@@ -1,0 +1,14 @@
+{
+  "name": "buki-mocha",
+  "version": "1.0.0",
+  "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"],
+  "hooksPath": "hooks"
+}
