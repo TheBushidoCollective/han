@@ -1,0 +1,14 @@
+{
+  "name": "buki-vitest",
+  "version": "1.0.0",
+  "description": "Comprehensive Vitest testing framework skills for modern Vite-powered JavaScript and TypeScript projects.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["vitest", "testing", "vite", "javascript", "typescript", "skill"],
+  "hooksPath": "hooks"
+}
