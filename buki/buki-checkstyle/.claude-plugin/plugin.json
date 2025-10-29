@@ -1,0 +1,14 @@
+{
+  "name": "buki-checkstyle",
+  "version": "1.0.0",
+  "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["checkstyle", "linting", "java", "skill"],
+  "hooksPath": "hooks"
+}
