@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go fmt ./..."
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go vet ./..."
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go test ./..."
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go fmt ./..."
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go vet ./..."
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with go.mod go test ./..."
+          }
+        ]
+      }
+    ]
+  }
+}

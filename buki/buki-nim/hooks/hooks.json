@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.nimble nim check *.nim"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.nimble nim check *.nim"
+          }
+        ]
+      }
+    ]
+  }
+}

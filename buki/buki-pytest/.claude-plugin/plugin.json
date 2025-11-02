@@ -1,0 +1,14 @@
+{
+  "name": "buki-pytest",
+  "version": "1.0.0",
+  "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["pytest", "testing", "python", "skill"],
+  "hooksPath": "hooks"
+}

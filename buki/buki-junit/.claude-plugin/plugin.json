@@ -1,0 +1,14 @@
+{
+  "name": "buki-junit",
+  "version": "1.0.0",
+  "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["junit", "testing", "java", "skill"],
+  "hooksPath": "hooks"
+}
