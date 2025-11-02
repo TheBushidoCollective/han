@@ -1,0 +1,13 @@
+{
+  "name": "buki-go",
+  "version": "1.0.0",
+  "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["go", "golang", "concurrency", "skill"]
+}
