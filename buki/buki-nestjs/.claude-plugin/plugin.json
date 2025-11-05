@@ -1,0 +1,13 @@
+{
+  "name": "buki-nestjs",
+  "version": "1.0.0",
+  "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["nestjs", "typescript", "nodejs", "skill"]
+}
