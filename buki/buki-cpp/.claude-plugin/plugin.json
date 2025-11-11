@@ -1,0 +1,13 @@
+{
+  "name": "buki-cpp",
+  "version": "1.0.0",
+  "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"]
+}

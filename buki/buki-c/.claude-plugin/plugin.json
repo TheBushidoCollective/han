@@ -1,0 +1,13 @@
+{
+  "name": "buki-c",
+  "version": "1.0.0",
+  "description": "Advanced C programming skills for systems programming and memory management",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["c", "systems-programming", "memory-management", "skill"]
+}
