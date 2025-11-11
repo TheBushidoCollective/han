@@ -1,0 +1,13 @@
+{
+  "name": "buki-lua",
+  "version": "1.0.0",
+  "description": "Advanced Lua programming skills for embedded scripting and game development",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["lua", "scripting", "embedded", "gaming", "skill"]
+}
