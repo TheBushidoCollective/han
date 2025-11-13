@@ -1,0 +1,13 @@
+{
+  "name": "do-network-engineering",
+  "version": "1.0.0",
+  "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["network", "protocols", "distributed-systems", "agent"]
+}

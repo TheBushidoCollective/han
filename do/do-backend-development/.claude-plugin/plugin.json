@@ -1,0 +1,13 @@
+{
+  "name": "do-backend-development",
+  "version": "1.0.0",
+  "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["backend", "api", "architecture", "data", "server", "agent"]
+}

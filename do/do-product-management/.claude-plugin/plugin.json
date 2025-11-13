@@ -1,0 +1,13 @@
+{
+  "name": "do-product-management",
+  "version": "1.0.0",
+  "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["product", "strategy", "vision", "planning", "agent"]
+}

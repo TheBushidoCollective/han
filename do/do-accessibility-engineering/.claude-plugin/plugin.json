@@ -1,0 +1,13 @@
+{
+  "name": "do-accessibility-engineering",
+  "version": "1.0.0",
+  "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["accessibility", "wcag", "inclusive-design", "agent"]
+}
