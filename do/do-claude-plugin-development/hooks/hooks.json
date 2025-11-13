@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uvx claudelint ${CLAUDE_PROJECT_DIR} || (echo 'Please fix the claude lint errors before continuing:\\n'; exit 2)"
+          },
+          {
+            "type": "command",
+            "command": "npx -y markdownlint-cli2 --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json --fix ${CLAUDE_PROJECT_DIR}/**/*.md || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uvx claudelint ${CLAUDE_PROJECT_DIR} || (echo 'Please fix the claude lint errors before continuing:\\n'; exit 2)"
+          },
+          {
+            "type": "command",
+            "command": "npx -y markdownlint-cli2 --fix ${CLAUDE_PROJECT_DIR}/**/*.md || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
+          }
+        ]
+      }
+    ]
+  }
+}
