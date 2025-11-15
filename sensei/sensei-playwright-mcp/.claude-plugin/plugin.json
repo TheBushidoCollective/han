@@ -1,0 +1,19 @@
+{
+  "name": "sensei-playwright-mcp",
+  "version": "1.0.0",
+  "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["mcp", "playwright", "testing", "automation", "server"],
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    }
+  }
+}
