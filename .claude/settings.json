@@ -1,0 +1,19 @@
+{
+  "extraKnownMarketplaces": {
+    "han": {
+      "source": {
+        "source": "directory",
+        "path": "./"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "bushido@han": true,
+    "do-documentation@han": true,
+    "do-prompter@han": true,
+    "do-claude-plugin-development@han": true,
+    "bushido": true
+  },
+  "extraMarketplaces": [],
+  "plugins": []
+}
