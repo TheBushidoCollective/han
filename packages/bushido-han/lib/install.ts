@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
 const HAN_MARKETPLACE_REPO = 'thebushidocollective/han';
-const HAN_MARKETPLACE_URL = `https://github.com/${HAN_MARKETPLACE_REPO}`;
 
 type MarketplaceSource = { source: 'directory', path: string } | { source: 'git', url: string } | { source: 'github', repo: string }
 type Marketplace = { source: MarketplaceSource }
@@ -66,7 +65,7 @@ Your Task:
 1. Use Glob to discover what files exist in the repository
 2. Use Grep to search for framework/library usage patterns
 3. Read key configuration files (package.json, Cargo.toml, go.mod, etc.)
-4. Get the latest han plugins from the marketplace ${HAN_MARKETPLACE_URL}
+4. Get the latest han plugins from the marketplace https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json
 5. Recommend Han plugins that match the detected technologies
 6. Return your recommendations as a JSON array of plugin names
 
@@ -86,8 +85,8 @@ Return ONLY a JSON array of recommended plugin names, like:
 Analyze this codebase and recommend appropriate Han plugins.`;
 
     // Define allowed tools - only read-only operations
-    const allowedTools: Tool[] = [
-      'web_search',
+    const allowedTools: string[] = [
+      'web_fetch',
       'read_file',
       'glob',
       'grep'
