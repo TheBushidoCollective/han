@@ -10,6 +10,66 @@
   },
   "plugins": [
     {
+      "name": "buki-ameba",
+      "description": "Ameba skills for Crystal code analysis and style checking",
+      "source": "./buki/buki-ameba",
+      "category": "Weapon",
+      "keywords": [
+        "crystal",
+        "linting",
+        "style",
+        "analysis"
+      ]
+    },
+    {
+      "name": "buki-credo",
+      "description": "Credo skills for Elixir code analysis and style checking",
+      "source": "./buki/buki-credo",
+      "category": "Weapon",
+      "keywords": [
+        "elixir",
+        "linting",
+        "style",
+        "analysis"
+      ]
+    },
+    {
+      "name": "buki-dialyzer",
+      "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
+      "source": "./buki/buki-dialyzer",
+      "category": "Weapon",
+      "keywords": [
+        "elixir",
+        "erlang",
+        "static-analysis",
+        "types"
+      ]
+    },
+    {
+      "name": "buki-ecto",
+      "description": "Ecto skills for database interactions in Elixir",
+      "source": "./buki/buki-ecto",
+      "category": "Weapon",
+      "keywords": [
+        "elixir",
+        "database",
+        "orm",
+        "ecto"
+      ]
+    },
+    {
+      "name": "buki-phoenix",
+      "description": "Phoenix Framework skills for building web applications",
+      "source": "./buki/buki-phoenix",
+      "category": "Weapon",
+      "keywords": [
+        "elixir",
+        "phoenix",
+        "web",
+        "framework"
+      ]
+    },
+    {
       "name": "bushido",
       "description": "The seven virtues, enforcement hooks, and foundational quality skills.",
       "source": "./bushido",

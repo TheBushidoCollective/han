@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with .credo.exs -- mix credo --strict"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with .credo.exs -- mix credo --strict"
+          }
+        ]
+      }
+    ]
+  }
+}

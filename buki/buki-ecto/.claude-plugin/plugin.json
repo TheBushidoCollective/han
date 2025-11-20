@@ -1,0 +1,10 @@
+{
+  "name": "buki-ecto",
+  "version": "1.0.0",
+  "description": "Ecto skills for database interactions in Elixir",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "skills": ["ecto-schemas", "ecto-queries", "ecto-migrations"]
+}
