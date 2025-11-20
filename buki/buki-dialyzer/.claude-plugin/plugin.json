@@ -1,0 +1,15 @@
+{
+  "name": "buki-dialyzer",
+  "version": "1.0.0",
+  "description": "Advanced Dialyzer skills for static analysis of Erlang/Elixir code",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "hooks": "hooks/hooks.json",
+  "skills": [
+    "dialyzer-configuration",
+    "dialyzer-analysis",
+    "dialyzer-integration"
+  ]
+}
