@@ -20,7 +20,7 @@ export const MarkdownWrapper: React.FC<MarkdownWrapperProps> = ({
     const parsed = marked.parse(children);
     const output = typeof parsed === 'string' ? parsed.trim() : '';
     return <Text>{output}</Text>;
-  } catch (error) {
+  } catch (_error) {
     // Fallback to plain text if markdown parsing fails
     return <Text wrap="wrap">{children}</Text>;
   }
