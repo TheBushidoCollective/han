@@ -1,0 +1,8 @@
+{
+  "name": "buki-docker-compose",
+  "displayName": "Docker Compose",
+  "description": "Docker Compose validation and best practices",
+  "version": "1.0.0",
+  "author": "The Bushido Collective",
+  "tags": ["docker", "docker-compose", "containers", "devops"]
+}

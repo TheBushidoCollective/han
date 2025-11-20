@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml crystal tool format --check"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml crystal spec"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
           }
         ]
       }
@@ -19,11 +19,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml crystal tool format --check"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml crystal spec"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
           }
         ]
       }

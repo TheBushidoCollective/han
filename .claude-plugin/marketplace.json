@@ -172,6 +172,18 @@
       ]
     },
     {
+      "name": "buki-ansible",
+      "description": "Ansible playbook validation and configuration management best practices",
+      "source": "./buki/buki-ansible",
+      "category": "Weapon",
+      "keywords": [
+        "ansible",
+        "configuration-management",
+        "devops",
+        "automation"
+      ]
+    },
+    {
       "name": "buki-biome",
       "description": "Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.",
       "source": "./buki/buki-biome",
@@ -287,6 +299,18 @@
       ]
     },
     {
+      "name": "buki-docker-compose",
+      "description": "Docker Compose validation and best practices for container orchestration",
+      "source": "./buki/buki-docker-compose",
+      "category": "Weapon",
+      "keywords": [
+        "docker",
+        "docker-compose",
+        "containers",
+        "devops"
+      ]
+    },
+    {
       "name": "buki-elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./buki/buki-elixir",
@@ -363,6 +387,19 @@
       ]
     },
     {
+      "name": "buki-helm",
+      "description": "Helm chart validation and best practices for Kubernetes package management",
+      "source": "./buki/buki-helm",
+      "category": "Weapon",
+      "keywords": [
+        "helm",
+        "kubernetes",
+        "k8s",
+        "charts",
+        "devops"
+      ]
+    },
+    {
       "name": "buki-ink",
       "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
       "source": "./buki/buki-ink",
@@ -427,6 +464,30 @@
       ]
     },
     {
+      "name": "buki-kubernetes",
+      "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
+      "source": "./buki/buki-kubernetes",
+      "category": "Weapon",
+      "keywords": [
+        "kubernetes",
+        "k8s",
+        "devops",
+        "infrastructure"
+      ]
+    },
+    {
+      "name": "buki-kustomize",
+      "description": "Kustomize configuration validation for Kubernetes customization",
+      "source": "./buki/buki-kustomize",
+      "category": "Weapon",
+      "keywords": [
+        "kustomize",
+        "kubernetes",
+        "k8s",
+        "devops"
+      ]
+    },
+    {
       "name": "buki-lua",
       "description": "Advanced Lua programming skills for embedded scripting and game development",
       "source": "./buki/buki-lua",
@@ -437,6 +498,18 @@
         "embedded",
         "gaming",
         "skill"
+      ]
+    },
+    {
+      "name": "buki-markdownlint",
+      "description": "Markdownlint configuration and validation for consistent markdown formatting",
+      "source": "./buki/buki-markdownlint",
+      "category": "Weapon",
+      "keywords": [
+        "markdownlint",
+        "markdown",
+        "linting",
+        "documentation"
       ]
     },
     {
@@ -553,6 +626,18 @@
         "javascript",
         "typescript",
         "skill"
+      ]
+    },
+    {
+      "name": "buki-pulumi",
+      "description": "Pulumi infrastructure-as-code validation and best practices",
+      "source": "./buki/buki-pulumi",
+      "category": "Weapon",
+      "keywords": [
+        "pulumi",
+        "infrastructure",
+        "iac",
+        "devops"
       ]
     },
     {
@@ -703,6 +788,19 @@
         "testing",
         "java",
         "skill"
+      ]
+    },
+    {
+      "name": "buki-terraform",
+      "description": "Terraform configuration validation and infrastructure-as-code best practices",
+      "source": "./buki/buki-terraform",
+      "category": "Weapon",
+      "keywords": [
+        "terraform",
+        "infrastructure",
+        "iac",
+        "devops",
+        "hashicorp"
       ]
     },
     {
@@ -1000,6 +1098,20 @@
         "compliance",
         "vulnerability",
         "threat",
+        "agent"
+      ]
+    },
+    {
+      "name": "do-sre",
+      "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+      "source": "./do/do-sre",
+      "category": "Discipline",
+      "keywords": [
+        "sre",
+        "reliability",
+        "monitoring",
+        "incidents",
+        "devops",
         "agent"
       ]
     },

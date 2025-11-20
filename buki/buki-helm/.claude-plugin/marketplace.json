@@ -1,0 +1,8 @@
+{
+  "name": "buki-helm",
+  "displayName": "Helm",
+  "description": "Helm chart validation and best practices",
+  "version": "1.0.0",
+  "author": "The Bushido Collective",
+  "tags": ["helm", "kubernetes", "k8s", "charts", "devops"]
+}

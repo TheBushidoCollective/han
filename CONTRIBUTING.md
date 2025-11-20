@@ -134,6 +134,131 @@ Enhance the `@thebushidocollective/han` package.
 - Follow existing code style (Biome)
 - Update documentation
 
+## Using Claude to Contribute
+
+Claude Code can help you generate high-quality plugins and contributions. Here are example prompts for each type of contribution:
+
+### Creating a Buki Plugin
+
+**Example Prompt:**
+
+```
+Add a buki for <tool-name> that validates <what it validates>.
+It should use --dirs-with <marker-file> and run <validation-command>.
+Include skills for <skill-topics>.
+```
+
+**Real Example:**
+
+```
+Add a buki for kubernetes that validates manifests.
+It should use --dirs-with *.yaml,*.yml and run kubeconform.
+Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-security.
+```
+
+**What Claude Will Generate:**
+
+- `buki-{name}/.claude-plugin/marketplace.json` - Plugin metadata
+- `buki-{name}/hooks/hooks.json` - Validation hooks with proper `han validate` usage
+- `buki-{name}/README.md` - Installation and usage documentation
+- `buki-{name}/skills/{skill-name}/SKILL.md` - Comprehensive skill documentation
+
+### Creating a Dō Discipline Agent
+
+**Example Prompt:**
+
+```
+Add a dō for <discipline> with an agent that acts as <expert-role>.
+Include skills for <skill-topics>.
+```
+
+**Real Example:**
+
+```
+Add a dō for SRE with an agent that acts as a site reliability engineer.
+Include skills for monitoring, incident-response, and reliability engineering.
+```
+
+**What Claude Will Generate:**
+
+- `do-{discipline}/.claude-plugin/marketplace.json` - Plugin metadata
+- `do-{discipline}/agents/{agent-name}.md` - Agent persona and expertise
+- `do-{discipline}/README.md` - Overview and usage guide
+- `do-{discipline}/skills/{skill-name}/SKILL.md` - Discipline-specific skills
+
+### Creating Bushido Skills
+
+**Example Prompt:**
+
+```
+Add a bushido skill for <principle> that teaches <what it teaches>.
+Include examples of good and bad practices.
+```
+
+**Real Example:**
+
+```
+Add a bushido skill for the boy-scout-rule that teaches leaving code better than you found it.
+Include examples of good and bad refactoring practices.
+```
+
+**What Claude Will Generate:**
+
+- `bushido/skills/{skill-name}/SKILL.md` - Detailed skill documentation with examples
+
+### Creating Multiple Related Plugins
+
+**Example Prompt:**
+
+```
+Add bukis for <tool1>, <tool2>, and <tool3> along with other comparable deployment tools.
+Also create a dō acting as an <expert-role>.
+```
+
+**Real Example:**
+
+```
+Add bukis for kubernetes, helm, and terraform along with other comparable deployment tools.
+Also create a dō acting as an SRE.
+```
+
+**What Claude Will Generate:**
+
+Multiple complete plugins with all necessary files, maintaining consistency across all of them.
+
+### Tips for Effective Prompts
+
+1. **Be Specific About Tools**: Name the exact tools and commands to use
+2. **Specify Marker Files**: Indicate what files identify a project type
+3. **Request Skills**: List the skill topics you want covered
+4. **Mention Examples**: Ask for code examples and best practices
+5. **Request Multiple**: You can ask for multiple related plugins at once
+
+### What Claude Generates Automatically
+
+When you request plugin generation, Claude will:
+
+- ✅ Use proper directory structure
+- ✅ Follow naming conventions (buki-*, do-*, sensei-*)
+- ✅ Include marketplace.json with metadata
+- ✅ Create hooks.json with `han validate` patterns
+- ✅ Generate comprehensive README.md files
+- ✅ Write detailed SKILL.md files with examples
+- ✅ Follow code style and formatting guidelines
+- ✅ Include proper error handling
+- ✅ Add validation commands with correct flags
+- ✅ Register plugins in `.claude-plugin/marketplace.json`
+
+### Validating Generated Files
+
+After Claude generates files, review:
+
+1. **Hook Commands**: Ensure they use `han validate --fail-fast --dirs-with`
+2. **Marker Files**: Verify marker files match project types
+3. **Skills**: Check that skills are comprehensive and accurate
+4. **Examples**: Ensure code examples are correct and follow best practices
+5. **Marketplace Entry**: Confirm plugin is registered in root marketplace.json
+
 ## Contribution Process
 
 ### 1. Discuss First
