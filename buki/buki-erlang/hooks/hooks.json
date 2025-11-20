@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with rebar.config rebar3 eunit"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config rebar3 eunit"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with rebar.config rebar3 eunit"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config rebar3 eunit"
           }
         ]
       }
