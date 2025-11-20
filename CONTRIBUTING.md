@@ -21,6 +21,7 @@ All contributions should embody the seven virtues:
 Add new quality principles and practices to the core bushido plugin.
 
 **Requirements:**
+
 - Must align with the seven virtues
 - Include clear documentation in SKILL.md
 - Provide practical examples
@@ -31,12 +32,14 @@ Add new quality principles and practices to the core bushido plugin.
 Create validation hooks for languages, frameworks, or tools.
 
 **Requirements:**
+
 - Include validation hooks for Stop and SubagentStop events
 - Use `han validate` command for monorepo support
 - Provide clear error messages
 - Include README.md with usage examples
 
 **Structure:**
+
 ```
 buki-{name}/
 ├── .claude-plugin/
@@ -48,6 +51,7 @@ buki-{name}/
 ```
 
 **Example hooks.json:**
+
 ```json
 {
   "hooks": {
@@ -80,12 +84,14 @@ buki-{name}/
 Create specialized agents for development practices.
 
 **Requirements:**
+
 - Focus on practice and discipline, not specific tools
 - Include agent markdown files with clear expertise
 - Provide skills that embody the discipline
 - Add to `/do/` directory
 
 **Structure:**
+
 ```
 do-{discipline}/
 ├── .claude-plugin/
@@ -101,12 +107,14 @@ do-{discipline}/
 Add MCP servers that provide external knowledge and integrations.
 
 **Requirements:**
+
 - Follow MCP server specifications
 - Include clear documentation
 - Provide value beyond what's available in Claude's knowledge
 - Add to `/sensei/` directory
 
 **Structure:**
+
 ```
 sensei-{name}/
 ├── .claude-plugin/
@@ -120,6 +128,7 @@ sensei-{name}/
 Enhance the `@thebushidocollective/han` package.
 
 **Requirements:**
+
 - Written in TypeScript
 - Include tests
 - Follow existing code style (Biome)
@@ -130,6 +139,7 @@ Enhance the `@thebushidocollective/han` package.
 ### 1. Discuss First
 
 For significant changes:
+
 - Open an issue to discuss the proposal
 - Explain how it aligns with the Bushido virtues
 - Get feedback from maintainers
@@ -154,6 +164,7 @@ git checkout -b feature/your-feature-name
 ### 4. Test Thoroughly
 
 For buki plugins:
+
 ```bash
 # Test validation hooks work correctly
 # Ensure they fail when they should
@@ -161,6 +172,7 @@ For buki plugins:
 ```
 
 For han CLI:
+
 ```bash
 cd packages/bushido-han
 npm run typecheck
@@ -177,11 +189,13 @@ npm test
 ### 6. Submit Pull Request
 
 **PR Title Format:**
+
 - `feat(buki): add markdownlint plugin`
 - `fix(han): improve error messages`
 - `docs: update contributing guidelines`
 
 **PR Description Should Include:**
+
 - What changed and why
 - How it embodies the Bushido virtues
 - Testing performed
@@ -190,34 +204,40 @@ npm test
 ## Plugin Naming Conventions
 
 ### Buki (Weapons)
+
 - `buki-{tool-name}` - e.g., `buki-jest`, `buki-typescript`
 - Use lowercase, hyphenated names
 - Name after the tool, not the language (e.g., `buki-pytest` not `buki-python-testing`)
 
 ### Dō (Disciplines)
+
 - `do-{discipline}` - e.g., `do-frontend`, `do-security`
 - Focus on the practice, not the tools
 - Use general terms that transcend specific technologies
 
 ### Sensei (Teachers)
+
 - `sensei-{service}` - e.g., `sensei-context7`, `sensei-github`
 - Name after the knowledge source or service
 
 ## Code Style
 
 ### TypeScript/JavaScript
+
 - Use Biome for linting and formatting
 - Prefer functional patterns
 - Use TypeScript for type safety
 - Write descriptive variable names
 
 ### Markdown
+
 - Use proper headings hierarchy
 - Include code examples
 - Keep lines reasonably short
 - Use markdownlint-compliant formatting
 
 ### JSON
+
 - Use 2-space indentation
 - No trailing commas
 - Alphabetize keys when reasonable
@@ -250,11 +270,13 @@ All buki plugins should use the `han validate` command:
 Don't add redundant error messages after `han validate` - it handles errors automatically.
 
 **Good:**
+
 ```json
 "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test"
 ```
 
 **Bad:**
+
 ```json
 "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test || (echo 'Tests failed'; exit 2)"
 ```

@@ -8,10 +8,38 @@ interface ValidateOptions {
 	command: string;
 }
 
+// Check if a filename matches a pattern (supports * wildcard)
+function matchesPattern(filename: string, pattern: string): boolean {
+	// Convert glob pattern to regex
+	const regexPattern = pattern
+		.replace(/\./g, "\\.")
+		.replace(/\*/g, ".*")
+		.replace(/\?/g, ".");
+	const regex = new RegExp(`^${regexPattern}$`);
+	return regex.test(filename);
+}
+
+// Check if directory contains any of the marker files/patterns
+function hasMarkerFile(dir: string, patterns: string[]): boolean {
+	try {
+		const entries = readdirSync(dir);
+		for (const pattern of patterns) {
+			for (const entry of entries) {
+				if (matchesPattern(entry, pattern)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	} catch (_e) {
+		return false;
+	}
+}
+
 // Recursively find all directories containing a marker file
 function findDirectoriesWithMarker(
 	rootDir: string,
-	markerFile: string,
+	markerPatterns: string[],
 ): string[] {
 	const dirs: string[] = [];
 
@@ -23,8 +51,8 @@ function findDirectoriesWithMarker(
 		}
 
 		try {
-			// Check if this directory contains the marker file
-			if (existsSync(join(dir, markerFile))) {
+			// Check if this directory contains any of the marker files
+			if (hasMarkerFile(dir, markerPatterns)) {
 				dirs.push(dir);
 			}
 
@@ -69,7 +97,10 @@ export function validate(options: ValidateOptions): void {
 		process.exit(1);
 	}
 
-	const targetDirs = findDirectoriesWithMarker(rootDir, dirsWith);
+	// Parse comma-delimited patterns
+	const patterns = dirsWith.split(",").map((p) => p.trim());
+
+	const targetDirs = findDirectoriesWithMarker(rootDir, patterns);
 
 	if (targetDirs.length === 0) {
 		console.log(`No directories found with ${dirsWith}`);

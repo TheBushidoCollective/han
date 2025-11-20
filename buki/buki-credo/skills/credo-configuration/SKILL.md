@@ -5,6 +5,7 @@ Credo is a static code analysis tool for Elixir focused on code quality and cons
 ## Configuration File
 
 ### .credo.exs
+
 ```elixir
 %{
   configs: [
