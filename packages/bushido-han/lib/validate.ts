@@ -75,7 +75,7 @@ export function validate(options: ValidateOptions): void {
   const { failFast, dirsWith, command: commandToRun } = options;
 
   // Main execution
-  const rootDir = process.cwd();
+  const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const allDirs = findDirectories(rootDir);
   const targetDirs = filterDirectories(allDirs, dirsWith);
 
