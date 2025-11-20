@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Test runs from dist/test, so go up to dist, then to lib/main.ts
-const binPath = join(__dirname, '..', 'lib', 'main.ts');
+// Test runs from dist/test, so go up to dist, then to lib/main.js
+const binPath = join(__dirname, '..', 'lib', 'main.js');
 
 function setup(): string {
   const testDir = join(__dirname, 'fixtures');
@@ -66,8 +66,8 @@ test('shows error when validate has no command argument', () => {
     const stderr = execError.stderr?.toString() || '';
     strictEqual(
       stderr.includes('missing required argument') ||
-      stderr.includes('error') ||
-      stderr.length > 0,
+        stderr.includes('error') ||
+        stderr.length > 0,
       true
     );
   }

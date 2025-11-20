@@ -3,11 +3,13 @@
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": true
+    "useIgnoreFile": false
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/node_modules/", "!**/*.log", "!**/dist/"]
+    "includes": [
+      "packages/**"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -18,13 +20,31 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "style": {
+        "useImportType": "off"
+      },
+      "correctness": {
+        "noUnusedImports": "warn"
+      }
     }
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
       "trailingCommas": "es5"
+    },
+    "jsxRuntime": "reactClassic"
+  },
+  "overrides": [
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
     }
-  }
+  ]
 }

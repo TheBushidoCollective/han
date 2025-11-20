@@ -14,7 +14,7 @@ program
   .description('Install Han marketplace and plugins')
   .action(async () => {
     try {
-      const { install } = await import('./install.ts');
+      const { install } = await import('./install.js');
       await install();
       process.exit(0);
     } catch (error: unknown) {
@@ -31,7 +31,7 @@ program
   .command('uninstall')
   .description('Remove Han marketplace and plugins')
   .action(async () => {
-    const { uninstall } = await import('./uninstall.ts');
+    const { uninstall } = await import('./uninstall.js');
     uninstall();
     process.exit(0);
   });
@@ -51,7 +51,7 @@ program
       commandArgs: string[],
       options: { failFast?: boolean; dirsWith?: string }
     ) => {
-      const { validate } = await import('./validate.ts');
+      const { validate } = await import('./validate.js');
       validate({
         failFast: options.failFast || false,
         dirsWith: options.dirsWith || null,
