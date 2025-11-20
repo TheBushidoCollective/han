@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface ValidateOptions {
@@ -8,53 +8,40 @@ interface ValidateOptions {
   command: string;
 }
 
-// Find directories
-function findDirectories(rootDir: string): string[] {
+// Recursively find all directories containing a marker file
+function findDirectoriesWithMarker(
+  rootDir: string,
+  markerFile: string
+): string[] {
   const dirs: string[] = [];
 
-  // Try to use git to find tracked directories
-  try {
-    const gitDirs = execSync('git ls-files', {
-      cwd: rootDir,
-      encoding: 'utf8',
-    })
-      .split('\n')
-      .map((file) => {
-        const parts = file.split('/');
-        return parts.length > 1 ? parts[0] : null;
-      })
-      .filter((dir): dir is string => dir !== null);
+  function searchDir(dir: string): void {
+    // Skip hidden directories and node_modules
+    const basename = dir.split('/').pop() || '';
+    if (basename.startsWith('.') || basename === 'node_modules') {
+      return;
+    }
 
-    const uniqueDirs = [...new Set(gitDirs)];
-    uniqueDirs.forEach((dir) => {
-      const fullPath = join(rootDir, dir);
-      if (existsSync(fullPath) && statSync(fullPath).isDirectory()) {
-        dirs.push(fullPath);
+    try {
+      // Check if this directory contains the marker file
+      if (existsSync(join(dir, markerFile))) {
+        dirs.push(dir);
       }
-    });
-  } catch (_e) {
-    // Git not available or not in git repo, use glob
-    const entries = readdirSync(rootDir, { withFileTypes: true });
-    entries.forEach((entry) => {
-      if (entry.isDirectory() && !entry.name.startsWith('.')) {
-        dirs.push(join(rootDir, entry.name));
+
+      // Recursively search subdirectories
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          searchDir(join(dir, entry.name));
+        }
       }
-    });
+    } catch (_e) {
+      // Skip directories we can't read
+    }
   }
 
+  searchDir(rootDir);
   return dirs;
-}
-
-// Filter directories by marker file
-function filterDirectories(
-  dirs: string[],
-  markerFile: string | null
-): string[] {
-  if (!markerFile) return dirs;
-
-  return dirs.filter((dir) => {
-    return existsSync(join(dir, markerFile));
-  });
 }
 
 // Run command in directory
@@ -76,17 +63,17 @@ export function validate(options: ValidateOptions): void {
 
   // Main execution
   const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const allDirs = findDirectories(rootDir);
-  const targetDirs = filterDirectories(allDirs, dirsWith);
+
+  if (!dirsWith) {
+    console.error('Error: --dirs-with <file> is required');
+    process.exit(1);
+  }
+
+  const targetDirs = findDirectoriesWithMarker(rootDir, dirsWith);
 
   if (targetDirs.length === 0) {
-    if (dirsWith) {
-      console.log(`No directories found with ${dirsWith}`);
-      process.exit(0);
-    } else {
-      console.error('No directories found');
-      process.exit(1);
-    }
+    console.log(`No directories found with ${dirsWith}`);
+    process.exit(0);
   }
 
   const failures: string[] = [];
