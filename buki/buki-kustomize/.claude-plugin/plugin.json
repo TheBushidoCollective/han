@@ -1,0 +1,14 @@
+{
+  "name": "buki-kustomize",
+  "version": "1.0.0",
+  "description": "Kustomize configuration validation for Kubernetes",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["kustomize", "kubernetes", "k8s", "devops"],
+  "hooksPath": "hooks"
+}

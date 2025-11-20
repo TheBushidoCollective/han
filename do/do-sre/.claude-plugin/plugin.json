@@ -1,0 +1,14 @@
+{
+  "name": "do-sre",
+  "version": "1.0.0",
+  "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["sre", "reliability", "monitoring", "incidents", "devops", "agent"],
+  "agentsPath": "agents"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "buki-pulumi",
+  "version": "1.0.0",
+  "description": "Pulumi infrastructure-as-code validation",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/sensei",
+  "repository": "https://github.com/thebushidocollective/sensei",
+  "license": "MIT",
+  "keywords": ["pulumi", "infrastructure", "iac", "devops"],
+  "hooksPath": "hooks"
+}
