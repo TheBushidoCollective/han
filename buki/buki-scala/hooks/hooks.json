@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with build.sbt sbt test"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with build.sbt sbt test"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with build.sbt sbt test"
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with build.sbt sbt test"
           }
         ]
       }
