@@ -3,12 +3,11 @@
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": false
+    "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "lib/**/*.{ts,tsx,js,jsx,json,md,mdx}"
-    ]
+    "ignoreUnknown": false,
+    "includes": ["**", "!**/node_modules/", "!**/*.log", "!**/dist/"]
   },
   "formatter": {
     "enabled": true,
@@ -34,16 +33,5 @@
       "trailingCommas": "es5"
     },
     "jsxRuntime": "reactClassic"
-  },
-  "overrides": [
-    {
-      "linter": {
-        "rules": {
-          "style": {
-            "useImportType": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }

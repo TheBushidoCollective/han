@@ -1,12 +1,20 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf-8')
+);
 
 const program = new Command();
 
 program
   .name('han')
   .description("Utilities for The Bushido Collective's Han Code Marketplace")
-  .version('1.0.0');
+  .version(packageJson.version);
 
 // Install command
 program

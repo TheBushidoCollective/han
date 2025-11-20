@@ -1,8 +1,8 @@
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect, useState } from 'react';
-import { MarkdownWrapper } from './markdown-wrapper.js';
 import type { AgentUpdate, DetectPluginsCallbacks } from './install.js';
+import { MarkdownWrapper } from './markdown-wrapper.js';
 
 interface InstallProgressProps {
   detectPlugins: (callbacks: DetectPluginsCallbacks) => Promise<void>;

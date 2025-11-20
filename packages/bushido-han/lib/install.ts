@@ -111,7 +111,7 @@ ULTRATHINK and Analyze this codebase and recommend appropriate Han plugins.`;
       model: 'claude-sonnet-4-5-20250929',
       includePartialMessages: true,
       allowedTools,
-      permissionMode: 'bypassPermissions'
+      permissionMode: 'bypassPermissions',
     },
   });
 
