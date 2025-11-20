@@ -16,6 +16,7 @@
     "buki-typescript@han": true,
     "buki-markdownlint@han": true,
     "buki-monorepo@han": true,
-    "buki-react@han": true
+    "buki-react@han": true,
+    "buki-ink@han": true
   }
 }
