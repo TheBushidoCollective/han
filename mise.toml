@@ -1,0 +1,7 @@
+[tools]
+claude-code = "latest"
+markdownlint-cli2 = "latest"
+"pipx:claudelint" = "latest"
+"uv" = "latest"
+"biome" = "latest"
+node = "lts"
