@@ -155,11 +155,11 @@ Or manually add to your `.claude/settings.json`:
 
 ```json
 {
-  "extraMarketplaces": [
+  "extraKnownMarketplaces": [
     "https://github.com/thebushidocollective/han"
   ],
-  "plugins": [
-    "do-content-creator"
+  "enabledPlugins": [
+    "do-content-creator": true
   ]
 }
 ```

@@ -303,6 +303,20 @@
       ]
     },
     {
+      "name": "buki-ink",
+      "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
+      "source": "./buki/buki-ink",
+      "category": "Weapon",
+      "keywords": [
+        "ink",
+        "terminal",
+        "cli",
+        "react",
+        "ui",
+        "skill"
+      ]
+    },
+    {
       "name": "buki-java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
       "source": "./buki/buki-java",

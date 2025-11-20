@@ -12,8 +12,10 @@
     "do-documentation@han": true,
     "do-prompter@han": true,
     "do-claude-plugin-development@han": true,
-    "bushido": true
-  },
-  "extraMarketplaces": [],
-  "plugins": []
+    "buki-biome@han": true,
+    "buki-typescript@han": true,
+    "buki-markdownlint@han": true,
+    "buki-monorepo@han": true,
+    "buki-react@han": true
+  }
 }

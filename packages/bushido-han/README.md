@@ -41,6 +41,7 @@ npx @thebushidocollective/han install
 - Uses Glob, Grep, and Read tools to understand your project
 - Detects languages, frameworks, and testing tools
 - Recommends appropriate Han plugins based on actual code, not just file patterns
+- Displays real-time progress with a beautiful Ink-powered terminal UI
 - Configures `.claude/settings.json` automatically
 
 **What it detects:**
@@ -158,18 +159,30 @@ Perfect for enforcing quality in Claude Code plugins:
 
 ## Development
 
-This package is written in TypeScript and compiles to CommonJS JavaScript.
+This package is written in TypeScript and uses React (via Ink) for the terminal UI.
+
+### Prerequisites
+
+- Node.js >= 24
+- TypeScript 5.9+
 
 ### Building
 
+The build process compiles TypeScript to ES modules:
+
 ```bash
-npm run build
+npm run build       # Compile TypeScript to dist/
+npm run typecheck   # Type-check without emitting
 ```
+
+The compiled output is in `dist/` and is what gets published to npm.
 
 ### Testing
 
+Tests run against the compiled JavaScript:
+
 ```bash
-npm test
+npm test            # Run tests from dist/test/
 ```
 
 ### Linting
@@ -178,6 +191,13 @@ npm test
 npm run lint        # Check for issues
 npm run lint:fix    # Auto-fix issues
 ```
+
+### UI Development
+
+The install command uses [Ink](https://github.com/vadimdemedes/ink) for a rich terminal UI experience. The UI components are in:
+
+- `lib/install-progress.tsx` - Main UI component
+- `lib/install.ts` - Integration with Claude Agent SDK
 
 ## Contributing
 

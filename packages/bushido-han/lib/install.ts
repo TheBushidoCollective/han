@@ -1,18 +1,35 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
+import { render } from 'ink';
+import React from 'react';
 
 const HAN_MARKETPLACE_REPO = 'thebushidocollective/han';
 
-type MarketplaceSource = { source: 'directory', path: string } | { source: 'git', url: string } | { source: 'github', repo: string }
-type Marketplace = { source: MarketplaceSource }
-type Marketplaces = Record<string, Marketplace>
-type Plugins = Record<string, boolean>
+type MarketplaceSource =
+  | { source: 'directory'; path: string }
+  | { source: 'git'; url: string }
+  | { source: 'github'; repo: string };
+type Marketplace = { source: MarketplaceSource };
+type Marketplaces = Record<string, Marketplace>;
+type Plugins = Record<string, boolean>;
 
 interface ClaudeSettings {
   extraKnownMarketplaces?: Marketplaces;
   enabledPlugins?: Plugins;
   [key: string]: unknown;
+}
+
+export interface AgentUpdate {
+  type: 'text' | 'tool';
+  content: string;
+  toolName?: string;
+}
+
+export interface DetectPluginsCallbacks {
+  onUpdate: (update: AgentUpdate) => void;
+  onComplete: (plugins: string[], fullText: string) => void;
+  onError: (error: Error) => void;
 }
 
 function getClaudeSettingsPath(): string {
@@ -51,9 +68,10 @@ function writeSettings(settings: ClaudeSettings): void {
 /**
  * Use Claude Agent SDK to intelligently analyze codebase and recommend plugins
  */
-async function detectPluginsWithAgent(): Promise<string[] | null> {
-  try {
-    const agentPrompt = `You are a Han plugin installer assistant. Your goal is to analyze the current codebase and recommend appropriate Claude Code plugins from the Han marketplace.
+async function detectPluginsWithAgent(
+  callbacks: DetectPluginsCallbacks
+): Promise<void> {
+  const agentPrompt = `You are a Han plugin installer assistant. Your goal is to analyze the current codebase and recommend appropriate Claude Code plugins from the Han marketplace.
 
 Available Plugin Categories:
 - buki-* (武器 weapons): Skills for specific technologies (e.g., buki-typescript, buki-react, buki-go)
@@ -82,72 +100,51 @@ ALWAYS add the bushido plugin!
 Return ONLY a JSON array of recommended plugin names, like:
 ["bushido", "buki-typescript", "buki-react", "buki-jest"]
 
-Analyze this codebase and recommend appropriate Han plugins.`;
+ULTRATHINK and Analyze this codebase and recommend appropriate Han plugins.`;
 
-    // Define allowed tools - only read-only operations
-    const allowedTools: string[] = [
-      'web_fetch',
-      'read_file',
-      'glob',
-      'grep'
-    ];
+  // Define allowed tools - only read-only operations
+  const allowedTools: string[] = ['web_fetch', 'read_file', 'glob', 'grep'];
 
-    console.log('🔍 Analyzing codebase...\n');
+  const agent = query({
+    prompt: agentPrompt,
+    options: {
+      model: 'claude-sonnet-4-5-20250929',
+      includePartialMessages: true,
+      allowedTools,
+      permissionMode: 'bypassPermissions'
+    },
+  });
 
-    const agent = query({
-      prompt: agentPrompt,
-      options: {
-        model: 'claude-sonnet-4-5-20250929',
-        maxTurns: 10,
-        includePartialMessages: true,
-        allowedTools
-      },
-    });
+  let responseContent = '';
 
-    let responseContent = '';
-    const toolCounts = new Map<string, number>();
-
-    // Collect all messages from the agent and show progress
+  try {
+    // Collect all messages from the agent with live updates
     for await (const sdkMessage of agent) {
       if (sdkMessage.type === 'assistant' && sdkMessage.message.content) {
         for (const block of sdkMessage.message.content) {
           if (block.type === 'text') {
+            // Send text updates
+            callbacks.onUpdate({ type: 'text', content: block.text });
             responseContent += block.text;
-            // Don't print agent's internal reasoning, just collect it
           } else if (block.type === 'tool_use') {
-            // Track tool usage
-            const count = (toolCounts.get(block.name) || 0) + 1;
-            toolCounts.set(block.name, count);
-
-            // Show tool usage on same line using carriage return
-            const toolEmoji = block.name === 'web_search' ? '🌐' :
-              block.name === 'read_file' ? '📄' :
-                block.name === 'glob' ? '🔍' :
-                  block.name === 'grep' ? '🔎' : '🔧';
-
-            // Clear line and show current tool
-            process.stdout.write(`\r${toolEmoji} ${block.name}... (${count}/${Array.from(toolCounts.values()).reduce((a, b) => a + b, 0)})    `);
+            // Send tool usage updates
+            callbacks.onUpdate({
+              type: 'tool',
+              content: `Using ${block.name}`,
+              toolName: block.name,
+            });
           }
         }
       }
     }
 
-    // Clear the progress line and show summary
-    process.stdout.write('\r\x1b[K'); // Clear line
-    console.log('📊 Analysis complete:');
-    for (const [tool, count] of toolCounts.entries()) {
-      console.log(`   ${tool}: ${count} call${count > 1 ? 's' : ''}`);
-    }
-    console.log();
-
     // Extract plugin recommendations from agent response
     const plugins = parsePluginRecommendations(responseContent);
+    const finalPlugins = plugins.length > 0 ? plugins : ['bushido'];
 
-    return plugins;
+    callbacks.onComplete(finalPlugins, responseContent);
   } catch (error) {
-    console.error('Error using Agent SDK:', (error as Error).message);
-    console.log('Falling back to simple detection...\n');
-    return null;
+    callbacks.onError(error as Error);
   }
 }
 
@@ -179,61 +176,65 @@ function parsePluginRecommendations(content: string): string[] {
 }
 
 /**
- * SDK-based install command
+ * Install plugins to Claude settings
  */
-export async function install(): Promise<void> {
-  console.log('🤖 Han Plugin Installer\n');
-
-  // Use SDK-based detection
-  let plugins = await detectPluginsWithAgent();
-
-  if (!plugins || plugins.length === 0) {
-    console.log('⚠️  No specific plugins detected. Installing core bushido plugin.\n');
-    plugins = ['bushido'];
-  } else {
-    console.log('✅ Recommended plugins:');
-    for (const plugin of plugins.sort()) {
-      console.log(`   • ${plugin}`);
-    }
-    console.log();
-  }
-
+function installPluginsToSettings(plugins: string[]): void {
   ensureClaudeDirectory();
-
-  console.log('📝 Updating Claude Code settings...\n');
 
   const settings = readOrCreateSettings();
 
   // Add Han marketplace to extraMarketplaces
-  if (!settings.extraMarketplaces) {
-    settings.extraMarketplaces = [];
-  }
-
   if (!settings?.extraKnownMarketplaces?.han) {
-    settings.extraKnownMarketplaces = { ...settings.extraKnownMarketplaces, han: { source: { source: "github", repo: HAN_MARKETPLACE_REPO } } };
-    console.log(`   ✓ Added Han marketplace: ${HAN_MARKETPLACE_REPO}`);
-  } else {
-    console.log(`   ✓ Han marketplace already configured`);
+    settings.extraKnownMarketplaces = {
+      ...settings.extraKnownMarketplaces,
+      han: { source: { source: 'github', repo: HAN_MARKETPLACE_REPO } },
+    };
   }
 
-  // Add detected plugins
-  if (!settings.plugins) {
-    settings.plugins = [];
-  }
-
-  let addedCount = 0;
+  // Add plugins
   for (const plugin of plugins) {
     settings.enabledPlugins = {
-      ...settings.enabledPlugins, [plugin]: true
+      ...settings.enabledPlugins,
+      [`${plugin}@han`]: true,
     };
-    addedCount++;
   }
 
-  console.log(`   ✓ Added ${addedCount} new plugin(s)`);
-  console.log(`   ✓ Total plugins configured: ${Object.keys(settings?.enabledPlugins ?? {}).length}`);
-
   writeSettings(settings);
+}
 
-  console.log('\n✅ Installation complete!\n');
-  console.log('💡 Restart Claude Code to load the new plugins.');
+/**
+ * SDK-based install command with Ink UI
+ */
+export async function install(): Promise<void> {
+  // Import Ink UI component dynamically to avoid issues with React
+  const { InstallProgress } = await import('./install-progress.js');
+
+  let resolveCompletion: (() => void) | undefined;
+  let rejectCompletion: ((error: Error) => void) | undefined;
+
+  const completionPromise = new Promise<void>((resolve, reject) => {
+    resolveCompletion = resolve;
+    rejectCompletion = reject;
+  });
+
+  const { unmount } = render(
+    React.createElement(InstallProgress, {
+      detectPlugins: detectPluginsWithAgent,
+      onInstallComplete: (plugins: string[]) => {
+        installPluginsToSettings(plugins);
+        if (resolveCompletion) resolveCompletion();
+      },
+      onInstallError: (error: Error) => {
+        if (rejectCompletion) rejectCompletion(error);
+      },
+    })
+  );
+
+  try {
+    await completionPromise;
+    // Wait a moment for the UI to show completion message
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  } finally {
+    unmount();
+  }
 }
