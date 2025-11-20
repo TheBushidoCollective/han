@@ -5,6 +5,7 @@ Understanding and fixing Dialyzer warnings in Erlang and Elixir code.
 ## Type Specifications
 
 ### Basic Specs
+
 ```elixir
 @spec add(integer(), integer()) :: integer()
 def add(a, b), do: a + b
@@ -16,6 +17,7 @@ end
 ```
 
 ### Complex Types
+
 ```elixir
 @type user :: %{
   id: pos_integer(),
@@ -28,6 +30,7 @@ end
 ```
 
 ### Generic Types
+
 ```elixir
 @spec map_values(map(), (any() -> any())) :: map()
 @spec filter_list([t], (t -> boolean())) :: [t] when t: any()
@@ -36,6 +39,7 @@ end
 ## Common Warnings
 
 ### Pattern Match Coverage
+
 ```elixir
 # Warning: pattern match is not exhaustive
 case value do
@@ -52,6 +56,7 @@ end
 ```
 
 ### No Return
+
 ```elixir
 # Warning: function has no local return
 def always_raises do
@@ -66,6 +71,7 @@ end
 ```
 
 ### Unmatched Returns
+
 ```elixir
 # Warning: unmatched return
 def process do
@@ -83,6 +89,7 @@ end
 ```
 
 ### Unknown Functions
+
 ```elixir
 # Warning: unknown function
 SomeModule.undefined_function()
@@ -97,6 +104,7 @@ end
 ## Type Analysis Patterns
 
 ### Union Types
+
 ```elixir
 @type result :: :ok | {:ok, any()} | {:error, String.t()}
 
@@ -107,6 +115,7 @@ def handle_result({:error, msg}), do: Logger.error(msg)
 ```
 
 ### Opaque Types
+
 ```elixir
 @opaque internal_state :: %{data: map(), timestamp: integer()}
 
@@ -115,6 +124,7 @@ def new, do: %{data: %{}, timestamp: System.system_time()}
 ```
 
 ### Remote Types
+
 ```elixir
 @spec process_conn(Plug.Conn.t()) :: Plug.Conn.t()
 @spec format_date(Date.t()) :: String.t()
@@ -123,11 +133,13 @@ def new, do: %{data: %{}, timestamp: System.system_time()}
 ## Success Typing
 
 Dialyzer uses success typing:
+
 - Approximates what a function can succeed with
 - Different from traditional type systems
 - May miss some errors, but no false positives (in theory)
 
 ### Example
+
 ```elixir
 # Dialyzer infers: integer() -> integer()
 def double(x), do: x * 2
@@ -148,16 +160,19 @@ def double(x) when x > 0, do: x * 2
 ## Debugging Tips
 
 ### Verbose Output
+
 ```bash
 mix dialyzer --format dialyzer
 ```
 
 ### Explain Warnings
+
 ```bash
 mix dialyzer --explain
 ```
 
 ### Check Specific Files
+
 ```bash
 mix dialyzer lib/my_module.ex
 ```

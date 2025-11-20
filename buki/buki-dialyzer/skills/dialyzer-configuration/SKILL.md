@@ -5,12 +5,14 @@ Dialyzer is a static analysis tool for Erlang and Elixir that identifies softwar
 ## Configuration Files
 
 ### dialyzer.ignore-warnings
+
 ```
 # Ignore specific warnings
 lib/my_module.ex:42:pattern_match_cov
 ```
 
 ### .dialyzer_ignore.exs
+
 ```elixir
 [
   {"lib/generated_code.ex", :no_return},
@@ -19,6 +21,7 @@ lib/my_module.ex:42:pattern_match_cov
 ```
 
 ### mix.exs Configuration
+
 ```elixir
 def project do
   [
@@ -38,12 +41,14 @@ end
 ## Common Configuration Options
 
 ### PLT Management
+
 - `plt_add_apps`: Additional applications to include in PLT
 - `plt_core_path`: Directory for core PLT files
 - `plt_file`: Custom PLT file location
 - `plt_add_deps`: Include dependencies (`:app_tree`, `:apps_direct`, `:transitive`)
 
 ### Analysis Flags
+
 - `:error_handling` - Check error handling
 - `:underspecs` - Warn on under-specified functions
 - `:unmatched_returns` - Warn on unmatched return values
@@ -51,6 +56,7 @@ end
 - `:overspecs` - Warn on over-specified functions
 
 ### Filter Options
+
 - `ignore_warnings`: File with warning patterns to ignore
 - `list_unused_filters`: Show unused ignore patterns
 
@@ -65,6 +71,7 @@ end
 ## Common Patterns
 
 ### Conditional Analysis
+
 ```elixir
 if Mix.env() in [:dev, :test] do
   {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
@@ -72,12 +79,14 @@ end
 ```
 
 ### Custom Check Script
+
 ```bash
 #!/bin/bash
 mix dialyzer --format github
 ```
 
 ### GitHub Actions Integration
+
 ```yaml
 - name: Run Dialyzer
   run: mix dialyzer --format github

@@ -5,6 +5,7 @@ Integrating Dialyzer into development workflow and CI/CD pipelines.
 ## Local Development
 
 ### Initial Setup
+
 ```bash
 # Install dialyxir
 mix deps.get
@@ -17,6 +18,7 @@ mix dialyzer
 ```
 
 ### Incremental Analysis
+
 ```bash
 # Only analyze changed files
 mix dialyzer --incremental
@@ -28,6 +30,7 @@ mix dialyzer --clean
 ## CI/CD Integration
 
 ### GitHub Actions
+
 ```yaml
 name: Dialyzer
 
@@ -71,6 +74,7 @@ jobs:
 ```
 
 ### GitLab CI
+
 ```yaml
 dialyzer:
   stage: test
@@ -89,6 +93,7 @@ dialyzer:
 ## IDE Integration
 
 ### VS Code (ElixirLS)
+
 ```json
 {
   "elixirLS.dialyzerEnabled": true,
@@ -102,6 +107,7 @@ dialyzer:
 ```
 
 ### Vim/Neovim (coc-elixir)
+
 ```json
 {
   "elixir.dialyzer.enabled": true
@@ -111,6 +117,7 @@ dialyzer:
 ## Pre-commit Hooks
 
 ### Using Husky/Lefthook
+
 ```yaml
 # lefthook.yml
 pre-commit:
@@ -121,6 +128,7 @@ pre-commit:
 ```
 
 ### Git Hook Script
+
 ```bash
 #!/bin/sh
 # .git/hooks/pre-commit
@@ -137,6 +145,7 @@ fi
 ## Team Workflow
 
 ### Shared PLT Strategy
+
 ```elixir
 # mix.exs
 def project do
@@ -153,6 +162,7 @@ end
 ```
 
 ### Baseline Approach
+
 ```bash
 # Generate baseline
 mix dialyzer > dialyzer_baseline.txt
@@ -164,6 +174,7 @@ mix dialyzer | diff - dialyzer_baseline.txt
 ## Performance Optimization
 
 ### Parallel Analysis
+
 ```elixir
 def project do
   [
@@ -177,12 +188,14 @@ end
 ```
 
 ### Selective Analysis
+
 ```bash
 # Only check specific paths
 mix dialyzer lib/critical/ test/important_test.exs
 ```
 
 ### Incremental Mode
+
 ```bash
 # Much faster after initial run
 mix dialyzer --incremental
@@ -191,6 +204,7 @@ mix dialyzer --incremental
 ## Monitoring and Reporting
 
 ### Custom Formatter
+
 ```elixir
 # lib/custom_dialyzer_formatter.ex
 defmodule CustomDialyzerFormatter do
@@ -207,6 +221,7 @@ end
 ```
 
 ### Metrics Collection
+
 ```bash
 # Count warnings over time
 mix dialyzer | grep -c "warning:" >> dialyzer_metrics.log
@@ -215,6 +230,7 @@ mix dialyzer | grep -c "warning:" >> dialyzer_metrics.log
 ## Troubleshooting
 
 ### PLT Issues
+
 ```bash
 # Remove and rebuild
 rm -rf _build/dev/*.plt priv/plts/*.plt
@@ -222,12 +238,14 @@ mix dialyzer --plt
 ```
 
 ### Memory Issues
+
 ```bash
 # Increase VM memory
 elixir --erl "+hms 4096" -S mix dialyzer
 ```
 
 ### Slow Analysis
+
 ```bash
 # Use incremental mode
 mix dialyzer --incremental
