@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Han - The Bushido Code Marketplace',
   description:
-    'A curated marketplace of Claude Code plugins that embody the principles of ethical and professional software development.',
+    'Sophisticated Claude Code plugins with superior accuracy, built on the foundation of the seven Bushido virtues.',
   keywords: [
     'claude',
     'claude-code',
