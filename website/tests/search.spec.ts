@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Search Page', () => {
   test('should load the search page', async ({ page }) => {
@@ -14,8 +14,12 @@ test.describe('Search Page', () => {
 
   test('should show quick links', async ({ page }) => {
     await page.goto('/search');
-    await expect(page.getByRole('link', { name: /browse by tags/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /all plugins/i })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /browse by tags/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /all plugins/i })
+    ).toBeVisible();
   });
 
   test('should navigate to tags page from quick links', async ({ page }) => {

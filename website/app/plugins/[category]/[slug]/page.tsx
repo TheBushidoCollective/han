@@ -1,12 +1,16 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getAllPlugins, getAllPluginsAcrossCategories, getPluginContent } from '../../../../lib/plugins';
-import InstallationTabs from '../../../components/InstallationTabs';
-import Sidebar from '../../../components/Sidebar';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import {
+  getAllPlugins,
+  getAllPluginsAcrossCategories,
+  getPluginContent,
+} from '../../../../lib/plugins';
 import Header from '../../../components/Header';
+import InstallationTabs from '../../../components/InstallationTabs';
 import RelatedPlugins from '../../../components/RelatedPlugins';
+import Sidebar from '../../../components/Sidebar';
 
 export async function generateStaticParams() {
   const categories = ['bushido', 'buki', 'do', 'sensei'] as const;
@@ -73,16 +77,28 @@ export default async function PluginPage({
   }
 
   // Load plugin metadata for tags
-  const pluginJsonPath = path.join(process.cwd(), '..', plugin.metadata.category === 'bushido' ? 'bushido' : `${plugin.metadata.category}/${plugin.metadata.name}`, '.claude-plugin/plugin.json');
+  const pluginJsonPath = path.join(
+    process.cwd(),
+    '..',
+    plugin.metadata.category === 'bushido'
+      ? 'bushido'
+      : `${plugin.metadata.category}/${plugin.metadata.name}`,
+    '.claude-plugin/plugin.json'
+  );
   const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf-8'));
   const tags = pluginJson.keywords || [];
 
   // Find related plugins
   const allPlugins = getAllPluginsAcrossCategories();
   const relatedPlugins = allPlugins
-    .filter(p => p.name !== plugin.metadata.name)
-    .map(p => {
-      const pJsonPath = path.join(process.cwd(), '..', p.source, '.claude-plugin/plugin.json');
+    .filter((p) => p.name !== plugin.metadata.name)
+    .map((p) => {
+      const pJsonPath = path.join(
+        process.cwd(),
+        '..',
+        p.source,
+        '.claude-plugin/plugin.json'
+      );
       const pJson = JSON.parse(fs.readFileSync(pJsonPath, 'utf-8'));
       const pTags = pJson.keywords || [];
       const sharedTags = pTags.filter((t: string) => tags.includes(t));
@@ -95,7 +111,7 @@ export default async function PluginPage({
         score: sharedTags.length + sameCategory,
       };
     })
-    .filter(p => p.score > 0)
+    .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 4);
 

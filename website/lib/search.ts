@@ -22,7 +22,13 @@ export interface SearchIndex {
 export interface TagInfo {
   name: string;
   count: number;
-  category: 'all' | 'language' | 'framework' | 'testing' | 'tooling' | 'paradigm';
+  category:
+    | 'all'
+    | 'language'
+    | 'framework'
+    | 'testing'
+    | 'tooling'
+    | 'paradigm';
 }
 
 // Build the search index from all plugins
@@ -34,7 +40,12 @@ export function buildSearchIndex(): SearchIndex {
   for (const plugin of plugins) {
     const pluginJson = JSON.parse(
       fs.readFileSync(
-        path.join(process.cwd(), '..', plugin.source, '.claude-plugin/plugin.json'),
+        path.join(
+          process.cwd(),
+          '..',
+          plugin.source,
+          '.claude-plugin/plugin.json'
+        ),
         'utf-8'
       )
     );
@@ -56,32 +67,93 @@ export function buildSearchIndex(): SearchIndex {
       category: plugin.category,
       tags,
       path: `/plugins/${plugin.category}/${plugin.name}`,
-      searchText: [
-        plugin.name,
-        plugin.description,
-        ...tags,
-        plugin.category,
-      ].join(' ').toLowerCase(),
+      searchText: [plugin.name, plugin.description, ...tags, plugin.category]
+        .join(' ')
+        .toLowerCase(),
     });
   }
 
   // Convert tag counts to TagInfo
-  const tags: TagInfo[] = Array.from(tagCounts.entries()).map(([name, count]) => ({
-    name,
-    count,
-    category: categorizeTag(name),
-  })).sort((a, b) => b.count - a.count);
+  const tags: TagInfo[] = Array.from(tagCounts.entries())
+    .map(([name, count]) => ({
+      name,
+      count,
+      category: categorizeTag(name),
+    }))
+    .sort((a, b) => b.count - a.count);
 
   return { entries, tags };
 }
 
 // Categorize tags for better organization
 function categorizeTag(tag: string): TagInfo['category'] {
-  const languageTags = ['javascript', 'typescript', 'python', 'java', 'go', 'rust', 'ruby', 'elixir', 'erlang', 'php', 'swift', 'kotlin', 'scala', 'csharp', 'cpp', 'c', 'lua', 'crystal', 'nim', 'gleam', 'objective-c'];
-  const frameworkTags = ['react', 'nextjs', 'vue', 'angular', 'django', 'rails', 'nestjs', 'fastapi', 'phoenix', 'express', 'flask'];
-  const testingTags = ['testing', 'jest', 'cypress', 'playwright', 'vitest', 'mocha', 'rspec', 'pytest', 'junit', 'testng', 'cucumber', 'bdd'];
-  const toolingTags = ['linting', 'formatting', 'biome', 'eslint', 'prettier', 'rubocop', 'clippy', 'pylint', 'checkstyle'];
-  const paradigmTags = ['functional-programming', 'oop', 'object-oriented', 'fp'];
+  const languageTags = [
+    'javascript',
+    'typescript',
+    'python',
+    'java',
+    'go',
+    'rust',
+    'ruby',
+    'elixir',
+    'erlang',
+    'php',
+    'swift',
+    'kotlin',
+    'scala',
+    'csharp',
+    'cpp',
+    'c',
+    'lua',
+    'crystal',
+    'nim',
+    'gleam',
+    'objective-c',
+  ];
+  const frameworkTags = [
+    'react',
+    'nextjs',
+    'vue',
+    'angular',
+    'django',
+    'rails',
+    'nestjs',
+    'fastapi',
+    'phoenix',
+    'express',
+    'flask',
+  ];
+  const testingTags = [
+    'testing',
+    'jest',
+    'cypress',
+    'playwright',
+    'vitest',
+    'mocha',
+    'rspec',
+    'pytest',
+    'junit',
+    'testng',
+    'cucumber',
+    'bdd',
+  ];
+  const toolingTags = [
+    'linting',
+    'formatting',
+    'biome',
+    'eslint',
+    'prettier',
+    'rubocop',
+    'clippy',
+    'pylint',
+    'checkstyle',
+  ];
+  const paradigmTags = [
+    'functional-programming',
+    'oop',
+    'object-oriented',
+    'fp',
+  ];
 
   const lowerTag = tag.toLowerCase();
 
@@ -95,10 +167,14 @@ function categorizeTag(tag: string): TagInfo['category'] {
 }
 
 // Search the index
-export function searchIndex(index: SearchIndex, query: string, filters?: {
-  category?: string;
-  tags?: string[];
-}): SearchIndexEntry[] {
+export function searchIndex(
+  index: SearchIndex,
+  query: string,
+  filters?: {
+    category?: string;
+    tags?: string[];
+  }
+): SearchIndexEntry[] {
   const lowerQuery = query.toLowerCase().trim();
 
   if (!lowerQuery && !filters?.tags?.length) {
@@ -109,25 +185,25 @@ export function searchIndex(index: SearchIndex, query: string, filters?: {
 
   // Filter by category
   if (filters?.category) {
-    results = results.filter(entry => entry.category === filters.category);
+    results = results.filter((entry) => entry.category === filters.category);
   }
 
   // Filter by tags
   if (filters?.tags?.length) {
-    results = results.filter(entry =>
-      filters.tags!.some(tag => entry.tags.includes(tag))
+    results = results.filter((entry) =>
+      filters.tags?.some((tag) => entry.tags.includes(tag))
     );
   }
 
   // Search query
   if (lowerQuery) {
-    results = results.filter(entry => {
+    results = results.filter((entry) => {
       // Exact name match gets highest priority
       if (entry.name.toLowerCase() === lowerQuery) return true;
 
       // Check if search text contains all query terms
       const terms = lowerQuery.split(/\s+/);
-      return terms.every(term => entry.searchText.includes(term));
+      return terms.every((term) => entry.searchText.includes(term));
     });
 
     // Sort by relevance
@@ -146,7 +222,11 @@ export function searchIndex(index: SearchIndex, query: string, filters?: {
 }
 
 // Get suggestions for autocomplete
-export function getSuggestions(index: SearchIndex, query: string, limit = 5): string[] {
+export function getSuggestions(
+  index: SearchIndex,
+  query: string,
+  limit = 5
+): string[] {
   const lowerQuery = query.toLowerCase().trim();
 
   if (!lowerQuery) return [];
@@ -180,23 +260,23 @@ export function findRelatedPlugins(
   pluginName: string,
   limit = 4
 ): SearchIndexEntry[] {
-  const plugin = index.entries.find(e => e.name === pluginName);
+  const plugin = index.entries.find((e) => e.name === pluginName);
   if (!plugin) return [];
 
   const related = index.entries
-    .filter(e => e.name !== pluginName)
-    .map(entry => {
-      const sharedTags = entry.tags.filter(tag => plugin.tags.includes(tag));
+    .filter((e) => e.name !== pluginName)
+    .map((entry) => {
+      const sharedTags = entry.tags.filter((tag) => plugin.tags.includes(tag));
       const sameCategory = entry.category === plugin.category ? 1 : 0;
       return {
         entry,
         score: sharedTags.length + sameCategory,
       };
     })
-    .filter(r => r.score > 0)
+    .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(r => r.entry);
+    .map((r) => r.entry);
 
   return related;
 }

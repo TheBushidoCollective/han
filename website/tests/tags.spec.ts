@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Tags Page', () => {
   test('should load the tags page', async ({ page }) => {
@@ -27,7 +27,9 @@ test.describe('Tags Page', () => {
     await page.waitForTimeout(300);
 
     // Should show TypeScript related tags
-    const allTags = page.locator('button[type="button"]').filter({ hasText: /.+/ });
+    const allTags = page
+      .locator('button[type="button"]')
+      .filter({ hasText: /.+/ });
     const count = await allTags.count();
     expect(count).toBeGreaterThan(0);
   });

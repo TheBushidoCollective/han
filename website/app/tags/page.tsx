@@ -1,8 +1,8 @@
-import { getAllPluginsAcrossCategories } from '@/lib/plugins';
 import fs from 'node:fs';
 import path from 'node:path';
-import TagsClient from '../components/TagsClient';
+import { getAllPluginsAcrossCategories } from '@/lib/plugins';
 import Header from '../components/Header';
+import TagsClient from '../components/TagsClient';
 
 interface TagWithPlugins {
   name: string;
@@ -24,7 +24,12 @@ export default function TagsPage() {
   for (const plugin of plugins) {
     const pluginJson = JSON.parse(
       fs.readFileSync(
-        path.join(process.cwd(), '..', plugin.source, '.claude-plugin/plugin.json'),
+        path.join(
+          process.cwd(),
+          '..',
+          plugin.source,
+          '.claude-plugin/plugin.json'
+        ),
         'utf-8'
       )
     );
@@ -40,7 +45,9 @@ export default function TagsPage() {
         });
       }
 
-      const tagInfo = tagsMap.get(tag)!;
+      const tagInfo = tagsMap.get(tag);
+      if (!tagInfo) continue;
+
       tagInfo.count++;
       tagInfo.plugins.push({
         name: plugin.name,
@@ -51,7 +58,9 @@ export default function TagsPage() {
     }
   }
 
-  const allTags = Array.from(tagsMap.values()).sort((a, b) => b.count - a.count);
+  const allTags = Array.from(tagsMap.values()).sort(
+    (a, b) => b.count - a.count
+  );
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -67,7 +76,7 @@ export default function TagsPage() {
           </p>
         </div>
 
-        <TagsClient allTags={allTags} pluginCount={plugins.length} />
+        <TagsClient allTags={allTags} />
       </div>
     </div>
   );

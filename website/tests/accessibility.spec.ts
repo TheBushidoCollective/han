@@ -1,7 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Accessibility', () => {
-  test('home page should have no accessibility violations', async ({ page }) => {
+  test('home page should have no accessibility violations', async ({
+    page,
+  }) => {
     await page.goto('/');
 
     // Check for essential accessibility features
