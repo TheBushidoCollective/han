@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { render } from 'ink';
@@ -39,27 +38,21 @@ export interface DetectPluginsCallbacks {
   onError: (error: Error) => void;
 }
 
-type SettingsScope = 'local' | 'project' | 'user';
-
-function getClaudeSettingsPath(scope: SettingsScope = 'user'): string {
-  if (scope === 'user') {
-    // User-level settings in home directory
-    return join(homedir(), '.claude', 'settings.json');
-  }
-  // local and project both use current working directory
+function getClaudeSettingsPath(): string {
+  // Always use project-level settings in current working directory
   return join(process.cwd(), '.claude', 'settings.json');
 }
 
-function ensureClaudeDirectory(scope: SettingsScope = 'user'): void {
-  const settingsPath = getClaudeSettingsPath(scope);
+function ensureClaudeDirectory(): void {
+  const settingsPath = getClaudeSettingsPath();
   const claudeDir = join(settingsPath, '..');
   if (!existsSync(claudeDir)) {
     mkdirSync(claudeDir, { recursive: true });
   }
 }
 
-function readOrCreateSettings(scope: SettingsScope = 'user'): ClaudeSettings {
-  const settingsPath = getClaudeSettingsPath(scope);
+function readOrCreateSettings(): ClaudeSettings {
+  const settingsPath = getClaudeSettingsPath();
 
   if (existsSync(settingsPath)) {
     try {
@@ -73,19 +66,16 @@ function readOrCreateSettings(scope: SettingsScope = 'user'): ClaudeSettings {
   return {};
 }
 
-function writeSettings(
-  settings: ClaudeSettings,
-  scope: SettingsScope = 'user'
-): void {
-  const settingsPath = getClaudeSettingsPath(scope);
+function writeSettings(settings: ClaudeSettings): void {
+  const settingsPath = getClaudeSettingsPath();
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
 /**
  * Get currently installed Han plugins
  */
-function getInstalledPlugins(scope: SettingsScope = 'user'): string[] {
-  const settings = readOrCreateSettings(scope);
+function getInstalledPlugins(): string[] {
+  const settings = readOrCreateSettings();
   const enabledPlugins = settings.enabledPlugins || {};
 
   return Object.keys(enabledPlugins)
@@ -205,14 +195,11 @@ function parsePluginRecommendations(content: string): string[] {
 /**
  * Compare current plugins with recommended plugins and update settings
  */
-function alignPluginsInSettings(
-  recommendedPlugins: string[],
-  scope: SettingsScope = 'user'
-): AlignResult {
-  ensureClaudeDirectory(scope);
+function alignPluginsInSettings(recommendedPlugins: string[]): AlignResult {
+  ensureClaudeDirectory();
 
-  const settings = readOrCreateSettings(scope);
-  const currentPlugins = getInstalledPlugins(scope);
+  const settings = readOrCreateSettings();
+  const currentPlugins = getInstalledPlugins();
 
   // Calculate differences
   const added: string[] = [];
@@ -250,7 +237,7 @@ function alignPluginsInSettings(
     }
   }
 
-  writeSettings(settings, scope);
+  writeSettings(settings);
 
   return { added, removed, unchanged };
 }
@@ -258,7 +245,7 @@ function alignPluginsInSettings(
 /**
  * SDK-based align command with Ink UI
  */
-export async function align(scope: SettingsScope = 'user'): Promise<void> {
+export async function align(): Promise<void> {
   // Import Ink UI component dynamically
   const { AlignProgress } = await import('./align-progress.js');
 
@@ -270,15 +257,13 @@ export async function align(scope: SettingsScope = 'user'): Promise<void> {
     rejectCompletion = reject;
   });
 
-  const scopeLabel =
-    scope === 'user' ? '~/.claude/settings.json' : './.claude/settings.json';
-  console.log(`Aligning plugins in ${scopeLabel}...\n`);
+  console.log('Aligning plugins in ./.claude/settings.json...\n');
 
   const { unmount } = render(
     React.createElement(AlignProgress, {
       detectPlugins: detectPluginsWithAgent,
       onAlignComplete: (plugins: string[]) => {
-        const result = alignPluginsInSettings(plugins, scope);
+        const result = alignPluginsInSettings(plugins);
 
         // Report changes
         if (result.added.length > 0) {
@@ -294,9 +279,7 @@ export async function align(scope: SettingsScope = 'user'): Promise<void> {
         if (result.added.length === 0 && result.removed.length === 0) {
           console.log('\n✓ No changes needed - plugins are already aligned');
         } else {
-          console.log(
-            '\n💡 Restart Claude Code to load the plugin changes.'
-          );
+          console.log('\n💡 Restart Claude Code to load the plugin changes.');
         }
 
         if (resolveCompletion) resolveCompletion();

@@ -19,25 +19,11 @@ program
 // Install command
 program
   .command('install')
-  .description('Install Han marketplace and plugins')
-  .option(
-    '--scope <scope>',
-    'Installation scope: local (project), project, or user',
-    'user'
-  )
-  .action(async (options: { scope: string }) => {
+  .description('Install Han marketplace and plugins to ./.claude/settings.json')
+  .action(async () => {
     try {
-      // Validate scope
-      const validScopes = ['local', 'project', 'user'];
-      if (!validScopes.includes(options.scope)) {
-        console.error(
-          `Invalid scope "${options.scope}". Must be one of: ${validScopes.join(', ')}`
-        );
-        process.exit(1);
-      }
-
       const { install } = await import('./install.js');
-      await install(options.scope as 'local' | 'project' | 'user');
+      await install();
       process.exit(0);
     } catch (error: unknown) {
       console.error(
@@ -61,25 +47,11 @@ program
 // Align command
 program
   .command('align')
-  .description('Align plugins with current codebase state')
-  .option(
-    '--scope <scope>',
-    'Alignment scope: local (project), project, or user',
-    'user'
-  )
-  .action(async (options: { scope: string }) => {
+  .description('Align plugins with current codebase state in ./.claude/settings.json')
+  .action(async () => {
     try {
-      // Validate scope
-      const validScopes = ['local', 'project', 'user'];
-      if (!validScopes.includes(options.scope)) {
-        console.error(
-          `Invalid scope "${options.scope}". Must be one of: ${validScopes.join(', ')}`
-        );
-        process.exit(1);
-      }
-
       const { align } = await import('./align.js');
-      await align(options.scope as 'local' | 'project' | 'user');
+      await align();
       process.exit(0);
     } catch (error: unknown) {
       console.error(
