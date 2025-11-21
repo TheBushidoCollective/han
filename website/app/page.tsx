@@ -9,9 +9,9 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="text-4xl">⛩️</div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 Han
-              </h1>
+              </div>
             </div>
             <div className="hidden md:flex space-x-8">
               <a
@@ -30,7 +30,7 @@ export default function Home() {
                 href="/docs"
                 className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               >
-                Documentation
+                Docs
               </a>
               <a
                 href="#getting-started"
