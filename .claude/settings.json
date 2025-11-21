@@ -9,8 +9,8 @@
   },
   "enabledPlugins": {
     "bushido@han": true,
-    "do-documentation@han": true,
-    "do-prompter@han": true,
+    "do-technical-documentation@han": true,
+    "do-prompt-engineering@han": true,
     "do-claude-plugin-development@han": true,
     "buki-biome@han": true,
     "buki-typescript@han": true,
