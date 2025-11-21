@@ -93,30 +93,47 @@ async function detectPluginsWithAgent(
 
 Available Plugin Categories:
 - buki-* (武器 weapons): Skills for specific technologies (e.g., buki-typescript, buki-react, buki-go)
-- do-* (道 disciplines): Specialized agents for development practices
+- do-* (道 disciplines): Specialized agents for development practices and workflows
 - sensei-* (先生 teachers): MCP servers for external integrations
-- bushido: Core quality and testing principles
+- bushido: Core quality and testing principles (ALWAYS recommend this)
 
 Your Task:
 1. Use Glob to discover what files exist in the repository
 2. Use Grep to search for framework/library usage patterns
 3. Read key configuration files (package.json, Cargo.toml, go.mod, etc.)
 4. Get the latest han plugins from the marketplace https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json
-5. Recommend Han plugins that match the detected technologies
+5. Recommend BOTH buki-* plugins for technologies AND do-* plugins for development practices
 6. Return your recommendations as a JSON array of plugin names
 
-Focus on detecting:
-- Programming languages (TypeScript, Python, Go, Rust, Ruby, etc.)
-- Frontend frameworks (React, Vue, Angular, Next.js, etc.)
-- Backend frameworks (NestJS, Django, FastAPI, Rails, etc.)
-- Testing frameworks (Jest, Pytest, RSpec, etc.)
-- GraphQL implementations
-- Monorepo tools (Nx, Turborepo, Lerna)
+Technology Detection (buki-* plugins):
+- Programming languages (TypeScript → buki-typescript, Python → buki-python, Go → buki-go, Rust → buki-rust, etc.)
+- Frontend frameworks (React → buki-react, Vue → buki-vue, Angular → buki-angular, Next.js → buki-nextjs)
+- Backend frameworks (NestJS → buki-nestjs, Django → buki-django, FastAPI → buki-fastapi, Rails → buki-rails)
+- Testing frameworks (Jest → buki-jest, Pytest → buki-pytest, Playwright → buki-playwright, Cypress → buki-cypress)
+- GraphQL (buki-graphql, buki-apollo-graphql, buki-relay)
+- Monorepo tools (buki-monorepo for Nx, Turborepo, Lerna)
+
+Development Practice Detection (do-* plugins):
+- Frontend work (components/, views/, pages/ folders) → do-frontend-development
+- Backend work (api/, services/, controllers/ folders) → do-backend-development
+- Testing presence (test/, __tests__/, spec/ folders) → do-quality-assurance
+- Infrastructure files (Dockerfile, kubernetes/, terraform/) → do-infrastructure
+- Documentation (docs/, README files) → do-technical-documentation
+- Mobile apps (ios/, android/, mobile/ folders) → do-mobile-development
+- API design (openapi.yaml, api/ routes) → do-api-engineering
+- Database work (migrations/, models/, schemas/) → do-database-engineering
+- Security focus (security/, auth/, encryption/) → do-security-engineering
+- Performance monitoring (monitoring/, observability/) → do-observability-engineering
+- System design (architecture docs, system diagrams) → do-architecture
+- Product planning (roadmap, specs) → do-product-management
+- AI/ML work (models/, training/, inference/) → do-machine-learning-engineering
+
+IMPORTANT: Recommend 2-5 do-* discipline plugins based on the type of work being done, not just the technologies used.
 
 Return ONLY a JSON array of recommended plugin names, like:
-["bushido", "buki-typescript", "buki-react", "buki-jest"]
+["bushido", "buki-typescript", "buki-react", "buki-jest", "do-frontend-development", "do-quality-assurance"]
 
-ULTRATHINK and Analyze this codebase and recommend appropriate Han plugins.`;
+ULTRATHINK and analyze this codebase to recommend appropriate Han plugins including BOTH technology skills (buki-*) AND development disciplines (do-*).`;
 
   // Define allowed tools - only read-only operations
   const allowedTools: string[] = ['web_fetch', 'read_file', 'glob', 'grep'];
