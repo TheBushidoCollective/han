@@ -56,11 +56,7 @@ npx @thebushidocollective/han install
 **After installation:**
 Restart Claude Code to load the new plugins.
 
-**Options:**
-
-- `--scope <scope>` - Installation scope: `local`, `project`, or `user` (default: `user`)
-  - `user`: Installs to `~/.claude/settings.json`
-  - `local`/`project`: Installs to `./.claude/settings.json`
+**Note:** `han install` always installs to `./.claude/settings.json` in your current project directory. For user-level plugin management, use Claude Code's native plugin system.
 
 ### align
 
@@ -85,9 +81,7 @@ npx @thebushidocollective/han align
 - Periodically to keep plugins in sync with your codebase
 - Automatically via a Stop hook (see below)
 
-**Options:**
-
-- `--scope <scope>` - Alignment scope: `local`, `project`, or `user` (default: `user`)
+**Note:** `han align` operates on `./.claude/settings.json` in your current project directory.
 
 **Automatic Alignment:**
 

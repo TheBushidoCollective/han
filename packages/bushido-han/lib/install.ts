@@ -33,27 +33,21 @@ export interface DetectPluginsCallbacks {
   onError: (error: Error) => void;
 }
 
-type SettingsScope = 'local' | 'project' | 'user';
-
-function getClaudeSettingsPath(scope: SettingsScope = 'user'): string {
-  if (scope === 'user') {
-    // User-level settings in home directory
-    return join(homedir(), '.claude', 'settings.json');
-  }
-  // local and project both use current working directory
+function getClaudeSettingsPath(): string {
+  // Always use project-level settings in current working directory
   return join(process.cwd(), '.claude', 'settings.json');
 }
 
-function ensureClaudeDirectory(scope: SettingsScope = 'user'): void {
-  const settingsPath = getClaudeSettingsPath(scope);
+function ensureClaudeDirectory(): void {
+  const settingsPath = getClaudeSettingsPath();
   const claudeDir = join(settingsPath, '..');
   if (!existsSync(claudeDir)) {
     mkdirSync(claudeDir, { recursive: true });
   }
 }
 
-function readOrCreateSettings(scope: SettingsScope = 'user'): ClaudeSettings {
-  const settingsPath = getClaudeSettingsPath(scope);
+function readOrCreateSettings(): ClaudeSettings {
+  const settingsPath = getClaudeSettingsPath();
 
   if (existsSync(settingsPath)) {
     try {
@@ -67,11 +61,8 @@ function readOrCreateSettings(scope: SettingsScope = 'user'): ClaudeSettings {
   return {};
 }
 
-function writeSettings(
-  settings: ClaudeSettings,
-  scope: SettingsScope = 'user'
-): void {
-  const settingsPath = getClaudeSettingsPath(scope);
+function writeSettings(settings: ClaudeSettings): void {
+  const settingsPath = getClaudeSettingsPath();
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
@@ -187,8 +178,8 @@ function parsePluginRecommendations(content: string): string[] {
 /**
  * Get currently installed Han plugins
  */
-function getInstalledPlugins(scope: SettingsScope = 'user'): string[] {
-  const settings = readOrCreateSettings(scope);
+function getInstalledPlugins(): string[] {
+  const settings = readOrCreateSettings();
   const enabledPlugins = settings.enabledPlugins || {};
 
   return Object.keys(enabledPlugins)
@@ -199,14 +190,11 @@ function getInstalledPlugins(scope: SettingsScope = 'user'): string[] {
 /**
  * Install plugins to Claude settings and return list of added plugins
  */
-function installPluginsToSettings(
-  plugins: string[],
-  scope: SettingsScope = 'user'
-): string[] {
-  ensureClaudeDirectory(scope);
+function installPluginsToSettings(plugins: string[]): string[] {
+  ensureClaudeDirectory();
 
-  const settings = readOrCreateSettings(scope);
-  const currentPlugins = getInstalledPlugins(scope);
+  const settings = readOrCreateSettings();
+  const currentPlugins = getInstalledPlugins();
   const added: string[] = [];
 
   // Add Han marketplace to extraMarketplaces
@@ -228,7 +216,7 @@ function installPluginsToSettings(
     };
   }
 
-  writeSettings(settings, scope);
+  writeSettings(settings);
 
   return added;
 }
@@ -236,7 +224,7 @@ function installPluginsToSettings(
 /**
  * SDK-based install command with Ink UI
  */
-export async function install(scope: SettingsScope = 'user'): Promise<void> {
+export async function install(): Promise<void> {
   // Import Ink UI component dynamically to avoid issues with React
   const { InstallProgress } = await import('./install-progress.js');
 
@@ -248,15 +236,13 @@ export async function install(scope: SettingsScope = 'user'): Promise<void> {
     rejectCompletion = reject;
   });
 
-  const scopeLabel =
-    scope === 'user' ? '~/.claude/settings.json' : './.claude/settings.json';
-  console.log(`Installing to ${scopeLabel}...\n`);
+  console.log('Installing to ./.claude/settings.json...\n');
 
   const { unmount } = render(
     React.createElement(InstallProgress, {
       detectPlugins: detectPluginsWithAgent,
       onInstallComplete: (plugins: string[]) => {
-        const added = installPluginsToSettings(plugins, scope);
+        const added = installPluginsToSettings(plugins);
         if (added.length > 0) {
           console.log(
             `\n✓ Added ${added.length} plugin(s): ${added.join(', ')}`
