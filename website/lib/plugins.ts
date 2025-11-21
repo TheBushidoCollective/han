@@ -119,6 +119,43 @@ function getPluginMetadata(
   }
 }
 
+// Get all plugins across all categories from marketplace.json
+export function getAllPluginsAcrossCategories(): Array<
+  PluginMetadata & { source: string }
+> {
+  try {
+    const marketplacePath = path.join(
+      PLUGINS_DIR,
+      '.claude-plugin',
+      'marketplace.json'
+    );
+    const marketplaceData = JSON.parse(
+      fs.readFileSync(marketplacePath, 'utf-8')
+    );
+
+    const plugins: Array<PluginMetadata & { source: string }> = [];
+
+    for (const plugin of marketplaceData.plugins) {
+      const pluginCategory = getCategoryFromMarketplace(plugin.category);
+      const pluginName = plugin.source.split('/').pop() || plugin.name;
+      const pluginPath = path.join(
+        PLUGINS_DIR,
+        plugin.source.replace('./', '')
+      );
+      const metadata = getPluginMetadata(pluginPath, pluginName, pluginCategory);
+      plugins.push({
+        ...metadata,
+        source: plugin.source,
+      });
+    }
+
+    return plugins.sort((a, b) => a.title.localeCompare(b.title));
+  } catch (error) {
+    console.error('Error reading all plugins:', error);
+    return [];
+  }
+}
+
 // Get all plugins in a category from marketplace.json
 export function getAllPlugins(
   category: 'bushido' | 'buki' | 'do' | 'sensei'

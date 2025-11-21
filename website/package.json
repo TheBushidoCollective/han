@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "export": "next build && next export"
+    "export": "next build && next export",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
   },
   "dependencies": {
+    "fuse.js": "^7.1.0",
     "gray-matter": "^4.0.3",
     "next": "^15.0.3",
     "react": "^19.0.0",
@@ -18,9 +22,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.6",
+    "@playwright/test": "^1.56.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^22.9.3",
     "@types/react": "^19.0.1",
-    "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
