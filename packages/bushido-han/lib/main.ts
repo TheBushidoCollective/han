@@ -58,6 +58,38 @@ program
     process.exit(0);
   });
 
+// Align command
+program
+  .command('align')
+  .description('Align plugins with current codebase state')
+  .option(
+    '--scope <scope>',
+    'Alignment scope: local (project), project, or user',
+    'user'
+  )
+  .action(async (options: { scope: string }) => {
+    try {
+      // Validate scope
+      const validScopes = ['local', 'project', 'user'];
+      if (!validScopes.includes(options.scope)) {
+        console.error(
+          `Invalid scope "${options.scope}". Must be one of: ${validScopes.join(', ')}`
+        );
+        process.exit(1);
+      }
+
+      const { align } = await import('./align.js');
+      await align(options.scope as 'local' | 'project' | 'user');
+      process.exit(0);
+    } catch (error: unknown) {
+      console.error(
+        'Error during alignment:',
+        error instanceof Error ? error.message : error
+      );
+      process.exit(1);
+    }
+  });
+
 // Validate command
 program
   .command('validate')
