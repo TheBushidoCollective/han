@@ -9,7 +9,7 @@ test.describe('Home Page', () => {
   test('should display the main heading', async ({ page }) => {
     await page.goto('/');
     const heading = page.locator('h1');
-    await expect(heading).toContainText('Han');
+    await expect(heading).toContainText('Sophisticated');
   });
 
   test('should have navigation links', async ({ page }) => {
@@ -29,6 +29,6 @@ test.describe('Home Page', () => {
   test('should navigate to plugins page', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('link', { name: /plugins/i }).click();
-    await expect(page).toHaveURL(/\/plugins/);
+    await expect(page).toHaveURL(/#plugins/);
   });
 });

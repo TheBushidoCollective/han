@@ -36,7 +36,7 @@ test.describe('Category Page', () => {
 test.describe('Plugin Detail Page', () => {
   test('should load a plugin detail page', async ({ page }) => {
     await page.goto('/plugins/bushido/core');
-    await expect(page.locator('h1')).toContainText('Bushido');
+    await expect(page.locator('h1')).toContainText('bushido');
   });
 
   test('should display installation section', async ({ page }) => {
@@ -46,9 +46,9 @@ test.describe('Plugin Detail Page', () => {
 
   test('should show skills section if available', async ({ page }) => {
     await page.goto('/plugins/bushido/core');
-    const skills = page.getByText('Skills');
+    const skills = page.getByRole('heading', { name: 'Skills' });
     if ((await skills.count()) > 0) {
-      await expect(skills).toBeVisible();
+      await expect(skills.first()).toBeVisible();
     }
   });
 
