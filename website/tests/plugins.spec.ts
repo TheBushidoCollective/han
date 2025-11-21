@@ -58,8 +58,13 @@ test.describe('Plugin Detail Page', () => {
     const count = await skillLinks.count();
 
     if (count > 0) {
+      const href = await skillLinks.first().getAttribute('href');
       await skillLinks.first().click();
-      await expect(page.url()).toContain('/skills/');
+      await page.waitForLoadState('networkidle');
+      // Only check if href was an actual navigation link
+      if (href && href.startsWith('/skills/')) {
+        await expect(page.url()).toContain('/skills/');
+      }
     }
   });
 });

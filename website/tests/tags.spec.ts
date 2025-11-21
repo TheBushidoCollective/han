@@ -37,7 +37,7 @@ test.describe('Tags Page', () => {
   test('should display popular categories', async ({ page }) => {
     await page.goto('/tags');
     await expect(page.getByText('Popular Categories')).toBeVisible();
-    await expect(page.getByText('language', { exact: false })).toBeVisible();
-    await expect(page.getByText('framework', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'language' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'framework' })).toBeVisible();
   });
 });
