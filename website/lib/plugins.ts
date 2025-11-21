@@ -33,9 +33,16 @@ export interface HookCommand {
   command: string;
 }
 
+export interface HookFile {
+  name: string;
+  path: string;
+  content: string;
+}
+
 export interface HookSection {
   section: string;
   commands: string[];
+  files: HookFile[];
 }
 
 interface Hook {
@@ -272,6 +279,7 @@ function getPluginSkills(pluginPath: string): SkillMetadata[] {
 function getPluginHooks(pluginPath: string): HookSection[] {
   const hookSections: HookSection[] = [];
   const hooksFile = path.join(pluginPath, 'hooks', 'hooks.json');
+  const hooksDir = path.join(pluginPath, 'hooks');
 
   if (!fs.existsSync(hooksFile)) return hookSections;
 
@@ -280,9 +288,28 @@ function getPluginHooks(pluginPath: string): HookSection[] {
       fs.readFileSync(hooksFile, 'utf-8')
     ) as HooksData;
 
+    // Get all files in hooks folder
+    const allHookFiles: HookFile[] = [];
+    if (fs.existsSync(hooksDir)) {
+      const files = fs
+        .readdirSync(hooksDir)
+        .filter((file) => file.endsWith('.md'));
+
+      for (const file of files) {
+        const filePath = path.join(hooksDir, file);
+        const content = fs.readFileSync(filePath, 'utf-8');
+        allHookFiles.push({
+          name: path.basename(file, '.md'),
+          path: file,
+          content,
+        });
+      }
+    }
+
     if (hooksData.hooks) {
       for (const [section, hookArrays] of Object.entries(hooksData.hooks)) {
         const commands: string[] = [];
+        const referencedFiles: HookFile[] = [];
 
         // Each section contains an array of hook objects
         for (const hookArray of hookArrays) {
@@ -290,6 +317,24 @@ function getPluginHooks(pluginPath: string): HookSection[] {
             for (const hook of hookArray.hooks) {
               if (hook.command) {
                 commands.push(hook.command);
+
+                // Extract file references from commands
+                // Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md"
+                const fileMatch = hook.command.match(
+                  /hooks\/([a-zA-Z0-9_-]+\.md)/
+                );
+                if (fileMatch) {
+                  const fileName = fileMatch[1];
+                  const hookFile = allHookFiles.find(
+                    (f) => f.path === fileName
+                  );
+                  if (
+                    hookFile &&
+                    !referencedFiles.some((f) => f.path === fileName)
+                  ) {
+                    referencedFiles.push(hookFile);
+                  }
+                }
               }
             }
           }
@@ -299,6 +344,7 @@ function getPluginHooks(pluginPath: string): HookSection[] {
           hookSections.push({
             section,
             commands,
+            files: referencedFiles,
           });
         }
       }
