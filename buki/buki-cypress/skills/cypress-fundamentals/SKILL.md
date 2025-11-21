@@ -1,6 +1,6 @@
 ---
 name: cypress-fundamentals
-description: Master Cypress fundamentals including commands, assertions, fixtures, and E2E testing patterns.
+description: Use when cypress fundamentals including commands, assertions, fixtures, and E2E testing patterns.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

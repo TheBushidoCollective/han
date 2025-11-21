@@ -1,3 +1,9 @@
+---
+name: ink-layout-styling
+description: Use when creating terminal layouts with Ink using Flexbox-based positioning and styling for CLI applications.
+allowed-tools: []
+---
+
 # Ink Layout and Styling
 
 You are an expert in creating beautiful terminal layouts with Ink using Flexbox-based positioning and styling.

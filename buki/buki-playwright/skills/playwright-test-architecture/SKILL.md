@@ -1,7 +1,6 @@
 ---
 name: playwright-test-architecture
-description: Master Playwright test organization, configuration, and project
-  structure. Use when setting up test projects or organizing test suites.
+description: Use when setting up Playwright test projects and organizing test suites with proper configuration and project structure.
 allowed-tools:
   - Bash
   - Read

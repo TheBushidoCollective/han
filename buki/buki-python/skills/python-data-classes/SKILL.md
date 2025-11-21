@@ -1,7 +1,6 @@
 ---
 name: python-data-classes
-description: Master Python data modeling with dataclasses, attrs, and Pydantic.
-  Use when creating data structures and models.
+description: Use when Python data modeling with dataclasses, attrs, and Pydantic. Use when creating data structures and models.
 allowed-tools:
   - Bash
   - Read

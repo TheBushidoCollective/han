@@ -1,7 +1,6 @@
 ---
 name: c-systems-programming
-description: Master C systems programming including file I/O, processes,
-  signals, and system calls. Use when writing low-level system software.
+description: Use when writing low-level system software in C requiring file I/O, process management, signals, and system calls.
 allowed-tools:
   - Bash
   - Read

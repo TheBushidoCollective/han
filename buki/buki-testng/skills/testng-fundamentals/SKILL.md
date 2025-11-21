@@ -1,6 +1,6 @@
 ---
 name: testng-fundamentals
-description: Master TestNG fundamentals including annotations, test groups, dependencies, and execution order.
+description: Use when testNG fundamentals including annotations, test groups, dependencies, and execution order.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

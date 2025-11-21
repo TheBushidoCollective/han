@@ -1,7 +1,6 @@
 ---
 name: rails-active-record-patterns
-description: Master Active Record patterns including models, associations,
-  queries, validations, and callbacks
+description: Use when active Record patterns including models, associations, queries, validations, and callbacks.
 allowed-tools:
   - Read
   - Write

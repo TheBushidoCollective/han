@@ -1,7 +1,6 @@
 ---
 name: rails-hotwire
-description: Master Hotwire (Turbo and Stimulus) for building modern reactive
-  Rails applications without complex JavaScript frameworks
+description: Use when hotwire (Turbo and Stimulus) for building modern reactive Rails applications without complex JavaScript frameworks.
 allowed-tools:
   - Read
   - Write

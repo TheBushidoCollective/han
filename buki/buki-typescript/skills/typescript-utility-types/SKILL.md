@@ -1,7 +1,6 @@
 ---
 name: typescript-utility-types
-description: Master TypeScript utility types, mapped types, and advanced type
-  manipulation. Use when creating flexible, type-safe TypeScript code.
+description: Use when typeScript utility types, mapped types, and advanced type manipulation. Use when creating flexible, type-safe TypeScript code.
 allowed-tools:
   - Bash
   - Read

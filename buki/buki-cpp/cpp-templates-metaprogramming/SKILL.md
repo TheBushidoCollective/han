@@ -1,7 +1,6 @@
 ---
 name: cpp-templates-metaprogramming
-description: Master C++ templates and metaprogramming including template
-  specialization, SFINAE, type traits, and C++20 concepts
+description: Use when C++ templates and metaprogramming including template specialization, SFINAE, type traits, and C++20 concepts.
 allowed-tools:
   - Read
   - Write

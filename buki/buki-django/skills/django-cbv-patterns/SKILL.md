@@ -1,7 +1,6 @@
 ---
 name: django-cbv-patterns
-description: Master Django Class-Based Views for building modular, reusable views. Use
-  when creating CRUD operations and complex view logic.
+description: Use when Django Class-Based Views for building modular, reusable views. Use when creating CRUD operations and complex view logic.
 allowed-tools:
   - Bash
   - Read

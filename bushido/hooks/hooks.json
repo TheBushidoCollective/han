@@ -1,32 +1,32 @@
 {
-    "hooks": {
-        "SessionStart": [
-            {
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\""
-                    },
-                    {
-                        "type": "command",
-                        "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md\""
-                    }
-                ]
-            }
-        ],
-        "UserPromptSubmit": [
-            {
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md\""
-                    },
-                    {
-                        "type": "command",
-                        "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md\""
-                    }
-                ]
-            }
-        ]
-    }
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\""
+					},
+					{
+						"type": "command",
+						"command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md\""
+					}
+				]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md\""
+					},
+					{
+						"type": "command",
+						"command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md\""
+					}
+				]
+			}
+		]
+	}
 }

@@ -1,9 +1,6 @@
 ---
 name: test-driven-development
-description: Apply test-driven development (TDD) by writing failing tests before
-implementation code
-. Use when writing new functions, adding features, fixing bugs, or refactoring.
-Write test first, make it pass, then refactor.
+description: Use when writing new functions, adding features, fixing bugs, or refactoring by applying TDD principles - write failing tests before implementation code, make them pass, then refactor.
 allowed-tools:
   - Write
   - Read

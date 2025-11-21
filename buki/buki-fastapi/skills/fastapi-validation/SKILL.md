@@ -1,7 +1,6 @@
 ---
 name: fastapi-validation
-description: Master FastAPI validation with Pydantic models. Use when building type-safe
-  APIs with robust request/response validation.
+description: Use when FastAPI validation with Pydantic models. Use when building type-safe APIs with robust request/response validation.
 allowed-tools:
   - Bash
   - Read

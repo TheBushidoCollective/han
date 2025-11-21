@@ -1,6 +1,6 @@
 ---
 name: checkstyle-configuration
-description: Master Checkstyle configuration including XML config, checks, properties, and module setup.
+description: Use when configuring Checkstyle for Java projects with XML config, custom checks, properties, and module setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

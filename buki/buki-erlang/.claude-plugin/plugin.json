@@ -1,13 +1,20 @@
 {
-  "name": "buki-erlang",
-  "version": "1.0.0",
-  "description": "Advanced Erlang programming skills for concurrent and distributed systems",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["erlang", "beam", "otp", "distributed", "concurrent", "skill"]
+	"name": "buki-erlang",
+	"version": "1.0.0",
+	"description": "Advanced Erlang programming skills for concurrent and distributed systems",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"erlang",
+		"beam",
+		"otp",
+		"distributed",
+		"concurrent",
+		"skill"
+	]
 }

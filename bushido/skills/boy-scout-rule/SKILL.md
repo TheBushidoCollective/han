@@ -1,8 +1,6 @@
 ---
 name: boy-scout-rule
-description: Apply the Boy Scout Rule by leaving code better than you found it.
-Use when modifying existing files, refactoring, improving code quality, or
-touching legacy code.
+description: Use when modifying existing files, refactoring, improving code quality, or touching legacy code by applying the Boy Scout Rule to leave code better than you found it.
 allowed-tools:
   - Read
   - Edit

@@ -1,10 +1,9 @@
 {
-  "name": "buki-phoenix",
-  "version": "1.0.0",
-  "description": "Phoenix Framework skills for building web applications",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "skills": ["phoenix-patterns", "phoenix-liveview", "phoenix-channels"]
+	"name": "buki-phoenix",
+	"version": "1.0.0",
+	"description": "Phoenix Framework skills for building web applications",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	}
 }

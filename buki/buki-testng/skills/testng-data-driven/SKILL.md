@@ -1,6 +1,6 @@
 ---
 name: testng-data-driven
-description: Master TestNG data-driven testing with DataProvider, parameters, and external data sources.
+description: Use when testNG data-driven testing with DataProvider, parameters, and external data sources.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

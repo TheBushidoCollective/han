@@ -1,0 +1,65 @@
+name: Validate Han Website
+
+on:
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/validate-website.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - '.github/workflows/validate-website.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./website
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run Biome format check
+        run: biome format --error-on-warnings --files-ignore-unknown=true .
+        working-directory: ./website
+
+      - name: Run Biome lint
+        run: biome lint --error-on-warnings --files-ignore-unknown=true .
+        working-directory: ./website
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        working-directory: ./website
+
+      - name: Setup markdownlint
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdownlint
+        run: markdownlint "**/*.md" --config ../.markdownlint.json --ignore node_modules --ignore .next
+        working-directory: ./website
+
+      - name: Copy marketplace.json
+        run: cp .claude-plugin/marketplace.json website/public/marketplace.json
+
+      - name: Build with Next.js
+        run: npm run build
+        working-directory: ./website
+        env:
+          NODE_ENV: production

@@ -1,6 +1,6 @@
 ---
 name: rspec-fundamentals
-description: Master RSpec fundamentals including describe, context, it blocks, let, and basic matchers for BDD testing.
+description: Use when rSpec fundamentals including describe, context, it blocks, let, and basic matchers for BDD testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

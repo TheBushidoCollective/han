@@ -1,13 +1,19 @@
 {
-  "name": "do-project-management",
-  "version": "1.0.0",
-  "description": "Agents specialized in project coordination and technical leadership. Focuses on workflow coordination and team dynamics.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["project-management", "coordination", "leadership", "team", "agent"]
+	"name": "do-project-management",
+	"version": "1.0.0",
+	"description": "Agents specialized in project coordination and technical leadership. Focuses on workflow coordination and team dynamics.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"project-management",
+		"coordination",
+		"leadership",
+		"team",
+		"agent"
+	]
 }

@@ -1,8 +1,6 @@
 ---
 name: baseline-restorer
-description: Systematically restore to working baseline and reimplement instead
-of fixing broken code
-. Use when multiple fix attempts fail.
+description: Use when multiple fix attempts fail and you need to systematically restore to a working baseline and reimplement instead of fixing broken code.
 allowed-tools:
   - Read
   - Bash

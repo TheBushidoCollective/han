@@ -1,3 +1,9 @@
+---
+name: helm-values
+description: Use when managing Helm values files and configuration overrides for customizing Kubernetes deployments.
+allowed-tools: []
+---
+
 # Helm Values
 
 Managing values files and configuration overrides in Helm.

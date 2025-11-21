@@ -1,9 +1,6 @@
 ---
 name: Scala Collections
-description: >
-  Master Scala collections including immutable/mutable variants, List, Vector,
-  Set, Map operations, collection transformations, lazy evaluation with views,
-  parallel collections, and custom collection builders for efficient data processing.
+description: Use when scala collections including immutable/mutable variants, List, Vector, Set, Map operations, collection transformations, lazy evaluation with views, parallel collections, and custom collection builders for efficient data processing.
 allowed-tools: []
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: mocha-fundamentals
-description: Master Mocha test structure, hooks, and async testing patterns for JavaScript testing.
+description: Use when mocha test structure, hooks, and async testing patterns for JavaScript testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

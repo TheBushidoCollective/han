@@ -21,14 +21,12 @@ This plugin provides the following skills:
 
 ## Usage
 
-Skills can be invoked using the Skill tool:
+Once enabled, Claude will automatically apply these foundational principles and quality practices. The plugin provides:
 
-```javascript
-Skill("bushido:baseline-restorer")
-```
-
-These skills enforce the core principles of the
-Bushido philosophy in software development.
+- Enforcement of software engineering best practices
+- Guidance on code quality and maintainability
+- Structural design principles and patterns
+- Professional development standards
 
 ## License
 

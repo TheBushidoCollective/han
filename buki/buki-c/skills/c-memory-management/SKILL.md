@@ -1,7 +1,6 @@
 ---
 name: c-memory-management
-description: Master C memory management including malloc/free, pointers, memory
-  safety, and common pitfalls
+description: Use when managing memory in C programs with malloc/free, pointers, and avoiding common memory safety pitfalls.
 allowed-tools:
   - Read
   - Write

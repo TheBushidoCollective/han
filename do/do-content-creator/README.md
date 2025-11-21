@@ -1,6 +1,4 @@
-# do-content-creator (道)
-
-> **道** (dō) - "the way" or "discipline"
+# Content Creator
 
 Specialized agents for creating engaging content across various formats and target audiences. These agents embody the discipline of effective communication, storytelling, and audience engagement.
 
@@ -345,4 +343,4 @@ MIT
 
 Part of [The Bushido Collective](https://thebushido.co) - Building better software through discipline and craftsmanship.
 
-For issues or suggestions: [GitHub Issues](https://github.com/thebushidocollective/sensei/issues)
+For issues or suggestions: [GitHub Issues](https://github.com/thebushidocollective/han/issues)

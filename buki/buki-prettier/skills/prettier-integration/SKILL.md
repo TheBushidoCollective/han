@@ -1,6 +1,6 @@
 ---
 name: prettier-integration
-description: Master Prettier integration with editors, pre-commit hooks, ESLint, and CI/CD pipelines.
+description: Use when prettier integration with editors, pre-commit hooks, ESLint, and CI/CD pipelines.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

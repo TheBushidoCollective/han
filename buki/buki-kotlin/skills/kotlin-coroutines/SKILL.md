@@ -1,9 +1,6 @@
 ---
 name: Kotlin Coroutines
-description: >
-  Master Kotlin coroutines for structured concurrency including suspend
-  functions, coroutine builders, Flow, channels, and patterns for building
-  efficient asynchronous code with cancellation and exception handling.
+description: Use when kotlin coroutines for structured concurrency including suspend functions, coroutine builders, Flow, channels, and patterns for building efficient asynchronous code with cancellation and exception handling.
 allowed-tools: []
 ---
 

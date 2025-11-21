@@ -1,6 +1,6 @@
 ---
 name: pylint-configuration
-description: Master Pylint configuration including pylintrc, message control, plugins, and scoring system.
+description: Use when pylint configuration including pylintrc, message control, plugins, and scoring system.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

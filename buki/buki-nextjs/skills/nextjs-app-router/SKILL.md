@@ -1,7 +1,6 @@
 ---
 name: nextjs-app-router
-description: Master Next.js App Router with layouts, loading states, and streaming.
-  Use when building modern Next.js 13+ applications.
+description: Use when next.js App Router with layouts, loading states, and streaming. Use when building modern Next.js 13+ applications.
 allowed-tools:
   - Bash
   - Read

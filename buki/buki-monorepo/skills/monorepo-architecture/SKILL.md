@@ -1,9 +1,6 @@
 ---
 name: monorepo-architecture
-description: Apply monorepo architectural patterns and structure for organizing
-  multiple packages, managing dependencies, and designing scalable workspace
-  configurations. Use when designing monorepo structure, organizing packages,
-  or migrating to monorepo architecture.
+description: Use when designing monorepo structure, organizing packages, or migrating to monorepo architecture with architectural patterns for managing dependencies and scalable workspace configurations.
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep
 ---
 

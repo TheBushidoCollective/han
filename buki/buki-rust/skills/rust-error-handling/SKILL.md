@@ -1,7 +1,6 @@
 ---
 name: rust-error-handling
-description: Master Rust error handling with Result, Option, custom errors,
-  thiserror, and anyhow. Use when handling errors in Rust applications.
+description: Use when Rust error handling with Result, Option, custom errors, thiserror, and anyhow. Use when handling errors in Rust applications.
 allowed-tools:
   - Bash
   - Read

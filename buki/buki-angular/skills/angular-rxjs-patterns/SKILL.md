@@ -1,7 +1,6 @@
 ---
 name: angular-rxjs-patterns
-description: Master RxJS patterns in Angular with observables, operators, and subjects.
-  Use when handling async operations in Angular.
+description: Use when handling async operations in Angular applications with observables, operators, and subjects.
 allowed-tools:
   - Bash
   - Read

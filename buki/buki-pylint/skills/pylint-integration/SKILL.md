@@ -1,6 +1,6 @@
 ---
 name: pylint-integration
-description: Master Pylint CI integration including plugins, editor integration, and performance tuning.
+description: Use when pylint CI integration including plugins, editor integration, and performance tuning.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

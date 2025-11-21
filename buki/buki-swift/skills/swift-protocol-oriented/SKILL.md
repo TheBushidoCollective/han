@@ -1,9 +1,6 @@
 ---
 name: Swift Protocol-Oriented Programming
-description: >
-  Master protocol-oriented programming in Swift including protocol extensions,
-  default implementations, protocol composition, associated types, and designing
-  flexible, reusable abstractions that favor composition over inheritance.
+description: Use when protocol-oriented programming in Swift including protocol extensions, default implementations, protocol composition, associated types, and designing flexible, reusable abstractions that favor composition over inheritance.
 allowed-tools: []
 ---
 

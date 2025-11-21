@@ -1,7 +1,6 @@
 ---
 name: angular-signals
-description: Master Angular Signals for reactive state management. Use when building
-  modern Angular 16+ applications with fine-grained reactivity.
+description: Use when building Angular 16+ applications requiring fine-grained reactive state management and zone-less change detection.
 allowed-tools:
   - Bash
   - Read

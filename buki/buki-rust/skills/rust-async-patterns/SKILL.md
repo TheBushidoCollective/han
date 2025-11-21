@@ -1,7 +1,6 @@
 ---
 name: rust-async-patterns
-description: Master Rust async programming with tokio, async/await, and futures.
-  Use when writing asynchronous Rust code.
+description: Use when Rust async programming with tokio, async/await, and futures. Use when writing asynchronous Rust code.
 allowed-tools:
   - Bash
   - Read

@@ -1,6 +1,6 @@
 ---
 name: mocha-assertions
-description: Master assertion libraries for Mocha including Chai with expect, should, and assert styles.
+description: Use when assertion libraries for Mocha including Chai with expect, should, and assert styles.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

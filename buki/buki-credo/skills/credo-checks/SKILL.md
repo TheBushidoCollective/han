@@ -1,3 +1,9 @@
+---
+name: credo-checks
+description: Use when understanding and fixing common Credo check issues for Elixir code quality and consistency.
+allowed-tools: []
+---
+
 # Credo Checks
 
 Understanding and fixing common Credo issues.

@@ -1,13 +1,18 @@
 {
-  "name": "buki-vue",
-  "version": "1.0.0",
-  "description": "Advanced Vue skills for Composition API, components, and reactivity.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["vue", "composition-api", "reactivity", "skill"]
+	"name": "buki-vue",
+	"version": "1.0.0",
+	"description": "Advanced Vue skills for Composition API, components, and reactivity.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"vue",
+		"composition-api",
+		"reactivity",
+		"skill"
+	]
 }

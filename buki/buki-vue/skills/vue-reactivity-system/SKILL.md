@@ -1,7 +1,6 @@
 ---
 name: vue-reactivity-system
-description: Master Vue reactivity system with refs, reactive, computed, and watchers.
-  Use when managing complex state in Vue applications.
+description: Use when Vue reactivity system with refs, reactive, computed, and watchers. Use when managing complex state in Vue applications.
 allowed-tools:
   - Bash
   - Read

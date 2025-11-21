@@ -1,6 +1,6 @@
 ---
 name: csharp-async-patterns
-description: Master C# async/await patterns including Task, ValueTask, async streams, and cancellation. Use when writing asynchronous C# code.
+description: Use when C# async/await patterns including Task, ValueTask, async streams, and cancellation. Use when writing asynchronous C# code.
 allowed-tools:
   - Bash
   - Read

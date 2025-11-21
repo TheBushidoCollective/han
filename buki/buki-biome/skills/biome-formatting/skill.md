@@ -1,6 +1,6 @@
 ---
 name: biome-formatting
-description: Formatting patterns, options, and code style management with Biome's fast formatter.
+description: Use when formatting JavaScript/TypeScript code with Biome's fast formatter including patterns, options, and code style management.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

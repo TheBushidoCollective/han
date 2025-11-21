@@ -1,8 +1,6 @@
 ---
 name: c-data-structures
-description: Master C data structures including arrays, linked lists, trees,
-  and hash tables with memory management. Use when implementing data
-  structures in C.
+description: Use when implementing data structures in C including arrays, linked lists, trees, and hash tables with manual memory management.
 allowed-tools:
   - Bash
   - Read

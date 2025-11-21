@@ -1,3 +1,9 @@
+---
+name: helm-templates
+description: Use when working with Helm templates and template functions for generating Kubernetes manifests dynamically.
+allowed-tools: []
+---
+
 # Helm Templates
 
 Working with Helm templates and template functions.

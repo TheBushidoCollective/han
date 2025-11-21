@@ -1,77 +1,77 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { render } from "ink";
-import React from "react";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+import { render } from 'ink';
+import React from 'react';
 
-const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
+const HAN_MARKETPLACE_REPO = 'thebushidocollective/han';
 
 type MarketplaceSource =
-	| { source: "directory"; path: string }
-	| { source: "git"; url: string }
-	| { source: "github"; repo: string };
+  | { source: 'directory'; path: string }
+  | { source: 'git'; url: string }
+  | { source: 'github'; repo: string };
 type Marketplace = { source: MarketplaceSource };
 type Marketplaces = Record<string, Marketplace>;
 type Plugins = Record<string, boolean>;
 
 interface ClaudeSettings {
-	extraKnownMarketplaces?: Marketplaces;
-	enabledPlugins?: Plugins;
-	[key: string]: unknown;
+  extraKnownMarketplaces?: Marketplaces;
+  enabledPlugins?: Plugins;
+  [key: string]: unknown;
 }
 
 export interface AgentUpdate {
-	type: "text" | "tool";
-	content: string;
-	toolName?: string;
+  type: 'text' | 'tool';
+  content: string;
+  toolName?: string;
 }
 
 export interface DetectPluginsCallbacks {
-	onUpdate: (update: AgentUpdate) => void;
-	onComplete: (plugins: string[], fullText: string) => void;
-	onError: (error: Error) => void;
+  onUpdate: (update: AgentUpdate) => void;
+  onComplete: (plugins: string[], fullText: string) => void;
+  onError: (error: Error) => void;
 }
 
 function getClaudeSettingsPath(): string {
-	const rootDir = process.cwd();
-	return join(rootDir, ".claude", "settings.json");
+  const rootDir = process.cwd();
+  return join(rootDir, '.claude', 'settings.json');
 }
 
 function ensureClaudeDirectory(): void {
-	const rootDir = process.cwd();
-	const claudeDir = join(rootDir, ".claude");
-	if (!existsSync(claudeDir)) {
-		mkdirSync(claudeDir, { recursive: true });
-	}
+  const rootDir = process.cwd();
+  const claudeDir = join(rootDir, '.claude');
+  if (!existsSync(claudeDir)) {
+    mkdirSync(claudeDir, { recursive: true });
+  }
 }
 
 function readOrCreateSettings(): ClaudeSettings {
-	const settingsPath = getClaudeSettingsPath();
+  const settingsPath = getClaudeSettingsPath();
 
-	if (existsSync(settingsPath)) {
-		try {
-			return JSON.parse(readFileSync(settingsPath, "utf8")) as ClaudeSettings;
-		} catch (_error) {
-			console.error("Error reading settings.json, creating new one");
-			return {};
-		}
-	}
+  if (existsSync(settingsPath)) {
+    try {
+      return JSON.parse(readFileSync(settingsPath, 'utf8')) as ClaudeSettings;
+    } catch (_error) {
+      console.error('Error reading settings.json, creating new one');
+      return {};
+    }
+  }
 
-	return {};
+  return {};
 }
 
 function writeSettings(settings: ClaudeSettings): void {
-	const settingsPath = getClaudeSettingsPath();
-	writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+  const settingsPath = getClaudeSettingsPath();
+  writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
 /**
  * Use Claude Agent SDK to intelligently analyze codebase and recommend plugins
  */
 async function detectPluginsWithAgent(
-	callbacks: DetectPluginsCallbacks,
+  callbacks: DetectPluginsCallbacks
 ): Promise<void> {
-	const agentPrompt = `You are a Han plugin installer assistant. Your goal is to analyze the current codebase and recommend appropriate Claude Code plugins from the Han marketplace.
+  const agentPrompt = `You are a Han plugin installer assistant. Your goal is to analyze the current codebase and recommend appropriate Claude Code plugins from the Han marketplace.
 
 Available Plugin Categories:
 - buki-* (武器 weapons): Skills for specific technologies (e.g., buki-typescript, buki-react, buki-go)
@@ -95,146 +95,145 @@ Focus on detecting:
 - GraphQL implementations
 - Monorepo tools (Nx, Turborepo, Lerna)
 
-ALWAYS add the bushido plugin!
-
 Return ONLY a JSON array of recommended plugin names, like:
 ["bushido", "buki-typescript", "buki-react", "buki-jest"]
 
 ULTRATHINK and Analyze this codebase and recommend appropriate Han plugins.`;
 
-	// Define allowed tools - only read-only operations
-	const allowedTools: string[] = ["web_fetch", "read_file", "glob", "grep"];
+  // Define allowed tools - only read-only operations
+  const allowedTools: string[] = ['web_fetch', 'read_file', 'glob', 'grep'];
 
-	const agent = query({
-		prompt: agentPrompt,
-		options: {
-			model: "claude-sonnet-4-5-20250929",
-			includePartialMessages: true,
-			allowedTools,
-			permissionMode: "bypassPermissions",
-		},
-	});
+  const agent = query({
+    prompt: agentPrompt,
+    options: {
+      model: 'claude-sonnet-4-5-20250929',
+      includePartialMessages: true,
+      allowedTools,
+      permissionMode: 'bypassPermissions',
+    },
+  });
 
-	let responseContent = "";
+  let responseContent = '';
 
-	try {
-		// Collect all messages from the agent with live updates
-		for await (const sdkMessage of agent) {
-			if (sdkMessage.type === "assistant" && sdkMessage.message.content) {
-				for (const block of sdkMessage.message.content) {
-					if (block.type === "text") {
-						// Send text updates
-						callbacks.onUpdate({ type: "text", content: block.text });
-						responseContent += block.text;
-					} else if (block.type === "tool_use") {
-						// Send tool usage updates
-						callbacks.onUpdate({
-							type: "tool",
-							content: `Using ${block.name}`,
-							toolName: block.name,
-						});
-					}
-				}
-			}
-		}
+  try {
+    // Collect all messages from the agent with live updates
+    for await (const sdkMessage of agent) {
+      if (sdkMessage.type === 'assistant' && sdkMessage.message.content) {
+        for (const block of sdkMessage.message.content) {
+          if (block.type === 'text') {
+            // Send text updates
+            callbacks.onUpdate({ type: 'text', content: block.text });
+            responseContent += block.text;
+          } else if (block.type === 'tool_use') {
+            // Send tool usage updates
+            callbacks.onUpdate({
+              type: 'tool',
+              content: `Using ${block.name}`,
+              toolName: block.name,
+            });
+          }
+        }
+      }
+    }
 
-		// Extract plugin recommendations from agent response
-		const plugins = parsePluginRecommendations(responseContent);
-		const finalPlugins = plugins.length > 0 ? plugins : ["bushido"];
+    // Extract plugin recommendations from agent response
+    const plugins = parsePluginRecommendations(responseContent);
+    const finalPlugins = plugins.length > 0 ? plugins : ['bushido'];
 
-		callbacks.onComplete(finalPlugins, responseContent);
-	} catch (error) {
-		callbacks.onError(error as Error);
-	}
+    callbacks.onComplete(finalPlugins, responseContent);
+  } catch (error) {
+    callbacks.onError(error as Error);
+  }
 }
 
 /**
  * Parse plugin recommendations from agent response
  */
 function parsePluginRecommendations(content: string): string[] {
-	try {
-		// Try to find JSON array in the response
-		const jsonMatch = content.match(/\[[\s\S]*?\]/);
-		if (jsonMatch) {
-			const plugins = JSON.parse(jsonMatch[0]) as unknown;
-			if (Array.isArray(plugins)) {
-				return plugins.filter((p): p is string => typeof p === "string");
-			}
-		}
+  try {
+    // Try to find JSON array in the response
+    const jsonMatch = content.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      const plugins = JSON.parse(jsonMatch[0]) as unknown;
+      if (Array.isArray(plugins)) {
+        plugins.push('bushido');
+        return plugins.filter((p): p is string => typeof p === 'string');
+      }
+    }
 
-		// Fallback: look for plugin names mentioned
-		const pluginPattern = /(buki-[\w-]+|do-[\w-]+|sensei-[\w-]+|bushido)/g;
-		const matches = content.match(pluginPattern);
-		if (matches) {
-			return [...new Set(matches)];
-		}
+    // Fallback: look for plugin names mentioned
+    const pluginPattern = /(buki-[\w-]+|do-[\w-]+|sensei-[\w-]+|bushido)/g;
+    const matches = content.match(pluginPattern);
+    if (matches) {
+      return [...new Set(matches)];
+    }
 
-		return [];
-	} catch (_error) {
-		return [];
-	}
+    return [];
+  } catch (_error) {
+    return [];
+  }
 }
 
 /**
  * Install plugins to Claude settings
  */
 function installPluginsToSettings(plugins: string[]): void {
-	ensureClaudeDirectory();
+  ensureClaudeDirectory();
 
-	const settings = readOrCreateSettings();
+  const settings = readOrCreateSettings();
 
-	// Add Han marketplace to extraMarketplaces
-	if (!settings?.extraKnownMarketplaces?.han) {
-		settings.extraKnownMarketplaces = {
-			...settings.extraKnownMarketplaces,
-			han: { source: { source: "github", repo: HAN_MARKETPLACE_REPO } },
-		};
-	}
+  // Add Han marketplace to extraMarketplaces
+  if (!settings?.extraKnownMarketplaces?.han) {
+    settings.extraKnownMarketplaces = {
+      ...settings.extraKnownMarketplaces,
+      han: { source: { source: 'github', repo: HAN_MARKETPLACE_REPO } },
+    };
+  }
 
-	// Add plugins
-	for (const plugin of plugins) {
-		settings.enabledPlugins = {
-			...settings.enabledPlugins,
-			[`${plugin}@han`]: true,
-		};
-	}
+  // Add plugins
+  for (const plugin of plugins) {
+    settings.enabledPlugins = {
+      ...settings.enabledPlugins,
+      [`${plugin}@han`]: true,
+    };
+  }
 
-	writeSettings(settings);
+  writeSettings(settings);
 }
 
 /**
  * SDK-based install command with Ink UI
  */
 export async function install(): Promise<void> {
-	// Import Ink UI component dynamically to avoid issues with React
-	const { InstallProgress } = await import("./install-progress.js");
+  // Import Ink UI component dynamically to avoid issues with React
+  const { InstallProgress } = await import('./install-progress.js');
 
-	let resolveCompletion: (() => void) | undefined;
-	let rejectCompletion: ((error: Error) => void) | undefined;
+  let resolveCompletion: (() => void) | undefined;
+  let rejectCompletion: ((error: Error) => void) | undefined;
 
-	const completionPromise = new Promise<void>((resolve, reject) => {
-		resolveCompletion = resolve;
-		rejectCompletion = reject;
-	});
+  const completionPromise = new Promise<void>((resolve, reject) => {
+    resolveCompletion = resolve;
+    rejectCompletion = reject;
+  });
 
-	const { unmount } = render(
-		React.createElement(InstallProgress, {
-			detectPlugins: detectPluginsWithAgent,
-			onInstallComplete: (plugins: string[]) => {
-				installPluginsToSettings(plugins);
-				if (resolveCompletion) resolveCompletion();
-			},
-			onInstallError: (error: Error) => {
-				if (rejectCompletion) rejectCompletion(error);
-			},
-		}),
-	);
+  const { unmount } = render(
+    React.createElement(InstallProgress, {
+      detectPlugins: detectPluginsWithAgent,
+      onInstallComplete: (plugins: string[]) => {
+        installPluginsToSettings(plugins);
+        if (resolveCompletion) resolveCompletion();
+      },
+      onInstallError: (error: Error) => {
+        if (rejectCompletion) rejectCompletion(error);
+      },
+    })
+  );
 
-	try {
-		await completionPromise;
-		// Wait a moment for the UI to show completion message
-		await new Promise((resolve) => setTimeout(resolve, 1500));
-	} finally {
-		unmount();
-	}
+  try {
+    await completionPromise;
+    // Wait a moment for the UI to show completion message
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  } finally {
+    unmount();
+  }
 }

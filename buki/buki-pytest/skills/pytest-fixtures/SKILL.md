@@ -1,6 +1,6 @@
 ---
 name: pytest-fixtures
-description: Master Pytest fixtures, conftest files, parametrize decorators, and fixture scopes for comprehensive test setup.
+description: Use when pytest fixtures, conftest files, parametrize decorators, and fixture scopes for comprehensive test setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

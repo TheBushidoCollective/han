@@ -1,3 +1,9 @@
+---
+name: dialyzer-integration
+description: Use when integrating Dialyzer into development workflows and CI/CD pipelines for Erlang/Elixir projects.
+allowed-tools: []
+---
+
 # Dialyzer Integration
 
 Integrating Dialyzer into development workflow and CI/CD pipelines.

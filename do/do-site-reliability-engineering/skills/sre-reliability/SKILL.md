@@ -1,3 +1,9 @@
+---
+name: sre-reliability-engineering
+description: Use when building reliable and scalable distributed systems.
+allowed-tools: []
+---
+
 # SRE Reliability Engineering
 
 Building reliable and scalable distributed systems.

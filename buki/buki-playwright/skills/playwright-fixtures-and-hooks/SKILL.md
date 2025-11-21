@@ -1,7 +1,6 @@
 ---
 name: playwright-fixtures-and-hooks
-description: Create reusable test fixtures and lifecycle hooks for efficient
-  test setup and teardown. Use when managing test state and infrastructure.
+description: Use when managing test state and infrastructure with reusable Playwright fixtures and lifecycle hooks for efficient test setup and teardown.
 allowed-tools:
   - Bash
   - Read

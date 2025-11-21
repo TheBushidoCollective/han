@@ -1,6 +1,6 @@
 ---
 name: prettier-plugins
-description: Master Prettier plugins including plugin ecosystem, custom parsers, and plugin development.
+description: Use when prettier plugins including plugin ecosystem, custom parsers, and plugin development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

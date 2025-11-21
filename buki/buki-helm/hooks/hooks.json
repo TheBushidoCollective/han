@@ -1,24 +1,24 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
-          }
-        ]
-      }
-    ]
-  }
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
+					}
+				]
+			}
+		],
+		"SubagentStop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
+					}
+				]
+			}
+		]
+	}
 }

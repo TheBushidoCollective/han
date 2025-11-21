@@ -1,13 +1,18 @@
 {
-  "name": "buki-rust",
-  "version": "1.0.0",
-  "description": "Advanced Rust skills for ownership, error handling, and async programming.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["rust", "ownership", "async", "skill"]
+	"name": "buki-rust",
+	"version": "1.0.0",
+	"description": "Advanced Rust skills for ownership, error handling, and async programming.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"rust",
+		"ownership",
+		"async",
+		"skill"
+	]
 }

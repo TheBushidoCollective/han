@@ -1,14 +1,18 @@
 {
-  "name": "buki-testng",
-  "version": "1.0.0",
-  "description": "Comprehensive TestNG testing framework skills for Java projects with advanced features like data providers and parallel execution.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["testng", "testing", "java", "skill"],
-  "hooksPath": "hooks"
+	"name": "buki-testng",
+	"version": "1.0.0",
+	"description": "Comprehensive TestNG testing framework skills for Java projects with advanced features like data providers and parallel execution.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"testng",
+		"testing",
+		"java",
+		"skill"
+	]
 }

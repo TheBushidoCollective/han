@@ -1,4 +1,4 @@
-# Buki Markdownlint
+# Markdownlint
 
 Markdown linting and style checking with markdownlint.
 

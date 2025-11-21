@@ -1,6 +1,6 @@
 ---
 name: csharp-nullable-types
-description: Master C# nullable reference types, null safety patterns, and migration strategies. Use when ensuring null safety in C# code.
+description: Use when C# nullable reference types, null safety patterns, and migration strategies. Use when ensuring null safety in C# code.
 allowed-tools:
   - Bash
   - Read

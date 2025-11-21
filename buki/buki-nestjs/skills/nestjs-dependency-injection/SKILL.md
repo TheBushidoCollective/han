@@ -1,7 +1,6 @@
 ---
 name: nestjs-dependency-injection
-description: Master NestJS dependency injection with providers, modules, and
-  decorators. Use when building modular NestJS applications.
+description: Use when nestJS dependency injection with providers, modules, and decorators. Use when building modular NestJS applications.
 allowed-tools:
   - Bash
   - Read

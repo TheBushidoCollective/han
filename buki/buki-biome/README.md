@@ -1,4 +1,4 @@
-# Buki Biome
+# Biome
 
 Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.
 

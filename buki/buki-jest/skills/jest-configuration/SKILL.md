@@ -1,6 +1,6 @@
 ---
 name: jest-configuration
-description: Master Jest configuration, setup files, module resolution, and project organization for optimal testing environments.
+description: Use when jest configuration, setup files, module resolution, and project organization for optimal testing environments.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

@@ -1,10 +1,6 @@
 ---
 name: proof-of-work
-description: Enforce providing concrete evidence when making claims about tests,
-builds, verification, or code quality
-.
-Use automatically during development workflows to ensure trust through
-transparency.
+description: Use automatically during development workflows when making claims about tests, builds, verification, or code quality requiring concrete evidence to ensure trust through transparency.
 allowed-tools:
   - Write
   - Edit

@@ -1,7 +1,6 @@
 ---
 name: vue-composition-api
-description: Master Vue 3 Composition API with reactive refs, computed, and composables.
-  Use when building modern Vue 3 applications.
+description: Use when Vue 3 Composition API with reactive refs, computed, and composables. Use when building modern Vue 3 applications.
 allowed-tools:
   - Bash
   - Read

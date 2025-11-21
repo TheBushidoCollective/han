@@ -1,3 +1,9 @@
+---
+name: docker-compose-basics
+description: Use when defining and running multi-container Docker applications with Docker Compose YAML configuration.
+allowed-tools: []
+---
+
 # Docker Compose Basics
 
 Docker Compose for defining and running multi-container applications.

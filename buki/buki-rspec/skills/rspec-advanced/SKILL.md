@@ -1,6 +1,6 @@
 ---
 name: rspec-advanced
-description: Master advanced RSpec features including custom matchers, shared examples, metadata, and hooks.
+description: Use when advanced RSpec features including custom matchers, shared examples, metadata, and hooks.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

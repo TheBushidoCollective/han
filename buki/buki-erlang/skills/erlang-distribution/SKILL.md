@@ -1,9 +1,6 @@
 ---
 name: Erlang Distribution
-description: >
-  Master Erlang distributed systems including node connectivity, distributed processes,
-  global name registration, distributed supervision, network partitions, and building
-  fault-tolerant multi-node applications on the BEAM VM.
+description: Use when erlang distributed systems including node connectivity, distributed processes, global name registration, distributed supervision, network partitions, and building fault-tolerant multi-node applications on the BEAM VM.
 allowed-tools: []
 ---
 

@@ -1,8 +1,0 @@
-{
-  "name": "do-sre",
-  "displayName": "Site Reliability Engineering",
-  "description": "SRE discipline agent for reliability, monitoring, and incident response",
-  "version": "1.0.0",
-  "author": "The Bushido Collective",
-  "tags": ["sre", "reliability", "monitoring", "incidents", "devops"]
-}

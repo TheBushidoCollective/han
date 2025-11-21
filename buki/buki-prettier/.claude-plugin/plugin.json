@@ -1,14 +1,19 @@
 {
-  "name": "buki-prettier",
-  "version": "1.0.0",
-  "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["prettier", "formatting", "javascript", "typescript", "skill"],
-  "hooksPath": "hooks"
+	"name": "buki-prettier",
+	"version": "1.0.0",
+	"description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"prettier",
+		"formatting",
+		"javascript",
+		"typescript",
+		"skill"
+	]
 }

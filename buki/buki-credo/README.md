@@ -1,4 +1,4 @@
-# Buki Credo
+# Credo
 
 Advanced Credo skills for code analysis and style checking in Elixir.
 

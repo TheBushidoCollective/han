@@ -1,19 +1,27 @@
 {
-  "name": "sensei-context7",
-  "version": "1.0.0",
-  "description": "MCP server configuration for Context7 integration providing persistent context and knowledge management.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["mcp", "context", "knowledge", "server"],
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
-    }
-  }
+	"name": "sensei-context7",
+	"version": "1.0.0",
+	"description": "MCP server configuration for Context7 integration providing persistent context and knowledge management.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"mcp",
+		"context",
+		"knowledge",
+		"server"
+	],
+	"mcpServers": {
+		"context7": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@upstash/context7-mcp"
+			]
+		}
+	}
 }

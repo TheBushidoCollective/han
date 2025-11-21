@@ -1,7 +1,6 @@
 ---
 name: nestjs-testing
-description: Master NestJS testing with unit tests, integration tests, and e2e tests.
-  Use when building well-tested NestJS applications.
+description: Use when nestJS testing with unit tests, integration tests, and e2e tests. Use when building well-tested NestJS applications.
 allowed-tools:
   - Bash
   - Read

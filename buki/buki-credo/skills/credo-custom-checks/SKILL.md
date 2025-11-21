@@ -1,3 +1,9 @@
+---
+name: credo-custom-checks
+description: Use when creating custom Credo checks for project-specific code quality rules and standards in Elixir.
+allowed-tools: []
+---
+
 # Credo Custom Checks
 
 Creating custom Credo checks for project-specific rules.

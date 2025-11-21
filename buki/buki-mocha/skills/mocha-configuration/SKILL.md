@@ -1,6 +1,6 @@
 ---
 name: mocha-configuration
-description: Master Mocha configuration including reporters, config files, plugins, and CI integration.
+description: Use when mocha configuration including reporters, config files, plugins, and CI integration.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

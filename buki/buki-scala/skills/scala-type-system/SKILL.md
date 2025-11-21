@@ -1,9 +1,6 @@
 ---
 name: Scala Type System
-description: >
-  Master Scala's advanced type system including generics, variance, type bounds,
-  implicit conversions, type classes, higher-kinded types, path-dependent types,
-  and abstract type members for building type-safe, flexible APIs.
+description: Use when scala's advanced type system including generics, variance, type bounds, implicit conversions, type classes, higher-kinded types, path-dependent types, and abstract type members for building type-safe, flexible APIs.
 allowed-tools: []
 ---
 

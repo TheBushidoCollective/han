@@ -1,6 +1,6 @@
 ---
 name: pytest-plugins
-description: Master Pytest plugin ecosystem including pytest-cov, pytest-mock, and custom plugin development.
+description: Use when pytest plugin ecosystem including pytest-cov, pytest-mock, and custom plugin development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

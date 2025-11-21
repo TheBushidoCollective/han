@@ -1,3 +1,9 @@
+---
+name: pulumi-basics
+description: Use when writing infrastructure-as-code with Pulumi using programming languages for cloud resource provisioning.
+allowed-tools: []
+---
+
 # Pulumi Basics
 
 Infrastructure-as-code using real programming languages with Pulumi.

@@ -1,9 +1,6 @@
 ---
 name: Lua Tables Patterns
-description: >
-  Master Lua tables as the universal data structure including arrays, dictionaries,
-  objects, metatables, object-oriented patterns, data structures, and advanced
-  table manipulation for building flexible, efficient Lua applications.
+description: Use when lua tables as the universal data structure including arrays, dictionaries, objects, metatables, object-oriented patterns, data structures, and advanced table manipulation for building flexible, efficient Lua applications.
 allowed-tools: []
 ---
 

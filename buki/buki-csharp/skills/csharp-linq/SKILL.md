@@ -1,6 +1,6 @@
 ---
 name: csharp-linq
-description: Master LINQ query and method syntax, deferred execution, and performance optimization. Use when querying collections in C#.
+description: Use when lINQ query and method syntax, deferred execution, and performance optimization. Use when querying collections in C#.
 allowed-tools:
   - Bash
   - Read

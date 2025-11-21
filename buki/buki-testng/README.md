@@ -1,4 +1,4 @@
-# Buki Testng
+# Testng
 
 Comprehensive TestNG testing framework skills for Java projects with advanced
 features like data providers and parallel execution.
@@ -13,14 +13,12 @@ This plugin provides the following skills:
 
 ## Usage
 
-Skills can be invoked using the Skill tool:
+Once enabled, Claude will automatically apply these skills when working with relevant code. The plugin provides context and expertise that Claude uses to:
 
-```javascript
-Skill("buki-testng:testng-data-driven")
-```
-
-Each skill provides specialized knowledge and patterns
-for Testng development.
+- Write idiomatic code following best practices
+- Suggest appropriate patterns and architectures
+- Catch common mistakes and anti-patterns
+- Provide framework-specific guidance
 
 ## License
 

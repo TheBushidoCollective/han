@@ -1,6 +1,6 @@
 ---
 name: junit-parameterized
-description: Master JUnit parameterized tests with various value sources and test factories.
+description: Use when jUnit parameterized tests with various value sources and test factories.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: csharp-linq
-description: Master LINQ (Language Integrated Query) with query and method syntax,
-  deferred execution, expression trees, and performance optimization
+description: Use when lINQ (Language Integrated Query) with query and method syntax, deferred execution, expression trees, and performance optimization.
 allowed-tools:
   - Read
   - Write

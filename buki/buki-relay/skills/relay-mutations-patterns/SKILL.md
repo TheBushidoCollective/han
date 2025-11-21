@@ -1,7 +1,6 @@
 ---
 name: relay-mutations-patterns
-description: Master Relay mutations with optimistic updates, connections,
-  declarative mutations, and error handling
+description: Use when relay mutations with optimistic updates, connections, declarative mutations, and error handling.
 allowed-tools:
   - Read
   - Write

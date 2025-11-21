@@ -1,3 +1,9 @@
+---
+name: ink-component-patterns
+description: Use when building terminal UIs with Ink component patterns for React-based CLI applications.
+allowed-tools: []
+---
+
 # Ink Component Patterns
 
 You are an expert in building terminal UIs with Ink, React for the terminal.

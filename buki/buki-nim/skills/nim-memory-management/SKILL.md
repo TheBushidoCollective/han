@@ -1,9 +1,6 @@
 ---
 name: Nim Memory Management
-description: >
-  Master Nim's memory management including garbage collection strategies, manual
-  memory control, destructors, move semantics, ref/ptr types, memory safety,
-  and optimization techniques for performance-critical systems programming.
+description: Use when nim's memory management including garbage collection strategies, manual memory control, destructors, move semantics, ref/ptr types, memory safety, and optimization techniques for performance-critical systems programming.
 allowed-tools: []
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: rails-action-controller-patterns
-description: Master Action Controller patterns including routing, filters,
-  strong parameters, and REST conventions
+description: Use when action Controller patterns including routing, filters, strong parameters, and REST conventions.
 allowed-tools:
   - Read
   - Write

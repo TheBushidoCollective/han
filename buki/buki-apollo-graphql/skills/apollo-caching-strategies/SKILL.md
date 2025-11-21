@@ -1,7 +1,6 @@
 ---
 name: apollo-caching-strategies
-description: Master Apollo caching strategies including cache policies,
-  optimistic UI, cache updates, and normalization
+description: Use when implementing Apollo caching strategies including cache policies, optimistic UI, cache updates, and normalization.
 allowed-tools:
   - Read
   - Write

@@ -1,7 +1,6 @@
 ---
 name: csharp-async-patterns
-description: Master C# asynchronous programming with async/await, Task, ValueTask,
-  ConfigureAwait, and async streams for responsive applications
+description: Use when C# asynchronous programming with async/await, Task, ValueTask, ConfigureAwait, and async streams for responsive applications.
 allowed-tools:
   - Read
   - Write

@@ -1,9 +1,6 @@
 ---
 name: solid-principles
-description: Apply SOLID principles (Single Responsibility, Open/Closed, Liskov
-Substitution, Interface Segregation, Dependency Inversion) when designing
-modules, functions, and components
-. Use during implementation to ensure maintainable, flexible architecture.
+description: Use during implementation when designing modules, functions, and components requiring SOLID principles for maintainable, flexible architecture.
 allowed-tools:
   - Read
   - Edit

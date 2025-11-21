@@ -1,3 +1,9 @@
+---
+name: terraform-configuration
+description: Use when writing and organizing Terraform infrastructure-as-code configurations for cloud resource provisioning.
+allowed-tools: []
+---
+
 # Terraform Configuration
 
 Writing and organizing Terraform infrastructure-as-code configurations.

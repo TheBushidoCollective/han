@@ -1,7 +1,6 @@
 ---
 name: csharp-nullable-types
-description: Master C# nullable reference types and value types for null safety,
-  nullable annotations, and patterns for handling null values
+description: Use when C# nullable reference types and value types for null safety, nullable annotations, and patterns for handling null values.
 allowed-tools:
   - Read
   - Write

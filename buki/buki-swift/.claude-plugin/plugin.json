@@ -1,13 +1,19 @@
 {
-  "name": "buki-swift",
-  "version": "1.0.0",
-  "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"]
+	"name": "buki-swift",
+	"version": "1.0.0",
+	"description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"swift",
+		"ios",
+		"protocol-oriented",
+		"concurrency",
+		"skill"
+	]
 }

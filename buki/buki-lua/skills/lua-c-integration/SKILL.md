@@ -1,9 +1,6 @@
 ---
 name: Lua C Integration
-description: >
-  Master Lua C API for extending Lua with native code including stack operations,
-  calling C from Lua, calling Lua from C, creating C modules, userdata types,
-  metatables in C, and performance optimization techniques.
+description: Use when lua C API for extending Lua with native code including stack operations, calling C from Lua, calling Lua from C, creating C modules, userdata types, metatables in C, and performance optimization techniques.
 allowed-tools: []
 ---
 

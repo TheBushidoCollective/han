@@ -1,3 +1,9 @@
+---
+name: terraform-state
+description: Use when managing Terraform state files, remote backends, and state locking for infrastructure coordination.
+allowed-tools: []
+---
+
 # Terraform State
 
 Managing Terraform state files and remote backends.

@@ -1,7 +1,6 @@
 ---
 name: cpp-smart-pointers
-description: Master C++ smart pointers including unique_ptr, shared_ptr,
-  weak_ptr and RAII patterns. Use when managing memory safely in C++.
+description: Use when managing memory safely in C++ with smart pointers including unique_ptr, shared_ptr, weak_ptr, and RAII patterns.
 allowed-tools:
   - Bash
   - Read

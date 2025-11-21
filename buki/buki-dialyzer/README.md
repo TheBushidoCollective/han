@@ -1,4 +1,4 @@
-# Buki Dialyzer
+# Dialyzer
 
 Advanced Dialyzer skills for static analysis of Erlang and Elixir code.
 

@@ -1,3 +1,9 @@
+---
+name: helm-charts
+description: Use when understanding and creating Helm charts for packaging and deploying Kubernetes applications.
+allowed-tools: []
+---
+
 # Helm Charts
 
 Understanding and creating Helm charts for Kubernetes applications.

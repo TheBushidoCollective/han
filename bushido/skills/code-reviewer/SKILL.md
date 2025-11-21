@@ -1,8 +1,6 @@
 ---
 name: code-reviewer
-description: Systematic code review process and quality inspection framework.
-Use during verification phase to conduct thorough reviews and provide
-constructive feedback based on universal software quality principles.
+description: Use during verification phase when conducting thorough code reviews and providing constructive feedback based on universal software quality principles.
 allowed-tools:
   - Read
   - Grep
