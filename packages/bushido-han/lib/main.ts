@@ -47,7 +47,9 @@ program
 // Align command
 program
   .command('align')
-  .description('Align plugins with current codebase state in ./.claude/settings.json')
+  .description(
+    'Align plugins with current codebase state in ./.claude/settings.json'
+  )
   .action(async () => {
     try {
       const { align } = await import('./align.js');
