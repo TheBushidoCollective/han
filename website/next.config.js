@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: '/han',
+  basePath: '',
   trailingSlash: true,
 };
 
