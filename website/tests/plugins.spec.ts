@@ -62,7 +62,7 @@ test.describe('Plugin Detail Page', () => {
       await skillLinks.first().click();
       await page.waitForLoadState('networkidle');
       // Only check if href was an actual navigation link
-      if (href && href.startsWith('/skills/')) {
+      if (href?.startsWith('/skills/')) {
         await expect(page.url()).toContain('/skills/');
       }
     }
