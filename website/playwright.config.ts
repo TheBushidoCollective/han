@@ -20,12 +20,14 @@ export default defineConfig({
   ],
 
   // Only run webServer locally, not in CI
-  ...(process.env.CI ? {} : {
-    webServer: {
-      command: 'npm run start',
-      url: 'http://localhost:3000',
-      reuseExistingServer: true,
-      timeout: 120000,
-    },
-  }),
+  ...(process.env.CI
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run start',
+          url: 'http://localhost:3000',
+          reuseExistingServer: true,
+          timeout: 120000,
+        },
+      }),
 });
