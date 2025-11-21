@@ -1,8 +1,0 @@
-{
-	"name": "buki-ansible",
-	"displayName": "Ansible",
-	"description": "Ansible playbook validation and best practices",
-	"version": "1.0.0",
-	"author": "The Bushido Collective",
-	"tags": ["ansible", "configuration-management", "devops", "automation"]
-}

@@ -1,6 +1,6 @@
 # Han Marketing Website
 
-This is the marketing website for Han, The Bushido Code Marketplace. It's built with Next.js and deployed to GitHub Pages at [https://han.guru](https://han.guru).
+This is the marketing website for Han. It's built with Next.js and deployed to GitHub Pages at [https://han.guru](https://han.guru).
 
 ## Features
 
