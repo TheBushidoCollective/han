@@ -38,6 +38,8 @@ test.describe('Tags Page', () => {
     await page.goto('/tags');
     await expect(page.getByText('Popular Categories')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'language' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'framework' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'framework' })
+    ).toBeVisible();
   });
 });
