@@ -56,6 +56,43 @@ npx @thebushidocollective/han install
 **After installation:**
 Restart Claude Code to load the new plugins.
 
+**Options:**
+
+- `--scope <scope>` - Installation scope: `local`, `project`, or `user` (default: `user`)
+  - `user`: Installs to `~/.claude/settings.json`
+  - `local`/`project`: Installs to `./.claude/settings.json`
+
+### align
+
+Continuously align your Han plugins with your evolving codebase. Automatically adds plugins for new technologies and removes plugins for technologies no longer in use.
+
+```bash
+npx @thebushidocollective/han align
+```
+
+**How it works:**
+
+- Re-analyzes your codebase to detect current technologies
+- Compares detected plugins with currently installed plugins
+- **Adds** plugins for newly detected technologies
+- **Removes** plugins for technologies no longer found
+- Reports all changes clearly
+
+**When to use:**
+
+- After adding new dependencies or frameworks
+- After removing technologies from your project
+- Periodically to keep plugins in sync with your codebase
+- Automatically via a Stop hook (see below)
+
+**Options:**
+
+- `--scope <scope>` - Alignment scope: `local`, `project`, or `user` (default: `user`)
+
+**Automatic Alignment:**
+
+The bushido plugin includes a Stop hook that automatically runs `han align` at the end of each Claude Code session, ensuring your plugins stay synchronized with your codebase as it evolves.
+
 ### uninstall
 
 Remove all Han plugins and marketplace configuration from Claude Code.

@@ -27,6 +27,12 @@ export interface AgentUpdate {
   toolName?: string;
 }
 
+export interface AlignResult {
+  added: string[];
+  removed: string[];
+  unchanged: string[];
+}
+
 export interface DetectPluginsCallbacks {
   onUpdate: (update: AgentUpdate) => void;
   onComplete: (plugins: string[], fullText: string) => void;
@@ -73,6 +79,18 @@ function writeSettings(
 ): void {
   const settingsPath = getClaudeSettingsPath(scope);
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+}
+
+/**
+ * Get currently installed Han plugins
+ */
+function getInstalledPlugins(scope: SettingsScope = 'user'): string[] {
+  const settings = readOrCreateSettings(scope);
+  const enabledPlugins = settings.enabledPlugins || {};
+
+  return Object.keys(enabledPlugins)
+    .filter((key) => key.endsWith('@han') && enabledPlugins[key])
+    .map((key) => key.replace('@han', ''));
 }
 
 /**
@@ -185,31 +203,23 @@ function parsePluginRecommendations(content: string): string[] {
 }
 
 /**
- * Get currently installed Han plugins
+ * Compare current plugins with recommended plugins and update settings
  */
-function getInstalledPlugins(scope: SettingsScope = 'user'): string[] {
-  const settings = readOrCreateSettings(scope);
-  const enabledPlugins = settings.enabledPlugins || {};
-
-  return Object.keys(enabledPlugins)
-    .filter((key) => key.endsWith('@han') && enabledPlugins[key])
-    .map((key) => key.replace('@han', ''));
-}
-
-/**
- * Install plugins to Claude settings and return list of added plugins
- */
-function installPluginsToSettings(
-  plugins: string[],
+function alignPluginsInSettings(
+  recommendedPlugins: string[],
   scope: SettingsScope = 'user'
-): string[] {
+): AlignResult {
   ensureClaudeDirectory(scope);
 
   const settings = readOrCreateSettings(scope);
   const currentPlugins = getInstalledPlugins(scope);
-  const added: string[] = [];
 
-  // Add Han marketplace to extraMarketplaces
+  // Calculate differences
+  const added: string[] = [];
+  const removed: string[] = [];
+  const unchanged: string[] = [];
+
+  // Add Han marketplace if not present
   if (!settings?.extraKnownMarketplaces?.han) {
     settings.extraKnownMarketplaces = {
       ...settings.extraKnownMarketplaces,
@@ -217,28 +227,40 @@ function installPluginsToSettings(
     };
   }
 
-  // Add plugins
-  for (const plugin of plugins) {
+  // Initialize enabledPlugins if needed
+  if (!settings.enabledPlugins) {
+    settings.enabledPlugins = {};
+  }
+
+  // Find plugins to add (in recommended but not in current)
+  for (const plugin of recommendedPlugins) {
     if (!currentPlugins.includes(plugin)) {
       added.push(plugin);
+      settings.enabledPlugins[`${plugin}@han`] = true;
+    } else {
+      unchanged.push(plugin);
     }
-    settings.enabledPlugins = {
-      ...settings.enabledPlugins,
-      [`${plugin}@han`]: true,
-    };
+  }
+
+  // Find plugins to remove (in current but not in recommended)
+  for (const plugin of currentPlugins) {
+    if (!recommendedPlugins.includes(plugin)) {
+      removed.push(plugin);
+      delete settings.enabledPlugins[`${plugin}@han`];
+    }
   }
 
   writeSettings(settings, scope);
 
-  return added;
+  return { added, removed, unchanged };
 }
 
 /**
- * SDK-based install command with Ink UI
+ * SDK-based align command with Ink UI
  */
-export async function install(scope: SettingsScope = 'user'): Promise<void> {
-  // Import Ink UI component dynamically to avoid issues with React
-  const { InstallProgress } = await import('./install-progress.js');
+export async function align(scope: SettingsScope = 'user'): Promise<void> {
+  // Import Ink UI component dynamically
+  const { AlignProgress } = await import('./align-progress.js');
 
   let resolveCompletion: (() => void) | undefined;
   let rejectCompletion: ((error: Error) => void) | undefined;
@@ -250,23 +272,36 @@ export async function install(scope: SettingsScope = 'user'): Promise<void> {
 
   const scopeLabel =
     scope === 'user' ? '~/.claude/settings.json' : './.claude/settings.json';
-  console.log(`Installing to ${scopeLabel}...\n`);
+  console.log(`Aligning plugins in ${scopeLabel}...\n`);
 
   const { unmount } = render(
-    React.createElement(InstallProgress, {
+    React.createElement(AlignProgress, {
       detectPlugins: detectPluginsWithAgent,
-      onInstallComplete: (plugins: string[]) => {
-        const added = installPluginsToSettings(plugins, scope);
-        if (added.length > 0) {
+      onAlignComplete: (plugins: string[]) => {
+        const result = alignPluginsInSettings(plugins, scope);
+
+        // Report changes
+        if (result.added.length > 0) {
           console.log(
-            `\n✓ Added ${added.length} plugin(s): ${added.join(', ')}`
+            `\n✓ Added ${result.added.length} plugin(s): ${result.added.join(', ')}`
           );
-        } else {
-          console.log('\n✓ All recommended plugins were already installed');
         }
+        if (result.removed.length > 0) {
+          console.log(
+            `\n✓ Removed ${result.removed.length} plugin(s): ${result.removed.join(', ')}`
+          );
+        }
+        if (result.added.length === 0 && result.removed.length === 0) {
+          console.log('\n✓ No changes needed - plugins are already aligned');
+        } else {
+          console.log(
+            '\n💡 Restart Claude Code to load the plugin changes.'
+          );
+        }
+
         if (resolveCompletion) resolveCompletion();
       },
-      onInstallError: (error: Error) => {
+      onAlignError: (error: Error) => {
         if (rejectCompletion) rejectCompletion(error);
       },
     })
