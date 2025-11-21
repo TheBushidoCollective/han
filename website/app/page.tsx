@@ -82,7 +82,7 @@ export default function Home() {
             Plugin Categories
           </h2>
           <p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
-            Organized around Japanese martial arts philosophy
+            Inspired by Japanese samurai traditions
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <CategoryCard
