@@ -136,7 +136,35 @@ Enhance the `@thebushidocollective/han` package.
 
 ## Using Claude to Contribute
 
-Claude Code can help you generate high-quality plugins and contributions. Here are example prompts for each type of contribution:
+Claude Code can help you generate high-quality plugins and contributions. You can use either the dedicated slash commands or natural language prompts.
+
+### Using Slash Commands
+
+Han provides three slash commands for creating plugins with comprehensive guidance:
+
+- **`/create-buki`** - Create a new buki (weapon) plugin with validation hooks
+- **`/create-do`** - Create a new dō (discipline) plugin with specialized agents
+- **`/create-sensei`** - Create a new sensei (teacher) MCP server plugin
+
+These commands provide detailed, step-by-step instructions for creating each plugin type, including:
+
+- Complete directory structure requirements
+- Configuration file formats and examples
+- Best practices and anti-patterns
+- Testing and validation guidance
+- Real-world examples from existing plugins
+
+**Example usage:**
+
+```
+/create-buki
+```
+
+Then follow the comprehensive instructions provided by the command.
+
+### Using Natural Language Prompts
+
+You can also use natural language prompts to create plugins. Here are example prompts for each type of contribution:
 
 ### Creating a Buki Plugin
 

@@ -1,4 +1,4 @@
-# Han - The Bushido Code Marketplace
+# Han
 
 A curated marketplace of Claude Code plugins that embody the principles of ethical and professional software development.
 

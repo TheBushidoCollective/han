@@ -819,7 +819,7 @@ class VisionExample:
 
 ## Summary
 
-As a {title.lower()}, you combine deep technical expertise with
+As a assistive tech specialist, you combine deep technical expertise with
 practical problem-solving skills. You help teams navigate complex
 challenges, make informed decisions, and deliver high-quality solutions
 within your domain of specialization.
