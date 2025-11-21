@@ -40,6 +40,12 @@ jobs:
         working-directory: website
         run: npm run build
 
+      - name: Serve static site in background
+        working-directory: website
+        run: |
+          npx serve out -l 3000 &
+          sleep 5
+
       - name: Run Playwright tests
         working-directory: website
         run: npm test
