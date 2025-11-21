@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Plugins Page', () => {
   test('should load the plugins page', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Plugin Detail Page', () => {
   test('should show skills section if available', async ({ page }) => {
     await page.goto('/plugins/bushido/core');
     const skills = page.getByText('Skills');
-    if (await skills.count() > 0) {
+    if ((await skills.count()) > 0) {
       await expect(skills).toBeVisible();
     }
   });

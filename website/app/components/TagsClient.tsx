@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
 
 interface TagWithPlugins {
   name: string;
@@ -16,18 +16,19 @@ interface TagWithPlugins {
 
 interface TagsClientProps {
   allTags: TagWithPlugins[];
-  pluginCount: number;
 }
 
-export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
+export default function TagsClient({ allTags }: TagsClientProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTags = allTags.filter(tag =>
+  const filteredTags = allTags.filter((tag) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedTagInfo = selectedTag ? allTags.find(t => t.name === selectedTag) : null;
+  const selectedTagInfo = selectedTag
+    ? allTags.find((t) => t.name === selectedTag)
+    : null;
 
   return (
     <>
@@ -48,7 +49,7 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
             All Tags
           </h2>
           <div className="flex flex-wrap gap-2">
-            {filteredTags.map(tag => {
+            {filteredTags.map((tag) => {
               const size = Math.min(Math.max(tag.count / 2, 0.875), 2);
               return (
                 <button
@@ -63,9 +64,7 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
                   style={{ fontSize: `${size}rem` }}
                 >
                   {tag.name}
-                  <span className="ml-2 text-xs opacity-60">
-                    {tag.count}
-                  </span>
+                  <span className="ml-2 text-xs opacity-60">{tag.count}</span>
                 </button>
               );
             })}
@@ -84,17 +83,31 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
                   type="button"
                   onClick={() => setSelectedTag(null)}
                   className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  aria-label="Close tag details"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <title>Close</title>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {selectedTagInfo.count} plugin{selectedTagInfo.count !== 1 ? 's' : ''}
+                {selectedTagInfo.count} plugin
+                {selectedTagInfo.count !== 1 ? 's' : ''}
               </p>
               <div className="space-y-3">
-                {selectedTagInfo.plugins.map(plugin => (
+                {selectedTagInfo.plugins.map((plugin) => (
                   <Link
                     key={plugin.name}
                     href={plugin.path}
@@ -123,7 +136,9 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
+                <title>Tag icon</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -143,18 +158,43 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
           Popular Categories
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {['language', 'framework', 'testing', 'tooling'].map(category => {
-            const categoryTags = allTags.filter(tag => {
+          {['language', 'framework', 'testing', 'tooling'].map((category) => {
+            const categoryTags = allTags.filter((tag) => {
               const lowerTag = tag.name.toLowerCase();
               switch (category) {
                 case 'language':
-                  return ['javascript', 'typescript', 'python', 'java', 'go', 'rust', 'ruby', 'elixir'].some(l => lowerTag.includes(l));
+                  return [
+                    'javascript',
+                    'typescript',
+                    'python',
+                    'java',
+                    'go',
+                    'rust',
+                    'ruby',
+                    'elixir',
+                  ].some((l) => lowerTag.includes(l));
                 case 'framework':
-                  return ['react', 'vue', 'angular', 'nextjs', 'django', 'rails'].some(f => lowerTag.includes(f));
+                  return [
+                    'react',
+                    'vue',
+                    'angular',
+                    'nextjs',
+                    'django',
+                    'rails',
+                  ].some((f) => lowerTag.includes(f));
                 case 'testing':
-                  return ['testing', 'jest', 'cypress', 'playwright', 'cucumber', 'bdd'].some(t => lowerTag.includes(t));
+                  return [
+                    'testing',
+                    'jest',
+                    'cypress',
+                    'playwright',
+                    'cucumber',
+                    'bdd',
+                  ].some((t) => lowerTag.includes(t));
                 case 'tooling':
-                  return ['linting', 'biome', 'eslint', 'prettier'].some(t => lowerTag.includes(t));
+                  return ['linting', 'biome', 'eslint', 'prettier'].some((t) =>
+                    lowerTag.includes(t)
+                  );
                 default:
                   return false;
               }
@@ -169,7 +209,7 @@ export default function TagsClient({ allTags, pluginCount }: TagsClientProps) {
                   {category}
                 </h3>
                 <div className="space-y-2">
-                  {categoryTags.slice(0, 5).map(tag => (
+                  {categoryTags.slice(0, 5).map((tag) => (
                     <button
                       key={tag.name}
                       type="button"

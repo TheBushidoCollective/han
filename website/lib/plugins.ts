@@ -142,7 +142,11 @@ export function getAllPluginsAcrossCategories(): Array<
         PLUGINS_DIR,
         plugin.source.replace('./', '')
       );
-      const metadata = getPluginMetadata(pluginPath, pluginName, pluginCategory);
+      const metadata = getPluginMetadata(
+        pluginPath,
+        pluginName,
+        pluginCategory
+      );
       plugins.push({
         ...metadata,
         source: plugin.source,

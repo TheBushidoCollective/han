@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import Fuse from 'fuse.js';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
 interface SearchResult {
   id: string;
@@ -18,7 +18,10 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-export default function SearchBar({ index, placeholder = 'Search plugins, skills, tags...' }: SearchBarProps) {
+export default function SearchBar({
+  index,
+  placeholder = 'Search plugins, skills, tags...',
+}: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +49,7 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
     }
 
     const searchResults = fuse.current.search(query).slice(0, 8);
-    setResults(searchResults.map(r => r.item));
+    setResults(searchResults.map((r) => r.item));
     setIsOpen(searchResults.length > 0);
     setSelectedIndex(0);
   }, [query]);
@@ -54,7 +57,10 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -70,11 +76,13 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % results.length);
+        setSelectedIndex((prev) => (prev + 1) % results.length);
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + results.length) % results.length);
+        setSelectedIndex(
+          (prev) => (prev - 1 + results.length) % results.length
+        );
         break;
       case 'Enter':
         e.preventDefault();
@@ -92,12 +100,21 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
     if (!query.trim()) return text;
 
     const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, i) =>
-      part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800">{part}</mark>
-      ) : (
-        part
-      )
+    return (
+      <>
+        {parts.map((part, idx) =>
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark
+              key={`match-${text.slice(0, 20)}-${idx}-${Math.random()}`}
+              className="bg-yellow-200 dark:bg-yellow-800"
+            >
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
     );
   }
 
@@ -109,7 +126,9 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={() => query.trim().length >= 2 && results.length > 0 && setIsOpen(true)}
+          onFocus={() =>
+            query.trim().length >= 2 && results.length > 0 && setIsOpen(true)
+          }
           placeholder={placeholder}
           className="w-full px-4 py-2 pl-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent"
         />
@@ -118,7 +137,9 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
+          <title>Search icon</title>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -150,7 +171,7 @@ export default function SearchBar({ index, placeholder = 'Search plugins, skills
                   </div>
                   {result.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {result.tags.slice(0, 3).map(tag => (
+                      {result.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
                           className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"

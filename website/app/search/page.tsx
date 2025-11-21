@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getAllPluginsAcrossCategories } from '@/lib/plugins';
-import SearchBar from '../components/SearchBar';
 import Header from '../components/Header';
+import SearchBar from '../components/SearchBar';
 
 export const metadata = {
   title: 'Search Plugins - Han',
@@ -12,13 +12,18 @@ export default function SearchPage() {
   const plugins = getAllPluginsAcrossCategories();
 
   // Build search index
-  const searchIndex = plugins.map(plugin => {
+  const searchIndex = plugins.map((plugin) => {
     const fs = require('node:fs');
     const path = require('node:path');
 
     const pluginJson = JSON.parse(
       fs.readFileSync(
-        path.join(process.cwd(), '..', plugin.source, '.claude-plugin/plugin.json'),
+        path.join(
+          process.cwd(),
+          '..',
+          plugin.source,
+          '.claude-plugin/plugin.json'
+        ),
         'utf-8'
       )
     );
@@ -87,8 +92,10 @@ export default function SearchPage() {
             Categories
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['bushido', 'buki', 'do', 'sensei'].map(category => {
-              const count = plugins.filter(p => p.category === category).length;
+            {['bushido', 'buki', 'do', 'sensei'].map((category) => {
+              const count = plugins.filter(
+                (p) => p.category === category
+              ).length;
               return (
                 <Link
                   key={category}
