@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { render } from 'ink';
@@ -32,21 +33,27 @@ export interface DetectPluginsCallbacks {
   onError: (error: Error) => void;
 }
 
-function getClaudeSettingsPath(): string {
-  const rootDir = process.cwd();
-  return join(rootDir, '.claude', 'settings.json');
+type SettingsScope = 'local' | 'project' | 'user';
+
+function getClaudeSettingsPath(scope: SettingsScope = 'user'): string {
+  if (scope === 'user') {
+    // User-level settings in home directory
+    return join(homedir(), '.claude', 'settings.json');
+  }
+  // local and project both use current working directory
+  return join(process.cwd(), '.claude', 'settings.json');
 }
 
-function ensureClaudeDirectory(): void {
-  const rootDir = process.cwd();
-  const claudeDir = join(rootDir, '.claude');
+function ensureClaudeDirectory(scope: SettingsScope = 'user'): void {
+  const settingsPath = getClaudeSettingsPath(scope);
+  const claudeDir = join(settingsPath, '..');
   if (!existsSync(claudeDir)) {
     mkdirSync(claudeDir, { recursive: true });
   }
 }
 
-function readOrCreateSettings(): ClaudeSettings {
-  const settingsPath = getClaudeSettingsPath();
+function readOrCreateSettings(scope: SettingsScope = 'user'): ClaudeSettings {
+  const settingsPath = getClaudeSettingsPath(scope);
 
   if (existsSync(settingsPath)) {
     try {
@@ -60,8 +67,11 @@ function readOrCreateSettings(): ClaudeSettings {
   return {};
 }
 
-function writeSettings(settings: ClaudeSettings): void {
-  const settingsPath = getClaudeSettingsPath();
+function writeSettings(
+  settings: ClaudeSettings,
+  scope: SettingsScope = 'user'
+): void {
+  const settingsPath = getClaudeSettingsPath(scope);
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
@@ -177,10 +187,13 @@ function parsePluginRecommendations(content: string): string[] {
 /**
  * Install plugins to Claude settings
  */
-function installPluginsToSettings(plugins: string[]): void {
-  ensureClaudeDirectory();
+function installPluginsToSettings(
+  plugins: string[],
+  scope: SettingsScope = 'user'
+): void {
+  ensureClaudeDirectory(scope);
 
-  const settings = readOrCreateSettings();
+  const settings = readOrCreateSettings(scope);
 
   // Add Han marketplace to extraMarketplaces
   if (!settings?.extraKnownMarketplaces?.han) {
@@ -198,13 +211,13 @@ function installPluginsToSettings(plugins: string[]): void {
     };
   }
 
-  writeSettings(settings);
+  writeSettings(settings, scope);
 }
 
 /**
  * SDK-based install command with Ink UI
  */
-export async function install(): Promise<void> {
+export async function install(scope: SettingsScope = 'user'): Promise<void> {
   // Import Ink UI component dynamically to avoid issues with React
   const { InstallProgress } = await import('./install-progress.js');
 
@@ -216,11 +229,15 @@ export async function install(): Promise<void> {
     rejectCompletion = reject;
   });
 
+  const scopeLabel =
+    scope === 'user' ? '~/.claude/settings.json' : './.claude/settings.json';
+  console.log(`Installing to ${scopeLabel}...\n`);
+
   const { unmount } = render(
     React.createElement(InstallProgress, {
       detectPlugins: detectPluginsWithAgent,
       onInstallComplete: (plugins: string[]) => {
-        installPluginsToSettings(plugins);
+        installPluginsToSettings(plugins, scope);
         if (resolveCompletion) resolveCompletion();
       },
       onInstallError: (error: Error) => {
