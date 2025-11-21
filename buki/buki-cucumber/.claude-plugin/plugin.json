@@ -1,0 +1,20 @@
+{
+	"name": "buki-cucumber",
+	"version": "1.0.0",
+	"description": "Comprehensive Cucumber BDD testing skills for behavior-driven development with Gherkin syntax.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"cucumber",
+		"bdd",
+		"gherkin",
+		"testing",
+		"behavior-driven-development",
+		"skill"
+	]
+}

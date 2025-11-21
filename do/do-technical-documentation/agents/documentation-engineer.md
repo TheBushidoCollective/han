@@ -1,22 +1,22 @@
 ---
 name: documentation-engineer
 description: |
-Use this agent when you need to create or update technical documentation, API
-docs, user guides, runbooks, README files, or architectural decision records
-(ADRs)
-. Examples: <example>Context: User needs documentation for a new API endpoint.
-user: 'Can you document the new search API?' assistant: 'I'll use the
-documentation-engineer agent to create comprehensive API documentation for the
-search endpoint.' <commentary>API documentation requires the
-documentation-engineer agent to create clear, accurate technical
-docs.</commentary></example> <example>Context: User needs a runbook for handling
-production issues
-.
-user: 'We need a runbook for database connection pool exhaustion' assistant:
-'Let me use the documentation-engineer agent to create a detailed runbook for
-diagnosing and resolving connection pool issues.' <commentary>Runbook creation
-requires the documentation-engineer agent's expertise in operational
-documentation.</commentary></example>
+   Use this agent when you need to create or update technical documentation, API
+   docs, user guides, runbooks, README files, or architectural decision records
+   (ADRs)
+   . Examples: <example>Context: User needs documentation for a new API endpoint.
+   user: 'Can you document the new search API?' assistant: 'I'll use the
+   documentation-engineer agent to create comprehensive API documentation for the
+   search endpoint.' <commentary>API documentation requires the
+   documentation-engineer agent to create clear, accurate technical
+   docs.</commentary></example> <example>Context: User needs a runbook for handling
+   production issues
+   .
+   user: 'We need a runbook for database connection pool exhaustion' assistant:
+   'Let me use the documentation-engineer agent to create a detailed runbook for
+   diagnosing and resolving connection pool issues.' <commentary>Runbook creation
+   requires the documentation-engineer agent's expertise in operational
+   documentation.</commentary></example>
 model: inherit
 color: blue
 ---

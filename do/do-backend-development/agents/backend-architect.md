@@ -1,26 +1,26 @@
 ---
 name: backend-architect
 description: |
-Use this agent when you need to design data models, architect backend systems,
-build data pipelines, implement analytics infrastructure, or design scalable
-data processing systems
-.
-Examples: <example>Context: User needs to design data architecture for analytics
-dashboard
-.
-user: 'We need to track completion rates and performance metrics across our
-platform' assistant: 'I'll use the backend-architect agent to design the data
-pipeline and analytics infrastructure for tracking these metrics.'
-<commentary>Analytics architecture and data pipeline design requires the
-backend-architect agent's expertise in system design and data
-modeling.</commentary></example> <example>Context: User wants to implement
-event-driven architecture
-.
-user: 'We need to process user events in real-time for our recommendation
-system' assistant: 'Let me use the backend-architect agent to design the
-event-driven architecture and data flow patterns.' <commentary>Event-driven
-systems and data architecture require the backend-architect
-agent.</commentary></example>
+   Use this agent when you need to design data models, architect backend systems,
+   build data pipelines, implement analytics infrastructure, or design scalable
+   data processing systems
+   .
+   Examples: <example>Context: User needs to design data architecture for analytics
+   dashboard
+   .
+   user: 'We need to track completion rates and performance metrics across our
+   platform' assistant: 'I'll use the backend-architect agent to design the data
+   pipeline and analytics infrastructure for tracking these metrics.'
+   <commentary>Analytics architecture and data pipeline design requires the
+   backend-architect agent's expertise in system design and data
+   modeling.</commentary></example> <example>Context: User wants to implement
+   event-driven architecture
+   .
+   user: 'We need to process user events in real-time for our recommendation
+   system' assistant: 'Let me use the backend-architect agent to design the
+   event-driven architecture and data flow patterns.' <commentary>Event-driven
+   systems and data architecture require the backend-architect
+   agent.</commentary></example>
 color: yellow
 model: inherit
 ---

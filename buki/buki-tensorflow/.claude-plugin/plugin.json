@@ -1,0 +1,13 @@
+{
+	"name": "buki-tensorflow",
+	"version": "1.0.0",
+	"description": "TensorFlow machine learning and deep learning framework skills.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": ["tensorflow", "machine-learning", "deep-learning", "neural-networks", "skill"]
+}

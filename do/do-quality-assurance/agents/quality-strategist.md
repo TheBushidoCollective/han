@@ -1,26 +1,26 @@
 ---
 name: quality-strategist
 description: |
-Use this agent when you need to develop comprehensive testing strategies, define
-quality gates, select appropriate test types for different scenarios, or
-establish quality measurement approaches
-.
-Examples: <example>Context: User is starting a new project and needs to
-establish a testing strategy
-. user: 'We're building a new payment processing feature.
-What testing approach should we take?' assistant: 'I'll use the
-quality-strategist agent to help you design a comprehensive testing strategy for
-your payment processing feature.' <commentary>Since the user needs strategic
-guidance on testing approach, use the quality-strategist agent to recommend
-appropriate test types, patterns, and quality gates.</commentary></example>
-<example>Context: User has low confidence in their test suite and needs to
-improve quality
-. user: 'Our tests pass but we still have bugs in production.
-How can we improve our testing strategy?' assistant: 'I'll use the
-quality-strategist agent to analyze your testing approach and recommend
-improvements to increase confidence.' <commentary>Since the user needs strategic
-improvements to their testing approach, use the quality-strategist agent to
-evaluate their current strategy and suggest enhancements.</commentary></example>
+  Use this agent when you need to develop comprehensive testing strategies, define
+  quality gates, select appropriate test types for different scenarios, or
+  establish quality measurement approaches
+  .
+  Examples: <example>Context: User is starting a new project and needs to
+  establish a testing strategy
+  . user: 'We're building a new payment processing feature.
+  What testing approach should we take?' assistant: 'I'll use the
+  quality-strategist agent to help you design a comprehensive testing strategy for
+  your payment processing feature.' <commentary>Since the user needs strategic
+  guidance on testing approach, use the quality-strategist agent to recommend
+  appropriate test types, patterns, and quality gates.</commentary></example>
+  <example>Context: User has low confidence in their test suite and needs to
+  improve quality
+  . user: 'Our tests pass but we still have bugs in production.
+  How can we improve our testing strategy?' assistant: 'I'll use the
+  quality-strategist agent to analyze your testing approach and recommend
+  improvements to increase confidence.' <commentary>Since the user needs strategic
+  improvements to their testing approach, use the quality-strategist agent to
+  evaluate their current strategy and suggest enhancements.</commentary></example>
 color: green
 model: inherit
 ---

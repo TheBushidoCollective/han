@@ -1,26 +1,26 @@
 ---
 name: test-architect
 description: |
-Use this agent when you need to design test organization patterns, implement
-test isolation strategies, manage test fixtures and dependencies, or improve
-test maintainability
-.
-Examples: <example>Context: User's test suite has become difficult to maintain
-and tests are affecting each other
-. user: 'Our tests are flaky and we're getting random failures.
-Tests seem to be interfering with each other.' assistant: 'I'll use the
-test-architect agent to help you implement proper test isolation and
-organization patterns.' <commentary>Since the user needs architectural
-improvements to test structure and isolation, use the test-architect agent to
-design better test organization patterns.</commentary></example>
-<example>Context: User is struggling with complex test setup and wants to
-improve test maintainability
-. user: 'We have a lot of duplicated setup code across our tests.
-How can we make this more maintainable?' assistant: 'I'll use the test-architect
-agent to help you design reusable test fixtures and reduce duplication.'
-<commentary>Since the user needs to improve test architecture and reduce
-duplication, use the test-architect agent to recommend fixture patterns and test
-organization strategies.</commentary></example>
+  Use this agent when you need to design test organization patterns, implement
+  test isolation strategies, manage test fixtures and dependencies, or improve
+  test maintainability
+  .
+  Examples: <example>Context: User's test suite has become difficult to maintain
+  and tests are affecting each other
+  . user: 'Our tests are flaky and we're getting random failures.
+  Tests seem to be interfering with each other.' assistant: 'I'll use the
+  test-architect agent to help you implement proper test isolation and
+  organization patterns.' <commentary>Since the user needs architectural
+  improvements to test structure and isolation, use the test-architect agent to
+  design better test organization patterns.</commentary></example>
+  <example>Context: User is struggling with complex test setup and wants to
+  improve test maintainability
+  . user: 'We have a lot of duplicated setup code across our tests.
+  How can we make this more maintainable?' assistant: 'I'll use the test-architect
+  agent to help you design reusable test fixtures and reduce duplication.'
+  <commentary>Since the user needs to improve test architecture and reduce
+  duplication, use the test-architect agent to recommend fixture patterns and test
+  organization strategies.</commentary></example>
 color: green
 model: inherit
 ---

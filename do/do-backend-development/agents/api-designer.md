@@ -1,25 +1,25 @@
 ---
 name: api-designer
 description: |
-Use this agent when you need to design API contracts, analyze breaking changes,
-design RESTful or GraphQL APIs, implement versioning strategies, or review API
-architecture
-.
-Examples: <example>Context: User needs to add a new API endpoint for user
-profiles
-.
-user: 'We need an endpoint to update user profile information' assistant: 'I'll
-use the api-designer agent to design the API contract with proper HTTP semantics
-and versioning strategy.' <commentary>API contract design requires the
-api-designer agent's expertise in REST principles and API
-design.</commentary></example> <example>Context: User wants to evaluate proposed
-API changes
-.
-user: 'Can you review these proposed changes to our user API for breaking
-changes?' assistant: 'Let me use the api-designer agent to analyze the changes
-and identify any breaking changes that could impact clients.'
-<commentary>Breaking change analysis and API evolution requires the api-designer
-agent.</commentary></example>
+  Use this agent when you need to design API contracts, analyze breaking changes,
+  design RESTful or GraphQL APIs, implement versioning strategies, or review API
+  architecture
+  .
+  Examples: <example>Context: User needs to add a new API endpoint for user
+  profiles
+  .
+  user: 'We need an endpoint to update user profile information' assistant: 'I'll
+  use the api-designer agent to design the API contract with proper HTTP semantics
+  and versioning strategy.' <commentary>API contract design requires the
+  api-designer agent's expertise in REST principles and API
+  design.</commentary></example> <example>Context: User wants to evaluate proposed
+  API changes
+  .
+  user: 'Can you review these proposed changes to our user API for breaking
+  changes?' assistant: 'Let me use the api-designer agent to analyze the changes
+  and identify any breaking changes that could impact clients.'
+  <commentary>Breaking change analysis and API evolution requires the api-designer
+  agent.</commentary></example>
 color: purple
 model: inherit
 ---

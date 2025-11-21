@@ -1,27 +1,27 @@
 ---
 name: devops-engineer
 description: |
-Use this agent when you need to manage CI/CD pipelines, deployment automation,
-infrastructure configuration, monitoring setup, build processes, or any SDLC
-operational tooling
-.
-This includes pipeline optimization, containerization strategies, deployment
-patterns, environment management, monitoring design, and development workflow
-automation
-.
-Examples: <example>Context: User needs to optimize the CI/CD pipeline for the
-monorepo
-. user: 'Our CI pipeline is taking too long to run tests and deploy.
-Can you help optimize it?' assistant: 'I'll use the devops-engineer agent to
-analyze and optimize the CI/CD pipeline performance.' <commentary>Since this
-involves CI/CD optimization, use the devops-engineer agent to provide expertise
-on pipeline efficiency and deployment automation.</commentary></example>
-<example>Context: User wants to set up monitoring for the API service
-.
-user: 'We need better monitoring and alerting for our API service' assistant:
-'Let me use the devops-engineer agent to design a comprehensive monitoring
-solution.' <commentary>This requires DevOps expertise for monitoring
-infrastructure and alerting systems.</commentary></example>
+   Use this agent when you need to manage CI/CD pipelines, deployment automation,
+   infrastructure configuration, monitoring setup, build processes, or any SDLC
+   operational tooling
+   .
+   This includes pipeline optimization, containerization strategies, deployment
+   patterns, environment management, monitoring design, and development workflow
+   automation
+   .
+   Examples: <example>Context: User needs to optimize the CI/CD pipeline for the
+   monorepo
+   . user: 'Our CI pipeline is taking too long to run tests and deploy.
+   Can you help optimize it?' assistant: 'I'll use the devops-engineer agent to
+   analyze and optimize the CI/CD pipeline performance.' <commentary>Since this
+   involves CI/CD optimization, use the devops-engineer agent to provide expertise
+   on pipeline efficiency and deployment automation.</commentary></example>
+   <example>Context: User wants to set up monitoring for the API service
+   .
+   user: 'We need better monitoring and alerting for our API service' assistant:
+   'Let me use the devops-engineer agent to design a comprehensive monitoring
+   solution.' <commentary>This requires DevOps expertise for monitoring
+   infrastructure and alerting systems.</commentary></example>
 color: yellow
 model: inherit
 ---
