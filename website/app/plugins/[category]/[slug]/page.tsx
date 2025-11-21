@@ -268,7 +268,7 @@ export default async function PluginPage({
                           )}
                         </div>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-3 mb-4">
                         {hookSection.commands.map((command) => (
                           <pre
                             key={command}
@@ -278,6 +278,27 @@ export default async function PluginPage({
                           </pre>
                         ))}
                       </div>
+                      {hookSection.files.length > 0 && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                            Referenced Files:
+                          </h4>
+                          <div className="grid gap-2">
+                            {hookSection.files.map((file) => (
+                              <Link
+                                key={file.name}
+                                href={`/plugins/${category}/${slug}/hooks/${file.name}`}
+                                className="flex items-center space-x-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-950 transition border border-gray-200 dark:border-gray-700"
+                              >
+                                <span className="text-lg">📄</span>
+                                <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                                  {file.path}
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
