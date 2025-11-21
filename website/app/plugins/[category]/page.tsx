@@ -66,9 +66,9 @@ export default async function CategoryPage({
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3">
               <div className="text-4xl">⛩️</div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 Han
-              </h1>
+              </div>
             </Link>
             <div className="hidden md:flex space-x-8">
               <Link
@@ -115,7 +115,7 @@ export default async function CategoryPage({
                 <div>
                   <h1 className="text-5xl font-bold text-gray-900 dark:text-white">
                     {categoryInfo.title}
-                  </h1>
+                  </div>
                   <p className="text-xl text-gray-600 dark:text-gray-400 mt-1">
                     {categoryInfo.subtitle}
                   </p>
