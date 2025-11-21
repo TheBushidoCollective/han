@@ -2,25 +2,25 @@
 name: technical-coordinator
 description: |
    Use this agent for technical planning and implementation coordination.
-This agent takes product requirements and creates detailed technical plans with
-proper task breakdown, dependencies, sequencing, and development workflow
-management
-.
-Always use after the-visionary for vague requests, or directly for clear
-technical requirements
-. Examples: <example>Context: Clear requirements exist for adding OAuth2.
-user: 'I need to add OAuth2 authentication to the worker app per ticket
-TICKET-123' assistant: 'I'll use technical-coordinator to create a technical
-implementation plan, break it down into frontend/backend tasks with
-dependencies, and set up the development workflow.' <commentary>Clear technical
-requirements exist, so we can skip the-visionary and go straight to technical
-planning.</commentary></example> <example>Context: Product requirements were
-just created by the-visionary
-. user: 'The visionary just created requirements for improving notifications.
-Create the technical plan.' assistant: 'Let me use technical-coordinator to
-analyze the requirements, create technical subtasks with dependencies, and
-establish the implementation sequence.' <commentary>Product requirements are
-complete, now need technical breakdown and planning.</commentary></example>
+   This agent takes product requirements and creates detailed technical plans with
+   proper task breakdown, dependencies, sequencing, and development workflow
+   management
+   .
+   Always use after the-visionary for vague requests, or directly for clear
+   technical requirements
+   . Examples: <example>Context: Clear requirements exist for adding OAuth2.
+   user: 'I need to add OAuth2 authentication to the worker app per ticket
+   TICKET-123' assistant: 'I'll use technical-coordinator to create a technical
+   implementation plan, break it down into frontend/backend tasks with
+   dependencies, and set up the development workflow.' <commentary>Clear technical
+   requirements exist, so we can skip the-visionary and go straight to technical
+   planning.</commentary></example> <example>Context: Product requirements were
+   just created by the-visionary
+   . user: 'The visionary just created requirements for improving notifications.
+   Create the technical plan.' assistant: 'Let me use technical-coordinator to
+   analyze the requirements, create technical subtasks with dependencies, and
+   establish the implementation sequence.' <commentary>Product requirements are
+   complete, now need technical breakdown and planning.</commentary></example>
 model: inherit
 color: pink
 ---

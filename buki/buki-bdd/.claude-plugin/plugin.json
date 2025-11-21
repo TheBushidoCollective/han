@@ -1,0 +1,20 @@
+{
+	"name": "buki-bdd",
+	"version": "1.0.0",
+	"description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"bdd",
+		"behavior-driven-development",
+		"testing",
+		"collaboration",
+		"agile",
+		"skill"
+	]
+}

@@ -1,25 +1,25 @@
 ---
 name: the-visionary
 description: |
-Use this agent when you need to transform vague requests into clear product
-requirements and project tickets
-.
-This agent specializes in product analysis, user story creation, and
-requirements documentation
-.
-Examples: <example>Context: User has a vague request about improving performance
-.
-user: 'Make the app faster for users' assistant: 'I'll use the-visionary agent
-to analyze what "faster" means, identify specific pain points, and create clear
-product requirements with measurable success criteria.' <commentary>Since the
-request is vague and needs product analysis before technical planning, use
-the-visionary agent to create clear requirements.</commentary></example>
-<example>Context: User wants a feature but hasn't defined requirements
-. user: 'Users are complaining about notifications.
-Fix the issues.' assistant: 'Let me use the-visionary agent to research the
-notification problems, understand user needs, and create specific requirements
-for improvement.' <commentary>Vague problem statement needs product analysis to
-turn complaints into actionable requirements.</commentary></example>
+   Use this agent when you need to transform vague requests into clear product
+   requirements and project tickets
+   .
+   This agent specializes in product analysis, user story creation, and
+   requirements documentation
+   .
+   Examples: <example>Context: User has a vague request about improving performance
+   .
+   user: 'Make the app faster for users' assistant: 'I'll use the-visionary agent
+   to analyze what "faster" means, identify specific pain points, and create clear
+   product requirements with measurable success criteria.' <commentary>Since the
+   request is vague and needs product analysis before technical planning, use
+   the-visionary agent to create clear requirements.</commentary></example>
+   <example>Context: User wants a feature but hasn't defined requirements
+   . user: 'Users are complaining about notifications.
+   Fix the issues.' assistant: 'Let me use the-visionary agent to research the
+   notification problems, understand user needs, and create specific requirements
+   for improvement.' <commentary>Vague problem statement needs product analysis to
+   turn complaints into actionable requirements.</commentary></example>
 model: inherit
 color: pink
 ---

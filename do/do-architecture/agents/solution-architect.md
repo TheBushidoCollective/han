@@ -1,28 +1,28 @@
 ---
 name: solution-architect
 description: |
-Use this agent for solving specific technical problems with architectural
-patterns and technology-agnostic recommendations
-.
-This agent analyzes requirements, recommends patterns, and provides
-architectural guidance for specific features or challenges
-.
-Use when you need pattern recommendations for a specific problem, not full
-system architecture design
-. Examples: <example>Context: Need to handle file uploads efficiently.
-user: 'How should we architect file upload handling for large files (up to
-5GB)?' assistant: 'I'll use solution-architect to analyze requirements, evaluate
-patterns (chunked upload, resumable upload, direct-to-storage), and recommend an
-architecture with rationale and trade-offs.' <commentary>This is a specific
-problem requiring pattern selection and architectural
-guidance.</commentary></example> <example>Context: Need to improve search
-performance
-. user: 'Our search is slow.
-What architectural approach should we use?' assistant: 'Let me use
-solution-architect to analyze the search problem, evaluate solutions (full-text
-search, Elasticsearch, read replicas, caching), and recommend an approach based
-on your scale and requirements.' <commentary>Specific problem requiring
-architectural solution recommendation.</commentary></example>
+  Use this agent for solving specific technical problems with architectural
+  patterns and technology-agnostic recommendations
+  .
+  This agent analyzes requirements, recommends patterns, and provides
+  architectural guidance for specific features or challenges
+  .
+  Use when you need pattern recommendations for a specific problem, not full
+  system architecture design
+  . Examples: <example>Context: Need to handle file uploads efficiently.
+  user: 'How should we architect file upload handling for large files (up to
+  5GB)?' assistant: 'I'll use solution-architect to analyze requirements, evaluate
+  patterns (chunked upload, resumable upload, direct-to-storage), and recommend an
+  architecture with rationale and trade-offs.' <commentary>This is a specific
+  problem requiring pattern selection and architectural
+  guidance.</commentary></example> <example>Context: Need to improve search
+  performance
+  . user: 'Our search is slow.
+  What architectural approach should we use?' assistant: 'Let me use
+  solution-architect to analyze the search problem, evaluate solutions (full-text
+  search, Elasticsearch, read replicas, caching), and recommend an approach based
+  on your scale and requirements.' <commentary>Specific problem requiring
+  architectural solution recommendation.</commentary></example>
 model: inherit
 color: teal
 ---

@@ -1,28 +1,28 @@
 ---
 name: system-architect
 description: |
-  Use this agent for system architecture design and evaluation.
-This agent focuses on architectural patterns, quality attributes, system design
-principles, and architectural decision-making
-.
-Use when you need to design system architecture, evaluate architectural
-trade-offs, or create architectural decision records
-. Examples: <example>Context: Need to design a new microservices-based system.
-user: 'We need to design the architecture for a distributed event processing
-system that handles 100K events/second' assistant: 'I'll use system-architect to
-analyze quality attribute requirements (scalability, performance, reliability),
-evaluate architectural patterns (event sourcing, CQRS, stream processing), and
-create an architectural blueprint with ADRs.' <commentary>This requires
-architectural thinking about patterns, trade-offs, and quality
-attributes.</commentary></example> <example>Context: Evaluating architectural
-options for a new feature
-.
-user: 'Should we use event-driven architecture or REST APIs for our notification
-system?' assistant: 'Let me use system-architect to evaluate both approaches
-against quality attributes, analyze trade-offs (consistency vs availability,
-coupling vs performance), and recommend the appropriate pattern with rationale.'
-<commentary>This is an architectural decision requiring trade-off
-analysis.</commentary></example>
+   Use this agent for system architecture design and evaluation.
+   This agent focuses on architectural patterns, quality attributes, system design
+   principles, and architectural decision-making
+   .
+   Use when you need to design system architecture, evaluate architectural
+   trade-offs, or create architectural decision records
+   . Examples: <example>Context: Need to design a new microservices-based system.
+   user: 'We need to design the architecture for a distributed event processing
+   system that handles 100K events/second' assistant: 'I'll use system-architect to
+   analyze quality attribute requirements (scalability, performance, reliability),
+   evaluate architectural patterns (event sourcing, CQRS, stream processing), and
+   create an architectural blueprint with ADRs.' <commentary>This requires
+   architectural thinking about patterns, trade-offs, and quality
+   attributes.</commentary></example> <example>Context: Evaluating architectural
+   options for a new feature
+   .
+   user: 'Should we use event-driven architecture or REST APIs for our notification
+   system?' assistant: 'Let me use system-architect to evaluate both approaches
+   against quality attributes, analyze trade-offs (consistency vs availability,
+   coupling vs performance), and recommend the appropriate pattern with rationale.'
+   <commentary>This is an architectural decision requiring trade-off
+   analysis.</commentary></example>
 model: inherit
 color: purple
 ---

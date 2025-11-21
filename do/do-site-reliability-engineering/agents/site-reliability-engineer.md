@@ -1,5 +1,5 @@
 ---
-name: sre
+name: site-reliability-engineer
 description: |
   Use this agent when you need expertise in site reliability engineering,
   monitoring, incident response, SLOs, error budgets, or building reliable

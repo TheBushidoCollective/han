@@ -1,0 +1,13 @@
+{
+	"name": "buki-functional-programming",
+	"version": "1.0.0",
+	"description": "Functional programming paradigm, patterns, and best practices across languages.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": ["functional-programming", "fp", "immutability", "pure-functions", "skill"]
+}

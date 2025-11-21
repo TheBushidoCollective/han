@@ -1,25 +1,25 @@
 ---
 name: security-engineer
 description: |
-Use this agent when you need to perform security assessments, fix
-vulnerabilities, implement authentication/authorization, handle PII protection,
-or ensure compliance with security standards
-.
-Examples: <example>Context: User needs to review code for security
-vulnerabilities before deployment
-.
-user: 'Can you review the new payment processing code for security issues?'
-assistant: 'I'll use the security-engineer agent to perform a comprehensive
-security review of the payment processing implementation.'
-<commentary>Security-critical code like payment processing requires the
-security-engineer agent's expertise.</commentary></example> <example>Context:
-User received a security audit finding
-.
-user: 'Our security scan found SQL injection vulnerabilities in the search
-feature' assistant: 'Let me use the security-engineer agent to analyze and fix
-these SQL injection vulnerabilities with proper parameterization.'
-<commentary>Security vulnerabilities require immediate attention from the
-security-engineer agent.</commentary></example>
+   Use this agent when you need to perform security assessments, fix
+   vulnerabilities, implement authentication/authorization, handle PII protection,
+   or ensure compliance with security standards
+   .
+   Examples: <example>Context: User needs to review code for security
+   vulnerabilities before deployment
+   .
+   user: 'Can you review the new payment processing code for security issues?'
+   assistant: 'I'll use the security-engineer agent to perform a comprehensive
+   security review of the payment processing implementation.'
+   <commentary>Security-critical code like payment processing requires the
+   security-engineer agent's expertise.</commentary></example> <example>Context:
+   User received a security audit finding
+   .
+   user: 'Our security scan found SQL injection vulnerabilities in the search
+   feature' assistant: 'Let me use the security-engineer agent to analyze and fix
+   these SQL injection vulnerabilities with proper parameterization.'
+   <commentary>Security vulnerabilities require immediate attention from the
+   security-engineer agent.</commentary></example>
 color: red
 model: inherit
 ---
