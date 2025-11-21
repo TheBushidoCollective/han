@@ -51,9 +51,9 @@ export default function Home() {
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-        <h2 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
           Sophsticated Claude Code Plugins with Superior Accuracy
-        </h2>
+        </h1>
         <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
           A curated marketplace of Claude Code plugins built on the foundation
           of the seven Bushido virtues. Master your craft through disciplined
