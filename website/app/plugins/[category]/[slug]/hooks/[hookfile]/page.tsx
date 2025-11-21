@@ -8,7 +8,7 @@ import Sidebar from '../../../../../components/Sidebar';
 import {
   getAllPluginsAcrossCategories,
   getPluginContent,
-} from '../../../../../lib/plugins';
+} from '../../../../../../lib/plugins';
 
 export async function generateStaticParams() {
   const allPlugins = getAllPluginsAcrossCategories();
