@@ -11,9 +11,9 @@ export default function Header({
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3">
             <div className="text-4xl">⛩️</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
               Han
-            </h1>
+            </div>
           </Link>
 
           <div className="flex items-center space-x-6">
