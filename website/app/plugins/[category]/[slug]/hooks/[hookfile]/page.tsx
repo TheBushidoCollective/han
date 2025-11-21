@@ -3,12 +3,12 @@ import path from 'node:path';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import Header from '../../../../../components/Header';
-import Sidebar from '../../../../../components/Sidebar';
 import {
   getAllPluginsAcrossCategories,
   getPluginContent,
 } from '../../../../../../lib/plugins';
+import Header from '../../../../../components/Header';
+import Sidebar from '../../../../../components/Sidebar';
 
 export async function generateStaticParams() {
   const allPlugins = getAllPluginsAcrossCategories();
