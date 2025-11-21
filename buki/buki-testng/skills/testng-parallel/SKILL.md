@@ -1,6 +1,6 @@
 ---
 name: testng-parallel
-description: Master TestNG parallel execution including thread pools, parallel modes, and thread safety.
+description: Use when testNG parallel execution including thread pools, parallel modes, and thread safety.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

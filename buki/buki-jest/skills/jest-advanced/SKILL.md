@@ -1,6 +1,6 @@
 ---
 name: jest-advanced
-description: Master advanced Jest features including custom matchers, parameterized tests with test.each, coverage configuration, and performance optimization.
+description: Use when advanced Jest features including custom matchers, parameterized tests with test.each, coverage configuration, and performance optimization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

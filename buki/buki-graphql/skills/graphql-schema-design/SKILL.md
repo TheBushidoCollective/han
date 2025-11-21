@@ -1,9 +1,6 @@
 ---
-name: GraphQL Schema Design
-description: >
-  Apply GraphQL schema design principles including type system usage,
-  SDL patterns, field design, pagination, directives, and versioning
-  strategies for building maintainable and scalable GraphQL APIs.
+name: graphql-schema-design
+description: Use when designing GraphQL schemas with type system, SDL patterns, field design, pagination, directives, and versioning strategies for maintainable and scalable APIs.
 allowed-tools: []
 ---
 

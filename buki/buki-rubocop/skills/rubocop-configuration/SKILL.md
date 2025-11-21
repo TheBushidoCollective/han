@@ -1,6 +1,6 @@
 ---
 name: rubocop-configuration
-description: Master RuboCop configuration including YAML config, departments, inheritance, and customization.
+description: Use when ruboCop configuration including YAML config, departments, inheritance, and customization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

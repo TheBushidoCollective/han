@@ -1,11 +1,12 @@
 ---
 name: crystal-engineer
-description: |
-  Use this agent when you need to work with Crystal language development.
-This includes WebSocket communication, TLS/SSL configuration, HTTP framework
-usage, ORM operations, concurrent job processing, and high-performance systems
-.
-Examples: <example>Context: User needs to implement WebSocket-based real-time
+description: Use when working with Crystal language development including WebSocket communication, TLS/SSL configuration, HTTP frameworks, ORM operations, and high-performance concurrent systems.
+allowed-tools: []
+---
+
+# Crystal Engineer
+
+<example>Context: User needs to implement WebSocket-based real-time
 communication
 .
 user: 'I need to add real-time streaming through WebSockets' assistant: 'I'll

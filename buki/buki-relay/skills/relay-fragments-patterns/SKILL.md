@@ -1,7 +1,6 @@
 ---
 name: relay-fragments-patterns
-description: Master Relay fragment composition, data masking, colocation, and
-  container patterns for React applications
+description: Use when relay fragment composition, data masking, colocation, and container patterns for React applications.
 allowed-tools:
   - Read
   - Write

@@ -1,14 +1,19 @@
 {
-  "name": "buki-rspec",
-  "version": "1.0.0",
-  "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["rspec", "testing", "ruby", "bdd", "skill"],
-  "hooksPath": "hooks"
+	"name": "buki-rspec",
+	"version": "1.0.0",
+	"description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"rspec",
+		"testing",
+		"ruby",
+		"bdd",
+		"skill"
+	]
 }

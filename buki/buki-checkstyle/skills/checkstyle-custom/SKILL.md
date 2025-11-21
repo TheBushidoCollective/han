@@ -1,6 +1,6 @@
 ---
 name: checkstyle-custom
-description: Master custom Checkstyle checks including check development, filters, and plugin integration.
+description: Use when developing custom Checkstyle checks, filters, and plugin integrations for project-specific Java code standards.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

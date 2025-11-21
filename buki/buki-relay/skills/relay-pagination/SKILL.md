@@ -1,7 +1,6 @@
 ---
 name: relay-pagination
-description: Master Relay pagination with cursor-based pagination, infinite
-  scroll, load more patterns, and connection protocols
+description: Use when relay pagination with cursor-based pagination, infinite scroll, load more patterns, and connection protocols.
 allowed-tools:
   - Read
   - Write

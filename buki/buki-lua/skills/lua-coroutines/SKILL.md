@@ -1,9 +1,6 @@
 ---
 name: Lua Coroutines
-description: >
-  Master Lua coroutines for cooperative multitasking including coroutine creation,
-  yielding and resuming, passing values, generators, iterators, asynchronous
-  patterns, state machines, and producer-consumer implementations.
+description: Use when lua coroutines for cooperative multitasking including coroutine creation, yielding and resuming, passing values, generators, iterators, asynchronous patterns, state machines, and producer-consumer implementations.
 allowed-tools: []
 ---
 

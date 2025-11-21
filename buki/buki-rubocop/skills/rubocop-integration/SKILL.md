@@ -1,6 +1,6 @@
 ---
 name: rubocop-integration
-description: Master RuboCop CI integration including GitHub Actions, plugins, and performance optimization.
+description: Use when ruboCop CI integration including GitHub Actions, plugins, and performance optimization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

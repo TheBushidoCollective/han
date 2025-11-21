@@ -1,9 +1,6 @@
 ---
 name: PHP Modern Features
-description: >
-  Master modern PHP features including typed properties, union types, match
-  expressions, named arguments, attributes, enums, and patterns for writing
-  type-safe, expressive PHP code with latest language improvements.
+description: Use when modern PHP features including typed properties, union types, match expressions, named arguments, attributes, enums, and patterns for writing type-safe, expressive PHP code with latest language improvements.
 allowed-tools: []
 ---
 

@@ -1,4 +1,4 @@
-# Sensei Context7
+# Context7
 
 MCP server configuration for Context7 integration providing persistent context
 and knowledge management.

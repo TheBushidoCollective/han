@@ -1,7 +1,6 @@
 ---
 name: elixir-pattern-matching
-description: Master Elixir pattern matching including function clauses, case
-  statements, with statements, and destructuring. Use for elegant control flow.
+description: Use when Elixir pattern matching including function clauses, case statements, with statements, and destructuring. Use for elegant control flow.
 allowed-tools:
   - Bash
   - Read

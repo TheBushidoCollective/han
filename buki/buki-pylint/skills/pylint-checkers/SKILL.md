@@ -1,6 +1,6 @@
 ---
 name: pylint-checkers
-description: Master Pylint checkers including built-in checkers, custom checkers, and checker development.
+description: Use when pylint checkers including built-in checkers, custom checkers, and checker development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

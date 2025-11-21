@@ -1,3 +1,9 @@
+---
+name: kubernetes-manifests
+description: Use when writing and deploying Kubernetes manifests for container orchestration.
+allowed-tools: []
+---
+
 # Kubernetes Manifests
 
 Understanding and writing Kubernetes manifest files.

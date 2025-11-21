@@ -1,6 +1,6 @@
 ---
 name: vitest-configuration
-description: Master Vitest configuration, Vite integration, workspace setup, and test environment configuration for modern testing.
+description: Use when vitest configuration, Vite integration, workspace setup, and test environment configuration for modern testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

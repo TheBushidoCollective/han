@@ -51,7 +51,22 @@ The installer will:
 Use Claude Code's built-in plugin command to add the marketplace:
 
 ```
-/plugin add-marketplace han github:thebushidocollective/han
+claude plugin marketplace add thebushidocollective/han
+```
+
+Then install individual plugins:
+
+```
+claude plugin install bushido@han
+claude plugin install buki-typescript@han
+```
+
+### Via `/plugin` Command
+
+Use Claude Code's built-in plugin command to add the marketplace:
+
+```
+thebushidocollective/han
 ```
 
 Then install individual plugins:

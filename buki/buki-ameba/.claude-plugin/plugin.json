@@ -1,11 +1,9 @@
 {
-  "name": "buki-ameba",
-  "version": "1.0.0",
-  "description": "Ameba skills for Crystal code analysis",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "hooks": "hooks/hooks.json",
-  "skills": ["ameba-configuration"]
+	"name": "buki-ameba",
+	"version": "1.0.0",
+	"description": "Ameba skills for Crystal code analysis",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	}
 }

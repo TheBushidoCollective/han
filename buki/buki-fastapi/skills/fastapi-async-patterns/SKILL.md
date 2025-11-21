@@ -1,7 +1,6 @@
 ---
 name: fastapi-async-patterns
-description: Master FastAPI async patterns for building high-performance APIs. Use when
-  handling concurrent requests and async operations.
+description: Use when FastAPI async patterns for building high-performance APIs. Use when handling concurrent requests and async operations.
 allowed-tools:
   - Bash
   - Read

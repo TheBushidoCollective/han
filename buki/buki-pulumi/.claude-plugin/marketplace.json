@@ -1,8 +1,8 @@
 {
-  "name": "buki-pulumi",
-  "displayName": "Pulumi",
-  "description": "Pulumi infrastructure-as-code validation",
-  "version": "1.0.0",
-  "author": "The Bushido Collective",
-  "tags": ["pulumi", "infrastructure", "iac", "devops"]
+	"name": "buki-pulumi",
+	"displayName": "Pulumi",
+	"description": "Pulumi infrastructure-as-code validation",
+	"version": "1.0.0",
+	"author": "The Bushido Collective",
+	"tags": ["pulumi", "infrastructure", "iac", "devops"]
 }

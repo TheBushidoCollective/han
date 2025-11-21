@@ -1,8 +1,6 @@
 ---
 name: orthogonality-principle
-description: Apply the principle of orthogonality to create independent,
-non-overlapping components where changes in one don't affect others
-. Use when designing modules, APIs, and system architecture.
+description: Use when designing modules, APIs, and system architecture requiring independent, non-overlapping components where changes in one don't affect others.
 allowed-tools:
   - Read
   - Edit

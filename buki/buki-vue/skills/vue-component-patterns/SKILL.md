@@ -1,7 +1,6 @@
 ---
 name: vue-component-patterns
-description: Master Vue component patterns including props, emits, slots, and provide/inject.
-  Use when building reusable Vue components.
+description: Use when Vue component patterns including props, emits, slots, and provide/inject. Use when building reusable Vue components.
 allowed-tools:
   - Bash
   - Read

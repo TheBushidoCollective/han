@@ -1,7 +1,6 @@
 ---
 name: apollo-client-patterns
-description: Master Apollo Client patterns for queries, mutations, cache
-  management, and local state in React applications
+description: Use when implementing Apollo Client patterns for queries, mutations, cache management, and local state in React applications.
 allowed-tools:
   - Read
   - Write

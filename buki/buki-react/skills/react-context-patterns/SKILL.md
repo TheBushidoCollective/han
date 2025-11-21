@@ -1,7 +1,6 @@
 ---
 name: react-context-patterns
-description: Master React Context patterns for state management. Use when sharing
-  state across component trees without prop drilling.
+description: Use when React Context patterns for state management. Use when sharing state across component trees without prop drilling.
 allowed-tools:
   - Bash
   - Read

@@ -1,7 +1,6 @@
 ---
 name: java-concurrency
-description: Master Java concurrency with ExecutorService, CompletableFuture,
-  and virtual threads. Use when building concurrent applications.
+description: Use when Java concurrency with ExecutorService, CompletableFuture, and virtual threads. Use when building concurrent applications.
 allowed-tools:
   - Bash
   - Read

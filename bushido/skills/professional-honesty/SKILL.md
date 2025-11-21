@@ -1,8 +1,6 @@
 ---
 name: professional-honesty
-description: Prioritize professional honesty and directness over excessive
-agreeableness
-. Use when responding to a question or providing information.
+description: Use when responding to questions or providing information requiring professional honesty and directness over excessive agreeableness.
 allowed-tools:
   - "*"
 ---

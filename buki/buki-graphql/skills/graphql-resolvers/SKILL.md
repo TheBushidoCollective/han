@@ -1,9 +1,6 @@
 ---
-name: GraphQL Resolvers
-description: >
-  Apply resolver implementation patterns including resolver functions,
-  context management, DataLoader batching, error handling, authentication,
-  and testing strategies for efficient GraphQL server development.
+name: graphql-resolvers
+description: Use when implementing GraphQL resolvers with resolver functions, context management, DataLoader batching, error handling, authentication, and testing strategies.
 allowed-tools: []
 ---
 

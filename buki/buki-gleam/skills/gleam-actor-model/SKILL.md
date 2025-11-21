@@ -1,9 +1,6 @@
 ---
 name: Gleam Actor Model
-description: >
-  Master OTP actor patterns in Gleam including processes, message passing, GenServer
-  implementations, supervisors, fault tolerance, state management, and building
-  concurrent, fault-tolerant applications on the Erlang VM.
+description: Use when oTP actor patterns in Gleam including processes, message passing, GenServer implementations, supervisors, fault tolerance, state management, and building concurrent, fault-tolerant applications on the Erlang VM.
 allowed-tools: []
 ---
 

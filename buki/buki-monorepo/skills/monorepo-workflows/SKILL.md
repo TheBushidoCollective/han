@@ -1,9 +1,6 @@
 ---
 name: monorepo-workflows
-description: Apply monorepo development workflows including CI/CD patterns,
-  version management, publishing, and team collaboration practices. Use when
-  setting up CI/CD, implementing versioning, optimizing workflows, or managing
-  releases.
+description: Use when setting up CI/CD, implementing versioning, optimizing workflows, or managing releases with monorepo development workflows including version management, publishing, and team collaboration practices.
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: pytest-advanced
-description: Master advanced Pytest features including markers, custom assertions, hooks, and coverage configuration.
+description: Use when advanced Pytest features including markers, custom assertions, hooks, and coverage configuration.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

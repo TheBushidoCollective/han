@@ -1,6 +1,6 @@
 ---
 name: eslint-rules
-description: Master ESLint built-in rules including rule configuration, severity levels, and disabling strategies.
+description: Use when eSLint built-in rules including rule configuration, severity levels, and disabling strategies.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

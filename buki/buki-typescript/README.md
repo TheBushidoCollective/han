@@ -1,4 +1,4 @@
-# Buki TypeScript
+# TypeScript
 
 TypeScript compiler validation and type checking for TypeScript projects.
 

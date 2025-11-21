@@ -1,7 +1,6 @@
 ---
 name: playwright-page-object-model
-description: Implement maintainable Page Object Model patterns in Playwright.
-  Use when creating page objects or refactoring tests for better maintainability.
+description: Use when creating page objects or refactoring Playwright tests for better maintainability with Page Object Model patterns.
 allowed-tools:
   - Bash
   - Read

@@ -1,4 +1,4 @@
-# Sensei Playwright Mcp
+# Playwright Mcp
 
 MCP server configuration for Playwright integration providing test automation,
 browser control, and test execution capabilities.

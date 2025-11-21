@@ -1,7 +1,6 @@
 ---
 name: angular-dependency-injection
-description: Master Angular dependency injection with providers, injectors, and services.
-  Use when building modular Angular applications.
+description: Use when building modular Angular applications requiring dependency injection with providers, injectors, and services.
 allowed-tools:
   - Bash
   - Read

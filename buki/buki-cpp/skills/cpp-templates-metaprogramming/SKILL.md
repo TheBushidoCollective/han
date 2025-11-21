@@ -1,7 +1,6 @@
 ---
 name: cpp-templates-metaprogramming
-description: Master C++ templates, SFINAE, concepts, and compile-time
-  metaprogramming. Use when creating generic and type-safe C++ libraries.
+description: Use when creating generic and type-safe C++ libraries with templates, SFINAE, concepts, and compile-time metaprogramming.
 allowed-tools:
   - Bash
   - Read

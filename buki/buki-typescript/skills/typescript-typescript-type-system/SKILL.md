@@ -1,6 +1,6 @@
 ---
 name: typescript-type-system
-description: Master TypeScript's type system including strict mode, advanced
+description: Use when typeScript's type system including strict mode, advanced.
 types, generics, type guards, and compiler configuration
 . Use when working with TypeScript language features.
 allowed-tools:

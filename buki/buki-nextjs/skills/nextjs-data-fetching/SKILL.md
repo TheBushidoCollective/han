@@ -1,7 +1,6 @@
 ---
 name: nextjs-data-fetching
-description: Master Next.js data fetching patterns including SSG, SSR, and ISR. Use when
-  building data-driven Next.js applications.
+description: Use when next.js data fetching patterns including SSG, SSR, and ISR. Use when building data-driven Next.js applications.
 allowed-tools:
   - Bash
   - Read

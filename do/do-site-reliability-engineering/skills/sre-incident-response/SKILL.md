@@ -1,3 +1,9 @@
+---
+name: sre-incident-response
+description: Use when responding to production incidents following SRE principles and best practices.
+allowed-tools: []
+---
+
 # SRE Incident Response
 
 Managing incidents and conducting effective postmortems.

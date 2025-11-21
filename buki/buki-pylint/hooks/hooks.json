@@ -1,24 +1,24 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with pyproject.toml --  pylint **/*.py"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with pyproject.toml --  pylint **/*.py"
-          }
-        ]
-      }
-    ]
-  }
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with pyproject.toml --  pylint **/*.py"
+					}
+				]
+			}
+		],
+		"SubagentStop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with pyproject.toml --  pylint **/*.py"
+					}
+				]
+			}
+		]
+	}
 }

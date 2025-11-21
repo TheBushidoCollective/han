@@ -1,22 +1,21 @@
 {
-  "extraKnownMarketplaces": {
-    "han": {
-      "source": {
-        "source": "directory",
-        "path": "./"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "bushido@han": true,
-    "do-technical-documentation@han": true,
-    "do-prompt-engineering@han": true,
-    "do-claude-plugin-development@han": true,
-    "buki-biome@han": true,
-    "buki-typescript@han": true,
-    "buki-markdownlint@han": true,
-    "buki-monorepo@han": true,
-    "buki-react@han": true,
-    "buki-ink@han": true
-  }
+	"extraKnownMarketplaces": {
+		"han": {
+			"source": {
+				"source": "directory",
+				"path": "./"
+			}
+		}
+	},
+	"enabledPlugins": {
+		"bushido@han": true,
+		"do-technical-documentation@han": true,
+		"do-prompt-engineering@han": true,
+		"do-claude-plugin-development@han": true,
+		"buki-biome@han": true,
+		"buki-typescript@han": true,
+		"buki-markdownlint@han": true,
+		"buki-monorepo@han": true,
+		"buki-react@han": true
+	}
 }

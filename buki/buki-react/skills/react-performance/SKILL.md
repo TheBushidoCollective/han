@@ -1,7 +1,6 @@
 ---
 name: react-performance
-description: Master React performance optimization including memoization, lazy loading,
-  and virtualization. Use when optimizing React applications.
+description: Use when React performance optimization including memoization, lazy loading, and virtualization. Use when optimizing React applications.
 allowed-tools:
   - Bash
   - Read

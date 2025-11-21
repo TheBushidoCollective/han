@@ -1,9 +1,6 @@
 ---
 name: PHP Composer and Autoloading
-description: >
-  Master Composer package management and PSR-4 autoloading including dependency
-  management, autoload strategies, package creation, version constraints, and
-  patterns for modern PHP project organization and distribution.
+description: Use when composer package management and PSR-4 autoloading including dependency management, autoload strategies, package creation, version constraints, and patterns for modern PHP project organization and distribution.
 allowed-tools: []
 ---
 

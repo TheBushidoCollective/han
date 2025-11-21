@@ -1,4 +1,4 @@
-# buki-ink
+# Ink
 
 Advanced Ink skills for building beautiful, interactive terminal UIs with React.
 

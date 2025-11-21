@@ -1,13 +1,18 @@
 {
-  "name": "buki-angular",
-  "version": "1.0.0",
-  "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["angular", "rxjs", "signals", "skill"]
+	"name": "buki-angular",
+	"version": "1.0.0",
+	"description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"angular",
+		"rxjs",
+		"signals",
+		"skill"
+	]
 }

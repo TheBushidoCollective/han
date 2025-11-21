@@ -1,6 +1,6 @@
 ---
 name: clippy-lints
-description: Master Clippy lint categories including correctness, performance, style, and lint configuration.
+description: Use when applying Clippy lint categories for Rust code including correctness, performance, style, and custom lint configuration.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

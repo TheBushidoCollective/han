@@ -1,8 +1,6 @@
 ---
 name: simplicity-principles
-description: Apply KISS (Keep It Simple), YAGNI (You Aren't Gonna Need It), and
-Principle of Least Astonishment to write simple, predictable code
-. Use when designing solutions, adding features, or refactoring.
+description: Use when designing solutions, adding features, or refactoring by applying KISS, YAGNI, and Principle of Least Astonishment to write simple, predictable code.
 allowed-tools:
   - Read
   - Edit

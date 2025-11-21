@@ -1,9 +1,6 @@
 ---
 name: Gleam Erlang Interop
-description: >
-  Master Gleam-Erlang interoperability including calling Erlang code from Gleam,
-  using Erlang libraries, external functions, working with Erlang types, NIFs,
-  and leveraging the BEAM ecosystem from Gleam applications.
+description: Use when gleam-Erlang interoperability including calling Erlang code from Gleam, using Erlang libraries, external functions, working with Erlang types, NIFs, and leveraging the BEAM ecosystem from Gleam applications.
 allowed-tools: []
 ---
 

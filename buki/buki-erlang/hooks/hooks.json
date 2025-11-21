@@ -1,32 +1,32 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 compile warnings_as_errors=true"
-          },
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 eunit"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 compile warnings_as_errors=true"
-          },
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 eunit"
-          }
-        ]
-      }
-    ]
-  }
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 compile warnings_as_errors=true"
+					},
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 eunit"
+					}
+				]
+			}
+		],
+		"SubagentStop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 compile warnings_as_errors=true"
+					},
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with rebar.config --  rebar3 eunit"
+					}
+				]
+			}
+		]
+	}
 }

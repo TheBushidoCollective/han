@@ -1,7 +1,6 @@
 ---
 name: go-concurrency
-description: Master Go concurrency with goroutines, channels, and sync patterns.
-  Use when writing concurrent Go code.
+description: Use when Go concurrency with goroutines, channels, and sync patterns. Use when writing concurrent Go code.
 allowed-tools:
   - Bash
   - Read

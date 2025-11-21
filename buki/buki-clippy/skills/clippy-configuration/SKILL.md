@@ -1,6 +1,6 @@
 ---
 name: clippy-configuration
-description: Master Clippy configuration including TOML config, lint groups, attributes, and workspace setup.
+description: Use when configuring Clippy for Rust projects with TOML config, lint groups, attributes, and workspace setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

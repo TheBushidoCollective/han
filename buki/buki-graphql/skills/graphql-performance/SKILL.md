@@ -1,9 +1,6 @@
 ---
-name: GraphQL Performance
-description: >
-  Apply GraphQL performance optimization techniques including query
-  complexity analysis, batching, caching strategies, depth limiting,
-  monitoring, and database optimization for scalable GraphQL APIs.
+name: graphql-performance
+description: Use when optimizing GraphQL API performance with query complexity analysis, batching, caching strategies, depth limiting, monitoring, and database optimization.
 allowed-tools: []
 ---
 

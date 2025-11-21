@@ -1,9 +1,6 @@
 ---
 name: monorepo-tooling
-description: Apply monorepo build systems and tools including Turborepo, Nx,
-  Bazel, Lerna, and package managers for efficient task running, caching, and
-  code generation. Use when setting up monorepo tooling, optimizing builds, or
-  migrating between tools.
+description: Use when setting up monorepo tooling, optimizing builds, or migrating between tools with Turborepo, Nx, Bazel, Lerna for efficient task running, caching, and code generation.
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep
 ---
 

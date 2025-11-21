@@ -1,3 +1,9 @@
+---
+name: dialyzer-analysis
+description: Use when analyzing and fixing Dialyzer warnings and type discrepancies in Erlang/Elixir code.
+allowed-tools: []
+---
+
 # Dialyzer Analysis
 
 Understanding and fixing Dialyzer warnings in Erlang and Elixir code.

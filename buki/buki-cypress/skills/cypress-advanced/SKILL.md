@@ -1,6 +1,6 @@
 ---
 name: cypress-advanced
-description: Master advanced Cypress features including custom commands, plugins, and network stubbing.
+description: Use when advanced Cypress features including custom commands, plugins, and network stubbing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

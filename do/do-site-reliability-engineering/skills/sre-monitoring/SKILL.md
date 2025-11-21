@@ -1,3 +1,9 @@
+---
+name: sre-monitoring-and-observability
+description: Use when building comprehensive monitoring and observability systems.
+allowed-tools: []
+---
+
 # SRE Monitoring and Observability
 
 Building comprehensive monitoring and observability systems.

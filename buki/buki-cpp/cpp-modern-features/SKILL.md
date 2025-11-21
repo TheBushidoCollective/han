@@ -1,7 +1,6 @@
 ---
 name: cpp-modern-features
-description: Master modern C++ features from C++11/14/17/20 including auto,
-  lambdas, range-based loops, structured bindings, and concepts
+description: Use when modern C++ features from C++11/14/17/20 including auto, lambdas, range-based loops, structured bindings, and concepts.
 allowed-tools:
   - Read
   - Write

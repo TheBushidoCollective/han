@@ -1,8 +1,8 @@
 {
-  "name": "buki-kustomize",
-  "displayName": "Kustomize",
-  "description": "Kustomize configuration validation for Kubernetes",
-  "version": "1.0.0",
-  "author": "The Bushido Collective",
-  "tags": ["kustomize", "kubernetes", "k8s", "devops"]
+	"name": "buki-kustomize",
+	"displayName": "Kustomize",
+	"description": "Kustomize configuration validation for Kubernetes",
+	"version": "1.0.0",
+	"author": "The Bushido Collective",
+	"tags": ["kustomize", "kubernetes", "k8s", "devops"]
 }

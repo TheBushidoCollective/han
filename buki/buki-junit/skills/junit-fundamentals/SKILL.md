@@ -1,6 +1,6 @@
 ---
 name: junit-fundamentals
-description: Master JUnit fundamentals including annotations, assertions, and test lifecycle for Java testing.
+description: Use when jUnit fundamentals including annotations, assertions, and test lifecycle for Java testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

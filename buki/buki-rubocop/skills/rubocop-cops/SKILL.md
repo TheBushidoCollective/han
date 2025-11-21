@@ -1,6 +1,6 @@
 ---
 name: rubocop-cops
-description: Master RuboCop cops including built-in cops, configuration, auto-correction, and development.
+description: Use when ruboCop cops including built-in cops, configuration, auto-correction, and development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

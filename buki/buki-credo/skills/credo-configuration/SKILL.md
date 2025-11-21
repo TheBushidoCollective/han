@@ -1,3 +1,9 @@
+---
+name: credo-configuration
+description: Use when configuring Credo static analysis for Elixir projects requiring customized code quality rules and settings.
+allowed-tools: []
+---
+
 # Credo Configuration
 
 Credo is a static code analysis tool for Elixir focused on code quality and consistency.

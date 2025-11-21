@@ -1,7 +1,6 @@
 ---
 name: c-data-structures
-description: Master fundamental C data structures including arrays, structs,
-  linked lists, trees, and hash tables with memory-efficient implementations
+description: Use when fundamental C data structures including arrays, structs, linked lists, trees, and hash tables with memory-efficient implementations.
 allowed-tools:
   - Read
   - Write

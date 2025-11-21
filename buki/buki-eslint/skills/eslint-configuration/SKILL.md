@@ -1,6 +1,6 @@
 ---
 name: eslint-configuration
-description: Master ESLint configuration including config files, extends, plugins, and environment setup.
+description: Use when eSLint configuration including config files, extends, plugins, and environment setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

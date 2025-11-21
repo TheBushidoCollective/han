@@ -1,7 +1,6 @@
 ---
 name: django-rest-framework
-description: Master Django REST Framework for building APIs with serializers, viewsets,
-  and authentication. Use when creating RESTful APIs.
+description: Use when Django REST Framework for building APIs with serializers, viewsets, and authentication. Use when creating RESTful APIs.
 allowed-tools:
   - Bash
   - Read

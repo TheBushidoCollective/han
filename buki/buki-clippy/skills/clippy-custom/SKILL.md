@@ -1,6 +1,6 @@
 ---
 name: clippy-custom
-description: Master custom Clippy lints including lint development, lint passes, and contributing to Clippy.
+description: Use when developing custom Clippy lints, implementing lint passes, and contributing to Clippy for Rust code standards.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

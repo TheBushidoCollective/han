@@ -1,4 +1,4 @@
-# Buki Fastapi
+# Fastapi
 
 Advanced FastAPI skills for dependency injection, async patterns, and
 validation.
@@ -13,14 +13,12 @@ This plugin provides the following skills:
 
 ## Usage
 
-Skills can be invoked using the Skill tool:
+Once enabled, Claude will automatically apply these skills when working with relevant code. The plugin provides context and expertise that Claude uses to:
 
-```javascript
-Skill("buki-fastapi:fastapi-async-patterns")
-```
-
-Each skill provides specialized knowledge and patterns
-for Fastapi development.
+- Write idiomatic code following best practices
+- Suggest appropriate patterns and architectures
+- Catch common mistakes and anti-patterns
+- Provide framework-specific guidance
 
 ## License
 

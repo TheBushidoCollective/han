@@ -1,9 +1,6 @@
 ---
 name: Scala Functional Patterns
-description: >
-  Master functional programming patterns in Scala including higher-order functions,
-  immutability, pattern matching, algebraic data types, monads, for-comprehensions,
-  and functional composition for building robust, type-safe applications.
+description: Use when functional programming patterns in Scala including higher-order functions, immutability, pattern matching, algebraic data types, monads, for-comprehensions, and functional composition for building robust, type-safe applications.
 allowed-tools: []
 ---
 

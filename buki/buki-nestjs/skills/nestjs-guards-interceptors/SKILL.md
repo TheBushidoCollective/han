@@ -1,7 +1,6 @@
 ---
 name: nestjs-guards-interceptors
-description: Master NestJS guards and interceptors for auth, logging, and transformation.
-  Use when implementing cross-cutting concerns.
+description: Use when nestJS guards and interceptors for auth, logging, and transformation. Use when implementing cross-cutting concerns.
 allowed-tools:
   - Bash
   - Read

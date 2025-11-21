@@ -1,7 +1,6 @@
 ---
 name: java-generics
-description: Master Java generics including type parameters, wildcards, and
-  type bounds. Use when writing type-safe reusable code.
+description: Use when Java generics including type parameters, wildcards, and type bounds. Use when writing type-safe reusable code.
 allowed-tools:
   - Bash
   - Read

@@ -1,6 +1,6 @@
 ---
 name: prettier-configuration
-description: Master Prettier configuration including options, config files, ignore patterns, and formatting rules.
+description: Use when prettier configuration including options, config files, ignore patterns, and formatting rules.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

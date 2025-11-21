@@ -1,24 +1,24 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
-          }
-        ]
-      }
-    ]
-  }
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
+					}
+				]
+			}
+		],
+		"SubagentStop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
+					}
+				]
+			}
+		]
+	}
 }

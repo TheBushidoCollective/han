@@ -1,3 +1,9 @@
+---
+name: ink-hooks-state
+description: Use when managing state and side effects in Ink applications using React hooks for terminal UIs.
+allowed-tools: []
+---
+
 # Ink Hooks and State Management
 
 You are an expert in managing state and side effects in Ink applications using React hooks.

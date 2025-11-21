@@ -1,9 +1,6 @@
 ---
 name: Objective-C Protocols and Categories
-description: >
-  Master Objective-C protocols for defining interfaces and categories for
-  extending classes, including formal protocols, optional methods, class
-  extensions, and patterns for modular, reusable code design.
+description: Use when objective-C protocols for defining interfaces and categories for extending classes, including formal protocols, optional methods, class extensions, and patterns for modular, reusable code design.
 allowed-tools: []
 ---
 

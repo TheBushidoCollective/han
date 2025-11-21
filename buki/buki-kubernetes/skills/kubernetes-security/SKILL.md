@@ -1,3 +1,9 @@
+---
+name: kubernetes-security
+description: Use when implementing Kubernetes security best practices including RBAC, pod security policies, and network policies.
+allowed-tools: []
+---
+
 # Kubernetes Security
 
 Security best practices for Kubernetes deployments.

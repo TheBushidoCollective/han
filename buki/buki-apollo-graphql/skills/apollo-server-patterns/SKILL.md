@@ -1,7 +1,6 @@
 ---
 name: apollo-server-patterns
-description: Master Apollo Server patterns for building GraphQL APIs with
-  resolvers, data sources, schema design, and federation
+description: Use when building GraphQL APIs with Apollo Server requiring resolvers, data sources, schema design, and federation.
 allowed-tools:
   - Read
   - Write

@@ -1,7 +1,6 @@
 ---
 name: java-streams-api
-description: Master Java Streams API for functional-style data processing.
-  Use when processing collections with streams.
+description: Use when Java Streams API for functional-style data processing. Use when processing collections with streams.
 allowed-tools:
   - Bash
   - Read

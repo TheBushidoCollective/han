@@ -1,3 +1,9 @@
+---
+name: dialyzer-configuration
+description: Use when configuring Dialyzer for Erlang/Elixir type checking and static analysis.
+allowed-tools: []
+---
+
 # Dialyzer Configuration
 
 Dialyzer is a static analysis tool for Erlang and Elixir that identifies software discrepancies such as type errors, unreachable code, and unnecessary tests.

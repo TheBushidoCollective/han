@@ -1,10 +1,6 @@
 ---
 name: structural-design-principles
-description: Apply Composition Over Inheritance, Law of Demeter, Tell Don't Ask,
-and Encapsulation principles when designing modules and components
-.
-These structural principles transcend programming paradigms and apply to both
-functional (Elixir) and object-oriented (TypeScript) code.
+description: Use when designing modules and components requiring Composition Over Inheritance, Law of Demeter, Tell Don't Ask, and Encapsulation principles that transcend programming paradigms.
 allowed-tools:
   - Read
   - Edit

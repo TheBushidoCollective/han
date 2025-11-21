@@ -1,3 +1,9 @@
+---
+name: ansible-playbooks
+description: Use when writing and organizing Ansible playbooks for automated configuration management and infrastructure orchestration.
+allowed-tools: []
+---
+
 # Ansible Playbooks
 
 Writing and organizing Ansible playbooks for configuration management.

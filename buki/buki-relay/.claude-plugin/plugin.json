@@ -1,13 +1,19 @@
 {
-  "name": "buki-relay",
-  "version": "1.0.0",
-  "description": "Advanced Relay GraphQL framework skills for React applications",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  },
-  "homepage": "https://github.com/thebushidocollective/sensei",
-  "repository": "https://github.com/thebushidocollective/sensei",
-  "license": "MIT",
-  "keywords": ["relay", "graphql", "react", "fragments", "skill"]
+	"name": "buki-relay",
+	"version": "1.0.0",
+	"description": "Advanced Relay GraphQL framework skills for React applications",
+	"author": {
+		"name": "The Bushido Collective",
+		"url": "https://thebushido.co"
+	},
+	"homepage": "https://github.com/thebushidocollective/han",
+	"repository": "https://github.com/thebushidocollective/han",
+	"license": "MIT",
+	"keywords": [
+		"relay",
+		"graphql",
+		"react",
+		"fragments",
+		"skill"
+	]
 }

@@ -1,7 +1,6 @@
 ---
 name: django-orm-patterns
-description: Master Django ORM patterns with models, queries, and relationships. Use when
-  building database-driven Django applications.
+description: Use when Django ORM patterns with models, queries, and relationships. Use when building database-driven Django applications.
 allowed-tools:
   - Bash
   - Read

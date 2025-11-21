@@ -1,7 +1,6 @@
 ---
 name: rust-ownership-system
-description: Master Rust's ownership system including ownership rules, borrowing,
-  lifetimes, and memory safety. Use when working with Rust memory management.
+description: Use when Rust's ownership system including ownership rules, borrowing, lifetimes, and memory safety. Use when working with Rust memory management.
 allowed-tools:
   - Bash
   - Read

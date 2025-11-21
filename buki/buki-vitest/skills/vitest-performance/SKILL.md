@@ -1,6 +1,6 @@
 ---
 name: vitest-performance
-description: Master Vitest performance optimization including fast execution, watch mode, and parallelization strategies.
+description: Use when vitest performance optimization including fast execution, watch mode, and parallelization strategies.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
