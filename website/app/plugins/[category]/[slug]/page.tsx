@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getAllPlugins, getPluginContent } from '../../../../lib/plugins';
+import fs from 'node:fs';
+import path from 'node:path';
+import { getAllPlugins, getAllPluginsAcrossCategories, getPluginContent } from '../../../../lib/plugins';
 import InstallationTabs from '../../../components/InstallationTabs';
 import Sidebar from '../../../components/Sidebar';
+import Header from '../../../components/Header';
+import RelatedPlugins from '../../../components/RelatedPlugins';
 
 export async function generateStaticParams() {
   const categories = ['bushido', 'buki', 'do', 'sensei'] as const;
@@ -68,35 +72,36 @@ export default async function PluginPage({
     notFound();
   }
 
+  // Load plugin metadata for tags
+  const pluginJsonPath = path.join(process.cwd(), '..', plugin.metadata.category === 'bushido' ? 'bushido' : `${plugin.metadata.category}/${plugin.metadata.name}`, '.claude-plugin/plugin.json');
+  const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf-8'));
+  const tags = pluginJson.keywords || [];
+
+  // Find related plugins
+  const allPlugins = getAllPluginsAcrossCategories();
+  const relatedPlugins = allPlugins
+    .filter(p => p.name !== plugin.metadata.name)
+    .map(p => {
+      const pJsonPath = path.join(process.cwd(), '..', p.source, '.claude-plugin/plugin.json');
+      const pJson = JSON.parse(fs.readFileSync(pJsonPath, 'utf-8'));
+      const pTags = pJson.keywords || [];
+      const sharedTags = pTags.filter((t: string) => tags.includes(t));
+      const sameCategory = p.category === plugin.metadata.category ? 1 : 0;
+      return {
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        sharedTags,
+        score: sharedTags.length + sameCategory,
+      };
+    })
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="text-4xl">⛩️</div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Han
-              </h1>
-            </Link>
-            <div className="hidden md:flex space-x-8">
-              <Link
-                href="/docs"
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              >
-                Documentation
-              </Link>
-              <a
-                href="https://github.com/thebushidocollective/han"
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              >
-                GitHub
-              </a>
-            </div>
-          </div>
-        </nav>
-      </header>
+      <Header showSearch={true} />
 
       {/* Breadcrumbs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -139,6 +144,19 @@ export default async function PluginPage({
                   </p>
                 </div>
               </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {tags.map((tag: string) => (
+                    <Link
+                      key={tag}
+                      href={`/tags?tag=${encodeURIComponent(tag)}`}
+                      className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Installation */}
@@ -248,6 +266,11 @@ export default async function PluginPage({
                   ))}
                 </div>
               </section>
+            )}
+
+            {/* Related Plugins */}
+            {relatedPlugins.length > 0 && (
+              <RelatedPlugins plugins={relatedPlugins} />
             )}
           </main>
         </div>
