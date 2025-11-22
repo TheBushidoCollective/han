@@ -94,6 +94,27 @@ function getCategoryIcon(
   }
 }
 
+/**
+ * Titleize a string by capitalizing words and replacing hyphens with spaces
+ */
+function titleize(str: string): string {
+  return str
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
+ * Strip the category prefix from a plugin name
+ */
+function stripPrefix(name: string, category: string): string {
+  const prefix = `${category}-`;
+  if (name.startsWith(prefix)) {
+    return name.slice(prefix.length);
+  }
+  return name;
+}
+
 function getPluginMetadata(
   pluginPath: string,
   pluginName: string,
@@ -107,9 +128,13 @@ function getPluginMetadata(
     );
     const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf-8'));
 
+    // Strip prefix and titleize for display
+    const strippedName = stripPrefix(pluginName, category);
+    const displayTitle = titleize(strippedName);
+
     return {
       name: pluginName,
-      title: pluginJson.name || pluginName,
+      title: displayTitle,
       description: pluginJson.description || '',
       icon: pluginJson.icon || getCategoryIcon(category),
       kanji: pluginJson.kanji,
@@ -117,9 +142,12 @@ function getPluginMetadata(
     };
   } catch (error) {
     console.error(`Error reading plugin metadata for ${pluginName}:`, error);
+    const strippedName = stripPrefix(pluginName, category);
+    const displayTitle = titleize(strippedName);
+
     return {
       name: pluginName,
-      title: pluginName,
+      title: displayTitle,
       description: '',
       icon: getCategoryIcon(category),
       category,
