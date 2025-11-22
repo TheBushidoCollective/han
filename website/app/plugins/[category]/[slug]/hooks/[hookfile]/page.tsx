@@ -26,7 +26,7 @@ export async function generateStaticParams() {
       for (const file of files) {
         params.push({
           category: plugin.category,
-          slug: plugin.name,
+          slug: plugin.category === 'bushido' ? 'core' : plugin.name,
           hookfile: path.basename(file, '.md'),
         });
       }
@@ -55,9 +55,11 @@ export default async function HookFilePage({
     notFound();
   }
 
+  const pluginSlug =
+    category === 'bushido' && slug === 'core' ? 'bushido' : slug;
   const plugin = getPluginContent(
     category as 'bushido' | 'buki' | 'do' | 'sensei',
-    slug
+    pluginSlug
   );
 
   if (!plugin) {
