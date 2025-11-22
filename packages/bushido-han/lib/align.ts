@@ -7,6 +7,7 @@ import {
   writeSettings,
   getInstalledPlugins,
   detectPluginsWithAgent,
+  detectHanScopes,
 } from './shared.js';
 
 export interface AlignResult {
@@ -67,8 +68,31 @@ function alignPluginsInSettings(recommendedPlugins: string[], scope: 'project' |
 
 /**
  * SDK-based align command with Ink UI
+ * If scope is not provided, auto-detects which scope(s) have Han installed
  */
-export async function align(scope: 'project' | 'local' = 'project'): Promise<void> {
+export async function align(scope?: 'project' | 'local'): Promise<void> {
+  // Auto-detect scopes if not explicitly provided
+  let scopesToAlign: Array<'project' | 'local'>;
+  if (scope) {
+    scopesToAlign = [scope];
+  } else {
+    scopesToAlign = detectHanScopes();
+    // Default to project if Han not installed anywhere
+    if (scopesToAlign.length === 0) {
+      scopesToAlign = ['project'];
+    }
+  }
+
+  // Align each detected scope
+  for (const currentScope of scopesToAlign) {
+    await alignSingleScope(currentScope);
+  }
+}
+
+/**
+ * Align plugins for a single scope
+ */
+async function alignSingleScope(scope: 'project' | 'local'): Promise<void> {
   // Import Ink UI component dynamically
   const { AlignProgress } = await import('./align-progress.js');
 

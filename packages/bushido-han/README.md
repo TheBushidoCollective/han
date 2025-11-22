@@ -82,9 +82,12 @@ npx @thebushidocollective/han align [--scope <project|local>]
 
 **Options:**
 
-- `--scope <project|local>` - Alignment scope (default: `project`)
+- `--scope <project|local>` - Alignment scope (optional, auto-detects if not specified)
   - `project`: Align plugins in `.claude/settings.json` (shared via git)
   - `local`: Align plugins in `.claude/settings.local.json` (git-ignored, machine-specific)
+  - If not specified, automatically detects which scope(s) have Han installed and aligns those
+  - If Han is installed in both scopes, aligns both
+  - If Han is not installed anywhere, defaults to `project`
 
 **How it works:**
 
@@ -112,10 +115,13 @@ This ensures your plugins stay synchronized with your codebase as it evolves.
 **Examples:**
 
 ```bash
-# Align project settings (default)
+# Auto-detect and align all scopes where Han is installed
 npx @thebushidocollective/han align
 
-# Align local settings
+# Explicitly align project settings only
+npx @thebushidocollective/han align --scope project
+
+# Explicitly align local settings only
 npx @thebushidocollective/han align --scope local
 ```
 

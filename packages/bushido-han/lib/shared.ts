@@ -65,6 +65,28 @@ export function writeSettings(settings: ClaudeSettings, scope: 'project' | 'loca
 }
 
 /**
+ * Detect which scope(s) have Han marketplace configured
+ * Returns array of scopes where Han is installed
+ */
+export function detectHanScopes(): Array<'project' | 'local'> {
+  const scopes: Array<'project' | 'local'> = [];
+
+  // Check project scope
+  const projectSettings = readOrCreateSettings('project');
+  if (projectSettings.extraKnownMarketplaces?.han) {
+    scopes.push('project');
+  }
+
+  // Check local scope
+  const localSettings = readOrCreateSettings('local');
+  if (localSettings.extraKnownMarketplaces?.han) {
+    scopes.push('local');
+  }
+
+  return scopes;
+}
+
+/**
  * Get currently installed Han plugins
  */
 export function getInstalledPlugins(scope: 'project' | 'local' = 'project'): string[] {
