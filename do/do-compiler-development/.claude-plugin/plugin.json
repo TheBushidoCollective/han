@@ -1,18 +1,13 @@
 {
-	"name": "do-compiler-development",
-	"version": "1.0.0",
-	"description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"compiler",
-		"language-design",
-		"parsing",
-		"agent"
-	]
+  "name": "do-compiler-development",
+  "version": "1.0.0",
+  "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["compiler", "language-design", "parsing", "agent"]
 }

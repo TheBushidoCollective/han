@@ -1,13 +1,13 @@
 {
-	"name": "do-voip-engineering",
-	"version": "1.0.0",
-	"description": "VoIP engineering discipline for telecommunications and real-time communications systems.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
+  "name": "do-voip-engineering",
+  "version": "1.0.0",
+  "description": "VoIP engineering discipline for telecommunications and real-time communications systems.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
 }

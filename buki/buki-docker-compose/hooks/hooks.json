@@ -1,24 +1,24 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -1,21 +1,21 @@
 {
-	"name": "do-site-reliability-engineering",
-	"version": "1.0.0",
-	"description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"sre",
-		"reliability",
-		"monitoring",
-		"incidents",
-		"devops",
-		"agent"
-	],
-	"agentsPath": "agents"
+  "name": "do-site-reliability-engineering",
+  "version": "1.0.0",
+  "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "sre",
+    "reliability",
+    "monitoring",
+    "incidents",
+    "devops",
+    "agent"
+  ],
+  "agentsPath": "agents"
 }

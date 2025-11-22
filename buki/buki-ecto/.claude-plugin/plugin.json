@@ -1,9 +1,9 @@
 {
-	"name": "buki-ecto",
-	"version": "1.0.0",
-	"description": "Ecto skills for database interactions in Elixir",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	}
+  "name": "buki-ecto",
+  "version": "1.0.0",
+  "description": "Ecto skills for database interactions in Elixir",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  }
 }

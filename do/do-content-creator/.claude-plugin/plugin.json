@@ -1,20 +1,20 @@
 {
-	"name": "do-content-creator",
-	"version": "1.0.0",
-	"description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"content",
-		"writing",
-		"marketing",
-		"storytelling",
-		"engagement",
-		"agent"
-	]
+  "name": "do-content-creator",
+  "version": "1.0.0",
+  "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "content",
+    "writing",
+    "marketing",
+    "storytelling",
+    "engagement",
+    "agent"
+  ]
 }

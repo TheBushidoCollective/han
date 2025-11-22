@@ -1,19 +1,13 @@
 {
-	"name": "buki-typescript",
-	"version": "1.0.0",
-	"description": "TypeScript compiler validation and type checking for TypeScript projects.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"typescript",
-		"tsc",
-		"type-checking",
-		"validation",
-		"compiler"
-	]
+  "name": "buki-typescript",
+  "version": "1.0.0",
+  "description": "TypeScript compiler validation and type checking for TypeScript projects.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["typescript", "tsc", "type-checking", "validation", "compiler"]
 }

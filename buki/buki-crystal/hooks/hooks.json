@@ -1,32 +1,32 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
-					},
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
-					},
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal tool format --check"
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with shard.yml --  crystal spec"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -1,19 +1,13 @@
 {
-	"name": "buki-php",
-	"version": "1.0.0",
-	"description": "Advanced PHP programming skills for modern PHP and security patterns",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"php",
-		"composer",
-		"security",
-		"web",
-		"skill"
-	]
+  "name": "buki-php",
+  "version": "1.0.0",
+  "description": "Advanced PHP programming skills for modern PHP and security patterns",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["php", "composer", "security", "web", "skill"]
 }

@@ -1,18 +1,13 @@
 {
-	"name": "do-technical-documentation",
-	"version": "1.0.0",
-	"description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"documentation",
-		"technical-writing",
-		"knowledge",
-		"agent"
-	]
+  "name": "do-technical-documentation",
+  "version": "1.0.0",
+  "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
 }

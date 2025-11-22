@@ -1,24 +1,24 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Pulumi.yaml -- pulumi preview --non-interactive --suppress-outputs || true"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Pulumi.yaml -- pulumi preview --non-interactive --suppress-outputs || true"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Pulumi.yaml -- pulumi preview --non-interactive --suppress-outputs || true"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with Pulumi.yaml -- pulumi preview --non-interactive --suppress-outputs || true"
+          }
+        ]
+      }
+    ]
+  }
 }
