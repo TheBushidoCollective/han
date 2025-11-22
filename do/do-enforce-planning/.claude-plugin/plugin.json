@@ -1,18 +1,13 @@
 {
-	"name": "do-enforce-planning",
-	"version": "1.0.0",
-	"description": "Enforces planning before implementation work begins",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"planning",
-		"workflow",
-		"agent",
-		"hook"
-	]
+  "name": "do-enforce-planning",
+  "version": "1.0.0",
+  "description": "Enforces planning before implementation work begins",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["planning", "workflow", "agent", "hook"]
 }

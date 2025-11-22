@@ -1,19 +1,13 @@
 {
-	"name": "buki-kotlin",
-	"version": "1.0.0",
-	"description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"kotlin",
-		"coroutines",
-		"android",
-		"jvm",
-		"skill"
-	]
+  "name": "buki-kotlin",
+  "version": "1.0.0",
+  "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"]
 }

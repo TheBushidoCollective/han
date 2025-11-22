@@ -1,15 +1,15 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "if [ \"${CLAUDE_HOOK_STOP_HOOK_ACTIVE:-false}\" = \"true\" ]; then echo 'Commit already made during this session'; exit 0; fi; if ! git rev-parse --git-dir > /dev/null 2>&1; then echo 'Not a git repository, skipping commit'; exit 0; fi; if [ -z \"$(git status --porcelain)\" ]; then echo 'No changes to commit'; exit 0; fi; echo 'Committing work for git storytelling...'; git add -A && git commit -m \"$(cat <<'EOF'\nwork: commit current progress\n\nCommitted early and often to tell the story of development.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\" || echo 'Commit failed, please review changes manually'",
-						"description": "Commit work early and often for git storytelling"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"${CLAUDE_HOOK_STOP_HOOK_ACTIVE:-false}\" = \"true\" ]; then echo 'Commit already made during this session'; exit 0; fi; if ! git rev-parse --git-dir > /dev/null 2>&1; then echo 'Not a git repository, skipping commit'; exit 0; fi; if [ -z \"$(git status --porcelain)\" ]; then echo 'No changes to commit'; exit 0; fi; echo 'Committing work for git storytelling...'; git add -A && git commit -m \"$(cat <<'EOF'\nwork: commit current progress\n\nCommitted early and often to tell the story of development.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\" || echo 'Commit failed, please review changes manually'",
+            "description": "Commit work early and often for git storytelling"
+          }
+        ]
+      }
+    ]
+  }
 }

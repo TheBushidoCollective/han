@@ -1,18 +1,13 @@
 {
-	"name": "do-observability-engineering",
-	"version": "1.0.0",
-	"description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"observability",
-		"monitoring",
-		"tracing",
-		"agent"
-	]
+  "name": "do-observability-engineering",
+  "version": "1.0.0",
+  "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["observability", "monitoring", "tracing", "agent"]
 }

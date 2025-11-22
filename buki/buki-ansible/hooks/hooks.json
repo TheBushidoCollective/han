@@ -1,24 +1,24 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.yml,*.yaml -- sh -c 'if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi'"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.yml,*.yaml -- sh -c 'if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi'"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.yml,*.yaml -- sh -c 'if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi'"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with *.yml,*.yaml -- sh -c 'if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi'"
+          }
+        ]
+      }
+    ]
+  }
 }

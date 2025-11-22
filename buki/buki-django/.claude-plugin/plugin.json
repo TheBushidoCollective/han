@@ -1,18 +1,13 @@
 {
-	"name": "buki-django",
-	"version": "1.0.0",
-	"description": "Advanced Django skills for ORM, class-based views, and REST framework.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"django",
-		"python",
-		"orm",
-		"skill"
-	]
+  "name": "buki-django",
+  "version": "1.0.0",
+  "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["django", "python", "orm", "skill"]
 }

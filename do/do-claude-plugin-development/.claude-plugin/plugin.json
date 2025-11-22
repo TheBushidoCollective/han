@@ -1,19 +1,13 @@
 {
-	"name": "do-claude-plugin-development",
-	"version": "1.0.0",
-	"description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"plugin",
-		"development",
-		"claude-code",
-		"quality",
-		"agent"
-	]
+  "name": "do-claude-plugin-development",
+  "version": "1.0.0",
+  "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
 }

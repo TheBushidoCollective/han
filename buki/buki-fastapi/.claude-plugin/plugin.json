@@ -1,18 +1,13 @@
 {
-	"name": "buki-fastapi",
-	"version": "1.0.0",
-	"description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"fastapi",
-		"python",
-		"async",
-		"skill"
-	]
+  "name": "buki-fastapi",
+  "version": "1.0.0",
+  "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["fastapi", "python", "async", "skill"]
 }

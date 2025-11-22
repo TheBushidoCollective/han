@@ -1,20 +1,20 @@
 {
-	"name": "bushido",
-	"version": "1.0.0",
-	"description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"philosophy",
-		"quality",
-		"testing",
-		"principles",
-		"bushido",
-		"virtues"
-	]
+  "name": "bushido",
+  "version": "1.0.0",
+  "description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "philosophy",
+    "quality",
+    "testing",
+    "principles",
+    "bushido",
+    "virtues"
+  ]
 }

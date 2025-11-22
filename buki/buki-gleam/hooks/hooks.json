@@ -1,32 +1,32 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam format --check"
-					},
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam test"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam format --check"
-					},
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam test"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam format --check"
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam test"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam format --check"
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with gleam.toml --  gleam test"
+          }
+        ]
+      }
+    ]
+  }
 }

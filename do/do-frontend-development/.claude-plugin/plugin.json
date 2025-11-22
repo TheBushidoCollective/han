@@ -1,20 +1,13 @@
 {
-	"name": "do-frontend-development",
-	"version": "1.0.0",
-	"description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"frontend",
-		"ui",
-		"ux",
-		"design",
-		"presentation",
-		"agent"
-	]
+  "name": "do-frontend-development",
+  "version": "1.0.0",
+  "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"]
 }
