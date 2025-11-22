@@ -28,6 +28,9 @@ export default function Sidebar() {
             >
               🎯 Bushido
             </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+              Core philosophy and quality principles
+            </p>
           </div>
 
           {/* Dō */}
@@ -38,6 +41,9 @@ export default function Sidebar() {
             >
               🛤️ Dō
             </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+              Specialized development disciplines
+            </p>
             <ul className="space-y-1 ml-4">
               {doPlugins.map((plugin) => (
                 <li key={plugin.name}>
@@ -60,6 +66,9 @@ export default function Sidebar() {
             >
               ⚔️ Buki
             </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+              Technology skills and validations
+            </p>
             <ul className="space-y-1 ml-4">
               {bukiPlugins.map((plugin) => (
                 <li key={plugin.name}>
@@ -82,6 +91,9 @@ export default function Sidebar() {
             >
               👴 Sensei
             </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+              MCP servers for external integrations
+            </p>
             <ul className="space-y-1 ml-4">
               {senseiPlugins.map((plugin) => (
                 <li key={plugin.name}>
