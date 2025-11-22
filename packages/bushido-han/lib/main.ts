@@ -19,11 +19,21 @@ program
 // Install command
 program
   .command('install')
-  .description('Install Han marketplace and plugins to ./.claude/settings.json')
-  .action(async () => {
+  .description('Install Han marketplace and plugins to Claude Code settings')
+  .option(
+    '--scope <scope>',
+    'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
+    'project'
+  )
+  .action(async (options: { scope?: string }) => {
     try {
+      const scope = options.scope || 'project';
+      if (scope !== 'project' && scope !== 'local') {
+        console.error('Error: --scope must be either "project" or "local"');
+        process.exit(1);
+      }
       const { install } = await import('./install.js');
-      await install();
+      await install(scope as 'project' | 'local');
       process.exit(0);
     } catch (error: unknown) {
       console.error(
@@ -47,13 +57,21 @@ program
 // Align command
 program
   .command('align')
-  .description(
-    'Align plugins with current codebase state in ./.claude/settings.json'
+  .description('Align plugins with current codebase state in Claude Code settings')
+  .option(
+    '--scope <scope>',
+    'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
+    'project'
   )
-  .action(async () => {
+  .action(async (options: { scope?: string }) => {
     try {
+      const scope = options.scope || 'project';
+      if (scope !== 'project' && scope !== 'local') {
+        console.error('Error: --scope must be either "project" or "local"');
+        process.exit(1);
+      }
       const { align } = await import('./align.js');
-      await align();
+      await align(scope as 'project' | 'local');
       process.exit(0);
     } catch (error: unknown) {
       console.error(

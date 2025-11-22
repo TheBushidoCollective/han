@@ -34,9 +34,9 @@ export interface DetectPluginsCallbacks {
   onError: (error: Error) => void;
 }
 
-function getClaudeSettingsPath(): string {
-  // Always use project-level settings in current working directory
-  return join(process.cwd(), '.claude', 'settings.json');
+function getClaudeSettingsPath(scope: 'project' | 'local' = 'project'): string {
+  const filename = scope === 'local' ? 'settings.local.json' : 'settings.json';
+  return join(process.cwd(), '.claude', filename);
 }
 
 function ensureClaudeDirectory(): void {
@@ -47,14 +47,14 @@ function ensureClaudeDirectory(): void {
   }
 }
 
-function readOrCreateSettings(): ClaudeSettings {
-  const settingsPath = getClaudeSettingsPath();
+function readOrCreateSettings(scope: 'project' | 'local' = 'project'): ClaudeSettings {
+  const settingsPath = getClaudeSettingsPath(scope);
 
   if (existsSync(settingsPath)) {
     try {
       return JSON.parse(readFileSync(settingsPath, 'utf8')) as ClaudeSettings;
     } catch (_error) {
-      console.error('Error reading settings.json, creating new one');
+      console.error(`Error reading ${scope === 'local' ? 'settings.local.json' : 'settings.json'}, creating new one`);
       return {};
     }
   }
@@ -62,8 +62,8 @@ function readOrCreateSettings(): ClaudeSettings {
   return {};
 }
 
-function writeSettings(settings: ClaudeSettings): void {
-  const settingsPath = getClaudeSettingsPath();
+function writeSettings(settings: ClaudeSettings, scope: 'project' | 'local' = 'project'): void {
+  const settingsPath = getClaudeSettingsPath(scope);
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
@@ -150,8 +150,8 @@ function parsePluginRecommendations(content: string): string[] {
 /**
  * Get currently installed Han plugins
  */
-function getInstalledPlugins(): string[] {
-  const settings = readOrCreateSettings();
+function getInstalledPlugins(scope: 'project' | 'local' = 'project'): string[] {
+  const settings = readOrCreateSettings(scope);
   const enabledPlugins = settings.enabledPlugins || {};
 
   return Object.keys(enabledPlugins)
@@ -162,11 +162,11 @@ function getInstalledPlugins(): string[] {
 /**
  * Install plugins to Claude settings and return list of added plugins
  */
-function installPluginsToSettings(plugins: string[]): string[] {
+function installPluginsToSettings(plugins: string[], scope: 'project' | 'local' = 'project'): string[] {
   ensureClaudeDirectory();
 
-  const settings = readOrCreateSettings();
-  const currentPlugins = getInstalledPlugins();
+  const settings = readOrCreateSettings(scope);
+  const currentPlugins = getInstalledPlugins(scope);
   const added: string[] = [];
 
   // Add Han marketplace to extraMarketplaces
@@ -188,7 +188,7 @@ function installPluginsToSettings(plugins: string[]): string[] {
     };
   }
 
-  writeSettings(settings);
+  writeSettings(settings, scope);
 
   return added;
 }
@@ -196,7 +196,7 @@ function installPluginsToSettings(plugins: string[]): string[] {
 /**
  * SDK-based install command with Ink UI
  */
-export async function install(): Promise<void> {
+export async function install(scope: 'project' | 'local' = 'project'): Promise<void> {
   // Import Ink UI component dynamically to avoid issues with React
   const { InstallProgress } = await import('./install-progress.js');
 
@@ -208,13 +208,14 @@ export async function install(): Promise<void> {
     rejectCompletion = reject;
   });
 
-  console.log('Installing to ./.claude/settings.json...\n');
+  const filename = scope === 'local' ? 'settings.local.json' : 'settings.json';
+  console.log(`Installing to ./.claude/${filename}...\n`);
 
   const { unmount } = render(
     React.createElement(InstallProgress, {
       detectPlugins: detectPluginsWithAgent,
       onInstallComplete: (plugins: string[]) => {
-        const added = installPluginsToSettings(plugins);
+        const added = installPluginsToSettings(plugins, scope);
         if (added.length > 0) {
           console.log(
             `\n✓ Added ${added.length} plugin(s): ${added.join(', ')}`
@@ -222,6 +223,7 @@ export async function install(): Promise<void> {
         } else {
           console.log('\n✓ All recommended plugins were already installed');
         }
+        console.log('\n⚠️  Please restart Claude Code to load the new plugins');
         if (resolveCompletion) resolveCompletion();
       },
       onInstallError: (error: Error) => {
