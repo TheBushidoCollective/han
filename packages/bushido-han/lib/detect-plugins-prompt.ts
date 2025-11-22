@@ -20,8 +20,13 @@ Plugin Categories:
 Your Analysis Process:
 1. **Analyze the codebase structure**:
    - Use Glob to discover directory structure and file types
+     * Example: glob("**/*.md") to find markdown files
+     * Example: glob("**/blog/**") to check for blog directories
    - Use Grep to search for import statements and framework usage
+     * Example: grep("import.*react") to find React usage
+     * Example: grep("^---") to find frontmatter in markdown files
    - Read configuration files (package.json, Cargo.toml, go.mod, requirements.txt, etc.)
+   - Use Read tool to examine specific files when patterns are found
 
 2. **Identify technologies used** (for buki-* recommendations):
    - What programming languages are in use?
@@ -30,10 +35,39 @@ Your Analysis Process:
    - What build tools and infrastructure are present?
 
 3. **Identify development practices** (for do-* recommendations):
-   - What type of application is this? (frontend, backend, mobile, etc.)
-   - What development disciplines are evidenced by the folder structure?
-   - What engineering practices would benefit this codebase?
-   - Are there APIs, databases, infrastructure, documentation, etc.?
+   Analyze the codebase for these specific patterns:
+
+   - **Content & Writing**: Look for blog posts, articles, or documentation:
+     * Directories: blog/, posts/, content/, articles/, docs/, _posts/
+     * Files: .md, .mdx with frontmatter (title, date, author, tags)
+     * CMS: contentlayer.config.js, sanity.config.ts, contentful
+     * If found → recommend do-content-creator
+
+   - **API Development**: Look for API/backend patterns:
+     * Directories: api/, routes/, controllers/, endpoints/
+     * Files: OpenAPI/Swagger specs, GraphQL schemas
+     * Frameworks: Express routes, tRPC, FastAPI, Rails controllers
+     * If found → recommend do-api-development
+
+   - **Testing Practices**: Look for test infrastructure:
+     * Directories: __tests__/, tests/, test/, spec/
+     * Files: *.test.*, *.spec.*, test configuration files
+     * If found → consider relevant testing do-* plugins
+
+   - **DevOps/Infrastructure**: Look for deployment configs:
+     * Files: Dockerfile, docker-compose.yml, kubernetes/, terraform/
+     * CI/CD: .github/workflows/, .gitlab-ci.yml, .circleci/
+     * If found → recommend do-devops or do-infrastructure
+
+   - **Accessibility**: Look for a11y patterns:
+     * Dependencies: @axe-core, pa11y, jest-axe
+     * Config files: .pa11yci, accessibility test files
+     * If found → recommend do-accessibility-engineering
+
+   - **Type of application**:
+     * Frontend-heavy (components/, pages/, views/) → do-frontend-development
+     * Mobile (android/, ios/, mobile/) → do-mobile-development
+     * Full-stack (both frontend & backend) → both frontend and backend do-*
 
 4. **Match findings to available plugins**:
    - Cross-reference detected technologies with buki-* plugins in marketplace
