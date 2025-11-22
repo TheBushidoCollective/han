@@ -142,11 +142,34 @@ export async function detectPluginsWithAgent(
 
     // Extract plugin recommendations from agent response
     const plugins = parsePluginRecommendations(responseContent);
-    const finalPlugins = plugins.length > 0 ? plugins : ['bushido'];
+
+    // Validate plugins against marketplace
+    const validatedPlugins = await validatePlugins(plugins);
+    const finalPlugins = validatedPlugins.length > 0 ? validatedPlugins : ['bushido'];
 
     callbacks.onComplete(finalPlugins, responseContent);
   } catch (error) {
     callbacks.onError(error as Error);
+  }
+}
+
+/**
+ * Fetch the marketplace to get list of valid plugins
+ */
+async function fetchMarketplacePlugins(): Promise<Set<string>> {
+  try {
+    const response = await fetch(
+      'https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json'
+    );
+    if (!response.ok) {
+      console.warn('Warning: Could not fetch marketplace.json, skipping validation');
+      return new Set();
+    }
+    const marketplace = await response.json() as { plugins: Array<{ name: string }> };
+    return new Set(marketplace.plugins.map(p => p.name));
+  } catch (_error) {
+    console.warn('Warning: Could not fetch marketplace.json, skipping validation');
+    return new Set();
   }
 }
 
@@ -176,4 +199,34 @@ export function parsePluginRecommendations(content: string): string[] {
   } catch (_error) {
     return [];
   }
+}
+
+/**
+ * Validate that recommended plugins exist in the marketplace
+ */
+async function validatePlugins(plugins: string[]): Promise<string[]> {
+  const validPlugins = await fetchMarketplacePlugins();
+
+  // If we couldn't fetch the marketplace, return all plugins
+  if (validPlugins.size === 0) {
+    return plugins;
+  }
+
+  const validated: string[] = [];
+  const invalid: string[] = [];
+
+  for (const plugin of plugins) {
+    if (validPlugins.has(plugin)) {
+      validated.push(plugin);
+    } else {
+      invalid.push(plugin);
+    }
+  }
+
+  // Log warning if any invalid plugins were found
+  if (invalid.length > 0) {
+    console.warn(`Warning: Filtered out ${invalid.length} invalid plugin(s): ${invalid.join(', ')}`);
+  }
+
+  return validated;
 }
