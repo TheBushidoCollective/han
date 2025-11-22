@@ -99,16 +99,50 @@ export function getInstalledPlugins(scope: 'project' | 'local' = 'project'): str
 }
 
 /**
+ * Build prompt with marketplace data injected
+ */
+function buildPromptWithMarketplace(plugins: MarketplacePlugin[]): string {
+  const pluginList = plugins
+    .map(p => {
+      const parts = [`- ${p.name}`];
+      if (p.description) parts.push(`: ${p.description}`);
+      if (p.keywords && p.keywords.length > 0) {
+        parts.push(` [${p.keywords.join(', ')}]`);
+      }
+      return parts.join('');
+    })
+    .join('\n');
+
+  return `${detectPluginsPrompt}
+
+AVAILABLE PLUGINS IN MARKETPLACE:
+${pluginList}
+
+Remember: ONLY recommend plugins from the list above. Never recommend plugins that are not in this list.`;
+}
+
+/**
  * Use Claude Agent SDK to intelligently analyze codebase and recommend plugins
  */
 export async function detectPluginsWithAgent(
   callbacks: DetectPluginsCallbacks
 ): Promise<void> {
-  // Define allowed tools - only read-only operations
-  const allowedTools: string[] = ['web_fetch', 'read_file', 'glob', 'grep'];
+  // Fetch marketplace first
+  const marketplacePlugins = await fetchMarketplace();
+  if (marketplacePlugins.length === 0) {
+    callbacks.onError(new Error('Could not fetch marketplace. Please check your internet connection.'));
+    return;
+  }
+
+  // Build prompt with marketplace data
+  const prompt = buildPromptWithMarketplace(marketplacePlugins);
+  const validPluginNames = new Set(marketplacePlugins.map(p => p.name));
+
+  // Define allowed tools - only read-only operations (no web_fetch needed)
+  const allowedTools: string[] = ['read_file', 'glob', 'grep'];
 
   const agent = query({
-    prompt: detectPluginsPrompt,
+    prompt,
     options: {
       model: 'haiku',
       includePartialMessages: true,
@@ -144,8 +178,23 @@ export async function detectPluginsWithAgent(
     const plugins = parsePluginRecommendations(responseContent);
 
     // Validate plugins against marketplace
-    const validatedPlugins = await validatePlugins(plugins);
-    const finalPlugins = validatedPlugins.length > 0 ? validatedPlugins : ['bushido'];
+    const validated: string[] = [];
+    const invalid: string[] = [];
+
+    for (const plugin of plugins) {
+      if (validPluginNames.has(plugin)) {
+        validated.push(plugin);
+      } else {
+        invalid.push(plugin);
+      }
+    }
+
+    // Log warning if any invalid plugins were found
+    if (invalid.length > 0) {
+      console.warn(`Warning: Filtered out ${invalid.length} invalid plugin(s): ${invalid.join(', ')}`);
+    }
+
+    const finalPlugins = validated.length > 0 ? validated : ['bushido'];
 
     callbacks.onComplete(finalPlugins, responseContent);
   } catch (error) {
@@ -153,23 +202,30 @@ export async function detectPluginsWithAgent(
   }
 }
 
+interface MarketplacePlugin {
+  name: string;
+  description?: string;
+  keywords?: string[];
+  category?: string;
+}
+
 /**
- * Fetch the marketplace to get list of valid plugins
+ * Fetch the marketplace to get list of available plugins
  */
-async function fetchMarketplacePlugins(): Promise<Set<string>> {
+async function fetchMarketplace(): Promise<MarketplacePlugin[]> {
   try {
     const response = await fetch(
       'https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json'
     );
     if (!response.ok) {
-      console.warn('Warning: Could not fetch marketplace.json, skipping validation');
-      return new Set();
+      console.warn('Warning: Could not fetch marketplace.json');
+      return [];
     }
-    const marketplace = await response.json() as { plugins: Array<{ name: string }> };
-    return new Set(marketplace.plugins.map(p => p.name));
+    const marketplace = await response.json() as { plugins: MarketplacePlugin[] };
+    return marketplace.plugins;
   } catch (_error) {
-    console.warn('Warning: Could not fetch marketplace.json, skipping validation');
-    return new Set();
+    console.warn('Warning: Could not fetch marketplace.json');
+    return [];
   }
 }
 
@@ -199,34 +255,4 @@ export function parsePluginRecommendations(content: string): string[] {
   } catch (_error) {
     return [];
   }
-}
-
-/**
- * Validate that recommended plugins exist in the marketplace
- */
-async function validatePlugins(plugins: string[]): Promise<string[]> {
-  const validPlugins = await fetchMarketplacePlugins();
-
-  // If we couldn't fetch the marketplace, return all plugins
-  if (validPlugins.size === 0) {
-    return plugins;
-  }
-
-  const validated: string[] = [];
-  const invalid: string[] = [];
-
-  for (const plugin of plugins) {
-    if (validPlugins.has(plugin)) {
-      validated.push(plugin);
-    } else {
-      invalid.push(plugin);
-    }
-  }
-
-  // Log warning if any invalid plugins were found
-  if (invalid.length > 0) {
-    console.warn(`Warning: Filtered out ${invalid.length} invalid plugin(s): ${invalid.join(', ')}`);
-  }
-
-  return validated;
 }
