@@ -36,7 +36,7 @@ test.describe('Category Page', () => {
 test.describe('Plugin Detail Page', () => {
   test('should load a plugin detail page', async ({ page }) => {
     await page.goto('/plugins/bushido/core');
-    await expect(page.locator('h1')).toContainText('bushido');
+    await expect(page.locator('h1')).toContainText('Bushido');
   });
 
   test('should display installation section', async ({ page }) => {
