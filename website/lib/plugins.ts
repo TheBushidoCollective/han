@@ -61,6 +61,7 @@ interface HooksData {
 
 export interface PluginDetails {
   metadata: PluginMetadata;
+  source: string;
   agents: AgentMetadata[];
   skills: SkillMetadata[];
   hooks: HookSection[];
@@ -393,6 +394,7 @@ export function getPluginContent(
 
     return {
       metadata,
+      source: plugin.source,
       agents,
       skills,
       hooks,
