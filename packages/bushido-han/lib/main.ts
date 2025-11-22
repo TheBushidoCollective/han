@@ -60,18 +60,20 @@ program
   .description('Align plugins with current codebase state in Claude Code settings')
   .option(
     '--scope <scope>',
-    'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
-    'project'
+    'Installation scope: "project" (.claude/settings.json), "local" (.claude/settings.local.json), or auto-detect if not specified'
   )
   .action(async (options: { scope?: string }) => {
     try {
-      const scope = options.scope || 'project';
-      if (scope !== 'project' && scope !== 'local') {
-        console.error('Error: --scope must be either "project" or "local"');
-        process.exit(1);
+      let scope: 'project' | 'local' | undefined;
+      if (options.scope) {
+        if (options.scope !== 'project' && options.scope !== 'local') {
+          console.error('Error: --scope must be either "project" or "local"');
+          process.exit(1);
+        }
+        scope = options.scope as 'project' | 'local';
       }
       const { align } = await import('./align.js');
-      await align(scope as 'project' | 'local');
+      await align(scope);
       process.exit(0);
     } catch (error: unknown) {
       console.error(
