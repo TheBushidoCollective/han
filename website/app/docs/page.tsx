@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
+
+export const metadata: Metadata = {
+  title: 'Documentation - Han',
+  description:
+    'Browse all Han marketplace plugins organized by category. Each category represents a different aspect of the development lifecycle.',
+};
 
 export default function DocsPage() {
   return (

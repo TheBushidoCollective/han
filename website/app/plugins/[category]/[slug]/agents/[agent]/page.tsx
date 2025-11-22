@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
@@ -34,6 +35,46 @@ const categoryLabels = {
   do: 'Dō',
   sensei: 'Sensei',
 } as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string; slug: string; agent: string }>;
+}): Promise<Metadata> {
+  const { category, slug, agent: agentName } = await params;
+
+  if (!['bushido', 'buki', 'do', 'sensei'].includes(category)) {
+    return {
+      title: 'Agent Not Found - Han',
+    };
+  }
+
+  const pluginSlug =
+    category === 'bushido' && slug === 'core' ? 'bushido' : slug;
+  const plugin = getPluginContent(
+    category as 'bushido' | 'buki' | 'do' | 'sensei',
+    pluginSlug
+  );
+
+  if (!plugin) {
+    return {
+      title: 'Agent Not Found - Han',
+    };
+  }
+
+  const agent = plugin.agents.find((a) => a.name === agentName);
+
+  if (!agent) {
+    return {
+      title: 'Agent Not Found - Han',
+    };
+  }
+
+  return {
+    title: `${agent.name} - ${plugin.metadata.title} - Han`,
+    description: agent.description,
+  };
+}
 
 export default async function AgentPage({
   params,
