@@ -39,9 +39,9 @@ export interface DetectPluginsCallbacks {
   onError: (error: Error) => void;
 }
 
-function getClaudeSettingsPath(): string {
-  // Always use project-level settings in current working directory
-  return join(process.cwd(), '.claude', 'settings.json');
+function getClaudeSettingsPath(scope: 'project' | 'local' = 'project'): string {
+  const filename = scope === 'local' ? 'settings.local.json' : 'settings.json';
+  return join(process.cwd(), '.claude', filename);
 }
 
 function ensureClaudeDirectory(): void {
@@ -52,14 +52,14 @@ function ensureClaudeDirectory(): void {
   }
 }
 
-function readOrCreateSettings(): ClaudeSettings {
-  const settingsPath = getClaudeSettingsPath();
+function readOrCreateSettings(scope: 'project' | 'local' = 'project'): ClaudeSettings {
+  const settingsPath = getClaudeSettingsPath(scope);
 
   if (existsSync(settingsPath)) {
     try {
       return JSON.parse(readFileSync(settingsPath, 'utf8')) as ClaudeSettings;
     } catch (_error) {
-      console.error('Error reading settings.json, creating new one');
+      console.error(`Error reading ${scope === 'local' ? 'settings.local.json' : 'settings.json'}, creating new one`);
       return {};
     }
   }
@@ -67,16 +67,16 @@ function readOrCreateSettings(): ClaudeSettings {
   return {};
 }
 
-function writeSettings(settings: ClaudeSettings): void {
-  const settingsPath = getClaudeSettingsPath();
+function writeSettings(settings: ClaudeSettings, scope: 'project' | 'local' = 'project'): void {
+  const settingsPath = getClaudeSettingsPath(scope);
   writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
 /**
  * Get currently installed Han plugins
  */
-function getInstalledPlugins(): string[] {
-  const settings = readOrCreateSettings();
+function getInstalledPlugins(scope: 'project' | 'local' = 'project'): string[] {
+  const settings = readOrCreateSettings(scope);
   const enabledPlugins = settings.enabledPlugins || {};
 
   return Object.keys(enabledPlugins)
@@ -167,11 +167,11 @@ function parsePluginRecommendations(content: string): string[] {
 /**
  * Compare current plugins with recommended plugins and update settings
  */
-function alignPluginsInSettings(recommendedPlugins: string[]): AlignResult {
+function alignPluginsInSettings(recommendedPlugins: string[], scope: 'project' | 'local' = 'project'): AlignResult {
   ensureClaudeDirectory();
 
-  const settings = readOrCreateSettings();
-  const currentPlugins = getInstalledPlugins();
+  const settings = readOrCreateSettings(scope);
+  const currentPlugins = getInstalledPlugins(scope);
 
   // Calculate differences
   const added: string[] = [];
@@ -209,7 +209,7 @@ function alignPluginsInSettings(recommendedPlugins: string[]): AlignResult {
     }
   }
 
-  writeSettings(settings);
+  writeSettings(settings, scope);
 
   return { added, removed, unchanged };
 }
@@ -217,7 +217,7 @@ function alignPluginsInSettings(recommendedPlugins: string[]): AlignResult {
 /**
  * SDK-based align command with Ink UI
  */
-export async function align(): Promise<void> {
+export async function align(scope: 'project' | 'local' = 'project'): Promise<void> {
   // Import Ink UI component dynamically
   const { AlignProgress } = await import('./align-progress.js');
 
@@ -229,13 +229,14 @@ export async function align(): Promise<void> {
     rejectCompletion = reject;
   });
 
-  console.log('Aligning plugins in ./.claude/settings.json...\n');
+  const filename = scope === 'local' ? 'settings.local.json' : 'settings.json';
+  console.log(`Aligning plugins in ./.claude/${filename}...\n`);
 
   const { unmount } = render(
     React.createElement(AlignProgress, {
       detectPlugins: detectPluginsWithAgent,
       onAlignComplete: (plugins: string[]) => {
-        const result = alignPluginsInSettings(plugins);
+        const result = alignPluginsInSettings(plugins, scope);
 
         // Report changes
         if (result.added.length > 0) {
@@ -251,7 +252,7 @@ export async function align(): Promise<void> {
         if (result.added.length === 0 && result.removed.length === 0) {
           console.log('\n✓ No changes needed - plugins are already aligned');
         } else {
-          console.log('\n💡 Restart Claude Code to load the plugin changes.');
+          console.log('\n⚠️  Please restart Claude Code to load the plugin changes');
         }
 
         if (resolveCompletion) resolveCompletion();

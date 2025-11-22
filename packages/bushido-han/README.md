@@ -32,8 +32,14 @@ npx -y @thebushidocollective/han validate <command>
 Intelligently analyze your codebase and configure Claude Code with appropriate Han plugins using the Claude Agent SDK.
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han install [--scope <project|local>]
 ```
+
+**Options:**
+
+- `--scope <project|local>` - Installation scope (default: `project`)
+  - `project`: Install to `.claude/settings.json` (shared via git)
+  - `local`: Install to `.claude/settings.local.json` (git-ignored, machine-specific)
 
 **How it works:**
 
@@ -42,7 +48,7 @@ npx @thebushidocollective/han install
 - Detects languages, frameworks, and testing tools
 - Recommends appropriate Han plugins based on actual code, not just file patterns
 - Displays real-time progress with a beautiful Ink-powered terminal UI
-- Configures `.claude/settings.json` automatically
+- Configures Claude Code settings automatically
 
 **What it detects:**
 
@@ -56,15 +62,29 @@ npx @thebushidocollective/han install
 **After installation:**
 Restart Claude Code to load the new plugins.
 
-**Note:** `han install` always installs to `./.claude/settings.json` in your current project directory. For user-level plugin management, use Claude Code's native plugin system.
+**Examples:**
+
+```bash
+# Install to project settings (default, shared via git)
+npx @thebushidocollective/han install
+
+# Install to local settings (machine-specific, not shared)
+npx @thebushidocollective/han install --scope local
+```
 
 ### align
 
 Continuously align your Han plugins with your evolving codebase. Automatically adds plugins for new technologies and removes plugins for technologies no longer in use.
 
 ```bash
-npx @thebushidocollective/han align
+npx @thebushidocollective/han align [--scope <project|local>]
 ```
+
+**Options:**
+
+- `--scope <project|local>` - Alignment scope (default: `project`)
+  - `project`: Align plugins in `.claude/settings.json` (shared via git)
+  - `local`: Align plugins in `.claude/settings.local.json` (git-ignored, machine-specific)
 
 **How it works:**
 
@@ -81,11 +101,19 @@ npx @thebushidocollective/han align
 - Periodically to keep plugins in sync with your codebase
 - Automatically via a Stop hook (see below)
 
-**Note:** `han align` operates on `./.claude/settings.json` in your current project directory.
-
 **Automatic Alignment:**
 
 The bushido plugin includes a Stop hook that automatically runs `han align` at the end of each Claude Code session, ensuring your plugins stay synchronized with your codebase as it evolves.
+
+**Examples:**
+
+```bash
+# Align project settings (default)
+npx @thebushidocollective/han align
+
+# Align local settings
+npx @thebushidocollective/han align --scope local
+```
 
 ### uninstall
 
