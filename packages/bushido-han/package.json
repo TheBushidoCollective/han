@@ -1,6 +1,6 @@
 {
   "name": "@thebushidocollective/han",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Monorepo validation tool for Claude Code hooks",
   "main": "dist/lib/main.js",
   "types": "dist/lib/main.d.ts",
