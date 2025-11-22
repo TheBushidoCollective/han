@@ -38,6 +38,17 @@
 					}
 				]
 			}
+		],
+		"PreCompact": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han@latest align",
+						"description": "Align Han plugins with current codebase state"
+					}
+				]
+			}
 		]
 	}
 }

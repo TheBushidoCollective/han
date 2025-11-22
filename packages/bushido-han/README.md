@@ -99,11 +99,15 @@ npx @thebushidocollective/han align [--scope <project|local>]
 - After adding new dependencies or frameworks
 - After removing technologies from your project
 - Periodically to keep plugins in sync with your codebase
-- Automatically via a Stop hook (see below)
+- Automatically via Stop and PreCompact hooks (see below)
 
 **Automatic Alignment:**
 
-The bushido plugin includes a Stop hook that automatically runs `han align` at the end of each Claude Code session, ensuring your plugins stay synchronized with your codebase as it evolves.
+The bushido plugin includes hooks that automatically run `han align`:
+- **Stop hook**: Runs at the end of each Claude Code session
+- **PreCompact hook**: Runs before compacting conversation history
+
+This ensures your plugins stay synchronized with your codebase as it evolves.
 
 **Examples:**
 

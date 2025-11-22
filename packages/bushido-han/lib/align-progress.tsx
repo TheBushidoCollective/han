@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 import { useEffect, useState } from 'react';
-import type { AgentUpdate, DetectPluginsCallbacks } from './align.js';
+import type { AgentUpdate, DetectPluginsCallbacks } from './shared.js';
 import { MarkdownWrapper } from './markdown-wrapper.js';
 
 interface AlignProgressProps {
