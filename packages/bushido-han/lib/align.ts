@@ -96,7 +96,7 @@ async function detectPluginsWithAgent(
   const agent = query({
     prompt: detectPluginsPrompt,
     options: {
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-haiku-4-20250514',
       includePartialMessages: true,
       allowedTools,
       permissionMode: 'bypassPermissions',
