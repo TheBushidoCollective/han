@@ -847,6 +847,19 @@
 			]
 		},
 		{
+			"name": "buki-git-storytelling",
+			"description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
+			"source": "./buki/buki-git-storytelling",
+			"category": "Weapon",
+			"keywords": [
+				"git",
+				"storytelling",
+				"commit",
+				"version-control",
+				"workflow"
+			]
+		},
+		{
 			"name": "bushido",
 			"description": "The seven virtues, enforcement hooks, and foundational quality skills.",
 			"source": "./bushido",
