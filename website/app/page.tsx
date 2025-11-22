@@ -115,18 +115,18 @@ export default function Home() {
               description="Core principles, enforcement hooks, and foundational quality skills"
             />
             <CategoryCard
-              href="/plugins/buki"
-              icon="⚔️"
-              title="Buki"
-              subtitle="武器 - Weapons"
-              description="Language and tool skills with validation hooks for quality"
-            />
-            <CategoryCard
               href="/plugins/do"
               icon="🛤️"
               title="Dō"
               subtitle="道 - The Way"
               description="Specialized agents for development disciplines and practices"
+            />
+            <CategoryCard
+              href="/plugins/buki"
+              icon="⚔️"
+              title="Buki"
+              subtitle="武器 - Weapons"
+              description="Language and tool skills with validation hooks for quality"
             />
             <CategoryCard
               href="/plugins/sensei"
