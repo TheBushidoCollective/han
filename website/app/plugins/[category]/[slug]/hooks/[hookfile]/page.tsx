@@ -80,9 +80,7 @@ export default async function HookFilePage({
     const pluginPath = path.join(
       process.cwd(),
       '..',
-      plugin.metadata.category === 'bushido'
-        ? 'bushido'
-        : `${plugin.metadata.category}/${plugin.metadata.name}`
+      plugin.source.replace('./', '')
     );
     const filePath = path.join(pluginPath, 'hooks', `${hookfile}.md`);
 
