@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAllPluginsAcrossCategories } from '@/lib/plugins';
 import Header from '../components/Header';
 import TagsClient from '../components/TagsClient';
+
+export const metadata: Metadata = {
+  title: 'Browse by Tags - Han',
+  description:
+    'Explore Han plugins organized by technology tags. Find plugins for your favorite languages, frameworks, and tools.',
+};
 
 interface TagWithPlugins {
   name: string;

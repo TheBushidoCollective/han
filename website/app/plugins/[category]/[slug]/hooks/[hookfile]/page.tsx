@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import fs from 'node:fs';
 import path from 'node:path';
 import Link from 'next/link';
@@ -42,6 +43,38 @@ const categoryLabels = {
   do: 'Dō',
   sensei: 'Sensei',
 } as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string; slug: string; hookfile: string }>;
+}): Promise<Metadata> {
+  const { category, slug, hookfile } = await params;
+
+  if (!['bushido', 'buki', 'do', 'sensei'].includes(category)) {
+    return {
+      title: 'Hook File Not Found - Han',
+    };
+  }
+
+  const pluginSlug =
+    category === 'bushido' && slug === 'core' ? 'bushido' : slug;
+  const plugin = getPluginContent(
+    category as 'bushido' | 'buki' | 'do' | 'sensei',
+    pluginSlug
+  );
+
+  if (!plugin) {
+    return {
+      title: 'Hook File Not Found - Han',
+    };
+  }
+
+  return {
+    title: `${hookfile} - ${plugin.metadata.title} - Han`,
+    description: `Hook file for ${plugin.metadata.title}`,
+  };
+}
 
 export default async function HookFilePage({
   params,

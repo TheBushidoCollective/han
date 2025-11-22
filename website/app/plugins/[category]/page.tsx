@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlugins } from '../../../lib/plugins';
@@ -42,6 +43,26 @@ const categoryData = {
       "MCP servers that extend Claude Code's capabilities. These plugins integrate external services and tools to enhance Claude's abilities.",
   },
 } as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>;
+}): Promise<Metadata> {
+  const { category } = await params;
+  const data = categoryData[category as keyof typeof categoryData];
+
+  if (!data) {
+    return {
+      title: 'Category Not Found - Han',
+    };
+  }
+
+  return {
+    title: `${data.title} Plugins - Han`,
+    description: data.description,
+  };
+}
 
 export default async function CategoryPage({
   params,

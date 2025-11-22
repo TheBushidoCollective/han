@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import fs from 'node:fs';
 import path from 'node:path';
 import Link from 'next/link';
@@ -52,6 +53,38 @@ const hookDescriptions: Record<string, string> = {
     'Runs when Claude Code starts a new session or resumes an existing session.',
   SessionEnd: 'Runs when a Claude Code session ends.',
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string; slug: string }>;
+}): Promise<Metadata> {
+  const { category, slug } = await params;
+
+  if (!['bushido', 'buki', 'do', 'sensei'].includes(category)) {
+    return {
+      title: 'Plugin Not Found - Han',
+    };
+  }
+
+  const pluginSlug =
+    category === 'bushido' && slug === 'core' ? 'bushido' : slug;
+  const plugin = getPluginContent(
+    category as 'bushido' | 'buki' | 'do' | 'sensei',
+    pluginSlug
+  );
+
+  if (!plugin) {
+    return {
+      title: 'Plugin Not Found - Han',
+    };
+  }
+
+  return {
+    title: `${plugin.metadata.title} - Han`,
+    description: plugin.metadata.description,
+  };
+}
 
 export default async function PluginPage({
   params,

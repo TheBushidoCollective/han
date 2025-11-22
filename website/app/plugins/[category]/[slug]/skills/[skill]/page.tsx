@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
@@ -34,6 +35,46 @@ const categoryLabels = {
   do: 'Dō',
   sensei: 'Sensei',
 } as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string; slug: string; skill: string }>;
+}): Promise<Metadata> {
+  const { category, slug, skill: skillName } = await params;
+
+  if (!['bushido', 'buki', 'do', 'sensei'].includes(category)) {
+    return {
+      title: 'Skill Not Found - Han',
+    };
+  }
+
+  const pluginSlug =
+    category === 'bushido' && slug === 'core' ? 'bushido' : slug;
+  const plugin = getPluginContent(
+    category as 'bushido' | 'buki' | 'do' | 'sensei',
+    pluginSlug
+  );
+
+  if (!plugin) {
+    return {
+      title: 'Skill Not Found - Han',
+    };
+  }
+
+  const skill = plugin.skills.find((s) => s.name === skillName);
+
+  if (!skill) {
+    return {
+      title: 'Skill Not Found - Han',
+    };
+  }
+
+  return {
+    title: `${skill.name} - ${plugin.metadata.title} - Han`,
+    description: skill.description,
+  };
+}
 
 export default async function SkillPage({
   params,
