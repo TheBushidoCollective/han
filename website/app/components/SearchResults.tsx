@@ -12,16 +12,68 @@ interface SearchResult {
 	category: string;
 	tags: string[];
 	path: string;
+	components: string[];
 }
 
 interface SearchResultsProps {
 	index: SearchResult[];
 }
 
+interface ParsedQuery {
+	textQuery: string;
+	tagFilters: string[];
+	componentFilters: string[];
+}
+
+function parseQuery(query: string): ParsedQuery {
+	const parsed: ParsedQuery = {
+		textQuery: "",
+		tagFilters: [],
+		componentFilters: [],
+	};
+
+	// Split query into parts
+	const parts = query.split(/\s+/);
+	const textParts: string[] = [];
+
+	for (const part of parts) {
+		// Check for tag: or tags:
+		const tagMatch = part.match(/^tags?:(.+)$/i);
+		if (tagMatch) {
+			parsed.tagFilters.push(...tagMatch[1].split(","));
+			continue;
+		}
+
+		// Check for component: or components:
+		const componentMatch = part.match(/^components?:(.+)$/i);
+		if (componentMatch) {
+			parsed.componentFilters.push(...componentMatch[1].split(","));
+			continue;
+		}
+
+		// Regular text query
+		textParts.push(part);
+	}
+
+	parsed.textQuery = textParts.join(" ").trim();
+	return parsed;
+}
+
+function hasComponent(result: SearchResult, component: string): boolean {
+	return result.components
+		.map((c) => c.toLowerCase())
+		.includes(component.toLowerCase());
+}
+
 export default function SearchResults({ index }: SearchResultsProps) {
 	const searchParams = useSearchParams();
 	const query = searchParams.get("q") || "";
 	const [results, setResults] = useState<SearchResult[]>([]);
+	const [activeFilters, setActiveFilters] = useState<ParsedQuery>({
+		textQuery: "",
+		tagFilters: [],
+		componentFilters: [],
+	});
 	const fuse = useRef<Fuse<SearchResult> | null>(null);
 
 	// Initialize Fuse.js
@@ -41,24 +93,53 @@ export default function SearchResults({ index }: SearchResultsProps) {
 	useEffect(() => {
 		if (!fuse.current) return;
 
-		if (query.trim().length < 2) {
-			// Show all plugins when no query
-			setResults(index);
-			return;
+		const parsed = parseQuery(query);
+		setActiveFilters(parsed);
+
+		let filteredResults = index;
+
+		// Apply tag filters
+		if (parsed.tagFilters.length > 0) {
+			filteredResults = filteredResults.filter((result) =>
+				parsed.tagFilters.some((tag) =>
+					result.tags.map((t) => t.toLowerCase()).includes(tag.toLowerCase()),
+				),
+			);
 		}
 
-		const searchResults = fuse.current.search(query);
-		setResults(searchResults.map((r) => r.item));
+		// Apply component filters (TODO: implement proper component detection)
+		if (parsed.componentFilters.length > 0) {
+			filteredResults = filteredResults.filter((result) =>
+				parsed.componentFilters.some((comp) => hasComponent(result, comp)),
+			);
+		}
+
+		// Apply text search if present
+		if (parsed.textQuery.trim().length >= 2) {
+			const searchResults = fuse.current.search(parsed.textQuery);
+			const searchIds = new Set(searchResults.map((r) => r.item.id));
+			filteredResults = filteredResults.filter((r) => searchIds.has(r.id));
+		} else if (
+			parsed.textQuery.trim().length === 0 &&
+			parsed.tagFilters.length === 0 &&
+			parsed.componentFilters.length === 0
+		) {
+			// Show all plugins when no filters
+			filteredResults = index;
+		}
+
+		setResults(filteredResults);
 	}, [query, index]);
 
-	const highlightMatch = (text: string, query: string): React.ReactNode => {
-		if (!query.trim()) return text;
+	const highlightMatch = (text: string): React.ReactNode => {
+		const highlightQuery = activeFilters.textQuery;
+		if (!highlightQuery.trim()) return text;
 
-		const parts = text.split(new RegExp(`(${query})`, "gi"));
+		const parts = text.split(new RegExp(`(${highlightQuery})`, "gi"));
 		return (
 			<>
 				{parts.map((part, idx) =>
-					part.toLowerCase() === query.toLowerCase() ? (
+					part.toLowerCase() === highlightQuery.toLowerCase() ? (
 						<mark
 							key={`match-${text.slice(0, 20)}-${idx}-${Math.random()}`}
 							className="bg-yellow-200 dark:bg-yellow-800"
@@ -77,13 +158,42 @@ export default function SearchResults({ index }: SearchResultsProps) {
 		<div>
 			{query && (
 				<div className="mb-6">
-					<p className="text-gray-600 dark:text-gray-400">
-						{results.length} result{results.length !== 1 ? "s" : ""} for "
-						<span className="font-semibold text-gray-900 dark:text-white">
-							{query}
-						</span>
-						"
+					<p className="text-gray-600 dark:text-gray-400 mb-3">
+						{results.length} result{results.length !== 1 ? "s" : ""}{" "}
+						{activeFilters.textQuery && (
+							<>
+								for "
+								<span className="font-semibold text-gray-900 dark:text-white">
+									{activeFilters.textQuery}
+								</span>
+								"
+							</>
+						)}
 					</p>
+
+					{(activeFilters.tagFilters.length > 0 ||
+						activeFilters.componentFilters.length > 0) && (
+						<div className="flex flex-wrap gap-2">
+							{activeFilters.tagFilters.map((tag) => (
+								<span
+									key={tag}
+									className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+								>
+									<span className="font-semibold mr-1">tag:</span>
+									{tag}
+								</span>
+							))}
+							{activeFilters.componentFilters.map((comp) => (
+								<span
+									key={comp}
+									className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+								>
+									<span className="font-semibold mr-1">component:</span>
+									{comp}
+								</span>
+							))}
+						</div>
+					)}
 				</div>
 			)}
 
@@ -122,27 +232,35 @@ export default function SearchResults({ index }: SearchResultsProps) {
 						>
 							<div className="flex items-start justify-between mb-2">
 								<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-									{highlightMatch(result.name, query)}
+									{highlightMatch(result.name)}
 								</h3>
 								<span className="ml-4 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded capitalize">
 									{result.category}
 								</span>
 							</div>
 							<p className="text-gray-600 dark:text-gray-400 mb-3">
-								{highlightMatch(result.description, query)}
+								{highlightMatch(result.description)}
 							</p>
-							{result.tags.length > 0 && (
-								<div className="flex flex-wrap gap-2">
-									{result.tags.map((tag) => (
+							<div className="flex flex-wrap gap-2">
+								{result.tags.length > 0 &&
+									result.tags.map((tag) => (
 										<span
-											key={tag}
+											key={`tag-${tag}`}
 											className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"
 										>
 											{tag}
 										</span>
 									))}
-								</div>
-							)}
+								{result.components.length > 0 &&
+									result.components.map((comp) => (
+										<span
+											key={`comp-${comp}`}
+											className="inline-block px-2 py-1 text-xs bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded"
+										>
+											{comp}
+										</span>
+									))}
+							</div>
 						</Link>
 					))}
 				</div>

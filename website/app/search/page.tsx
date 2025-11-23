@@ -29,6 +29,23 @@ export default function SearchPage() {
 			),
 		);
 
+		// Detect components by checking plugin structure
+		const components: string[] = [];
+		const pluginPath = path.join(process.cwd(), "..", plugin.source);
+
+		if (fs.existsSync(path.join(pluginPath, "skills"))) {
+			components.push("skill");
+		}
+		if (fs.existsSync(path.join(pluginPath, "agents"))) {
+			components.push("agent");
+		}
+		if (fs.existsSync(path.join(pluginPath, "commands"))) {
+			components.push("command");
+		}
+		if (fs.existsSync(path.join(pluginPath, "hooks"))) {
+			components.push("hook");
+		}
+
 		return {
 			id: plugin.name,
 			name: plugin.name,
@@ -36,6 +53,7 @@ export default function SearchPage() {
 			category: plugin.category,
 			tags: pluginJson.keywords || [],
 			path: `/plugins/${plugin.category}/${plugin.name}`,
+			components,
 		};
 	});
 
