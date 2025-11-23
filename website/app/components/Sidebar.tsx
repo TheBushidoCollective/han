@@ -38,7 +38,7 @@ export default function Sidebar() {
 					{/* Overview */}
 					<div>
 						<Link
-							href="/docs"
+							href="/plugins"
 							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300"
 						>
 							Overview

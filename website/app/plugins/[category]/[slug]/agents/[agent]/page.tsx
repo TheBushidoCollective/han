@@ -113,7 +113,7 @@ export default async function AgentPage({
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 				<div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
 					<Link
-						href="/docs"
+						href="/plugins"
 						className="hover:text-gray-900 dark:hover:text-white"
 					>
 						Documentation
