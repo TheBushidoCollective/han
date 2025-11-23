@@ -1,65 +1,63 @@
 "use client";
 
+import Fuse from "fuse.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 
-interface SearchIndex {
-	plugins: Array<{ name: string; category: string; path: string }>;
-	tags: string[];
-}
-
-interface Suggestion {
+interface SearchResult {
+	id: string;
 	name: string;
-	path: string;
+	description: string;
 	category: string;
+	tags: string[];
+	path: string;
 }
 
 export default function Header() {
 	const router = useRouter();
 	const [searchQuery, setSearchQuery] = useState("");
-	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+	const [results, setResults] = useState<SearchResult[]>([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(-1);
-	const [searchIndex, setSearchIndex] = useState<SearchIndex | null>(null);
+	const [searchIndex, setSearchIndex] = useState<SearchResult[]>([]);
 	const searchRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const fuse = useRef<Fuse<SearchResult> | null>(null);
 
 	// Load search index on mount
 	useEffect(() => {
 		fetch("/search-index.json")
 			.then((res) => res.json())
-			.then((data) => setSearchIndex(data))
+			.then((data: SearchResult[]) => {
+				setSearchIndex(data);
+				// Initialize Fuse.js
+				fuse.current = new Fuse(data, {
+					keys: [
+						{ name: "name", weight: 2 },
+						{ name: "description", weight: 1 },
+						{ name: "tags", weight: 1.5 },
+					],
+					threshold: 0.3,
+					minMatchCharLength: 2,
+				});
+			})
 			.catch((error) => console.error("Failed to load search index:", error));
 	}, []);
 
 	// Generate suggestions when query changes
 	useEffect(() => {
-		if (!searchIndex || searchQuery.trim().length < 2) {
-			setSuggestions([]);
+		if (!fuse.current || searchQuery.trim().length < 2) {
+			setResults([]);
 			setShowDropdown(false);
 			return;
 		}
 
-		const lowerQuery = searchQuery.toLowerCase().trim();
-		const newSuggestions: Suggestion[] = [];
-
-		// Add matching plugins
-		for (const plugin of searchIndex.plugins) {
-			if (plugin.name.toLowerCase().includes(lowerQuery)) {
-				newSuggestions.push({
-					name: plugin.name,
-					path: plugin.path,
-					category: plugin.category,
-				});
-			}
-			if (newSuggestions.length >= 8) break;
-		}
-
-		setSuggestions(newSuggestions);
-		setShowDropdown(newSuggestions.length > 0);
+		const searchResults = fuse.current.search(searchQuery).slice(0, 8);
+		setResults(searchResults.map((r) => r.item));
+		setShowDropdown(searchResults.length > 0);
 		setSelectedIndex(-1);
-	}, [searchQuery, searchIndex]);
+	}, [searchQuery]);
 
 	// Handle click outside to close dropdown
 	useEffect(() => {
@@ -92,13 +90,13 @@ export default function Header() {
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (!showDropdown || suggestions.length === 0) return;
+		if (!showDropdown || results.length === 0) return;
 
 		switch (e.key) {
 			case "ArrowDown":
 				e.preventDefault();
 				setSelectedIndex((prev) =>
-					prev < suggestions.length - 1 ? prev + 1 : prev,
+					prev < results.length - 1 ? prev + 1 : prev,
 				);
 				break;
 			case "ArrowUp":
@@ -106,9 +104,16 @@ export default function Header() {
 				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
 				break;
 			case "Enter":
-				if (selectedIndex >= 0) {
-					e.preventDefault();
-					navigateToPlugin(suggestions[selectedIndex]);
+				e.preventDefault();
+				if (selectedIndex >= 0 && results[selectedIndex]) {
+					// Navigate to selected plugin
+					router.push(results[selectedIndex].path);
+					setShowDropdown(false);
+					setSearchQuery("");
+					inputRef.current?.blur();
+				} else {
+					// No selection - go to search results page
+					handleSearch();
 				}
 				break;
 			case "Escape":
@@ -118,15 +123,26 @@ export default function Header() {
 		}
 	};
 
-	const navigateToPlugin = (suggestion: Suggestion) => {
-		router.push(suggestion.path);
-		setShowDropdown(false);
-		setSearchQuery("");
-		inputRef.current?.blur();
-	};
+	const highlightMatch = (text: string, query: string): React.ReactNode => {
+		if (!query.trim()) return text;
 
-	const handleSuggestionClick = (suggestion: Suggestion) => {
-		navigateToPlugin(suggestion);
+		const parts = text.split(new RegExp(`(${query})`, "gi"));
+		return (
+			<>
+				{parts.map((part, idx) =>
+					part.toLowerCase() === query.toLowerCase() ? (
+						<mark
+							key={`match-${text.slice(0, 20)}-${idx}-${Math.random()}`}
+							className="bg-yellow-200 dark:bg-yellow-800"
+						>
+							{part}
+						</mark>
+					) : (
+						part
+					),
+				)}
+			</>
+		);
 	};
 
 	return (
@@ -170,29 +186,64 @@ export default function Header() {
 							/>
 
 							{/* Autocomplete Dropdown */}
-							{showDropdown && suggestions.length > 0 && (
-								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-auto">
-									{suggestions.map((suggestion, index) => (
-										<button
-											key={suggestion.path}
-											type="button"
-											onClick={() => handleSuggestionClick(suggestion)}
-											className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
+							{showDropdown && results.length > 0 && (
+								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+									{results.map((result, index) => (
+										<Link
+											key={result.id}
+											href={result.path}
+											onClick={() => {
+												setShowDropdown(false);
+												setSearchQuery("");
+											}}
+											className={`block px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
 												index === selectedIndex
-													? "bg-gray-100 dark:bg-gray-700"
+													? "bg-gray-50 dark:bg-gray-700"
 													: ""
 											}`}
 										>
-											<div className="flex items-center justify-between gap-3">
-												<span className="text-gray-900 dark:text-gray-100 font-medium">
-													{suggestion.name}
-												</span>
-												<span className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 capitalize flex-shrink-0">
-													{suggestion.category}
+											<div className="flex items-start justify-between">
+												<div className="flex-1">
+													<div className="font-semibold text-gray-900 dark:text-white">
+														{highlightMatch(result.name, searchQuery)}
+													</div>
+													<div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+														{highlightMatch(
+															result.description.slice(0, 100),
+															searchQuery,
+														)}
+														{result.description.length > 100 && "..."}
+													</div>
+													{result.tags.length > 0 && (
+														<div className="flex flex-wrap gap-1 mt-2">
+															{result.tags.slice(0, 3).map((tag) => (
+																<span
+																	key={tag}
+																	className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"
+																>
+																	{tag}
+																</span>
+															))}
+															{result.tags.length > 3 && (
+																<span className="inline-block px-2 py-1 text-xs text-gray-500 dark:text-gray-500">
+																	+{result.tags.length - 3} more
+																</span>
+															)}
+														</div>
+													)}
+												</div>
+												<span className="ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+													{result.category}
 												</span>
 											</div>
-										</button>
+										</Link>
 									))}
+								</div>
+							)}
+
+							{searchQuery.trim().length >= 2 && results.length === 0 && (
+								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 text-center text-gray-500 dark:text-gray-400">
+									No results found for "{searchQuery}"
 								</div>
 							)}
 						</div>

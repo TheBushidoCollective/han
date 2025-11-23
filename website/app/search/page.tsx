@@ -92,7 +92,7 @@ export default function SearchPage() {
 						Categories
 					</h2>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-						{["bushido", "buki", "do", "sensei"].map((category) => {
+						{["bushido", "do", "buki", "sensei"].map((category) => {
 							const count = plugins.filter(
 								(p) => p.category === category,
 							).length;
