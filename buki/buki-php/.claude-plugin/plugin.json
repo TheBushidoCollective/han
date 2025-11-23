@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["php", "composer", "security", "web", "skill"]
+  "keywords": [
+    "php",
+    "composer",
+    "security",
+    "web"
+  ]
 }

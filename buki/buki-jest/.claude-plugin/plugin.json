@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["jest", "testing", "javascript", "typescript", "skill"]
+  "keywords": [
+    "jest",
+    "testing",
+    "javascript",
+    "typescript"
+  ]
 }

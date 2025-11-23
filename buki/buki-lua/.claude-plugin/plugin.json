@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["lua", "scripting", "embedded", "gaming", "skill"]
+  "keywords": [
+    "lua",
+    "scripting",
+    "embedded",
+    "gaming"
+  ]
 }

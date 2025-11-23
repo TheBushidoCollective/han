@@ -7,8 +7,7 @@
     "tags": [
       "accessibility",
       "wcag",
-      "inclusive-design",
-      "agent"
+      "inclusive-design"
     ],
     "path": "/plugins/do/do-accessibility-engineering"
   },
@@ -28,8 +27,7 @@
     "tags": [
       "angular",
       "rxjs",
-      "signals",
-      "skill"
+      "signals"
     ],
     "path": "/plugins/buki/buki-angular"
   },
@@ -54,8 +52,7 @@
     "tags": [
       "api",
       "rest",
-      "graphql",
-      "agent"
+      "graphql"
     ],
     "path": "/plugins/do/do-api-engineering"
   },
@@ -68,8 +65,7 @@
       "apollo",
       "graphql",
       "client",
-      "server",
-      "skill"
+      "server"
     ],
     "path": "/plugins/buki/buki-apollo-graphql"
   },
@@ -82,8 +78,7 @@
       "architecture",
       "design",
       "patterns",
-      "scalability",
-      "agent"
+      "scalability"
     ],
     "path": "/plugins/do/do-architecture"
   },
@@ -97,8 +92,7 @@
       "api",
       "architecture",
       "data",
-      "server",
-      "agent"
+      "server"
     ],
     "path": "/plugins/do/do-backend-development"
   },
@@ -112,8 +106,7 @@
       "behavior-driven-development",
       "testing",
       "collaboration",
-      "agile",
-      "skill"
+      "agile"
     ],
     "path": "/plugins/buki/buki-bdd"
   },
@@ -127,8 +120,7 @@
       "linting",
       "formatting",
       "javascript",
-      "typescript",
-      "skill"
+      "typescript"
     ],
     "path": "/plugins/buki/buki-biome"
   },
@@ -140,8 +132,7 @@
     "tags": [
       "blockchain",
       "web3",
-      "smart-contracts",
-      "agent"
+      "smart-contracts"
     ],
     "path": "/plugins/do/do-blockchain-development"
   },
@@ -168,8 +159,7 @@
     "tags": [
       "c",
       "systems-programming",
-      "memory-management",
-      "skill"
+      "memory-management"
     ],
     "path": "/plugins/buki/buki-c"
   },
@@ -181,8 +171,7 @@
     "tags": [
       "checkstyle",
       "linting",
-      "java",
-      "skill"
+      "java"
     ],
     "path": "/plugins/buki/buki-checkstyle"
   },
@@ -195,8 +184,7 @@
       "plugin",
       "development",
       "claude-code",
-      "quality",
-      "agent"
+      "quality"
     ],
     "path": "/plugins/do/do-claude-plugin-development"
   },
@@ -208,8 +196,7 @@
     "tags": [
       "clippy",
       "linting",
-      "rust",
-      "skill"
+      "rust"
     ],
     "path": "/plugins/buki/buki-clippy"
   },
@@ -221,8 +208,7 @@
     "tags": [
       "compiler",
       "language-design",
-      "parsing",
-      "agent"
+      "parsing"
     ],
     "path": "/plugins/do/do-compiler-development"
   },
@@ -236,8 +222,7 @@
       "writing",
       "marketing",
       "storytelling",
-      "engagement",
-      "agent"
+      "engagement"
     ],
     "path": "/plugins/do/do-content-creator"
   },
@@ -263,8 +248,7 @@
       "cpp",
       "c++",
       "modern-cpp",
-      "templates",
-      "skill"
+      "templates"
     ],
     "path": "/plugins/buki/buki-cpp"
   },
@@ -283,8 +267,7 @@
     "category": "buki",
     "tags": [
       "crystal",
-      "language",
-      "skill"
+      "language"
     ],
     "path": "/plugins/buki/buki-crystal"
   },
@@ -298,8 +281,7 @@
       "c#",
       "dotnet",
       "async",
-      "linq",
-      "skill"
+      "linq"
     ],
     "path": "/plugins/buki/buki-csharp"
   },
@@ -313,8 +295,7 @@
       "bdd",
       "gherkin",
       "testing",
-      "behavior-driven-development",
-      "skill"
+      "behavior-driven-development"
     ],
     "path": "/plugins/buki/buki-cucumber"
   },
@@ -327,8 +308,7 @@
       "cypress",
       "testing",
       "e2e",
-      "javascript",
-      "skill"
+      "javascript"
     ],
     "path": "/plugins/buki/buki-cypress"
   },
@@ -340,8 +320,7 @@
     "tags": [
       "data-engineering",
       "etl",
-      "streaming",
-      "agent"
+      "streaming"
     ],
     "path": "/plugins/do/do-data-engineering"
   },
@@ -353,8 +332,7 @@
     "tags": [
       "database",
       "sql",
-      "query-optimization",
-      "agent"
+      "query-optimization"
     ],
     "path": "/plugins/do/do-database-engineering"
   },
@@ -374,8 +352,7 @@
     "tags": [
       "django",
       "python",
-      "orm",
-      "skill"
+      "orm"
     ],
     "path": "/plugins/buki/buki-django"
   },
@@ -408,8 +385,7 @@
     "tags": [
       "elixir",
       "otp",
-      "ecto",
-      "skill"
+      "ecto"
     ],
     "path": "/plugins/buki/buki-elixir"
   },
@@ -421,8 +397,7 @@
     "tags": [
       "embedded-systems",
       "firmware",
-      "iot",
-      "agent"
+      "iot"
     ],
     "path": "/plugins/do/do-embedded-development"
   },
@@ -433,9 +408,7 @@
     "category": "do",
     "tags": [
       "planning",
-      "workflow",
-      "agent",
-      "hook"
+      "workflow"
     ],
     "path": "/plugins/do/do-enforce-planning"
   },
@@ -449,8 +422,7 @@
       "beam",
       "otp",
       "distributed",
-      "concurrent",
-      "skill"
+      "concurrent"
     ],
     "path": "/plugins/buki/buki-erlang"
   },
@@ -463,8 +435,7 @@
       "eslint",
       "linting",
       "javascript",
-      "typescript",
-      "skill"
+      "typescript"
     ],
     "path": "/plugins/buki/buki-eslint"
   },
@@ -476,8 +447,7 @@
     "tags": [
       "fastapi",
       "python",
-      "async",
-      "skill"
+      "async"
     ],
     "path": "/plugins/buki/buki-fastapi"
   },
@@ -491,8 +461,7 @@
       "ui",
       "ux",
       "design",
-      "presentation",
-      "agent"
+      "presentation"
     ],
     "path": "/plugins/do/do-frontend-development"
   },
@@ -505,8 +474,7 @@
       "functional-programming",
       "fp",
       "immutability",
-      "pure-functions",
-      "skill"
+      "pure-functions"
     ],
     "path": "/plugins/buki/buki-functional-programming"
   },
@@ -518,8 +486,7 @@
     "tags": [
       "game-development",
       "game-engine",
-      "gameplay",
-      "agent"
+      "gameplay"
     ],
     "path": "/plugins/do/do-game-development"
   },
@@ -547,8 +514,7 @@
       "gleam",
       "beam",
       "functional",
-      "erlang",
-      "skill"
+      "erlang"
     ],
     "path": "/plugins/buki/buki-gleam"
   },
@@ -560,8 +526,7 @@
     "tags": [
       "go",
       "golang",
-      "concurrency",
-      "skill"
+      "concurrency"
     ],
     "path": "/plugins/buki/buki-go"
   },
@@ -573,8 +538,7 @@
     "tags": [
       "graphics",
       "gpu",
-      "shaders",
-      "agent"
+      "shaders"
     ],
     "path": "/plugins/do/do-graphics-engineering"
   },
@@ -586,8 +550,7 @@
     "tags": [
       "graphql",
       "api",
-      "schema",
-      "skill"
+      "schema"
     ],
     "path": "/plugins/buki/buki-graphql"
   },
@@ -615,8 +578,7 @@
       "devops",
       "sre",
       "deployment",
-      "monitoring",
-      "agent"
+      "monitoring"
     ],
     "path": "/plugins/do/do-infrastructure"
   },
@@ -643,8 +605,7 @@
     "tags": [
       "java",
       "streams",
-      "concurrency",
-      "skill"
+      "concurrency"
     ],
     "path": "/plugins/buki/buki-java"
   },
@@ -657,8 +618,7 @@
       "jest",
       "testing",
       "javascript",
-      "typescript",
-      "skill"
+      "typescript"
     ],
     "path": "/plugins/buki/buki-jest"
   },
@@ -670,8 +630,7 @@
     "tags": [
       "junit",
       "testing",
-      "java",
-      "skill"
+      "java"
     ],
     "path": "/plugins/buki/buki-junit"
   },
@@ -684,8 +643,7 @@
       "kotlin",
       "coroutines",
       "android",
-      "jvm",
-      "skill"
+      "jvm"
     ],
     "path": "/plugins/buki/buki-kotlin"
   },
@@ -724,8 +682,7 @@
       "lua",
       "scripting",
       "embedded",
-      "gaming",
-      "skill"
+      "gaming"
     ],
     "path": "/plugins/buki/buki-lua"
   },
@@ -737,8 +694,7 @@
     "tags": [
       "ml-engineering",
       "mlops",
-      "inference",
-      "agent"
+      "inference"
     ],
     "path": "/plugins/do/do-machine-learning-engineering"
   },
@@ -764,8 +720,7 @@
       "mobile",
       "ios",
       "android",
-      "development",
-      "agent"
+      "development"
     ],
     "path": "/plugins/do/do-mobile-development"
   },
@@ -778,8 +733,7 @@
       "mocha",
       "testing",
       "javascript",
-      "nodejs",
-      "skill"
+      "nodejs"
     ],
     "path": "/plugins/buki/buki-mocha"
   },
@@ -793,8 +747,7 @@
       "workspace",
       "turborepo",
       "nx",
-      "lerna",
-      "skill"
+      "lerna"
     ],
     "path": "/plugins/buki/buki-monorepo"
   },
@@ -806,8 +759,7 @@
     "tags": [
       "nestjs",
       "typescript",
-      "nodejs",
-      "skill"
+      "nodejs"
     ],
     "path": "/plugins/buki/buki-nestjs"
   },
@@ -819,8 +771,7 @@
     "tags": [
       "network",
       "protocols",
-      "distributed-systems",
-      "agent"
+      "distributed-systems"
     ],
     "path": "/plugins/do/do-network-engineering"
   },
@@ -832,8 +783,7 @@
     "tags": [
       "nextjs",
       "react",
-      "ssr",
-      "skill"
+      "ssr"
     ],
     "path": "/plugins/buki/buki-nextjs"
   },
@@ -845,8 +795,7 @@
     "tags": [
       "nim",
       "systems-programming",
-      "metaprogramming",
-      "skill"
+      "metaprogramming"
     ],
     "path": "/plugins/buki/buki-nim"
   },
@@ -860,8 +809,7 @@
       "objc",
       "ios",
       "macos",
-      "arc",
-      "skill"
+      "arc"
     ],
     "path": "/plugins/buki/buki-objective-c"
   },
@@ -873,8 +821,7 @@
     "tags": [
       "observability",
       "monitoring",
-      "tracing",
-      "agent"
+      "tracing"
     ],
     "path": "/plugins/do/do-observability-engineering"
   },
@@ -887,8 +834,7 @@
       "oop",
       "object-oriented",
       "design-patterns",
-      "encapsulation",
-      "skill"
+      "encapsulation"
     ],
     "path": "/plugins/buki/buki-oop"
   },
@@ -900,8 +846,7 @@
     "tags": [
       "performance",
       "optimization",
-      "scalability",
-      "agent"
+      "scalability"
     ],
     "path": "/plugins/do/do-performance-engineering"
   },
@@ -922,8 +867,7 @@
       "php",
       "composer",
       "security",
-      "web",
-      "skill"
+      "web"
     ],
     "path": "/plugins/buki/buki-php"
   },
@@ -935,8 +879,7 @@
     "tags": [
       "platform-engineering",
       "infrastructure",
-      "devex",
-      "agent"
+      "devex"
     ],
     "path": "/plugins/do/do-platform-engineering"
   },
@@ -949,8 +892,7 @@
       "playwright",
       "testing",
       "e2e",
-      "automation",
-      "skill"
+      "automation"
     ],
     "path": "/plugins/buki/buki-playwright"
   },
@@ -977,8 +919,7 @@
       "prettier",
       "formatting",
       "javascript",
-      "typescript",
-      "skill"
+      "typescript"
     ],
     "path": "/plugins/buki/buki-prettier"
   },
@@ -991,8 +932,7 @@
       "product",
       "strategy",
       "vision",
-      "planning",
-      "agent"
+      "planning"
     ],
     "path": "/plugins/do/do-product-management"
   },
@@ -1005,8 +945,7 @@
       "project-management",
       "coordination",
       "leadership",
-      "team",
-      "agent"
+      "team"
     ],
     "path": "/plugins/do/do-project-management"
   },
@@ -1018,8 +957,7 @@
     "tags": [
       "prompt-engineering",
       "ai",
-      "llm",
-      "agent"
+      "llm"
     ],
     "path": "/plugins/do/do-prompt-engineering"
   },
@@ -1044,8 +982,7 @@
     "tags": [
       "pylint",
       "linting",
-      "python",
-      "skill"
+      "python"
     ],
     "path": "/plugins/buki/buki-pylint"
   },
@@ -1057,8 +994,7 @@
     "tags": [
       "pytest",
       "testing",
-      "python",
-      "skill"
+      "python"
     ],
     "path": "/plugins/buki/buki-pytest"
   },
@@ -1070,8 +1006,7 @@
     "tags": [
       "python",
       "types",
-      "async",
-      "skill"
+      "async"
     ],
     "path": "/plugins/buki/buki-python"
   },
@@ -1084,8 +1019,7 @@
       "quality",
       "testing",
       "qa",
-      "reliability",
-      "agent"
+      "reliability"
     ],
     "path": "/plugins/do/do-quality-assurance"
   },
@@ -1099,8 +1033,7 @@
       "ruby",
       "mvc",
       "active-record",
-      "hotwire",
-      "skill"
+      "hotwire"
     ],
     "path": "/plugins/buki/buki-rails"
   },
@@ -1112,8 +1045,7 @@
     "tags": [
       "react",
       "hooks",
-      "performance",
-      "skill"
+      "performance"
     ],
     "path": "/plugins/buki/buki-react"
   },
@@ -1126,8 +1058,7 @@
       "relay",
       "graphql",
       "react",
-      "fragments",
-      "skill"
+      "fragments"
     ],
     "path": "/plugins/buki/buki-relay"
   },
@@ -1140,8 +1071,7 @@
       "rspec",
       "testing",
       "ruby",
-      "bdd",
-      "skill"
+      "bdd"
     ],
     "path": "/plugins/buki/buki-rspec"
   },
@@ -1153,8 +1083,7 @@
     "tags": [
       "rubocop",
       "linting",
-      "ruby",
-      "skill"
+      "ruby"
     ],
     "path": "/plugins/buki/buki-rubocop"
   },
@@ -1166,8 +1095,7 @@
     "tags": [
       "rust",
       "ownership",
-      "async",
-      "skill"
+      "async"
     ],
     "path": "/plugins/buki/buki-rust"
   },
@@ -1180,8 +1108,7 @@
       "scala",
       "functional",
       "jvm",
-      "type-system",
-      "skill"
+      "type-system"
     ],
     "path": "/plugins/buki/buki-scala"
   },
@@ -1194,8 +1121,7 @@
       "security",
       "compliance",
       "vulnerability",
-      "threat",
-      "agent"
+      "threat"
     ],
     "path": "/plugins/do/do-security-engineering"
   },
@@ -1208,8 +1134,7 @@
       "sip",
       "voip",
       "telecommunications",
-      "real-time",
-      "skill"
+      "real-time"
     ],
     "path": "/plugins/buki/buki-sip"
   },
@@ -1223,8 +1148,7 @@
       "reliability",
       "monitoring",
       "incidents",
-      "devops",
-      "agent"
+      "devops"
     ],
     "path": "/plugins/do/do-site-reliability-engineering"
   },
@@ -1237,8 +1161,7 @@
       "swift",
       "ios",
       "protocol-oriented",
-      "concurrency",
-      "skill"
+      "concurrency"
     ],
     "path": "/plugins/buki/buki-swift"
   },
@@ -1250,8 +1173,7 @@
     "tags": [
       "documentation",
       "technical-writing",
-      "knowledge",
-      "agent"
+      "knowledge"
     ],
     "path": "/plugins/do/do-technical-documentation"
   },
@@ -1264,8 +1186,7 @@
       "tensorflow",
       "machine-learning",
       "deep-learning",
-      "neural-networks",
-      "skill"
+      "neural-networks"
     ],
     "path": "/plugins/buki/buki-tensorflow"
   },
@@ -1291,8 +1212,7 @@
     "tags": [
       "testng",
       "testing",
-      "java",
-      "skill"
+      "java"
     ],
     "path": "/plugins/buki/buki-testng"
   },
@@ -1320,8 +1240,7 @@
       "testing",
       "vite",
       "javascript",
-      "typescript",
-      "skill"
+      "typescript"
     ],
     "path": "/plugins/buki/buki-vitest"
   },
@@ -1347,8 +1266,7 @@
     "tags": [
       "vue",
       "composition-api",
-      "reactivity",
-      "skill"
+      "reactivity"
     ],
     "path": "/plugins/buki/buki-vue"
   }

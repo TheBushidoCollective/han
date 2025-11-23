@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["embedded-systems", "firmware", "iot", "agent"]
+  "keywords": [
+    "embedded-systems",
+    "firmware",
+    "iot"
+  ]
 }

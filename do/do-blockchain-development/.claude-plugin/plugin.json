@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
+  "keywords": [
+    "blockchain",
+    "web3",
+    "smart-contracts"
+  ]
 }

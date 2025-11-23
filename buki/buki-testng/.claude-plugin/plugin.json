@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["testng", "testing", "java", "skill"]
+  "keywords": [
+    "testng",
+    "testing",
+    "java"
+  ]
 }

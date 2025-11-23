@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["compiler", "language-design", "parsing", "agent"]
+  "keywords": [
+    "compiler",
+    "language-design",
+    "parsing"
+  ]
 }

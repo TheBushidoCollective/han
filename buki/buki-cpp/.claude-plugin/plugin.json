@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"]
+  "keywords": [
+    "cpp",
+    "c++",
+    "modern-cpp",
+    "templates"
+  ]
 }

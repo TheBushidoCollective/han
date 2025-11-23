@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["vitest", "testing", "vite", "javascript", "typescript", "skill"]
+  "keywords": [
+    "vitest",
+    "testing",
+    "vite",
+    "javascript",
+    "typescript"
+  ]
 }

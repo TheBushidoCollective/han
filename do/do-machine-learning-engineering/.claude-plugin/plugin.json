@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ml-engineering", "mlops", "inference", "agent"]
+  "keywords": [
+    "ml-engineering",
+    "mlops",
+    "inference"
+  ]
 }
