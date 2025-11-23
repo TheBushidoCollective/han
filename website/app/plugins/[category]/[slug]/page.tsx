@@ -193,19 +193,61 @@ export default async function PluginPage({
 									</p>
 								</div>
 							</div>
-							{tags.length > 0 && (
-								<div className="flex flex-wrap gap-2 mt-4">
-									{tags.map((tag: string) => (
+							<div className="flex flex-wrap gap-2 mt-4">
+								{/* Category badge */}
+								<Link
+									href={`/search?q=${encodeURIComponent(`category:${category}`)}`}
+									className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition text-sm capitalize"
+								>
+									{category}
+								</Link>
+
+								{/* Component badges */}
+								{plugin.agents.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:agent")}`}
+										className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-sm"
+									>
+										agent
+									</Link>
+								)}
+								{plugin.skills.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:skill")}`}
+										className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-sm"
+									>
+										skill
+									</Link>
+								)}
+								{plugin.commands.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:command")}`}
+										className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-sm"
+									>
+										command
+									</Link>
+								)}
+								{plugin.hooks.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:hook")}`}
+										className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-sm"
+									>
+										hook
+									</Link>
+								)}
+
+								{/* Tag badges */}
+								{tags.length > 0 &&
+									tags.map((tag: string) => (
 										<Link
 											key={tag}
-											href={`/search?q=${encodeURIComponent(tag)}`}
+											href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
 											className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm"
 										>
 											{tag}
 										</Link>
 									))}
-								</div>
-							)}
+							</div>
 						</div>
 
 						{/* Installation */}

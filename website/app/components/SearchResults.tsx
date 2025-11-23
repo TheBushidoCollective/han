@@ -23,6 +23,7 @@ interface ParsedQuery {
 	textQuery: string;
 	tagFilters: string[];
 	componentFilters: string[];
+	categoryFilters: string[];
 }
 
 function parseQuery(query: string): ParsedQuery {
@@ -30,6 +31,7 @@ function parseQuery(query: string): ParsedQuery {
 		textQuery: "",
 		tagFilters: [],
 		componentFilters: [],
+		categoryFilters: [],
 	};
 
 	// Split query into parts
@@ -48,6 +50,13 @@ function parseQuery(query: string): ParsedQuery {
 		const componentMatch = part.match(/^components?:(.+)$/i);
 		if (componentMatch) {
 			parsed.componentFilters.push(...componentMatch[1].split(","));
+			continue;
+		}
+
+		// Check for category: or categories:
+		const categoryMatch = part.match(/^categor(?:y|ies):(.+)$/i);
+		if (categoryMatch) {
+			parsed.categoryFilters.push(...categoryMatch[1].split(","));
 			continue;
 		}
 
@@ -73,6 +82,7 @@ export default function SearchResults({ index }: SearchResultsProps) {
 		textQuery: "",
 		tagFilters: [],
 		componentFilters: [],
+		categoryFilters: [],
 	});
 	const fuse = useRef<Fuse<SearchResult> | null>(null);
 
@@ -107,10 +117,19 @@ export default function SearchResults({ index }: SearchResultsProps) {
 			);
 		}
 
-		// Apply component filters (TODO: implement proper component detection)
+		// Apply component filters
 		if (parsed.componentFilters.length > 0) {
 			filteredResults = filteredResults.filter((result) =>
 				parsed.componentFilters.some((comp) => hasComponent(result, comp)),
+			);
+		}
+
+		// Apply category filters
+		if (parsed.categoryFilters.length > 0) {
+			filteredResults = filteredResults.filter((result) =>
+				parsed.categoryFilters.some(
+					(cat) => result.category.toLowerCase() === cat.toLowerCase(),
+				),
 			);
 		}
 
@@ -122,7 +141,8 @@ export default function SearchResults({ index }: SearchResultsProps) {
 		} else if (
 			parsed.textQuery.trim().length === 0 &&
 			parsed.tagFilters.length === 0 &&
-			parsed.componentFilters.length === 0
+			parsed.componentFilters.length === 0 &&
+			parsed.categoryFilters.length === 0
 		) {
 			// Show all plugins when no filters
 			filteredResults = index;
@@ -172,7 +192,8 @@ export default function SearchResults({ index }: SearchResultsProps) {
 					</p>
 
 					{(activeFilters.tagFilters.length > 0 ||
-						activeFilters.componentFilters.length > 0) && (
+						activeFilters.componentFilters.length > 0 ||
+						activeFilters.categoryFilters.length > 0) && (
 						<div className="flex flex-wrap gap-2">
 							{activeFilters.tagFilters.map((tag) => (
 								<span
@@ -190,6 +211,15 @@ export default function SearchResults({ index }: SearchResultsProps) {
 								>
 									<span className="font-semibold mr-1">component:</span>
 									{comp}
+								</span>
+							))}
+							{activeFilters.categoryFilters.map((cat) => (
+								<span
+									key={cat}
+									className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+								>
+									<span className="font-semibold mr-1">category:</span>
+									{cat}
 								</span>
 							))}
 						</div>
@@ -230,18 +260,27 @@ export default function SearchResults({ index }: SearchResultsProps) {
 							href={result.path}
 							className="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-900 dark:hover:border-white transition"
 						>
-							<div className="flex items-start justify-between mb-2">
+							<div className="mb-2">
 								<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
 									{highlightMatch(result.name)}
 								</h3>
-								<span className="ml-4 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded capitalize">
-									{result.category}
-								</span>
 							</div>
 							<p className="text-gray-600 dark:text-gray-400 mb-3">
 								{highlightMatch(result.description)}
 							</p>
 							<div className="flex flex-wrap gap-2">
+								<span className="inline-block px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded capitalize">
+									{result.category}
+								</span>
+								{result.components.length > 0 &&
+									result.components.map((comp) => (
+										<span
+											key={`comp-${comp}`}
+											className="inline-block px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded"
+										>
+											{comp}
+										</span>
+									))}
 								{result.tags.length > 0 &&
 									result.tags.map((tag) => (
 										<span
@@ -249,15 +288,6 @@ export default function SearchResults({ index }: SearchResultsProps) {
 											className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"
 										>
 											{tag}
-										</span>
-									))}
-								{result.components.length > 0 &&
-									result.components.map((comp) => (
-										<span
-											key={`comp-${comp}`}
-											className="inline-block px-2 py-1 text-xs bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded"
-										>
-											{comp}
 										</span>
 									))}
 							</div>
