@@ -1,765 +1,1355 @@
-{
-  "plugins": [
-    {
-      "name": "do-accessibility-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-accessibility-engineering"
-    },
-    {
-      "name": "buki-ameba",
-      "category": "buki",
-      "path": "/plugins/buki/buki-ameba"
-    },
-    {
-      "name": "buki-angular",
-      "category": "buki",
-      "path": "/plugins/buki/buki-angular"
-    },
-    {
-      "name": "buki-ansible",
-      "category": "buki",
-      "path": "/plugins/buki/buki-ansible"
-    },
-    {
-      "name": "do-api-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-api-engineering"
-    },
-    {
-      "name": "buki-apollo-graphql",
-      "category": "buki",
-      "path": "/plugins/buki/buki-apollo-graphql"
-    },
-    {
-      "name": "do-architecture",
-      "category": "do",
-      "path": "/plugins/do/do-architecture"
-    },
-    {
-      "name": "do-backend-development",
-      "category": "do",
-      "path": "/plugins/do/do-backend-development"
-    },
-    {
-      "name": "buki-bdd",
-      "category": "buki",
-      "path": "/plugins/buki/buki-bdd"
-    },
-    {
-      "name": "buki-biome",
-      "category": "buki",
-      "path": "/plugins/buki/buki-biome"
-    },
-    {
-      "name": "do-blockchain-development",
-      "category": "do",
-      "path": "/plugins/do/do-blockchain-development"
-    },
-    {
-      "name": "bushido",
-      "category": "bushido",
-      "path": "/plugins/bushido/bushido"
-    },
-    {
-      "name": "buki-c",
-      "category": "buki",
-      "path": "/plugins/buki/buki-c"
-    },
-    {
-      "name": "buki-checkstyle",
-      "category": "buki",
-      "path": "/plugins/buki/buki-checkstyle"
-    },
-    {
-      "name": "do-claude-plugin-development",
-      "category": "do",
-      "path": "/plugins/do/do-claude-plugin-development"
-    },
-    {
-      "name": "buki-clippy",
-      "category": "buki",
-      "path": "/plugins/buki/buki-clippy"
-    },
-    {
-      "name": "do-compiler-development",
-      "category": "do",
-      "path": "/plugins/do/do-compiler-development"
-    },
-    {
-      "name": "do-content-creator",
-      "category": "do",
-      "path": "/plugins/do/do-content-creator"
-    },
-    {
-      "name": "sensei-context7",
-      "category": "sensei",
-      "path": "/plugins/sensei/sensei-context7"
-    },
-    {
-      "name": "buki-cpp",
-      "category": "buki",
-      "path": "/plugins/buki/buki-cpp"
-    },
-    {
-      "name": "buki-credo",
-      "category": "buki",
-      "path": "/plugins/buki/buki-credo"
-    },
-    {
-      "name": "buki-crystal",
-      "category": "buki",
-      "path": "/plugins/buki/buki-crystal"
-    },
-    {
-      "name": "buki-csharp",
-      "category": "buki",
-      "path": "/plugins/buki/buki-csharp"
-    },
-    {
-      "name": "buki-cucumber",
-      "category": "buki",
-      "path": "/plugins/buki/buki-cucumber"
-    },
-    {
-      "name": "buki-cypress",
-      "category": "buki",
-      "path": "/plugins/buki/buki-cypress"
-    },
-    {
-      "name": "do-data-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-data-engineering"
-    },
-    {
-      "name": "do-database-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-database-engineering"
-    },
-    {
-      "name": "buki-dialyzer",
-      "category": "buki",
-      "path": "/plugins/buki/buki-dialyzer"
-    },
-    {
-      "name": "buki-django",
-      "category": "buki",
-      "path": "/plugins/buki/buki-django"
-    },
-    {
-      "name": "buki-docker-compose",
-      "category": "buki",
-      "path": "/plugins/buki/buki-docker-compose"
-    },
-    {
-      "name": "buki-ecto",
-      "category": "buki",
-      "path": "/plugins/buki/buki-ecto"
-    },
-    {
-      "name": "buki-elixir",
-      "category": "buki",
-      "path": "/plugins/buki/buki-elixir"
-    },
-    {
-      "name": "do-embedded-development",
-      "category": "do",
-      "path": "/plugins/do/do-embedded-development"
-    },
-    {
-      "name": "do-enforce-planning",
-      "category": "do",
-      "path": "/plugins/do/do-enforce-planning"
-    },
-    {
-      "name": "buki-erlang",
-      "category": "buki",
-      "path": "/plugins/buki/buki-erlang"
-    },
-    {
-      "name": "buki-eslint",
-      "category": "buki",
-      "path": "/plugins/buki/buki-eslint"
-    },
-    {
-      "name": "buki-fastapi",
-      "category": "buki",
-      "path": "/plugins/buki/buki-fastapi"
-    },
-    {
-      "name": "do-frontend-development",
-      "category": "do",
-      "path": "/plugins/do/do-frontend-development"
-    },
-    {
-      "name": "buki-functional-programming",
-      "category": "buki",
-      "path": "/plugins/buki/buki-functional-programming"
-    },
-    {
-      "name": "do-game-development",
-      "category": "do",
-      "path": "/plugins/do/do-game-development"
-    },
-    {
-      "name": "buki-git-storytelling",
-      "category": "buki",
-      "path": "/plugins/buki/buki-git-storytelling"
-    },
-    {
-      "name": "buki-gleam",
-      "category": "buki",
-      "path": "/plugins/buki/buki-gleam"
-    },
-    {
-      "name": "buki-go",
-      "category": "buki",
-      "path": "/plugins/buki/buki-go"
-    },
-    {
-      "name": "do-graphics-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-graphics-engineering"
-    },
-    {
-      "name": "buki-graphql",
-      "category": "buki",
-      "path": "/plugins/buki/buki-graphql"
-    },
-    {
-      "name": "buki-helm",
-      "category": "buki",
-      "path": "/plugins/buki/buki-helm"
-    },
-    {
-      "name": "do-infrastructure",
-      "category": "do",
-      "path": "/plugins/do/do-infrastructure"
-    },
-    {
-      "name": "buki-ink",
-      "category": "buki",
-      "path": "/plugins/buki/buki-ink"
-    },
-    {
-      "name": "buki-java",
-      "category": "buki",
-      "path": "/plugins/buki/buki-java"
-    },
-    {
-      "name": "buki-jest",
-      "category": "buki",
-      "path": "/plugins/buki/buki-jest"
-    },
-    {
-      "name": "buki-junit",
-      "category": "buki",
-      "path": "/plugins/buki/buki-junit"
-    },
-    {
-      "name": "buki-kotlin",
-      "category": "buki",
-      "path": "/plugins/buki/buki-kotlin"
-    },
-    {
-      "name": "buki-kubernetes",
-      "category": "buki",
-      "path": "/plugins/buki/buki-kubernetes"
-    },
-    {
-      "name": "buki-kustomize",
-      "category": "buki",
-      "path": "/plugins/buki/buki-kustomize"
-    },
-    {
-      "name": "buki-lua",
-      "category": "buki",
-      "path": "/plugins/buki/buki-lua"
-    },
-    {
-      "name": "do-machine-learning-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-machine-learning-engineering"
-    },
-    {
-      "name": "buki-markdownlint",
-      "category": "buki",
-      "path": "/plugins/buki/buki-markdownlint"
-    },
-    {
-      "name": "do-mobile-development",
-      "category": "do",
-      "path": "/plugins/do/do-mobile-development"
-    },
-    {
-      "name": "buki-mocha",
-      "category": "buki",
-      "path": "/plugins/buki/buki-mocha"
-    },
-    {
-      "name": "buki-monorepo",
-      "category": "buki",
-      "path": "/plugins/buki/buki-monorepo"
-    },
-    {
-      "name": "buki-nestjs",
-      "category": "buki",
-      "path": "/plugins/buki/buki-nestjs"
-    },
-    {
-      "name": "do-network-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-network-engineering"
-    },
-    {
-      "name": "buki-nextjs",
-      "category": "buki",
-      "path": "/plugins/buki/buki-nextjs"
-    },
-    {
-      "name": "buki-nim",
-      "category": "buki",
-      "path": "/plugins/buki/buki-nim"
-    },
-    {
-      "name": "buki-objective-c",
-      "category": "buki",
-      "path": "/plugins/buki/buki-objective-c"
-    },
-    {
-      "name": "do-observability-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-observability-engineering"
-    },
-    {
-      "name": "buki-oop",
-      "category": "buki",
-      "path": "/plugins/buki/buki-oop"
-    },
-    {
-      "name": "do-performance-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-performance-engineering"
-    },
-    {
-      "name": "buki-phoenix",
-      "category": "buki",
-      "path": "/plugins/buki/buki-phoenix"
-    },
-    {
-      "name": "buki-php",
-      "category": "buki",
-      "path": "/plugins/buki/buki-php"
-    },
-    {
-      "name": "do-platform-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-platform-engineering"
-    },
-    {
-      "name": "buki-playwright",
-      "category": "buki",
-      "path": "/plugins/buki/buki-playwright"
-    },
-    {
-      "name": "sensei-playwright-mcp",
-      "category": "sensei",
-      "path": "/plugins/sensei/sensei-playwright-mcp"
-    },
-    {
-      "name": "buki-prettier",
-      "category": "buki",
-      "path": "/plugins/buki/buki-prettier"
-    },
-    {
-      "name": "do-product-management",
-      "category": "do",
-      "path": "/plugins/do/do-product-management"
-    },
-    {
-      "name": "do-project-management",
-      "category": "do",
-      "path": "/plugins/do/do-project-management"
-    },
-    {
-      "name": "do-prompt-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-prompt-engineering"
-    },
-    {
-      "name": "buki-pulumi",
-      "category": "buki",
-      "path": "/plugins/buki/buki-pulumi"
-    },
-    {
-      "name": "buki-pylint",
-      "category": "buki",
-      "path": "/plugins/buki/buki-pylint"
-    },
-    {
-      "name": "buki-pytest",
-      "category": "buki",
-      "path": "/plugins/buki/buki-pytest"
-    },
-    {
-      "name": "buki-python",
-      "category": "buki",
-      "path": "/plugins/buki/buki-python"
-    },
-    {
-      "name": "do-quality-assurance",
-      "category": "do",
-      "path": "/plugins/do/do-quality-assurance"
-    },
-    {
-      "name": "buki-rails",
-      "category": "buki",
-      "path": "/plugins/buki/buki-rails"
-    },
-    {
-      "name": "buki-react",
-      "category": "buki",
-      "path": "/plugins/buki/buki-react"
-    },
-    {
-      "name": "buki-relay",
-      "category": "buki",
-      "path": "/plugins/buki/buki-relay"
-    },
-    {
-      "name": "buki-rspec",
-      "category": "buki",
-      "path": "/plugins/buki/buki-rspec"
-    },
-    {
-      "name": "buki-rubocop",
-      "category": "buki",
-      "path": "/plugins/buki/buki-rubocop"
-    },
-    {
-      "name": "buki-rust",
-      "category": "buki",
-      "path": "/plugins/buki/buki-rust"
-    },
-    {
-      "name": "buki-scala",
-      "category": "buki",
-      "path": "/plugins/buki/buki-scala"
-    },
-    {
-      "name": "do-security-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-security-engineering"
-    },
-    {
-      "name": "buki-sip",
-      "category": "buki",
-      "path": "/plugins/buki/buki-sip"
-    },
-    {
-      "name": "do-site-reliability-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-site-reliability-engineering"
-    },
-    {
-      "name": "buki-swift",
-      "category": "buki",
-      "path": "/plugins/buki/buki-swift"
-    },
-    {
-      "name": "do-technical-documentation",
-      "category": "do",
-      "path": "/plugins/do/do-technical-documentation"
-    },
-    {
-      "name": "buki-tensorflow",
-      "category": "buki",
-      "path": "/plugins/buki/buki-tensorflow"
-    },
-    {
-      "name": "buki-terraform",
-      "category": "buki",
-      "path": "/plugins/buki/buki-terraform"
-    },
-    {
-      "name": "buki-testng",
-      "category": "buki",
-      "path": "/plugins/buki/buki-testng"
-    },
-    {
-      "name": "buki-typescript",
-      "category": "buki",
-      "path": "/plugins/buki/buki-typescript"
-    },
-    {
-      "name": "buki-vitest",
-      "category": "buki",
-      "path": "/plugins/buki/buki-vitest"
-    },
-    {
-      "name": "do-voip-engineering",
-      "category": "do",
-      "path": "/plugins/do/do-voip-engineering"
-    },
-    {
-      "name": "buki-vue",
-      "category": "buki",
-      "path": "/plugins/buki/buki-vue"
-    }
-  ],
-  "tags": [
-    "skill",
-    "agent",
-    "testing",
-    "devops",
-    "linting",
-    "javascript",
-    "typescript",
-    "python",
-    "infrastructure",
-    "graphql",
-    "server",
-    "quality",
-    "java",
-    "async",
-    "react",
-    "automation",
-    "api",
-    "bdd",
-    "concurrency",
-    "kubernetes",
-    "k8s",
-    "monitoring",
-    "ios",
-    "ruby",
-    "architecture",
-    "design",
-    "scalability",
-    "behavior-driven-development",
-    "formatting",
-    "enforcement",
-    "systems-programming",
-    "development",
-    "rust",
-    "compiler",
-    "storytelling",
-    "mcp",
-    "knowledge",
-    "e2e",
-    "otp",
-    "planning",
-    "erlang",
-    "beam",
-    "ui",
-    "functional",
-    "sre",
-    "android",
-    "jvm",
-    "documentation",
-    "nodejs",
-    "performance",
-    "security",
-    "playwright",
-    "iac",
-    "reliability",
-    "sip",
-    "voip",
-    "telecommunications",
-    "accessibility",
-    "wcag",
-    "inclusive-design",
-    "angular",
-    "rxjs",
-    "signals",
-    "ansible",
-    "configuration-management",
-    "rest",
-    "apollo",
-    "client",
-    "patterns",
-    "backend",
-    "data",
-    "collaboration",
-    "agile",
-    "biome",
-    "blockchain",
-    "web3",
-    "smart-contracts",
-    "philosophy",
-    "principles",
-    "virtues",
-    "c",
-    "memory-management",
-    "checkstyle",
-    "plugin",
-    "claude-code",
-    "clippy",
-    "language-design",
-    "parsing",
-    "content",
-    "writing",
-    "marketing",
-    "engagement",
-    "context",
-    "cpp",
-    "c++",
-    "modern-cpp",
-    "templates",
-    "crystal",
-    "language",
-    "csharp",
-    "c#",
-    "dotnet",
-    "linq",
-    "cucumber",
-    "gherkin",
-    "cypress",
-    "data-engineering",
-    "etl",
-    "streaming",
-    "database",
-    "sql",
-    "query-optimization",
-    "django",
-    "orm",
-    "docker",
-    "docker-compose",
-    "containers",
-    "elixir",
-    "ecto",
-    "embedded-systems",
-    "firmware",
-    "iot",
-    "workflow",
-    "hook",
-    "distributed",
-    "concurrent",
-    "eslint",
-    "fastapi",
-    "frontend",
-    "ux",
-    "presentation",
-    "functional-programming",
-    "fp",
-    "immutability",
-    "pure-functions",
-    "game-development",
-    "game-engine",
-    "gameplay",
-    "git",
-    "commit",
-    "version-control",
-    "gleam",
-    "go",
-    "golang",
-    "graphics",
-    "gpu",
-    "shaders",
-    "schema",
-    "helm",
-    "charts",
-    "deployment",
-    "ink",
-    "terminal",
-    "cli",
-    "tui",
-    "streams",
-    "jest",
-    "junit",
-    "kotlin",
-    "coroutines",
-    "kustomize",
-    "lua",
-    "scripting",
-    "embedded",
-    "gaming",
-    "ml-engineering",
-    "mlops",
-    "inference",
-    "markdownlint",
-    "markdown",
-    "mobile",
-    "mocha",
-    "monorepo",
-    "workspace",
-    "turborepo",
-    "nx",
-    "lerna",
-    "nestjs",
-    "network",
-    "protocols",
-    "distributed-systems",
-    "nextjs",
-    "ssr",
-    "nim",
-    "metaprogramming",
-    "objective-c",
-    "objc",
-    "macos",
-    "arc",
-    "observability",
-    "tracing",
-    "oop",
-    "object-oriented",
-    "design-patterns",
-    "encapsulation",
-    "optimization",
-    "php",
-    "composer",
-    "web",
-    "platform-engineering",
-    "devex",
-    "prettier",
-    "product",
-    "strategy",
-    "vision",
-    "project-management",
-    "coordination",
-    "leadership",
-    "team",
-    "prompt-engineering",
-    "ai",
-    "llm",
-    "pulumi",
-    "pylint",
-    "pytest",
-    "types",
-    "qa",
-    "rails",
-    "mvc",
-    "active-record",
-    "hotwire",
-    "hooks",
-    "relay",
-    "fragments",
-    "rspec",
-    "rubocop",
-    "ownership",
-    "scala",
-    "type-system",
-    "compliance",
-    "vulnerability",
-    "threat",
-    "real-time",
-    "incidents",
-    "swift",
-    "protocol-oriented",
-    "technical-writing",
-    "tensorflow",
-    "machine-learning",
-    "deep-learning",
-    "neural-networks",
-    "terraform",
-    "hashicorp",
-    "testng",
-    "tsc",
-    "type-checking",
-    "validation",
-    "vitest",
-    "vite",
-    "rtp",
-    "engineering",
-    "vue",
-    "composition-api",
-    "reactivity"
-  ]
-}
+[
+  {
+    "id": "do-accessibility-engineering",
+    "name": "do-accessibility-engineering",
+    "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
+    "category": "do",
+    "tags": [
+      "accessibility",
+      "wcag",
+      "inclusive-design",
+      "agent"
+    ],
+    "path": "/plugins/do/do-accessibility-engineering"
+  },
+  {
+    "id": "buki-ameba",
+    "name": "buki-ameba",
+    "description": "Ameba skills for Crystal code analysis",
+    "category": "buki",
+    "tags": [],
+    "path": "/plugins/buki/buki-ameba"
+  },
+  {
+    "id": "buki-angular",
+    "name": "buki-angular",
+    "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
+    "category": "buki",
+    "tags": [
+      "angular",
+      "rxjs",
+      "signals",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-angular"
+  },
+  {
+    "id": "buki-ansible",
+    "name": "buki-ansible",
+    "description": "Ansible playbook validation and configuration management best practices",
+    "category": "buki",
+    "tags": [
+      "ansible",
+      "configuration-management",
+      "devops",
+      "automation"
+    ],
+    "path": "/plugins/buki/buki-ansible"
+  },
+  {
+    "id": "do-api-engineering",
+    "name": "do-api-engineering",
+    "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
+    "category": "do",
+    "tags": [
+      "api",
+      "rest",
+      "graphql",
+      "agent"
+    ],
+    "path": "/plugins/do/do-api-engineering"
+  },
+  {
+    "id": "buki-apollo-graphql",
+    "name": "buki-apollo-graphql",
+    "description": "Advanced Apollo GraphQL skills for client and server development",
+    "category": "buki",
+    "tags": [
+      "apollo",
+      "graphql",
+      "client",
+      "server",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-apollo-graphql"
+  },
+  {
+    "id": "do-architecture",
+    "name": "do-architecture",
+    "description": "Agents specialized in system architecture and solution design. Focuses on scalability, design patterns, and architectural decisions.",
+    "category": "do",
+    "tags": [
+      "architecture",
+      "design",
+      "patterns",
+      "scalability",
+      "agent"
+    ],
+    "path": "/plugins/do/do-architecture"
+  },
+  {
+    "id": "do-backend-development",
+    "name": "do-backend-development",
+    "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
+    "category": "do",
+    "tags": [
+      "backend",
+      "api",
+      "architecture",
+      "data",
+      "server",
+      "agent"
+    ],
+    "path": "/plugins/do/do-backend-development"
+  },
+  {
+    "id": "buki-bdd",
+    "name": "buki-bdd",
+    "description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns.",
+    "category": "buki",
+    "tags": [
+      "bdd",
+      "behavior-driven-development",
+      "testing",
+      "collaboration",
+      "agile",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-bdd"
+  },
+  {
+    "id": "buki-biome",
+    "name": "buki-biome",
+    "description": "Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.",
+    "category": "buki",
+    "tags": [
+      "biome",
+      "linting",
+      "formatting",
+      "javascript",
+      "typescript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-biome"
+  },
+  {
+    "id": "do-blockchain-development",
+    "name": "do-blockchain-development",
+    "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
+    "category": "do",
+    "tags": [
+      "blockchain",
+      "web3",
+      "smart-contracts",
+      "agent"
+    ],
+    "path": "/plugins/do/do-blockchain-development"
+  },
+  {
+    "id": "bushido",
+    "name": "bushido",
+    "description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
+    "category": "bushido",
+    "tags": [
+      "philosophy",
+      "quality",
+      "testing",
+      "principles",
+      "virtues",
+      "enforcement"
+    ],
+    "path": "/plugins/bushido/bushido"
+  },
+  {
+    "id": "buki-c",
+    "name": "buki-c",
+    "description": "Advanced C programming skills for systems programming and memory management",
+    "category": "buki",
+    "tags": [
+      "c",
+      "systems-programming",
+      "memory-management",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-c"
+  },
+  {
+    "id": "buki-checkstyle",
+    "name": "buki-checkstyle",
+    "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
+    "category": "buki",
+    "tags": [
+      "checkstyle",
+      "linting",
+      "java",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-checkstyle"
+  },
+  {
+    "id": "do-claude-plugin-development",
+    "name": "do-claude-plugin-development",
+    "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
+    "category": "do",
+    "tags": [
+      "plugin",
+      "development",
+      "claude-code",
+      "quality",
+      "agent"
+    ],
+    "path": "/plugins/do/do-claude-plugin-development"
+  },
+  {
+    "id": "buki-clippy",
+    "name": "buki-clippy",
+    "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
+    "category": "buki",
+    "tags": [
+      "clippy",
+      "linting",
+      "rust",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-clippy"
+  },
+  {
+    "id": "do-compiler-development",
+    "name": "do-compiler-development",
+    "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
+    "category": "do",
+    "tags": [
+      "compiler",
+      "language-design",
+      "parsing",
+      "agent"
+    ],
+    "path": "/plugins/do/do-compiler-development"
+  },
+  {
+    "id": "do-content-creator",
+    "name": "do-content-creator",
+    "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
+    "category": "do",
+    "tags": [
+      "content",
+      "writing",
+      "marketing",
+      "storytelling",
+      "engagement",
+      "agent"
+    ],
+    "path": "/plugins/do/do-content-creator"
+  },
+  {
+    "id": "sensei-context7",
+    "name": "sensei-context7",
+    "description": "MCP server configuration for Context7 integration providing persistent context and knowledge management.",
+    "category": "sensei",
+    "tags": [
+      "mcp",
+      "context",
+      "knowledge",
+      "server"
+    ],
+    "path": "/plugins/sensei/sensei-context7"
+  },
+  {
+    "id": "buki-cpp",
+    "name": "buki-cpp",
+    "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
+    "category": "buki",
+    "tags": [
+      "cpp",
+      "c++",
+      "modern-cpp",
+      "templates",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-cpp"
+  },
+  {
+    "id": "buki-credo",
+    "name": "buki-credo",
+    "description": "Advanced Credo skills for code analysis and style checking in Elixir",
+    "category": "buki",
+    "tags": [],
+    "path": "/plugins/buki/buki-credo"
+  },
+  {
+    "id": "buki-crystal",
+    "name": "buki-crystal",
+    "description": "Crystal language development skills and best practices.",
+    "category": "buki",
+    "tags": [
+      "crystal",
+      "language",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-crystal"
+  },
+  {
+    "id": "buki-csharp",
+    "name": "buki-csharp",
+    "description": "Advanced C# programming skills for async patterns and LINQ",
+    "category": "buki",
+    "tags": [
+      "csharp",
+      "c#",
+      "dotnet",
+      "async",
+      "linq",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-csharp"
+  },
+  {
+    "id": "buki-cucumber",
+    "name": "buki-cucumber",
+    "description": "Comprehensive Cucumber BDD testing skills for behavior-driven development with Gherkin syntax.",
+    "category": "buki",
+    "tags": [
+      "cucumber",
+      "bdd",
+      "gherkin",
+      "testing",
+      "behavior-driven-development",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-cucumber"
+  },
+  {
+    "id": "buki-cypress",
+    "name": "buki-cypress",
+    "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
+    "category": "buki",
+    "tags": [
+      "cypress",
+      "testing",
+      "e2e",
+      "javascript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-cypress"
+  },
+  {
+    "id": "do-data-engineering",
+    "name": "do-data-engineering",
+    "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
+    "category": "do",
+    "tags": [
+      "data-engineering",
+      "etl",
+      "streaming",
+      "agent"
+    ],
+    "path": "/plugins/do/do-data-engineering"
+  },
+  {
+    "id": "do-database-engineering",
+    "name": "do-database-engineering",
+    "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
+    "category": "do",
+    "tags": [
+      "database",
+      "sql",
+      "query-optimization",
+      "agent"
+    ],
+    "path": "/plugins/do/do-database-engineering"
+  },
+  {
+    "id": "buki-dialyzer",
+    "name": "buki-dialyzer",
+    "description": "Advanced Dialyzer skills for static analysis of Erlang/Elixir code",
+    "category": "buki",
+    "tags": [],
+    "path": "/plugins/buki/buki-dialyzer"
+  },
+  {
+    "id": "buki-django",
+    "name": "buki-django",
+    "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
+    "category": "buki",
+    "tags": [
+      "django",
+      "python",
+      "orm",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-django"
+  },
+  {
+    "id": "buki-docker-compose",
+    "name": "buki-docker-compose",
+    "description": "Docker Compose validation and best practices",
+    "category": "buki",
+    "tags": [
+      "docker",
+      "docker-compose",
+      "containers",
+      "devops"
+    ],
+    "path": "/plugins/buki/buki-docker-compose"
+  },
+  {
+    "id": "buki-ecto",
+    "name": "buki-ecto",
+    "description": "Ecto skills for database interactions in Elixir",
+    "category": "buki",
+    "tags": [],
+    "path": "/plugins/buki/buki-ecto"
+  },
+  {
+    "id": "buki-elixir",
+    "name": "buki-elixir",
+    "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
+    "category": "buki",
+    "tags": [
+      "elixir",
+      "otp",
+      "ecto",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-elixir"
+  },
+  {
+    "id": "do-embedded-development",
+    "name": "do-embedded-development",
+    "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
+    "category": "do",
+    "tags": [
+      "embedded-systems",
+      "firmware",
+      "iot",
+      "agent"
+    ],
+    "path": "/plugins/do/do-embedded-development"
+  },
+  {
+    "id": "do-enforce-planning",
+    "name": "do-enforce-planning",
+    "description": "Enforces planning before implementation work begins",
+    "category": "do",
+    "tags": [
+      "planning",
+      "workflow",
+      "agent",
+      "hook"
+    ],
+    "path": "/plugins/do/do-enforce-planning"
+  },
+  {
+    "id": "buki-erlang",
+    "name": "buki-erlang",
+    "description": "Advanced Erlang programming skills for concurrent and distributed systems",
+    "category": "buki",
+    "tags": [
+      "erlang",
+      "beam",
+      "otp",
+      "distributed",
+      "concurrent",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-erlang"
+  },
+  {
+    "id": "buki-eslint",
+    "name": "buki-eslint",
+    "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
+    "category": "buki",
+    "tags": [
+      "eslint",
+      "linting",
+      "javascript",
+      "typescript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-eslint"
+  },
+  {
+    "id": "buki-fastapi",
+    "name": "buki-fastapi",
+    "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
+    "category": "buki",
+    "tags": [
+      "fastapi",
+      "python",
+      "async",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-fastapi"
+  },
+  {
+    "id": "do-frontend-development",
+    "name": "do-frontend-development",
+    "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
+    "category": "do",
+    "tags": [
+      "frontend",
+      "ui",
+      "ux",
+      "design",
+      "presentation",
+      "agent"
+    ],
+    "path": "/plugins/do/do-frontend-development"
+  },
+  {
+    "id": "buki-functional-programming",
+    "name": "buki-functional-programming",
+    "description": "Functional programming paradigm, patterns, and best practices across languages.",
+    "category": "buki",
+    "tags": [
+      "functional-programming",
+      "fp",
+      "immutability",
+      "pure-functions",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-functional-programming"
+  },
+  {
+    "id": "do-game-development",
+    "name": "do-game-development",
+    "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
+    "category": "do",
+    "tags": [
+      "game-development",
+      "game-engine",
+      "gameplay",
+      "agent"
+    ],
+    "path": "/plugins/do/do-game-development"
+  },
+  {
+    "id": "buki-git-storytelling",
+    "name": "buki-git-storytelling",
+    "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
+    "category": "buki",
+    "tags": [
+      "git",
+      "storytelling",
+      "commit",
+      "version-control",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/buki/buki-git-storytelling"
+  },
+  {
+    "id": "buki-gleam",
+    "name": "buki-gleam",
+    "description": "Advanced Gleam programming skills for functional BEAM development",
+    "category": "buki",
+    "tags": [
+      "gleam",
+      "beam",
+      "functional",
+      "erlang",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-gleam"
+  },
+  {
+    "id": "buki-go",
+    "name": "buki-go",
+    "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
+    "category": "buki",
+    "tags": [
+      "go",
+      "golang",
+      "concurrency",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-go"
+  },
+  {
+    "id": "do-graphics-engineering",
+    "name": "do-graphics-engineering",
+    "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
+    "category": "do",
+    "tags": [
+      "graphics",
+      "gpu",
+      "shaders",
+      "agent"
+    ],
+    "path": "/plugins/do/do-graphics-engineering"
+  },
+  {
+    "id": "buki-graphql",
+    "name": "buki-graphql",
+    "description": "Advanced GraphQL skills for schema design, resolvers, and query optimization.",
+    "category": "buki",
+    "tags": [
+      "graphql",
+      "api",
+      "schema",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-graphql"
+  },
+  {
+    "id": "buki-helm",
+    "name": "buki-helm",
+    "description": "Helm chart validation and best practices",
+    "category": "buki",
+    "tags": [
+      "helm",
+      "kubernetes",
+      "k8s",
+      "charts",
+      "devops"
+    ],
+    "path": "/plugins/buki/buki-helm"
+  },
+  {
+    "id": "do-infrastructure",
+    "name": "do-infrastructure",
+    "description": "Agents specialized in infrastructure management, DevOps, and site reliability engineering. Focuses on deployment, monitoring, and system operations.",
+    "category": "do",
+    "tags": [
+      "infrastructure",
+      "devops",
+      "sre",
+      "deployment",
+      "monitoring",
+      "agent"
+    ],
+    "path": "/plugins/do/do-infrastructure"
+  },
+  {
+    "id": "buki-ink",
+    "name": "buki-ink",
+    "description": "Advanced Ink skills for building interactive terminal UIs with React components, hooks, and layout patterns.",
+    "category": "buki",
+    "tags": [
+      "ink",
+      "terminal",
+      "cli",
+      "react",
+      "ui",
+      "tui"
+    ],
+    "path": "/plugins/buki/buki-ink"
+  },
+  {
+    "id": "buki-java",
+    "name": "buki-java",
+    "description": "Advanced Java skills for streams, concurrency, and generics.",
+    "category": "buki",
+    "tags": [
+      "java",
+      "streams",
+      "concurrency",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-java"
+  },
+  {
+    "id": "buki-jest",
+    "name": "buki-jest",
+    "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
+    "category": "buki",
+    "tags": [
+      "jest",
+      "testing",
+      "javascript",
+      "typescript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-jest"
+  },
+  {
+    "id": "buki-junit",
+    "name": "buki-junit",
+    "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
+    "category": "buki",
+    "tags": [
+      "junit",
+      "testing",
+      "java",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-junit"
+  },
+  {
+    "id": "buki-kotlin",
+    "name": "buki-kotlin",
+    "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
+    "category": "buki",
+    "tags": [
+      "kotlin",
+      "coroutines",
+      "android",
+      "jvm",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-kotlin"
+  },
+  {
+    "id": "buki-kubernetes",
+    "name": "buki-kubernetes",
+    "description": "Kubernetes manifest validation and best practices",
+    "category": "buki",
+    "tags": [
+      "kubernetes",
+      "k8s",
+      "devops",
+      "infrastructure"
+    ],
+    "path": "/plugins/buki/buki-kubernetes"
+  },
+  {
+    "id": "buki-kustomize",
+    "name": "buki-kustomize",
+    "description": "Kustomize configuration validation for Kubernetes",
+    "category": "buki",
+    "tags": [
+      "kustomize",
+      "kubernetes",
+      "k8s",
+      "devops"
+    ],
+    "path": "/plugins/buki/buki-kustomize"
+  },
+  {
+    "id": "buki-lua",
+    "name": "buki-lua",
+    "description": "Advanced Lua programming skills for embedded scripting and game development",
+    "category": "buki",
+    "tags": [
+      "lua",
+      "scripting",
+      "embedded",
+      "gaming",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-lua"
+  },
+  {
+    "id": "do-machine-learning-engineering",
+    "name": "do-machine-learning-engineering",
+    "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
+    "category": "do",
+    "tags": [
+      "ml-engineering",
+      "mlops",
+      "inference",
+      "agent"
+    ],
+    "path": "/plugins/do/do-machine-learning-engineering"
+  },
+  {
+    "id": "buki-markdownlint",
+    "name": "buki-markdownlint",
+    "description": "Markdown linting and style checking with markdownlint.",
+    "category": "buki",
+    "tags": [
+      "markdownlint",
+      "markdown",
+      "linting",
+      "documentation"
+    ],
+    "path": "/plugins/buki/buki-markdownlint"
+  },
+  {
+    "id": "do-mobile-development",
+    "name": "do-mobile-development",
+    "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
+    "category": "do",
+    "tags": [
+      "mobile",
+      "ios",
+      "android",
+      "development",
+      "agent"
+    ],
+    "path": "/plugins/do/do-mobile-development"
+  },
+  {
+    "id": "buki-mocha",
+    "name": "buki-mocha",
+    "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
+    "category": "buki",
+    "tags": [
+      "mocha",
+      "testing",
+      "javascript",
+      "nodejs",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-mocha"
+  },
+  {
+    "id": "buki-monorepo",
+    "name": "buki-monorepo",
+    "description": "Advanced monorepo development skills for architecture, tooling, and workflow management across multiple packages and projects.",
+    "category": "buki",
+    "tags": [
+      "monorepo",
+      "workspace",
+      "turborepo",
+      "nx",
+      "lerna",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-monorepo"
+  },
+  {
+    "id": "buki-nestjs",
+    "name": "buki-nestjs",
+    "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
+    "category": "buki",
+    "tags": [
+      "nestjs",
+      "typescript",
+      "nodejs",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-nestjs"
+  },
+  {
+    "id": "do-network-engineering",
+    "name": "do-network-engineering",
+    "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
+    "category": "do",
+    "tags": [
+      "network",
+      "protocols",
+      "distributed-systems",
+      "agent"
+    ],
+    "path": "/plugins/do/do-network-engineering"
+  },
+  {
+    "id": "buki-nextjs",
+    "name": "buki-nextjs",
+    "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
+    "category": "buki",
+    "tags": [
+      "nextjs",
+      "react",
+      "ssr",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-nextjs"
+  },
+  {
+    "id": "buki-nim",
+    "name": "buki-nim",
+    "description": "Advanced Nim programming skills for systems programming and metaprogramming",
+    "category": "buki",
+    "tags": [
+      "nim",
+      "systems-programming",
+      "metaprogramming",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-nim"
+  },
+  {
+    "id": "buki-objective-c",
+    "name": "buki-objective-c",
+    "description": "Advanced Objective-C programming skills for iOS and macOS development",
+    "category": "buki",
+    "tags": [
+      "objective-c",
+      "objc",
+      "ios",
+      "macos",
+      "arc",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-objective-c"
+  },
+  {
+    "id": "do-observability-engineering",
+    "name": "do-observability-engineering",
+    "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
+    "category": "do",
+    "tags": [
+      "observability",
+      "monitoring",
+      "tracing",
+      "agent"
+    ],
+    "path": "/plugins/do/do-observability-engineering"
+  },
+  {
+    "id": "buki-oop",
+    "name": "buki-oop",
+    "description": "Object-Oriented Programming principles, design patterns, and best practices.",
+    "category": "buki",
+    "tags": [
+      "oop",
+      "object-oriented",
+      "design-patterns",
+      "encapsulation",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-oop"
+  },
+  {
+    "id": "do-performance-engineering",
+    "name": "do-performance-engineering",
+    "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
+    "category": "do",
+    "tags": [
+      "performance",
+      "optimization",
+      "scalability",
+      "agent"
+    ],
+    "path": "/plugins/do/do-performance-engineering"
+  },
+  {
+    "id": "buki-phoenix",
+    "name": "buki-phoenix",
+    "description": "Phoenix Framework skills for building web applications",
+    "category": "buki",
+    "tags": [],
+    "path": "/plugins/buki/buki-phoenix"
+  },
+  {
+    "id": "buki-php",
+    "name": "buki-php",
+    "description": "Advanced PHP programming skills for modern PHP and security patterns",
+    "category": "buki",
+    "tags": [
+      "php",
+      "composer",
+      "security",
+      "web",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-php"
+  },
+  {
+    "id": "do-platform-engineering",
+    "name": "do-platform-engineering",
+    "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
+    "category": "do",
+    "tags": [
+      "platform-engineering",
+      "infrastructure",
+      "devex",
+      "agent"
+    ],
+    "path": "/plugins/do/do-platform-engineering"
+  },
+  {
+    "id": "buki-playwright",
+    "name": "buki-playwright",
+    "description": "Advanced Playwright skills for end-to-end testing, test architecture, and test automation best practices.",
+    "category": "buki",
+    "tags": [
+      "playwright",
+      "testing",
+      "e2e",
+      "automation",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-playwright"
+  },
+  {
+    "id": "sensei-playwright-mcp",
+    "name": "sensei-playwright-mcp",
+    "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
+    "category": "sensei",
+    "tags": [
+      "mcp",
+      "playwright",
+      "testing",
+      "automation",
+      "server"
+    ],
+    "path": "/plugins/sensei/sensei-playwright-mcp"
+  },
+  {
+    "id": "buki-prettier",
+    "name": "buki-prettier",
+    "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
+    "category": "buki",
+    "tags": [
+      "prettier",
+      "formatting",
+      "javascript",
+      "typescript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-prettier"
+  },
+  {
+    "id": "do-product-management",
+    "name": "do-product-management",
+    "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
+    "category": "do",
+    "tags": [
+      "product",
+      "strategy",
+      "vision",
+      "planning",
+      "agent"
+    ],
+    "path": "/plugins/do/do-product-management"
+  },
+  {
+    "id": "do-project-management",
+    "name": "do-project-management",
+    "description": "Agents specialized in project coordination and technical leadership. Focuses on workflow coordination and team dynamics.",
+    "category": "do",
+    "tags": [
+      "project-management",
+      "coordination",
+      "leadership",
+      "team",
+      "agent"
+    ],
+    "path": "/plugins/do/do-project-management"
+  },
+  {
+    "id": "do-prompt-engineering",
+    "name": "do-prompt-engineering",
+    "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
+    "category": "do",
+    "tags": [
+      "prompt-engineering",
+      "ai",
+      "llm",
+      "agent"
+    ],
+    "path": "/plugins/do/do-prompt-engineering"
+  },
+  {
+    "id": "buki-pulumi",
+    "name": "buki-pulumi",
+    "description": "Pulumi infrastructure-as-code validation",
+    "category": "buki",
+    "tags": [
+      "pulumi",
+      "infrastructure",
+      "iac",
+      "devops"
+    ],
+    "path": "/plugins/buki/buki-pulumi"
+  },
+  {
+    "id": "buki-pylint",
+    "name": "buki-pylint",
+    "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
+    "category": "buki",
+    "tags": [
+      "pylint",
+      "linting",
+      "python",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-pylint"
+  },
+  {
+    "id": "buki-pytest",
+    "name": "buki-pytest",
+    "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
+    "category": "buki",
+    "tags": [
+      "pytest",
+      "testing",
+      "python",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-pytest"
+  },
+  {
+    "id": "buki-python",
+    "name": "buki-python",
+    "description": "Advanced Python skills for type system, async patterns, and data modeling.",
+    "category": "buki",
+    "tags": [
+      "python",
+      "types",
+      "async",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-python"
+  },
+  {
+    "id": "do-quality-assurance",
+    "name": "do-quality-assurance",
+    "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
+    "category": "do",
+    "tags": [
+      "quality",
+      "testing",
+      "qa",
+      "reliability",
+      "agent"
+    ],
+    "path": "/plugins/do/do-quality-assurance"
+  },
+  {
+    "id": "buki-rails",
+    "name": "buki-rails",
+    "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
+    "category": "buki",
+    "tags": [
+      "rails",
+      "ruby",
+      "mvc",
+      "active-record",
+      "hotwire",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-rails"
+  },
+  {
+    "id": "buki-react",
+    "name": "buki-react",
+    "description": "Advanced React skills for hooks, context, and performance optimization.",
+    "category": "buki",
+    "tags": [
+      "react",
+      "hooks",
+      "performance",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-react"
+  },
+  {
+    "id": "buki-relay",
+    "name": "buki-relay",
+    "description": "Advanced Relay GraphQL framework skills for React applications",
+    "category": "buki",
+    "tags": [
+      "relay",
+      "graphql",
+      "react",
+      "fragments",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-relay"
+  },
+  {
+    "id": "buki-rspec",
+    "name": "buki-rspec",
+    "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
+    "category": "buki",
+    "tags": [
+      "rspec",
+      "testing",
+      "ruby",
+      "bdd",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-rspec"
+  },
+  {
+    "id": "buki-rubocop",
+    "name": "buki-rubocop",
+    "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
+    "category": "buki",
+    "tags": [
+      "rubocop",
+      "linting",
+      "ruby",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-rubocop"
+  },
+  {
+    "id": "buki-rust",
+    "name": "buki-rust",
+    "description": "Advanced Rust skills for ownership, error handling, and async programming.",
+    "category": "buki",
+    "tags": [
+      "rust",
+      "ownership",
+      "async",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-rust"
+  },
+  {
+    "id": "buki-scala",
+    "name": "buki-scala",
+    "description": "Advanced Scala programming skills for functional programming and type systems",
+    "category": "buki",
+    "tags": [
+      "scala",
+      "functional",
+      "jvm",
+      "type-system",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-scala"
+  },
+  {
+    "id": "do-security-engineering",
+    "name": "do-security-engineering",
+    "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
+    "category": "do",
+    "tags": [
+      "security",
+      "compliance",
+      "vulnerability",
+      "threat",
+      "agent"
+    ],
+    "path": "/plugins/do/do-security-engineering"
+  },
+  {
+    "id": "buki-sip",
+    "name": "buki-sip",
+    "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications.",
+    "category": "buki",
+    "tags": [
+      "sip",
+      "voip",
+      "telecommunications",
+      "real-time",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-sip"
+  },
+  {
+    "id": "do-site-reliability-engineering",
+    "name": "do-site-reliability-engineering",
+    "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+    "category": "do",
+    "tags": [
+      "sre",
+      "reliability",
+      "monitoring",
+      "incidents",
+      "devops",
+      "agent"
+    ],
+    "path": "/plugins/do/do-site-reliability-engineering"
+  },
+  {
+    "id": "buki-swift",
+    "name": "buki-swift",
+    "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
+    "category": "buki",
+    "tags": [
+      "swift",
+      "ios",
+      "protocol-oriented",
+      "concurrency",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-swift"
+  },
+  {
+    "id": "do-technical-documentation",
+    "name": "do-technical-documentation",
+    "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
+    "category": "do",
+    "tags": [
+      "documentation",
+      "technical-writing",
+      "knowledge",
+      "agent"
+    ],
+    "path": "/plugins/do/do-technical-documentation"
+  },
+  {
+    "id": "buki-tensorflow",
+    "name": "buki-tensorflow",
+    "description": "TensorFlow machine learning and deep learning framework skills.",
+    "category": "buki",
+    "tags": [
+      "tensorflow",
+      "machine-learning",
+      "deep-learning",
+      "neural-networks",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-tensorflow"
+  },
+  {
+    "id": "buki-terraform",
+    "name": "buki-terraform",
+    "description": "Terraform configuration validation and infrastructure-as-code best practices",
+    "category": "buki",
+    "tags": [
+      "terraform",
+      "infrastructure",
+      "iac",
+      "devops",
+      "hashicorp"
+    ],
+    "path": "/plugins/buki/buki-terraform"
+  },
+  {
+    "id": "buki-testng",
+    "name": "buki-testng",
+    "description": "Comprehensive TestNG testing framework skills for Java projects with advanced features like data providers and parallel execution.",
+    "category": "buki",
+    "tags": [
+      "testng",
+      "testing",
+      "java",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-testng"
+  },
+  {
+    "id": "buki-typescript",
+    "name": "buki-typescript",
+    "description": "TypeScript compiler validation and type checking for TypeScript projects.",
+    "category": "buki",
+    "tags": [
+      "typescript",
+      "tsc",
+      "type-checking",
+      "validation",
+      "compiler"
+    ],
+    "path": "/plugins/buki/buki-typescript"
+  },
+  {
+    "id": "buki-vitest",
+    "name": "buki-vitest",
+    "description": "Comprehensive Vitest testing framework skills for modern Vite-powered JavaScript and TypeScript projects.",
+    "category": "buki",
+    "tags": [
+      "vitest",
+      "testing",
+      "vite",
+      "javascript",
+      "typescript",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-vitest"
+  },
+  {
+    "id": "do-voip-engineering",
+    "name": "do-voip-engineering",
+    "description": "VoIP engineering discipline for telecommunications and real-time communications systems.",
+    "category": "do",
+    "tags": [
+      "voip",
+      "telecommunications",
+      "sip",
+      "rtp",
+      "engineering"
+    ],
+    "path": "/plugins/do/do-voip-engineering"
+  },
+  {
+    "id": "buki-vue",
+    "name": "buki-vue",
+    "description": "Advanced Vue skills for Composition API, components, and reactivity.",
+    "category": "buki",
+    "tags": [
+      "vue",
+      "composition-api",
+      "reactivity",
+      "skill"
+    ],
+    "path": "/plugins/buki/buki-vue"
+  }
+]
