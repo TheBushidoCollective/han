@@ -303,11 +303,13 @@ Then('I should see the dashboard', async function() {
 ## Anti-Patterns to Avoid
 
 ❌ **Don't create overly specific steps:**
+
 ```javascript
 Given('I am on the login page as a premium user with valid credentials')
 ```
 
 ✅ **Create composable steps:**
+
 ```javascript
 Given('I am on the login page')
 And('I am a premium user')
@@ -315,17 +317,20 @@ And('I have valid credentials')
 ```
 
 ❌ **Don't put assertions in Given/When:**
+
 ```javascript
 When('I click login and see the dashboard')
 ```
 
 ✅ **Separate actions and assertions:**
+
 ```javascript
 When('I click login')
 Then('I should see the dashboard')
 ```
 
 ❌ **Don't use steps as functions:**
+
 ```javascript
 // Don't call steps from within steps
 When('I log in', async function() {
@@ -335,6 +340,7 @@ When('I log in', async function() {
 ```
 
 ✅ **Extract to helper functions:**
+
 ```javascript
 // support/auth-helpers.js
 async function login(world, username, password) {

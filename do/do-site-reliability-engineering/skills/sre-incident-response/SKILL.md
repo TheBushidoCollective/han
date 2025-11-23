@@ -252,7 +252,8 @@ Users experience slow page loads. P1 severity if p95 > 1s.
    ORDER BY total_time DESC LIMIT 10;
    ```
 
-3. Check for locks:
+1. Check for locks:
+
    ```sql
    SELECT * FROM pg_stat_activity 
    WHERE state = 'active';
@@ -261,6 +262,7 @@ Users experience slow page loads. P1 severity if p95 > 1s.
 ## Mitigation
 
 **Quick fixes:**
+
 - Kill long-running queries if safe
 - Add missing indexes if identified
 - Scale up read replicas if read-heavy
@@ -273,6 +275,7 @@ If latency > 2s for > 15 minutes, page DBA team.
 - Regular query performance reviews
 - Automated index recommendations
 - Capacity planning for growth
+
 ```
 
 ## Best Practices

@@ -205,6 +205,7 @@ logger.info('request_processed', {
 ### USE Method
 
 For resources:
+
 - **Utilization**: % time resource is busy
 - **Saturation**: Work queued but not serviced
 - **Errors**: Error count
@@ -212,6 +213,7 @@ For resources:
 ### RED Method
 
 For requests:
+
 - **Rate**: Requests per second
 - **Errors**: Failed requests per second
 - **Duration**: Request latency distribution

@@ -74,7 +74,7 @@ export default function SearchPage() {
 						</Link>
 
 						<Link
-							href="/plugins"
+							href="/docs"
 							className="block p-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-900 dark:hover:border-white transition"
 						>
 							<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">

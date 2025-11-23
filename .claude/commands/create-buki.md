@@ -74,14 +74,14 @@ Create `hooks/hooks.json` with validation hooks:
 }
 ```
 
-### Hook Configuration Guide:
+### Hook Configuration Guide
 
 - **name**: Descriptive name for the validation step
 - **description**: What the hook validates
 - **command**: The validation command to run
 - **showOutput**: When to display output ("always", "on-error", "never")
 
-### Marker Files by Technology:
+### Marker Files by Technology
 
 - JavaScript/TypeScript: `package.json`
 - Python: `pyproject.toml` or `requirements.txt`
@@ -92,7 +92,7 @@ Create `hooks/hooks.json` with validation hooks:
 - C#: `*.csproj`
 - Elixir: `mix.exs`
 
-### Common Validation Commands:
+### Common Validation Commands
 
 - **TypeScript**: `npx tsc --noEmit`
 - **ESLint**: `npx eslint . --max-warnings 0`
@@ -106,14 +106,14 @@ Create `hooks/hooks.json` with validation hooks:
 
 For each major concept/feature of the technology, create a skill:
 
-### Skill Directory Structure:
+### Skill Directory Structure
 
 ```
 skills/{skill-name}/
 └── SKILL.md
 ```
 
-### SKILL.md Format:
+### SKILL.md Format
 
 ```markdown
 ---
@@ -157,7 +157,7 @@ allowed-tools:
 - {Link to related skills}
 ```
 
-### Recommended Skill Categories:
+### Recommended Skill Categories
 
 1. **Core Language/Framework Features** (3-5 skills)
    - Type system, syntax, fundamental patterns
@@ -261,7 +261,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ## Best Practices
 
-### DO:
+### DO
 
 ✅ Focus on read-only validation (check, lint, test)
 ✅ Use `--fail-fast` for quick feedback
@@ -272,7 +272,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 ✅ Document required versions and dependencies
 ✅ Include practical examples in skills
 
-### DON'T:
+### DON'T
 
 ❌ Don't auto-fix code in hooks (hooks should only validate)
 ❌ Don't include placeholder or template content in skills
@@ -284,17 +284,20 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 ## Testing Your Buki
 
 1. Install locally:
+
    ```bash
    claude plugin install /path/to/buki-{name}@local
    ```
 
 2. Test validation hooks:
+
    ```bash
    # Intentionally break code to trigger validation
    # Then run Claude Code to verify hooks execute
    ```
 
 3. Verify skills are accessible:
+
    ```bash
    # In Claude Code, invoke a skill and verify it provides correct guidance
    ```

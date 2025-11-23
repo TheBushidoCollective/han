@@ -1,46 +1,96 @@
 # Ensure Proper Subagent Usage
 
-When delegating work to subagents, follow these principles:
-
 ## When to Use Subagents
 
-Use the Task tool to spawn subagents when:
+Use Task tool for:
 
-- The task requires multiple parallel operations
-- You need to search/explore the codebase extensively
-- The work is complex and benefits from focused attention
-- You want to isolate context for a specific subtask
+- ✅ Parallel operations (exploration, review, analysis)
+- ✅ Extensive codebase search/exploration
+- ✅ Complex work needing focused attention
+- ✅ Multiple independent perspectives
 
-## Best Practices
+❌ Don't use for simple operations - use Read/Grep/Glob instead.
 
-**1. Clear Task Descriptions**
-Provide complete, autonomous task descriptions. The subagent won't
-be able to ask follow-up questions.
+## Core Principles
 
-**2. Specify Expected Output**
-Tell the subagent exactly what information to return in their final
-report.
+### 1. Complete Task Descriptions
 
-**3. Parallel Execution**
-When tasks are independent, launch multiple subagents in a single
-message for maximum performance.
+Provide autonomous instructions - subagents can't ask questions.
 
-**4. Trust Subagent Output**
-Subagent results should generally be trusted. Don't second-guess
-or re-verify their work unless there's a specific concern.
+**Include**:
 
-## Anti-Patterns
+- Clear objective and scope
+- Expected output format
+- Confidence thresholds (≥80%)
+- Specific exclusions (pre-existing issues, linter-caught problems)
 
-**Don't:**
+### 2. Parallel Execution (CRITICAL)
 
-- Use subagents for simple, single-file operations
-- Spawn subagents when you already know the answer
-- Create subagents for tasks you're already in the middle of
-- Launch subagents sequentially when they could run in parallel
+**Always launch independent agents in a SINGLE message:**
+
+```
+Single message with multiple Task calls:
+- Agent 1: [task A]
+- Agent 2: [task B]
+- Agent 3: [task C]
+```
+
+❌ Never sequential when tasks are independent.
+
+### 3. Confidence-Based Filtering
+
+**All review findings must include confidence score (0-100):**
+
+- ≥90%: Critical issues, report always
+- ≥80%: Important issues, report
+- <80%: Filter out, don't report
+
+**Exclude from reports:**
+
+- Pre-existing issues (not in current changes)
+- Linter-catchable problems
+- Style preferences without standards
+- Theoretical concerns without evidence
+
+### 4. Consolidation
+
+When running multiple agents:
+
+1. Collect all findings
+2. De-duplicate identical issues
+3. Filter for confidence ≥80%
+4. Resolve conflicts (highest confidence wins, security overrides)
+5. Present unified report
+
+### 5. Human Decision Points
+
+Use AskUserQuestion for:
+
+- Multiple valid approaches with trade-offs
+- Unclear requirements
+- Breaking changes affecting others
+- Long-term technical decisions
+
+Don't pause for:
+
+- Standard documented patterns
+- Obviously correct approaches
+- Minor implementation details
+
+## Quick Rules
 
 **Do:**
 
-- Use appropriate tools (Read, Grep, Glob) for simple operations
-- Spawn multiple subagents at once when possible
-- Provide complete context in the task prompt
-- Choose the right subagent_type for the task
+- Launch parallel agents in single message
+- Trust subagent expertise
+- Provide complete context in prompts
+- Use appropriate subagent_type (Explore/Plan/General/Specialized)
+- Filter all findings to ≥80% confidence
+
+**Don't:**
+
+- Use subagents for simple operations
+- Launch agents sequentially when parallel possible
+- Spawn agents for work you're already doing
+- Report low-confidence findings
+- Second-guess domain experts without reason

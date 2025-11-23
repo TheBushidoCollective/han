@@ -146,18 +146,94 @@ Use this skill to:
 - Checking for standard pattern violations
 - Verifying no bypasses of quality gates
 
-### Phase 3: Feedback & Decision
+### Phase 3: Confidence Scoring
+
+### Apply confidence scoring to all findings
+
+Each identified issue must include a **confidence score (0-100)** indicating how certain you are that it's a genuine problem:
+
+| Score | Confidence Level | When to Use |
+|-------|------------------|-------------|
+| 100   | Absolutely certain | Objective facts: linter errors, type errors, failing tests, security vulnerabilities |
+| 90    | Very high confidence | Clear violations of documented standards, obvious correctness bugs |
+| 80    | High confidence | Pattern violations, missing error handling, maintainability issues |
+| 70    | Moderately confident | Potential issues that need context, possible edge cases |
+| 60    | Somewhat confident | Questionable patterns, style concerns with codebase precedent |
+| 50    | Uncertain | Potential improvements without clear precedent |
+| <50   | Low confidence | Speculative concerns, personal preferences |
+
+**CRITICAL FILTERING RULE**: Only report issues with **confidence ≥80%**. Lower-confidence findings create noise and should be omitted.
+
+### Confidence Scoring Guidelines
+
+**High Confidence (90-100)** - Report these:
+
+- Verification failures (linting, tests, types)
+- Security vulnerabilities (SQL injection, XSS, auth bypass)
+- Correctness bugs with clear reproduction
+- Breaking API changes
+- Violations of documented team standards
+
+**Medium-High Confidence (80-89)** - Report these:
+
+- Missing tests for new functionality
+- Error handling gaps
+- Performance issues (N+1 queries, missing indexes)
+- Maintainability concerns with clear patterns
+- Boy Scout Rule violations
+
+**Medium Confidence (60-79)** - DO NOT REPORT:
+
+- Style preferences without clear codebase precedent
+- Speculative performance concerns
+- Alternative approaches without clear benefit
+
+**Low Confidence (<60)** - DO NOT REPORT:
+
+- Personal opinions
+- "Could be better" without specific impact
+- Theoretical edge cases without evidence
+
+### False Positive Filtering
+
+**CRITICAL**: Apply these filters to avoid reporting non-issues:
+
+**DO NOT REPORT**:
+
+- ❌ Pre-existing issues not introduced by this change (check git blame)
+- ❌ Issues already handled by linters/formatters
+- ❌ Code with explicit lint-ignore comments (respect developer decisions)
+- ❌ Style preferences without documented standards
+- ❌ Theoretical bugs without evidence or reproduction
+- ❌ "Could use" suggestions without clear benefit
+- ❌ Pedantic nitpicks that don't affect quality
+
+**VERIFY BEFORE REPORTING**:
+
+- ✅ Run `git diff` to confirm issue is in changed lines
+- ✅ Check if automated tools already catch this
+- ✅ Verify against documented project standards (CLAUDE.md, CONTRIBUTING.md, etc.)
+- ✅ Confirm the issue actually impacts correctness, safety, or maintainability
+
+**Example of False Positive vs. Genuine Issue**:
+
+❌ **False Positive**: "This function could use TypeScript generics for better type safety" (confidence: 60%, style preference, no documented standard)
+
+✅ **Genuine Issue**: "Function `processPayment` at `services/payment.ts:42` performs database operation without transaction protection, risking data inconsistency if an error occurs mid-operation." (confidence: 90%, documented pattern violation, clear impact)
+
+### Phase 4: Feedback & Decision
 
 ### Provide structured feedback
 
 1. **Summary**: High-level assessment
 2. **Strengths**: What's done well (positive reinforcement)
-3. **Issues**: Organized by severity:
-   - **Critical**: Blocks approval (security, correctness, breaking changes)
-   - **Important**: Should be addressed (maintainability, best practices)
-   - **Suggestions**: Nice-to-haves (optimizations, style preferences)
+3. **Issues**: Organized by severity with **confidence scores**:
+   - **Critical** (confidence ≥90): Blocks approval (security, correctness, breaking changes)
+   - **Important** (confidence ≥80): Should be addressed (maintainability, best practices)
 4. **Actionable next steps**: Specific changes with file:line references
 5. **Decision**: Approve, Request Changes, or Needs Discussion
+
+**Note**: Suggestions/nice-to-haves are intentionally omitted. Focus only on high-confidence, actionable feedback.
 
 ## Approval Criteria
 
@@ -260,23 +336,23 @@ Brief overall assessment of the change and its quality.
 
 ### Issues
 
+**Note**: Only issues with confidence ≥80% are reported. All findings include confidence scores.
+
 #### 🔴 Critical (Block Approval)
 
-- Issue description with file:line reference
-- Why it's critical
-- How to fix
+**[Issue Title]** - `file/path.ts:42` - **Confidence: 95%**
+
+- **Problem**: Clear description of the issue
+- **Impact**: Why this is critical (security, correctness, breaking change)
+- **Fix**: Specific actionable steps
 
 #### 🟡 Important (Should Address)
 
-- Issue description with file:line reference
-- Impact on maintainability/quality
-- Suggested improvement
+**[Issue Title]** - `file/path.ts:89` - **Confidence: 85%**
 
-#### 🟢 Suggestions (Nice-to-Have)
-
-- Optional improvements
-- Performance optimizations
-- Style preferences
+- **Problem**: Description of maintainability/quality issue
+- **Impact**: How this affects code quality
+- **Suggestion**: Recommended improvement
 
 ---
 

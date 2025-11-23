@@ -109,6 +109,7 @@ Scenario: Password reset
 ## Example: Good vs Bad Scenarios
 
 ❌ **Bad** (imperative, implementation-focused):
+
 ```gherkin
 Scenario: Update user profile
   Given I navigate to "http://example.com/profile"
@@ -120,6 +121,7 @@ Scenario: Update user profile
 ```
 
 ✅ **Good** (declarative, business-focused):
+
 ```gherkin
 Scenario: Update user profile
   Given I am on my profile page

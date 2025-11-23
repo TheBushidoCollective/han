@@ -56,11 +56,11 @@ Create `.claude-plugin/plugin.json`:
 }
 ```
 
-### mcpServers Configuration:
+### mcpServers Configuration
 
 The `mcpServers` field defines one or more MCP server connections:
 
-#### NPM Package MCP Server:
+#### NPM Package MCP Server
 
 ```json
 "mcpServers": {
@@ -71,7 +71,7 @@ The `mcpServers` field defines one or more MCP server connections:
 }
 ```
 
-#### Node.js Script MCP Server:
+#### Node.js Script MCP Server
 
 ```json
 "mcpServers": {
@@ -82,7 +82,7 @@ The `mcpServers` field defines one or more MCP server connections:
 }
 ```
 
-#### Python MCP Server:
+#### Python MCP Server
 
 ```json
 "mcpServers": {
@@ -93,7 +93,7 @@ The `mcpServers` field defines one or more MCP server connections:
 }
 ```
 
-#### UV-based Python MCP Server:
+#### UV-based Python MCP Server
 
 ```json
 "mcpServers": {
@@ -104,7 +104,7 @@ The `mcpServers` field defines one or more MCP server connections:
 }
 ```
 
-#### With Environment Variables:
+#### With Environment Variables
 
 ```json
 "mcpServers": {
@@ -119,7 +119,7 @@ The `mcpServers` field defines one or more MCP server connections:
 }
 ```
 
-### Environment Variable Patterns:
+### Environment Variable Patterns
 
 - **Required API Keys**: Use `${SERVICE_NAME_API_KEY}` format
 - **Optional Configuration**: Provide sensible defaults
@@ -144,6 +144,7 @@ Create `.mcp.json` to document the MCP server configuration:
 ```
 
 This file serves as:
+
 - Documentation for users
 - Template for manual installation
 - Reference for the plugin system
@@ -385,7 +386,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ## Best Practices
 
-### DO:
+### DO
 
 ✅ Use well-maintained MCP server packages
 ✅ Document all environment variables clearly
@@ -398,7 +399,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 ✅ Use descriptive tool names that indicate their purpose
 ✅ Handle authentication securely
 
-### DON'T:
+### DON'T
 
 ❌ Don't hardcode API keys or secrets
 ❌ Don't skip documentation of required setup
@@ -449,7 +450,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 If creating a custom MCP server (not using an existing package):
 
-### Server Implementation:
+### Server Implementation
 
 1. Choose a language (TypeScript, Python recommended)
 2. Implement MCP protocol handlers
@@ -457,7 +458,7 @@ If creating a custom MCP server (not using an existing package):
 4. Handle authentication
 5. Publish package to npm or PyPI
 
-### Server Repository Structure:
+### Server Repository Structure
 
 ```
 your-mcp-server/
@@ -468,7 +469,7 @@ your-mcp-server/
 └── README.md
 ```
 
-### Example MCP Server (TypeScript):
+### Example MCP Server (TypeScript)
 
 ```typescript
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -520,17 +521,20 @@ await server.connect(transport);
 ## Testing Your Sensei
 
 1. Install locally:
+
    ```bash
    claude plugin install /path/to/sensei-{name}@local
    ```
 
 2. Verify MCP server connects:
+
    ```bash
    # Check Claude Code logs for connection errors
    tail -f ~/.claude/logs/claude.log
    ```
 
 3. Test tools are available:
+
    ```
    # In Claude Code, ask to use specific tools
    "Can you use the {tool-name} tool to {action}?"

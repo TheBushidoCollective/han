@@ -8,8 +8,33 @@ export default function Sidebar() {
 
 	return (
 		<aside className="hidden lg:block w-64 shrink-0">
-			<div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+			<div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2 scrollbar-custom">
 				<nav className="space-y-6">
+					{/* Search */}
+					<div>
+						<Link
+							href="/search"
+							className="flex items-center space-x-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+						>
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-label="Search icon"
+							>
+								<title>Search</title>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
+							</svg>
+							<span>Search</span>
+						</Link>
+					</div>
+
 					{/* Overview */}
 					<div>
 						<Link

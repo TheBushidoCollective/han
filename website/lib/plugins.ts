@@ -45,6 +45,12 @@ export interface HookSection {
 	files: HookFile[];
 }
 
+export interface CommandMetadata {
+	name: string;
+	description: string;
+	content: string;
+}
+
 interface Hook {
 	command?: string;
 }
@@ -65,6 +71,7 @@ export interface PluginDetails {
 	agents: AgentMetadata[];
 	skills: SkillMetadata[];
 	hooks: HookSection[];
+	commands: CommandMetadata[];
 }
 
 function getCategoryFromMarketplace(
@@ -385,6 +392,56 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 	return hookSections;
 }
 
+// Parse commands from a plugin
+function getPluginCommands(pluginPath: string): CommandMetadata[] {
+	const commands: CommandMetadata[] = [];
+	const commandsDir = path.join(pluginPath, "commands");
+
+	if (!fs.existsSync(commandsDir)) {
+		return commands;
+	}
+
+	try {
+		const commandFiles = fs
+			.readdirSync(commandsDir)
+			.filter((file) => file.endsWith(".md"));
+
+		for (const file of commandFiles) {
+			const filePath = path.join(commandsDir, file);
+			const fileContent = fs.readFileSync(filePath, "utf-8");
+			const { data, content } = matter(fileContent);
+
+			// Extract description from frontmatter or first paragraph after heading
+			let description = data.description || "";
+			if (!description) {
+				const lines = content.split("\n");
+				// Find first paragraph after the first heading
+				let foundHeading = false;
+				for (const line of lines) {
+					if (line.startsWith("#")) {
+						foundHeading = true;
+						continue;
+					}
+					if (foundHeading && line.trim() && !line.startsWith("#")) {
+						description = line.trim();
+						break;
+					}
+				}
+			}
+
+			commands.push({
+				name: path.basename(file, ".md"),
+				description,
+				content: fileContent,
+			});
+		}
+	} catch (error) {
+		console.error(`Error reading commands from ${pluginPath}:`, error);
+	}
+
+	return commands.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Get full plugin details with agents and skills
 export function getPluginContent(
 	category: "bushido" | "buki" | "do" | "sensei",
@@ -419,6 +476,7 @@ export function getPluginContent(
 		const agents = getPluginAgents(pluginPath);
 		const skills = getPluginSkills(pluginPath);
 		const hooks = getPluginHooks(pluginPath);
+		const commands = getPluginCommands(pluginPath);
 
 		return {
 			metadata,
@@ -426,6 +484,7 @@ export function getPluginContent(
 			agents,
 			skills,
 			hooks,
+			commands,
 		};
 	} catch (error) {
 		console.error(
