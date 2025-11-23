@@ -71,7 +71,7 @@ export default function TagsPage() {
 
 	return (
 		<div className="min-h-screen bg-white dark:bg-gray-900">
-			<Header showSearch={true} />
+			<Header />
 
 			<div className="max-w-7xl mx-auto px-4 py-12">
 				<div className="mb-8">
