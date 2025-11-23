@@ -9,10 +9,16 @@ interface SearchIndex {
 	tags: string[];
 }
 
+interface Suggestion {
+	name: string;
+	path: string;
+	category: string;
+}
+
 export default function Header() {
 	const router = useRouter();
 	const [searchQuery, setSearchQuery] = useState("");
-	const [suggestions, setSuggestions] = useState<string[]>([]);
+	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(-1);
 	const [searchIndex, setSearchIndex] = useState<SearchIndex | null>(null);
@@ -36,29 +42,22 @@ export default function Header() {
 		}
 
 		const lowerQuery = searchQuery.toLowerCase().trim();
-		const newSuggestions = new Set<string>();
+		const newSuggestions: Suggestion[] = [];
 
-		// Add matching plugin names
+		// Add matching plugins
 		for (const plugin of searchIndex.plugins) {
 			if (plugin.name.toLowerCase().includes(lowerQuery)) {
-				newSuggestions.add(plugin.name);
+				newSuggestions.push({
+					name: plugin.name,
+					path: plugin.path,
+					category: plugin.category,
+				});
 			}
-			if (newSuggestions.size >= 5) break;
+			if (newSuggestions.length >= 8) break;
 		}
 
-		// Add matching tags if we have room
-		if (newSuggestions.size < 5) {
-			for (const tag of searchIndex.tags) {
-				if (tag.toLowerCase().includes(lowerQuery)) {
-					newSuggestions.add(tag);
-				}
-				if (newSuggestions.size >= 5) break;
-			}
-		}
-
-		const suggestionsList = Array.from(newSuggestions);
-		setSuggestions(suggestionsList);
-		setShowDropdown(suggestionsList.length > 0);
+		setSuggestions(newSuggestions);
+		setShowDropdown(newSuggestions.length > 0);
 		setSelectedIndex(-1);
 	}, [searchQuery, searchIndex]);
 
@@ -77,9 +76,9 @@ export default function Header() {
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
-	const handleSearch = (query: string = searchQuery) => {
-		if (query.trim()) {
-			router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+	const handleSearch = () => {
+		if (searchQuery.trim()) {
+			router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
 			setShowDropdown(false);
 			inputRef.current?.blur();
 		} else {
@@ -109,7 +108,7 @@ export default function Header() {
 			case "Enter":
 				if (selectedIndex >= 0) {
 					e.preventDefault();
-					handleSearch(suggestions[selectedIndex]);
+					navigateToPlugin(suggestions[selectedIndex]);
 				}
 				break;
 			case "Escape":
@@ -119,9 +118,15 @@ export default function Header() {
 		}
 	};
 
-	const handleSuggestionClick = (suggestion: string) => {
-		setSearchQuery(suggestion);
-		handleSearch(suggestion);
+	const navigateToPlugin = (suggestion: Suggestion) => {
+		router.push(suggestion.path);
+		setShowDropdown(false);
+		setSearchQuery("");
+		inputRef.current?.blur();
+	};
+
+	const handleSuggestionClick = (suggestion: Suggestion) => {
+		navigateToPlugin(suggestion);
 	};
 
 	return (
@@ -166,21 +171,26 @@ export default function Header() {
 
 							{/* Autocomplete Dropdown */}
 							{showDropdown && suggestions.length > 0 && (
-								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-auto">
 									{suggestions.map((suggestion, index) => (
 										<button
-											key={suggestion}
+											key={suggestion.path}
 											type="button"
 											onClick={() => handleSuggestionClick(suggestion)}
-											className={`w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+											className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
 												index === selectedIndex
 													? "bg-gray-100 dark:bg-gray-700"
 													: ""
 											}`}
 										>
-											<span className="text-gray-900 dark:text-gray-100">
-												{suggestion}
-											</span>
+											<div className="flex items-center justify-between gap-3">
+												<span className="text-gray-900 dark:text-gray-100 font-medium">
+													{suggestion.name}
+												</span>
+												<span className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 capitalize flex-shrink-0">
+													{suggestion.category}
+												</span>
+											</div>
 										</button>
 									))}
 								</div>
