@@ -13,6 +13,8 @@ export default function Home() {
 		<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
 			<Header />
 
+
+
 			{/* Hero */}
 			<section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
 				<h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
