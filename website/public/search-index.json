@@ -1,0 +1,765 @@
+{
+  "plugins": [
+    {
+      "name": "do-accessibility-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-accessibility-engineering"
+    },
+    {
+      "name": "buki-ameba",
+      "category": "buki",
+      "path": "/plugins/buki/buki-ameba"
+    },
+    {
+      "name": "buki-angular",
+      "category": "buki",
+      "path": "/plugins/buki/buki-angular"
+    },
+    {
+      "name": "buki-ansible",
+      "category": "buki",
+      "path": "/plugins/buki/buki-ansible"
+    },
+    {
+      "name": "do-api-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-api-engineering"
+    },
+    {
+      "name": "buki-apollo-graphql",
+      "category": "buki",
+      "path": "/plugins/buki/buki-apollo-graphql"
+    },
+    {
+      "name": "do-architecture",
+      "category": "do",
+      "path": "/plugins/do/do-architecture"
+    },
+    {
+      "name": "do-backend-development",
+      "category": "do",
+      "path": "/plugins/do/do-backend-development"
+    },
+    {
+      "name": "buki-bdd",
+      "category": "buki",
+      "path": "/plugins/buki/buki-bdd"
+    },
+    {
+      "name": "buki-biome",
+      "category": "buki",
+      "path": "/plugins/buki/buki-biome"
+    },
+    {
+      "name": "do-blockchain-development",
+      "category": "do",
+      "path": "/plugins/do/do-blockchain-development"
+    },
+    {
+      "name": "bushido",
+      "category": "bushido",
+      "path": "/plugins/bushido/bushido"
+    },
+    {
+      "name": "buki-c",
+      "category": "buki",
+      "path": "/plugins/buki/buki-c"
+    },
+    {
+      "name": "buki-checkstyle",
+      "category": "buki",
+      "path": "/plugins/buki/buki-checkstyle"
+    },
+    {
+      "name": "do-claude-plugin-development",
+      "category": "do",
+      "path": "/plugins/do/do-claude-plugin-development"
+    },
+    {
+      "name": "buki-clippy",
+      "category": "buki",
+      "path": "/plugins/buki/buki-clippy"
+    },
+    {
+      "name": "do-compiler-development",
+      "category": "do",
+      "path": "/plugins/do/do-compiler-development"
+    },
+    {
+      "name": "do-content-creator",
+      "category": "do",
+      "path": "/plugins/do/do-content-creator"
+    },
+    {
+      "name": "sensei-context7",
+      "category": "sensei",
+      "path": "/plugins/sensei/sensei-context7"
+    },
+    {
+      "name": "buki-cpp",
+      "category": "buki",
+      "path": "/plugins/buki/buki-cpp"
+    },
+    {
+      "name": "buki-credo",
+      "category": "buki",
+      "path": "/plugins/buki/buki-credo"
+    },
+    {
+      "name": "buki-crystal",
+      "category": "buki",
+      "path": "/plugins/buki/buki-crystal"
+    },
+    {
+      "name": "buki-csharp",
+      "category": "buki",
+      "path": "/plugins/buki/buki-csharp"
+    },
+    {
+      "name": "buki-cucumber",
+      "category": "buki",
+      "path": "/plugins/buki/buki-cucumber"
+    },
+    {
+      "name": "buki-cypress",
+      "category": "buki",
+      "path": "/plugins/buki/buki-cypress"
+    },
+    {
+      "name": "do-data-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-data-engineering"
+    },
+    {
+      "name": "do-database-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-database-engineering"
+    },
+    {
+      "name": "buki-dialyzer",
+      "category": "buki",
+      "path": "/plugins/buki/buki-dialyzer"
+    },
+    {
+      "name": "buki-django",
+      "category": "buki",
+      "path": "/plugins/buki/buki-django"
+    },
+    {
+      "name": "buki-docker-compose",
+      "category": "buki",
+      "path": "/plugins/buki/buki-docker-compose"
+    },
+    {
+      "name": "buki-ecto",
+      "category": "buki",
+      "path": "/plugins/buki/buki-ecto"
+    },
+    {
+      "name": "buki-elixir",
+      "category": "buki",
+      "path": "/plugins/buki/buki-elixir"
+    },
+    {
+      "name": "do-embedded-development",
+      "category": "do",
+      "path": "/plugins/do/do-embedded-development"
+    },
+    {
+      "name": "do-enforce-planning",
+      "category": "do",
+      "path": "/plugins/do/do-enforce-planning"
+    },
+    {
+      "name": "buki-erlang",
+      "category": "buki",
+      "path": "/plugins/buki/buki-erlang"
+    },
+    {
+      "name": "buki-eslint",
+      "category": "buki",
+      "path": "/plugins/buki/buki-eslint"
+    },
+    {
+      "name": "buki-fastapi",
+      "category": "buki",
+      "path": "/plugins/buki/buki-fastapi"
+    },
+    {
+      "name": "do-frontend-development",
+      "category": "do",
+      "path": "/plugins/do/do-frontend-development"
+    },
+    {
+      "name": "buki-functional-programming",
+      "category": "buki",
+      "path": "/plugins/buki/buki-functional-programming"
+    },
+    {
+      "name": "do-game-development",
+      "category": "do",
+      "path": "/plugins/do/do-game-development"
+    },
+    {
+      "name": "buki-git-storytelling",
+      "category": "buki",
+      "path": "/plugins/buki/buki-git-storytelling"
+    },
+    {
+      "name": "buki-gleam",
+      "category": "buki",
+      "path": "/plugins/buki/buki-gleam"
+    },
+    {
+      "name": "buki-go",
+      "category": "buki",
+      "path": "/plugins/buki/buki-go"
+    },
+    {
+      "name": "do-graphics-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-graphics-engineering"
+    },
+    {
+      "name": "buki-graphql",
+      "category": "buki",
+      "path": "/plugins/buki/buki-graphql"
+    },
+    {
+      "name": "buki-helm",
+      "category": "buki",
+      "path": "/plugins/buki/buki-helm"
+    },
+    {
+      "name": "do-infrastructure",
+      "category": "do",
+      "path": "/plugins/do/do-infrastructure"
+    },
+    {
+      "name": "buki-ink",
+      "category": "buki",
+      "path": "/plugins/buki/buki-ink"
+    },
+    {
+      "name": "buki-java",
+      "category": "buki",
+      "path": "/plugins/buki/buki-java"
+    },
+    {
+      "name": "buki-jest",
+      "category": "buki",
+      "path": "/plugins/buki/buki-jest"
+    },
+    {
+      "name": "buki-junit",
+      "category": "buki",
+      "path": "/plugins/buki/buki-junit"
+    },
+    {
+      "name": "buki-kotlin",
+      "category": "buki",
+      "path": "/plugins/buki/buki-kotlin"
+    },
+    {
+      "name": "buki-kubernetes",
+      "category": "buki",
+      "path": "/plugins/buki/buki-kubernetes"
+    },
+    {
+      "name": "buki-kustomize",
+      "category": "buki",
+      "path": "/plugins/buki/buki-kustomize"
+    },
+    {
+      "name": "buki-lua",
+      "category": "buki",
+      "path": "/plugins/buki/buki-lua"
+    },
+    {
+      "name": "do-machine-learning-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-machine-learning-engineering"
+    },
+    {
+      "name": "buki-markdownlint",
+      "category": "buki",
+      "path": "/plugins/buki/buki-markdownlint"
+    },
+    {
+      "name": "do-mobile-development",
+      "category": "do",
+      "path": "/plugins/do/do-mobile-development"
+    },
+    {
+      "name": "buki-mocha",
+      "category": "buki",
+      "path": "/plugins/buki/buki-mocha"
+    },
+    {
+      "name": "buki-monorepo",
+      "category": "buki",
+      "path": "/plugins/buki/buki-monorepo"
+    },
+    {
+      "name": "buki-nestjs",
+      "category": "buki",
+      "path": "/plugins/buki/buki-nestjs"
+    },
+    {
+      "name": "do-network-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-network-engineering"
+    },
+    {
+      "name": "buki-nextjs",
+      "category": "buki",
+      "path": "/plugins/buki/buki-nextjs"
+    },
+    {
+      "name": "buki-nim",
+      "category": "buki",
+      "path": "/plugins/buki/buki-nim"
+    },
+    {
+      "name": "buki-objective-c",
+      "category": "buki",
+      "path": "/plugins/buki/buki-objective-c"
+    },
+    {
+      "name": "do-observability-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-observability-engineering"
+    },
+    {
+      "name": "buki-oop",
+      "category": "buki",
+      "path": "/plugins/buki/buki-oop"
+    },
+    {
+      "name": "do-performance-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-performance-engineering"
+    },
+    {
+      "name": "buki-phoenix",
+      "category": "buki",
+      "path": "/plugins/buki/buki-phoenix"
+    },
+    {
+      "name": "buki-php",
+      "category": "buki",
+      "path": "/plugins/buki/buki-php"
+    },
+    {
+      "name": "do-platform-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-platform-engineering"
+    },
+    {
+      "name": "buki-playwright",
+      "category": "buki",
+      "path": "/plugins/buki/buki-playwright"
+    },
+    {
+      "name": "sensei-playwright-mcp",
+      "category": "sensei",
+      "path": "/plugins/sensei/sensei-playwright-mcp"
+    },
+    {
+      "name": "buki-prettier",
+      "category": "buki",
+      "path": "/plugins/buki/buki-prettier"
+    },
+    {
+      "name": "do-product-management",
+      "category": "do",
+      "path": "/plugins/do/do-product-management"
+    },
+    {
+      "name": "do-project-management",
+      "category": "do",
+      "path": "/plugins/do/do-project-management"
+    },
+    {
+      "name": "do-prompt-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-prompt-engineering"
+    },
+    {
+      "name": "buki-pulumi",
+      "category": "buki",
+      "path": "/plugins/buki/buki-pulumi"
+    },
+    {
+      "name": "buki-pylint",
+      "category": "buki",
+      "path": "/plugins/buki/buki-pylint"
+    },
+    {
+      "name": "buki-pytest",
+      "category": "buki",
+      "path": "/plugins/buki/buki-pytest"
+    },
+    {
+      "name": "buki-python",
+      "category": "buki",
+      "path": "/plugins/buki/buki-python"
+    },
+    {
+      "name": "do-quality-assurance",
+      "category": "do",
+      "path": "/plugins/do/do-quality-assurance"
+    },
+    {
+      "name": "buki-rails",
+      "category": "buki",
+      "path": "/plugins/buki/buki-rails"
+    },
+    {
+      "name": "buki-react",
+      "category": "buki",
+      "path": "/plugins/buki/buki-react"
+    },
+    {
+      "name": "buki-relay",
+      "category": "buki",
+      "path": "/plugins/buki/buki-relay"
+    },
+    {
+      "name": "buki-rspec",
+      "category": "buki",
+      "path": "/plugins/buki/buki-rspec"
+    },
+    {
+      "name": "buki-rubocop",
+      "category": "buki",
+      "path": "/plugins/buki/buki-rubocop"
+    },
+    {
+      "name": "buki-rust",
+      "category": "buki",
+      "path": "/plugins/buki/buki-rust"
+    },
+    {
+      "name": "buki-scala",
+      "category": "buki",
+      "path": "/plugins/buki/buki-scala"
+    },
+    {
+      "name": "do-security-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-security-engineering"
+    },
+    {
+      "name": "buki-sip",
+      "category": "buki",
+      "path": "/plugins/buki/buki-sip"
+    },
+    {
+      "name": "do-site-reliability-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-site-reliability-engineering"
+    },
+    {
+      "name": "buki-swift",
+      "category": "buki",
+      "path": "/plugins/buki/buki-swift"
+    },
+    {
+      "name": "do-technical-documentation",
+      "category": "do",
+      "path": "/plugins/do/do-technical-documentation"
+    },
+    {
+      "name": "buki-tensorflow",
+      "category": "buki",
+      "path": "/plugins/buki/buki-tensorflow"
+    },
+    {
+      "name": "buki-terraform",
+      "category": "buki",
+      "path": "/plugins/buki/buki-terraform"
+    },
+    {
+      "name": "buki-testng",
+      "category": "buki",
+      "path": "/plugins/buki/buki-testng"
+    },
+    {
+      "name": "buki-typescript",
+      "category": "buki",
+      "path": "/plugins/buki/buki-typescript"
+    },
+    {
+      "name": "buki-vitest",
+      "category": "buki",
+      "path": "/plugins/buki/buki-vitest"
+    },
+    {
+      "name": "do-voip-engineering",
+      "category": "do",
+      "path": "/plugins/do/do-voip-engineering"
+    },
+    {
+      "name": "buki-vue",
+      "category": "buki",
+      "path": "/plugins/buki/buki-vue"
+    }
+  ],
+  "tags": [
+    "skill",
+    "agent",
+    "testing",
+    "devops",
+    "linting",
+    "javascript",
+    "typescript",
+    "python",
+    "infrastructure",
+    "graphql",
+    "server",
+    "quality",
+    "java",
+    "async",
+    "react",
+    "automation",
+    "api",
+    "bdd",
+    "concurrency",
+    "kubernetes",
+    "k8s",
+    "monitoring",
+    "ios",
+    "ruby",
+    "architecture",
+    "design",
+    "scalability",
+    "behavior-driven-development",
+    "formatting",
+    "enforcement",
+    "systems-programming",
+    "development",
+    "rust",
+    "compiler",
+    "storytelling",
+    "mcp",
+    "knowledge",
+    "e2e",
+    "otp",
+    "planning",
+    "erlang",
+    "beam",
+    "ui",
+    "functional",
+    "sre",
+    "android",
+    "jvm",
+    "documentation",
+    "nodejs",
+    "performance",
+    "security",
+    "playwright",
+    "iac",
+    "reliability",
+    "sip",
+    "voip",
+    "telecommunications",
+    "accessibility",
+    "wcag",
+    "inclusive-design",
+    "angular",
+    "rxjs",
+    "signals",
+    "ansible",
+    "configuration-management",
+    "rest",
+    "apollo",
+    "client",
+    "patterns",
+    "backend",
+    "data",
+    "collaboration",
+    "agile",
+    "biome",
+    "blockchain",
+    "web3",
+    "smart-contracts",
+    "philosophy",
+    "principles",
+    "virtues",
+    "c",
+    "memory-management",
+    "checkstyle",
+    "plugin",
+    "claude-code",
+    "clippy",
+    "language-design",
+    "parsing",
+    "content",
+    "writing",
+    "marketing",
+    "engagement",
+    "context",
+    "cpp",
+    "c++",
+    "modern-cpp",
+    "templates",
+    "crystal",
+    "language",
+    "csharp",
+    "c#",
+    "dotnet",
+    "linq",
+    "cucumber",
+    "gherkin",
+    "cypress",
+    "data-engineering",
+    "etl",
+    "streaming",
+    "database",
+    "sql",
+    "query-optimization",
+    "django",
+    "orm",
+    "docker",
+    "docker-compose",
+    "containers",
+    "elixir",
+    "ecto",
+    "embedded-systems",
+    "firmware",
+    "iot",
+    "workflow",
+    "hook",
+    "distributed",
+    "concurrent",
+    "eslint",
+    "fastapi",
+    "frontend",
+    "ux",
+    "presentation",
+    "functional-programming",
+    "fp",
+    "immutability",
+    "pure-functions",
+    "game-development",
+    "game-engine",
+    "gameplay",
+    "git",
+    "commit",
+    "version-control",
+    "gleam",
+    "go",
+    "golang",
+    "graphics",
+    "gpu",
+    "shaders",
+    "schema",
+    "helm",
+    "charts",
+    "deployment",
+    "ink",
+    "terminal",
+    "cli",
+    "tui",
+    "streams",
+    "jest",
+    "junit",
+    "kotlin",
+    "coroutines",
+    "kustomize",
+    "lua",
+    "scripting",
+    "embedded",
+    "gaming",
+    "ml-engineering",
+    "mlops",
+    "inference",
+    "markdownlint",
+    "markdown",
+    "mobile",
+    "mocha",
+    "monorepo",
+    "workspace",
+    "turborepo",
+    "nx",
+    "lerna",
+    "nestjs",
+    "network",
+    "protocols",
+    "distributed-systems",
+    "nextjs",
+    "ssr",
+    "nim",
+    "metaprogramming",
+    "objective-c",
+    "objc",
+    "macos",
+    "arc",
+    "observability",
+    "tracing",
+    "oop",
+    "object-oriented",
+    "design-patterns",
+    "encapsulation",
+    "optimization",
+    "php",
+    "composer",
+    "web",
+    "platform-engineering",
+    "devex",
+    "prettier",
+    "product",
+    "strategy",
+    "vision",
+    "project-management",
+    "coordination",
+    "leadership",
+    "team",
+    "prompt-engineering",
+    "ai",
+    "llm",
+    "pulumi",
+    "pylint",
+    "pytest",
+    "types",
+    "qa",
+    "rails",
+    "mvc",
+    "active-record",
+    "hotwire",
+    "hooks",
+    "relay",
+    "fragments",
+    "rspec",
+    "rubocop",
+    "ownership",
+    "scala",
+    "type-system",
+    "compliance",
+    "vulnerability",
+    "threat",
+    "real-time",
+    "incidents",
+    "swift",
+    "protocol-oriented",
+    "technical-writing",
+    "tensorflow",
+    "machine-learning",
+    "deep-learning",
+    "neural-networks",
+    "terraform",
+    "hashicorp",
+    "testng",
+    "tsc",
+    "type-checking",
+    "validation",
+    "vitest",
+    "vite",
+    "rtp",
+    "engineering",
+    "vue",
+    "composition-api",
+    "reactivity"
+  ]
+}
