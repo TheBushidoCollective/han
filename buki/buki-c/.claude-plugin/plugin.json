@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["c", "systems-programming", "memory-management", "skill"]
+  "keywords": [
+    "c",
+    "systems-programming",
+    "memory-management"
+  ]
 }

@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
+  "keywords": [
+    "eslint",
+    "linting",
+    "javascript",
+    "typescript"
+  ]
 }

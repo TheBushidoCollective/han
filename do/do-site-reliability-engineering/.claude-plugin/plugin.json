@@ -14,8 +14,7 @@
     "reliability",
     "monitoring",
     "incidents",
-    "devops",
-    "agent"
+    "devops"
   ],
   "agentsPath": "agents"
 }

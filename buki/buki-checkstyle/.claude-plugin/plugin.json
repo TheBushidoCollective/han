@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["checkstyle", "linting", "java", "skill"]
+  "keywords": [
+    "checkstyle",
+    "linting",
+    "java"
+  ]
 }

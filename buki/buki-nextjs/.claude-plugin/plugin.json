@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["nextjs", "react", "ssr", "skill"]
+  "keywords": [
+    "nextjs",
+    "react",
+    "ssr"
+  ]
 }

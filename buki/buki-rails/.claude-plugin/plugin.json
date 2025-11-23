@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire", "skill"]
+  "keywords": [
+    "rails",
+    "ruby",
+    "mvc",
+    "active-record",
+    "hotwire"
+  ]
 }

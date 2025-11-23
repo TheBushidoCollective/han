@@ -198,7 +198,7 @@ export default async function PluginPage({
 									{tags.map((tag: string) => (
 										<Link
 											key={tag}
-											href={`/tags?tag=${encodeURIComponent(tag)}`}
+											href={`/search?q=${encodeURIComponent(tag)}`}
 											className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm"
 										>
 											{tag}

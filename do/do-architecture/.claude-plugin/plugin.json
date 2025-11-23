@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["architecture", "design", "patterns", "scalability", "agent"]
+  "keywords": [
+    "architecture",
+    "design",
+    "patterns",
+    "scalability"
+  ]
 }

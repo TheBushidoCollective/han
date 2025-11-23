@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rubocop", "linting", "ruby", "skill"]
+  "keywords": [
+    "rubocop",
+    "linting",
+    "ruby"
+  ]
 }

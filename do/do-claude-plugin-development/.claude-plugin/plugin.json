@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
+  "keywords": [
+    "plugin",
+    "development",
+    "claude-code",
+    "quality"
+  ]
 }

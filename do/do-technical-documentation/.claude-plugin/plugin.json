@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
+  "keywords": [
+    "documentation",
+    "technical-writing",
+    "knowledge"
+  ]
 }

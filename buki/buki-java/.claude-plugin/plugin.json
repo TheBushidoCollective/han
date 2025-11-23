@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["java", "streams", "concurrency", "skill"]
+  "keywords": [
+    "java",
+    "streams",
+    "concurrency"
+  ]
 }
