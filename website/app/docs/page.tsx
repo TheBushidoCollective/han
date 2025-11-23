@@ -69,20 +69,20 @@ export default function DocsPage() {
 								pluginCount={1}
 							/>
 							<CategoryLink
-								href="/plugins/buki"
-								icon="⚔️"
-								title="Buki"
-								subtitle="武器 - Weapons"
-								description="Language and tool skills with validation hooks for maintaining quality."
-								pluginCount={54}
-							/>
-							<CategoryLink
 								href="/plugins/do"
 								icon="🛤️"
 								title="Dō"
 								subtitle="道 - The Way"
 								description="Specialized agents for development disciplines and practices."
-								pluginCount={28}
+								pluginCount={30}
+							/>
+							<CategoryLink
+								href="/plugins/buki"
+								icon="⚔️"
+								title="Buki"
+								subtitle="武器 - Weapons"
+								description="Language and tool skills with validation hooks for maintaining quality."
+								pluginCount={69}
 							/>
 							<CategoryLink
 								href="/plugins/sensei"

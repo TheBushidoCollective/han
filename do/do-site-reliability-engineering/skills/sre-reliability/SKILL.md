@@ -42,9 +42,11 @@ sum(rate(http_requests_total{status!~"4.."}[30d]))
 **Error Budget**: 0.1% = ~43 minutes/month
 
 **Consequences**:
+
 - Budget remaining > 0: Ship features fast
 - Budget exhausted: Feature freeze, focus on reliability
 - Budget at 50%: Increase caution
+
 ```
 
 ## Error Budgets

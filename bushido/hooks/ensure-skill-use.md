@@ -1,89 +1,47 @@
-# Ensure Proper Skill Usage
+# Mandatory Skill Selection
 
-Before implementing features or making decisions, consider if
-existing Bushido skills can guide your approach.
+**ALWAYS review available skills BEFORE starting work.**
 
-## Available Bushido Skills
+## Process
 
-The `bushido` plugin provides these core skills:
+1. Check `<available_skills>` in system prompt
+2. Read skill descriptions - they tell you when to use them
+3. Match descriptions to current task
+4. Select ALL applicable skills
+5. Announce selection to user
 
-### Quality & Testing
+## Skill Categories
 
-**`bushido:proof-of-work`**
+Mental checklist for skill selection:
 
-- Enforce concrete evidence when making claims
-- Show actual command output, not assertions
-- Verify before claiming completion
-- Use when: Making claims about tests, builds, or validations
+- **Core Philosophy** - Code quality, honesty, evidence-based claims?
+- **Design Principles** - Architecture, modularity, coupling, simplicity?
+- **Testing & Quality** - TDD, code review, verification?
+- **Process & Recovery** - Debugging strategies, baseline restoration?
+- **Code Improvement** - Refactoring, incremental improvements?
+- **Technology-Specific** - Framework/language patterns (Buki skills)?
 
-**`bushido:test-driven-development`**
+## Communication
 
-- Write failing tests before implementation
-- Red-Green-Refactor cycle
-- Use when: Implementing new features or fixing bugs
+**At task start:**
 
-**`bushido:code-reviewer`**
-
-- Systematic code review process
-- Quality inspection framework
-- Use when: After writing significant code
-
-### Design Principles
-
-**`bushido:solid-principles`**
-
-- Single Responsibility, Open/Closed, Liskov Substitution,
-  Interface Segregation, Dependency Inversion
-- Use when: Designing classes and modules
-
-**`bushido:simplicity-principles`**
-
-- KISS (Keep It Simple), YAGNI (You Aren't Gonna Need It)
-- Use when: Avoiding over-engineering
-
-**`bushido:structural-design-principles`**
-
-- Composition Over Inheritance, Law of Demeter, Tell Don't Ask
-- Use when: Designing object interactions
-
-**`bushido:orthogonality-principle`**
-
-- Create independent, composable components
-- Reduce coupling, increase cohesion
-- Use when: Designing system architecture
-
-### Process
-
-**`bushido:professional-honesty`**
-
-- Prioritize technical accuracy over validation
-- Disagree when necessary
-- Use when: Reviewing user assumptions or design decisions
-
-**`bushido:baseline-restorer`**
-
-- Restore to working baseline instead of debugging further
-- Use when: Stuck in debugging rabbit holes
-
-**`bushido:boy-scout-rule`**
-
-- Leave code better than you found it
-- Use when: Making changes to existing code
-
-## When to Invoke Skills
-
-**Before Implementation:**
-Announce which principles/skills apply to the current task.
-
-**During Implementation:**
-Reference skills when making design decisions.
-
-**After Implementation:**
-Use code-reviewer skill for quality inspection.
-
-## Example
-
-```text
-User: "Add user authentication"
-Assistant: "Applicable skills: solid-principles, test-driven-development"
 ```
+"Using these skills:
+- skill-name (reason it applies)"
+```
+
+**During work (if new skills identified):**
+
+```
+"Identified additional skill needed:
+- skill-name (reason)"
+```
+
+## Key Points
+
+- Skill descriptions are source of truth
+- Multiple skills often apply to one task
+- Quality/verification skills apply to most tasks
+- Announce skills BEFORE coding, not after
+
+**Review skills FIRST, not after work starts.**

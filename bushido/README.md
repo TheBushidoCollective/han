@@ -19,6 +19,16 @@ This plugin provides the following skills:
 - **Structural Design Principles**
 - **Test Driven Development**
 
+## Commands
+
+This plugin provides workflow orchestration commands:
+
+- **/agents** - Browse and search 30+ specialized Dō agents for development disciplines
+- **/skills** - Browse and search 100+ skills across all installed plugins
+- **/feature-dev** - 7-phase structured feature development workflow with parallel agent execution
+- **/review** - Multi-agent code review with confidence-based filtering (≥80% threshold)
+- **/commit** - Smart git commit workflow with validation and conventional commit messages
+
 ## Usage
 
 Once enabled, Claude will automatically apply these foundational principles and quality practices. The plugin provides:

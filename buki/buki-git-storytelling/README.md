@@ -14,6 +14,7 @@ This buki provides a **Stop hook** that automatically commits your work when you
 - Make debugging and code review easier
 
 The hook intelligently:
+
 - ✅ Detects if a commit was already made during the session (via `CLAUDE_HOOK_STOP_HOOK_ACTIVE`)
 - ✅ Skips if not in a git repository
 - ✅ Skips if there are no changes to commit
@@ -94,6 +95,7 @@ This buki embodies the Bushido virtues:
 ### When to Commit
 
 ✅ **DO commit when:**
+
 - You've completed a logical unit of work
 - Tests pass for the changes made
 - You're about to switch tasks
@@ -102,6 +104,7 @@ This buki embodies the Bushido virtues:
 - You're at a stable checkpoint
 
 ❌ **DON'T commit when:**
+
 - Code doesn't compile
 - Tests are failing (unless documenting a known issue)
 - You have unrelated changes mixed together

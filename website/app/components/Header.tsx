@@ -42,24 +42,17 @@ export default function Header({
 						)}
 
 						<Link
-							href="/tags"
-							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
-						>
-							Tags
-						</Link>
-
-						<Link
-							href="/plugins"
-							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
-						>
-							Plugins
-						</Link>
-
-						<Link
 							href="/docs"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>
 							Docs
+						</Link>
+
+						<Link
+							href="/tags"
+							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+						>
+							Tags
 						</Link>
 
 						<a

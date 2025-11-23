@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getAllPlugins, getPluginContent } from "../../../../../../lib/plugins";
+import Header from "../../../../../components/Header";
 import Sidebar from "../../../../../components/Sidebar";
 
 export async function generateStaticParams() {
@@ -106,33 +107,7 @@ export default async function SkillPage({
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-			{/* Header */}
-			<header className="border-b border-gray-200 dark:border-gray-700">
-				<nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<div className="flex items-center justify-between">
-						<Link href="/" className="flex items-center space-x-3">
-							<div className="text-4xl">⛩️</div>
-							<div className="text-2xl font-bold text-gray-900 dark:text-white">
-								Han
-							</div>
-						</Link>
-						<div className="hidden md:flex space-x-8">
-							<Link
-								href="/docs"
-								className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-							>
-								Documentation
-							</Link>
-							<a
-								href="https://github.com/thebushidocollective/han"
-								className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-							>
-								GitHub
-							</a>
-						</div>
-					</div>
-				</nav>
-			</header>
+			<Header showSearch={true} />
 
 			{/* Breadcrumbs */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

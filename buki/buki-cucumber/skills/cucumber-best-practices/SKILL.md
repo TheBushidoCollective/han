@@ -14,6 +14,7 @@ Master patterns and practices for effective Cucumber testing.
 Focus on **what** needs to happen, not **how** it happens.
 
 ❌ **Imperative** (implementation-focused):
+
 ```gherkin
 Scenario: Add product to cart
   Given I navigate to "http://shop.com/products"
@@ -24,6 +25,7 @@ Scenario: Add product to cart
 ```
 
 ✅ **Declarative** (business-focused):
+
 ```gherkin
 Scenario: Add product to cart
   Given I am browsing products
@@ -36,6 +38,7 @@ Scenario: Add product to cart
 Each scenario should test exactly one business rule or behavior.
 
 ❌ **Multiple behaviors in one scenario:**
+
 ```gherkin
 Scenario: User registration and login and profile update
   Given I register a new account
@@ -46,6 +49,7 @@ Scenario: User registration and login and profile update
 ```
 
 ✅ **Separate scenarios:**
+
 ```gherkin
 Scenario: Register new account
   When I register with valid details
@@ -67,6 +71,7 @@ Scenario: Update profile
 Each scenario should set up its own preconditions.
 
 ❌ **Dependent scenarios:**
+
 ```gherkin
 Scenario: Create order
   When I create order #12345
@@ -76,6 +81,7 @@ Scenario: View order
 ```
 
 ✅ **Independent scenarios:**
+
 ```gherkin
 Scenario: View order
   Given an order exists with ID "12345"
@@ -88,6 +94,7 @@ Scenario: View order
 Use Background for common setup, but don't overuse it.
 
 ✅ **Good use of Background:**
+
 ```gherkin
 Feature: Shopping Cart
 
@@ -105,6 +112,7 @@ Feature: Shopping Cart
 ```
 
 ❌ **Background doing too much:**
+
 ```gherkin
 Background:
   Given I am on the homepage
@@ -150,6 +158,7 @@ Scenario: OAuth login
 ```
 
 Run specific tags:
+
 ```bash
 # Run smoke tests
 cucumber --tags "@smoke"
@@ -171,6 +180,7 @@ cucumber --tags "@smoke or @critical"
 Write in the language of the business domain, not technical terms.
 
 ❌ **Technical language:**
+
 ```gherkin
 Scenario: POST request to /api/users
   When I send a POST to "/api/users" with JSON payload
@@ -178,6 +188,7 @@ Scenario: POST request to /api/users
 ```
 
 ✅ **Domain language:**
+
 ```gherkin
 Scenario: Register new user
   When I register a new user account
@@ -189,6 +200,7 @@ Scenario: Register new user
 Don't mix high-level and low-level details.
 
 ❌ **Mixed levels:**
+
 ```gherkin
 Scenario: Purchase product
   Given I am logged in
@@ -199,6 +211,7 @@ Scenario: Purchase product
 ```
 
 ✅ **Consistent level:**
+
 ```gherkin
 Scenario: Purchase product
   Given I am logged in
@@ -213,11 +226,13 @@ Scenario: Purchase product
 Don't use "And" to combine multiple distinct actions in prose.
 
 ❌ **Conjunctive step:**
+
 ```gherkin
 When I log in and add a product to cart and checkout
 ```
 
 ✅ **Separate steps:**
+
 ```gherkin
 When I log in
 And I add a product to my cart
@@ -231,6 +246,7 @@ And I proceed to checkout
 Use Scenario Outlines when you need to test the same behavior with different data.
 
 ✅ **Good use:**
+
 ```gherkin
 Scenario Outline: Login validation
   When I log in with "<username>" and "<password>"
@@ -245,6 +261,7 @@ Scenario Outline: Login validation
 ```
 
 ❌ **Overusing Scenario Outline:**
+
 ```gherkin
 # Don't use Scenario Outline for unrelated test cases
 Scenario Outline: Multiple features
@@ -299,11 +316,13 @@ When('I fill in "search" with "products"')
 Balance reusability with readability.
 
 ❌ **Too generic:**
+
 ```javascript
 When('I do {string} with {string} and {string}', ...)
 ```
 
 ✅ **Specific and readable:**
+
 ```javascript
 When('I log in with {string} and {string}', ...)
 When('I search for {string} in {string}', ...)
@@ -340,12 +359,14 @@ Given('I register a new user', async function() {
 ### Avoid Hardcoded IDs
 
 ❌ **Hardcoded:**
+
 ```gherkin
 Given user "12345" exists
 When I view order "67890"
 ```
 
 ✅ **Named entities:**
+
 ```gherkin
 Given a user "john@example.com" exists
 When I view my most recent order
@@ -425,21 +446,25 @@ features/
 ## Common Anti-Patterns
 
 ❌ **Testing implementation details:**
+
 ```gherkin
 Then the database should have 1 record in the users table
 ```
 
 ❌ **UI-specific assertions in business scenarios:**
+
 ```gherkin
 Then I should see a red error message in the top right corner
 ```
 
 ❌ **Using Given for actions:**
+
 ```gherkin
 Given I click the submit button  # This is a When, not a Given!
 ```
 
 ❌ **Technical jargon:**
+
 ```gherkin
 When I POST to /api/v1/users with JSON body
 ```

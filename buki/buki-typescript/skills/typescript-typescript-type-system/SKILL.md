@@ -1,8 +1,6 @@
 ---
 name: typescript-type-system
-description: Use when typeScript's type system including strict mode, advanced.
-types, generics, type guards, and compiler configuration
-. Use when working with TypeScript language features.
+description: Use when working with TypeScript's type system including strict mode, advanced types, generics, type guards, and compiler configuration.
 allowed-tools:
   - Bash
   - Read

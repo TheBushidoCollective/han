@@ -48,7 +48,7 @@ Your commits should read like a story:
 
 ## Best Practices
 
-### DO Commit When:
+### DO Commit When
 
 ✅ You've completed a logical unit of work (even if small)
 ✅ Tests pass for the changes made
@@ -59,7 +59,7 @@ Your commits should read like a story:
 ✅ You've updated documentation
 ✅ You're at a stable checkpoint
 
-### DON'T Commit When:
+### DON'T Commit When
 
 ❌ Code doesn't compile or has syntax errors
 ❌ Tests are failing (unless documenting a known issue)
@@ -204,16 +204,19 @@ git commit -m "test: verify all tests still pass after refactor"
 ### Avoid These Commit Styles
 
 ❌ **The Dump Truck**
+
 ```bash
 git commit -m "updated files"  # Too vague, too many changes
 ```
 
 ❌ **The Novel**
+
 ```bash
 git commit -m "fixed bug and added feature and updated docs and refactored code and..."
 ```
 
 ❌ **The WIP Spam**
+
 ```bash
 git commit -m "wip"
 git commit -m "wip2"
@@ -222,6 +225,7 @@ git commit -m "wip3"
 ```
 
 ❌ **The Time Machine**
+
 ```bash
 # Making 50 commits then squashing them all
 # Keep the story, just clean up truly meaningless commits
@@ -248,6 +252,7 @@ git merge feature/user-auth
 ### With Pull Requests
 
 Small commits make code review easier:
+
 - Reviewers can understand changes step-by-step
 - Discussion can happen on specific commits
 - Changes are easier to test individually
@@ -255,6 +260,7 @@ Small commits make code review easier:
 ### With CI/CD
 
 Frequent commits trigger CI more often:
+
 - Catch issues earlier
 - Smaller changesets are easier to debug
 - Faster feedback loop
@@ -289,6 +295,7 @@ git log --oneline -10
 ```
 
 A good story should be:
+
 - Easy to follow
 - Logically ordered
 - Self-documenting

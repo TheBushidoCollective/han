@@ -1,6 +1,11 @@
 {
   "enabledPlugins": {
-    "bushido@han": true
+    "bushido@han": true,
+    "buki-biome@han": true,
+    "buki-ink@han": true,
+    "buki-react@han": true,
+    "buki-typescript@han": true,
+    "do-quality-assurance@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

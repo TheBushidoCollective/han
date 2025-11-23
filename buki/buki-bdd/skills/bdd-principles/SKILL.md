@@ -22,17 +22,20 @@ Behavior-Driven Development (BDD) is a collaborative software development approa
 ### Discovery > Development > Delivery
 
 **Discovery**: Collaborate to understand requirements
+
 - Hold Three Amigos sessions
 - Explore with examples
 - Challenge assumptions
 - Build shared understanding
 
 **Development**: Implement guided by examples
+
 - Use examples as specifications
 - Automate examples as tests
 - Follow outside-in TDD
 
 **Delivery**: Validate against real behavior
+
 - Executable specifications provide confidence
 - Living documentation stays current
 - Regressions are caught early
@@ -42,16 +45,19 @@ Behavior-Driven Development (BDD) is a collaborative software development approa
 A practice where three perspectives collaborate to explore and define features:
 
 ### 1. Business Perspective (Product Owner/BA)
+
 - What problem are we solving?
 - What value does it provide?
 - What are the business rules?
 
 ### 2. Development Perspective (Developer)
+
 - How might we build this?
 - What are the technical constraints?
 - What are the edge cases?
 
 ### 3. Testing Perspective (Tester/QA)
+
 - What could go wrong?
 - What are we missing?
 - How will we verify this works?
@@ -140,6 +146,7 @@ Feature: Promotional Discount Application
 Develop and use a shared vocabulary:
 
 ❌ **Technical Jargon**:
+
 ```
 "When the user submits the form, we validate the input,
 hash the password with bcrypt, insert a record into the
@@ -147,6 +154,7 @@ users table, and return a 201 response."
 ```
 
 ✅ **Ubiquitous Language**:
+
 ```
 "When a customer registers, we verify their information,
 create their account, and send a welcome email."
@@ -155,11 +163,13 @@ create their account, and send a welcome email."
 ### Building Ubiquitous Language
 
 **Discover terms through conversation:**
+
 - What do you call this?
 - What's the difference between X and Y?
 - When does this state change?
 
 **Document terms in scenarios:**
+
 ```gherkin
 # Use "Member" not "User" (business term)
 Given I am a Gold Member
@@ -172,6 +182,7 @@ Then the order should be Pending
 ```
 
 **Keep a glossary:**
+
 ```
 Member: A customer with a subscription
 Guest: A customer without a subscription
@@ -195,17 +206,20 @@ A workshop technique to explore features with examples:
 **Story**: User registration
 
 **Rules** (Blue):
+
 - Email must be unique
 - Password must be strong
 - Age must be 18+
 
 **Examples** (Green):
+
 - Register with valid details → Success
 - Register with existing email → Error
 - Register with weak password → Error
 - Register under 18 → Error
 
 **Questions** (Red):
+
 - Do we verify email addresses?
 - What defines a "strong" password?
 - Do we need parent consent for minors?
@@ -215,9 +229,11 @@ A workshop technique to explore features with examples:
 Use concrete examples to drive development:
 
 ### Vague Requirement
+
 "Users should be able to search for products."
 
 ### Specification by Example
+
 ```gherkin
 Scenario: Search by product name
   Given products "Laptop", "Mouse", "Keyboard" exist
@@ -262,18 +278,21 @@ Scenario Passes ───────┴─────────────�
 ## BDD vs TDD
 
 **TDD** (Test-Driven Development):
+
 - Developer-focused
 - Tests implementation
 - Red-Green-Refactor cycle
 - Unit tests guide design
 
 **BDD** (Behavior-Driven Development):
+
 - Business-focused
 - Tests behavior
 - Conversation-Specification-Automation
 - Scenarios guide development
 
 **They complement each other:**
+
 - BDD: What should we build? (outside-in)
 - TDD: How should we build it? (inside-out)
 

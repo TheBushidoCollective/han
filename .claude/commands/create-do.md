@@ -186,14 +186,14 @@ Summon this agent when you need:
 - {Specific scenario}
 ```
 
-### Agent Frontmatter Guide:
+### Agent Frontmatter Guide
 
 - **name**: Kebab-case identifier (e.g., "frontend-architect", "security-engineer")
 - **description**: Multi-line YAML string with detailed agent purpose. Use `|` for multi-line.
 - **model**: Usually "inherit" to use the default model
 - **color**: Visual identifier in Claude Code UI (purple, blue, green, red, yellow, cyan, magenta)
 
-### Agent Color Guidelines:
+### Agent Color Guidelines
 
 - **purple**: Design, UI/UX, presentation
 - **blue**: Architecture, planning, infrastructure
@@ -207,14 +207,14 @@ Summon this agent when you need:
 
 Dō plugins can include supporting skills that agents can invoke:
 
-### Skill Directory Structure:
+### Skill Directory Structure
 
 ```
 skills/{skill-name}/
 └── SKILL.md
 ```
 
-### SKILL.md Format:
+### SKILL.md Format
 
 ```markdown
 ---
@@ -386,7 +386,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ## Best Practices
 
-### DO:
+### DO
 
 ✅ Create agents with deep, specific expertise (not generic generalists)
 ✅ Write detailed, comprehensive agent definitions (1000+ words)
@@ -399,7 +399,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 ✅ Include technical depth appropriate to the discipline
 ✅ Test agents with realistic scenarios
 
-### DON'T:
+### DON'T
 
 ❌ Don't create vague or generic agents
 ❌ Don't duplicate functionality of existing agents
@@ -486,11 +486,13 @@ Reference these examples:
 ## Testing Your Dō
 
 1. Install locally:
+
    ```bash
    claude plugin install /path/to/do-{discipline}@local
    ```
 
 2. Invoke agents in various scenarios:
+
    ```
    "I need help with [scenario] - can a [agent-name] help?"
    ```

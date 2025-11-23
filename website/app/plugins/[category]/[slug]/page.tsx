@@ -246,6 +246,36 @@ export default async function PluginPage({
 							</section>
 						)}
 
+						{/* Commands Section */}
+						{plugin.commands.length > 0 && (
+							<section className="mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+									Commands
+								</h2>
+								<div className="space-y-4">
+									{plugin.commands.map((command) => (
+										<Link
+											key={command.name}
+											href={`/plugins/${category}/${slug}/commands/${command.name}`}
+											className="block bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition"
+										>
+											<div className="flex items-center space-x-3">
+												<div className="text-2xl">⌘</div>
+												<div className="flex-1">
+													<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+														/{command.name}
+													</h3>
+													<p className="text-gray-600 dark:text-gray-300">
+														{command.description}
+													</p>
+												</div>
+											</div>
+										</Link>
+									))}
+								</div>
+							</section>
+						)}
+
 						{/* Skills Section */}
 						{plugin.skills.length > 0 && (
 							<section className="mb-12">
@@ -305,7 +335,7 @@ export default async function PluginPage({
 												{hookSection.commands.map((command) => (
 													<pre
 														key={command}
-														className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm"
+														className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom"
 													>
 														<code>{command}</code>
 													</pre>

@@ -20,37 +20,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'If the user mentions an animal tell a joke about it'"
-          },
-          {
-            "type": "command",
             "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md\""
           },
           {
             "type": "command",
             "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md\""
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest align",
-            "description": "Align Han plugins with current codebase state"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest align",
-            "description": "Align Han plugins with current codebase state"
           }
         ]
       }
