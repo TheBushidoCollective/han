@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getAllPluginsAcrossCategories } from "@/lib/plugins";
 import Header from "../components/Header";
-import SearchBar from "../components/SearchBar";
+import SearchResults from "../components/SearchResults";
 
 export const metadata = {
 	title: "Search Plugins - Han",
@@ -53,7 +54,15 @@ export default function SearchPage() {
 				</div>
 
 				<div className="mb-12">
-					<SearchBar index={searchIndex} />
+					<Suspense
+						fallback={
+							<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+								Loading results...
+							</div>
+						}
+					>
+						<SearchResults index={searchIndex} />
+					</Suspense>
 				</div>
 
 				<div className="mb-8">
