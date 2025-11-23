@@ -2,19 +2,126 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+interface SearchIndex {
+	plugins: Array<{ name: string; category: string; path: string }>;
+	tags: string[];
+}
 
 export default function Header() {
 	const router = useRouter();
 	const [searchQuery, setSearchQuery] = useState("");
+	const [suggestions, setSuggestions] = useState<string[]>([]);
+	const [showDropdown, setShowDropdown] = useState(false);
+	const [selectedIndex, setSelectedIndex] = useState(-1);
+	const [searchIndex, setSearchIndex] = useState<SearchIndex | null>(null);
+	const searchRef = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
 
-	const handleSearch = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (searchQuery.trim()) {
-			router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+	// Load search index on mount
+	useEffect(() => {
+		fetch("/search-index.json")
+			.then((res) => res.json())
+			.then((data) => setSearchIndex(data))
+			.catch((error) => console.error("Failed to load search index:", error));
+	}, []);
+
+	// Generate suggestions when query changes
+	useEffect(() => {
+		if (!searchIndex || searchQuery.trim().length < 2) {
+			setSuggestions([]);
+			setShowDropdown(false);
+			return;
+		}
+
+		const lowerQuery = searchQuery.toLowerCase().trim();
+		const newSuggestions = new Set<string>();
+
+		// Add matching plugin names
+		for (const plugin of searchIndex.plugins) {
+			if (plugin.name.toLowerCase().includes(lowerQuery)) {
+				newSuggestions.add(plugin.name);
+			}
+			if (newSuggestions.size >= 5) break;
+		}
+
+		// Add matching tags if we have room
+		if (newSuggestions.size < 5) {
+			for (const tag of searchIndex.tags) {
+				if (tag.toLowerCase().includes(lowerQuery)) {
+					newSuggestions.add(tag);
+				}
+				if (newSuggestions.size >= 5) break;
+			}
+		}
+
+		const suggestionsList = Array.from(newSuggestions);
+		setSuggestions(suggestionsList);
+		setShowDropdown(suggestionsList.length > 0);
+		setSelectedIndex(-1);
+	}, [searchQuery, searchIndex]);
+
+	// Handle click outside to close dropdown
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				searchRef.current &&
+				!searchRef.current.contains(event.target as Node)
+			) {
+				setShowDropdown(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	const handleSearch = (query: string = searchQuery) => {
+		if (query.trim()) {
+			router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+			setShowDropdown(false);
+			inputRef.current?.blur();
 		} else {
 			router.push("/search");
 		}
+	};
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		handleSearch();
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (!showDropdown || suggestions.length === 0) return;
+
+		switch (e.key) {
+			case "ArrowDown":
+				e.preventDefault();
+				setSelectedIndex((prev) =>
+					prev < suggestions.length - 1 ? prev + 1 : prev,
+				);
+				break;
+			case "ArrowUp":
+				e.preventDefault();
+				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+				break;
+			case "Enter":
+				if (selectedIndex >= 0) {
+					e.preventDefault();
+					handleSearch(suggestions[selectedIndex]);
+				}
+				break;
+			case "Escape":
+				setShowDropdown(false);
+				setSelectedIndex(-1);
+				break;
+		}
+	};
+
+	const handleSuggestionClick = (suggestion: string) => {
+		setSearchQuery(suggestion);
+		handleSearch(suggestion);
 	};
 
 	return (
@@ -28,8 +135,8 @@ export default function Header() {
 						</div>
 					</Link>
 
-					<form onSubmit={handleSearch} className="flex-1 max-w-md">
-						<div className="relative">
+					<form onSubmit={handleSubmit} className="flex-1 max-w-md">
+						<div className="relative" ref={searchRef}>
 							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
 								<svg
 									className="w-5 h-5 text-gray-400"
@@ -47,12 +154,37 @@ export default function Header() {
 								</svg>
 							</div>
 							<input
+								ref={inputRef}
 								type="text"
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
+								onKeyDown={handleKeyDown}
 								placeholder="Search plugins..."
 								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								autoComplete="off"
 							/>
+
+							{/* Autocomplete Dropdown */}
+							{showDropdown && suggestions.length > 0 && (
+								<div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+									{suggestions.map((suggestion, index) => (
+										<button
+											key={suggestion}
+											type="button"
+											onClick={() => handleSuggestionClick(suggestion)}
+											className={`w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+												index === selectedIndex
+													? "bg-gray-100 dark:bg-gray-700"
+													: ""
+											}`}
+										>
+											<span className="text-gray-900 dark:text-gray-100">
+												{suggestion}
+											</span>
+										</button>
+									))}
+								</div>
+							)}
 						</div>
 					</form>
 
