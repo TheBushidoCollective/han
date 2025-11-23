@@ -12,6 +12,7 @@ interface SearchResult {
 	category: string;
 	tags: string[];
 	path: string;
+	components: string[];
 }
 
 export default function Header() {
