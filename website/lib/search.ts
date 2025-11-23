@@ -267,10 +267,9 @@ export function findRelatedPlugins(
 		.filter((e) => e.name !== pluginName)
 		.map((entry) => {
 			const sharedTags = entry.tags.filter((tag) => plugin.tags.includes(tag));
-			const sameCategory = entry.category === plugin.category ? 1 : 0;
 			return {
 				entry,
-				score: sharedTags.length + sameCategory,
+				score: sharedTags.length,
 			};
 		})
 		.filter((r) => r.score > 0)
