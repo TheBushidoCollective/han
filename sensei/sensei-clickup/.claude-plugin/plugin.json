@@ -1,0 +1,33 @@
+{
+  "name": "sensei-clickup",
+  "version": "1.0.0",
+  "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "clickup",
+    "project-management",
+    "tasks",
+    "acceptance-criteria",
+    "validation",
+    "productivity"
+  ],
+  "mcpServers": {
+    "clickup": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-clickup"
+      ],
+      "env": {
+        "CLICKUP_API_TOKEN": "${CLICKUP_API_TOKEN}"
+      }
+    }
+  }
+}

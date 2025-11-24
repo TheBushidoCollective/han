@@ -1,3 +1,7 @@
+---
+description: Comprehensive 7-phase workflow for developing new features with quality enforcement
+---
+
 # Feature Development Workflow
 
 A comprehensive, structured 7-phase workflow for developing new features with quality enforcement and Bushido principles.

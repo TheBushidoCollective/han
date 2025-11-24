@@ -1,3 +1,7 @@
+---
+description: View CI/CD pipeline status for a merge request or project
+---
+
 # View GitLab Pipeline Status
 
 View the status of CI/CD pipelines for a merge request or project.

@@ -1,3 +1,7 @@
+---
+description: Create a new merge request in a GitLab project
+---
+
 # Create GitLab Merge Request
 
 Create a new merge request in a GitLab project with source and target branches.

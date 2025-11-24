@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "name": "clickup-acceptance-criteria-validation",
+        "description": "Validates completed work against ClickUp task acceptance criteria for any tasks mentioned in the conversation",
+        "hooks": [
+          {
+            "command": "node",
+            "args": [
+              "-e",
+              "const fs = require('fs'); const taskPattern = /\\b#[A-Z0-9]{6,}\\b|\\btask[\\s-]?id[:\\s]+([a-z0-9]+)\\b/gi; const context = process.argv.slice(1).join(' '); const matches = context.matchAll(taskPattern); const tasks = [...new Set([...matches].map(m => m[0].replace('#', '').replace(/task[\\s-]?id[:\\s]+/i, '')))]; if (tasks.length === 0) { console.log('No ClickUp tasks found in context'); process.exit(0); } console.log('Found ClickUp tasks:', tasks.join(', ')); console.log('\\n⚠️  VALIDATION REQUIRED'); console.log('Before stopping, please validate each task:'); tasks.forEach(task => { console.log(`  - Use MCP to fetch task ${task} details`); console.log(`  - Review acceptance criteria and checklist items`); console.log(`  - Confirm all criteria are met`); }); console.log('\\nAsk Claude: \"Validate that all acceptance criteria for tasks ' + tasks.join(', ') + ' are met\"');"
+            ],
+            "showOutput": "always"
+          }
+        ]
+      }
+    ]
+  }
+}

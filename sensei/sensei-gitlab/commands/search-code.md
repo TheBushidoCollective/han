@@ -1,3 +1,7 @@
+---
+description: Search for code across your GitLab instance
+---
+
 # Search GitLab Code
 
 Search for code, files, or implementations across your GitLab instance using semantic or keyword search.

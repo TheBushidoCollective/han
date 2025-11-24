@@ -1,3 +1,7 @@
+---
+description: Get comprehensive review of a GitLab merge request
+---
+
 # Review GitLab Merge Request
 
 Get a comprehensive review of a GitLab merge request including commits, diffs, and pipeline status.
