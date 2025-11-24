@@ -5,15 +5,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix compile --warnings-as-errors"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix compile --warnings-as-errors"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix format --check-formatted"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix format --check-formatted"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix test"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix test"
           }
         ]
       }
@@ -23,15 +23,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix compile --warnings-as-errors"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix compile --warnings-as-errors"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix format --check-formatted"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix format --check-formatted"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with mix.exs --  mix test"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with mix.exs --  mix test"
           }
         ]
       }

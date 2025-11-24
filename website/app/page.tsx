@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "./components/Header";
+import { getCategoryIcon } from "../lib/plugins";
 
 export const metadata: Metadata = {
 	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",
@@ -53,28 +54,28 @@ export default function Home() {
 					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
 						<CategoryCard
 							href="/plugins/bushido"
-							icon="🎯"
+							icon={getCategoryIcon("bushido")}
 							title="Bushido"
 							subtitle="武士道"
 							description="Core principles, enforcement hooks, and foundational quality skills"
 						/>
 						<CategoryCard
 							href="/plugins/do"
-							icon="🛤️"
+							icon={getCategoryIcon("do")}
 							title="Dō"
 							subtitle="道 - The Way"
 							description="Specialized agents for development disciplines and practices"
 						/>
 						<CategoryCard
 							href="/plugins/buki"
-							icon="⚔️"
+							icon={getCategoryIcon("buki")}
 							title="Buki"
 							subtitle="武器 - Weapons"
 							description="Language and tool skills with validation hooks for quality"
 						/>
 						<CategoryCard
 							href="/plugins/sensei"
-							icon="👴"
+							icon={getCategoryIcon("sensei")}
 							title="Sensei"
 							subtitle="先生 - Teachers"
 							description="MCP servers providing external knowledge and integrations"

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* --  npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* --  npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* --  npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* --  npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
           }
         ]
       }

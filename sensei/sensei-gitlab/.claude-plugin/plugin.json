@@ -1,0 +1,32 @@
+{
+  "name": "sensei-gitlab",
+  "version": "1.0.0",
+  "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "gitlab",
+    "git",
+    "issues",
+    "merge-requests",
+    "ci-cd",
+    "devops",
+    "server"
+  ],
+  "mcpServers": {
+    "gitlab": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://gitlab.com/api/v4/mcp"
+      ]
+    }
+  }
+}

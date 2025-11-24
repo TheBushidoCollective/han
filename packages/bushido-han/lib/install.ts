@@ -3,24 +3,31 @@ import React from "react";
 import {
 	detectPluginsWithAgent,
 	ensureClaudeDirectory,
+	fetchMarketplace,
 	getInstalledPlugins,
 	HAN_MARKETPLACE_REPO,
 	readOrCreateSettings,
 	writeSettings,
 } from "./shared.js";
 
+interface PluginChanges {
+	added: string[];
+	removed: string[];
+}
+
 /**
- * Install plugins to Claude settings and return list of added plugins
+ * Sync plugins to Claude settings - adds selected and removes deselected
  */
-function installPluginsToSettings(
-	plugins: string[],
+function syncPluginsToSettings(
+	selectedPlugins: string[],
 	scope: "project" | "local" = "project",
-): string[] {
+): PluginChanges {
 	ensureClaudeDirectory();
 
 	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
 	const added: string[] = [];
+	const removed: string[] = [];
 
 	// Add Han marketplace to extraMarketplaces
 	if (!settings?.extraKnownMarketplaces?.han) {
@@ -30,8 +37,8 @@ function installPluginsToSettings(
 		};
 	}
 
-	// Add plugins
-	for (const plugin of plugins) {
+	// Add newly selected plugins
+	for (const plugin of selectedPlugins) {
 		if (!currentPlugins.includes(plugin)) {
 			added.push(plugin);
 		}
@@ -41,22 +48,33 @@ function installPluginsToSettings(
 		};
 	}
 
+	// Remove deselected plugins
+	for (const plugin of currentPlugins) {
+		if (!selectedPlugins.includes(plugin)) {
+			removed.push(plugin);
+			if (settings.enabledPlugins) {
+				delete settings.enabledPlugins[`${plugin}@han`];
+			}
+		}
+	}
+
 	writeSettings(settings, scope);
 
-	return added;
+	return { added, removed };
 }
 
 /**
- * SDK-based install command with Ink UI
+ * SDK-based auto-detect install command with Ink UI
  */
 export async function install(
 	scope: "project" | "local" = "project",
 ): Promise<void> {
 	// Import Ink UI component dynamically to avoid issues with React
-	const { InstallProgress } = await import("./install-progress.js");
+	const { InstallInteractive } = await import("./install-interactive.js");
 
 	let resolveCompletion: (() => void) | undefined;
 	let rejectCompletion: ((error: Error) => void) | undefined;
+	let wasCancelled = false;
 
 	const completionPromise = new Promise<void>((resolve, reject) => {
 		resolveCompletion = resolve;
@@ -67,16 +85,19 @@ export async function install(
 	console.log(`Installing to ./.claude/${filename}...\n`);
 
 	const { unmount } = render(
-		React.createElement(InstallProgress, {
+		React.createElement(InstallInteractive, {
 			detectPlugins: detectPluginsWithAgent,
+			fetchMarketplace,
 			onInstallComplete: (plugins: string[]) => {
-				const added = installPluginsToSettings(plugins, scope);
+				const { added, removed } = syncPluginsToSettings(plugins, scope);
 				if (added.length > 0) {
-					console.log(
-						`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`,
-					);
-				} else {
-					console.log("\n✓ All recommended plugins were already installed");
+					console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
+				}
+				if (removed.length > 0) {
+					console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+				}
+				if (added.length === 0 && removed.length === 0) {
+					console.log("\n✓ No changes made");
 				}
 				console.log("\n⚠️  Please restart Claude Code to load the new plugins");
 				if (resolveCompletion) resolveCompletion();
@@ -84,13 +105,84 @@ export async function install(
 			onInstallError: (error: Error) => {
 				if (rejectCompletion) rejectCompletion(error);
 			},
+			onCancel: () => {
+				wasCancelled = true;
+				console.log("\n⚠️  Installation cancelled");
+				if (resolveCompletion) resolveCompletion();
+			},
 		}),
 	);
 
 	try {
 		await completionPromise;
 		// Wait a moment for the UI to show completion message
-		await new Promise((resolve) => setTimeout(resolve, 1500));
+		if (!wasCancelled) {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+		}
+	} finally {
+		unmount();
+	}
+}
+
+/**
+ * Interactive plugin selector (no auto-detect)
+ */
+export async function installInteractive(
+	scope: "project" | "local" = "project",
+): Promise<void> {
+	const { PluginSelector } = await import("./plugin-selector.js");
+
+	let resolveCompletion: (() => void) | undefined;
+	let wasCancelled = false;
+
+	const completionPromise = new Promise<void>((resolve) => {
+		resolveCompletion = resolve;
+	});
+
+	const filename = scope === "local" ? "settings.local.json" : "settings.json";
+	console.log(`Installing to ./.claude/${filename}...\n`);
+
+	// Fetch marketplace plugins
+	const allPlugins = await fetchMarketplace();
+	if (allPlugins.length === 0) {
+		console.error("Could not fetch marketplace. Please check your internet connection.");
+		return;
+	}
+
+	// Get currently installed plugins
+	const installedPlugins = getInstalledPlugins(scope);
+
+	const { unmount } = render(
+		React.createElement(PluginSelector, {
+			detectedPlugins: installedPlugins,
+			allPlugins,
+			onComplete: (plugins: string[]) => {
+				const { added, removed } = syncPluginsToSettings(plugins, scope);
+				if (added.length > 0) {
+					console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
+				}
+				if (removed.length > 0) {
+					console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+				}
+				if (added.length === 0 && removed.length === 0) {
+					console.log("\n✓ No changes made");
+				}
+				console.log("\n⚠️  Please restart Claude Code to load the new plugins");
+				if (resolveCompletion) resolveCompletion();
+			},
+			onCancel: () => {
+				wasCancelled = true;
+				console.log("\n⚠️  Installation cancelled");
+				if (resolveCompletion) resolveCompletion();
+			},
+		}),
+	);
+
+	try {
+		await completionPromise;
+		if (!wasCancelled) {
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		}
 	} finally {
 		unmount();
 	}

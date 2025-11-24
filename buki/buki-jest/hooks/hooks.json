@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with package.json --  npm test"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json --  npm test"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han@latest validate --fail-fast --dirs-with package.json --  npm test"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json --  npm test"
           }
         ]
       }

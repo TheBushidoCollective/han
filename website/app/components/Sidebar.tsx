@@ -4,6 +4,7 @@ import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SidebarScrollContainer from "./SidebarScrollContainer";
+import { getCategoryIcon } from "../../lib/plugins";
 
 interface SidebarProps {
 	bukiPlugins: Array<{ name: string; title: string }>;
@@ -75,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins
 							href="/plugins/bushido"
 							className={`${getLinkClass("/plugins/bushido")} mb-2`}
 						>
-							🎯 Bushido
+							{getCategoryIcon("bushido")} Bushido
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Core philosophy and quality principles
@@ -88,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins
 							href="/plugins/do"
 							className={`${getLinkClass("/plugins/do")} mb-2`}
 						>
-							🛤️ Dō
+							{getCategoryIcon("do")} Dō
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Specialized development disciplines
@@ -113,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins
 							href="/plugins/buki"
 							className={`${getLinkClass("/plugins/buki")} mb-2`}
 						>
-							⚔️ Buki
+							{getCategoryIcon("buki")} Buki
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Technology skills and validations
@@ -138,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins
 							href="/plugins/sensei"
 							className={`${getLinkClass("/plugins/sensei")} mb-2`}
 						>
-							👴 Sensei
+							{getCategoryIcon("sensei")} Sensei
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							MCP servers for external integrations

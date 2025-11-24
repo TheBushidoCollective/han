@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllPlugins } from "../../lib/plugins";
+import { getAllPlugins, getCategoryIcon } from "../../lib/plugins";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 
@@ -35,7 +35,7 @@ export default function PluginsPage() {
 						<div className="grid md:grid-cols-2 gap-8 mb-16">
 							<CategoryLink
 								href="/plugins/bushido"
-								icon="🎯"
+								icon={getCategoryIcon("bushido")}
 								title="Bushido"
 								subtitle="武士道 - Core Principles"
 								description="Foundational philosophy and enforcement mechanisms for honorable software development."
@@ -43,7 +43,7 @@ export default function PluginsPage() {
 							/>
 							<CategoryLink
 								href="/plugins/do"
-								icon="🛤️"
+								icon={getCategoryIcon("do")}
 								title="Dō"
 								subtitle="道 - The Way"
 								description="Specialized agents for development disciplines and practices."
@@ -51,7 +51,7 @@ export default function PluginsPage() {
 							/>
 							<CategoryLink
 								href="/plugins/buki"
-								icon="⚔️"
+								icon={getCategoryIcon("buki")}
 								title="Buki"
 								subtitle="武器 - Weapons"
 								description="Language and tool skills with validation hooks for maintaining quality."
@@ -59,7 +59,7 @@ export default function PluginsPage() {
 							/>
 							<CategoryLink
 								href="/plugins/sensei"
-								icon="👴"
+								icon={getCategoryIcon("sensei")}
 								title="Sensei"
 								subtitle="先生 - Teachers"
 								description="MCP servers providing external knowledge and integrations."

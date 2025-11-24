@@ -1,0 +1,18 @@
+{
+  "Stop": [
+    {
+      "name": "react-native-type-check",
+      "description": "Validates TypeScript types in React Native projects before stopping",
+      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npx tsc --noEmit",
+      "showOutput": "on-error"
+    }
+  ],
+  "SubagentStop": [
+    {
+      "name": "react-native-type-check",
+      "description": "Validates TypeScript types in React Native projects when agents complete",
+      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npx tsc --noEmit",
+      "showOutput": "on-error"
+    }
+  ]
+}

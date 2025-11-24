@@ -1,0 +1,21 @@
+{
+  "name": "buki-react-native",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for React Native projects.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "react-native",
+    "validation",
+    "mobile",
+    "ios",
+    "android",
+    "quality",
+    "enforcement"
+  ]
+}
