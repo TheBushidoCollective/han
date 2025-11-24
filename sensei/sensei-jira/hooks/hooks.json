@@ -6,6 +6,7 @@
         "description": "Validates completed work against Jira ticket acceptance criteria for any tickets mentioned in the conversation",
         "hooks": [
           {
+            "type": "command",
             "command": "node",
             "args": [
               "-e",
