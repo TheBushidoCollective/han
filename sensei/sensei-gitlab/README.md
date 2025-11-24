@@ -42,10 +42,6 @@ Once installed, Claude Code gains access to these tools:
 - Beta features enabled (for GitLab 18.4 and earlier)
 - Available on GitLab.com, Self-Managed, or Dedicated instances
 
-**System Requirements:**
-- Node.js 20 or higher
-- Active GitLab account with appropriate permissions
-
 ### Via Han Marketplace
 
 ```bash
@@ -59,46 +55,59 @@ claude plugin marketplace add thebushidocollective/han
 claude plugin install sensei-gitlab@han
 ```
 
-### Configuration
+### Authentication
 
-1. The GitLab MCP server uses OAuth 2.0 for authentication. On first use, you'll be prompted to authorize access through your browser.
+After installation, authenticate with GitLab OAuth:
 
-2. For self-hosted GitLab instances, update the URL in your configuration:
+1. Run `/mcp` in Claude Code
+2. Select the GitLab server
+3. Click "Authenticate" to open the OAuth flow in your browser
+4. Authorize access to your GitLab account
 
-```bash
-# For GitLab.com (default)
-# No additional configuration needed
-
-# For self-hosted GitLab
-# Edit ~/.claude/settings.json and change the URL:
-"gitlab": {
-  "command": "npx",
-  "args": ["-y", "mcp-remote", "https://your-gitlab.example.com/api/v4/mcp"]
-}
-```
-
-3. **Enable Beta Features** (GitLab 18.4 and earlier):
-   - Go to Admin Area > Settings > General
-   - Expand "Model Context Protocol"
-   - Enable "Model Context Protocol Beta"
-   - Save changes
+Authentication tokens are stored securely and refreshed automatically.
 
 ### Manual Installation
 
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
+Add to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
   "mcpServers": {
     "gitlab": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://gitlab.com/api/v4/mcp"]
+      "type": "http",
+      "url": "https://gitlab.com/api/v4/mcp"
     }
   }
 }
 ```
 
-For self-hosted GitLab, replace `gitlab.com` with your instance URL.
+Or via CLI:
+
+```bash
+claude mcp add --transport http gitlab https://gitlab.com/api/v4/mcp
+```
+
+### Self-Hosted GitLab
+
+For self-hosted GitLab instances, replace `gitlab.com` with your instance URL:
+
+```json
+{
+  "mcpServers": {
+    "gitlab": {
+      "type": "http",
+      "url": "https://your-gitlab.example.com/api/v4/mcp"
+    }
+  }
+}
+```
+
+### Enable Beta Features (GitLab 18.4 and earlier)
+
+1. Go to Admin Area > Settings > General
+2. Expand "Model Context Protocol"
+3. Enable "Model Context Protocol Beta"
+4. Save changes
 
 ## Usage
 
@@ -419,13 +428,13 @@ Pipeline #1234 - Status: Running
 3. Check that you have the necessary add-on subscription
 4. Fall back to `gitlab_search` for basic search functionality
 
-### Issue: Node.js Version Error
+### Issue: Authentication Token Expired
 
 **Solution**:
-1. Upgrade to Node.js 20 or higher: `nvm install 20` or `nvm use 20`
-2. Make Node.js 20 available globally
-3. Restart Claude Code after Node.js upgrade
-4. Verify with: `node --version`
+1. Run `/mcp` in Claude Code
+2. Select the GitLab server
+3. Click "Clear authentication" to reset
+4. Re-authenticate through the OAuth flow
 
 ## Philosophy
 
