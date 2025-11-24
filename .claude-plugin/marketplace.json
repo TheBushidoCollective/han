@@ -602,6 +602,13 @@
       "keywords": ["mcp", "gitlab", "git", "issues", "merge-requests", "ci-cd", "devops", "server"]
     },
     {
+      "name": "sensei-github",
+      "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
+      "source": "./sensei/sensei-github",
+      "category": "Teacher",
+      "keywords": ["mcp", "github", "git", "repository", "issues", "pull-requests", "actions", "code-search", "server"]
+    },
+    {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",
