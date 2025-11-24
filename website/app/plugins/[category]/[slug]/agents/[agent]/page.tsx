@@ -99,6 +99,11 @@ export default async function AgentPage({
 		notFound();
 	}
 
+	// Get plugins for sidebar
+	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
+	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
+	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
+
 	const agent = plugin.agents.find((a) => a.name === agentName);
 
 	if (!agent) {
@@ -142,7 +147,7 @@ export default async function AgentPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar />
+					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
