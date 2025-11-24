@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "name": "linear-acceptance-criteria-validation",
+        "description": "Validates completed work against Linear issue acceptance criteria for any issues mentioned in the conversation",
+        "hooks": [
+          {
+            "command": "node",
+            "args": [
+              "-e",
+              "const fs = require('fs'); const issuePattern = /\\b[A-Z]{2,10}-\\d+\\b/g; const context = process.argv.slice(1).join(' '); const issues = [...new Set(context.match(issuePattern) || [])]; if (issues.length === 0) { console.log('No Linear issues found in context'); process.exit(0); } console.log('Found Linear issues:', issues.join(', ')); console.log('\\n⚠️  VALIDATION REQUIRED'); console.log('Before stopping, please validate each issue:'); issues.forEach(issue => { console.log(`  - Use MCP to fetch ${issue} details`); console.log(`  - Review acceptance criteria and requirements`); console.log(`  - Confirm all criteria are met`); }); console.log('\\nAsk Claude: \"Validate that all acceptance criteria for ' + issues.join(', ') + ' are met\"');"
+            ],
+            "showOutput": "always"
+          }
+        ]
+      }
+    ]
+  }
+}

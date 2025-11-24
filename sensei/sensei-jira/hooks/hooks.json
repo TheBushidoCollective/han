@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "name": "jira-acceptance-criteria-validation",
+        "description": "Validates completed work against Jira ticket acceptance criteria for any tickets mentioned in the conversation",
+        "hooks": [
+          {
+            "command": "node",
+            "args": [
+              "-e",
+              "const fs = require('fs'); const ticketPattern = /\\b[A-Z]{2,10}-\\d+\\b/g; const context = process.argv.slice(1).join(' '); const tickets = [...new Set(context.match(ticketPattern) || [])]; if (tickets.length === 0) { console.log('No Jira tickets found in context'); process.exit(0); } console.log('Found Jira tickets:', tickets.join(', ')); console.log('\\n⚠️  VALIDATION REQUIRED'); console.log('Before stopping, please use Claude Code to validate each ticket:'); tickets.forEach(ticket => { console.log(`  - Use MCP to fetch ${ticket} details`); console.log(`  - Review acceptance criteria`); console.log(`  - Confirm all criteria are met`); }); console.log('\\nAsk Claude: \"Validate that all acceptance criteria for ' + tickets.join(', ') + ' are met\"');"
+            ],
+            "showOutput": "always"
+          }
+        ]
+      }
+    ]
+  }
+}
