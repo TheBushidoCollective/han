@@ -10,6 +10,13 @@
   },
   "plugins": [
     {
+      "name": "buki-act",
+      "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
+      "source": "./buki/buki-act",
+      "category": "Weapon",
+      "keywords": ["github-actions", "act", "workflow", "ci-cd", "validation", "local-testing", "docker"]
+    },
+    {
       "name": "buki-ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
       "source": "./buki/buki-ameba",
@@ -581,6 +588,13 @@
       "keywords": ["philosophy", "quality", "testing", "principles"]
     },
     {
+      "name": "sensei-clickup",
+      "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
+      "source": "./sensei/sensei-clickup",
+      "category": "Teacher",
+      "keywords": ["mcp", "clickup", "project-management", "tasks", "acceptance-criteria", "validation", "productivity"]
+    },
+    {
       "name": "sensei-context7",
       "description": "MCP server for library documentation and framework examples.",
       "source": "./sensei/sensei-context7",
@@ -607,6 +621,20 @@
       "source": "./sensei/sensei-github",
       "category": "Teacher",
       "keywords": ["mcp", "github", "git", "repository", "issues", "pull-requests", "actions", "code-search", "server"]
+    },
+    {
+      "name": "sensei-jira",
+      "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
+      "source": "./sensei/sensei-jira",
+      "category": "Teacher",
+      "keywords": ["mcp", "jira", "atlassian", "project-management", "tickets", "acceptance-criteria", "validation"]
+    },
+    {
+      "name": "sensei-linear",
+      "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
+      "source": "./sensei/sensei-linear",
+      "category": "Teacher",
+      "keywords": ["mcp", "linear", "project-management", "issues", "acceptance-criteria", "validation", "workflow"]
     },
     {
       "name": "do-accessibility-engineering",
