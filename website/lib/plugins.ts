@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { getCategoryIcon } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
 
@@ -93,22 +94,8 @@ function getCategoryFromMarketplace(
 	return "buki";
 }
 
-export function getCategoryIcon(
-	category: "bushido" | "buki" | "do" | "sensei",
-): string {
-	switch (category) {
-		case "bushido":
-			return "⛩️";
-		case "buki":
-			return "⚔️";
-		case "do":
-			return "🛤️";
-		case "sensei":
-			return "🏮";
-		default:
-			return "📦";
-	}
-}
+// Re-export getCategoryIcon from constants for convenience
+export { getCategoryIcon } from "./constants";
 
 /**
  * Titleize a string by capitalizing words and replacing hyphens with spaces

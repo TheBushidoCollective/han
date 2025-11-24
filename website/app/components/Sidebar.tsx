@@ -4,7 +4,7 @@ import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SidebarScrollContainer from "./SidebarScrollContainer";
-import { getCategoryIcon } from "../../lib/plugins";
+import { getCategoryIcon } from "../../lib/constants";
 
 interface SidebarProps {
 	bukiPlugins: Array<{ name: string; title: string }>;

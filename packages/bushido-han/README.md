@@ -1,139 +1,105 @@
 # @thebushidocollective/han
 
-Monorepo validation tool and Claude Code plugin installer for Han (bushido) plugins.
+**Sophisticated Claude Code Plugins with Superior Accuracy**
+
+A curated marketplace of Claude Code plugins built on the foundation of the seven Bushido virtues. Master your craft through disciplined practice, quality craftsmanship, and continuous improvement.
 
 ## Installation
-
-### Global Installation
 
 ```bash
 npm install -g @thebushidocollective/han
 ```
 
-### Use with npx (No Installation)
+Or use with npx (no installation required):
 
 ```bash
-npx -y @thebushidocollective/han validate <command>
+npx @thebushidocollective/han <command>
 ```
 
-### Use in Claude Code Hooks
+## Plugin Categories
 
-```json
-{
-  "type": "command",
-  "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with Gemfile bundle exec rspec"
-}
-```
+Han organizes plugins into four categories inspired by Japanese samurai traditions:
+
+- **Bushido** (武士道) - Core principles, enforcement hooks, and foundational quality skills
+- **Do** (道 - The Way) - Specialized agents for development disciplines and practices
+- **Buki** (武器 - Weapons) - Language and tool skills with validation hooks for quality
+- **Sensei** (先生 - Teachers) - MCP servers providing external knowledge and integrations
 
 ## Commands
 
-### install
+### han install
 
-Intelligently analyze your codebase and configure Claude Code with appropriate Han plugins using the Claude Agent SDK.
+Auto-detect and install recommended plugins using AI analysis.
 
 ```bash
-npx @thebushidocollective/han install [--scope <project|local>]
+han install [--scope <project|local>]
+```
+
+This command uses the Claude Agent SDK to analyze your codebase and recommend appropriate plugins based on:
+- Programming languages detected
+- Frameworks and libraries in use
+- Testing tools configured
+- Project structure
+
+### han plugin install
+
+Interactive plugin management.
+
+```bash
+# Interactive mode - browse and select plugins
+han plugin install
+
+# Auto-detect mode - AI analyzes codebase
+han plugin install --auto
+
+# Install specific plugin
+han plugin install <plugin-name>
 ```
 
 **Options:**
-
+- `--auto` - Use AI to auto-detect and recommend plugins
 - `--scope <project|local>` - Installation scope (default: `project`)
   - `project`: Install to `.claude/settings.json` (shared via git)
-  - `local`: Install to `.claude/settings.local.json` (git-ignored, machine-specific)
+  - `local`: Install to `.claude/settings.local.json` (git-ignored)
 
-**How it works:**
+### han plugin uninstall
 
-- Spawns a Claude agent to analyze your codebase
-- Uses Glob, Grep, and Read tools to understand your project
-- Detects languages, frameworks, and testing tools
-- Recommends appropriate Han plugins based on actual code, not just file patterns
-- Displays real-time progress with a beautiful Ink-powered terminal UI
-- Configures Claude Code settings automatically
-
-**What it detects:**
-
-- Programming languages (TypeScript, Python, Go, Rust, Ruby, etc.)
-- Frontend frameworks (React, Vue, Angular, Next.js, etc.)
-- Backend frameworks (NestJS, Django, FastAPI, Rails, etc.)
-- Testing frameworks (Jest, Pytest, RSpec, etc.)
-- GraphQL implementations
-- Monorepo tools (Nx, Turborepo, Lerna)
-
-**After installation:**
-Restart Claude Code to load the new plugins.
-
-**Examples:**
+Remove a specific plugin.
 
 ```bash
-# Install to project settings (default, shared via git)
-npx @thebushidocollective/han install
-
-# Install to local settings (machine-specific, not shared)
-npx @thebushidocollective/han install --scope local
+han plugin uninstall <plugin-name> [--scope <project|local>]
 ```
 
-### align
+### han plugin search
 
-Continuously align your Han plugins with your evolving codebase. Automatically adds plugins for new technologies and removes plugins for technologies no longer in use.
+Search for plugins in the Han marketplace.
 
 ```bash
-npx @thebushidocollective/han align [--scope <project|local>]
+han plugin search [query]
 ```
 
-**Options:**
+### han align
 
-- `--scope <project|local>` - Alignment scope (optional, auto-detects if not specified)
-  - `project`: Align plugins in `.claude/settings.json` (shared via git)
-  - `local`: Align plugins in `.claude/settings.local.json` (git-ignored, machine-specific)
-  - If not specified, automatically detects which scope(s) have Han installed and aligns those
-  - If Han is installed in both scopes, aligns both
-  - If Han is not installed anywhere, defaults to `project`
+Re-analyze your codebase and sync plugins with current state. Adds new plugins for detected technologies and removes plugins for technologies no longer in use.
 
-**How it works:**
-
-- Re-analyzes your codebase to detect current technologies
-- Compares detected plugins with currently installed plugins
-- **Adds** plugins for newly detected technologies
-- **Removes** plugins for technologies no longer found
-- Reports all changes clearly
+```bash
+han align [--scope <project|local>]
+```
 
 **When to use:**
-
 - After adding new dependencies or frameworks
 - After removing technologies from your project
-- Periodically to keep plugins in sync with your codebase
-- Automatically via Stop and PreCompact hooks (see below)
+- Periodically to keep plugins in sync
 
-**Automatic Alignment:**
+### han uninstall
 
-The bushido plugin includes hooks that automatically run `han align`:
-- **Stop hook**: Runs at the end of each Claude Code session
-- **PreCompact hook**: Runs before compacting conversation history
-
-This ensures your plugins stay synchronized with your codebase as it evolves.
-
-**Examples:**
+Remove all Han plugins and marketplace configuration.
 
 ```bash
-# Auto-detect and align all scopes where Han is installed
-npx @thebushidocollective/han align
-
-# Explicitly align project settings only
-npx @thebushidocollective/han align --scope project
-
-# Explicitly align local settings only
-npx @thebushidocollective/han align --scope local
+han uninstall
 ```
 
-### uninstall
-
-Remove all Han plugins and marketplace configuration from Claude Code.
-
-```bash
-npx @thebushidocollective/han uninstall
-```
-
-### validate
+### han validate
 
 Run validation commands across monorepo packages.
 
@@ -141,137 +107,57 @@ Run validation commands across monorepo packages.
 han validate [options] <command>
 ```
 
-#### Options
-
+**Options:**
 - `--fail-fast` - Stop on first failure
 - `--dirs-with <file>` - Only run in directories containing the specified file
 
-#### Examples
-
-Run RSpec tests in all directories with a Gemfile:
+**Examples:**
 
 ```bash
-han validate --fail-fast --dirs-with Gemfile bundle exec rspec
-```
-
-Run npm test in all directories with package.json:
-
-```bash
+# Run tests in all directories with package.json
 han validate --dirs-with package.json npm test
-```
 
-Run go test in all directories:
+# Run RSpec in all directories with Gemfile
+han validate --fail-fast --dirs-with Gemfile bundle exec rspec
 
-```bash
+# Run go tests everywhere
 han validate go test ./...
 ```
 
-## Exit Codes
+## Usage in Claude Code Hooks
 
-- `0` - All validations passed
-- `1` - Invalid usage or no directories found
-- `2` - One or more validations failed
-
-## How It Works
-
-1. **Auto-discovers directories** - Uses git to find tracked directories,
-   falls back to filesystem scan
-2. **Filters by marker files** - Only runs in directories containing
-   the specified file (e.g., `Gemfile`, `package.json`)
-3. **Runs command in each** - Executes the command in each matching
-   directory
-4. **Reports failures** - Shows which directories failed with clear
-   error messages
-5. **Exits with code 2** - Hard failure prevents Claude from bypassing
-   validation
-
-## Use Cases
-
-### Monorepo Testing
-
-Run tests across all packages in a monorepo:
-
-```bash
-# JavaScript/TypeScript packages
-npx -y @thebushidocollective/han validate --dirs-with package.json npm test
-
-# Ruby packages
-npx -y @thebushidocollective/han validate --dirs-with Gemfile bundle exec rspec
-
-# Go modules
-npx -y @thebushidocollective/han validate --dirs-with go.mod go test ./...
-
-# Python packages
-npx -y @thebushidocollective/han validate --dirs-with pyproject.toml pytest
-```
-
-### Claude Code Hooks
-
-Perfect for enforcing quality in Claude Code plugins:
+Use han validate in Claude Code hooks for quality enforcement:
 
 ```json
 {
   "hooks": {
     "Stop": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test || (echo 'Please fix failing tests before continuing:\\n'; exit 2)"
-          }
-        ]
+        "type": "command",
+        "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test"
       }
     ]
   }
 }
 ```
 
-## Development
+## Exit Codes
 
-This package is written in TypeScript and uses React (via Ink) for the terminal UI.
+- `0` - Success
+- `1` - Invalid usage or no directories found
+- `2` - One or more validations failed
 
-### Prerequisites
+## Philosophy
 
-- Node.js >= 24
-- TypeScript 5.9+
+> "Beginning is easy - continuing is hard." - Japanese Proverb
 
-### Building
+Walk the way of Bushido. Practice with Discipline. Build with Honor.
 
-The build process compiles TypeScript to ES modules:
+## Links
 
-```bash
-npm run build       # Compile TypeScript to dist/
-npm run typecheck   # Type-check without emitting
-```
-
-The compiled output is in `dist/` and is what gets published to npm.
-
-### Testing
-
-Tests run against the compiled JavaScript:
-
-```bash
-npm test            # Run tests from dist/test/
-```
-
-### Linting
-
-```bash
-npm run lint        # Check for issues
-npm run lint:fix    # Auto-fix issues
-```
-
-### UI Development
-
-The install command uses [Ink](https://github.com/vadimdemedes/ink) for a rich terminal UI experience. The UI components are in:
-
-- `lib/install-progress.tsx` - Main UI component
-- `lib/install.ts` - Integration with Claude Agent SDK
-
-## Contributing
-
-See [RELEASING.md](RELEASING.md) for information on publishing new
-versions.
+- [Han Marketplace](https://han.thebushido.co)
+- [GitHub](https://github.com/thebushidocollective/han)
+- [The Bushido Collective](https://thebushido.co)
 
 ## License
 
