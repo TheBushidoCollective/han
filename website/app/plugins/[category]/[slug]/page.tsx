@@ -346,7 +346,7 @@ export default async function PluginPage({
 						</nav>
 
 						{/* Installation */}
-						<section id="installation" className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+						<section id="installation" className="scroll-mt-32 mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
 							<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
 								Installation
 							</h2>
@@ -355,7 +355,7 @@ export default async function PluginPage({
 
 						{/* README Section */}
 						{plugin.readme && (
-							<section id="overview" className="mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
+							<section id="overview" className="scroll-mt-32 mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
 								<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
 									<ReactMarkdown remarkPlugins={[remarkGfm]}>
 										{plugin.readme.replace(/^\s*#\s+.+/, '# Overview')}
@@ -366,7 +366,7 @@ export default async function PluginPage({
 
 						{/* MCP Servers Section */}
 						{plugin.mcpServers.length > 0 && (
-							<section id="mcp-servers" className="mb-12">
+							<section id="mcp-servers" className="scroll-mt-32 mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									MCP Servers
 								</h2>
@@ -412,7 +412,7 @@ export default async function PluginPage({
 
 						{/* Agents Section */}
 						{plugin.agents.length > 0 && (
-							<section id="agents" className="mb-12">
+							<section id="agents" className="scroll-mt-32 mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Agents
 								</h2>
@@ -442,7 +442,7 @@ export default async function PluginPage({
 
 						{/* Commands Section */}
 						{plugin.commands.length > 0 && (
-							<section id="commands" className="mb-12">
+							<section id="commands" className="scroll-mt-32 mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Commands
 								</h2>
@@ -472,7 +472,7 @@ export default async function PluginPage({
 
 						{/* Skills Section */}
 						{plugin.skills.length > 0 && (
-							<section id="skills" className="mb-12">
+							<section id="skills" className="scroll-mt-32 mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Skills
 								</h2>
@@ -502,7 +502,7 @@ export default async function PluginPage({
 
 						{/* Hooks Section */}
 						{plugin.hooks.length > 0 && (
-							<section id="hooks" className="mb-12">
+							<section id="hooks" className="scroll-mt-32 mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Hooks
 								</h2>
