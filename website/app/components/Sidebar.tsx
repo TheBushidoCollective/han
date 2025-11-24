@@ -1,14 +1,38 @@
-import Link from "next/link";
-import { getAllPlugins } from "../../lib/plugins";
+"use client";
 
-export default function Sidebar() {
-	const bukiPlugins = getAllPlugins("buki");
-	const doPlugins = getAllPlugins("do");
-	const senseiPlugins = getAllPlugins("sensei");
+import type React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import SidebarScrollContainer from "./SidebarScrollContainer";
+
+interface SidebarProps {
+	bukiPlugins: Array<{ name: string; title: string }>;
+	doPlugins: Array<{ name: string; title: string }>;
+	senseiPlugins: Array<{ name: string; title: string }>;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins }) => {
+	const pathname = usePathname();
+
+	const isActive = (href: string) => {
+		return pathname === href || pathname?.startsWith(`${href}/`);
+	};
+
+	const getLinkClass = (href: string) => {
+		return isActive(href)
+			? "block text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+			: "block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300";
+	};
+
+	const getSubLinkClass = (href: string) => {
+		return isActive(href)
+			? "block text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold"
+			: "block text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200";
+	};
 
 	return (
 		<aside className="hidden lg:block w-64 shrink-0">
-			<div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2 scrollbar-custom">
+			<SidebarScrollContainer>
 				<nav className="space-y-6">
 					{/* Search */}
 					<div>
@@ -39,7 +63,7 @@ export default function Sidebar() {
 					<div>
 						<Link
 							href="/plugins"
-							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300"
+							className={`${getLinkClass("/plugins")} mb-2`}
 						>
 							Overview
 						</Link>
@@ -49,11 +73,11 @@ export default function Sidebar() {
 					<div>
 						<Link
 							href="/plugins/bushido"
-							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 mb-2"
+							className={`${getLinkClass("/plugins/bushido")} mb-2`}
 						>
 							🎯 Bushido
 						</Link>
-						<p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Core philosophy and quality principles
 						</p>
 					</div>
@@ -62,11 +86,11 @@ export default function Sidebar() {
 					<div>
 						<Link
 							href="/plugins/do"
-							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 mb-2"
+							className={`${getLinkClass("/plugins/do")} mb-2`}
 						>
 							🛤️ Dō
 						</Link>
-						<p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Specialized development disciplines
 						</p>
 						<ul className="space-y-1 ml-4">
@@ -74,7 +98,7 @@ export default function Sidebar() {
 								<li key={plugin.name}>
 									<Link
 										href={`/plugins/do/${plugin.name}`}
-										className="block text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+										className={getSubLinkClass(`/plugins/do/${plugin.name}`)}
 									>
 										{plugin.title}
 									</Link>
@@ -87,11 +111,11 @@ export default function Sidebar() {
 					<div>
 						<Link
 							href="/plugins/buki"
-							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 mb-2"
+							className={`${getLinkClass("/plugins/buki")} mb-2`}
 						>
 							⚔️ Buki
 						</Link>
-						<p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Technology skills and validations
 						</p>
 						<ul className="space-y-1 ml-4">
@@ -99,7 +123,7 @@ export default function Sidebar() {
 								<li key={plugin.name}>
 									<Link
 										href={`/plugins/buki/${plugin.name}`}
-										className="block text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+										className={getSubLinkClass(`/plugins/buki/${plugin.name}`)}
 									>
 										{plugin.title}
 									</Link>
@@ -112,11 +136,11 @@ export default function Sidebar() {
 					<div>
 						<Link
 							href="/plugins/sensei"
-							className="block text-sm font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 mb-2"
+							className={`${getLinkClass("/plugins/sensei")} mb-2`}
 						>
 							👴 Sensei
 						</Link>
-						<p className="text-xs text-gray-500 dark:text-gray-400 ml-4 mb-2">
+						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							MCP servers for external integrations
 						</p>
 						<ul className="space-y-1 ml-4">
@@ -124,7 +148,7 @@ export default function Sidebar() {
 								<li key={plugin.name}>
 									<Link
 										href={`/plugins/sensei/${plugin.name}`}
-										className="block text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+										className={getSubLinkClass(`/plugins/sensei/${plugin.name}`)}
 									>
 										{plugin.title}
 									</Link>
@@ -133,7 +157,9 @@ export default function Sidebar() {
 						</ul>
 					</div>
 				</nav>
-			</div>
+			</SidebarScrollContainer>
 		</aside>
 	);
-}
+};
+
+export default Sidebar;
