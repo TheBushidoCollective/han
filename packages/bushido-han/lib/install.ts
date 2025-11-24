@@ -17,6 +17,7 @@ interface PluginChanges {
 
 /**
  * Sync plugins to Claude settings - adds selected and removes deselected
+ * Note: "bushido" is always installed and cannot be removed
  */
 function syncPluginsToSettings(
 	selectedPlugins: string[],
@@ -29,6 +30,9 @@ function syncPluginsToSettings(
 	const added: string[] = [];
 	const removed: string[] = [];
 
+	// Always include bushido
+	const pluginsToInstall = [...new Set(["bushido", ...selectedPlugins])];
+
 	// Add Han marketplace to extraMarketplaces
 	if (!settings?.extraKnownMarketplaces?.han) {
 		settings.extraKnownMarketplaces = {
@@ -38,7 +42,7 @@ function syncPluginsToSettings(
 	}
 
 	// Add newly selected plugins
-	for (const plugin of selectedPlugins) {
+	for (const plugin of pluginsToInstall) {
 		if (!currentPlugins.includes(plugin)) {
 			added.push(plugin);
 		}
@@ -48,9 +52,9 @@ function syncPluginsToSettings(
 		};
 	}
 
-	// Remove deselected plugins
+	// Remove deselected plugins (but never bushido)
 	for (const plugin of currentPlugins) {
-		if (!selectedPlugins.includes(plugin)) {
+		if (plugin !== "bushido" && !selectedPlugins.includes(plugin)) {
 			removed.push(plugin);
 			if (settings.enabledPlugins) {
 				delete settings.enabledPlugins[`${plugin}@han`];
