@@ -173,6 +173,25 @@
     ]
   },
   {
+    "id": "buki-bun",
+    "name": "buki-bun",
+    "description": "Validation and quality enforcement for Bun.js projects.",
+    "category": "buki",
+    "tags": [
+      "bun",
+      "validation",
+      "javascript",
+      "typescript",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/buki/buki-bun",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "bushido",
     "name": "bushido",
     "description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
@@ -561,6 +580,27 @@
     ]
   },
   {
+    "id": "buki-expo",
+    "name": "buki-expo",
+    "description": "Validation and quality enforcement for Expo React Native projects.",
+    "category": "buki",
+    "tags": [
+      "expo",
+      "react-native",
+      "validation",
+      "mobile",
+      "ios",
+      "android",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/buki/buki-expo",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "buki-fastapi",
     "name": "buki-fastapi",
     "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
@@ -640,6 +680,26 @@
     "components": [
       "skill",
       "hook"
+    ]
+  },
+  {
+    "id": "sensei-gitlab",
+    "name": "sensei-gitlab",
+    "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
+    "category": "sensei",
+    "tags": [
+      "mcp",
+      "gitlab",
+      "git",
+      "issues",
+      "merge-requests",
+      "ci-cd",
+      "devops",
+      "server"
+    ],
+    "path": "/plugins/sensei/sensei-gitlab",
+    "components": [
+      "command"
     ]
   },
   {
@@ -1328,6 +1388,26 @@
     "path": "/plugins/buki/buki-react",
     "components": [
       "skill"
+    ]
+  },
+  {
+    "id": "buki-react-native",
+    "name": "buki-react-native",
+    "description": "Validation and quality enforcement for React Native projects.",
+    "category": "buki",
+    "tags": [
+      "react-native",
+      "validation",
+      "mobile",
+      "ios",
+      "android",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/buki/buki-react-native",
+    "components": [
+      "skill",
+      "hook"
     ]
   },
   {

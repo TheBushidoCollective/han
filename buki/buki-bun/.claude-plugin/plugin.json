@@ -1,0 +1,20 @@
+{
+  "name": "buki-bun",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for Bun.js projects.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "bun",
+    "validation",
+    "javascript",
+    "typescript",
+    "quality",
+    "enforcement"
+  ]
+}

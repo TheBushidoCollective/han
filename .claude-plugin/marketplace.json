@@ -70,6 +70,20 @@
       ]
     },
     {
+      "name": "buki-bun",
+      "description": "Validation and quality enforcement for Bun.js projects with runtime, testing, bundler, package manager, and SQLite skills.",
+      "source": "./buki/buki-bun",
+      "category": "Weapon",
+      "keywords": [
+        "bun",
+        "javascript",
+        "typescript",
+        "runtime",
+        "testing",
+        "bundler"
+      ]
+    },
+    {
       "name": "buki-c",
       "description": "Advanced C programming skills for systems programming and memory management",
       "source": "./buki/buki-c",
@@ -193,6 +207,13 @@
       "source": "./buki/buki-eslint",
       "category": "Weapon",
       "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
+    },
+    {
+      "name": "buki-expo",
+      "description": "Validation and quality enforcement for Expo React Native projects with config, router, modules, updates, and build skills.",
+      "source": "./buki/buki-expo",
+      "category": "Weapon",
+      "keywords": ["expo", "react-native", "mobile", "ios", "android"]
     },
     {
       "name": "buki-fastapi",
@@ -430,6 +451,13 @@
       "keywords": ["react", "hooks", "performance", "skill"]
     },
     {
+      "name": "buki-react-native",
+      "description": "Validation and quality enforcement for React Native mobile applications with components, navigation, styling, and native modules.",
+      "source": "./buki/buki-react-native",
+      "category": "Weapon",
+      "keywords": ["react-native", "mobile", "ios", "android", "native"]
+    },
+    {
       "name": "buki-relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./buki/buki-relay",
@@ -565,6 +593,13 @@
       "source": "./sensei/sensei-playwright-mcp",
       "category": "Teacher",
       "keywords": ["mcp", "playwright", "testing", "automation", "server"]
+    },
+    {
+      "name": "sensei-gitlab",
+      "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
+      "source": "./sensei/sensei-gitlab",
+      "category": "Teacher",
+      "keywords": ["mcp", "gitlab", "git", "issues", "merge-requests", "ci-cd", "devops", "server"]
     },
     {
       "name": "do-accessibility-engineering",

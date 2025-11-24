@@ -93,7 +93,7 @@ function getCategoryFromMarketplace(
 	return "buki";
 }
 
-function getCategoryIcon(
+export function getCategoryIcon(
 	category: "bushido" | "buki" | "do" | "sensei",
 ): string {
 	switch (category) {

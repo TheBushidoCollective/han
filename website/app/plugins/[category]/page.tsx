@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllPlugins } from "../../../lib/plugins";
+import { getAllPlugins, getCategoryIcon } from "../../../lib/plugins";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
 
@@ -18,28 +18,24 @@ const categoryData = {
 	bushido: {
 		title: "Bushido",
 		subtitle: "武士道 - The Way of the Warrior",
-		icon: "⛩️",
 		description:
 			"Core principles and best practices for software development. These skills embody the fundamental disciplines that guide exceptional engineering.",
 	},
 	buki: {
 		title: "Buki",
 		subtitle: "武器 - Weapons",
-		icon: "⚔️",
 		description:
 			"Language and tool skills with validation hooks for maintaining quality. Each Buki plugin provides specialized knowledge for a specific programming language, framework, or development tool.",
 	},
 	do: {
 		title: "Dō",
 		subtitle: "道 - The Way",
-		icon: "🛤️",
 		description:
 			"Specialized discipline agents for focused expertise areas. Each Dō plugin contains agents that embody specific engineering disciplines and methodologies.",
 	},
 	sensei: {
 		title: "Sensei",
 		subtitle: "先生 - Teacher",
-		icon: "👴",
 		description:
 			"MCP servers that extend Claude Code's capabilities. These plugins integrate external services and tools to enhance Claude's abilities.",
 	},
@@ -78,6 +74,7 @@ export default async function CategoryPage({
 
 	const categoryKey = category as keyof typeof categoryData;
 	const categoryInfo = categoryData[categoryKey];
+	const categoryIcon = getCategoryIcon(categoryKey);
 	const plugins = getAllPlugins(categoryKey);
 
 	// Get plugins for sidebar
@@ -112,7 +109,7 @@ export default async function CategoryPage({
 					<main className="flex-1 min-w-0">
 						<div className="mb-12">
 							<div className="flex items-center space-x-4 mb-4">
-								<div className="text-6xl">{categoryInfo.icon}</div>
+								<div className="text-6xl">{categoryIcon}</div>
 								<div>
 									<h1 className="text-5xl font-bold text-gray-900 dark:text-white">
 										{categoryInfo.title}
@@ -138,7 +135,7 @@ export default async function CategoryPage({
 										{plugins.length}
 									</p>
 								</div>
-								<div className="text-5xl">{categoryInfo.icon}</div>
+								<div className="text-5xl">{categoryIcon}</div>
 							</div>
 						</div>
 

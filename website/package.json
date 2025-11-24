@@ -10,7 +10,8 @@
 		"export": "next build && next export",
 		"test": "playwright test",
 		"test:headed": "playwright test --headed",
-		"test:debug": "playwright test --debug"
+		"test:debug": "playwright test --debug",
+		"test:unit": "tsx lib/search-utils.test.ts"
 	},
 	"dependencies": {
 		"fuse.js": "7.1.0",

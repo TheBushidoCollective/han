@@ -30,7 +30,7 @@ export default function RelatedPlugins({ plugins }: RelatedPluginsProps) {
 							<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
 								{plugin.name}
 							</h3>
-							<span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+							<span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded capitalize">
 								{plugin.category}
 							</span>
 						</div>

@@ -4,6 +4,7 @@ import Fuse from "fuse.js";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { hasComponent, parseQuery, type ParsedQuery } from "@/lib/search-utils";
 
 interface SearchResult {
 	id: string;
@@ -17,61 +18,6 @@ interface SearchResult {
 
 interface SearchResultsProps {
 	index: SearchResult[];
-}
-
-interface ParsedQuery {
-	textQuery: string;
-	tagFilters: string[];
-	componentFilters: string[];
-	categoryFilters: string[];
-}
-
-function parseQuery(query: string): ParsedQuery {
-	const parsed: ParsedQuery = {
-		textQuery: "",
-		tagFilters: [],
-		componentFilters: [],
-		categoryFilters: [],
-	};
-
-	// Split query into parts
-	const parts = query.split(/\s+/);
-	const textParts: string[] = [];
-
-	for (const part of parts) {
-		// Check for tag: or tags:
-		const tagMatch = part.match(/^tags?:(.+)$/i);
-		if (tagMatch) {
-			parsed.tagFilters.push(...tagMatch[1].split(","));
-			continue;
-		}
-
-		// Check for component: or components:
-		const componentMatch = part.match(/^components?:(.+)$/i);
-		if (componentMatch) {
-			parsed.componentFilters.push(...componentMatch[1].split(","));
-			continue;
-		}
-
-		// Check for category: or categories:
-		const categoryMatch = part.match(/^categor(?:y|ies):(.+)$/i);
-		if (categoryMatch) {
-			parsed.categoryFilters.push(...categoryMatch[1].split(","));
-			continue;
-		}
-
-		// Regular text query
-		textParts.push(part);
-	}
-
-	parsed.textQuery = textParts.join(" ").trim();
-	return parsed;
-}
-
-function hasComponent(result: SearchResult, component: string): boolean {
-	return result.components
-		.map((c) => c.toLowerCase())
-		.includes(component.toLowerCase());
 }
 
 export default function SearchResults({ index }: SearchResultsProps) {
@@ -120,7 +66,9 @@ export default function SearchResults({ index }: SearchResultsProps) {
 		// Apply component filters
 		if (parsed.componentFilters.length > 0) {
 			filteredResults = filteredResults.filter((result) =>
-				parsed.componentFilters.some((comp) => hasComponent(result, comp)),
+				parsed.componentFilters.some((comp) =>
+					hasComponent(result.components, comp),
+				),
 			);
 		}
 
