@@ -227,14 +227,6 @@ Once installed, this buki automatically validates your {technology} code:
 - {Technology} {minimum version}
 - {Any required tools or dependencies}
 
-## Philosophy
-
-This buki embodies the Bushido virtues:
-
-- **Integrity (誠 - Makoto)**: Ensures code meets quality standards
-- **Respect (礼 - Rei)**: Validates work thoroughly
-- **Courage (勇 - Yū)**: Fails fast when issues are found
-
 ## Contributing
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.

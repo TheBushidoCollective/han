@@ -110,14 +110,6 @@ Expo is a framework and platform for React Native that makes mobile development 
 - App store submission
 - Build monitoring
 
-## Philosophy
-
-This buki embodies the Bushido virtues:
-
-- **Integrity (誠 - Makoto)**: Ensures code meets quality standards through type checking
-- **Respect (礼 - Rei)**: Validates work thoroughly for all platforms
-- **Courage (勇 - Yū)**: Fails fast when issues are found to maintain quality
-
 ## Quick Start Examples
 
 ### Create New Expo App

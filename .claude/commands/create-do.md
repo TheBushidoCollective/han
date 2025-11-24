@@ -338,14 +338,6 @@ Please spawn a {agent-name} agent to help with {specific task}
 2. {Step 2}
 3. {Step 3}
 
-## Philosophy
-
-This dō embodies the Bushido virtues:
-
-- **{Virtue 1} ({Japanese} - {Romanization})**: {How this discipline demonstrates this virtue}
-- **{Virtue 2} ({Japanese} - {Romanization})**: {How this discipline demonstrates this virtue}
-- **{Virtue 3} ({Japanese} - {Romanization})**: {How this discipline demonstrates this virtue}
-
 ## Learning Path
 
 ### Shu (守) - Follow
