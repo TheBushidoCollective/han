@@ -15,7 +15,7 @@ export default function RelatedPlugins({ plugins }: RelatedPluginsProps) {
 	if (plugins.length === 0) return null;
 
 	return (
-		<section className="mt-12 pt-12 border-t border-gray-200 dark:border-gray-700">
+		<section id="related" className="mt-12 pt-12 border-t border-gray-200 dark:border-gray-700">
 			<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 				Related Plugins
 			</h2>

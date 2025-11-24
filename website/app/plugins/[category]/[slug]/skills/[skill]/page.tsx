@@ -163,9 +163,9 @@ export default async function SkillPage({
 						<br />
 
 						{/* Markdown Content */}
-						<div className="prose prose-lg dark:prose-invert max-w-none">
+						<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>
-								{skill.content}
+								{skill.content.replace(/^\s*#\s+.+/, '# Overview')}
 							</ReactMarkdown>
 						</div>
 					</main>
