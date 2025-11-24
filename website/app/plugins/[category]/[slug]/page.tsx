@@ -112,9 +112,9 @@ export default async function PluginPage({
 	}
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki");
-	const doPlugins = getAllPlugins("do");
-	const senseiPlugins = getAllPlugins("sensei");
+	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
+	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
+	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
 
 	// Load plugin metadata for tags
 	const pluginJsonPath = path.join(
