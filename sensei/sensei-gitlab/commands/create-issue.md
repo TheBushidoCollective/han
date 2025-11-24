@@ -1,3 +1,7 @@
+---
+description: Create a new issue in a GitLab project
+---
+
 # Create GitLab Issue
 
 Create a new issue in a GitLab project with title, description, and labels.

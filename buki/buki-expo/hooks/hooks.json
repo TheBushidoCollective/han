@@ -1,18 +1,28 @@
 {
-  "Stop": [
-    {
-      "name": "expo-type-check",
-      "description": "Validates TypeScript types in Expo projects before stopping",
-      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with app.json npx tsc --noEmit",
-      "showOutput": "on-error"
-    }
-  ],
-  "SubagentStop": [
-    {
-      "name": "expo-type-check",
-      "description": "Validates TypeScript types in Expo projects when agents complete",
-      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with app.json npx tsc --noEmit",
-      "showOutput": "on-error"
-    }
-  ]
+	"hooks": {
+		"Stop": [
+			{
+				"name": "expo-type-check",
+				"description": "Validates TypeScript types in Expo projects before stopping",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with app.json npx tsc --noEmit"
+					}
+				]
+			}
+		],
+		"SubagentStop": [
+			{
+				"name": "expo-type-check",
+				"description": "Validates TypeScript types in Expo projects when agents complete",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with app.json npx tsc --noEmit"
+					}
+				]
+			}
+		]
+	}
 }
