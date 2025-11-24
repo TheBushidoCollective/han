@@ -23,7 +23,7 @@ export default function SidebarScrollContainer({
 			if (scrollContainerRef.current) {
 				sessionStorage.setItem(
 					"sidebarScrollPos",
-					scrollContainerRef.current.scrollTop.toString()
+					scrollContainerRef.current.scrollTop.toString(),
 				);
 			}
 		};

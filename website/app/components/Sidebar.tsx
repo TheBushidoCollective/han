@@ -12,7 +12,11 @@ interface SidebarProps {
 	senseiPlugins: Array<{ name: string; title: string }>;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+	bukiPlugins,
+	doPlugins,
+	senseiPlugins,
+}) => {
 	const pathname = usePathname();
 
 	const isActive = (href: string) => {
@@ -149,7 +153,9 @@ const Sidebar: React.FC<SidebarProps> = ({ bukiPlugins, doPlugins, senseiPlugins
 								<li key={plugin.name}>
 									<Link
 										href={`/plugins/sensei/${plugin.name}`}
-										className={getSubLinkClass(`/plugins/sensei/${plugin.name}`)}
+										className={getSubLinkClass(
+											`/plugins/sensei/${plugin.name}`,
+										)}
 									>
 										{plugin.title}
 									</Link>

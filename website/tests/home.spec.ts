@@ -14,21 +14,15 @@ test.describe("Home Page", () => {
 
 	test("should have navigation links", async ({ page }) => {
 		await page.goto("/");
-		const docsLink = page.getByRole("link", { name: /docs/i });
 		const pluginsLink = page.getByRole("link", { name: /plugins/i });
-		await expect(docsLink).toBeVisible();
-		await expect(pluginsLink).toBeVisible();
-	});
-
-	test("should navigate to docs page", async ({ page }) => {
-		await page.goto("/");
-		await page.getByRole("link", { name: /docs/i }).click();
-		await expect(page).toHaveURL(/\/docs/);
+		const githubLink = page.getByRole("link", { name: /github/i });
+		await expect(pluginsLink.first()).toBeVisible();
+		await expect(githubLink.first()).toBeVisible();
 	});
 
 	test("should navigate to plugins page", async ({ page }) => {
 		await page.goto("/");
-		await page.getByRole("link", { name: /plugins/i }).click();
-		await expect(page).toHaveURL(/#plugins/);
+		await page.locator("header").getByRole("link", { name: /plugins/i }).click();
+		await expect(page).toHaveURL(/\/plugins/);
 	});
 });
