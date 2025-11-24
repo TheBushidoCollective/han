@@ -21,7 +21,7 @@ export default function Header() {
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(-1);
-	const [searchIndex, setSearchIndex] = useState<SearchResult[]>([]);
+	const [_searchIndex, setSearchIndex] = useState<SearchResult[]>([]);
 	const searchRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const fuse = useRef<Fuse<SearchResult> | null>(null);
