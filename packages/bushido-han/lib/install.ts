@@ -63,6 +63,12 @@ function syncPluginsToSettings(
 	return { added, removed };
 }
 
+interface InstallResult {
+	plugins?: string[];
+	cancelled?: boolean;
+	error?: Error;
+}
+
 /**
  * SDK-based auto-detect install command with Ink UI
  */
@@ -72,13 +78,10 @@ export async function install(
 	// Import Ink UI component dynamically to avoid issues with React
 	const { InstallInteractive } = await import("./install-interactive.js");
 
-	let resolveCompletion: (() => void) | undefined;
-	let rejectCompletion: ((error: Error) => void) | undefined;
-	let wasCancelled = false;
+	let resolveCompletion: ((result: InstallResult) => void) | undefined;
 
-	const completionPromise = new Promise<void>((resolve, reject) => {
+	const completionPromise = new Promise<InstallResult>((resolve) => {
 		resolveCompletion = resolve;
-		rejectCompletion = reject;
 	});
 
 	const filename = scope === "local" ? "settings.local.json" : "settings.json";
@@ -89,38 +92,37 @@ export async function install(
 			detectPlugins: detectPluginsWithAgent,
 			fetchMarketplace,
 			onInstallComplete: (plugins: string[]) => {
-				const { added, removed } = syncPluginsToSettings(plugins, scope);
-				if (added.length > 0) {
-					console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
-				}
-				if (removed.length > 0) {
-					console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
-				}
-				if (added.length === 0 && removed.length === 0) {
-					console.log("\n✓ No changes made");
-				}
-				console.log("\n⚠️  Please restart Claude Code to load the new plugins");
-				if (resolveCompletion) resolveCompletion();
+				if (resolveCompletion) resolveCompletion({ plugins });
 			},
 			onInstallError: (error: Error) => {
-				if (rejectCompletion) rejectCompletion(error);
+				if (resolveCompletion) resolveCompletion({ error });
 			},
 			onCancel: () => {
-				wasCancelled = true;
-				console.log("\n⚠️  Installation cancelled");
-				if (resolveCompletion) resolveCompletion();
+				if (resolveCompletion) resolveCompletion({ cancelled: true });
 			},
 		}),
 	);
 
-	try {
-		await completionPromise;
-		// Wait a moment for the UI to show completion message
-		if (!wasCancelled) {
-			await new Promise((resolve) => setTimeout(resolve, 1500));
+	const result = await completionPromise;
+	unmount();
+
+	// Show results after UI is cleared
+	if (result.error) {
+		throw result.error;
+	} else if (result.cancelled) {
+		console.log("\n⚠️  Installation cancelled");
+	} else if (result.plugins) {
+		const { added, removed } = syncPluginsToSettings(result.plugins, scope);
+		if (added.length > 0) {
+			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
 		}
-	} finally {
-		unmount();
+		if (removed.length > 0) {
+			console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+		}
+		if (added.length === 0 && removed.length === 0) {
+			console.log("\n✓ No changes made");
+		}
+		console.log("\n⚠️  Please restart Claude Code to load the new plugins");
 	}
 }
 
@@ -132,10 +134,9 @@ export async function installInteractive(
 ): Promise<void> {
 	const { PluginSelector } = await import("./plugin-selector.js");
 
-	let resolveCompletion: (() => void) | undefined;
-	let wasCancelled = false;
+	let resolveCompletion: ((result: { plugins?: string[]; cancelled?: boolean }) => void) | undefined;
 
-	const completionPromise = new Promise<void>((resolve) => {
+	const completionPromise = new Promise<{ plugins?: string[]; cancelled?: boolean }>((resolve) => {
 		resolveCompletion = resolve;
 	});
 
@@ -157,33 +158,31 @@ export async function installInteractive(
 			detectedPlugins: installedPlugins,
 			allPlugins,
 			onComplete: (plugins: string[]) => {
-				const { added, removed } = syncPluginsToSettings(plugins, scope);
-				if (added.length > 0) {
-					console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
-				}
-				if (removed.length > 0) {
-					console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
-				}
-				if (added.length === 0 && removed.length === 0) {
-					console.log("\n✓ No changes made");
-				}
-				console.log("\n⚠️  Please restart Claude Code to load the new plugins");
-				if (resolveCompletion) resolveCompletion();
+				if (resolveCompletion) resolveCompletion({ plugins });
 			},
 			onCancel: () => {
-				wasCancelled = true;
-				console.log("\n⚠️  Installation cancelled");
-				if (resolveCompletion) resolveCompletion();
+				if (resolveCompletion) resolveCompletion({ cancelled: true });
 			},
 		}),
 	);
 
-	try {
-		await completionPromise;
-		if (!wasCancelled) {
-			await new Promise((resolve) => setTimeout(resolve, 500));
+	const result = await completionPromise;
+	unmount();
+
+	// Show results after UI is cleared
+	if (result.cancelled) {
+		console.log("\n⚠️  Installation cancelled");
+	} else if (result.plugins) {
+		const { added, removed } = syncPluginsToSettings(result.plugins, scope);
+		if (added.length > 0) {
+			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
 		}
-	} finally {
-		unmount();
+		if (removed.length > 0) {
+			console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+		}
+		if (added.length === 0 && removed.length === 0) {
+			console.log("\n✓ No changes made");
+		}
+		console.log("\n⚠️  Please restart Claude Code to load the new plugins");
 	}
 }

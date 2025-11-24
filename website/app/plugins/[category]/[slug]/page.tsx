@@ -266,6 +266,14 @@ export default async function PluginPage({
 							</div>
 						</div>
 
+						{/* Installation */}
+						<section className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+							<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+								Installation
+							</h2>
+							<InstallationTabs pluginName={plugin.metadata.name} />
+						</section>
+
 						{/* README Section */}
 						{plugin.readme && (
 							<section className="mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
@@ -276,14 +284,6 @@ export default async function PluginPage({
 								</div>
 							</section>
 						)}
-
-						{/* Installation */}
-						<section className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-							<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-								Installation
-							</h2>
-							<InstallationTabs pluginName={plugin.metadata.name} />
-						</section>
 
 						{/* MCP Servers Section */}
 						{plugin.mcpServers.length > 0 && (
