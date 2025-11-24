@@ -266,8 +266,79 @@ export default async function PluginPage({
 							</div>
 						</div>
 
+						{/* Jump to Menu */}
+						<nav className="mb-8 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+							<p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">
+								Jump to:
+							</p>
+							<div className="flex flex-wrap gap-2">
+								<a
+									href="#installation"
+									className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+								>
+									Installation
+								</a>
+								{plugin.readme && (
+									<a
+										href="#overview"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Overview
+									</a>
+								)}
+								{plugin.mcpServers.length > 0 && (
+									<a
+										href="#mcp-servers"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										MCP Servers
+									</a>
+								)}
+								{plugin.agents.length > 0 && (
+									<a
+										href="#agents"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Agents
+									</a>
+								)}
+								{plugin.commands.length > 0 && (
+									<a
+										href="#commands"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Commands
+									</a>
+								)}
+								{plugin.skills.length > 0 && (
+									<a
+										href="#skills"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Skills
+									</a>
+								)}
+								{plugin.hooks.length > 0 && (
+									<a
+										href="#hooks"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Hooks
+									</a>
+								)}
+								{relatedPlugins.length > 0 && (
+									<a
+										href="#related"
+										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										Related Plugins
+									</a>
+								)}
+							</div>
+						</nav>
+
 						{/* Installation */}
-						<section className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+						<section id="installation" className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
 							<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
 								Installation
 							</h2>
@@ -276,10 +347,10 @@ export default async function PluginPage({
 
 						{/* README Section */}
 						{plugin.readme && (
-							<section className="mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
+							<section id="overview" className="mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
 								<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
 									<ReactMarkdown remarkPlugins={[remarkGfm]}>
-										{plugin.readme.replace(/^#\s+.+/, '## Overview')}
+										{plugin.readme.replace(/^\s*#\s+.+/, '# Overview')}
 									</ReactMarkdown>
 								</div>
 							</section>
@@ -287,7 +358,7 @@ export default async function PluginPage({
 
 						{/* MCP Servers Section */}
 						{plugin.mcpServers.length > 0 && (
-							<section className="mb-12">
+							<section id="mcp-servers" className="mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									MCP Servers
 								</h2>
@@ -333,7 +404,7 @@ export default async function PluginPage({
 
 						{/* Agents Section */}
 						{plugin.agents.length > 0 && (
-							<section className="mb-12">
+							<section id="agents" className="mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Agents
 								</h2>
@@ -363,7 +434,7 @@ export default async function PluginPage({
 
 						{/* Commands Section */}
 						{plugin.commands.length > 0 && (
-							<section className="mb-12">
+							<section id="commands" className="mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Commands
 								</h2>
@@ -393,7 +464,7 @@ export default async function PluginPage({
 
 						{/* Skills Section */}
 						{plugin.skills.length > 0 && (
-							<section className="mb-12">
+							<section id="skills" className="mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Skills
 								</h2>
@@ -423,7 +494,7 @@ export default async function PluginPage({
 
 						{/* Hooks Section */}
 						{plugin.hooks.length > 0 && (
-							<section className="mb-12">
+							<section id="hooks" className="mb-12">
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Hooks
 								</h2>
