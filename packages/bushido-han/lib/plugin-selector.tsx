@@ -122,33 +122,43 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		{ isActive: mode === "selection" }
 	);
 
-	// Handle search result navigation (separate from text input)
+	// Handle escape in search mode (always active in search)
 	useInput(
-		(input, key) => {
+		(_input, key) => {
+			if (key.escape) {
+				setMode("selection");
+				setSearchResults([]);
+				setSearchQuery("");
+			}
+		},
+		{ isActive: mode === "search" },
+	);
+
+	// Handle search result navigation (only when results exist)
+	useInput(
+		(_input, key) => {
 			if (key.upArrow) {
 				setSearchSelectedIndex(Math.max(0, searchSelectedIndex - 1));
 			} else if (key.downArrow) {
 				// +1 for "Back" option
-				setSearchSelectedIndex(Math.min(searchResults.length, searchSelectedIndex + 1));
+				setSearchSelectedIndex(
+					Math.min(searchResults.length, searchSelectedIndex + 1),
+				);
 			} else if (key.return) {
 				if (searchSelectedIndex < searchResults.length) {
 					// Add selected plugin
 					const plugin = searchResults[searchSelectedIndex];
 					setSelectedPlugins((prev) => new Set([...prev, plugin.name]));
 					setAddedPlugins((prev) =>
-						prev.includes(plugin.name) ? prev : [...prev, plugin.name]
+						prev.includes(plugin.name) ? prev : [...prev, plugin.name],
 					);
 				}
 				// Go back to selection mode
 				setMode("selection");
 				setSelectedIndex(0);
-			} else if (key.escape) {
-				setMode("selection");
-				setSearchResults([]);
-				setSearchQuery("");
 			}
 		},
-		{ isActive: mode === "search" && searchResults.length > 0 }
+		{ isActive: mode === "search" && searchResults.length > 0 },
 	);
 
 	if (mode === "selection") {
