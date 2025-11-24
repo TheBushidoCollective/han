@@ -64,12 +64,41 @@ Once installed, Claude Code gains access to these tool categories:
 
 ## Installation
 
-### Prerequisites
+The GitHub MCP server supports two authentication methods:
 
-- Docker installed and running
-- GitHub Personal Access Token with appropriate scopes
+| Method | Transport | Auth Type | Best For |
+|--------|-----------|-----------|----------|
+| **Remote Server** | HTTP | OAuth | VS Code, MCP hosts with OAuth support |
+| **Docker** | stdio | Personal Access Token | Claude Code, any MCP host |
 
-### Creating a GitHub Personal Access Token
+### Option 1: Remote Server with OAuth (Recommended for VS Code)
+
+The easiest setup - uses GitHub's hosted MCP server with OAuth authentication.
+
+**Requirements**: MCP host with HTTP transport and OAuth support (VS Code 1.101+)
+
+Add to your MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
+```
+
+OAuth will be handled automatically by your MCP host.
+
+### Option 2: Docker with Personal Access Token
+
+Works with any MCP host that supports stdio transport, including Claude Code.
+
+**Requirements**: Docker installed and running
+
+#### Creating a GitHub Personal Access Token
 
 1. Go to [GitHub Settings > Developer Settings > Personal Access Tokens](https://github.com/settings/tokens)
 2. Click "Generate new token (classic)" or use Fine-grained tokens
@@ -80,7 +109,7 @@ Once installed, Claude Code gains access to these tool categories:
    - `read:user` - Read user profile data
 4. Generate and copy the token
 
-### Via Han Marketplace
+#### Via Han Marketplace
 
 ```bash
 npx @thebushidocollective/han install
@@ -93,7 +122,7 @@ claude plugin marketplace add thebushidocollective/han
 claude plugin install sensei-github@han
 ```
 
-### Configuration
+#### Configuration
 
 Set your GitHub Personal Access Token:
 
@@ -108,9 +137,9 @@ echo 'export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### Manual Installation
+#### Manual Installation (Docker)
 
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
+Add to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
