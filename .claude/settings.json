@@ -1,18 +1,5 @@
 {
-  "enabledPlugins": {
-    "bushido@han": true,
-    "buki-biome@han": true,
-    "buki-ink@han": true,
-    "buki-react@han": true,
-    "buki-typescript@han": true,
-    "do-quality-assurance@han": true,
-    "buki-playwright@han": true,
-    "buki-markdownlint@han": true,
-    "buki-prettier@han": true,
-    "do-frontend-development@han": true,
-    "do-technical-documentation@han": true,
-    "buki-nextjs@han": true
-  },
+  "enabledPlugins": {},
   "extraKnownMarketplaces": {
     "han": {
       "source": {
