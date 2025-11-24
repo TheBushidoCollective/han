@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "name": "act-workflow-validation",
+        "description": "Validates GitHub Actions workflows before stopping",
+        "hooks": [
+          {
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .github/workflows \"act --dryrun\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "name": "act-workflow-validation",
+        "description": "Validates GitHub Actions workflows when agents complete",
+        "hooks": [
+          {
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .github/workflows \"act --dryrun\""
+          }
+        ]
+      }
+    ]
+  }
+}
