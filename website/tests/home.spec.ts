@@ -22,7 +22,10 @@ test.describe("Home Page", () => {
 
 	test("should navigate to plugins page", async ({ page }) => {
 		await page.goto("/");
-		await page.locator("header").getByRole("link", { name: /plugins/i }).click();
+		await page
+			.locator("header")
+			.getByRole("link", { name: /plugins/i })
+			.click();
 		await expect(page).toHaveURL(/\/plugins/);
 	});
 });

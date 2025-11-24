@@ -11,12 +11,17 @@ test.describe("Plugins Page", () => {
 		await expect(
 			page.getByRole("link", { name: /bushido/i }).first(),
 		).toBeVisible();
-		await expect(page.getByRole("link", { name: /buki/i }).first()).toBeVisible();
+		await expect(
+			page.getByRole("link", { name: /buki/i }).first(),
+		).toBeVisible();
 	});
 
 	test("should navigate to bushido category", async ({ page }) => {
 		await page.goto("/plugins");
-		await page.getByRole("link", { name: /bushido/i }).first().click();
+		await page
+			.getByRole("link", { name: /bushido/i })
+			.first()
+			.click();
 		await expect(page).toHaveURL(/\/plugins\/bushido/);
 	});
 });
