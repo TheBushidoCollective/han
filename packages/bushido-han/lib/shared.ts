@@ -1,8 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path, { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { detectPluginsPrompt } from "./detect-plugins-prompt.js";
+import {
+	analyzeCodebase,
+	type CodebaseStats,
+	formatStatsForPrompt,
+} from "./codebase-analyzer.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
 
@@ -24,6 +31,7 @@ export interface AgentUpdate {
 	type: "text" | "tool";
 	content: string;
 	toolName?: string;
+	toolInput?: Record<string, unknown>;
 }
 
 export interface DetectPluginsCallbacks {
@@ -111,9 +119,20 @@ export function getInstalledPlugins(
 }
 
 /**
- * Build prompt with marketplace data injected
+ * Read the base prompt from markdown file
  */
-function buildPromptWithMarketplace(plugins: MarketplacePlugin[]): string {
+function getBasePrompt(): string {
+	const promptPath = path.join(__dirname, "detect-plugins-prompt.md");
+	return readFileSync(promptPath, "utf-8");
+}
+
+/**
+ * Build prompt with marketplace data and codebase stats injected
+ */
+function buildPromptWithMarketplace(
+	plugins: MarketplacePlugin[],
+	codebaseStats?: CodebaseStats,
+): string {
 	const pluginList = plugins
 		.map((p) => {
 			const parts = [`- ${p.name}`];
@@ -125,12 +144,20 @@ function buildPromptWithMarketplace(plugins: MarketplacePlugin[]): string {
 		})
 		.join("\n");
 
-	return `${detectPluginsPrompt}
+	// Start with base prompt from markdown
+	let prompt = getBasePrompt();
 
-AVAILABLE PLUGINS IN MARKETPLACE:
-${pluginList}
+	// Add codebase statistics if available
+	if (codebaseStats && codebaseStats.totalFiles > 0) {
+		prompt += `\n\n## CODEBASE STATISTICS (pre-computed)\n\n${formatStatsForPrompt(codebaseStats)}`;
+	}
 
-Remember: ONLY recommend plugins from the list above. Never recommend plugins that are not in this list.`;
+	// Add available plugins
+	prompt += `\n## AVAILABLE PLUGINS IN MARKETPLACE\n\n${pluginList}`;
+
+	prompt += `\n\nRemember: ONLY recommend plugins from the list above. Never recommend plugins that are not in this list.`;
+
+	return prompt;
 }
 
 /**
@@ -150,26 +177,39 @@ export async function detectPluginsWithAgent(
 		return;
 	}
 
-	// Build prompt with marketplace data
-	const prompt = buildPromptWithMarketplace(marketplacePlugins);
+	// Analyze codebase to get file statistics upfront
+	let codebaseStats: CodebaseStats | undefined;
+	try {
+		callbacks.onUpdate({
+			type: "text",
+			content: "Analyzing codebase structure...",
+		});
+		codebaseStats = analyzeCodebase(process.cwd());
+	} catch (_error) {
+		console.warn(
+			"Warning: Could not analyze codebase, proceeding without stats",
+		);
+	}
+
+	// Build prompt with marketplace data and codebase stats
+	const prompt = buildPromptWithMarketplace(marketplacePlugins, codebaseStats);
 	const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
 
 	// Define allowed tools - only read-only operations (no web_fetch needed)
 	const allowedTools: string[] = ["read_file", "glob", "grep"];
-	process.env.CLAUDE_CONFIG_DIR = path.join(os.tmpdir(), ".config");
-	const agent = query({
-		prompt,
-		options: {
-			model: "haiku",
-			includePartialMessages: true,
-			allowedTools,
-			permissionMode: "bypassPermissions",
-		},
-	});
 
 	let responseContent = "";
 
 	try {
+		const agent = query({
+			prompt,
+			options: {
+				model: "haiku",
+				includePartialMessages: true,
+				allowedTools
+			},
+		});
+
 		// Collect all messages from the agent with live updates
 		for await (const sdkMessage of agent) {
 			if (sdkMessage.type === "assistant" && sdkMessage.message.content) {
@@ -179,11 +219,12 @@ export async function detectPluginsWithAgent(
 						callbacks.onUpdate({ type: "text", content: block.text });
 						responseContent += block.text;
 					} else if (block.type === "tool_use") {
-						// Send tool usage updates
+						// Send tool usage updates with input details
 						callbacks.onUpdate({
 							type: "tool",
 							content: `Using ${block.name}`,
 							toolName: block.name,
+							toolInput: block.input as Record<string, unknown>,
 						});
 					}
 				}
@@ -220,7 +261,7 @@ export async function detectPluginsWithAgent(
 	}
 }
 
-interface MarketplacePlugin {
+export interface MarketplacePlugin {
 	name: string;
 	description?: string;
 	keywords?: string[];
@@ -230,7 +271,7 @@ interface MarketplacePlugin {
 /**
  * Fetch the marketplace to get list of available plugins
  */
-async function fetchMarketplace(): Promise<MarketplacePlugin[]> {
+export async function fetchMarketplace(): Promise<MarketplacePlugin[]> {
 	try {
 		const response = await fetch(
 			"https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json",
@@ -253,26 +294,33 @@ async function fetchMarketplace(): Promise<MarketplacePlugin[]> {
  * Parse plugin recommendations from agent response
  */
 export function parsePluginRecommendations(content: string): string[] {
-	try {
-		// Try to find JSON array in the response
-		const jsonMatch = content.match(/\[[\s\S]*?\]/);
-		if (jsonMatch) {
+	// Try to find JSON array in the response
+	const jsonMatch = content.match(/\[[\s\S]*?\]/);
+	if (jsonMatch) {
+		try {
 			const plugins = JSON.parse(jsonMatch[0]) as unknown;
 			if (Array.isArray(plugins)) {
-				plugins.push("bushido");
-				return plugins.filter((p): p is string => typeof p === "string");
+				const stringPlugins = plugins.filter(
+					(p): p is string => typeof p === "string",
+				);
+				// Always include bushido and deduplicate
+				const uniquePlugins = new Set([...stringPlugins, "bushido"]);
+				return Array.from(uniquePlugins);
 			}
+		} catch {
+			// JSON parsing failed, fall through to regex matching
 		}
-
-		// Fallback: look for plugin names mentioned
-		const pluginPattern = /(buki-[\w-]+|do-[\w-]+|sensei-[\w-]+|bushido)/g;
-		const matches = content.match(pluginPattern);
-		if (matches) {
-			return [...new Set(matches)];
-		}
-
-		return [];
-	} catch (_error) {
-		return [];
 	}
+
+	// Fallback: look for plugin names mentioned
+	const pluginPattern = /(buki-[\w-]+|do-[\w-]+|sensei-[\w-]+|bushido)/g;
+	const matches = content.match(pluginPattern);
+	if (matches) {
+		// Ensure bushido is included and deduplicate
+		const uniquePlugins = new Set([...matches, "bushido"]);
+		return Array.from(uniquePlugins);
+	}
+
+	// Always return at least bushido
+	return ["bushido"];
 }
