@@ -64,52 +64,7 @@ Once installed, Claude Code gains access to these tool categories:
 
 ## Installation
 
-The GitHub MCP server supports two authentication methods:
-
-| Method | Transport | Auth Type | Best For |
-|--------|-----------|-----------|----------|
-| **Remote Server** | HTTP | OAuth | VS Code, MCP hosts with OAuth support |
-| **Docker** | stdio | Personal Access Token | Claude Code, any MCP host |
-
-### Option 1: Remote Server with OAuth (Recommended for VS Code)
-
-The easiest setup - uses GitHub's hosted MCP server with OAuth authentication.
-
-**Requirements**: MCP host with HTTP transport and OAuth support (VS Code 1.101+)
-
-Add to your MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
-    }
-  }
-}
-```
-
-OAuth will be handled automatically by your MCP host.
-
-### Option 2: Docker with Personal Access Token
-
-Works with any MCP host that supports stdio transport, including Claude Code.
-
-**Requirements**: Docker installed and running
-
-#### Creating a GitHub Personal Access Token
-
-1. Go to [GitHub Settings > Developer Settings > Personal Access Tokens](https://github.com/settings/tokens)
-2. Click "Generate new token (classic)" or use Fine-grained tokens
-3. Select scopes based on your needs:
-   - `repo` - Full repository access
-   - `read:org` - Read organization data
-   - `workflow` - Manage GitHub Actions
-   - `read:user` - Read user profile data
-4. Generate and copy the token
-
-#### Via Han Marketplace
+### Via Han Marketplace (Recommended)
 
 ```bash
 npx @thebushidocollective/han install
@@ -122,22 +77,18 @@ claude plugin marketplace add thebushidocollective/han
 claude plugin install sensei-github@han
 ```
 
-#### Configuration
+### Authentication
 
-Set your GitHub Personal Access Token:
+After installation, authenticate with GitHub OAuth:
 
-```bash
-export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
-```
+1. Run `/mcp` in Claude Code
+2. Select the GitHub server
+3. Click "Authenticate" to open the OAuth flow in your browser
+4. Authorize access to your GitHub account
 
-Or add to your shell profile (`~/.zshrc`, `~/.bashrc`):
+Authentication tokens are stored securely and refreshed automatically.
 
-```bash
-echo 'export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-#### Manual Installation (Docker)
+### Manual Installation
 
 Add to your Claude Code settings (`~/.claude/settings.json`):
 
@@ -145,22 +96,53 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 {
   "mcpServers": {
     "github": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
     }
   }
 }
 ```
+
+Or via CLI:
+
+```bash
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/
+```
+
+### Alternative: Docker with Personal Access Token
+
+If you prefer using a Personal Access Token instead of OAuth, or need to use GitHub Enterprise:
+
+1. Create a [GitHub Personal Access Token](https://github.com/settings/tokens) with scopes:
+   - `repo` - Full repository access
+   - `read:org` - Read organization data
+   - `workflow` - Manage GitHub Actions
+
+2. Set the environment variable:
+
+   ```bash
+   export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
+   ```
+
+3. Configure the Docker-based server:
+
+   ```json
+   {
+     "mcpServers": {
+       "github": {
+         "command": "docker",
+         "args": [
+           "run", "-i", "--rm",
+           "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+           "ghcr.io/github/github-mcp-server"
+         ],
+         "env": {
+           "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+         }
+       }
+     }
+   }
+   ```
 
 ## Usage
 
@@ -255,46 +237,35 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 
 ## Security Considerations
 
-- **Token Security**: Never commit your Personal Access Token to version control
-- **Minimal Scopes**: Use the minimum required scopes for your use case
-- **Token Rotation**: Regularly rotate your access tokens
-- **Fine-grained Tokens**: Consider using fine-grained tokens for specific repository access
-- **Docker Isolation**: The MCP server runs in an isolated Docker container
+- **OAuth Tokens**: Managed automatically by Claude Code, stored securely, and refreshed as needed
+- **Revoke Access**: Use `/mcp` > "Clear authentication" to revoke OAuth access anytime
+- **Minimal Scopes**: OAuth requests only necessary permissions for the tools you use
+- **PAT Security**: If using Personal Access Tokens, never commit them to version control
 
 ## Limitations
 
-- Requires Docker to be installed and running
 - API rate limits apply (5000 requests/hour for authenticated requests)
-- Some operations require specific token scopes
+- Some operations require specific OAuth scopes
 - Large file operations may timeout
-- GitHub Enterprise requires additional configuration
+- GitHub Enterprise requires Docker-based setup with PAT
 
 ## Troubleshooting
 
-### Issue: "Docker not found"
+### Issue: OAuth authentication fails
 
-**Solution**: Ensure Docker is installed and the Docker daemon is running:
-
-```bash
-docker --version
-docker ps  # Should not error
-```
-
-### Issue: "Bad credentials" error
-
-**Solution**: Verify your token is set correctly:
-
-```bash
-echo $GITHUB_PERSONAL_ACCESS_TOKEN  # Should show your token
-```
+**Solution**: Run `/mcp` in Claude Code, select GitHub, and click "Clear authentication" to reset. Then re-authenticate.
 
 ### Issue: "Resource not accessible"
 
-**Solution**: Check that your token has the required scopes for the operation. Repository operations need `repo` scope, organization operations need `read:org`, etc.
+**Solution**: The OAuth flow may not have requested sufficient scopes. Re-authenticate and ensure you grant the requested permissions.
 
 ### Issue: Rate limit exceeded
 
-**Solution**: Wait for rate limit reset (shown in error message) or use a token with higher limits (GitHub Enterprise).
+**Solution**: Wait for rate limit reset (shown in error message). Authenticated requests have higher limits (5000/hour).
+
+### Issue: Need GitHub Enterprise support
+
+**Solution**: Use the Docker-based setup with a Personal Access Token configured for your GitHub Enterprise instance.
 
 ## Philosophy
 
