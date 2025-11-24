@@ -274,64 +274,72 @@ export default async function PluginPage({
 							<div className="flex flex-wrap gap-2">
 								<a
 									href="#installation"
-									className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 								>
-									Installation
+									<span>📦</span>
+									<span>Installation</span>
 								</a>
 								{plugin.readme && (
 									<a
 										href="#overview"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Overview
+										<span>📄</span>
+										<span>Overview</span>
 									</a>
 								)}
 								{plugin.mcpServers.length > 0 && (
 									<a
 										href="#mcp-servers"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										MCP Servers
+										<span>🔌</span>
+										<span>MCP Servers</span>
 									</a>
 								)}
 								{plugin.agents.length > 0 && (
 									<a
 										href="#agents"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Agents
+										<span>🤖</span>
+										<span>Agents</span>
 									</a>
 								)}
 								{plugin.commands.length > 0 && (
 									<a
 										href="#commands"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Commands
+										<span>⌘</span>
+										<span>Commands</span>
 									</a>
 								)}
 								{plugin.skills.length > 0 && (
 									<a
 										href="#skills"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Skills
+										<span>📖</span>
+										<span>Skills</span>
 									</a>
 								)}
 								{plugin.hooks.length > 0 && (
 									<a
 										href="#hooks"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Hooks
+										<span>🪝</span>
+										<span>Hooks</span>
 									</a>
 								)}
 								{relatedPlugins.length > 0 && (
 									<a
 										href="#related"
-										className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
 									>
-										Related Plugins
+										<span>🔗</span>
+										<span>Related Plugins</span>
 									</a>
 								)}
 							</div>
