@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -127,6 +128,23 @@ function getBasePrompt(): string {
 }
 
 /**
+ * Get the git remote origin URL for the current directory
+ */
+function getGitRemoteUrl(): string | null {
+	try {
+		const remoteUrl = execSync("git remote get-url origin", {
+			cwd: process.cwd(),
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		}).trim();
+		return remoteUrl || null;
+	} catch {
+		// Not a git repo or no remote configured
+		return null;
+	}
+}
+
+/**
  * Build prompt with marketplace data and codebase stats injected
  */
 function buildPromptWithMarketplace(
@@ -146,6 +164,12 @@ function buildPromptWithMarketplace(
 
 	// Start with base prompt from markdown
 	let prompt = getBasePrompt();
+
+	// Add git remote URL if available
+	const gitRemoteUrl = getGitRemoteUrl();
+	if (gitRemoteUrl) {
+		prompt += `\n\n## GIT REPOSITORY\n\nRemote URL: ${gitRemoteUrl}`;
+	}
 
 	// Add codebase statistics if available
 	if (codebaseStats && codebaseStats.totalFiles > 0) {
