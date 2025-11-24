@@ -20,8 +20,9 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 }) => {
 	const [mode, setMode] = useState<Mode>("selection");
 	const [selectedIndex, setSelectedIndex] = useState(0);
+	// Initialize with detected plugins, excluding bushido (always installed separately)
 	const [selectedPlugins, setSelectedPlugins] = useState<Set<string>>(
-		new Set(detectedPlugins),
+		new Set(detectedPlugins.filter((p) => p !== "bushido")),
 	);
 	// Track plugins added via search (separate from detected)
 	const [addedPlugins, setAddedPlugins] = useState<string[]>([]);
@@ -30,11 +31,14 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
 
 	// Memoize options list to prevent recreation on every render
+	// Note: "bushido" is always installed and never shown in the selector
 	const options = useMemo(() => {
 		const opts: Array<{ name: string; isPlugin: boolean }> = [];
 
-		// Add detected plugins + added plugins (deduped and sorted)
-		const allPluginNames = [...new Set([...detectedPlugins, ...addedPlugins])].sort();
+		// Add detected plugins + added plugins (deduped, sorted, excluding bushido)
+		const allPluginNames = [...new Set([...detectedPlugins, ...addedPlugins])]
+			.filter((p) => p !== "bushido")
+			.sort();
 		for (const plugin of allPluginNames) {
 			opts.push({ name: plugin, isPlugin: true });
 		}
@@ -47,7 +51,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		return opts;
 	}, [detectedPlugins, addedPlugins]);
 
-	// Memoize search function
+	// Memoize search function (excludes bushido from results)
 	const performSearch = useCallback(
 		(query: string) => {
 			if (!query.trim()) {
@@ -57,6 +61,9 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 
 			const lowerQuery = query.toLowerCase();
 			const results = allPlugins.filter((plugin) => {
+				// Never show bushido in search - it's always installed
+				if (plugin.name === "bushido") return false;
+
 				const nameMatch = plugin.name.toLowerCase().includes(lowerQuery);
 				const descMatch = plugin.description?.toLowerCase().includes(lowerQuery);
 				const keywordMatch = plugin.keywords?.some((k) =>
