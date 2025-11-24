@@ -6,6 +6,7 @@
         "description": "Validates completed work against ClickUp task acceptance criteria for any tasks mentioned in the conversation",
         "hooks": [
           {
+            "type": "command",
             "command": "node",
             "args": [
               "-e",

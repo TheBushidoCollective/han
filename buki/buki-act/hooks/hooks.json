@@ -6,6 +6,7 @@
         "description": "Validates GitHub Actions workflows before stopping",
         "hooks": [
           {
+            "type": "command",
             "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .github/workflows \"act --dryrun\""
           }
         ]
@@ -17,6 +18,7 @@
         "description": "Validates GitHub Actions workflows when agents complete",
         "hooks": [
           {
+            "type": "command",
             "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with .github/workflows \"act --dryrun\""
           }
         ]
