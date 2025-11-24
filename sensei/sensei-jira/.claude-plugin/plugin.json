@@ -1,0 +1,35 @@
+{
+  "name": "sensei-jira",
+  "version": "1.0.0",
+  "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "jira",
+    "atlassian",
+    "project-management",
+    "tickets",
+    "acceptance-criteria",
+    "validation"
+  ],
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-atlassian"
+      ],
+      "env": {
+        "ATLASSIAN_API_TOKEN": "${ATLASSIAN_API_TOKEN}",
+        "ATLASSIAN_EMAIL": "${ATLASSIAN_EMAIL}",
+        "ATLASSIAN_SITE_URL": "${ATLASSIAN_SITE_URL}"
+      }
+    }
+  }
+}

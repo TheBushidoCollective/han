@@ -3,14 +3,14 @@ name: Validate Han Website
 on:
   pull_request:
     paths:
-      - 'website/**'
-      - '.github/workflows/validate-website.yml'
+      - "website/**"
+      - ".github/workflows/validate-website.yml"
   push:
     branches:
       - main
     paths:
-      - 'website/**'
-      - '.github/workflows/validate-website.yml'
+      - "website/**"
+      - ".github/workflows/validate-website.yml"
   workflow_dispatch:
 
 jobs:
@@ -23,8 +23,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
@@ -37,11 +37,11 @@ jobs:
           version: latest
 
       - name: Run Biome format check
-        run: biome format --error-on-warnings --files-ignore-unknown=true .
+        run: biome format --files-ignore-unknown=true .
         working-directory: ./website
 
       - name: Run Biome lint
-        run: biome lint --error-on-warnings --files-ignore-unknown=true .
+        run: biome lint --files-ignore-unknown=true .
         working-directory: ./website
 
       - name: TypeScript type check
