@@ -3,6 +3,8 @@ import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
@@ -109,6 +111,11 @@ export default async function PluginPage({
 		notFound();
 	}
 
+	// Get plugins for sidebar
+	const bukiPlugins = getAllPlugins("buki");
+	const doPlugins = getAllPlugins("do");
+	const senseiPlugins = getAllPlugins("sensei");
+
 	// Load plugin metadata for tags
 	const pluginJsonPath = path.join(
 		process.cwd(),
@@ -178,7 +185,7 @@ export default async function PluginPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar />
+					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
@@ -236,6 +243,15 @@ export default async function PluginPage({
 									</Link>
 								)}
 
+								{plugin.mcpServers.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:mcp")}`}
+										className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-sm"
+									>
+										mcp
+									</Link>
+								)}
+
 								{/* Tag badges */}
 								{tags.length > 0 &&
 									tags.map((tag: string) => (
@@ -250,6 +266,17 @@ export default async function PluginPage({
 							</div>
 						</div>
 
+						{/* README Section */}
+						{plugin.readme && (
+							<section className="mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
+								<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
+									<ReactMarkdown remarkPlugins={[remarkGfm]}>
+										{plugin.readme.replace(/^#\s+.+/, '## Overview')}
+									</ReactMarkdown>
+								</div>
+							</section>
+						)}
+
 						{/* Installation */}
 						<section className="mb-12 bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
 							<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -257,6 +284,52 @@ export default async function PluginPage({
 							</h2>
 							<InstallationTabs pluginName={plugin.metadata.name} />
 						</section>
+
+						{/* MCP Servers Section */}
+						{plugin.mcpServers.length > 0 && (
+							<section className="mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+									MCP Servers
+								</h2>
+								<div className="space-y-4">
+									{plugin.mcpServers.map((server) => (
+										<div
+											key={server.name}
+											className="block bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+										>
+											<div className="flex items-start space-x-3">
+												<div className="text-2xl">🔌</div>
+												<div className="flex-1">
+													<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+														{server.name}
+													</h3>
+													<div className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom">
+														<code>
+															{server.command} {server.args.join(' ')}
+														</code>
+													</div>
+													{server.env && Object.keys(server.env).length > 0 && (
+														<div className="mt-4">
+															<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+																Environment Variables:
+															</h4>
+															<div className="bg-gray-50 dark:bg-gray-900 p-3 rounded space-y-1">
+																{Object.entries(server.env).map(([key, value]) => (
+																	<div key={key} className="text-sm font-mono">
+																		<span className="text-purple-600 dark:text-purple-400">{key}</span>
+																		<span className="text-gray-500">={value}</span>
+																	</div>
+																))}
+															</div>
+														</div>
+													)}
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</section>
+						)}
 
 						{/* Agents Section */}
 						{plugin.agents.length > 0 && (

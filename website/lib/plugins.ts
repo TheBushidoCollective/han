@@ -51,6 +51,13 @@ export interface CommandMetadata {
 	content: string;
 }
 
+export interface MCPServerMetadata {
+	name: string;
+	command: string;
+	args: string[];
+	env?: Record<string, string>;
+}
+
 interface Hook {
 	command?: string;
 }
@@ -68,10 +75,12 @@ interface HooksData {
 export interface PluginDetails {
 	metadata: PluginMetadata;
 	source: string;
+	readme: string | null;
 	agents: AgentMetadata[];
 	skills: SkillMetadata[];
 	hooks: HookSection[];
 	commands: CommandMetadata[];
+	mcpServers: MCPServerMetadata[];
 }
 
 function getCategoryFromMarketplace(
@@ -95,7 +104,7 @@ function getCategoryIcon(
 		case "do":
 			return "🛤️";
 		case "sensei":
-			return "👴";
+			return "🏮";
 		default:
 			return "📦";
 	}
@@ -442,6 +451,62 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 	return commands.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Parse MCP servers from plugin.json
+function getPluginMCPServers(pluginPath: string): MCPServerMetadata[] {
+	const mcpServers: MCPServerMetadata[] = [];
+
+	try {
+		const pluginJsonPath = path.join(
+			pluginPath,
+			".claude-plugin",
+			"plugin.json",
+		);
+
+		if (!fs.existsSync(pluginJsonPath)) {
+			return mcpServers;
+		}
+
+		const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
+
+		if (pluginJson.mcpServers && typeof pluginJson.mcpServers === "object") {
+			for (const [name, config] of Object.entries(pluginJson.mcpServers)) {
+				const serverConfig = config as {
+					command: string;
+					args?: string[];
+					env?: Record<string, string>;
+				};
+
+				mcpServers.push({
+					name,
+					command: serverConfig.command,
+					args: serverConfig.args || [],
+					env: serverConfig.env,
+				});
+			}
+		}
+	} catch (error) {
+		console.error(`Error reading MCP servers from ${pluginPath}:`, error);
+	}
+
+	return mcpServers.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Read README.md from plugin directory
+function getPluginReadme(pluginPath: string): string | null {
+	try {
+		const readmePath = path.join(pluginPath, "README.md");
+
+		if (!fs.existsSync(readmePath)) {
+			return null;
+		}
+
+		return fs.readFileSync(readmePath, "utf-8");
+	} catch (error) {
+		console.error(`Error reading README from ${pluginPath}:`, error);
+		return null;
+	}
+}
+
 // Get full plugin details with agents and skills
 export function getPluginContent(
 	category: "bushido" | "buki" | "do" | "sensei",
@@ -473,18 +538,22 @@ export function getPluginContent(
 		const pluginName = plugin.source.split("/").pop() || slug;
 
 		const metadata = getPluginMetadata(pluginPath, pluginName, category);
+		const readme = getPluginReadme(pluginPath);
 		const agents = getPluginAgents(pluginPath);
 		const skills = getPluginSkills(pluginPath);
 		const hooks = getPluginHooks(pluginPath);
 		const commands = getPluginCommands(pluginPath);
+		const mcpServers = getPluginMCPServers(pluginPath);
 
 		return {
 			metadata,
 			source: plugin.source,
+			readme,
 			agents,
 			skills,
 			hooks,
 			commands,
+			mcpServers,
 		};
 	} catch (error) {
 		console.error(
