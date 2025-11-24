@@ -267,7 +267,7 @@ export default async function PluginPage({
 						</div>
 
 						{/* Jump to Menu */}
-						<nav className="mb-8 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+						<nav className="sticky top-4 z-10 mb-8 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-md">
 							<p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">
 								Jump to:
 							</p>
