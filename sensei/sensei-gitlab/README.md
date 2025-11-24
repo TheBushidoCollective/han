@@ -436,15 +436,6 @@ Pipeline #1234 - Status: Running
 3. Click "Clear authentication" to reset
 4. Re-authenticate through the OAuth flow
 
-## Philosophy
-
-This sensei embodies the Bushido virtues:
-
-- **Wisdom (智 - Chi)**: Provides intelligent access to project knowledge and code context
-- **Respect (礼 - Rei)**: Integrates thoughtfully with GitLab's security and permission model
-- **Integrity (誠 - Makoto)**: Maintains secure OAuth connections and respects data privacy
-- **Courage (勇 - Yū)**: Enables confident collaboration through comprehensive project visibility
-
 ## Related Plugins
 
 - **sensei-context7**: Up-to-date library documentation for code references

@@ -467,15 +467,6 @@ duedate < now() AND status != Done
 - Verify Node.js is available in PATH
 - Check Claude Code logs for hook execution errors
 
-## Philosophy
-
-This sensei embodies the Bushido virtues:
-
-- **Wisdom (智 - Chi)**: Provides intelligent ticket management and validation
-- **Integrity (誠 - Makoto)**: Ensures work meets acceptance criteria before completion
-- **Respect (礼 - Rei)**: Integrates thoughtfully with your team's Jira workflow
-- **Diligence (勤 - Kin)**: Automatically validates completeness without being asked
-
 ## Related Plugins
 
 - **buki-jira**: Additional Jira-focused skills and commands (if you want extended functionality beyond the MCP)

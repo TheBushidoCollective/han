@@ -267,14 +267,6 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 
 **Solution**: Use the Docker-based setup with a Personal Access Token configured for your GitHub Enterprise instance.
 
-## Philosophy
-
-This sensei embodies the Bushido virtues:
-
-- **Wisdom (Chi)**: Provides access to the vast knowledge stored in GitHub repositories
-- **Respect (Rei)**: Integrates thoughtfully with GitHub's API rate limits and guidelines
-- **Integrity (Makoto)**: Maintains secure connections and proper authentication
-
 ## Related Plugins
 
 - **sensei-gitlab**: GitLab integration via MCP

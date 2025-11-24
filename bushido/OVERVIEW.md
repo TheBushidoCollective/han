@@ -148,6 +148,7 @@ technical-planning
 ### Evidence-Based Development
 
 The bushido plugin emphasizes **proof-of-work**:
+
 - Don't claim tests pass without showing output
 - Don't say you analyzed code without specific findings
 - Show file paths, line numbers, concrete examples
@@ -156,6 +157,7 @@ The bushido plugin emphasizes **proof-of-work**:
 ### Incremental Improvement
 
 Many skills embody the **boy scout rule**:
+
 - Leave code better than you found it
 - Small improvements accumulate
 - Fix obvious issues while working
@@ -164,6 +166,7 @@ Many skills embody the **boy scout rule**:
 ### Safety Through Testing
 
 Multiple skills emphasize **tests as safety net**:
+
 - Refactoring: tests must pass before and after
 - Debugging: add regression tests after fixing
 - TDD: write tests first
@@ -172,6 +175,7 @@ Multiple skills emphasize **tests as safety net**:
 ### Simplicity First
 
 Several skills reinforce **simplicity principles**:
+
 - Start simple, add complexity when needed
 - YAGNI: You Aren't Gonna Need It
 - Don't over-engineer
@@ -180,14 +184,17 @@ Several skills reinforce **simplicity principles**:
 ### Measurement Over Guessing
 
 Performance and debugging skills emphasize **data-driven decisions**:
+
 - Profile before optimizing
 - Measure impact of changes
 - Gather evidence systematically
+
 - Question assumptions with data
 
 ## Usage Examples
 
 ### Feature Development
+
 ```bash
 # Plan the feature
 /plan [describe feature]
@@ -201,16 +208,19 @@ Performance and debugging skills emphasize **data-driven decisions**:
 # Document
 /document [what needs documenting]
 
+
 # Review
 /code-review
 ```
 
 ### Bug Fixing
+
 ```bash
 # Investigate
 /debug [describe issue]
 
 # Fix with verification
+
 /fix [implement solution]
 
 # Add regression test
@@ -218,9 +228,11 @@ Performance and debugging skills emphasize **data-driven decisions**:
 ```
 
 ### Architecture Work
+
 ```bash
 # Design system
 /architect [describe system needs]
+
 
 # Plan implementation
 /plan [based on architecture]
@@ -230,6 +242,7 @@ Performance and debugging skills emphasize **data-driven decisions**:
 ```
 
 ### Code Quality
+
 ```bash
 # Refactor safely
 /refactor [what to improve]

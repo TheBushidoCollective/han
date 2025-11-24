@@ -101,14 +101,6 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 - Migration support
 - High performance
 
-## Philosophy
-
-This buki embodies the Bushido virtues:
-
-- **Integrity (誠 - Makoto)**: Ensures code meets quality standards through type checking
-- **Respect (礼 - Rei)**: Validates work thoroughly before completion
-- **Courage (勇 - Yū)**: Fails fast when issues are found to prevent technical debt
-
 ## Examples
 
 ### Create a Simple HTTP Server

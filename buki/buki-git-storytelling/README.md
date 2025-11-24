@@ -81,15 +81,6 @@ You can always amend the commit message afterward:
 git commit --amend -m "feat: add user authentication system"
 ```
 
-## Philosophy
-
-This buki embodies the Bushido virtues:
-
-- **Courage (勇 - Yū)**: Commit your work confidently, even when incomplete
-- **Integrity (誠 - Makoto)**: Create an honest record of your development process
-- **Respect (礼 - Rei)**: Make your work reviewable and understandable for others
-- **Honor (名誉 - Meiyo)**: Take pride in showing your problem-solving journey
-
 ## Git Storytelling Best Practices
 
 ### When to Commit

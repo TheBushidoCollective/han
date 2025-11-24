@@ -339,14 +339,6 @@ Claude: {uses {tool-name} tool to accomplish task}
 
 **Solution**: {How to resolve}
 
-## Philosophy
-
-This sensei embodies the Bushido virtues:
-
-- **Wisdom (智 - Chi)**: Provides access to specialized knowledge
-- **Respect (礼 - Rei)**: Integrates thoughtfully with external services
-- **Integrity (誠 - Makoto)**: Maintains secure and reliable connections
-
 ## Related Plugins
 
 {List related senseis or bukis}
