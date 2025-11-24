@@ -100,9 +100,18 @@ export default async function AgentPage({
 	}
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
-	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
-	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
+	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const doPlugins = getAllPlugins("do").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
 
 	const agent = plugin.agents.find((a) => a.name === agentName);
 
@@ -147,7 +156,11 @@ export default async function AgentPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
+					<Sidebar
+						bukiPlugins={bukiPlugins}
+						doPlugins={doPlugins}
+						senseiPlugins={senseiPlugins}
+					/>
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
@@ -165,8 +178,8 @@ export default async function AgentPage({
 								Agent Invocation
 							</h3>
 							<p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-								Claude will automatically use this agent based on context. To force
-								invocation, mention this agent in your prompt:
+								Claude will automatically use this agent based on context. To
+								force invocation, mention this agent in your prompt:
 							</p>
 							<div className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded p-3">
 								<code className="text-sm font-mono text-gray-900 dark:text-gray-100">

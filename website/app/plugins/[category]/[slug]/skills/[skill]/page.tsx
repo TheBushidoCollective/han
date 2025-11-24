@@ -100,9 +100,18 @@ export default async function SkillPage({
 	}
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
-	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
-	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
+	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const doPlugins = getAllPlugins("do").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
 
 	const skill = plugin.skills.find((s) => s.name === skillName);
 
@@ -147,7 +156,11 @@ export default async function SkillPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
+					<Sidebar
+						bukiPlugins={bukiPlugins}
+						doPlugins={doPlugins}
+						senseiPlugins={senseiPlugins}
+					/>
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
@@ -165,7 +178,7 @@ export default async function SkillPage({
 						{/* Markdown Content */}
 						<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>
-								{skill.content.replace(/^\s*#\s+.+/, '# Overview')}
+								{skill.content.replace(/^\s*#\s+.+/, "# Overview")}
 							</ReactMarkdown>
 						</div>
 					</main>

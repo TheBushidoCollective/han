@@ -61,7 +61,9 @@ test("parseQuery extracts multiple categories", () => {
 });
 
 test("parseQuery handles mixed query with text and filters", () => {
-	const result = parseQuery("typescript tag:react component:skill category:buki");
+	const result = parseQuery(
+		"typescript tag:react component:skill category:buki",
+	);
 	strictEqual(result.textQuery, "typescript");
 	deepStrictEqual(result.tagFilters, ["react"]);
 	deepStrictEqual(result.componentFilters, ["skill"]);
@@ -69,7 +71,9 @@ test("parseQuery handles mixed query with text and filters", () => {
 });
 
 test("parseQuery handles complex mixed query", () => {
-	const result = parseQuery("linting tags:eslint,biome category:buki formatting");
+	const result = parseQuery(
+		"linting tags:eslint,biome category:buki formatting",
+	);
 	strictEqual(result.textQuery, "linting formatting");
 	deepStrictEqual(result.tagFilters, ["eslint", "biome"]);
 	deepStrictEqual(result.categoryFilters, ["buki"]);

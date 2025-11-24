@@ -11,9 +11,18 @@ export const metadata: Metadata = {
 };
 
 export default function PluginsPage() {
-	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
-	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
-	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
+	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const doPlugins = getAllPlugins("do").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
 			<Header />
@@ -21,7 +30,11 @@ export default function PluginsPage() {
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 				<div className="flex gap-12">
-					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
+					<Sidebar
+						bukiPlugins={bukiPlugins}
+						doPlugins={doPlugins}
+						senseiPlugins={senseiPlugins}
+					/>
 					<main className="flex-1 min-w-0">
 						<h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
 							Plugin Marketplace

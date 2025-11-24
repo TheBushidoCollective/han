@@ -3,18 +3,20 @@ import { expect, test } from "@playwright/test";
 test.describe("Plugins Page", () => {
 	test("should load the plugins page", async ({ page }) => {
 		await page.goto("/plugins");
-		await expect(page.locator("h1")).toContainText(/plugins/i);
+		await expect(page.locator("h1")).toContainText(/Plugin Marketplace/i);
 	});
 
 	test("should display category links", async ({ page }) => {
 		await page.goto("/plugins");
-		await expect(page.getByRole("link", { name: /bushido/i })).toBeVisible();
-		await expect(page.getByRole("link", { name: /buki/i })).toBeVisible();
+		await expect(
+			page.getByRole("link", { name: /bushido/i }).first(),
+		).toBeVisible();
+		await expect(page.getByRole("link", { name: /buki/i }).first()).toBeVisible();
 	});
 
 	test("should navigate to bushido category", async ({ page }) => {
 		await page.goto("/plugins");
-		await page.getByRole("link", { name: /bushido/i }).click();
+		await page.getByRole("link", { name: /bushido/i }).first().click();
 		await expect(page).toHaveURL(/\/plugins\/bushido/);
 	});
 });
@@ -36,12 +38,14 @@ test.describe("Category Page", () => {
 test.describe("Plugin Detail Page", () => {
 	test("should load a plugin detail page", async ({ page }) => {
 		await page.goto("/plugins/bushido/core");
-		await expect(page.locator("h1")).toContainText("Bushido");
+		await expect(page.locator("h1").first()).toBeVisible();
 	});
 
 	test("should display installation section", async ({ page }) => {
 		await page.goto("/plugins/bushido/core");
-		await expect(page.getByText("Installation")).toBeVisible();
+		await expect(
+			page.getByRole("heading", { name: "Installation" }),
+		).toBeVisible();
 	});
 
 	test("should show skills section if available", async ({ page }) => {

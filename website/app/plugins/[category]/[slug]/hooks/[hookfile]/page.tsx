@@ -101,9 +101,18 @@ export default async function HookFilePage({
 	}
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki").map(p => ({ name: p.name, title: p.title }));
-	const doPlugins = getAllPlugins("do").map(p => ({ name: p.name, title: p.title }));
-	const senseiPlugins = getAllPlugins("sensei").map(p => ({ name: p.name, title: p.title }));
+	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const doPlugins = getAllPlugins("do").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
+	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+		name: p.name,
+		title: p.title,
+	}));
 
 	// Find the hook file across all hook sections
 	let hookFile: { name: string; path: string; content: string } | null = null;
@@ -174,7 +183,11 @@ export default async function HookFilePage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar bukiPlugins={bukiPlugins} doPlugins={doPlugins} senseiPlugins={senseiPlugins} />
+					<Sidebar
+						bukiPlugins={bukiPlugins}
+						doPlugins={doPlugins}
+						senseiPlugins={senseiPlugins}
+					/>
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
