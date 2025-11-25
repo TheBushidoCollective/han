@@ -23,13 +23,14 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 }) => {
 	const [mode, setMode] = useState<Mode>("selection");
 	const [selectedIndex, setSelectedIndex] = useState(0);
-	// Initialize with detected plugins + already installed plugins, excluding bushido
+	// Initialize with only recommended plugins (detected), excluding bushido
+	// Installed but no longer recommended plugins will be shown but deselected
 	const initialSelection = useMemo(() => {
-		const combined = [...new Set([...detectedPlugins, ...installedPlugins])];
-		return new Set(combined.filter((p) => p !== "bushido"));
-	}, [detectedPlugins, installedPlugins]);
+		return new Set(detectedPlugins.filter((p) => p !== "bushido"));
+	}, [detectedPlugins]);
 
-	const [selectedPlugins, setSelectedPlugins] = useState<Set<string>>(initialSelection);
+	const [selectedPlugins, setSelectedPlugins] =
+		useState<Set<string>>(initialSelection);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<MarketplacePlugin[]>([]);
 	const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
@@ -37,20 +38,27 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	// Memoize options list to prevent recreation on every render
 	// Note: "bushido" is always installed and never shown in the selector
 	const options = useMemo(() => {
-		const opts: Array<{ name: string; isPlugin: boolean; isRecommended?: boolean; isInstalled?: boolean }> = [];
+		const opts: Array<{
+			name: string;
+			isPlugin: boolean;
+			isRecommended?: boolean;
+			isInstalled?: boolean;
+		}> = [];
 
-		// Show ALL plugins from marketplace (excluding bushido), sorted
-		const allPluginNames = allPlugins
-			.map((p) => p.name)
-			.filter((p) => p !== "bushido")
-			.sort();
+		// Build set of plugins to show: installed OR recommended (excluding bushido)
+		const pluginsToShow = new Set([
+			...installedPlugins.filter((p) => p !== "bushido"),
+			...detectedPlugins.filter((p) => p !== "bushido"),
+		]);
 
-		for (const plugin of allPluginNames) {
+		// Sort and add to options
+		const sortedPlugins = Array.from(pluginsToShow).sort();
+		for (const plugin of sortedPlugins) {
 			opts.push({
 				name: plugin,
 				isPlugin: true,
 				isRecommended: detectedPlugins.includes(plugin),
-				isInstalled: installedPlugins.includes(plugin)
+				isInstalled: installedPlugins.includes(plugin),
 			});
 		}
 
@@ -60,7 +68,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		opts.push({ name: "❌ Cancel", isPlugin: false });
 
 		return opts;
-	}, [allPlugins, detectedPlugins, installedPlugins]);
+	}, [detectedPlugins, installedPlugins]);
 
 	// Memoize search function (excludes bushido from results)
 	const performSearch = useCallback(
@@ -210,8 +218,8 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 
 				<Box marginTop={1}>
 					<Text dimColor>
-						{selectedPlugins.size} plugin(s) selected • ⭐ = recommended • Use ↑↓ arrows to
-						navigate • Space to toggle • Enter to select
+						{selectedPlugins.size} plugin(s) selected • ⭐ = recommended • Use
+						↑↓ arrows to navigate • Space to toggle • Enter to select
 					</Text>
 				</Box>
 			</Box>
