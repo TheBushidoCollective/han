@@ -176,32 +176,32 @@ hookCommand
 			_ignored: string[],
 			options: { failFast?: boolean; dirsWith?: string },
 		) => {
-		// Parse command from process.argv after --
-		const separatorIndex = process.argv.indexOf("--");
+			// Parse command from process.argv after --
+			const separatorIndex = process.argv.indexOf("--");
 
-		if (separatorIndex === -1) {
-			console.error(
-				"Error: Command must be specified after -- separator\n\nExample: han hook run --dirs-with package.json -- npm test",
-			);
-			process.exit(1);
-		}
+			if (separatorIndex === -1) {
+				console.error(
+					"Error: Command must be specified after -- separator\n\nExample: han hook run --dirs-with package.json -- npm test",
+				);
+				process.exit(1);
+			}
 
-		const commandArgs = process.argv.slice(separatorIndex + 1);
+			const commandArgs = process.argv.slice(separatorIndex + 1);
 
-		if (commandArgs.length === 0) {
-			console.error(
-				"Error: No command specified after --\n\nExample: han hook run --dirs-with package.json -- npm test",
-			);
-			process.exit(1);
-		}
+			if (commandArgs.length === 0) {
+				console.error(
+					"Error: No command specified after --\n\nExample: han hook run --dirs-with package.json -- npm test",
+				);
+				process.exit(1);
+			}
 
-		const { validate } = await import("./validate.js");
-		validate({
-			failFast: options.failFast || false,
-			dirsWith: options.dirsWith || null,
-			command: commandArgs.join(" "),
-		});
-	},
+			const { validate } = await import("./validate.js");
+			validate({
+				failFast: options.failFast || false,
+				dirsWith: options.dirsWith || null,
+				command: commandArgs.join(" "),
+			});
+		},
 	);
 
 // ============================================
@@ -280,32 +280,32 @@ program
 			_ignored: string[],
 			options: { failFast?: boolean; dirsWith?: string },
 		) => {
-		// Parse command from process.argv after --
-		const separatorIndex = process.argv.indexOf("--");
+			// Parse command from process.argv after --
+			const separatorIndex = process.argv.indexOf("--");
 
-		if (separatorIndex === -1) {
-			console.error(
-				"Error: Command must be specified after -- separator\n\nExample: han validate --dirs-with package.json -- npm test",
-			);
-			process.exit(1);
-		}
+			if (separatorIndex === -1) {
+				console.error(
+					"Error: Command must be specified after -- separator\n\nExample: han validate --dirs-with package.json -- npm test",
+				);
+				process.exit(1);
+			}
 
-		const commandArgs = process.argv.slice(separatorIndex + 1);
+			const commandArgs = process.argv.slice(separatorIndex + 1);
 
-		if (commandArgs.length === 0) {
-			console.error(
-				"Error: No command specified after --\n\nExample: han validate --dirs-with package.json -- npm test",
-			);
-			process.exit(1);
-		}
+			if (commandArgs.length === 0) {
+				console.error(
+					"Error: No command specified after --\n\nExample: han validate --dirs-with package.json -- npm test",
+				);
+				process.exit(1);
+			}
 
-		const { validate } = await import("./validate.js");
-		validate({
-			failFast: options.failFast || false,
-			dirsWith: options.dirsWith || null,
-			command: commandArgs.join(" "),
-		});
-	},
+			const { validate } = await import("./validate.js");
+			validate({
+				failFast: options.failFast || false,
+				dirsWith: options.dirsWith || null,
+				command: commandArgs.join(" "),
+			});
+		},
 	);
 
 program.parse();
