@@ -232,11 +232,13 @@ Let me validate these issues before we stop...
 **Purpose**: Get comprehensive details of a specific Linear issue
 
 **Parameters**:
+
 - `issueId` (required): The issue ID or identifier (e.g., "ENG-123")
 
 **Returns**: Full issue object including title, description, status, assignee, comments, etc.
 
 **Example**:
+
 ```json
 {
   "issueId": "ENG-123"
@@ -248,6 +250,7 @@ Let me validate these issues before we stop...
 **Purpose**: Search for issues with various filters
 
 **Parameters**:
+
 - `teamId` (optional): Filter by team ID
 - `assigneeId` (optional): Filter by assignee
 - `stateId` (optional): Filter by workflow state
@@ -258,6 +261,7 @@ Let me validate these issues before we stop...
 **Returns**: Array of matching issues
 
 **Example**:
+
 ```json
 {
   "assigneeId": "current-user-id",
@@ -270,6 +274,7 @@ Let me validate these issues before we stop...
 **Purpose**: Create a new Linear issue
 
 **Parameters**:
+
 - `title` (required): Issue title
 - `teamId` (required): Team ID
 - `description` (optional): Issue description (supports markdown)
@@ -282,6 +287,7 @@ Let me validate these issues before we stop...
 **Returns**: Created issue details
 
 **Example**:
+
 ```json
 {
   "title": "Add user authentication",
@@ -296,6 +302,7 @@ Let me validate these issues before we stop...
 **Purpose**: Update issue fields
 
 **Parameters**:
+
 - `issueId` (required): The issue ID
 - `title` (optional): New title
 - `description` (optional): New description
@@ -306,6 +313,7 @@ Let me validate these issues before we stop...
 **Returns**: Update confirmation
 
 **Example**:
+
 ```json
 {
   "issueId": "ENG-123",
@@ -319,12 +327,14 @@ Let me validate these issues before we stop...
 **Purpose**: Change issue workflow state
 
 **Parameters**:
+
 - `issueId` (required): The issue ID
 - `stateId` (required): Target state ID
 
 **Returns**: State change confirmation
 
 **Example**:
+
 ```json
 {
   "issueId": "ENG-123",
@@ -337,12 +347,14 @@ Let me validate these issues before we stop...
 **Purpose**: Add a comment to an issue
 
 **Parameters**:
+
 - `issueId` (required): The issue ID
 - `body` (required): Comment text (supports markdown)
 
 **Returns**: Comment confirmation
 
 **Example**:
+
 ```json
 {
   "issueId": "ENG-123",
@@ -355,11 +367,13 @@ Let me validate these issues before we stop...
 **Purpose**: Get team information
 
 **Parameters**:
+
 - `teamId` (required): The team ID or key (e.g., "ENG")
 
 **Returns**: Team details including states, labels, members
 
 **Example**:
+
 ```json
 {
   "teamId": "ENG"
@@ -375,6 +389,7 @@ Let me validate these issues before we stop...
 **Returns**: Array of projects
 
 **Example**:
+
 ```json
 {}
 ```
@@ -384,11 +399,13 @@ Let me validate these issues before we stop...
 **Purpose**: List active cycles/sprints
 
 **Parameters**:
+
 - `teamId` (optional): Filter by team
 
 **Returns**: Array of cycles
 
 **Example**:
+
 ```json
 {
   "teamId": "ENG"
@@ -420,6 +437,7 @@ Let me validate these issues before we stop...
 ## Security Considerations
 
 **API Key Security:**
+
 - Never commit API keys to version control
 - Store keys in environment variables only
 - Use separate keys for different environments
@@ -427,12 +445,14 @@ Let me validate these issues before we stop...
 - Revoke unused keys immediately
 
 **Permissions:**
+
 - MCP server inherits your Linear permissions
 - Claude can only perform actions you're authorized to do
 - Review actions before Claude executes them
 - Be cautious with bulk operations
 
 **Data Privacy:**
+
 - Issue data is transmitted to Claude for processing
 - Sensitive information in issues will be visible to Claude
 - Consider using separate workspaces for sensitive projects
@@ -453,11 +473,13 @@ Let me validate these issues before we stop...
 **Solution**:
 
 1. Verify environment variable is set:
+
    ```bash
    echo $LINEAR_API_KEY
    ```
 
 2. Test API access directly:
+
    ```bash
    curl -H "Authorization: $LINEAR_API_KEY" \
      https://api.linear.app/graphql \

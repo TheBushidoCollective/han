@@ -29,6 +29,7 @@ cd website && npx playwright test
 ## Plugin Structure
 
 Each plugin follows this structure:
+
 ```
 plugin-name/
 ├── .claude-plugin/
@@ -42,6 +43,7 @@ plugin-name/
 ### Command Files
 
 Commands require YAML frontmatter:
+
 ```markdown
 ---
 description: Brief description of the command
@@ -69,11 +71,13 @@ Command content here...
 ## CLI Architecture
 
 The CLI (`packages/bushido-han/`) uses:
+
 - **Commander.js** for CLI parsing
 - **Ink** (React for CLI) for interactive UIs
 - **Claude Agent SDK** for AI-powered plugin detection
 
 Key files:
+
 - `lib/main.ts` - CLI entry point and command definitions
 - `lib/install.ts` - Plugin installation logic
 - `lib/shared.ts` - Shared utilities and agent detection
@@ -82,6 +86,7 @@ Key files:
 ## Versioning
 
 Version bumps happen automatically via GitHub Actions:
+
 - `feat:` commits trigger MINOR bumps
 - `fix:`, `refactor:`, etc. trigger PATCH bumps
 - `!` or `BREAKING CHANGE:` triggers MAJOR bumps

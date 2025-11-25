@@ -13,6 +13,7 @@ Group results by status and display in a clear table format:
 |----|-------|--------|----------|---------|
 
 Include:
+
 - Issue identifier (e.g., ENG-123)
 - Title (truncate if too long)
 - Current state
@@ -20,6 +21,7 @@ Include:
 - Last updated date
 
 Show count of issues by status at the end:
+
 ```
 Summary:
 - In Progress: 3

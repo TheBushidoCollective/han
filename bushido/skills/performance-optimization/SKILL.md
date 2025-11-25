@@ -33,6 +33,7 @@ Systematic approach to identifying and fixing performance issues.
 **Before touching any code, establish metrics:**
 
 **Frontend Performance:**
+
 ```bash
 # Chrome DevTools Performance tab
 # Lighthouse audit
@@ -40,6 +41,7 @@ npm run build && du -sh dist/  # Bundle size
 ```
 
 **Backend Performance:**
+
 ```bash
 # Add timing logs
 start = Time.now
@@ -49,6 +51,7 @@ Logger.info("Operation took #{elapsed}ms")
 ```
 
 **Database:**
+
 ```bash
 # PostgreSQL
 EXPLAIN ANALYZE SELECT ...;
@@ -58,6 +61,7 @@ grep "SELECT" logs/production.log | grep "Duration:"
 ```
 
 **Metrics to capture:**
+
 - Load time / response time
 - Time to interactive
 - Bundle size
@@ -70,12 +74,14 @@ grep "SELECT" logs/production.log | grep "Duration:"
 **Don't guess where the problem is - profile:**
 
 **Browser Profiling:**
+
 - Chrome DevTools > Performance tab
 - Record interaction
 - Look for long tasks (> 50ms)
 - Check for layout thrashing
 
 **Server Profiling:**
+
 ```bash
 # Add detailed timing
 defmodule Profiler do
@@ -95,6 +101,7 @@ end)
 ```
 
 **React Profiling:**
+
 ```bash
 # React DevTools Profiler
 # Look for:
@@ -108,6 +115,7 @@ end)
 **Common performance issues:**
 
 **Frontend:**
+
 - Large bundle size (lazy load, code split)
 - Unnecessary re-renders (memoization)
 - Blocking JavaScript (defer, async)
@@ -116,6 +124,7 @@ end)
 - Memory leaks (cleanup useEffect)
 
 **Backend:**
+
 - N+1 queries (preload associations)
 - Missing database indexes
 - Expensive computations in loops
@@ -124,6 +133,7 @@ end)
 - Inefficient algorithms
 
 **Database:**
+
 - Missing indexes
 - Inefficient query structure
 - Too many joins
@@ -137,6 +147,7 @@ end)
 #### Frontend Optimizations
 
 **Bundle Size Reduction:**
+
 ```typescript
 // Before: Import entire library
 import _ from 'lodash'
@@ -149,6 +160,7 @@ const unique = [...new Set(array)]  // Instead of _.uniq(array)
 ```
 
 **React Performance:**
+
 ```typescript
 // Before: Re-renders on every parent render
 function ChildComponent({ items }) {
@@ -174,6 +186,7 @@ function Parent() {
 ```
 
 **Code Splitting:**
+
 ```typescript
 // Before: All in main bundle
 import HeavyComponent from './HeavyComponent'
@@ -191,6 +204,7 @@ function App() {
 ```
 
 **Image Optimization:**
+
 ```typescript
 // Before: Full-size image
 <img src="/hero.jpg" />
@@ -207,6 +221,7 @@ function App() {
 #### Backend Optimizations
 
 **N+1 Query Fix:**
+
 ```elixir
 # Before: N+1 queries (1 for users + N for posts)
 users = Repo.all(User)
@@ -221,6 +236,7 @@ Enum.map(users, fn user -> {user, user.posts} end)
 ```
 
 **Database Indexing:**
+
 ```sql
 -- Before: Slow query
 SELECT * FROM users WHERE email = 'user@example.com';
@@ -232,6 +248,7 @@ CREATE INDEX idx_users_email ON users(email);
 ```
 
 **Caching:**
+
 ```elixir
 # Before: Expensive calculation every request
 def get_popular_posts do
@@ -249,6 +266,7 @@ end
 ```
 
 **Batch Processing:**
+
 ```elixir
 # Before: Process one at a time
 Enum.each(user_ids, fn id ->
@@ -264,6 +282,7 @@ Enum.each(users, &send_email/1)
 #### Algorithm Optimization
 
 **Reduce Complexity:**
+
 ```typescript
 // Before: O(n²) - nested loops
 function findDuplicates(arr: number[]): number[] {
@@ -326,6 +345,7 @@ dist/main.js   850.2 KB
 $ npm run build
 dist/main.js   520.8 KB
 ```
+
 ```
 
 **Use proof-of-work skill to document evidence**
@@ -473,6 +493,7 @@ GOOD: "Profiler shows this takes 80% of time" [measures, optimizes, measures aga
 ## Trade-offs to Consider
 
 **Performance vs Readability:**
+
 ```typescript
 // More readable
 const result = items
@@ -491,6 +512,7 @@ for (const item of items) {
 **Question:** Is the perf gain worth the readability loss? Profile first.
 
 **Performance vs Maintainability:**
+
 - Caching adds complexity
 - Memoization adds memory overhead
 - Code splitting adds bundle management
@@ -500,6 +522,7 @@ for (const item of items) {
 ## Tools & Commands
 
 **Frontend:**
+
 ```bash
 # Bundle analysis
 npm run build -- --analyze
@@ -512,6 +535,7 @@ npx webpack-bundle-analyzer dist/stats.json
 ```
 
 **Backend:**
+
 ```bash
 # Database query analysis
 EXPLAIN ANALYZE SELECT ...;

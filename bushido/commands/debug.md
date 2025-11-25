@@ -20,6 +20,7 @@ Use the debugging skill from bushido to:
 ## Debug vs Fix
 
 **Use `/debug` when:**
+
 - Investigating an issue to understand it
 - Need to gather information before fixing
 - Want to identify root cause without implementing solution
@@ -27,6 +28,7 @@ Use the debugging skill from bushido to:
 - Research phase before fix
 
 **Use `/fix` when:**
+
 - Ready to implement the solution
 - Debugging AND fixing in one go
 - Issue is understood, just needs fixing
@@ -221,6 +223,7 @@ useEffect(() => {
 ## Examples
 
 When the user says:
+
 - "Why is this page loading slowly?"
 - "Investigate this intermittent test failure"
 - "Figure out why users are seeing this error"
@@ -230,18 +233,21 @@ When the user says:
 ## Debugging Tools by Stack
 
 **Frontend:**
+
 - Chrome DevTools (Console, Network, Performance, Memory)
 - React DevTools
 - Redux DevTools
 - Lighthouse
 
 **Backend:**
+
 - Application logs
 - APM tools (New Relic, Datadog)
 - Database query analyzers
 - Profilers
 
 **Database:**
+
 - EXPLAIN ANALYZE (PostgreSQL)
 - Slow query log
 - Query profilers
@@ -249,24 +255,28 @@ When the user says:
 ## Common Issues to Check
 
 **"It doesn't work":**
+
 - Check error messages
 - Check browser console
 - Check network tab
 - Check server logs
 
 **"It's slow":**
+
 - Profile to find bottleneck
 - Check database queries
 - Check network waterfall
 - Check bundle size
 
 **"It works locally but not in production":**
+
 - Check environment variables
 - Check production logs
 - Check data differences
 - Check network/CORS issues
 
 **"It works sometimes":**
+
 - Race condition?
 - Timing issue?
 - Data-dependent?

@@ -57,6 +57,7 @@ Create this task? (y/n)
 ```
 
 After creation, use `clickup_create_task` and optionally `clickup_create_checklist`, then display:
+
 ```
 ✅ Created #ABC123: {name}
 

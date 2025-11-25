@@ -31,6 +31,7 @@ Display in sections:
 ## Checklist Items
 
 {show all checklist items with completion status}
+
 - [x] Completed item
 - [ ] Incomplete item
 

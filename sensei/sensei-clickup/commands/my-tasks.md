@@ -13,6 +13,7 @@ Group results by status and display in a clear table format:
 |----|------|--------|----------|----------|---------|
 
 Include:
+
 - Task ID (e.g., #ABC123 or custom ID)
 - Task name (truncate if too long)
 - Current status
@@ -21,6 +22,7 @@ Include:
 - Last updated date
 
 Show count of tasks by status at the end:
+
 ```
 Summary:
 - In Progress: 4

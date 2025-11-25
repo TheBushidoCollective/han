@@ -409,7 +409,7 @@ forward "/jobs", Oban.Web.Router
 View all defined routes in your application:
 
 ```bash
-$ mix phx.routes
+mix phx.routes
 ```
 
 Output shows HTTP verb, path, controller, and action:
@@ -431,8 +431,8 @@ DELETE  /users/:id       HelloWeb.UserController :delete
 Grep for specific routes:
 
 ```bash
-$ mix phx.routes | grep users
-$ mix phx.routes | grep POST
+mix phx.routes | grep users
+mix phx.routes | grep POST
 ```
 
 ## Building Paths Programmatically

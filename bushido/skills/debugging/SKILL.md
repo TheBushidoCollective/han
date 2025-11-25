@@ -23,6 +23,7 @@ Systematic approaches to investigating and diagnosing bugs.
 ### 1. Observe
 
 **Gather all the facts:**
+
 - What's the symptom? (What's happening that shouldn't?)
 - When does it happen? (Always, sometimes, specific conditions?)
 - Who's affected? (All users, some users, specific scenarios?)
@@ -30,6 +31,7 @@ Systematic approaches to investigating and diagnosing bugs.
 - Recent changes? (What changed before this started?)
 
 **Evidence to collect:**
+
 - Error messages and stack traces
 - Application logs
 - User reports
@@ -43,6 +45,7 @@ Systematic approaches to investigating and diagnosing bugs.
 **Based on symptoms, what could cause this?**
 
 **Common categories:**
+
 - **Logic error:** Code does wrong thing
 - **State management:** State gets out of sync
 - **Async/timing:** Race condition, callback hell
@@ -52,6 +55,7 @@ Systematic approaches to investigating and diagnosing bugs.
 - **Resource:** Memory leak, connection pool exhausted
 
 **Prioritize hypotheses:**
+
 1. Most likely causes first
 2. Easiest to test first (when equal likelihood)
 3. Most impactful if true
@@ -59,6 +63,7 @@ Systematic approaches to investigating and diagnosing bugs.
 ### 3. Test Hypothesis
 
 **Design experiment to prove/disprove:**
+
 - Add logging to see values
 - Add breakpoints to pause execution
 - Modify input to isolate variable
@@ -66,6 +71,7 @@ Systematic approaches to investigating and diagnosing bugs.
 - Compare with working version
 
 **Keep notes:**
+
 ```markdown
 **Hypothesis:** Database query timeout
 **Test:** Add query timing logs
@@ -81,6 +87,7 @@ Systematic approaches to investigating and diagnosing bugs.
 ### 4. Analyze Results
 
 **What did you learn?**
+
 - Hypothesis confirmed or rejected?
 - New questions raised?
 - Unexpected findings?
@@ -89,11 +96,13 @@ Systematic approaches to investigating and diagnosing bugs.
 ### 5. Repeat or Conclude
 
 **If root cause found:**
+
 - Document findings
 - Estimate impact
 - Plan fix
 
 **If not found:**
+
 - Form new hypothesis
 - Repeat cycle
 
@@ -128,6 +137,7 @@ function processOrder(order) {
 ```
 
 **Logging guidelines:**
+
 - Log function entry/exit
 - Log branching decisions
 - Log external calls (API, database)
@@ -153,6 +163,7 @@ node --inspect app.js
 ```
 
 **Debugger features:**
+
 - Step over (next line)
 - Step into (into function call)
 - Step out (back to caller)
@@ -195,6 +206,7 @@ node --inspect app.js
 **What's different?**
 
 **Version comparison:**
+
 ```bash
 # Find which commit broke it
 git bisect start
@@ -207,6 +219,7 @@ git bisect good/bad
 ```
 
 **Environment comparison:**
+
 - Works locally but not production?
 - Works for some users but not others?
 - Worked yesterday but not today?
@@ -248,6 +261,7 @@ console.log(users)          // undefined
 ```
 
 **Common wrong assumptions:**
+
 - Function returns expected type
 - Variable is defined
 - Array is not empty
@@ -260,12 +274,14 @@ console.log(users)          // undefined
 ### "Intermittent failure"
 
 **Likely causes:**
+
 - Race condition (timing-dependent)
 - Data-dependent (certain inputs trigger it)
 - Resource leak (happens after N operations)
 - External service flakiness
 
 **Investigation:**
+
 - Add extensive logging
 - Look for async operations
 - Check timing between operations
@@ -275,6 +291,7 @@ console.log(users)          // undefined
 ### "Works locally, fails in production"
 
 **Check differences:**
+
 - Environment variables
 - Data (production has different/more data)
 - Network (CORS, SSL, proxies)
@@ -286,12 +303,14 @@ console.log(users)          // undefined
 **Don't guess - profile:**
 
 **Frontend:**
+
 - Chrome DevTools > Performance tab
 - Look for long tasks (> 50ms)
 - Check for layout thrashing
 - Look for memory leaks
 
 **Backend:**
+
 - Add timing logs around operations
 - Check database query time (EXPLAIN ANALYZE)
 - Check external API call time
@@ -300,6 +319,7 @@ console.log(users)          // undefined
 ### "Memory leak"
 
 **Investigation:**
+
 ```typescript
 // Take heap snapshot
 // Do operation that leaks
@@ -308,6 +328,7 @@ console.log(users)          // undefined
 ```
 
 **Common causes:**
+
 - Event listeners not removed
 - Closures holding references
 - Global variables accumulating
@@ -317,6 +338,7 @@ console.log(users)          // undefined
 ### "Crash/Exception"
 
 **Read the stack trace:**
+
 ```
 Error: Cannot read property 'map' of undefined
     at processUsers (app.js:42:15)
@@ -325,11 +347,13 @@ Error: Cannot read property 'map' of undefined
 ```
 
 **Stack trace tells you:**
+
 - Line 42: Where it crashed
 - Line 23: Where it was called from
 - Line 12: Origin of the request
 
 **Then:**
+
 - Go to line 42
 - Check what's undefined
 - Trace back why it's undefined
@@ -422,12 +446,14 @@ for (var i = 0; i < 3; i++) {
 ### Browser Developer Tools
 
 **Console:**
+
 - `console.log()` - Print values
 - `console.table()` - Display arrays/objects as table
 - `console.trace()` - Print stack trace
 - `console.time()` / `console.timeEnd()` - Measure duration
 
 **Debugger:**
+
 - Set breakpoints
 - Step through code
 - Inspect variables
@@ -435,12 +461,14 @@ for (var i = 0; i < 3; i++) {
 - Call stack
 
 **Network:**
+
 - View all requests
 - See request/response headers and bodies
 - Measure timing
 - Replay requests
 
 **Performance:**
+
 - Record profile
 - See function call tree
 - Identify bottlenecks
@@ -490,6 +518,7 @@ SELECT pg_size_pretty(pg_total_relation_size('users'));
 ## Debugging Checklist
 
 ### Before Starting
+
 - [ ] Can reproduce the issue reliably?
 - [ ] Have error message or symptom description?
 - [ ] Know when it started happening?
@@ -497,6 +526,7 @@ SELECT pg_size_pretty(pg_total_relation_size('users'));
 - [ ] Checked logs for clues?
 
 ### During Investigation
+
 - [ ] Formed clear hypothesis?
 - [ ] Testing hypothesis systematically?
 - [ ] Taking notes on findings?
@@ -504,6 +534,7 @@ SELECT pg_size_pretty(pg_total_relation_size('users'));
 - [ ] Questioning assumptions?
 
 ### After Finding Root Cause
+
 - [ ] Understand WHY it happens?
 - [ ] Can explain it to someone else?
 - [ ] Documented findings?

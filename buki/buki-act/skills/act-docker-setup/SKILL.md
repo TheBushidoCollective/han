@@ -153,6 +153,7 @@ docker inspect act-<job-name>
 ### Default Mounts
 
 Act automatically mounts:
+
 - Current directory → `/github/workspace`
 - Act cache → `/root/.cache/act`
 - Docker socket (if needed)

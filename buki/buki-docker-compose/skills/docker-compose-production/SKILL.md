@@ -1127,21 +1127,25 @@ Use docker-compose-production when you need to:
 ## Resources
 
 ### Official Documentation
+
 - [Docker Compose Production](https://docs.docker.com/compose/production/)
 - [Docker Security Best Practices](https://docs.docker.com/engine/security/)
 - [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/)
 
 ### Deployment Guides
+
 - [Deploy on Production](https://docs.docker.com/compose/production/)
 - [Configure Container Resources](https://docs.docker.com/config/containers/resource_constraints/)
 - [Container Security](https://docs.docker.com/engine/security/security/)
 
 ### Tools and Images
+
 - [Docker Volume Backup](https://github.com/futurice/docker-volume-backup)
 - [Postgres Backup Local](https://github.com/prodrigestivill/docker-postgres-backup-local)
 - [Watchtower](https://containrrr.dev/watchtower/) - Automated container updates
 
 ### Monitoring
+
 - [Prometheus](https://prometheus.io/docs/introduction/overview/)
 - [Grafana](https://grafana.com/docs/)
 - [cAdvisor](https://github.com/google/cadvisor)

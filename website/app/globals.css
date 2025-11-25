@@ -3,59 +3,59 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+	--background: #ffffff;
+	--foreground: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+	:root {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+	}
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+	color: var(--foreground);
+	background: var(--background);
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+		"Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 }
 
 /* Custom scrollbar styling */
 .scrollbar-custom {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(209 213 219) transparent;
+	scrollbar-width: thin;
+	scrollbar-color: rgb(209 213 219) transparent;
 }
 
 .scrollbar-custom::-webkit-scrollbar {
-  width: 6px;
+	width: 6px;
 }
 
 .scrollbar-custom::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb {
-  background-color: rgb(209 213 219);
-  border-radius: 3px;
+	background-color: rgb(209 213 219);
+	border-radius: 3px;
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(156 163 175);
+	background-color: rgb(156 163 175);
 }
 
 /* Dark mode scrollbar */
 @media (prefers-color-scheme: dark) {
-  .scrollbar-custom {
-    scrollbar-color: rgb(75 85 99) transparent;
-  }
+	.scrollbar-custom {
+		scrollbar-color: rgb(75 85 99) transparent;
+	}
 
-  .scrollbar-custom::-webkit-scrollbar-thumb {
-    background-color: rgb(75 85 99);
-  }
+	.scrollbar-custom::-webkit-scrollbar-thumb {
+		background-color: rgb(75 85 99);
+	}
 
-  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(107 114 128);
-  }
+	.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+		background-color: rgb(107 114 128);
+	}
 }

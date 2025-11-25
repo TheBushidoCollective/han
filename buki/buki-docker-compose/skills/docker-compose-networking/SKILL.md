@@ -35,6 +35,7 @@ services:
 ```
 
 In this setup:
+
 - All services can communicate using service names as hostnames
 - Frontend can reach backend at `http://backend:3000`
 - Backend can reach database at `postgres://database:5432`
@@ -94,6 +95,7 @@ volumes:
 ```
 
 Network isolation:
+
 - Frontend can only reach API
 - Frontend cannot reach database or cache directly
 - API can reach all services
@@ -152,6 +154,7 @@ networks:
 ```
 
 Services can be reached by any of their aliases:
+
 - `http://website`, `http://www`, `http://web-server` all reach web service
 - `postgresql://db:5432`, `postgresql://postgres:5432` both reach database
 
@@ -258,6 +261,7 @@ volumes:
 ```
 
 Create external network first:
+
 ```bash
 docker network create company-shared-network
 docker compose up -d
@@ -499,6 +503,7 @@ volumes:
 ```
 
 Network segmentation:
+
 - Public: Internet-facing services (nginx, frontend)
 - Frontend-tier: Frontend and API communication
 - Backend-tier: API, workers, databases, cache, queue
@@ -733,6 +738,7 @@ networks:
 ```
 
 Debug commands:
+
 ```bash
 # Enter debug container
 docker compose exec debug bash
@@ -880,18 +886,22 @@ Use docker-compose-networking when you need to:
 ## Resources
 
 ### Official Documentation
+
 - [Docker Compose Networking](https://docs.docker.com/compose/networking/)
 - [Docker Network Drivers](https://docs.docker.com/network/drivers/)
 - [Docker DNS](https://docs.docker.com/config/containers/container-networking/#dns-services)
 
 ### Network Troubleshooting
+
 - [Nicolaka Netshoot](https://github.com/nicolaka/netshoot) - Network troubleshooting container
 - [Docker Network Inspect](https://docs.docker.com/engine/reference/commandline/network_inspect/)
 
 ### Architecture Patterns
+
 - [Microservices Network Patterns](https://microservices.io/patterns/communication-style/messaging.html)
 - [Docker Security Best Practices](https://docs.docker.com/engine/security/)
 
 ### Tools
+
 - [Docker Network Commands](https://docs.docker.com/engine/reference/commandline/network/)
 - [Compose Network Reference](https://docs.docker.com/compose/compose-file/06-networks/)

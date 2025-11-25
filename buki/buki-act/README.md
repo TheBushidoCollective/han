@@ -21,7 +21,9 @@ Buki-Act is a Han plugin that brings GitHub Actions workflow validation and loca
 Three specialized skills provide deep knowledge of act and GitHub Actions:
 
 #### act-workflow-syntax
+
 Complete guide to GitHub Actions workflow files:
+
 - Workflow structure and top-level fields
 - Event triggers (push, pull_request, workflow_dispatch, schedule)
 - Job configuration and dependencies
@@ -31,7 +33,9 @@ Complete guide to GitHub Actions workflow files:
 - Act-specific considerations
 
 #### act-local-testing
+
 Local workflow testing with act CLI:
+
 - Installation across platforms (macOS, Linux, Windows)
 - Running workflows and specific jobs
 - Validation and dry runs
@@ -41,7 +45,9 @@ Local workflow testing with act CLI:
 - Performance optimization tips
 
 #### act-docker-setup
+
 Docker configuration for act:
+
 - Runner image selection (micro, medium, large, custom)
 - Platform configuration with .actrc files
 - Container management and lifecycle
@@ -69,6 +75,7 @@ cd sensei/buki/buki-act
 ## Requirements
 
 - **act**: GitHub Actions local runner
+
   ```bash
   # macOS
   brew install act

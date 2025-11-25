@@ -19,6 +19,7 @@ Create actionable implementation plans for features and tasks.
 ## Planning vs Architecture
 
 **Technical Planning (this skill):**
+
 - Tactical: "How do I build feature X?"
 - Specific implementation steps
 - Days to weeks of work
@@ -26,6 +27,7 @@ Create actionable implementation plans for features and tasks.
 - Focuses on execution
 
 **Architecture Design (architecture-design skill):**
+
 - Strategic: "How should the system be structured?"
 - High-level design decisions
 - Weeks to months of impact
@@ -33,12 +35,14 @@ Create actionable implementation plans for features and tasks.
 - Focuses on structure
 
 **Use planning for:**
+
 - Implementing specific features
 - Breaking down work into tasks
 - Sequencing implementation steps
 - Estimating complexity
 
 **Use architecture for:**
+
 - Designing new systems
 - Major refactors
 - Technology choices
@@ -49,12 +53,14 @@ Create actionable implementation plans for features and tasks.
 ### 1. Understand Requirements
 
 **Clarify what success looks like:**
+
 - What exactly needs to be built?
 - What problem does it solve?
 - What are the acceptance criteria?
 - What's in scope vs out of scope?
 
 **Ask questions:**
+
 - Who will use this?
 - What's the expected behavior?
 - What edge cases should be handled?
@@ -64,12 +70,14 @@ Create actionable implementation plans for features and tasks.
 ### 2. Analyze Current State
 
 **Understand what exists:**
+
 - What code is already there?
 - What patterns are in use?
 - What can be reused?
 - What needs to change?
 
 **Research:**
+
 ```bash
 # Find similar implementations
 grep -r "similar_pattern" .
@@ -84,6 +92,7 @@ grep -r "test.*similar" test/
 ### 3. Break Down Into Tasks
 
 **Good tasks are:**
+
 - **Specific**: "Add user authentication" ❌ → "Create login API endpoint" ✅
 - **Testable**: Clear success criteria
 - **Right-sized**: Hours to days, not weeks
@@ -91,6 +100,7 @@ grep -r "test.*similar" test/
 - **Ordered** (when dependencies exist): Clear sequence
 
 **Task template:**
+
 ```markdown
 ### Task: [Specific deliverable]
 
@@ -113,11 +123,13 @@ grep -r "test.*similar" test/
 ### 4. Identify Dependencies
 
 **Task dependencies:**
+
 - **Blocks**: Task A must finish before Task B starts
 - **Blocked by**: Task B can't start until Task A finishes
 - **Related**: Tasks that should coordinate
 
 **Example:**
+
 ```
 Task 1: Create database schema (no dependencies)
 Task 2: Create API endpoint (depends on Task 1)
@@ -126,6 +138,7 @@ Task 4: Add tests (depends on Tasks 1-3)
 ```
 
 **Parallel vs Sequential:**
+
 ```
 Can be parallel:
   Task A: Frontend component
@@ -141,6 +154,7 @@ Must be sequential:
 ### 5. Estimate Complexity
 
 **Use relative sizing, not time:**
+
 - **S (Small)**: 1-4 hours, straightforward
 - **M (Medium)**: 4-8 hours, moderate complexity
 - **L (Large)**: 1-2 days, complex or uncertain
@@ -148,6 +162,7 @@ Must be sequential:
 **If task is > L:** Break it down further
 
 **Complexity factors:**
+
 - How well-understood is the requirement?
 - How many unknowns?
 - How many files need changes?
@@ -155,6 +170,7 @@ Must be sequential:
 - Testing complexity?
 
 **Examples:**
+
 - S: Add validation rule to existing form
 - M: Create new API endpoint with tests
 - L: Implement new payment provider integration
@@ -162,12 +178,14 @@ Must be sequential:
 ### 6. Define Testing Strategy
 
 **How will we verify it works?**
+
 - Unit tests for business logic
 - Integration tests for API endpoints
 - E2E tests for user workflows
 - Manual testing steps
 
 **Example:**
+
 ```markdown
 ## Testing Strategy
 
@@ -370,11 +388,13 @@ Could Have (P2):
 ### Start Simple
 
 **Don't over-plan:**
+
 - Start with high-level tasks
 - Add detail as you learn
 - Plans evolve during implementation
 
 **Good enough:**
+
 - Plan should be clear enough to start
 - Not every detail needs to be known upfront
 - Iterate as you go
@@ -382,11 +402,13 @@ Could Have (P2):
 ### Make Tasks Actionable
 
 **Bad task:**
+
 ```
 - Improve performance
 ```
 
 **Good task:**
+
 ```
 ### Task 3: Optimize database queries (Complexity: M)
 
@@ -401,6 +423,7 @@ Could Have (P2):
 ### Document Decisions
 
 **Why matters:**
+
 ```markdown
 ## Why this approach?
 
@@ -415,6 +438,7 @@ We chose REST over GraphQL because:
 ### Include Examples
 
 **Show, don't just tell:**
+
 ```markdown
 ## API Design
 
@@ -429,6 +453,7 @@ We chose REST over GraphQL because:
 ```
 
 **Response:**
+
 ```json
 {
   "id": "123",
@@ -437,6 +462,7 @@ We chose REST over GraphQL because:
   "createdAt": "2024-01-01T00:00:00Z"
 }
 ```
+
 ```
 
 ## Common Planning Mistakes
@@ -444,43 +470,54 @@ We chose REST over GraphQL because:
 ### ❌ Too Vague
 
 ```
+
 BAD:
+
 - Implement user system
 - Add features
 - Make it work
+
 ```
 
 ### ❌ Too Detailed
 
 ```
+
 BAD:
+
 - Add import statement on line 5
 - Declare variable on line 6
 - Call function on line 7
+
 ```
 
 ### ❌ Missing Dependencies
 
 ```
+
 BAD:
 Task 1: Create UI
 Task 2: Create API
 (But UI depends on API contract)
+
 ```
 
 ### ❌ No Success Criteria
 
 ```
+
 BAD:
 Task: Add validation
 (How do we know when it's done?)
 
 GOOD:
 Task: Add validation
+
 - [ ] Email format validated
 - [ ] Required fields checked
 - [ ] Error messages displayed
 - [ ] Tests pass
+
 ```
 
 ## Integration with Other Skills

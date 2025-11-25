@@ -116,6 +116,7 @@ Claude: Fetching pipeline status for MR !15...
 **Exit Code**: 1
 **Log excerpt**:
 ```
+
 Error: Connection to test database failed
     at Database.connect (db.ts:45:12)
     at setupTestDB (setup.ts:23:8)
@@ -130,6 +131,7 @@ Error: Connection to test database failed
   ● Authentication API › POST /register › should create new user
 
     Timeout - Async callback was not invoked within 5000ms
+
 ```
 
 ### Recommendations
@@ -160,24 +162,28 @@ Would you like me to help debug these test failures?
 ## Common Pipeline Issues
 
 ### Failed Tests
+
 - Review test logs for specific failures
 - Check if tests pass locally
 - Verify test environment configuration
 - Look for flaky tests that fail intermittently
 
 ### Build Errors
+
 - Check for missing dependencies
 - Verify build configuration
 - Look for syntax or compilation errors
 - Ensure all files are committed
 
 ### Timeout Issues
+
 - Increase timeout values if needed
 - Optimize slow tests or builds
 - Check for infinite loops or deadlocks
 - Review resource allocation
 
 ### Environment Issues
+
 - Verify environment variables are set
 - Check service dependencies are available
 - Ensure correct versions of tools/languages

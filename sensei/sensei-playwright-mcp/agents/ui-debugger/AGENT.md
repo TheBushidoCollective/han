@@ -116,6 +116,7 @@ Note: The exact MCP tools available depend on the Playwright MCP server configur
 When a test fails unexpectedly:
 
 1. **Reproduce the failure**:
+
    ```bash
    # Run the specific test
    npx playwright test path/to/test.spec.ts --headed
@@ -154,6 +155,7 @@ When a test fails unexpectedly:
 When selectors fail to find elements:
 
 1. **Verify element exists**:
+
    ```typescript
    // Check if element is in DOM
    const element = await page.locator('selector');
@@ -162,6 +164,7 @@ When selectors fail to find elements:
    ```
 
 2. **Inspect element properties**:
+
    ```typescript
    // Check element state
    const isVisible = await element.isVisible();
@@ -170,6 +173,7 @@ When selectors fail to find elements:
    ```
 
 3. **Debug selector strategy**:
+
    ```typescript
    // Try different selectors
    await page.locator('[data-testid="button"]');
@@ -178,6 +182,7 @@ When selectors fail to find elements:
    ```
 
 4. **Capture DOM state**:
+
    ```typescript
    // Get HTML for inspection
    const html = await page.locator('.container').innerHTML();
@@ -201,6 +206,7 @@ When tests fail due to timing problems:
    - Fails after app updates
 
 2. **Inspect wait conditions**:
+
    ```typescript
    // Check what's being waited for
    await page.waitForLoadState('networkidle');
@@ -209,6 +215,7 @@ When tests fail due to timing problems:
    ```
 
 3. **Add debugging points**:
+
    ```typescript
    // Take screenshots at key points
    await page.screenshot({ path: 'before-click.png' });
@@ -233,6 +240,7 @@ When tests fail due to timing problems:
 When tests fail unpredictably:
 
 1. **Collect failure data**:
+
    ```bash
    # Run test multiple times
    npx playwright test path/to/test.spec.ts --repeat-each=10
@@ -256,6 +264,7 @@ When tests fail unpredictably:
    - Asynchronous operations
 
 4. **Use debug tools**:
+
    ```typescript
    test('potentially flaky', async ({ page }) => {
      // Add more logging
@@ -281,6 +290,7 @@ When tests fail unpredictably:
 When UI doesn't look or behave as expected:
 
 1. **Capture visual state**:
+
    ```typescript
    // Full page screenshot
    await page.screenshot({ path: 'full-page.png', fullPage: true });
@@ -296,6 +306,7 @@ When UI doesn't look or behave as expected:
    - Verify CSS properties
 
 3. **Inspect computed styles**:
+
    ```typescript
    // Get element styling
    const bgColor = await page.locator('.button').evaluate(
@@ -305,6 +316,7 @@ When UI doesn't look or behave as expected:
    ```
 
 4. **Check viewport and rendering**:
+
    ```typescript
    // Check viewport size
    const viewport = page.viewportSize();
@@ -525,11 +537,13 @@ async function debugClick(locator: Locator, description: string) {
 ### Issue 1: "Element not found"
 
 **Diagnosis**:
+
 - Element doesn't exist in DOM
 - Selector doesn't match
 - Element not yet rendered
 
 **Debug**:
+
 ```typescript
 // Check if element exists
 const count = await page.locator('selector').count();
@@ -544,6 +558,7 @@ console.log(html);
 ```
 
 **Solutions**:
+
 - Fix selector to match actual DOM
 - Add wait for element to appear
 - Verify page loaded correctly
@@ -552,12 +567,14 @@ console.log(html);
 ### Issue 2: "Element not visible"
 
 **Diagnosis**:
+
 - Element in DOM but hidden
 - Element outside viewport
 - Element covered by another element
 - CSS display/visibility/opacity issue
 
 **Debug**:
+
 ```typescript
 // Check visibility
 const isVisible = await element.isVisible();
@@ -572,6 +589,7 @@ console.log(`Display: ${display}`);
 ```
 
 **Solutions**:
+
 - Scroll element into view
 - Wait for animations to complete
 - Remove overlapping elements
@@ -581,12 +599,14 @@ console.log(`Display: ${display}`);
 ### Issue 3: "Timeout waiting for condition"
 
 **Diagnosis**:
+
 - Condition never becomes true
 - Timeout too short
 - Network delay
 - Race condition
 
 **Debug**:
+
 ```typescript
 // Increase timeout temporarily
 await expect(page.locator('.result'))
@@ -600,6 +620,7 @@ await page.waitForLoadState('networkidle');
 ```
 
 **Solutions**:
+
 - Wait for correct condition
 - Increase timeout if justified
 - Fix race condition in application
@@ -609,12 +630,14 @@ await page.waitForLoadState('networkidle');
 ### Issue 4: "Click has no effect"
 
 **Diagnosis**:
+
 - Wrong element clicked
 - Event handler not attached
 - Prevented by another element
 - Timing issue
 
 **Debug**:
+
 ```typescript
 // Verify element before click
 await element.screenshot({ path: 'before-click.png' });
@@ -631,6 +654,7 @@ console.log(`Has click handler: ${hasListener}`);
 ```
 
 **Solutions**:
+
 - Click correct element
 - Wait for handler attachment
 - Scroll element into view
@@ -640,12 +664,14 @@ console.log(`Has click handler: ${hasListener}`);
 ### Issue 5: "Flaky test failures"
 
 **Diagnosis**:
+
 - Race condition
 - Timing dependency
 - External service issue
 - Insufficient waits
 
 **Debug**:
+
 ```bash
 # Run multiple times
 npx playwright test --repeat-each=20
@@ -655,6 +681,7 @@ npx playwright test --trace retain-on-failure
 ```
 
 **Solutions**:
+
 - Use web-first assertions (auto-wait)
 - Replace hard waits with condition waits
 - Mock external dependencies

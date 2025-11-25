@@ -21,6 +21,7 @@ Create clear, insightful explanations of code, concepts, and technical decisions
 ### 1. Understand the Question
 
 **What are they really asking?**
+
 - Literal question: "What does this do?"
 - Deeper question: "Why does this exist?" or "How does this work?"
 - Context matters: Junior dev vs senior dev needs different explanations
@@ -28,6 +29,7 @@ Create clear, insightful explanations of code, concepts, and technical decisions
 ### 2. Gather Full Context
 
 **Read before explaining:**
+
 - The code in question (obvious)
 - Surrounding code (function, class, module)
 - Related code (what calls it, what it calls)
@@ -53,6 +55,7 @@ Create clear, insightful explanations of code, concepts, and technical decisions
 **Match explanation to context:**
 
 **For "What does this do?"**
+
 ```
 BAD: "It's a reducer function that takes state and action..."
 GOOD: "This manages the shopping cart state. When you add/remove
@@ -60,6 +63,7 @@ GOOD: "This manages the shopping cart state. When you add/remove
 ```
 
 **For "How does this work?"**
+
 ```
 BAD: "It just loops through items and sums prices."
 GOOD: "It iterates through cart items, applies discounts to each,
@@ -68,6 +72,7 @@ GOOD: "It iterates through cart items, applies discounts to each,
 ```
 
 **For "Why this approach?"**
+
 ```
 BAD: "Because it's faster."
 GOOD: "We chose this over X because: (1) handles async updates
@@ -181,6 +186,7 @@ GOOD: "We chose this over X because: (1) handles async updates
 
 **Example:**
 "Think of this like a restaurant kitchen:
+
 - Actions are customer orders
 - Reducers are chefs preparing food
 - Store is the completed order waiting area"
@@ -240,6 +246,7 @@ users.map(u => ...)
 **Why this works:**
 `?.` is optional chaining - it only calls `.map()` if `users`
 exists. If not, it shows a loading state instead.
+
 ```
 
 ### Explaining "Why Not X?"
@@ -324,6 +331,7 @@ GOOD: "Similar to UserService.findActive() in services/user.ts:45"
 ## Verification
 
 **After explaining, check:**
+
 - ✅ Does this answer the actual question asked?
 - ✅ Is it understandable without reading it 3 times?
 - ✅ Are technical terms explained or linked?

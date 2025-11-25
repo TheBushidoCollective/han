@@ -238,11 +238,13 @@ Let me validate these tasks before we stop...
 **Purpose**: Get comprehensive details of a specific ClickUp task
 
 **Parameters**:
+
 - `taskId` (required): The task ID (e.g., "ABC123" or full ID)
 
 **Returns**: Full task object including name, description, status, assignees, checklist, custom fields, etc.
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123"
@@ -254,6 +256,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Search for tasks with various filters
 
 **Parameters**:
+
 - `listId` (optional): Filter by list ID
 - `folderId` (optional): Filter by folder ID
 - `spaceId` (optional): Filter by space ID
@@ -266,6 +269,7 @@ Let me validate these tasks before we stop...
 **Returns**: Array of matching tasks
 
 **Example**:
+
 ```json
 {
   "listId": "123456789",
@@ -279,6 +283,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Create a new ClickUp task
 
 **Parameters**:
+
 - `listId` (required): List ID where task will be created
 - `name` (required): Task name
 - `description` (optional): Task description (supports markdown)
@@ -291,6 +296,7 @@ Let me validate these tasks before we stop...
 **Returns**: Created task details
 
 **Example**:
+
 ```json
 {
   "listId": "123456789",
@@ -306,6 +312,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Update task fields
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `name` (optional): New task name
 - `description` (optional): New description
@@ -316,6 +323,7 @@ Let me validate these tasks before we stop...
 **Returns**: Update confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -329,12 +337,14 @@ Let me validate these tasks before we stop...
 **Purpose**: Change task status
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `status` (required): Target status name (e.g., "in progress", "done")
 
 **Returns**: Status change confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -347,6 +357,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Add a comment to a task
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `comment` (required): Comment text (supports markdown)
 - `notify_all` (optional): Notify all task followers (boolean)
@@ -354,6 +365,7 @@ Let me validate these tasks before we stop...
 **Returns**: Comment confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -367,6 +379,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Create a checklist on a task
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `name` (required): Checklist name
 - `items` (optional): Array of checklist item names
@@ -374,6 +387,7 @@ Let me validate these tasks before we stop...
 **Returns**: Checklist creation confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -391,6 +405,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Track time on a task
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `duration` (required): Duration in milliseconds
 - `description` (optional): Time entry description
@@ -398,6 +413,7 @@ Let me validate these tasks before we stop...
 **Returns**: Time tracking confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -411,6 +427,7 @@ Let me validate these tasks before we stop...
 **Purpose**: Assign or unassign users to a task
 
 **Parameters**:
+
 - `taskId` (required): The task ID
 - `assignees` (required): Array of user IDs to assign
 - `add` (optional): If true, adds to existing assignees; if false, replaces
@@ -418,6 +435,7 @@ Let me validate these tasks before we stop...
 **Returns**: Assignment confirmation
 
 **Example**:
+
 ```json
 {
   "taskId": "ABC123",
@@ -431,11 +449,13 @@ Let me validate these tasks before we stop...
 **Purpose**: Get list information
 
 **Parameters**:
+
 - `listId` (required): The list ID
 
 **Returns**: List details including tasks, statuses, fields
 
 **Example**:
+
 ```json
 {
   "listId": "123456789"
@@ -447,11 +467,13 @@ Let me validate these tasks before we stop...
 **Purpose**: Get workspace information and teams
 
 **Parameters**:
+
 - `workspaceId` (optional): Specific workspace ID, or omit for all accessible workspaces
 
 **Returns**: Workspace details
 
 **Example**:
+
 ```json
 {
   "workspaceId": "workspace-id"
@@ -486,6 +508,7 @@ Let me validate these tasks before we stop...
 ## Security Considerations
 
 **API Token Security:**
+
 - Never commit API tokens to version control
 - Store tokens in environment variables only
 - Use separate tokens for different environments
@@ -493,12 +516,14 @@ Let me validate these tasks before we stop...
 - Revoke unused tokens immediately
 
 **Permissions:**
+
 - MCP server inherits your ClickUp permissions
 - Claude can only perform actions you're authorized to do
 - Review actions before Claude executes them
 - Be cautious with bulk operations
 
 **Data Privacy:**
+
 - Task data is transmitted to Claude for processing
 - Sensitive information in tasks will be visible to Claude
 - Consider using separate workspaces for sensitive projects
@@ -519,11 +544,13 @@ Let me validate these tasks before we stop...
 **Solution**:
 
 1. Verify environment variable is set:
+
    ```bash
    echo $CLICKUP_API_TOKEN
    ```
 
 2. Test API access directly:
+
    ```bash
    curl -H "Authorization: $CLICKUP_API_TOKEN" \
      https://api.clickup.com/api/v2/user

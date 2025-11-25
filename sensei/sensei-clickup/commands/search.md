@@ -6,12 +6,14 @@ description: Search for ClickUp tasks
 Search for ClickUp tasks using filters or text search.
 
 **Usage**:
+
 - `/search authentication` (text search in task names)
 - `/search list:123456 status:in-progress` (with filters)
 
 Use the ClickUp MCP tool `clickup_search_tasks`.
 
 **Supported filters**:
+
 - `list:ID` - Filter by list ID
 - `folder:ID` - Filter by folder ID
 - `space:ID` - Filter by space ID

@@ -21,6 +21,7 @@ Use the architecture-design skill from bushido to:
 ## Architecture vs Planning
 
 **Use /architect when:**
+
 - Significant system change (new subsystem, major refactor)
 - Affects multiple components or teams
 - Long-term technical strategy needed
@@ -28,6 +29,7 @@ Use the architecture-design skill from bushido to:
 - Decisions have broad impact
 
 **Use /plan when:**
+
 - Implementing specific feature within existing architecture
 - Tactical execution planning
 - Breaking down known work
@@ -36,6 +38,7 @@ Use the architecture-design skill from bushido to:
 ## Architecture Principles
 
 **Good architecture is:**
+
 - **Simple**: Complexity only where necessary
 - **Flexible**: Can adapt to changing requirements
 - **Maintainable**: Others can understand and modify
@@ -43,6 +46,7 @@ Use the architecture-design skill from bushido to:
 - **Tested**: Can be validated
 
 **Apply these skills:**
+
 - `solid-principles` - Single Responsibility, Open/Closed, etc.
 - `simplicity-principles` - KISS, YAGNI
 - `orthogonality-principle` - Independent components
@@ -89,6 +93,7 @@ Use the architecture-design skill from bushido to:
 [Diagram or description of system components]
 
 ```
+
 ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
 │   Client    │────▶│   API       │────▶│  Database    │
 └─────────────┘     └─────────────┘     └──────────────┘
@@ -97,6 +102,7 @@ Use the architecture-design skill from bushido to:
                     ┌─────────────┐
                     │  Cache      │
                     └─────────────┘
+
 ```
 
 ### Components
@@ -219,6 +225,7 @@ For each major decision, create an ADR:
 ## Examples
 
 When the user says:
+
 - "Design the architecture for our multi-tenant system"
 - "How should we structure our microservices?"
 - "Plan the technical approach for real-time notifications"
@@ -228,6 +235,7 @@ When the user says:
 ## Architectural Patterns to Consider
 
 **System Patterns:**
+
 - Layered architecture
 - Microservices vs monolith
 - Event-driven architecture
@@ -235,6 +243,7 @@ When the user says:
 - Hexagonal architecture
 
 **Data Patterns:**
+
 - Database per service
 - Shared database
 - Event sourcing
@@ -242,6 +251,7 @@ When the user says:
 - Cache-aside
 
 **Integration Patterns:**
+
 - API Gateway
 - Service mesh
 - Message queue

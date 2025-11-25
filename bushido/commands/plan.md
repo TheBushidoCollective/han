@@ -20,6 +20,7 @@ Use the technical-planning skill from bushido to:
 ## Planning Principles
 
 **Good plans are:**
+
 - **Specific**: Concrete steps, not vague ideas
 - **Actionable**: Each task can be started immediately
 - **Ordered**: Dependencies clear, sequence logical
@@ -27,6 +28,7 @@ Use the technical-planning skill from bushido to:
 - **Testable**: Success criteria for each task
 
 **Bad plans are:**
+
 - Vague ("Make it better")
 - Missing dependencies ("Do A and B" when B depends on A)
 - Too large (one task = weeks of work)
@@ -85,6 +87,7 @@ Use the technical-planning skill from bushido to:
 ## Examples
 
 When the user says:
+
 - "How should I implement user authentication?"
 - "Plan out the shopping cart feature"
 - "What's the approach for migrating to the new API?"
@@ -94,6 +97,7 @@ When the user says:
 ## Planning Checklist
 
 Before finishing plan, verify:
+
 - [ ] Goal is clear and specific
 - [ ] Current state analyzed
 - [ ] Approach is feasible

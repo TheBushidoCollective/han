@@ -27,6 +27,7 @@ Create clear, useful documentation that helps people understand and use your cod
 **Audience:** New users, potential contributors
 
 **Key sections:**
+
 - What it does (one paragraph)
 - Installation instructions
 - Quick start example
@@ -42,6 +43,7 @@ Create clear, useful documentation that helps people understand and use your cod
 **Audience:** Other developers integrating with your code
 
 **Key information:**
+
 - Endpoint/function signature
 - Parameters and types
 - Return values
@@ -56,6 +58,7 @@ Create clear, useful documentation that helps people understand and use your cod
 **Audience:** Future developers (including future you)
 
 **When to add:**
+
 - Non-obvious decisions ("why" not "what")
 - Complex algorithms
 - Workarounds
@@ -70,6 +73,7 @@ Create clear, useful documentation that helps people understand and use your cod
 **Audience:** Developers working with the system
 
 **Types:**
+
 - How-to guides (step-by-step)
 - Architecture overviews (system structure)
 - Integration guides (connecting systems)
@@ -82,6 +86,7 @@ Create clear, useful documentation that helps people understand and use your cod
 **Audience:** Current and future team members
 
 **Key information:**
+
 - Context (what problem exists)
 - Decision (what was chosen)
 - Alternatives considered
@@ -133,15 +138,18 @@ thing.doSomething()
 Description of what the function does.
 
 **Parameters:**
+
 - `param1` (string, required): Description of parameter
 - `param2` (number, optional): Description with default. Default: 42
 
 **Returns:** `string` - Description of return value
 
 **Throws:**
+
 - `Error` - When parameter is invalid
 
 **Example:**
+
 ```javascript
 const result = functionName('hello', 10)
 console.log(result) // "hello repeated 10 times"
@@ -157,6 +165,7 @@ console.log(result) // "hello repeated 10 times"
 
 **Cause:** Package not installed
 **Solution:**
+
 ```bash
 npm install project-name
 ```
@@ -168,6 +177,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
 ```
 
 ## API Documentation Template
@@ -194,6 +204,7 @@ Requires admin access token in Authorization header.
 ```
 
 **Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -203,6 +214,7 @@ Requires admin access token in Authorization header.
 ```
 
 **Body Parameters:**
+
 - `email` (string, required): Valid email address. Must be unique.
 - `name` (string, required): User's full name. 2-100 characters.
 - `role` (string, optional): User role. One of: "user", "admin". Default: "user".
@@ -210,6 +222,7 @@ Requires admin access token in Authorization header.
 ### Response
 
 **Success (201 Created):**
+
 ```json
 {
   "id": "abc123",
@@ -223,6 +236,7 @@ Requires admin access token in Authorization header.
 **Error Responses:**
 
 **400 Bad Request:**
+
 ```json
 {
   "error": "Invalid email format",
@@ -231,6 +245,7 @@ Requires admin access token in Authorization header.
 ```
 
 **401 Unauthorized:**
+
 ```json
 {
   "error": "Authentication required"
@@ -238,6 +253,7 @@ Requires admin access token in Authorization header.
 ```
 
 **403 Forbidden:**
+
 ```json
 {
   "error": "Admin access required"
@@ -245,6 +261,7 @@ Requires admin access token in Authorization header.
 ```
 
 **409 Conflict:**
+
 ```json
 {
   "error": "Email already exists",
@@ -253,6 +270,7 @@ Requires admin access token in Authorization header.
 ```
 
 **429 Too Many Requests:**
+
 ```json
 {
   "error": "Rate limit exceeded. Try again in 60 seconds.",
@@ -263,6 +281,7 @@ Requires admin access token in Authorization header.
 ### Example
 
 **cURL:**
+
 ```bash
 curl -X POST https://api.example.com/users \
   -H "Content-Type: application/json" \
@@ -275,6 +294,7 @@ curl -X POST https://api.example.com/users \
 ```
 
 **JavaScript:**
+
 ```javascript
 const response = await fetch('https://api.example.com/users', {
   method: 'POST',
@@ -298,6 +318,7 @@ console.log(user.id) // "abc123"
 - 100 requests per minute per API key
 - Returns 429 when exceeded
 - Check `X-RateLimit-Remaining` header
+
 ```
 
 ### Function/Method Documentation
@@ -345,6 +366,7 @@ function calculateTotal(
 ### When to Comment
 
 **✅ DO comment:**
+
 - **Why**: Explains reasoning for non-obvious decisions
 - **Trade-offs**: Documents deliberate choices
 - **Workarounds**: Explains temporary solutions
@@ -354,6 +376,7 @@ function calculateTotal(
 - **Security**: Notes security considerations
 
 **❌ DON'T comment:**
+
 - **What**: Code is self-explanatory
 - **Redundant**: Comment repeats code
 - **Obvious**: Anyone can see what it does
@@ -415,12 +438,14 @@ function processOrder(order) {
 ### Comment Formats
 
 **Single-line comments:**
+
 ```typescript
 // For brief explanations
 const tax = subtotal * TAX_RATE  // Updated quarterly
 ```
 
 **Multi-line comments:**
+
 ```typescript
 /*
  * For longer explanations that span multiple lines.
@@ -429,6 +454,7 @@ const tax = subtotal * TAX_RATE  // Updated quarterly
 ```
 
 **Doc comments (JSDoc/TSDoc):**
+
 ```typescript
 /**
  * For API documentation.
@@ -439,6 +465,7 @@ const tax = subtotal * TAX_RATE  // Updated quarterly
 ```
 
 **TODO comments:**
+
 ```typescript
 // TODO(username): Description of what needs to be done
 // FIXME: Description of what's broken and needs fixing
@@ -506,6 +533,7 @@ Complete working example showing the entire process.
 ## Next Steps
 
 - [What to do after completing this guide]
+
 ```
 
 ## Architecture Decision Record Template
@@ -579,6 +607,7 @@ Any specific guidance for implementing this decision.
 ### 1. Write for Your Audience
 
 **Different audiences need different docs:**
+
 - **New users:** Quick start, common use cases
 - **API consumers:** Complete reference, examples
 - **Contributors:** Architecture, dev setup
@@ -587,11 +616,13 @@ Any specific guidance for implementing this decision.
 ### 2. Show, Don't Just Tell
 
 **Bad:**
+
 ```
 The function accepts parameters and returns a result.
 ```
 
 **Good:**
+
 ```typescript
 function calculateTotal(items, tax) {
   return items.reduce((sum, item) => sum + item.price, 0) * (1 + tax)
@@ -605,6 +636,7 @@ const total = calculateTotal(items, 0.08) // 32.40
 ### 3. Keep Examples Runnable
 
 **Test your examples:**
+
 - Copy/paste should work
 - Include all imports
 - Show complete code, not fragments
@@ -613,6 +645,7 @@ const total = calculateTotal(items, 0.08) // 32.40
 ### 4. Maintain Documentation
 
 **Documentation rots:**
+
 - Update docs when code changes
 - Include doc updates in PRs
 - Review docs periodically
@@ -621,20 +654,24 @@ const total = calculateTotal(items, 0.08) // 32.40
 ### 5. Use Clear Language
 
 **Avoid jargon:**
+
 - Bad: "Leverages polymorphic memoization"
 - Good: "Caches results based on input type"
 
 **Be specific:**
+
 - Bad: "It's fast"
 - Good: "Responds in < 100ms for 95% of requests"
 
 **Use active voice:**
+
 - Bad: "The request is processed by the server"
 - Good: "The server processes the request"
 
 ## Documentation Checklist
 
 ### README
+
 - [ ] Clear description of what project does
 - [ ] Installation instructions
 - [ ] Quick start example
@@ -643,6 +680,7 @@ const total = calculateTotal(items, 0.08) // 32.40
 - [ ] License information
 
 ### API Docs
+
 - [ ] All public APIs documented
 - [ ] Parameters described with types
 - [ ] Return values described
@@ -651,6 +689,7 @@ const total = calculateTotal(items, 0.08) // 32.40
 - [ ] Authentication requirements stated
 
 ### Inline Comments
+
 - [ ] Complex logic explained
 - [ ] Non-obvious decisions documented
 - [ ] Workarounds noted
@@ -659,6 +698,7 @@ const total = calculateTotal(items, 0.08) // 32.40
 - [ ] TODOs have owner and context
 
 ### Technical Guides
+
 - [ ] Prerequisites listed
 - [ ] Steps are clear and ordered
 - [ ] Examples are complete and runnable
@@ -692,11 +732,13 @@ const total = calculateTotal(items, 0.08) // 32.40
 ### ❌ Incomplete Examples
 
 **Bad:**
+
 ```typescript
 const result = doSomething()
 ```
 
 **Good:**
+
 ```typescript
 import { doSomething } from 'my-package'
 

@@ -52,6 +52,7 @@ Create this issue? (y/n)
 ```
 
 After creation, use `linear_create_issue` and display:
+
 ```
 ✅ Created ENG-123: {title}
 
