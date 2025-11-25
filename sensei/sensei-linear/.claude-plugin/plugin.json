@@ -1,7 +1,7 @@
 {
   "name": "sensei-linear",
   "version": "1.0.0",
-  "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
+  "description": "Official Linear MCP server integration with OAuth authentication. Provides issue management, project tracking, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -20,14 +20,8 @@
   ],
   "mcpServers": {
     "linear": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-linear"
-      ],
-      "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
-      }
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
     }
   }
 }

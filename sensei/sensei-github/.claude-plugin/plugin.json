@@ -1,29 +1,33 @@
 {
-	"name": "sensei-github",
-	"version": "1.0.0",
-	"description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"homepage": "https://github.com/thebushidocollective/han",
-	"repository": "https://github.com/thebushidocollective/han",
-	"license": "MIT",
-	"keywords": [
-		"mcp",
-		"github",
-		"git",
-		"repository",
-		"issues",
-		"pull-requests",
-		"actions",
-		"code-search",
-		"server"
-	],
-	"mcpServers": {
-		"github": {
-			"type": "http",
-			"url": "https://api.githubcopilot.com/mcp/"
-		}
-	}
+  "name": "sensei-github",
+  "version": "1.0.0",
+  "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "github",
+    "git",
+    "repository",
+    "issues",
+    "pull-requests",
+    "actions",
+    "code-search",
+    "server"
+  ],
+  "mcpServers": {
+    "github": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"
+      ],
+      "env": {}
+    }
+  }
 }
