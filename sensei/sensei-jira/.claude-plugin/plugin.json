@@ -1,7 +1,7 @@
 {
   "name": "sensei-jira",
   "version": "1.0.0",
-  "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
+  "description": "Official Atlassian MCP server for Jira and Confluence integration with OAuth authentication. Provides ticket management, JQL search, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -21,15 +21,7 @@
   "mcpServers": {
     "atlassian": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-atlassian"
-      ],
-      "env": {
-        "ATLASSIAN_API_TOKEN": "${ATLASSIAN_API_TOKEN}",
-        "ATLASSIAN_EMAIL": "${ATLASSIAN_EMAIL}",
-        "ATLASSIAN_SITE_URL": "${ATLASSIAN_SITE_URL}"
-      }
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"]
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "sensei-clickup",
   "version": "1.0.0",
-  "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
+  "description": "Official ClickUp MCP server integration with OAuth authentication. Provides task management, workspace access, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -20,14 +20,8 @@
   ],
   "mcpServers": {
     "clickup": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-clickup"
-      ],
-      "env": {
-        "CLICKUP_API_TOKEN": "${CLICKUP_API_TOKEN}"
-      }
+      "type": "http",
+      "url": "https://mcp.clickup.com/mcp"
     }
   }
 }

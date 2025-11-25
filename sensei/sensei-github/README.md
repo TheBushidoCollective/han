@@ -2,6 +2,8 @@
 
 Connect Claude Code to the GitHub API for comprehensive repository management, issue tracking, pull request workflows, GitHub Actions, and code search.
 
+**Zero Configuration**: If you have GitHub CLI (`gh`) installed and authenticated, this plugin works instantly - no OAuth setup, no tokens to manage!
+
 ## What This Sensei Provides
 
 ### MCP Server: github
@@ -79,70 +81,64 @@ claude plugin install sensei-github@han
 
 ### Authentication
 
-After installation, authenticate with GitHub OAuth:
+**No setup required!** If you have [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated, this plugin automatically uses your existing credentials.
 
-1. Run `/mcp` in Claude Code
-2. Select the GitHub server
-3. Click "Authenticate" to open the OAuth flow in your browser
-4. Authorize access to your GitHub account
+To check if you're authenticated:
 
-Authentication tokens are stored securely and refreshed automatically.
+```bash
+gh auth status
+```
 
-### Manual Installation
+If not authenticated, run:
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
+```bash
+gh auth login
+```
+
+That's it! The plugin seamlessly uses your `gh` token - no OAuth apps, no environment variables, no configuration files to manage.
+
+#### How It Works
+
+The plugin uses this configuration to automatically pull your `gh` token:
 
 ```json
 {
   "mcpServers": {
     "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "command": "sh",
+      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"],
+      "env": {}
     }
   }
 }
 ```
 
-Or via CLI:
+When the MCP server starts, it runs `gh auth token` to get your current token and passes it to GitHub's official Docker image - no manual copying required!
 
-```bash
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/
-```
+**Requirements**: Docker must be installed and running on your system.
 
-### Alternative: Docker with Personal Access Token
+#### Alternative: Manual Token (Without GitHub CLI)
 
-If you prefer using a Personal Access Token instead of OAuth, or need to use GitHub Enterprise:
+If you prefer not to use GitHub CLI, you can use a Personal Access Token instead:
 
-1. Create a [GitHub Personal Access Token](https://github.com/settings/tokens) with scopes:
-   - `repo` - Full repository access
-   - `read:org` - Read organization data
-   - `workflow` - Manage GitHub Actions
+1. Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) with scopes: `repo`, `read:org`, `workflow`
 
-2. Set the environment variable:
-
-   ```bash
-   export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
-   ```
-
-3. Configure the Docker-based server:
-
+2. Update the plugin configuration to use your token directly:
    ```json
    {
      "mcpServers": {
        "github": {
-         "command": "docker",
-         "args": [
-           "run", "-i", "--rm",
-           "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
-           "ghcr.io/github/github-mcp-server"
-         ],
+         "command": "npx",
+         "args": ["-y", "@modelcontextprotocol/server-github"],
          "env": {
-           "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+           "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_your_token_here"
          }
        }
      }
    }
    ```
+
+**Note**: Never commit this configuration with your token to version control!
 
 ## Usage
 
@@ -237,35 +233,52 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 
 ## Security Considerations
 
-- **OAuth Tokens**: Managed automatically by Claude Code, stored securely, and refreshed as needed
-- **Revoke Access**: Use `/mcp` > "Clear authentication" to revoke OAuth access anytime
-- **Minimal Scopes**: OAuth requests only necessary permissions for the tools you use
-- **PAT Security**: If using Personal Access Tokens, never commit them to version control
+- **Token Security**: Uses your existing `gh` CLI authentication token
+- **Revoke Access**: Revoke via `gh auth logout` or manage tokens at [github.com/settings/tokens](https://github.com/settings/tokens)
+- **Minimal Privileges**: Only requests permissions based on your `gh` token scopes
+- **Local Execution**: Runs locally via `npx` - no remote servers storing credentials
 
 ## Limitations
 
 - API rate limits apply (5000 requests/hour for authenticated requests)
-- Some operations require specific OAuth scopes
+- Requires GitHub CLI (`gh`) to be installed and authenticated
 - Large file operations may timeout
-- GitHub Enterprise requires Docker-based setup with PAT
+- GitHub Enterprise requires your `gh` CLI to be configured for your enterprise instance
 
 ## Troubleshooting
 
-### Issue: OAuth authentication fails
+### Issue: "gh: command not found"
 
-**Solution**: Run `/mcp` in Claude Code, select GitHub, and click "Clear authentication" to reset. Then re-authenticate.
+**Solution**: Install GitHub CLI from [cli.github.com](https://cli.github.com/) or via package manager:
+```bash
+# macOS
+brew install gh
 
-### Issue: "Resource not accessible"
+# Windows
+winget install --id GitHub.cli
 
-**Solution**: The OAuth flow may not have requested sufficient scopes. Re-authenticate and ensure you grant the requested permissions.
+# Linux
+sudo apt install gh  # Debian/Ubuntu
+```
+
+### Issue: Authentication errors
+
+**Solution**: Ensure you're logged in to `gh`:
+```bash
+gh auth status
+gh auth login  # if not authenticated
+```
+
+### Issue: Insufficient permissions
+
+**Solution**: Re-authenticate with additional scopes:
+```bash
+gh auth refresh -s repo,read:org,workflow
+```
 
 ### Issue: Rate limit exceeded
 
 **Solution**: Wait for rate limit reset (shown in error message). Authenticated requests have higher limits (5000/hour).
-
-### Issue: Need GitHub Enterprise support
-
-**Solution**: Use the Docker-based setup with a Personal Access Token configured for your GitHub Enterprise instance.
 
 ## Related Plugins
 
