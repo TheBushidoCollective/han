@@ -112,9 +112,9 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Created tag: $TAG"
 
-  publish:
-    needs: bump-and-tag
-    uses: ./.github/workflows/publish-npm.yml
-    with:
-      ref: ${{ needs.bump-and-tag.outputs.tag }}
-    secrets: inherit
+      - name: Trigger publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run publish-npm.yml --ref "${{ steps.create-tag.outputs.tag }}"
+          echo "Triggered publish workflow for ${{ steps.create-tag.outputs.tag }}"
