@@ -31,7 +31,7 @@ This plugin includes hooks that ensure Biome checks pass before completing work.
 The hooks automatically detect directories with `biome.json` and run Biome checks in each:
 
 ```bash
-npx -y @thebushidocollective/han validate --fail-fast --dirs-with biome.json -- npx biome check .
+npx -y @thebushidocollective/han hook run --fail-fast --dirs-with biome.json -- npx biome check .
 ```
 
 This ensures all packages in your monorepo pass Biome validation before work is marked complete.

@@ -50,11 +50,7 @@ export async function searchPlugins(query?: string): Promise<void> {
 	});
 
 	for (const plugin of filteredPlugins) {
-		table.push([
-			plugin.name,
-			plugin.category || "",
-			plugin.description || "",
-		]);
+		table.push([plugin.name, plugin.category || "", plugin.description || ""]);
 	}
 
 	console.log(table.toString());
@@ -62,6 +58,6 @@ export async function searchPlugins(query?: string): Promise<void> {
 		`\n✓ Found ${filteredPlugins.length} plugin(s)${query ? ` matching "${query}"` : ""}`,
 	);
 	console.log(
-		'\nTo install a plugin, run: han plugin install <plugin-name>\nExample: han plugin install bushido',
+		"\nTo install a plugin, run: han plugin install <plugin-name>\nExample: han plugin install bushido",
 	);
 }

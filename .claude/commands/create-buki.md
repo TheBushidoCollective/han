@@ -63,7 +63,7 @@ Create `hooks/hooks.json` with validation hooks:
     {
       "name": "{technology}-validation",
       "description": "Validates {technology} code before stopping",
-      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with {marker-file} {validation-command}",
+      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
       "showOutput": "on-error"
     }
   ],
@@ -71,7 +71,7 @@ Create `hooks/hooks.json` with validation hooks:
     {
       "name": "{technology}-validation",
       "description": "Validates {technology} code when agents complete",
-      "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with {marker-file} {validation-command}",
+      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
       "showOutput": "on-error"
     }
   ]
@@ -261,7 +261,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ✅ Focus on read-only validation (check, lint, test)
 ✅ Use `--fail-fast` for quick feedback
-✅ Use `--dirs-with` for monorepo support
+✅ Use `--dirs-with` to invoke hooks in multiple directories
 ✅ Provide clear error messages with `showOutput: "on-error"`
 ✅ Include skills for modern (2024-2025) features
 ✅ Test your hooks in both single-project and monorepo scenarios

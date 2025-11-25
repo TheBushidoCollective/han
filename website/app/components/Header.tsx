@@ -3,7 +3,7 @@
 import Fuse from "fuse.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SearchResult {
 	id: string;

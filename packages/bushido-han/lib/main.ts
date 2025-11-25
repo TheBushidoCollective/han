@@ -31,36 +31,41 @@ pluginCommand
 		'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
 		"project",
 	)
-	.action(async (pluginNames: string[], options: { auto?: boolean; scope?: string }) => {
-		try {
-			const scope = options.scope || "project";
-			if (scope !== "project" && scope !== "local") {
-				console.error('Error: --scope must be either "project" or "local"');
+	.action(
+		async (
+			pluginNames: string[],
+			options: { auto?: boolean; scope?: string },
+		) => {
+			try {
+				const scope = options.scope || "project";
+				if (scope !== "project" && scope !== "local") {
+					console.error('Error: --scope must be either "project" or "local"');
+					process.exit(1);
+				}
+
+				if (options.auto) {
+					// Auto-detect plugins
+					const { install } = await import("./install.js");
+					await install(scope as "project" | "local");
+				} else if (pluginNames.length > 0) {
+					// Install specific plugin(s)
+					const { installPlugins } = await import("./plugin-install.js");
+					await installPlugins(pluginNames, scope as "project" | "local");
+				} else {
+					// Interactive mode - no auto-detect
+					const { installInteractive } = await import("./install.js");
+					await installInteractive(scope as "project" | "local");
+				}
+				process.exit(0);
+			} catch (error: unknown) {
+				console.error(
+					"Error during plugin installation:",
+					error instanceof Error ? error.message : error,
+				);
 				process.exit(1);
 			}
-
-			if (options.auto) {
-				// Auto-detect plugins
-				const { install } = await import("./install.js");
-				await install(scope as "project" | "local");
-			} else if (pluginNames.length > 0) {
-				// Install specific plugin(s)
-				const { installPlugins } = await import("./plugin-install.js");
-				await installPlugins(pluginNames, scope as "project" | "local");
-			} else {
-				// Interactive mode - no auto-detect
-				const { installInteractive } = await import("./install.js");
-				await installInteractive(scope as "project" | "local");
-			}
-			process.exit(0);
-		} catch (error: unknown) {
-			console.error(
-				"Error during plugin installation:",
-				error instanceof Error ? error.message : error,
-			);
-			process.exit(1);
-		}
-	});
+		},
+	);
 
 // Plugin uninstall subcommand
 pluginCommand
@@ -152,14 +157,14 @@ program
 	});
 
 // Hook command group
-const hookCommand = program
-	.command("hook")
-	.description("Hook utilities for monorepo validation");
+const hookCommand = program.command("hook").description("Hook utilities");
 
 // Hook run subcommand
 hookCommand
 	.command("run")
-	.description("Run a command across directories (use -- before command to pass through arguments)")
+	.description(
+		"Run a command across directories (use -- before command to pass through arguments)",
+	)
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
@@ -217,10 +222,7 @@ program
 program
 	.command("align")
 	.description("Alias for 'plugin align'")
-	.option(
-		"--scope <scope>",
-		'Installation scope: "project" or "local"',
-	)
+	.option("--scope <scope>", 'Installation scope: "project" or "local"')
 	.action(async (options: { scope?: string }) => {
 		try {
 			let scope: "project" | "local" | undefined;
@@ -243,10 +245,12 @@ program
 		}
 	});
 
-// Alias: han validate -> han hook run
+// Alias: han hook run -> han hook run
 program
 	.command("validate")
-	.description("Alias for 'hook run' (use -- before command to pass through arguments)")
+	.description(
+		"Alias for 'hook run' (use -- before command to pass through arguments)",
+	)
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",

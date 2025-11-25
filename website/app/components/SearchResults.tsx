@@ -4,7 +4,7 @@ import Fuse from "fuse.js";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { hasComponent, parseQuery, type ParsedQuery } from "@/lib/search-utils";
+import { hasComponent, type ParsedQuery, parseQuery } from "@/lib/search-utils";
 
 interface SearchResult {
 	id: string;

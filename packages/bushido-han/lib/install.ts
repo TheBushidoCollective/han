@@ -129,7 +129,8 @@ export async function install(
 				return marketplacePlugins;
 			},
 			onInstallComplete: (plugins: string[]) => {
-				if (resolveCompletion) resolveCompletion({ plugins, marketplacePlugins });
+				if (resolveCompletion)
+					resolveCompletion({ plugins, marketplacePlugins });
 			},
 			onInstallError: (error: Error) => {
 				if (resolveCompletion) resolveCompletion({ error });
@@ -166,7 +167,9 @@ export async function install(
 			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
 		}
 		if (removed.length > 0) {
-			console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+			console.log(
+				`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`,
+			);
 		}
 		if (added.length === 0 && removed.length === 0 && invalid.length === 0) {
 			console.log("\n✓ No changes made");
@@ -183,9 +186,14 @@ export async function installInteractive(
 ): Promise<void> {
 	const { PluginSelector } = await import("./plugin-selector.js");
 
-	let resolveCompletion: ((result: { plugins?: string[]; cancelled?: boolean }) => void) | undefined;
+	let resolveCompletion:
+		| ((result: { plugins?: string[]; cancelled?: boolean }) => void)
+		| undefined;
 
-	const completionPromise = new Promise<{ plugins?: string[]; cancelled?: boolean }>((resolve) => {
+	const completionPromise = new Promise<{
+		plugins?: string[];
+		cancelled?: boolean;
+	}>((resolve) => {
 		resolveCompletion = resolve;
 	});
 
@@ -195,7 +203,9 @@ export async function installInteractive(
 	// Fetch marketplace plugins
 	const allPlugins = await fetchMarketplace();
 	if (allPlugins.length === 0) {
-		console.error("Could not fetch marketplace. Please check your internet connection.");
+		console.error(
+			"Could not fetch marketplace. Please check your internet connection.",
+		);
 		return;
 	}
 
@@ -238,7 +248,9 @@ export async function installInteractive(
 			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
 		}
 		if (removed.length > 0) {
-			console.log(`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`);
+			console.log(
+				`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`,
+			);
 		}
 		if (added.length === 0 && removed.length === 0 && invalid.length === 0) {
 			console.log("\n✓ No changes made");

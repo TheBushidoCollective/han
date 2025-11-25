@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "./components/Header";
 import { getCategoryIcon } from "../lib/plugins";
+import Header from "./components/Header";
 
 export const metadata: Metadata = {
 	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",

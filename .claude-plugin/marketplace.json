@@ -14,7 +14,15 @@
       "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
       "source": "./buki/buki-act",
       "category": "Weapon",
-      "keywords": ["github-actions", "act", "workflow", "ci-cd", "validation", "local-testing", "docker"]
+      "keywords": [
+        "github-actions",
+        "act",
+        "workflow",
+        "ci-cd",
+        "validation",
+        "local-testing",
+        "docker"
+      ]
     },
     {
       "name": "buki-ameba",
@@ -469,7 +477,14 @@
       "description": "Validation and quality enforcement for React Native Web projects with cross-platform components, styling, navigation, performance, and testing.",
       "source": "./buki/buki-react-native-web",
       "category": "Weapon",
-      "keywords": ["react-native-web", "react-native", "react", "web", "typescript", "cross-platform"]
+      "keywords": [
+        "react-native-web",
+        "react-native",
+        "react",
+        "web",
+        "typescript",
+        "cross-platform"
+      ]
     },
     {
       "name": "buki-relay",
@@ -599,7 +614,15 @@
       "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
       "source": "./sensei/sensei-clickup",
       "category": "Teacher",
-      "keywords": ["mcp", "clickup", "project-management", "tasks", "acceptance-criteria", "validation", "productivity"]
+      "keywords": [
+        "mcp",
+        "clickup",
+        "project-management",
+        "tasks",
+        "acceptance-criteria",
+        "validation",
+        "productivity"
+      ]
     },
     {
       "name": "sensei-context7",
@@ -620,28 +643,63 @@
       "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
       "source": "./sensei/sensei-gitlab",
       "category": "Teacher",
-      "keywords": ["mcp", "gitlab", "git", "issues", "merge-requests", "ci-cd", "devops", "server"]
+      "keywords": [
+        "mcp",
+        "gitlab",
+        "git",
+        "issues",
+        "merge-requests",
+        "ci-cd",
+        "devops",
+        "server"
+      ]
     },
     {
       "name": "sensei-github",
       "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
       "source": "./sensei/sensei-github",
       "category": "Teacher",
-      "keywords": ["mcp", "github", "git", "repository", "issues", "pull-requests", "actions", "code-search", "server"]
+      "keywords": [
+        "mcp",
+        "github",
+        "git",
+        "repository",
+        "issues",
+        "pull-requests",
+        "actions",
+        "code-search",
+        "server"
+      ]
     },
     {
       "name": "sensei-jira",
       "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
       "source": "./sensei/sensei-jira",
       "category": "Teacher",
-      "keywords": ["mcp", "jira", "atlassian", "project-management", "tickets", "acceptance-criteria", "validation"]
+      "keywords": [
+        "mcp",
+        "jira",
+        "atlassian",
+        "project-management",
+        "tickets",
+        "acceptance-criteria",
+        "validation"
+      ]
     },
     {
       "name": "sensei-linear",
       "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
       "source": "./sensei/sensei-linear",
       "category": "Teacher",
-      "keywords": ["mcp", "linear", "project-management", "issues", "acceptance-criteria", "validation", "workflow"]
+      "keywords": [
+        "mcp",
+        "linear",
+        "project-management",
+        "issues",
+        "acceptance-criteria",
+        "validation",
+        "workflow"
+      ]
     },
     {
       "name": "do-accessibility-engineering",

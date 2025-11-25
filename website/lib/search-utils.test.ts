@@ -1,4 +1,4 @@
-import { strictEqual, deepStrictEqual } from "node:assert";
+import { deepStrictEqual, strictEqual } from "node:assert";
 import { hasComponent, parseQuery } from "./search-utils.js";
 
 function test(name: string, fn: () => void): void {

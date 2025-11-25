@@ -1,10 +1,10 @@
 "use client";
 
-import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import SidebarScrollContainer from "./SidebarScrollContainer";
+import type React from "react";
 import { getCategoryIcon } from "../../lib/constants";
+import SidebarScrollContainer from "./SidebarScrollContainer";
 
 interface SidebarProps {
 	bukiPlugins: Array<{ name: string; title: string }>;
