@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with *.nimble -- nim check *.nim"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.nimble --  nim check *.nim"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with *.nimble -- nim check *.nim"
           }
         ]
       }

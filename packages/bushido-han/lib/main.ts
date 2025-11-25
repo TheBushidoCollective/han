@@ -159,7 +159,7 @@ const hookCommand = program
 // Hook run subcommand
 hookCommand
 	.command("run")
-	.description("Run a command across directories")
+	.description("Run a command across directories (use -- before command to pass through arguments)")
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
@@ -246,7 +246,7 @@ program
 // Alias: han validate -> han hook run
 program
 	.command("validate")
-	.description("Alias for 'hook run'")
+	.description("Alias for 'hook run' (use -- before command to pass through arguments)")
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
