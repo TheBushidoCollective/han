@@ -27,37 +27,27 @@ Han organizes plugins into four categories inspired by Japanese samurai traditio
 
 ## Commands
 
-### han install
-
-Auto-detect and install recommended plugins using AI analysis.
-
-```bash
-han install [--scope <project|local>]
-```
-
-This command uses the Claude Agent SDK to analyze your codebase and recommend appropriate plugins based on:
-- Programming languages detected
-- Frameworks and libraries in use
-- Testing tools configured
-- Project structure
-
 ### han plugin install
 
-Interactive plugin management.
+Install plugins interactively or automatically.
 
 ```bash
 # Interactive mode - browse and select plugins
 han plugin install
 
-# Auto-detect mode - AI analyzes codebase
+# Auto-detect mode - AI analyzes codebase and recommends plugins
 han plugin install --auto
 
-# Install specific plugin
+# Install specific plugin by name
 han plugin install <plugin-name>
 ```
 
 **Options:**
-- `--auto` - Use AI to auto-detect and recommend plugins
+- `--auto` - Use AI to auto-detect and recommend plugins based on:
+  - Programming languages detected
+  - Frameworks and libraries in use
+  - Git hosting platform (GitHub/GitLab)
+  - Testing tools configured
 - `--scope <project|local>` - Installation scope (default: `project`)
   - `project`: Install to `.claude/settings.json` (shared via git)
   - `local`: Install to `.claude/settings.local.json` (git-ignored)
@@ -78,12 +68,12 @@ Search for plugins in the Han marketplace.
 han plugin search [query]
 ```
 
-### han align
+### han plugin align
 
 Re-analyze your codebase and sync plugins with current state. Adds new plugins for detected technologies and removes plugins for technologies no longer in use.
 
 ```bash
-han align [--scope <project|local>]
+han plugin align [--scope <project|local>]
 ```
 
 **When to use:**
