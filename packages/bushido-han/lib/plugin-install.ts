@@ -3,22 +3,68 @@ import {
 	fetchMarketplace,
 	getInstalledPlugins,
 	HAN_MARKETPLACE_REPO,
+	type MarketplacePlugin,
 	readOrCreateSettings,
 	removeInvalidPlugins,
 	writeSettings,
 } from "./shared.js";
 
 /**
- * Install a specific plugin to Claude settings
+ * Show available plugins grouped by category
  */
-export async function installPlugin(
-	pluginName: string,
+function showAvailablePlugins(marketplacePlugins: MarketplacePlugin[]): void {
+	console.error("Available plugins:");
+
+	const bukis = marketplacePlugins
+		.filter((p) => p.name.startsWith("buki-"))
+		.map((p) => p.name);
+	const dos = marketplacePlugins
+		.filter((p) => p.name.startsWith("do-"))
+		.map((p) => p.name);
+	const senseis = marketplacePlugins
+		.filter((p) => p.name.startsWith("sensei-"))
+		.map((p) => p.name);
+	const others = marketplacePlugins
+		.filter(
+			(p) =>
+				!p.name.startsWith("buki-") &&
+				!p.name.startsWith("do-") &&
+				!p.name.startsWith("sensei-"),
+		)
+		.map((p) => p.name);
+
+	if (others.length > 0) {
+		console.error(`  Core: ${others.join(", ")}`);
+	}
+	if (bukis.length > 0) {
+		console.error(`  Bukis: ${bukis.join(", ")}`);
+	}
+	if (dos.length > 0) {
+		console.error(`  Dōs: ${dos.join(", ")}`);
+	}
+	if (senseis.length > 0) {
+		console.error(`  Senseis: ${senseis.join(", ")}`);
+	}
+
+	console.error("\nTip: Use 'han plugin search <query>' to find plugins.");
+}
+
+/**
+ * Install one or more plugins to Claude settings
+ */
+export async function installPlugins(
+	pluginNames: string[],
 	scope: "project" | "local" = "project",
 ): Promise<void> {
+	if (pluginNames.length === 0) {
+		console.error("Error: No plugin names provided.");
+		process.exit(1);
+	}
+
 	ensureClaudeDirectory();
 
-	// Validate plugin exists in marketplace
-	console.log("Validating plugin against marketplace...\n");
+	// Validate plugins exist in marketplace
+	console.log("Validating plugins against marketplace...\n");
 	const marketplacePlugins = await fetchMarketplace();
 
 	if (marketplacePlugins.length === 0) {
@@ -30,43 +76,13 @@ export async function installPlugin(
 
 	const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
 
-	if (!validPluginNames.has(pluginName)) {
-		console.error(`Error: Plugin "${pluginName}" not found in Han marketplace.\n`);
-		console.error("Available plugins:");
-
-		// Group by category
-		const bukis = marketplacePlugins
-			.filter((p) => p.name.startsWith("buki-"))
-			.map((p) => p.name);
-		const dos = marketplacePlugins
-			.filter((p) => p.name.startsWith("do-"))
-			.map((p) => p.name);
-		const senseis = marketplacePlugins
-			.filter((p) => p.name.startsWith("sensei-"))
-			.map((p) => p.name);
-		const others = marketplacePlugins
-			.filter(
-				(p) =>
-					!p.name.startsWith("buki-") &&
-					!p.name.startsWith("do-") &&
-					!p.name.startsWith("sensei-"),
-			)
-			.map((p) => p.name);
-
-		if (others.length > 0) {
-			console.error(`  Core: ${others.join(", ")}`);
-		}
-		if (bukis.length > 0) {
-			console.error(`  Bukis: ${bukis.join(", ")}`);
-		}
-		if (dos.length > 0) {
-			console.error(`  Dōs: ${dos.join(", ")}`);
-		}
-		if (senseis.length > 0) {
-			console.error(`  Senseis: ${senseis.join(", ")}`);
-		}
-
-		console.error("\nTip: Use 'han plugin search <query>' to find plugins.");
+	// Check all plugins are valid
+	const invalidPlugins = pluginNames.filter((p) => !validPluginNames.has(p));
+	if (invalidPlugins.length > 0) {
+		console.error(
+			`Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(", ")}\n`,
+		);
+		showAvailablePlugins(marketplacePlugins);
 		process.exit(1);
 	}
 
@@ -82,7 +98,7 @@ export async function installPlugin(
 	const currentPlugins = getInstalledPlugins(scope);
 
 	const filename = scope === "local" ? "settings.local.json" : "settings.json";
-	console.log(`Installing ${pluginName} to ./.claude/${filename}...\n`);
+	console.log(`Installing to ./.claude/${filename}...\n`);
 
 	// Add Han marketplace if not already added
 	if (!settings?.extraKnownMarketplaces?.han) {
@@ -93,20 +109,40 @@ export async function installPlugin(
 		console.log("✓ Added Han marketplace");
 	}
 
-	// Check if plugin is already installed
-	if (currentPlugins.includes(pluginName)) {
-		console.log(`\n⚠️  Plugin "${pluginName}" is already installed`);
-		return;
-	}
+	const installed: string[] = [];
+	const alreadyInstalled: string[] = [];
 
-	// Add plugin to enabled plugins
-	settings.enabledPlugins = {
-		...settings.enabledPlugins,
-		[`${pluginName}@han`]: true,
-	};
+	for (const pluginName of pluginNames) {
+		if (currentPlugins.includes(pluginName)) {
+			alreadyInstalled.push(pluginName);
+		} else {
+			settings.enabledPlugins = {
+				...settings.enabledPlugins,
+				[`${pluginName}@han`]: true,
+			};
+			installed.push(pluginName);
+		}
+	}
 
 	writeSettings(settings, scope);
 
-	console.log(`✓ Installed plugin: ${pluginName}`);
-	console.log("\n⚠️  Please restart Claude Code to load the new plugin");
+	if (installed.length > 0) {
+		console.log(`✓ Installed ${installed.length} plugin(s): ${installed.join(", ")}`);
+	}
+	if (alreadyInstalled.length > 0) {
+		console.log(`⚠️  Already installed: ${alreadyInstalled.join(", ")}`);
+	}
+	if (installed.length > 0) {
+		console.log("\n⚠️  Please restart Claude Code to load the new plugin(s)");
+	}
+}
+
+/**
+ * Install a specific plugin to Claude settings (convenience wrapper)
+ */
+export async function installPlugin(
+	pluginName: string,
+	scope: "project" | "local" = "project",
+): Promise<void> {
+	return installPlugins([pluginName], scope);
 }
