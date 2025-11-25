@@ -124,6 +124,7 @@ If you prefer not to use GitHub CLI, you can use a Personal Access Token instead
 1. Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) with scopes: `repo`, `read:org`, `workflow`
 
 2. Update the plugin configuration to use your token directly:
+
    ```json
    {
      "mcpServers": {
@@ -250,6 +251,7 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 ### Issue: "gh: command not found"
 
 **Solution**: Install GitHub CLI from [cli.github.com](https://cli.github.com/) or via package manager:
+
 ```bash
 # macOS
 brew install gh
@@ -264,6 +266,7 @@ sudo apt install gh  # Debian/Ubuntu
 ### Issue: Authentication errors
 
 **Solution**: Ensure you're logged in to `gh`:
+
 ```bash
 gh auth status
 gh auth login  # if not authenticated
@@ -272,6 +275,7 @@ gh auth login  # if not authenticated
 ### Issue: Insufficient permissions
 
 **Solution**: Re-authenticate with additional scopes:
+
 ```bash
 gh auth refresh -s repo,read:org,workflow
 ```

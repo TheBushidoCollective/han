@@ -63,6 +63,7 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 ## Features Covered by Skills
 
 ### Runtime APIs
+
 - File I/O with `Bun.file()` and `Bun.write()`
 - HTTP servers with `Bun.serve()`
 - WebSocket support
@@ -71,6 +72,7 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 - Shell command execution with `Bun.$`
 
 ### Testing
+
 - Built-in test runner
 - Jest-compatible API
 - Mocking and spies
@@ -79,6 +81,7 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 - Watch mode
 
 ### Bundler
+
 - Fast bundling for multiple targets (bun, browser, node)
 - Tree shaking
 - Code splitting
@@ -87,6 +90,7 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 - Plugin system
 
 ### Package Manager
+
 - Fast dependency installation
 - Binary lockfile (bun.lockb)
 - Workspace support for monorepos
@@ -95,6 +99,7 @@ Bun is an all-in-one JavaScript runtime and toolkit designed for speed:
 - Link local packages
 
 ### SQLite
+
 - Native SQLite driver
 - Prepared statements
 - Transactions

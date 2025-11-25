@@ -21,17 +21,20 @@ Use the debugging skill from bushido to:
 ## Bug Fixing Principles
 
 **Understand before fixing:**
+
 - Don't guess and patch - find the root cause
 - Reproduce reliably before attempting fix
 - Understand why the bug exists, not just symptoms
 
 **Fix properly:**
+
 - Fix the cause, not symptoms
 - Consider edge cases and similar issues
 - Add tests to prevent regression
 - Document why the fix works
 
 **Verify thoroughly:**
+
 - Original issue resolved
 - No new bugs introduced
 - Related scenarios still work
@@ -40,6 +43,7 @@ Use the debugging skill from bushido to:
 ## Examples
 
 When the user says:
+
 - "This function throws an error when passed null"
 - "The page crashes on mobile devices"
 - "Users report checkout fails intermittently"
@@ -49,22 +53,26 @@ When the user says:
 ## Debugging Techniques
 
 **Add logging:**
+
 ```typescript
 console.log('Value at checkpoint:', value)
 logger.debug('Processing item', { id: item.id, status: item.status })
 ```
 
 **Use debugger:**
+
 ```typescript
 debugger;  // Browser will pause here
 ```
 
 **Binary search:**
+
 - Comment out half the code
 - If bug disappears, it's in that half
 - Repeat until isolated
 
 **Compare working vs broken:**
+
 - What changed between working and broken?
 - Git bisect to find breaking commit
 - Compare with known-good version

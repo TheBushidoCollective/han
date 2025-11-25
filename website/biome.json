@@ -1,8 +1,8 @@
 {
-  "root": false,
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  }
+	"root": false,
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }

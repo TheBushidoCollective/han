@@ -455,12 +455,12 @@ fi
 ```makefile
 .PHONY: test-workflows
 test-workflows:
-	act --dryrun
-	act -j test
+ act --dryrun
+ act -j test
 
 .PHONY: ci-local
 ci-local:
-	act --reuse
+ act --reuse
 ```
 
 ## Performance Tips

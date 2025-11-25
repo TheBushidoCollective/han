@@ -432,6 +432,7 @@ configMapGenerator:
 Generated ConfigMap name: `app-config` (no hash)
 
 Use cases:
+
 - Static references that shouldn't trigger rollouts
 - Resources referenced by external systems
 - Stable endpoints for debugging

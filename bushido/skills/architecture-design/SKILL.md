@@ -19,6 +19,7 @@ Design system architecture and make strategic technical decisions.
 ## Architecture vs Planning
 
 **Architecture Design (this skill):**
+
 - Strategic: "How should the system be structured?"
 - Component interactions and boundaries
 - Technology and pattern choices
@@ -26,12 +27,14 @@ Design system architecture and make strategic technical decisions.
 - System-level decisions
 
 **Technical Planning (technical-planning skill):**
+
 - Tactical: "How do I implement feature X?"
 - Specific implementation tasks
 - Execution details
 - Short-term focus
 
 **Use architecture when:**
+
 - Designing new systems or subsystems
 - Major refactors affecting multiple components
 - Technology selection decisions
@@ -39,6 +42,7 @@ Design system architecture and make strategic technical decisions.
 - Making decisions with long-term impact
 
 **Use planning when:**
+
 - Implementing within existing architecture
 - Breaking down specific features
 - Task sequencing and execution
@@ -48,18 +52,21 @@ Design system architecture and make strategic technical decisions.
 ### 1. Understand Context
 
 **Business context:**
+
 - What problem are we solving?
 - Who are the users?
 - What are the business goals?
 - What are the success metrics?
 
 **Technical context:**
+
 - What exists today?
 - What constraints exist?
 - What must we integrate with?
 - What scale must we support?
 
 **Team context:**
+
 - What's our expertise?
 - What can we maintain?
 - What's our velocity?
@@ -67,11 +74,13 @@ Design system architecture and make strategic technical decisions.
 ### 2. Gather Requirements
 
 **Functional requirements:**
+
 - What must the system do?
 - What are the features?
 - What are the user scenarios?
 
 **Non-functional requirements:**
+
 - **Performance**: Response time, throughput
 - **Scalability**: Expected load, growth
 - **Availability**: Uptime requirements
@@ -80,6 +89,7 @@ Design system architecture and make strategic technical decisions.
 - **Cost**: Budget constraints
 
 **Example:**
+
 ```markdown
 ## Requirements
 
@@ -99,16 +109,19 @@ Design system architecture and make strategic technical decisions.
 ### 3. Identify Constraints
 
 **Technical constraints:**
+
 - Must use existing authentication system
 - Must integrate with legacy inventory system
 - Database must be PostgreSQL (existing infrastructure)
 
 **Business constraints:**
+
 - Must launch in 3 months
 - Budget of $50k for infrastructure
 - Must support EU data residency
 
 **Team constraints:**
+
 - Team experienced in Python, less in Go
 - No DevOps specialist on team
 - Remote team across timezones
@@ -120,18 +133,22 @@ Design system architecture and make strategic technical decisions.
 **Example: Data storage choice**
 
 **Option 1: PostgreSQL**
+
 - Pros: Team knows it, ACID guarantees, rich query support
 - Cons: Vertical scaling limits, setup complexity
 
 **Option 2: MongoDB**
+
 - Pros: Flexible schema, horizontal scaling
 - Cons: Team unfamiliar, eventual consistency
 
 **Option 3: DynamoDB**
+
 - Pros: Fully managed, auto-scaling
 - Cons: Vendor lock-in, query limitations, cost at scale
 
 **Decision: PostgreSQL**
+
 - Team expertise outweighs scaling concerns
 - Can re-evaluate if scale becomes issue
 - Faster initial development
@@ -206,6 +223,7 @@ Design system architecture and make strategic technical decisions.
 ### 6. Define Interfaces
 
 **API contracts:**
+
 ```markdown
 ## API Design
 
@@ -221,6 +239,7 @@ Design system architecture and make strategic technical decisions.
 ```
 
 **Response (200):**
+
 ```json
 {
   "token": "eyJ...",
@@ -233,9 +252,11 @@ Design system architecture and make strategic technical decisions.
 ```
 
 **Errors:**
+
 - 400: Invalid request
 - 401: Invalid credentials
 - 429: Rate limit exceeded
+
 ```
 
 ### 7. Plan for Failure
@@ -356,6 +377,7 @@ Use PostgreSQL as primary database.
 ```
 
 **Apply YAGNI:** You Aren't Gonna Need It
+
 - Don't build for hypothetical future
 - Add when actually needed
 - Simpler is easier to maintain
@@ -375,6 +397,7 @@ Use PostgreSQL as primary database.
 ```
 
 **Apply SOLID principles:**
+
 - Single Responsibility
 - Open/Closed
 - Liskov Substitution
@@ -398,6 +421,7 @@ class OrderService {
 ```
 
 **Benefits:**
+
 - Easier to test (mock interface)
 - Easier to swap implementations
 - Components can evolve independently

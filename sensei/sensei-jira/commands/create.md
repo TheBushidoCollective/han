@@ -56,6 +56,7 @@ Create this ticket? (y/n)
 ```
 
 After creation, use `atlassian_create_issue` and display:
+
 ```
 ✅ Created PROJ-123: {summary}
 

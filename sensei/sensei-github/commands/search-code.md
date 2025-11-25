@@ -51,6 +51,7 @@ export function validateJWT(token: string): UserPayload {
 ```
 
 ### 2. my-org/api-gateway - lib/security/jwt.ts
+
 ```typescript
 async function verifyToken(req: Request): Promise<boolean> {
   const token = req.headers.authorization?.split(' ')[1];
@@ -60,6 +61,7 @@ async function verifyToken(req: Request): Promise<boolean> {
 ```
 
 Would you like to see more results or explore any of these files?
+
 ```
 
 ## Search Syntax
@@ -76,17 +78,23 @@ GitHub code search supports advanced syntax:
 ### Examples
 
 ```
-# Find all TypeScript files with "authenticate"
+
+## Find all TypeScript files with "authenticate"
+
 authenticate language:typescript
 
-# Search in specific path
+## Search in specific path
+
 validate path:src/middleware
 
-# Search specific repository
+## Search specific repository
+
 JWT repo:my-org/auth-service
 
-# Combine filters
+## Combine filters
+
 async function org:my-org language:javascript
+
 ```
 
 ## Tips

@@ -55,6 +55,7 @@ export function validateJWT(token: string): UserPayload {
 ```
 
 ### 2. api-gateway/lib/security/jwt.ts (Relevance: 87%)
+
 ```typescript
 async function verifyToken(req: Request): Promise<boolean> {
   const token = req.headers.authorization?.split(' ')[1];
@@ -65,6 +66,7 @@ async function verifyToken(req: Request): Promise<boolean> {
 ```
 
 ### 3. user-service/utils/auth.ts (Relevance: 82%)
+
 ```typescript
 const validateAuthToken = (token: string) => {
   const payload = jwt.decode(token, { complete: true });
@@ -73,11 +75,13 @@ const validateAuthToken = (token: string) => {
 ```
 
 Would you like to see more results or explore any of these implementations?
+
 ```
 
 ### Keyword Search
 
 ```
+
 User: /search-code authentication middleware
 
 Claude: Searching for "authentication middleware"...
@@ -85,17 +89,21 @@ Claude: Searching for "authentication middleware"...
 Found 7 results across 4 projects:
 
 ### Project: api-service
+
 - src/middleware/auth.ts:15 - `export const authenticationMiddleware = async`
 - src/middleware/auth.ts:42 - `// Authentication middleware for protected routes`
 
 ### Project: user-api
+
 - lib/middleware/authenticate.ts:8 - `class AuthenticationMiddleware {`
 - lib/middleware/authenticate.ts:23 - `// Main authentication check`
 
 ### Project: microservices-core
+
 - shared/middleware/auth.ts:5 - `const authMiddleware = (req, res, next) => {`
 
 Would you like to see the full context for any of these files?
+
 ```
 
 ## Arguments
@@ -145,25 +153,31 @@ Examples:
 ### Search with Scope
 
 ```
+
 User: /search-code Find all test files that test authentication, scope:tests
 
 Claude: Searching test files for authentication tests...
+
 ```
 
 ### Search in Specific Project
 
 ```
+
 User: /search-code Redis caching implementation in project auth-service
 
 Claude: Limiting search to auth-service project...
+
 ```
 
 ### Search by File Type
 
 ```
+
 User: /search-code Database connection configuration in YAML files
 
 Claude: Searching YAML files for database configuration...
+
 ```
 
 ## Related Commands

@@ -31,6 +31,7 @@ Improve code structure and quality while preserving behavior.
 ## Pre-Refactoring Checklist
 
 **STOP if any of these are false:**
+
 - [ ] Tests exist for code being refactored
 - [ ] All tests currently pass
 - [ ] Understand what code does
@@ -38,6 +39,7 @@ Improve code structure and quality while preserving behavior.
 - [ ] Have time to do this properly (not rushing)
 
 **If no tests exist:**
+
 1. Add tests first
 2. Verify tests pass
 3. THEN refactor
@@ -47,6 +49,7 @@ Improve code structure and quality while preserving behavior.
 ### Code Smells That Suggest Refactoring
 
 **Readability issues:**
+
 - Long functions (> 50 lines)
 - Deep nesting (> 3 levels)
 - Unclear naming
@@ -54,12 +57,14 @@ Improve code structure and quality while preserving behavior.
 - Complex conditionals
 
 **Maintainability issues:**
+
 - Duplication (same code in multiple places)
 - God classes (too many responsibilities)
 - Feature envy (method uses another class more than its own)
 - Data clumps (same groups of parameters passed around)
 
 **Complexity issues:**
+
 - Cyclomatic complexity > 10
 - Too many dependencies
 - Tightly coupled code
@@ -435,6 +440,7 @@ git reset --hard HEAD
 **"Leave code better than you found it"**
 
 When touching code for any reason:
+
 1. Fix obvious issues you see
 2. Improve naming
 3. Extract complex expressions
@@ -475,17 +481,20 @@ When touching code for any reason:
 ## Refactoring Safety Checklist
 
 **Before every change:**
+
 - [ ] Tests exist
 - [ ] Tests pass
 - [ ] Understand what code does
 
 **After every change:**
+
 - [ ] Tests still pass
 - [ ] No functionality changed
 - [ ] Code is clearer
 - [ ] Ready to commit
 
 **If tests fail:**
+
 - [ ] Understand why
 - [ ] Fix or revert
 - [ ] Never commit broken tests
@@ -493,6 +502,7 @@ When touching code for any reason:
 ## Integration with Other Skills
 
 Apply these skills during refactoring:
+
 - **boy-scout-rule** - Leave code better than found
 - **simplicity-principles** - KISS, YAGNI, simple is better
 - **solid-principles** - Single Responsibility, etc.
@@ -536,6 +546,7 @@ Apply these skills during refactoring:
 ## Measuring Refactoring Success
 
 **Good refactoring results in:**
+
 - ✅ Easier to understand
 - ✅ Easier to modify
 - ✅ Easier to test
@@ -549,12 +560,14 @@ Apply these skills during refactoring:
 ## Tools
 
 **Automated refactoring tools:**
+
 - IDE refactoring commands (safe)
 - Rename variable/function (safe)
 - Extract method (safe)
 - Move file (safe)
 
 **Manual refactoring:**
+
 - Make small changes
 - Test frequently
 - Commit after each change

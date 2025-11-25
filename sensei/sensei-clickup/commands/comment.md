@@ -25,6 +25,7 @@ View task: {task URL}
 ```
 
 Support markdown formatting in comments:
+
 - Bold: **text**
 - Italic: *text*
 - Code: `code`

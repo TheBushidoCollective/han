@@ -6,6 +6,7 @@ description: Show all Jira tickets assigned to you
 Retrieve and display all Jira tickets currently assigned to you.
 
 Use the Atlassian MCP tool `atlassian_search_issues` with JQL:
+
 ```
 assignee = currentUser() AND status != Done
 ```
@@ -16,6 +17,7 @@ Group the results by status and display in a clear table format:
 |-----|---------|--------|----------|---------|
 
 Include:
+
 - Ticket key (e.g., PROJ-123)
 - Summary (truncate if too long)
 - Current status

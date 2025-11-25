@@ -120,6 +120,7 @@ Converting a user flow into a test:
    - Note preconditions and data needs
 
 2. **Structure the test**:
+
    ```typescript
    test('user flow description', async ({ page }) => {
      // Setup - prepare test state
@@ -151,6 +152,7 @@ Converting requirements into comprehensive tests:
    - Determine test boundaries
 
 2. **Design test structure**:
+
    ```typescript
    test.describe('Feature Name', () => {
      test.beforeEach(async ({ page }) => {
@@ -193,6 +195,7 @@ Creating maintainable page objects:
    - Determine reusable actions
 
 2. **Create page object class**:
+
    ```typescript
    export class LoginPage {
      readonly page: Page;
@@ -220,6 +223,7 @@ Creating maintainable page objects:
    ```
 
 3. **Use in tests**:
+
    ```typescript
    test('successful login', async ({ page }) => {
      const loginPage = new LoginPage(page);
@@ -234,6 +238,7 @@ Creating maintainable page objects:
 Creating tests that run with multiple data sets:
 
 1. **Define test data**:
+
    ```typescript
    const testCases = [
      { input: 'valid@email.com', expected: 'success' },
@@ -243,6 +248,7 @@ Creating tests that run with multiple data sets:
    ```
 
 2. **Generate parameterized tests**:
+
    ```typescript
    for (const testCase of testCases) {
      test(`email validation: ${testCase.input}`, async ({ page }) => {
@@ -265,6 +271,7 @@ Creating tests that run with multiple data sets:
 Generating tests that combine UI and API:
 
 1. **Setup API context**:
+
    ```typescript
    test('user creation flow', async ({ page, request }) => {
      // Create test data via API
@@ -280,6 +287,7 @@ Generating tests that combine UI and API:
    ```
 
 2. **Mock API responses**:
+
    ```typescript
    test('handles API errors', async ({ page }) => {
      await page.route('/api/data', route =>

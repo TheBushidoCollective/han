@@ -66,6 +66,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 ## Features Covered by Skills
 
 ### Core Components
+
 - View, Text, Image, ScrollView
 - FlatList and SectionList for performance
 - TextInput, Button, Pressable
@@ -73,6 +74,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 - Platform-specific components
 
 ### Navigation
+
 - Stack navigation with type safety
 - Tab navigation with icons
 - Drawer navigation
@@ -81,6 +83,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 - Authentication flows
 
 ### Styling
+
 - StyleSheet API for optimized styles
 - Flexbox layout system
 - Responsive design with Dimensions
@@ -89,6 +92,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 - Dark mode support
 
 ### Platform APIs
+
 - Platform detection (iOS/Android)
 - Platform-specific files (.ios.tsx, .android.tsx)
 - Permissions handling
@@ -97,6 +101,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 - Linking to native apps
 
 ### Performance Optimization
+
 - FlatList virtualization
 - React.memo and useMemo
 - Image optimization
@@ -106,6 +111,7 @@ React Native enables building native mobile apps using React and JavaScript/Type
 - Animation optimization
 
 ### Native Modules
+
 - Creating native modules (Swift/Kotlin)
 - Turbo Modules for better performance
 - Native events

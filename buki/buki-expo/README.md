@@ -66,6 +66,7 @@ Expo is a framework and platform for React Native that makes mobile development 
 ## Features Covered by Skills
 
 ### Configuration (app.json/app.config.ts)
+
 - App metadata and settings
 - Platform-specific configuration
 - Plugin system
@@ -74,6 +75,7 @@ Expo is a framework and platform for React Native that makes mobile development 
 - Deep linking setup
 
 ### Expo Router
+
 - File-based routing
 - Stack, tab, and drawer navigation
 - Dynamic routes with parameters
@@ -84,6 +86,7 @@ Expo is a framework and platform for React Native that makes mobile development 
 - Type-safe navigation
 
 ### Expo Modules (SDK)
+
 - Camera and image picker
 - Location and maps
 - Push notifications
@@ -94,6 +97,7 @@ Expo is a framework and platform for React Native that makes mobile development 
 - Sharing and permissions
 
 ### OTA Updates
+
 - Automatic update checking
 - Manual update triggers
 - Update channels
@@ -102,6 +106,7 @@ Expo is a framework and platform for React Native that makes mobile development 
 - Update UI patterns
 
 ### EAS Build
+
 - Development builds
 - Preview and production builds
 - Environment configuration
@@ -261,6 +266,7 @@ Expo apps can be tested with:
 ## Expo vs Bare React Native
 
 Expo provides:
+
 - Managed workflow (no native code needed)
 - EAS cloud services
 - Rich module ecosystem
@@ -268,6 +274,7 @@ Expo provides:
 - OTA updates out of the box
 
 Choose bare React Native when you need:
+
 - Custom native modules not in Expo
 - Full control over native code
 - Specific third-party native libraries

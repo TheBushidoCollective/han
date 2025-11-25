@@ -20,6 +20,7 @@ Use the documentation skill from bushido to:
 ## Documentation Types
 
 ### README
+
 - What the project does
 - How to install/setup
 - How to use (common tasks)
@@ -27,6 +28,7 @@ Use the documentation skill from bushido to:
 - Where to get help
 
 ### API Documentation
+
 - Endpoint/function signature
 - Parameters and types
 - Return values
@@ -35,18 +37,21 @@ Use the documentation skill from bushido to:
 - Authentication/authorization
 
 ### Inline Comments
+
 - Why (not what) the code does
 - Non-obvious decisions
 - Edge cases handled
 - Warnings or gotchas
 
 ### Technical Guides
+
 - How-to guides for specific tasks
 - Architecture overviews
 - Integration guides
 - Troubleshooting guides
 
 ### ADRs (Architecture Decision Records)
+
 - Context for decisions
 - Alternatives considered
 - Trade-offs accepted
@@ -54,6 +59,7 @@ Use the documentation skill from bushido to:
 ## Documentation Principles
 
 **Good documentation:**
+
 - **For the reader**: Written for their level and needs
 - **Clear**: No jargon unless necessary
 - **Concrete**: Examples over abstract descriptions
@@ -61,6 +67,7 @@ Use the documentation skill from bushido to:
 - **Maintained**: Updated when code changes
 
 **Bad documentation:**
+
 - Explains "what" instead of "why"
 - Assumes too much knowledge
 - No examples
@@ -108,12 +115,14 @@ thing.doSomething()
 Description of what the function does.
 
 **Parameters:**
+
 - `param1` (string): Description
 - `param2` (number, optional): Description
 
 **Returns:** Description of return value
 
 **Example:**
+
 ```javascript
 const result = functionName('hello', 42)
 ```
@@ -125,6 +134,7 @@ const result = functionName('hello', 42)
 ## Troubleshooting
 
 ### Common Issue 1
+
 **Problem:** [Description]
 **Solution:** [How to fix]
 
@@ -135,6 +145,7 @@ const result = functionName('hello', 42)
 ## License
 
 [License information]
+
 ```
 
 ## API Documentation Template
@@ -155,6 +166,7 @@ Create a new user.
 ```
 
 **Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -166,6 +178,7 @@ Create a new user.
 ### Response
 
 **Success (201 Created):**
+
 ```json
 {
   "id": "123",
@@ -177,6 +190,7 @@ Create a new user.
 ```
 
 **Error (400 Bad Request):**
+
 ```json
 {
   "error": "Invalid email format"
@@ -184,6 +198,7 @@ Create a new user.
 ```
 
 **Error (401 Unauthorized):**
+
 ```json
 {
   "error": "Authentication required"
@@ -198,6 +213,7 @@ curl -X POST https://api.example.com/users \
   -H "Authorization: Bearer abc123" \
   -d '{"email": "user@example.com", "name": "John Doe"}'
 ```
+
 ```
 
 ## Inline Comment Guidelines
@@ -242,6 +258,7 @@ function parseDate(input: string): Date {
 ## Examples
 
 When the user says:
+
 - "Write a README for this project"
 - "Document this API endpoint"
 - "Add comments explaining this complex function"
@@ -250,7 +267,8 @@ When the user says:
 
 ## Documentation Checklist
 
-### For README:
+### For README
+
 - [ ] What the project does
 - [ ] Installation instructions
 - [ ] Quick start example
@@ -259,7 +277,8 @@ When the user says:
 - [ ] How to contribute
 - [ ] License information
 
-### For API Docs:
+### For API Docs
+
 - [ ] Endpoint/function signature
 - [ ] All parameters documented
 - [ ] Return values documented
@@ -268,7 +287,8 @@ When the user says:
 - [ ] Example requests/responses
 - [ ] Rate limiting (if applicable)
 
-### For Inline Comments:
+### For Inline Comments
+
 - [ ] Explains *why*, not *what*
 - [ ] Documents non-obvious decisions
 - [ ] Notes edge cases handled

@@ -27,6 +27,7 @@ Use the test-driven-development skill from bushido to:
 ## Examples
 
 When the user says:
+
 - "Write tests for the authentication module"
 - "Add tests for the calculateTotal function"
 - "I need test coverage for the user registration flow"

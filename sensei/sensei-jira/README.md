@@ -231,11 +231,13 @@ Let me validate these tickets before we stop...
 **Purpose**: Get comprehensive details of a specific Jira issue
 
 **Parameters**:
+
 - `issueKey` (required): The issue key (e.g., "PROJ-123")
 
 **Returns**: Full issue object including description, status, assignee, comments, acceptance criteria, etc.
 
 **Example**:
+
 ```json
 {
   "issueKey": "PROJ-123"
@@ -247,6 +249,7 @@ Let me validate these tickets before we stop...
 **Purpose**: Search for issues using Jira Query Language (JQL)
 
 **Parameters**:
+
 - `jql` (required): JQL query string
 - `maxResults` (optional): Maximum results to return (default: 50)
 - `startAt` (optional): Pagination offset (default: 0)
@@ -254,6 +257,7 @@ Let me validate these tickets before we stop...
 **Returns**: Array of matching issues
 
 **Example**:
+
 ```json
 {
   "jql": "project = PROJ AND status = 'In Progress' AND assignee = currentUser()",
@@ -266,6 +270,7 @@ Let me validate these tickets before we stop...
 **Purpose**: Create a new Jira issue
 
 **Parameters**:
+
 - `projectKey` (required): Project key (e.g., "PROJ")
 - `summary` (required): Issue title
 - `issueType` (required): Type (Story, Bug, Task, Epic, etc.)
@@ -277,6 +282,7 @@ Let me validate these tickets before we stop...
 **Returns**: Created issue details
 
 **Example**:
+
 ```json
 {
   "projectKey": "PROJ",
@@ -292,12 +298,14 @@ Let me validate these tickets before we stop...
 **Purpose**: Move an issue through workflow states
 
 **Parameters**:
+
 - `issueKey` (required): The issue key
 - `transitionName` (required): Target status name (e.g., "In Progress", "Done")
 
 **Returns**: Transition confirmation
 
 **Example**:
+
 ```json
 {
   "issueKey": "PROJ-123",
@@ -310,12 +318,14 @@ Let me validate these tickets before we stop...
 **Purpose**: Add a comment to an issue
 
 **Parameters**:
+
 - `issueKey` (required): The issue key
 - `comment` (required): Comment text (supports markdown)
 
 **Returns**: Comment confirmation
 
 **Example**:
+
 ```json
 {
   "issueKey": "PROJ-123",
@@ -328,6 +338,7 @@ Let me validate these tickets before we stop...
 **Purpose**: Create a relationship between two issues
 
 **Parameters**:
+
 - `inwardIssue` (required): First issue key
 - `outwardIssue` (required): Second issue key
 - `linkType` (required): Relationship type (Blocks, Relates To, Duplicates, etc.)
@@ -335,6 +346,7 @@ Let me validate these tickets before we stop...
 **Returns**: Link confirmation
 
 **Example**:
+
 ```json
 {
   "inwardIssue": "PROJ-123",
@@ -384,6 +396,7 @@ duedate < now() AND status != Done
 ## Security Considerations
 
 **API Token Security:**
+
 - Never commit API tokens to version control
 - Store tokens in environment variables only
 - Use separate tokens for different environments
@@ -391,12 +404,14 @@ duedate < now() AND status != Done
 - Revoke unused tokens immediately
 
 **Permissions:**
+
 - MCP server inherits your Jira permissions
 - Claude can only perform actions you're authorized to do
 - Review actions before Claude executes them
 - Be cautious with bulk operations
 
 **Data Privacy:**
+
 - Ticket data is transmitted to Claude for processing
 - Sensitive information in tickets will be visible to Claude
 - Consider using separate Jira instances for sensitive projects
@@ -417,6 +432,7 @@ duedate < now() AND status != Done
 **Solution**:
 
 1. Verify environment variables are set correctly:
+
    ```bash
    echo $ATLASSIAN_API_TOKEN
    echo $ATLASSIAN_EMAIL
@@ -424,6 +440,7 @@ duedate < now() AND status != Done
    ```
 
 2. Test API access directly:
+
    ```bash
    curl -u $ATLASSIAN_EMAIL:$ATLASSIAN_API_TOKEN \
      $ATLASSIAN_SITE_URL/rest/api/3/myself

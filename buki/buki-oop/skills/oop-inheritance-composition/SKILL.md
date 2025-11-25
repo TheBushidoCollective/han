@@ -810,7 +810,7 @@ markdown_service = UserService(
 )
 ```
 
-### Strategy Pattern with Composition in C#
+### Strategy Pattern with Composition in C #
 
 ```csharp
 // Strategy interfaces

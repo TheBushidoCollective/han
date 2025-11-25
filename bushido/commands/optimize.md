@@ -19,18 +19,21 @@ Use the performance-optimization skill from bushido to:
 ## Optimization Types
 
 **Performance:**
+
 - Algorithm complexity reduction
 - Database query optimization
 - Caching strategies
 - Lazy loading and code splitting
 
 **Code Quality:**
+
 - Simplification and clarity
 - Removing duplication
 - Better naming and structure
 - Pattern improvements
 
 **Resource Efficiency:**
+
 - Memory usage reduction
 - Bundle size optimization
 - Network request reduction
@@ -39,6 +42,7 @@ Use the performance-optimization skill from bushido to:
 ## Examples
 
 When the user says:
+
 - "This function is too slow"
 - "Optimize the database queries in this module"
 - "Reduce the bundle size for this component"

@@ -81,12 +81,14 @@ Claude: Fetching workflow run #1232...
 - test (2m 15s)
   **Error**: Test suite failed with 3 failures
   ```
+
   FAIL src/auth.test.ts
     Authentication API
       POST /login
         should return JWT token
         Expected: 200
         Received: 500
+
   ```
 
 #### Passed
@@ -120,17 +122,20 @@ Claude: Fetching workflow run #1232...
 ## Common Issues
 
 ### Failed Tests
+
 - Review test logs for specific failures
 - Check if tests pass locally
 - Verify test environment configuration
 - Look for flaky tests
 
 ### Build Errors
+
 - Check for missing dependencies
 - Verify build configuration
 - Look for syntax or compilation errors
 
 ### Timeout Issues
+
 - Increase timeout values if needed
 - Optimize slow tests or builds
 - Check for infinite loops

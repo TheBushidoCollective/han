@@ -37,6 +37,7 @@ Once installed, Claude Code gains access to these tools:
 ### Prerequisites
 
 **GitLab Requirements:**
+
 - GitLab Premium or Ultimate tier
 - GitLab Duo Core, Pro, or Enterprise add-on
 - Beta features enabled (for GitLab 18.4 and earlier)
@@ -185,12 +186,14 @@ Pipeline #1234 - Status: Running
 **Purpose**: Creates a new issue in a GitLab project
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `title` (required): Issue title
 - `description` (optional): Issue description in Markdown format
 - `labels` (optional): Array of label names to add to the issue
 
 **Example**:
+
 ```json
 {
   "project_id": "123",
@@ -205,10 +208,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Retrieves detailed information about a specific issue
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `issue_iid` (required): Internal issue ID (the number shown in the UI)
 
 **Example**:
+
 ```json
 {
   "project_id": "123",
@@ -221,6 +226,7 @@ Pipeline #1234 - Status: Running
 **Purpose**: Creates a new merge request (GitLab 18.5+)
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `source_branch` (required): Source branch name
 - `target_branch` (required): Target branch name
@@ -228,6 +234,7 @@ Pipeline #1234 - Status: Running
 - `description` (optional): MR description in Markdown format
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -243,10 +250,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Fetches comprehensive merge request information
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `merge_request_iid` (required): Internal MR ID
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -259,10 +268,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Lists all commits in a merge request
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `merge_request_iid` (required): Internal MR ID
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -275,10 +286,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Shows file changes and diffs in a merge request
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `merge_request_iid` (required): Internal MR ID
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -291,10 +304,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Retrieves CI/CD pipeline data for a merge request
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `merge_request_iid` (required): Internal MR ID
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -307,10 +322,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Lists all jobs in a specific CI/CD pipeline
 
 **Parameters**:
+
 - `project_id` (required): Numeric project ID or URL-encoded project path
 - `pipeline_id` (required): Pipeline ID
 
 **Example**:
+
 ```json
 {
   "project_id": "456",
@@ -323,10 +340,12 @@ Pipeline #1234 - Status: Running
 **Purpose**: Searches for a term across the entire GitLab instance
 
 **Parameters**:
+
 - `search` (required): Search term
 - `scope` (optional): Search scope (issues, merge_requests, projects, etc.)
 
 **Example**:
+
 ```json
 {
   "search": "authentication bug",
@@ -341,9 +360,11 @@ Pipeline #1234 - Status: Running
 **Note**: Available on GitLab.com only
 
 **Parameters**:
+
 - `query` (required): Natural language query describing what you're looking for
 
 **Example**:
+
 ```json
 {
   "query": "How are user permissions checked in the API?"
@@ -353,21 +374,25 @@ Pipeline #1234 - Status: Running
 ## Security Considerations
 
 **OAuth 2.0 Authentication**:
+
 - The GitLab MCP server uses OAuth 2.0 with dynamic client registration
 - Browser-based authorization flow on first connection
 - Tokens are managed securely by the MCP server
 
 **Prompt Injection Risks**:
+
 - Be cautious when working with untrusted GitLab objects
 - Review AI-generated code or changes carefully before applying
 - Validate issue descriptions and comments from external sources
 
 **Access Control**:
+
 - The MCP server inherits your GitLab permissions
 - Only projects you have access to will be available
 - Respects GitLab's built-in access control and visibility settings
 
 **Data Privacy**:
+
 - All communication goes through GitLab's API
 - No data is stored or cached by the MCP server
 - Audit logs are maintained in GitLab's standard audit trail
@@ -375,21 +400,25 @@ Pipeline #1234 - Status: Running
 ## Limitations
 
 **Version Requirements**:
+
 - Merge request creation requires GitLab 18.5 or later
 - Beta features must be enabled for GitLab 18.4 and earlier
 - Semantic code search is only available on GitLab.com
 
 **Rate Limits**:
+
 - Subject to GitLab API rate limits (varies by tier)
 - Premium: 2,000 requests per minute
 - Ultimate: 4,000 requests per minute
 
 **Feature Availability**:
+
 - Some features require specific GitLab tiers (Premium/Ultimate)
 - GitLab Duo add-on required for AI features
 - Self-hosted instances need proper configuration
 
 **Scope Limitations**:
+
 - Default `mcp` OAuth scope provides read/write access
 - Cannot perform admin-level operations
 - Cannot modify GitLab instance settings
@@ -399,6 +428,7 @@ Pipeline #1234 - Status: Running
 ### Issue: OAuth Authorization Fails
 
 **Solution**:
+
 1. Ensure you're logged into GitLab in your default browser
 2. Check that beta features are enabled (GitLab 18.4 and earlier)
 3. Verify your account has the necessary permissions
@@ -407,6 +437,7 @@ Pipeline #1234 - Status: Running
 ### Issue: "Project not found" Error
 
 **Solution**:
+
 1. Verify the project ID is correct (use numeric ID or URL-encoded path)
 2. Ensure you have access to the project
 3. For private projects, confirm OAuth scope includes necessary permissions
@@ -415,6 +446,7 @@ Pipeline #1234 - Status: Running
 ### Issue: Merge Request Creation Unavailable
 
 **Solution**:
+
 1. Verify your GitLab version is 18.5 or later
 2. Ensure you have Developer or higher role in the project
 3. Check that both source and target branches exist
@@ -423,6 +455,7 @@ Pipeline #1234 - Status: Running
 ### Issue: Semantic Search Not Working
 
 **Solution**:
+
 1. Confirm you're using GitLab.com (not self-hosted)
 2. Verify GitLab Duo is enabled for your account
 3. Check that you have the necessary add-on subscription
@@ -431,6 +464,7 @@ Pipeline #1234 - Status: Running
 ### Issue: Authentication Token Expired
 
 **Solution**:
+
 1. Run `/mcp` in Claude Code
 2. Select the GitLab server
 3. Click "Clear authentication" to reset
@@ -462,6 +496,7 @@ MIT License - See [LICENSE](../../LICENSE) for details.
 ---
 
 **Sources:**
+
 - [GitLab MCP server | GitLab Docs](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/)
 - [Model Context Protocol | GitLab Docs](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/)
 - [@modelcontextprotocol/server-gitlab - npm](https://www.npmjs.com/package/@modelcontextprotocol/server-gitlab)

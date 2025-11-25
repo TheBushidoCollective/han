@@ -28,6 +28,7 @@ Tailor explanations based on context:
 ## Examples
 
 When the user says:
+
 - "Explain what this function does"
 - "Why are we using this pattern here?"
 - "What's the difference between these two approaches?"

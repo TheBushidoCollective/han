@@ -20,6 +20,7 @@ Use the refactoring skill from bushido to:
 ## Refactoring Golden Rules
 
 **Safety first:**
+
 - ✅ Tests exist and pass before starting
 - ✅ Make one change at a time
 - ✅ Run tests after each change
@@ -27,6 +28,7 @@ Use the refactoring skill from bushido to:
 - ✅ Commit after each successful refactoring
 
 **When to refactor:**
+
 - Code is hard to understand
 - Duplication exists
 - Functions are too long
@@ -34,6 +36,7 @@ Use the refactoring skill from bushido to:
 - Complexity is high
 
 **When NOT to refactor:**
+
 - No tests exist (add tests first)
 - Under time pressure (defer to later)
 - External behavior needs to change (that's not refactoring)
@@ -41,6 +44,7 @@ Use the refactoring skill from bushido to:
 ## Common Refactorings
 
 **Extract Function:**
+
 ```typescript
 // Before
 function processOrder(order) {
@@ -67,6 +71,7 @@ function calculateShipping(items) {
 ```
 
 **Eliminate Duplication:**
+
 ```typescript
 // Before
 function formatUserName(user) {
@@ -84,6 +89,7 @@ function formatFullName(person) {
 ```
 
 **Simplify Conditionals:**
+
 ```typescript
 // Before
 if (user.role === 'admin' || user.role === 'moderator' || user.role === 'super_admin') {
@@ -101,6 +107,7 @@ if (PRIVILEGED_ROLES.includes(user.role)) {
 ## Examples
 
 When the user says:
+
 - "This function is too long and hard to understand"
 - "Clean up this messy code"
 - "Remove duplication between these modules"

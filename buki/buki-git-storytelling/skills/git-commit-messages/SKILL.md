@@ -46,6 +46,7 @@ docs: update API documentation for v2 endpoints
 ### Subject Line Rules
 
 **DO:**
+
 - Start with a type prefix (feat, fix, docs, etc.)
 - Use imperative mood ("add" not "added" or "adds")
 - Keep it under 50 characters
@@ -54,6 +55,7 @@ docs: update API documentation for v2 endpoints
 - Be specific and descriptive
 
 **DON'T:**
+
 - Use vague terms like "update stuff" or "fix things"
 - Include file names unless necessary
 - Describe HOW you did it (that's what the code shows)
@@ -71,6 +73,7 @@ The body should explain:
 - **Context** that isn't obvious from the code
 
 Format:
+
 - Wrap at 72 characters per line
 - Use bullet points for multiple items
 - Separate from subject with a blank line

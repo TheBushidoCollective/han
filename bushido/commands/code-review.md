@@ -74,11 +74,11 @@ Found 3 issues:
 
 <link to file and line with full sha1 + line range for context, note that you MUST provide the full sha and not use bash here, eg. https://github.com/anthropics/claude-code/blob/1d54823877c4de72b2316a64032a54afc404e619/README.md#L13-L17>
 
-2. <brief description of bug> (some/other/CLAUDE.md says "<...>")
+1. <brief description of bug> (some/other/CLAUDE.md says "<...>")
 
 <link to file and line with full sha1 + line range for context>
 
-3. <brief description of bug> (bug due to <file and code snippet>)
+1. <brief description of bug> (bug due to <file and code snippet>)
 
 <link to file and line with full sha1 + line range for context>
 
@@ -102,6 +102,8 @@ No issues found. Checked for bugs and CLAUDE.md compliance.
   - Requires full git sha
   - You must provide the full sha. Commands like `https://github.com/owner/repo/blob/$(git rev-parse HEAD)/foo/bar` will not work, since your comment will be directly rendered in Markdown.
   - Repo name must match the repo you're code reviewing
+
   - # sign after the file name
+
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)

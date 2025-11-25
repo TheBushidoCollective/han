@@ -23,6 +23,7 @@ end
 ```
 
 Each controller action receives:
+
 - `conn` - The `Plug.Conn` struct representing the HTTP request/response
 - `params` - A map containing request parameters from the URL, query string, and request body
 
@@ -184,6 +185,7 @@ end
 ```
 
 Flash message types:
+
 - `:info` - Informational messages
 - `:error` - Error messages
 - `:warning` - Warning messages (custom)
