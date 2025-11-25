@@ -1,6 +1,10 @@
+---
+description: Create a new buki (weapon) plugin for a technology
+---
+
 # Create a Buki (武器 - Weapon) Plugin
 
-Create a new buki plugin for language, framework, or tool validation.
+Create a new buki plugin for: $ARGUMENTS
 
 ## What is a Buki?
 
