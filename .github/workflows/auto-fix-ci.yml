@@ -101,5 +101,5 @@ jobs:
             2. Make the minimal changes needed to fix the issue
             3. Commit your changes with a descriptive message
             4. Push to the current branch
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_tools: "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(npm:*),Bash(npx:*)"
