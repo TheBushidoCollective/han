@@ -49,6 +49,6 @@ jobs:
 
             Be conservative with labeling - only apply labels you're confident about.
 
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_tools: "mcp__github__get_issue,mcp__github__update_issue,mcp__github__list_issues,Read,Glob,Grep"
           github_token: ${{ secrets.GITHUB_TOKEN }}

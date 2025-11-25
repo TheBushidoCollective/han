@@ -419,9 +419,9 @@ test("han plugin install is idempotent", () => {
 			stdio: "pipe",
 		});
 
-		// Verify message about already installed
+		// Verify message about already installed (case-insensitive)
 		strictEqual(
-			output.includes("already installed"),
+			output.toLowerCase().includes("already installed"),
 			true,
 			"Expected 'already installed' message",
 		);
@@ -461,9 +461,9 @@ test("han plugin uninstall handles non-existent plugin gracefully", () => {
 			},
 		);
 
-		// Verify message about not installed
+		// Verify message about not installed (case-insensitive)
 		strictEqual(
-			output.includes("not installed"),
+			output.toLowerCase().includes("not installed"),
 			true,
 			"Expected 'not installed' message",
 		);
