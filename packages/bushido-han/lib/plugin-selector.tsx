@@ -45,10 +45,11 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 			isInstalled?: boolean;
 		}> = [];
 
-		// Build set of plugins to show: installed OR recommended (excluding bushido)
+		// Build set of plugins to show: installed OR recommended OR selected (excluding bushido)
 		const pluginsToShow = new Set([
 			...installedPlugins.filter((p) => p !== "bushido"),
 			...detectedPlugins.filter((p) => p !== "bushido"),
+			...Array.from(selectedPlugins).filter((p) => p !== "bushido"),
 		]);
 
 		// Sort and add to options
@@ -68,7 +69,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		opts.push({ name: "❌ Cancel", isPlugin: false });
 
 		return opts;
-	}, [detectedPlugins, installedPlugins]);
+	}, [detectedPlugins, installedPlugins, selectedPlugins]);
 
 	// Memoize search function (excludes bushido from results)
 	const performSearch = useCallback(
