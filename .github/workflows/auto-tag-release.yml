@@ -96,16 +96,30 @@ jobs:
         run: npm test
         working-directory: ./packages/bushido-han
 
+      - name: Check if tag already exists
+        id: check-tag
+        run: |
+          TAG="v${{ steps.bump-version.outputs.new_version }}"
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag $TAG already exists, skipping release"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Commit version bump
+        if: steps.check-tag.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           git add packages/bushido-han/package.json
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main
 
       - name: Create and push tag
         id: create-tag
+        if: steps.check-tag.outputs.exists == 'false'
         run: |
           TAG="v${{ steps.bump-version.outputs.new_version }}"
           git tag -a "$TAG" -m "Release $TAG"
@@ -114,6 +128,7 @@ jobs:
           echo "Created tag: $TAG"
 
       - name: Trigger publish workflow
+        if: steps.check-tag.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
