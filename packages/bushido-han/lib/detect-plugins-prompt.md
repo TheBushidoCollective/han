@@ -1,8 +1,9 @@
 <!--
 This prompt template is dynamically enhanced in shared.ts with:
 1. GIT REPOSITORY section - Remote URL to determine hosting platform (GitHub, GitLab, etc.)
-2. CODEBASE STATISTICS section - File extensions and config file names from codebase-analyzer.ts
-3. AVAILABLE PLUGINS IN MARKETPLACE section - Plugin list from marketplace.json
+2. CURRENTLY INSTALLED PLUGINS section - List of plugins already installed (if any)
+3. CODEBASE STATISTICS section - File extensions and config file names from codebase-analyzer.ts
+4. AVAILABLE PLUGINS IN MARKETPLACE section - Plugin list from marketplace.json
 
 These sections are appended to this base prompt at runtime.
 -->
@@ -22,7 +23,25 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 
 ## Your Analysis Process
 
-### STEP 1: Check git repository hosting platform (if provided)
+### STEP 1: Analyze currently installed plugins (if provided)
+
+- Check if CURRENTLY INSTALLED PLUGINS section is provided in the prompt
+- If provided, you should:
+  - **Understand why each plugin was likely added**: Look at plugin descriptions and infer original use case
+    - Example: `buki-typescript` suggests TypeScript development
+    - Example: `sensei-github` suggests GitHub integration needs
+    - Example: `do-frontend-development` suggests frontend focus
+  - **Determine if each plugin is still relevant**:
+    - Use the codebase statistics and configuration files to verify if the technology/practice is still in use
+    - A plugin is still relevant if its associated technology/practice is actively used in the codebase
+    - A plugin may be irrelevant if:
+      - The technology was removed (e.g., no more .ts files but buki-typescript is installed)
+      - The project migrated to a different platform (e.g., moved from GitHub to GitLab)
+      - The framework changed (e.g., migrated from React to Vue)
+  - **Keep relevant plugins in your recommendations**: If a plugin is still relevant, include it in your final list
+  - **Exclude irrelevant plugins**: If a plugin is no longer needed, do not include it in your recommendations
+
+### STEP 2: Check git repository hosting platform (if provided)
 
 - Check if GIT REPOSITORY section is provided in the prompt
 - If provided, examine the remote URL to determine the hosting platform:
@@ -30,7 +49,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
   - URLs containing `gitlab.com` or other GitLab instances → recommend `sensei-gitlab`
   - This helps integrate Claude Code with the project's issue tracking, PRs/MRs, and CI/CD
 
-### STEP 2: Review pre-computed codebase statistics (if provided)
+### STEP 3: Review pre-computed codebase statistics (if provided)
 
 - Check if CODEBASE STATISTICS section is provided in the prompt
 - If provided, you have:
@@ -48,7 +67,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
   - Example: glob("\*_/_.ts") to find TypeScript files
   - Example: glob("\*_/_.py") to find Python files
 
-### STEP 3: Examine key configuration files
+### STEP 4: Examine key configuration files
 
 - Config files are already identified in the statistics (if provided)
 - Use Read tool to examine important config files:
@@ -61,7 +80,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
   - Example: grep("import.\*react") to confirm React usage
   - Example: grep("from django") to confirm Django usage
 
-### STEP 4: Identify technologies and patterns
+### STEP 5: Identify technologies and patterns
 
 - Programming languages (TypeScript, Python, Go, Rust, Ruby, etc.)
 - Frameworks and libraries (React, Vue, Django, Rails, etc.)
@@ -72,7 +91,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 - CI/CD configurations
 - Accessibility tooling
 
-### STEP 5: Match findings to available plugins
+### STEP 6: Match findings to available plugins
 
 - Look at the plugin descriptions and keywords below
 - Cross-reference detected technologies with available buki-\* plugins
