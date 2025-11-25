@@ -173,11 +173,12 @@ function getGitRemoteUrl(): string | null {
 }
 
 /**
- * Build prompt with marketplace data and codebase stats injected
+ * Build prompt with marketplace data, codebase stats, and installed plugins injected
  */
 function buildPromptWithMarketplace(
 	plugins: MarketplacePlugin[],
 	codebaseStats?: CodebaseStats,
+	installedPlugins?: string[],
 ): string {
 	const pluginList = plugins
 		.map((p) => {
@@ -199,13 +200,29 @@ function buildPromptWithMarketplace(
 		prompt += `\n\n## GIT REPOSITORY\n\nRemote URL: ${gitRemoteUrl}`;
 	}
 
+	// Add currently installed plugins if available
+	if (installedPlugins && installedPlugins.length > 0) {
+		const installedList = installedPlugins
+			.map((name) => {
+				const plugin = plugins.find((p) => p.name === name);
+				if (plugin) {
+					const parts = [`- ${plugin.name}`];
+					if (plugin.description) parts.push(`: ${plugin.description}`);
+					return parts.join("");
+				}
+				return `- ${name}`;
+			})
+			.join("\n");
+		prompt += `\n\n## CURRENTLY INSTALLED PLUGINS\n\n${installedList}\n\nThese plugins are currently installed. You should analyze why they were likely added and determine if they are still relevant for this codebase.`;
+	}
+
 	// Add codebase statistics if available
 	if (codebaseStats && codebaseStats.totalFiles > 0) {
 		prompt += `\n\n## CODEBASE STATISTICS (pre-computed)\n\n${formatStatsForPrompt(codebaseStats)}`;
 	}
 
 	// Add available plugins
-	prompt += `\n## AVAILABLE PLUGINS IN MARKETPLACE\n\n${pluginList}`;
+	prompt += `\n\n## AVAILABLE PLUGINS IN MARKETPLACE\n\n${pluginList}`;
 
 	prompt += `\n\nRemember: ONLY recommend plugins from the list above. Never recommend plugins that are not in this list.`;
 
@@ -229,6 +246,13 @@ export async function detectPluginsWithAgent(
 		return;
 	}
 
+	// Get currently installed plugins (from both project and local scopes)
+	const projectPlugins = getInstalledPlugins("project");
+	const localPlugins = getInstalledPlugins("local");
+	const installedPlugins = Array.from(
+		new Set([...projectPlugins, ...localPlugins]),
+	);
+
 	// Analyze codebase to get file statistics upfront
 	let codebaseStats: CodebaseStats | undefined;
 	try {
@@ -243,8 +267,12 @@ export async function detectPluginsWithAgent(
 		);
 	}
 
-	// Build prompt with marketplace data and codebase stats
-	const prompt = buildPromptWithMarketplace(marketplacePlugins, codebaseStats);
+	// Build prompt with marketplace data, codebase stats, and installed plugins
+	const prompt = buildPromptWithMarketplace(
+		marketplacePlugins,
+		codebaseStats,
+		installedPlugins,
+	);
 	const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
 
 	// Define allowed tools - only read-only operations (no web_fetch needed)
