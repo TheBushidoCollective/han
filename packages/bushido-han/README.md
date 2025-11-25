@@ -99,54 +99,6 @@ Remove all Han plugins and marketplace configuration.
 han uninstall
 ```
 
-### han validate
-
-Run validation commands across monorepo packages.
-
-```bash
-han validate [options] <command>
-```
-
-**Options:**
-- `--fail-fast` - Stop on first failure
-- `--dirs-with <file>` - Only run in directories containing the specified file
-
-**Examples:**
-
-```bash
-# Run tests in all directories with package.json
-han validate --dirs-with package.json npm test
-
-# Run RSpec in all directories with Gemfile
-han validate --fail-fast --dirs-with Gemfile bundle exec rspec
-
-# Run go tests everywhere
-han validate go test ./...
-```
-
-## Usage in Claude Code Hooks
-
-Use han validate in Claude Code hooks for quality enforcement:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "type": "command",
-        "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test"
-      }
-    ]
-  }
-}
-```
-
-## Exit Codes
-
-- `0` - Success
-- `1` - Invalid usage or no directories found
-- `2` - One or more validations failed
-
 ## Philosophy
 
 > "Beginning is easy - continuing is hard." - Japanese Proverb
