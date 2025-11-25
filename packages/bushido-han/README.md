@@ -43,6 +43,7 @@ han plugin install <plugin-name>
 ```
 
 **Options:**
+
 - `--auto` - Use AI to analyze your codebase and recommend plugins:
   - Shows installed and recommended plugins only
   - Recommended plugins marked with ⭐ and pre-selected

@@ -15,9 +15,9 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 
 ## Plugin Categories
 
-- **buki-*** (武器 weapons): Skills for specific technologies and frameworks
-- **do-*** (道 disciplines): Specialized agents for development practices and workflows
-- **sensei-*** (先生 teachers): MCP servers for external integrations
+- **buki-\*** (武器 weapons): Skills for specific technologies and frameworks
+- **do-\*** (道 disciplines): Specialized agents for development practices and workflows
+- **sensei-\*** (先生 teachers): MCP servers for external integrations
 - **bushido**: Core quality principles (ALWAYS recommend this)
 
 ## Your Analysis Process
@@ -45,8 +45,8 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
     - etc.
   - **Config file names** (e.g., package.json, Cargo.toml, go.mod) - these reveal frameworks and tools
 - If statistics are NOT provided, use Glob to discover file types
-  - Example: glob("**/*.ts") to find TypeScript files
-  - Example: glob("**/*.py") to find Python files
+  - Example: glob("\*_/_.ts") to find TypeScript files
+  - Example: glob("\*_/_.py") to find Python files
 
 ### STEP 3: Examine key configuration files
 
@@ -58,7 +58,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
   - requirements.txt, pyproject.toml - reveals Python dependencies
   - mix.exs - reveals Elixir dependencies
 - Use Grep to search for framework-specific patterns
-  - Example: grep("import.*react") to confirm React usage
+  - Example: grep("import.\*react") to confirm React usage
   - Example: grep("from django") to confirm Django usage
 
 ### STEP 4: Identify technologies and patterns
@@ -75,9 +75,9 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 ### STEP 5: Match findings to available plugins
 
 - Look at the plugin descriptions and keywords below
-- Cross-reference detected technologies with available buki-* plugins
-- Cross-reference development practices with available do-* plugins
-- Cross-reference integrations with available sensei-* plugins
+- Cross-reference detected technologies with available buki-\* plugins
+- Cross-reference development practices with available do-\* plugins
+- Cross-reference integrations with available sensei-\* plugins
 - ONLY recommend plugins from the list provided
 - Aim for 3-8 total plugins that best match the codebase
 - Always include "bushido" as it's the core plugin
