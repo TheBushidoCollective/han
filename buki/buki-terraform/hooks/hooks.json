@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
           }
         ]
       }
