@@ -1,0 +1,54 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code for Issue Triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            Triage this issue by analyzing its content and applying appropriate labels.
+
+            Repository: ${{ github.repository }}
+            Issue: #${{ github.event.issue.number }}
+
+            Steps:
+            1. Read the issue using mcp__github__get_issue
+            2. Analyze the content to determine:
+               - Type: bug, feature, question, documentation
+               - Area: cli, plugins, website, ci, other
+               - Priority: low, medium, high (based on impact)
+            3. Apply appropriate labels using mcp__github__update_issue
+
+            Available labels to apply:
+            - bug: Something isn't working
+            - enhancement: New feature or request
+            - question: Further information is requested
+            - documentation: Improvements or additions to documentation
+            - good first issue: Good for newcomers
+            - help wanted: Extra attention is needed
+            - cli: Related to the han CLI tool
+            - plugins: Related to plugin system
+            - website: Related to the han website
+
+            Be conservative with labeling - only apply labels you're confident about.
+
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_tools: "mcp__github__get_issue,mcp__github__update_issue,mcp__github__list_issues,Read,Glob,Grep"
+          github_token: ${{ secrets.GITHUB_TOKEN }}

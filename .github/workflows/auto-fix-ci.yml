@@ -1,0 +1,105 @@
+name: Auto Fix CI Failures
+
+on:
+  workflow_run:
+    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  issues: write
+  id-token: write
+
+jobs:
+  auto-fix:
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      !startsWith(github.event.workflow_run.head_branch, 'claude-auto-fix-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup git identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Get CI failure details
+        id: failure_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+
+            const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
+
+            let errorLogs = [];
+            for (const job of failedJobs) {
+              try {
+                const logs = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  job_id: job.id
+                });
+                // Truncate logs to last 5000 chars to avoid token limits
+                const truncatedLogs = logs.data.slice(-5000);
+                errorLogs.push({
+                  jobName: job.name,
+                  logs: truncatedLogs
+                });
+              } catch (e) {
+                errorLogs.push({
+                  jobName: job.name,
+                  logs: 'Could not fetch logs'
+                });
+              }
+            }
+
+            return {
+              runUrl: run.data.html_url,
+              failedJobs: failedJobs.map(j => j.name),
+              errorLogs: errorLogs,
+              workflowName: run.data.name
+            };
+
+      - name: Fix CI failures with Claude
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            A CI workflow has failed. Please analyze the error and fix it.
+
+            Workflow: ${{ fromJSON(steps.failure_details.outputs.result).workflowName }}
+            Failed CI Run: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+            Failed Jobs: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
+            Branch: ${{ github.event.workflow_run.head_branch }}
+            Repository: ${{ github.repository }}
+
+            Error logs:
+            ${{ toJSON(fromJSON(steps.failure_details.outputs.result).errorLogs) }}
+
+            Instructions:
+            1. Analyze the error logs to understand what failed
+            2. Make the minimal changes needed to fix the issue
+            3. Commit your changes with a descriptive message
+            4. Push to the current branch
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_tools: "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(npm:*),Bash(npx:*)"
