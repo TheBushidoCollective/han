@@ -161,29 +161,47 @@ const hookCommand = program.command("hook").description("Hook utilities");
 
 // Hook run subcommand
 hookCommand
-	.command("run")
+	.command("run [ignored...]")
 	.description(
-		"Run a command across directories (use -- before command to pass through arguments)",
+		"Run a command across directories. Requires -- before command (e.g., han hook run --dirs-with package.json -- npm test)",
 	)
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
 		"Only run in directories containing the specified file",
 	)
-	.argument("<command...>", "Command to run in each directory")
 	.allowUnknownOption()
 	.action(
 		async (
-			commandArgs: string[],
+			_ignored: string[],
 			options: { failFast?: boolean; dirsWith?: string },
 		) => {
-			const { validate } = await import("./validate.js");
-			validate({
-				failFast: options.failFast || false,
-				dirsWith: options.dirsWith || null,
-				command: commandArgs.join(" "),
-			});
-		},
+		// Parse command from process.argv after --
+		const separatorIndex = process.argv.indexOf("--");
+
+		if (separatorIndex === -1) {
+			console.error(
+				"Error: Command must be specified after -- separator\n\nExample: han hook run --dirs-with package.json -- npm test",
+			);
+			process.exit(1);
+		}
+
+		const commandArgs = process.argv.slice(separatorIndex + 1);
+
+		if (commandArgs.length === 0) {
+			console.error(
+				"Error: No command specified after --\n\nExample: han hook run --dirs-with package.json -- npm test",
+			);
+			process.exit(1);
+		}
+
+		const { validate } = await import("./validate.js");
+		validate({
+			failFast: options.failFast || false,
+			dirsWith: options.dirsWith || null,
+			command: commandArgs.join(" "),
+		});
+	},
 	);
 
 // ============================================
@@ -245,31 +263,49 @@ program
 		}
 	});
 
-// Alias: han hook run -> han hook run
+// Alias: han validate -> han hook run (deprecated)
 program
-	.command("validate")
+	.command("validate [ignored...]")
 	.description(
-		"Alias for 'hook run' (use -- before command to pass through arguments)",
+		"Alias for 'hook run'. Requires -- before command (e.g., han validate --dirs-with package.json -- npm test)",
 	)
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
 		"Only run in directories containing the specified file",
 	)
-	.argument("<command...>", "Command to run in each directory")
 	.allowUnknownOption()
 	.action(
 		async (
-			commandArgs: string[],
+			_ignored: string[],
 			options: { failFast?: boolean; dirsWith?: string },
 		) => {
-			const { validate } = await import("./validate.js");
-			validate({
-				failFast: options.failFast || false,
-				dirsWith: options.dirsWith || null,
-				command: commandArgs.join(" "),
-			});
-		},
+		// Parse command from process.argv after --
+		const separatorIndex = process.argv.indexOf("--");
+
+		if (separatorIndex === -1) {
+			console.error(
+				"Error: Command must be specified after -- separator\n\nExample: han validate --dirs-with package.json -- npm test",
+			);
+			process.exit(1);
+		}
+
+		const commandArgs = process.argv.slice(separatorIndex + 1);
+
+		if (commandArgs.length === 0) {
+			console.error(
+				"Error: No command specified after --\n\nExample: han validate --dirs-with package.json -- npm test",
+			);
+			process.exit(1);
+		}
+
+		const { validate } = await import("./validate.js");
+		validate({
+			failFast: options.failFast || false,
+			dirsWith: options.dirsWith || null,
+			command: commandArgs.join(" "),
+		});
+	},
 	);
 
 program.parse();

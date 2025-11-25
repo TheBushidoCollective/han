@@ -62,7 +62,7 @@ test("shows help when no command provided", () => {
 	}
 });
 
-// Test: shows error when hook run has no command argument
+// Test: shows error when hook run has no command argument or -- separator
 test("shows error when hook run has no command argument", () => {
 	try {
 		execSync(`node ${binPath} hook run`, { encoding: "utf8" });
@@ -72,9 +72,7 @@ test("shows error when hook run has no command argument", () => {
 		strictEqual(execError.status, 1);
 		const stderr = execError.stderr?.toString() || "";
 		strictEqual(
-			stderr.includes("missing required argument") ||
-				stderr.includes("error") ||
-				stderr.length > 0,
+			stderr.includes("-- separator") || stderr.includes("error"),
 			true,
 		);
 	}
@@ -85,7 +83,7 @@ test("passes when no directories match filter", () => {
 	const testDir = setup();
 	try {
 		const output = execSync(
-			`node ${binPath} hook run --dirs-with nonexistent.txt echo test`,
+			`node ${binPath} hook run --dirs-with nonexistent.txt -- echo test`,
 			{ cwd: testDir, encoding: "utf8" } as ExecSyncOptionsWithStringEncoding,
 		);
 		strictEqual(
@@ -112,7 +110,7 @@ test("runs command in matching directories", () => {
 		execSync("git add .", { cwd: testDir });
 
 		const output = execSync(
-			`node ${binPath} hook run --dirs-with package.json echo success`,
+			`node ${binPath} hook run --dirs-with package.json -- echo success`,
 			{
 				cwd: testDir,
 				encoding: "utf8",
@@ -139,7 +137,7 @@ test("fails with exit code 2 when command fails", () => {
 		execSync("git add .", { cwd: testDir });
 
 		try {
-			execSync(`node ${binPath} hook run --dirs-with package.json exit 1`, {
+			execSync(`node ${binPath} hook run --dirs-with package.json -- exit 1`, {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: "pipe",
@@ -175,7 +173,7 @@ test("stops on first failure with --fail-fast", () => {
 
 		try {
 			execSync(
-				`node ${binPath} hook run --fail-fast --dirs-with package.json exit 1`,
+				`node ${binPath} hook run --fail-fast --dirs-with package.json -- exit 1`,
 				{ cwd: testDir, encoding: "utf8", stdio: "pipe" },
 			);
 			throw new Error("Should have failed");
