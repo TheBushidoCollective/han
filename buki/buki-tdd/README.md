@@ -23,6 +23,7 @@ Test-Driven Development is a software development approach where you:
 ## When to Use
 
 Install this plugin when working on:
+
 - Projects that require high code quality
 - Teams practicing TDD
 - Codebases with comprehensive test coverage
@@ -31,6 +32,7 @@ Install this plugin when working on:
 ## Hooks
 
 This plugin includes hooks that:
+
 - Inject TDD reminders on every user prompt (`UserPromptSubmit`)
 - Remind subagents to follow TDD when they complete (`SubagentStop`)
 

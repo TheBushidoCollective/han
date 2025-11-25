@@ -5,16 +5,19 @@
 ## Red → Green → Refactor
 
 ### 1. RED: Write Failing Test First
+
 - Write the test BEFORE any implementation code
 - Run the test to verify it FAILS
 - Confirm the failure message is correct
 
 ### 2. GREEN: Write Minimal Code
+
 - Write only enough code to make the test pass
 - No extra features or "future-proofing"
 - Run the test to verify it PASSES
 
 ### 3. REFACTOR: Improve Code Quality
+
 - Clean up the code while tests are green
 - Extract constants, improve naming, remove duplication
 - Run tests to ensure they still pass
@@ -22,6 +25,7 @@
 ## When TDD Applies
 
 ✅ **ALWAYS use TDD for:**
+
 - New functions/methods
 - New features
 - Bug fixes (write test that reproduces the bug first)
@@ -29,6 +33,7 @@
 - API changes
 
 ❌ **Skip TDD for:**
+
 - UI styling tweaks
 - Configuration file changes
 - Documentation updates
@@ -44,6 +49,7 @@
 ## Verification Checklist
 
 Before considering a task complete:
+
 - [ ] Wrote test first and saw it fail
 - [ ] Implemented minimal code to pass test
 - [ ] Ran test and saw it pass

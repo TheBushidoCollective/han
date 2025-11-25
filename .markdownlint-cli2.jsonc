@@ -1,0 +1,23 @@
+{
+  "config": {
+    "MD033": false,
+    "MD013": false,
+    "MD024": false,
+    "MD040": false,
+    "MD041": false,
+    "MD046": false,
+    "MD034": false,
+    "MD060": false,
+    "MD003": false,
+    "MD036": false,
+    "default": true,
+    "line-length": false
+  },
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    "**/node_modules/**",
+    "node_modules/**"
+  ]
+}
