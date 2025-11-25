@@ -36,37 +36,23 @@ Use the `han` CLI tool to automatically detect and install appropriate plugins:
 npm install -g @thebushidocollective/han
 
 # Or use with npx (no installation required)
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install --auto
 ```
 
 The installer will:
 
 - Analyze your codebase using Claude Agent SDK
 - Detect languages, frameworks, and testing tools
+- Detect git hosting platform (GitHub/GitLab)
 - Recommend appropriate plugins
 - Configure `.claude/settings.json` automatically
 
-### Via `/plugin` Command
+### Via Claude Code `/plugin` Command
 
 Use Claude Code's built-in plugin command to add the marketplace:
 
 ```
-claude plugin marketplace add thebushidocollective/han
-```
-
-Then install individual plugins:
-
-```
-claude plugin install bushido@han
-claude plugin install buki-typescript@han
-```
-
-### Via `/plugin` Command
-
-Use Claude Code's built-in plugin command to add the marketplace:
-
-```
-thebushidocollective/han
+/plugin marketplace add thebushidocollective/han
 ```
 
 Then install individual plugins:
@@ -150,41 +136,28 @@ MCP servers that provide external knowledge and integrations.
 ### Install Plugins
 
 ```bash
-npx @thebushidocollective/han install
+# Interactive mode - browse and select plugins
+npx @thebushidocollective/han plugin install
+
+# Auto-detect mode - AI analyzes codebase
+npx @thebushidocollective/han plugin install --auto
+
+# Install specific plugin by name
+npx @thebushidocollective/han plugin install buki-typescript
 ```
 
-### Validate Monorepo Projects
-
-The `han validate` command runs validation across multiple packages:
+### Search Plugins
 
 ```bash
-# Run tests in all JavaScript packages
-han validate --fail-fast --dirs-with package.json npm test
-
-# Run RSpec in all Ruby packages
-han validate --fail-fast --dirs-with Gemfile bundle exec rspec
-
-# Run go test in all Go modules
-han validate --fail-fast --dirs-with go.mod go test ./...
+npx @thebushidocollective/han plugin search typescript
 ```
 
-**Use in hooks:**
+### Align Plugins with Codebase
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npm test"
-          }
-        ]
-      }
-    ]
-  }
-}
+Re-analyze your codebase and sync plugins with current state:
+
+```bash
+npx @thebushidocollective/han plugin align
 ```
 
 ### Uninstall
