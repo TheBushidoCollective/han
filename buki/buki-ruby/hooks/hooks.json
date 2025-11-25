@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Gemfile -- ruby -c"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Gemfile -- ruby -c"
+          }
+        ]
+      }
+    ]
+  }
+}

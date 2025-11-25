@@ -501,6 +501,13 @@
       "keywords": ["rspec", "testing", "ruby", "bdd", "skill"]
     },
     {
+      "name": "buki-ruby",
+      "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
+      "source": "./buki/buki-ruby",
+      "category": "Weapon",
+      "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"]
+    },
+    {
       "name": "buki-rubocop",
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
       "source": "./buki/buki-rubocop",
