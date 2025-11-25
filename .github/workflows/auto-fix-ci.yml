@@ -11,6 +11,7 @@ permissions:
   pull-requests: write
   actions: read
   issues: write
+  workflows: write
   id-token: write
 
 jobs:
