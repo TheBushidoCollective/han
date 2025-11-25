@@ -120,6 +120,34 @@ export function getInstalledPlugins(
 }
 
 /**
+ * Remove plugins that are not in the marketplace
+ * Returns the list of removed plugin names
+ */
+export function removeInvalidPlugins(
+	validPluginNames: Set<string>,
+	scope: "project" | "local" = "project",
+): string[] {
+	const settings = readOrCreateSettings(scope);
+	const currentPlugins = getInstalledPlugins(scope);
+	const removed: string[] = [];
+
+	for (const plugin of currentPlugins) {
+		if (!validPluginNames.has(plugin)) {
+			removed.push(plugin);
+			if (settings.enabledPlugins) {
+				delete settings.enabledPlugins[`${plugin}@han`];
+			}
+		}
+	}
+
+	if (removed.length > 0) {
+		writeSettings(settings, scope);
+	}
+
+	return removed;
+}
+
+/**
  * Read the base prompt from markdown file
  */
 function getBasePrompt(): string {
