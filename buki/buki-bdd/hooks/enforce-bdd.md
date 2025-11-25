@@ -5,18 +5,21 @@
 ## Discovery → Development → Delivery
 
 ### 1. DISCOVERY: Understand Requirements
+
 - Collaborate with stakeholders (Three Amigos)
 - Use concrete examples to clarify requirements
 - Document examples as scenarios in Gherkin
 - Build shared understanding before coding
 
 ### 2. DEVELOPMENT: Implement with Examples
+
 - Write failing scenario (acceptance test) first
 - Implement using outside-in TDD
 - Use scenarios as specifications
 - Keep scenarios executable and up-to-date
 
 ### 3. DELIVERY: Validate Behavior
+
 - Run scenarios to verify behavior
 - Ensure living documentation stays current
 - Validate against real business requirements
@@ -25,6 +28,7 @@
 ## When BDD Applies
 
 ✅ **ALWAYS use BDD for:**
+
 - User-facing features
 - Business rule implementation
 - Integration scenarios
@@ -33,6 +37,7 @@
 - Cross-team collaboration needs
 
 ❌ **Skip BDD for:**
+
 - Internal utility functions (use TDD)
 - Performance optimizations
 - Infrastructure code
@@ -74,6 +79,7 @@ Scenario (Fails) → Unit Test (Fails) → Code → Unit Test (Passes) → Scena
 ## Three Amigos Questions
 
 Before implementing, consider:
+
 - **Business**: What value does this provide? What are the business rules?
 - **Development**: What are technical constraints? What are edge cases?
 - **Testing**: What could go wrong? How do we verify this works?
@@ -81,6 +87,7 @@ Before implementing, consider:
 ## Verification Checklist
 
 Before considering a feature complete:
+
 - [ ] Wrote scenarios based on concrete examples
 - [ ] Validated scenarios with stakeholders
 - [ ] Implemented using outside-in TDD

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* -- npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
+            "command": "npx markdownlint-cli2 --fix '${CLAUDE_PROJECT_DIR}/**/*.md' '!${CLAUDE_PROJECT_DIR}/**/node_modules/**'"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with .markdownlint-cli2.*,.markdownlint.* -- npx markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\""
+            "command": "npx markdownlint-cli2 --fix '${CLAUDE_PROJECT_DIR}/**/*.md' '!${CLAUDE_PROJECT_DIR}/**/node_modules/**'"
           }
         ]
       }
