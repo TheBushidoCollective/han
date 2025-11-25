@@ -555,6 +555,19 @@
       "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"]
     },
     {
+      "name": "buki-tdd",
+      "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement",
+      "source": "./buki/buki-tdd",
+      "category": "Weapon",
+      "keywords": [
+        "tdd",
+        "test-driven-development",
+        "testing",
+        "red-green-refactor",
+        "quality"
+      ]
+    },
+    {
       "name": "buki-testng",
       "description": "Comprehensive TestNG testing framework skills for Java projects with advanced features like data providers and parallel execution.",
       "source": "./buki/buki-testng",

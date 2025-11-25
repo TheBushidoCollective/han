@@ -1,0 +1,25 @@
+{
+  "description": "Behavior-Driven Development enforcement hooks",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md\""
+          }
+        ]
+      }
+    ]
+  }
+}
