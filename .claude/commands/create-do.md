@@ -1,6 +1,10 @@
+---
+description: Create a new do (discipline) plugin with specialized agents
+---
+
 # Create a Dō (道 - The Way) Plugin
 
-Create a new dō plugin with specialized agents for a development discipline.
+Create a new dō plugin for: $ARGUMENTS
 
 ## What is a Dō?
 

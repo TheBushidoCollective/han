@@ -1,6 +1,10 @@
+---
+description: Create a new sensei (teacher) plugin for MCP server integration
+---
+
 # Create a Sensei (先生 - Teacher) Plugin
 
-Create a new sensei plugin for MCP (Model Context Protocol) server integration.
+Create a new sensei plugin for: $ARGUMENTS
 
 ## What is a Sensei?
 
