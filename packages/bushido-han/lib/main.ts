@@ -23,7 +23,7 @@ const pluginCommand = program
 
 // Plugin install subcommand
 pluginCommand
-	.command("install [plugin-name]")
+	.command("install [plugin-names...]")
 	.description("Install plugins interactively, or use --auto to auto-detect")
 	.option("--auto", "Auto-detect and install recommended plugins")
 	.option(
@@ -31,7 +31,7 @@ pluginCommand
 		'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
 		"project",
 	)
-	.action(async (pluginName: string | undefined, options: { auto?: boolean; scope?: string }) => {
+	.action(async (pluginNames: string[], options: { auto?: boolean; scope?: string }) => {
 		try {
 			const scope = options.scope || "project";
 			if (scope !== "project" && scope !== "local") {
@@ -43,10 +43,10 @@ pluginCommand
 				// Auto-detect plugins
 				const { install } = await import("./install.js");
 				await install(scope as "project" | "local");
-			} else if (pluginName) {
-				// Install specific plugin
-				const { installPlugin } = await import("./plugin-install.js");
-				await installPlugin(pluginName, scope as "project" | "local");
+			} else if (pluginNames.length > 0) {
+				// Install specific plugin(s)
+				const { installPlugins } = await import("./plugin-install.js");
+				await installPlugins(pluginNames, scope as "project" | "local");
 			} else {
 				// Interactive mode - no auto-detect
 				const { installInteractive } = await import("./install.js");
@@ -64,14 +64,14 @@ pluginCommand
 
 // Plugin uninstall subcommand
 pluginCommand
-	.command("uninstall <plugin-name>")
-	.description("Uninstall a specific plugin")
+	.command("uninstall <plugin-names...>")
+	.description("Uninstall one or more plugins")
 	.option(
 		"--scope <scope>",
 		'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
 		"project",
 	)
-	.action(async (pluginName: string, options: { scope?: string }) => {
+	.action(async (pluginNames: string[], options: { scope?: string }) => {
 		try {
 			const scope = options.scope || "project";
 			if (scope !== "project" && scope !== "local") {
@@ -79,8 +79,8 @@ pluginCommand
 				process.exit(1);
 			}
 
-			const { uninstallPlugin } = await import("./plugin-uninstall.js");
-			await uninstallPlugin(pluginName, scope as "project" | "local");
+			const { uninstallPlugins } = await import("./plugin-uninstall.js");
+			await uninstallPlugins(pluginNames, scope as "project" | "local");
 			process.exit(0);
 		} catch (error: unknown) {
 			console.error(
