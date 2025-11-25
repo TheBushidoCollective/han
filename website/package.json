@@ -6,7 +6,7 @@
 		"dev": "next dev",
 		"prebuild": "tsx scripts/generate-search-index.ts",
 		"build": "next build",
-		"start": "next start",
+		"start": "npx serve@latest out -p 3000",
 		"export": "next build && next export",
 		"test": "playwright test",
 		"test:headed": "playwright test --headed",
