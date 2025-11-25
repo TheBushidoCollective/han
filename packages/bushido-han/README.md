@@ -44,10 +44,10 @@ han plugin install <plugin-name>
 
 **Options:**
 - `--auto` - Use AI to analyze your codebase and recommend plugins:
-  - Shows ALL marketplace plugins for selection
+  - Shows installed and recommended plugins only
   - Recommended plugins marked with ⭐ and pre-selected
-  - Currently installed plugins marked as "(installed)" and pre-selected
-  - You can add/remove any plugins before confirming
+  - Installed but no longer recommended plugins marked as "(installed)" and deselected
+  - Other plugins discoverable via "🔍 Search for more plugins"
   - Based on: Programming languages, frameworks, git platform, testing tools
 - `--scope <project|local>` - Installation scope (default: `project`)
   - `project`: Install to `.claude/settings.json` (shared via git)
