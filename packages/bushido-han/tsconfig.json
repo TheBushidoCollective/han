@@ -1,23 +1,23 @@
 {
-	"compilerOptions": {
-		"target": "es2022",
-		"module": "es2022",
-		"lib": ["es2022"],
-		"outDir": "./dist",
-		"rootDir": ".",
-		"strict": true,
-		"noEmit": false,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
-		"moduleResolution": "bundler",
-		"resolveJsonModule": true,
-		"types": ["node"],
-		"jsx": "react-jsx"
-	},
-	"include": ["bin/**/*", "lib/**/*", "test/**/*", "index.ts"],
-	"exclude": ["node_modules", "dist", "**/*.js"]
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "lib": ["es2022"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "noEmit": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "jsx": "react-jsx"
+  },
+  "include": ["bin/**/*", "lib/**/*", "test/**/*", "index.ts"],
+  "exclude": ["node_modules", "dist", "**/*.js"]
 }

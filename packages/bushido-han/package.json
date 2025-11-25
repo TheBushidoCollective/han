@@ -1,64 +1,64 @@
 {
-	"name": "@thebushidocollective/han",
-	"version": "1.11.3",
-	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
-	"main": "dist/lib/main.js",
-	"types": "dist/lib/main.d.ts",
-	"type": "module",
-	"bin": {
-		"han": "dist/lib/main.js"
-	},
-	"scripts": {
-		"build": "tsc && npm run copy-assets",
-		"copy-assets": "cp lib/*.md dist/lib/",
-		"postbuild": "chmod +x dist/lib/main.js",
-		"typecheck": "tsc --noEmit",
-		"test": "node dist/test/han.test.js",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"prepack": "npm run build && npm test"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/TheBushidoCollective/han.git"
-	},
-	"homepage": "https://han.guru",
-	"bugs": {
-		"url": "https://github.com/TheBushidoCollective/han/issues"
-	},
-	"keywords": [
-		"bushido",
-		"validation",
-		"hooks",
-		"claude",
-		"claude-code",
-		"testing",
-		"ci"
-	],
-	"author": "The Bushido Collective",
-	"license": "MIT",
-	"engines": {
-		"node": ">=20"
-	},
-	"files": [
-		"dist/",
-		"README.md"
-	],
-	"devDependencies": {
-		"@biomejs/biome": "2.3.7",
-		"@types/marked-terminal": "6.1.1",
-		"@types/node": "24.10.1",
-		"@types/react": "19.2.6",
-		"typescript": "5.9.3"
-	},
-	"dependencies": {
-		"@anthropic-ai/claude-agent-sdk": "0.1.50",
-		"commander": "14.0.2",
-		"ink": "6.5.1",
-		"ink-select-input": "^6.2.0",
-		"ink-spinner": "5.0.0",
-		"ink-text-input": "^6.0.0",
-		"marked-terminal": "7.3.0",
-		"react": "19.2.0"
-	}
+  "name": "@thebushidocollective/han",
+  "version": "1.11.3",
+  "description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
+  "main": "dist/lib/main.js",
+  "types": "dist/lib/main.d.ts",
+  "type": "module",
+  "bin": {
+    "han": "dist/lib/main.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run copy-assets",
+    "copy-assets": "cp lib/*.md dist/lib/",
+    "postbuild": "chmod +x dist/lib/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node dist/test/han.test.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "prepack": "npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheBushidoCollective/han.git"
+  },
+  "homepage": "https://han.guru",
+  "bugs": {
+    "url": "https://github.com/TheBushidoCollective/han/issues"
+  },
+  "keywords": [
+    "bushido",
+    "validation",
+    "hooks",
+    "claude",
+    "claude-code",
+    "testing",
+    "ci"
+  ],
+  "author": "The Bushido Collective",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "2.3.7",
+    "@types/marked-terminal": "6.1.1",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.6",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.1.50",
+    "commander": "14.0.2",
+    "ink": "6.5.1",
+    "ink-select-input": "^6.2.0",
+    "ink-spinner": "5.0.0",
+    "ink-text-input": "^6.0.0",
+    "marked-terminal": "7.3.0",
+    "react": "19.2.0"
+  }
 }
