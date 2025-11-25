@@ -13,6 +13,7 @@ import type {
 interface InstallInteractiveProps {
 	detectPlugins: (callbacks: DetectPluginsCallbacks) => Promise<void>;
 	fetchMarketplace: () => Promise<MarketplacePlugin[]>;
+	installedPlugins: string[];
 	onInstallComplete: (plugins: string[]) => void;
 	onInstallError: (error: Error) => void;
 	onCancel: () => void;
@@ -98,6 +99,7 @@ function parseMarkdown(text: string): string {
 export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 	detectPlugins,
 	fetchMarketplace,
+	installedPlugins,
 	onInstallComplete,
 	onInstallError,
 	onCancel,
@@ -303,6 +305,7 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 			{phase === "selecting" && (
 				<PluginSelector
 					detectedPlugins={detectedPlugins}
+					installedPlugins={installedPlugins}
 					allPlugins={allPlugins}
 					onComplete={handleSelectionComplete}
 					onCancel={onCancel}

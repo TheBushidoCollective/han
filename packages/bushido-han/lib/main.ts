@@ -114,37 +114,6 @@ pluginCommand
 		}
 	});
 
-// Plugin align subcommand
-pluginCommand
-	.command("align")
-	.description(
-		"Align plugins with current codebase state in Claude Code settings",
-	)
-	.option(
-		"--scope <scope>",
-		'Installation scope: "project" (.claude/settings.json), "local" (.claude/settings.local.json), or auto-detect if not specified',
-	)
-	.action(async (options: { scope?: string }) => {
-		try {
-			let scope: "project" | "local" | undefined;
-			if (options.scope) {
-				if (options.scope !== "project" && options.scope !== "local") {
-					console.error('Error: --scope must be either "project" or "local"');
-					process.exit(1);
-				}
-				scope = options.scope as "project" | "local";
-			}
-			const { align } = await import("./align.js");
-			await align(scope);
-			process.exit(0);
-		} catch (error: unknown) {
-			console.error(
-				"Error during alignment:",
-				error instanceof Error ? error.message : error,
-			);
-			process.exit(1);
-		}
-	});
 
 // Uninstall command
 program
@@ -236,32 +205,6 @@ program
 		}
 	});
 
-// Alias: han align -> han plugin align
-program
-	.command("align")
-	.description("Alias for 'plugin align'")
-	.option("--scope <scope>", 'Installation scope: "project" or "local"')
-	.action(async (options: { scope?: string }) => {
-		try {
-			let scope: "project" | "local" | undefined;
-			if (options.scope) {
-				if (options.scope !== "project" && options.scope !== "local") {
-					console.error('Error: --scope must be either "project" or "local"');
-					process.exit(1);
-				}
-				scope = options.scope as "project" | "local";
-			}
-			const { align } = await import("./align.js");
-			await align(scope);
-			process.exit(0);
-		} catch (error: unknown) {
-			console.error(
-				"Error during alignment:",
-				error instanceof Error ? error.message : error,
-			);
-			process.exit(1);
-		}
-	});
 
 // Alias: han validate -> han hook run (deprecated)
 program
