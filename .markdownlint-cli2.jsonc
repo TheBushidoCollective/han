@@ -13,11 +13,6 @@
     "default": true,
     "line-length": false
   },
-  "globs": [
-    "**/*.md"
-  ],
-  "ignores": [
-    "**/node_modules/**",
-    "node_modules/**"
-  ]
+  "globs": ["**/*.md"],
+  "ignores": ["**/node_modules/**", "node_modules/**"]
 }
