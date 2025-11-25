@@ -16,9 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     # Skip if commit is from bot (prevent loops)
     if: github.actor != 'github-actions[bot]'
-    outputs:
-      tag-created: ${{ steps.create-tag.outputs.created }}
-      new-version: ${{ steps.bump-version.outputs.new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,9 +110,4 @@ jobs:
           git push origin "$TAG"
           echo "created=true" >> $GITHUB_OUTPUT
           echo "Created tag: $TAG"
-
-  publish:
-    needs: bump-and-tag
-    if: needs.bump-and-tag.outputs.tag-created == 'true'
-    uses: ./.github/workflows/publish-npm.yml
-    secrets: inherit
+          echo "Tag push will trigger publish-npm.yml workflow"
