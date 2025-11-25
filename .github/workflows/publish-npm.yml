@@ -53,12 +53,8 @@ jobs:
         if: ${{ github.event.inputs.dry-run == 'true' }}
         run: npm publish --dry-run --provenance --access public
         working-directory: ./packages/bushido-han
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to NPM
         if: ${{ github.event.inputs.dry-run != 'true' }}
         run: npm publish --provenance --access public
         working-directory: ./packages/bushido-han
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
