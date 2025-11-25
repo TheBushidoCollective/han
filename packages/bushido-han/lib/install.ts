@@ -128,6 +128,7 @@ export async function install(
 				marketplacePlugins = await fetchMarketplace();
 				return marketplacePlugins;
 			},
+			installedPlugins: existingPlugins,
 			onInstallComplete: (plugins: string[]) => {
 				if (resolveCompletion)
 					resolveCompletion({ plugins, marketplacePlugins });
@@ -217,6 +218,7 @@ export async function installInteractive(
 	const { unmount } = render(
 		React.createElement(PluginSelector, {
 			detectedPlugins: installedPlugins,
+			installedPlugins: installedPlugins,
 			allPlugins,
 			onComplete: (plugins: string[]) => {
 				if (resolveCompletion) resolveCompletion({ plugins });

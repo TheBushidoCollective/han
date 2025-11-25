@@ -6,14 +6,14 @@
     "buki-react@han": true,
     "buki-playwright@han": true,
     "buki-biome@han": true,
-    "buki-ink@han": true,
     "do-frontend-development@han": true,
-    "do-api-engineering@han": true,
     "do-claude-plugin-development@han": true,
     "buki-markdownlint@han": true,
     "sensei-github@han": true,
-    "sensei-jira@han": true,
-    "sensei-gitlab@han": true
+    "buki-prettier@han": true,
+    "buki-act@han": true,
+    "do-technical-documentation@han": true,
+    "buki-ink@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

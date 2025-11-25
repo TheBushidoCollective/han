@@ -43,11 +43,12 @@ han plugin install <plugin-name>
 ```
 
 **Options:**
-- `--auto` - Use AI to auto-detect and recommend plugins based on:
-  - Programming languages detected
-  - Frameworks and libraries in use
-  - Git hosting platform (GitHub/GitLab)
-  - Testing tools configured
+- `--auto` - Use AI to analyze your codebase and recommend plugins:
+  - Shows ALL marketplace plugins for selection
+  - Recommended plugins marked with ⭐ and pre-selected
+  - Currently installed plugins marked as "(installed)" and pre-selected
+  - You can add/remove any plugins before confirming
+  - Based on: Programming languages, frameworks, git platform, testing tools
 - `--scope <project|local>` - Installation scope (default: `project`)
   - `project`: Install to `.claude/settings.json` (shared via git)
   - `local`: Install to `.claude/settings.local.json` (git-ignored)
@@ -67,19 +68,6 @@ Search for plugins in the Han marketplace.
 ```bash
 han plugin search [query]
 ```
-
-### han plugin align
-
-Re-analyze your codebase and sync plugins with current state. Adds new plugins for detected technologies and removes plugins for technologies no longer in use.
-
-```bash
-han plugin align [--scope <project|local>]
-```
-
-**When to use:**
-- After adding new dependencies or frameworks
-- After removing technologies from your project
-- Periodically to keep plugins in sync
 
 ### han uninstall
 

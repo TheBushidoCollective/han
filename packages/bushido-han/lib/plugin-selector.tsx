@@ -6,6 +6,7 @@ import type { MarketplacePlugin } from "./shared.js";
 
 interface PluginSelectorProps {
 	detectedPlugins: string[];
+	installedPlugins?: string[];
 	allPlugins: MarketplacePlugin[];
 	onComplete: (selected: string[]) => void;
 	onCancel: () => void;
@@ -15,18 +16,20 @@ type Mode = "selection" | "search";
 
 export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	detectedPlugins,
+	installedPlugins = [],
 	allPlugins,
 	onComplete,
 	onCancel,
 }) => {
 	const [mode, setMode] = useState<Mode>("selection");
 	const [selectedIndex, setSelectedIndex] = useState(0);
-	// Initialize with detected plugins, excluding bushido (always installed separately)
-	const [selectedPlugins, setSelectedPlugins] = useState<Set<string>>(
-		new Set(detectedPlugins.filter((p) => p !== "bushido")),
-	);
-	// Track plugins added via search (separate from detected)
-	const [addedPlugins, setAddedPlugins] = useState<string[]>([]);
+	// Initialize with detected plugins + already installed plugins, excluding bushido
+	const initialSelection = useMemo(() => {
+		const combined = [...new Set([...detectedPlugins, ...installedPlugins])];
+		return new Set(combined.filter((p) => p !== "bushido"));
+	}, [detectedPlugins, installedPlugins]);
+
+	const [selectedPlugins, setSelectedPlugins] = useState<Set<string>>(initialSelection);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<MarketplacePlugin[]>([]);
 	const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
@@ -34,14 +37,21 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	// Memoize options list to prevent recreation on every render
 	// Note: "bushido" is always installed and never shown in the selector
 	const options = useMemo(() => {
-		const opts: Array<{ name: string; isPlugin: boolean }> = [];
+		const opts: Array<{ name: string; isPlugin: boolean; isRecommended?: boolean; isInstalled?: boolean }> = [];
 
-		// Add detected plugins + added plugins (deduped, sorted, excluding bushido)
-		const allPluginNames = [...new Set([...detectedPlugins, ...addedPlugins])]
+		// Show ALL plugins from marketplace (excluding bushido), sorted
+		const allPluginNames = allPlugins
+			.map((p) => p.name)
 			.filter((p) => p !== "bushido")
 			.sort();
+
 		for (const plugin of allPluginNames) {
-			opts.push({ name: plugin, isPlugin: true });
+			opts.push({
+				name: plugin,
+				isPlugin: true,
+				isRecommended: detectedPlugins.includes(plugin),
+				isInstalled: installedPlugins.includes(plugin)
+			});
 		}
 
 		// Add action options
@@ -50,7 +60,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		opts.push({ name: "❌ Cancel", isPlugin: false });
 
 		return opts;
-	}, [detectedPlugins, addedPlugins]);
+	}, [allPlugins, detectedPlugins, installedPlugins]);
 
 	// Memoize search function (excludes bushido from results)
 	const performSearch = useCallback(
@@ -154,9 +164,6 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 					// Add selected plugin
 					const plugin = searchResults[searchSelectedIndex];
 					setSelectedPlugins((prev) => new Set([...prev, plugin.name]));
-					setAddedPlugins((prev) =>
-						prev.includes(plugin.name) ? prev : [...prev, plugin.name],
-					);
 				}
 				// Go back to selection mode
 				setMode("selection");
@@ -179,6 +186,13 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 					const isSelected = index === selectedIndex;
 					const isChecked = option.isPlugin && selectedPlugins.has(option.name);
 
+					let displayName = option.name;
+					if (option.isPlugin && option.isRecommended) {
+						displayName = `${option.name} ⭐`;
+					} else if (option.isPlugin && option.isInstalled) {
+						displayName = `${option.name} (installed)`;
+					}
+
 					return (
 						<Box key={option.name} marginLeft={1}>
 							<Text
@@ -188,7 +202,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 							>
 								{isSelected ? "> " : "  "}
 								{option.isPlugin ? (isChecked ? "[✓] " : "[ ] ") : ""}
-								{option.name}
+								{displayName}
 							</Text>
 						</Box>
 					);
@@ -196,7 +210,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 
 				<Box marginTop={1}>
 					<Text dimColor>
-						{selectedPlugins.size} plugin(s) selected • Use ↑↓ arrows to
+						{selectedPlugins.size} plugin(s) selected • ⭐ = recommended • Use ↑↓ arrows to
 						navigate • Space to toggle • Enter to select
 					</Text>
 				</Box>
