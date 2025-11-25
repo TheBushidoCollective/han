@@ -2,20 +2,24 @@
   "hooks": {
     "Stop": [
       {
+        "name": "react-native-web-type-check",
+        "description": "Validates TypeScript types in React Native Web projects before stopping",
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json --  npx tsc --noEmit"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npx tsc --noEmit"
           }
         ]
       }
     ],
     "SubagentStop": [
       {
+        "name": "react-native-web-type-check",
+        "description": "Validates TypeScript types in React Native Web projects when agents complete",
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json --  npx tsc --noEmit"
+            "command": "npx -y @thebushidocollective/han validate --fail-fast --dirs-with package.json npx tsc --noEmit"
           }
         ]
       }
