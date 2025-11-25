@@ -1,6 +1,7 @@
-import { execSync, spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { execSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import ignore from "ignore";
 
 interface ValidateOptions {
 	failFast: boolean;
@@ -8,21 +9,25 @@ interface ValidateOptions {
 	command: string;
 }
 
-// Check if a path is git-ignored (respects root and nested .gitignore files)
-function isGitIgnored(path: string, rootDir: string): boolean {
-	try {
-		// Use git check-ignore to check if path should be ignored
-		// This respects all .gitignore files (root and nested)
-		const result = spawnSync("git", ["check-ignore", "-q", path], {
-			cwd: rootDir,
-			encoding: "utf8",
-		});
-		// Exit code 0 means the path is ignored
-		return result.status === 0;
-	} catch (_e) {
-		// If git is not available or other error, don't ignore
-		return false;
+// Load gitignore rules from the repository root
+function loadGitignoreRules(rootDir: string): ReturnType<typeof ignore> {
+	const ig = ignore();
+
+	// Add default patterns to always ignore
+	ig.add([".git", "node_modules"]);
+
+	// Try to read .gitignore from root
+	const gitignorePath = join(rootDir, ".gitignore");
+	if (existsSync(gitignorePath)) {
+		try {
+			const gitignoreContent = readFileSync(gitignorePath, "utf-8");
+			ig.add(gitignoreContent);
+		} catch (_e) {
+			// If we can't read .gitignore, just continue with defaults
+		}
 	}
+
+	return ig;
 }
 
 // Check if a filename matches a pattern (supports * wildcard)
@@ -57,18 +62,16 @@ function hasMarkerFile(dir: string, patterns: string[]): boolean {
 function findDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
+	ig: ReturnType<typeof ignore>,
 ): string[] {
 	const dirs: string[] = [];
 
 	function searchDir(dir: string): void {
-		// Skip hidden directories and node_modules
-		const basename = dir.split("/").pop() || "";
-		if (basename.startsWith(".") || basename === "node_modules") {
-			return;
-		}
+		// Get relative path from root for gitignore matching
+		const relativePath = relative(rootDir, dir);
 
-		// Skip git-ignored directories (respects root and nested .gitignore files)
-		if (dir !== rootDir && isGitIgnored(dir, rootDir)) {
+		// Skip if ignored by gitignore rules (empty path means root dir, which we don't skip)
+		if (relativePath && ig.ignores(relativePath)) {
 			return;
 		}
 
@@ -122,7 +125,10 @@ export function validate(options: ValidateOptions): void {
 	// Parse comma-delimited patterns
 	const patterns = dirsWith.split(",").map((p) => p.trim());
 
-	const targetDirs = findDirectoriesWithMarker(rootDir, patterns);
+	// Load gitignore rules
+	const ig = loadGitignoreRules(rootDir);
+
+	const targetDirs = findDirectoriesWithMarker(rootDir, patterns, ig);
 
 	if (targetDirs.length === 0) {
 		console.log(`No directories found with ${dirsWith}`);
