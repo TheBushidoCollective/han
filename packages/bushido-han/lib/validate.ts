@@ -1,11 +1,32 @@
 import { execSync } from "node:child_process";
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import ignore from "ignore";
 
 interface ValidateOptions {
 	failFast: boolean;
 	dirsWith: string | null;
 	command: string;
+}
+
+// Load .gitignore rules from root directory
+function loadGitignoreRules(rootDir: string): ReturnType<typeof ignore> {
+	const ig = ignore();
+	const gitignorePath = join(rootDir, ".gitignore");
+
+	if (existsSync(gitignorePath)) {
+		try {
+			const gitignoreContent = readFileSync(gitignorePath, "utf8");
+			ig.add(gitignoreContent);
+		} catch (_e) {
+			// If we can't read .gitignore, continue without it
+		}
+	}
+
+	// Always ignore common patterns
+	ig.add(["node_modules/", ".git/"]);
+
+	return ig;
 }
 
 // Check if a filename matches a pattern (supports * wildcard)
@@ -40,13 +61,16 @@ function hasMarkerFile(dir: string, patterns: string[]): boolean {
 function findDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
+	ig: ReturnType<typeof ignore>,
 ): string[] {
 	const dirs: string[] = [];
 
 	function searchDir(dir: string): void {
-		// Skip hidden directories and node_modules
-		const basename = dir.split("/").pop() || "";
-		if (basename.startsWith(".") || basename === "node_modules") {
+		// Get relative path from root for gitignore matching
+		const relativePath = relative(rootDir, dir);
+
+		// Skip if this path is git-ignored (only check subdirectories, not root)
+		if (relativePath && ig.ignores(relativePath)) {
 			return;
 		}
 
@@ -100,7 +124,10 @@ export function validate(options: ValidateOptions): void {
 	// Parse comma-delimited patterns
 	const patterns = dirsWith.split(",").map((p) => p.trim());
 
-	const targetDirs = findDirectoriesWithMarker(rootDir, patterns);
+	// Load .gitignore rules
+	const ig = loadGitignoreRules(rootDir);
+
+	const targetDirs = findDirectoriesWithMarker(rootDir, patterns, ig);
 
 	if (targetDirs.length === 0) {
 		console.log(`No directories found with ${dirsWith}`);
