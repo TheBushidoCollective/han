@@ -1,11 +1,28 @@
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 interface ValidateOptions {
 	failFast: boolean;
 	dirsWith: string | null;
 	command: string;
+}
+
+// Check if a path is git-ignored (respects root and nested .gitignore files)
+function isGitIgnored(path: string, rootDir: string): boolean {
+	try {
+		// Use git check-ignore to check if path should be ignored
+		// This respects all .gitignore files (root and nested)
+		const result = spawnSync("git", ["check-ignore", "-q", path], {
+			cwd: rootDir,
+			encoding: "utf8",
+		});
+		// Exit code 0 means the path is ignored
+		return result.status === 0;
+	} catch (_e) {
+		// If git is not available or other error, don't ignore
+		return false;
+	}
 }
 
 // Check if a filename matches a pattern (supports * wildcard)
@@ -47,6 +64,11 @@ function findDirectoriesWithMarker(
 		// Skip hidden directories and node_modules
 		const basename = dir.split("/").pop() || "";
 		if (basename.startsWith(".") || basename === "node_modules") {
+			return;
+		}
+
+		// Skip git-ignored directories (respects root and nested .gitignore files)
+		if (dir !== rootDir && isGitIgnored(dir, rootDir)) {
 			return;
 		}
 
