@@ -1,0 +1,13 @@
+{
+  "name": "buki-ruby",
+  "version": "1.0.0",
+  "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop"]
+}
