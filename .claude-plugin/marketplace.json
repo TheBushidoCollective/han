@@ -465,6 +465,13 @@
       "keywords": ["react-native", "mobile", "ios", "android", "native"]
     },
     {
+      "name": "buki-react-native-web",
+      "description": "Validation and quality enforcement for React Native Web projects with cross-platform components, styling, navigation, performance, and testing.",
+      "source": "./buki/buki-react-native-web",
+      "category": "Weapon",
+      "keywords": ["react-native-web", "react-native", "react", "web", "typescript", "cross-platform"]
+    },
+    {
       "name": "buki-relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./buki/buki-relay",
