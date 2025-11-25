@@ -20,11 +20,11 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/thebushidocollective/han.git"
+		"url": "git+https://github.com/TheBushidoCollective/han.git"
 	},
-	"homepage": "https://github.com/thebushidocollective/han",
+	"homepage": "https://github.com/TheBushidoCollective/han",
 	"bugs": {
-		"url": "https://github.com/thebushidocollective/han/issues"
+		"url": "https://github.com/TheBushidoCollective/han/issues"
 	},
 	"keywords": [
 		"bushido",

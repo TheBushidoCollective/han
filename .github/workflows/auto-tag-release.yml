@@ -12,22 +12,77 @@ permissions:
   id-token: write
 
 jobs:
-  check-and-tag:
+  bump-and-tag:
     runs-on: ubuntu-latest
-    # Only run if not a tag push (prevent loops)
-    if: github.ref_type != 'tag'
+    # Skip if commit is from bot (prevent loops)
+    if: github.actor != 'github-actions[bot]'
     outputs:
       tag-created: ${{ steps.create-tag.outputs.created }}
+      new-version: ${{ steps.bump-version.outputs.new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Determine version bump type
+        id: bump-type
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+
+          # Check for breaking changes (major bump)
+          if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+            echo "Detected: MAJOR (breaking change)"
+          # Check for features (minor bump)
+          elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "Detected: MINOR (new feature)"
+          # Everything else (patch bump) - fix, chore, docs, refactor, etc.
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "Detected: PATCH (fix/chore/other)"
+          fi
+
+      - name: Bump version
+        id: bump-version
+        working-directory: ./packages/bushido-han
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Bump based on type
+          case "${{ steps.bump-type.outputs.type }}" in
+            major)
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            minor)
+              NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              ;;
+          esac
+
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Update package.json
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
 
       - name: Install dependencies
         run: npm ci
@@ -41,39 +96,26 @@ jobs:
         run: npm test
         working-directory: ./packages/bushido-han
 
-      - name: Get package version
-        id: package-version
-        run: |
-          VERSION=$(node -p "require('./packages/bushido-han/package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check if tag exists
-        id: check-tag
-        run: |
-          if git rev-parse "refs/tags/${{ steps.package-version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create and push tag
-        id: create-tag
-        if: steps.check-tag.outputs.exists == 'false'
+      - name: Commit version bump
+        id: commit-version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.package-version.outputs.tag }}" -m "Release ${{ steps.package-version.outputs.tag }}"
-          git push origin "${{ steps.package-version.outputs.tag }}"
-          echo "created=true" >> $GITHUB_OUTPUT
+          git add packages/bushido-han/package.json
+          git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
+          git push origin main
 
-      - name: Skip tag (already exists)
-        if: steps.check-tag.outputs.exists == 'true'
+      - name: Create and push tag
+        id: create-tag
         run: |
-          echo "Tag ${{ steps.package-version.outputs.tag }} already exists, skipping..."
+          TAG="v${{ steps.bump-version.outputs.new_version }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          echo "created=true" >> $GITHUB_OUTPUT
+          echo "Created tag: $TAG"
 
   publish:
-    needs: check-and-tag
-    if: needs.check-and-tag.outputs.tag-created == 'true'
+    needs: bump-and-tag
+    if: needs.bump-and-tag.outputs.tag-created == 'true'
     uses: ./.github/workflows/publish-npm.yml
     secrets: inherit
