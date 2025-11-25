@@ -102,4 +102,3 @@ jobs:
             3. Commit your changes with a descriptive message
             4. Push to the current branch
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(npm:*),Bash(npx:*)"
