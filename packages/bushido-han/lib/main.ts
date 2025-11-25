@@ -16,34 +16,6 @@ program
 	.description("Utilities for The Bushido Collective's Han Code Marketplace")
 	.version(packageJson.version);
 
-// Install command (shorthand for plugin install --auto)
-program
-	.command("install")
-	.description("Auto-detect and install recommended plugins (alias for 'plugin install --auto')")
-	.option(
-		"--scope <scope>",
-		'Installation scope: "project" (.claude/settings.json) or "local" (.claude/settings.local.json)',
-		"project",
-	)
-	.action(async (options: { scope?: string }) => {
-		try {
-			const scope = options.scope || "project";
-			if (scope !== "project" && scope !== "local") {
-				console.error('Error: --scope must be either "project" or "local"');
-				process.exit(1);
-			}
-			const { install } = await import("./install.js");
-			await install(scope as "project" | "local");
-			process.exit(0);
-		} catch (error: unknown) {
-			console.error(
-				"Error during installation:",
-				error instanceof Error ? error.message : error,
-			);
-			process.exit(1);
-		}
-	});
-
 // Plugin command group
 const pluginCommand = program
 	.command("plugin")
@@ -137,18 +109,8 @@ pluginCommand
 		}
 	});
 
-// Uninstall command
-program
-	.command("uninstall")
-	.description("Remove Han marketplace and plugins")
-	.action(async () => {
-		const { uninstall } = await import("./uninstall.js");
-		uninstall();
-		process.exit(0);
-	});
-
-// Align command
-program
+// Plugin align subcommand
+pluginCommand
 	.command("align")
 	.description(
 		"Align plugins with current codebase state in Claude Code settings",
@@ -179,10 +141,112 @@ program
 		}
 	});
 
-// Validate command
+// Uninstall command
+program
+	.command("uninstall")
+	.description("Remove Han marketplace and plugins")
+	.action(async () => {
+		const { uninstall } = await import("./uninstall.js");
+		uninstall();
+		process.exit(0);
+	});
+
+// Hook command group
+const hookCommand = program
+	.command("hook")
+	.description("Hook utilities for monorepo validation");
+
+// Hook run subcommand
+hookCommand
+	.command("run")
+	.description("Run a command across directories")
+	.option("--fail-fast", "Stop on first failure")
+	.option(
+		"--dirs-with <file>",
+		"Only run in directories containing the specified file",
+	)
+	.argument("<command...>", "Command to run in each directory")
+	.allowUnknownOption()
+	.action(
+		async (
+			commandArgs: string[],
+			options: { failFast?: boolean; dirsWith?: string },
+		) => {
+			const { validate } = await import("./validate.js");
+			validate({
+				failFast: options.failFast || false,
+				dirsWith: options.dirsWith || null,
+				command: commandArgs.join(" "),
+			});
+		},
+	);
+
+// ============================================
+// Backwards compatibility aliases
+// ============================================
+
+// Alias: han install -> han plugin install --auto
+program
+	.command("install")
+	.description("Alias for 'plugin install --auto'")
+	.option(
+		"--scope <scope>",
+		'Installation scope: "project" or "local"',
+		"project",
+	)
+	.action(async (options: { scope?: string }) => {
+		try {
+			const scope = options.scope || "project";
+			if (scope !== "project" && scope !== "local") {
+				console.error('Error: --scope must be either "project" or "local"');
+				process.exit(1);
+			}
+			const { install } = await import("./install.js");
+			await install(scope as "project" | "local");
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error during installation:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
+// Alias: han align -> han plugin align
+program
+	.command("align")
+	.description("Alias for 'plugin align'")
+	.option(
+		"--scope <scope>",
+		'Installation scope: "project" or "local"',
+	)
+	.action(async (options: { scope?: string }) => {
+		try {
+			let scope: "project" | "local" | undefined;
+			if (options.scope) {
+				if (options.scope !== "project" && options.scope !== "local") {
+					console.error('Error: --scope must be either "project" or "local"');
+					process.exit(1);
+				}
+				scope = options.scope as "project" | "local";
+			}
+			const { align } = await import("./align.js");
+			await align(scope);
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error during alignment:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
+// Alias: han validate -> han hook run
 program
 	.command("validate")
-	.description("Validate directories")
+	.description("Alias for 'hook run'")
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
