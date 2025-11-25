@@ -91,6 +91,19 @@ export async function install(
 	const filename = scope === "local" ? "settings.local.json" : "settings.json";
 	console.log(`Installing to ./.claude/${filename}...\n`);
 
+	// Show existing plugins
+	const existingPlugins = getInstalledPlugins(scope);
+	const hanPlugins = existingPlugins.filter(
+		(p) =>
+			p.startsWith("buki-") ||
+			p.startsWith("do-") ||
+			p.startsWith("sensei-") ||
+			p === "bushido",
+	);
+	if (hanPlugins.length > 0) {
+		console.log(`Currently installed: ${hanPlugins.join(", ")}\n`);
+	}
+
 	const { unmount } = render(
 		React.createElement(InstallInteractive, {
 			detectPlugins: detectPluginsWithAgent,
