@@ -32,7 +32,7 @@ The hooks automatically detect directories with `Gemfile` and run
 tests in each:
 
 ```bash
-npx -y @thebushidocollective/han validate --fail-fast --dirs-with Gemfile -- bundle exec rspec
+npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Gemfile -- bundle exec rspec
 ```
 
 This ensures all Ruby packages in your monorepo pass tests before

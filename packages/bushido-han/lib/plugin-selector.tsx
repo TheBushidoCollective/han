@@ -1,6 +1,7 @@
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
-import React, { useCallback, useMemo, useState } from "react";
+import type React from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { MarketplacePlugin } from "./shared.js";
 
 interface PluginSelectorProps {
@@ -65,11 +66,15 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 				if (plugin.name === "bushido") return false;
 
 				const nameMatch = plugin.name.toLowerCase().includes(lowerQuery);
-				const descMatch = plugin.description?.toLowerCase().includes(lowerQuery);
+				const descMatch = plugin.description
+					?.toLowerCase()
+					.includes(lowerQuery);
 				const keywordMatch = plugin.keywords?.some((k) =>
 					k.toLowerCase().includes(lowerQuery),
 				);
-				const categoryMatch = plugin.category?.toLowerCase().includes(lowerQuery);
+				const categoryMatch = plugin.category
+					?.toLowerCase()
+					.includes(lowerQuery);
 				return nameMatch || descMatch || keywordMatch || categoryMatch;
 			});
 
@@ -119,7 +124,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 				}
 			}
 		},
-		{ isActive: mode === "selection" }
+		{ isActive: mode === "selection" },
 	);
 
 	// Handle escape in search mode (always active in search)
@@ -252,12 +257,16 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 
 					<Box marginLeft={1} marginTop={1}>
 						<Text
-							color={searchSelectedIndex === searchResults.length ? "cyan" : undefined}
+							color={
+								searchSelectedIndex === searchResults.length
+									? "cyan"
+									: undefined
+							}
 							bold={searchSelectedIndex === searchResults.length}
 							inverse={searchSelectedIndex === searchResults.length}
 						>
-							{searchSelectedIndex === searchResults.length ? "> " : "  "}
-							← Back to selection
+							{searchSelectedIndex === searchResults.length ? "> " : "  "}← Back
+							to selection
 						</Text>
 					</Box>
 				</Box>

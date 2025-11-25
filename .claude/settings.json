@@ -10,7 +10,10 @@
     "do-frontend-development@han": true,
     "do-api-engineering@han": true,
     "do-claude-plugin-development@han": true,
-    "buki-markdownlint@han": true
+    "buki-markdownlint@han": true,
+    "sensei-github@han": true,
+    "sensei-jira@han": true,
+    "sensei-gitlab@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

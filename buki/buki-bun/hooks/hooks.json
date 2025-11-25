@@ -1,28 +1,28 @@
 {
-	"hooks": {
-		"Stop": [
-			{
-				"name": "bun-type-check",
-				"description": "Validates TypeScript types in Bun projects before stopping",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- bun build --target=bun --no-bundle"
-					}
-				]
-			}
-		],
-		"SubagentStop": [
-			{
-				"name": "bun-type-check",
-				"description": "Validates TypeScript types in Bun projects when agents complete",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- bun build --target=bun --no-bundle"
-					}
-				]
-			}
-		]
-	}
+  "hooks": {
+    "Stop": [
+      {
+        "name": "bun-type-check",
+        "description": "Validates TypeScript types in Bun projects before stopping",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- bun build --target=bun --no-bundle"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "name": "bun-type-check",
+        "description": "Validates TypeScript types in Bun projects when agents complete",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- bun build --target=bun --no-bundle"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -258,7 +258,7 @@ export async function detectPluginsWithAgent(
 			options: {
 				model: "haiku",
 				includePartialMessages: true,
-				allowedTools
+				allowedTools,
 			},
 		});
 

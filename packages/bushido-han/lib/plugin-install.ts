@@ -127,7 +127,9 @@ export async function installPlugins(
 	writeSettings(settings, scope);
 
 	if (installed.length > 0) {
-		console.log(`✓ Installed ${installed.length} plugin(s): ${installed.join(", ")}`);
+		console.log(
+			`✓ Installed ${installed.length} plugin(s): ${installed.join(", ")}`,
+		);
 	}
 	if (alreadyInstalled.length > 0) {
 		console.log(`⚠️  Already installed: ${alreadyInstalled.join(", ")}`);

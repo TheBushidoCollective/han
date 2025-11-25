@@ -3,7 +3,13 @@ import {
 	type ExecSyncOptionsWithStringEncoding,
 	execSync,
 } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePluginRecommendations } from "../lib/shared.js";
@@ -428,8 +434,8 @@ test("han plugin install is idempotent", () => {
 
 		// Verify settings weren't duplicated
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-		const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
-			(k) => k.includes("buki-typescript"),
+		const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter((k) =>
+			k.includes("buki-typescript"),
 		);
 		strictEqual(
 			pluginKeys.length,

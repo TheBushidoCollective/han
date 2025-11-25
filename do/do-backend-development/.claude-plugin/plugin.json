@@ -9,11 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "backend",
-    "api",
-    "architecture",
-    "data",
-    "server"
-  ]
+  "keywords": ["backend", "api", "architecture", "data", "server"]
 }

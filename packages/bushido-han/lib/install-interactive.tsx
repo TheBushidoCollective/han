@@ -1,7 +1,8 @@
 import { Box, Static, Text } from "ink";
 import Spinner from "ink-spinner";
 import { marked } from "marked";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PluginSelector } from "./plugin-selector.js";
 import type {
 	AgentUpdate,
@@ -245,7 +246,7 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 			case "thinking":
 				return <Text dimColor>{line.text}</Text>;
 			case "spacer":
-				return <Text>{" "}</Text>;
+				return <Text> </Text>;
 			default:
 				return <Text>{line.text}</Text>;
 		}

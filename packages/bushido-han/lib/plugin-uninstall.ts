@@ -37,14 +37,19 @@ export async function uninstallPlugins(
 	}
 
 	// If no plugins left, remove the enabledPlugins object entirely
-	if (settings.enabledPlugins && Object.keys(settings.enabledPlugins).length === 0) {
+	if (
+		settings.enabledPlugins &&
+		Object.keys(settings.enabledPlugins).length === 0
+	) {
 		delete settings.enabledPlugins;
 	}
 
 	writeSettings(settings, scope);
 
 	if (uninstalled.length > 0) {
-		console.log(`✓ Uninstalled ${uninstalled.length} plugin(s): ${uninstalled.join(", ")}`);
+		console.log(
+			`✓ Uninstalled ${uninstalled.length} plugin(s): ${uninstalled.join(", ")}`,
+		);
 	}
 	if (notInstalled.length > 0) {
 		console.log(`⚠️  Not installed: ${notInstalled.join(", ")}`);
