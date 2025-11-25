@@ -1,7 +1,7 @@
 {
 	"name": "@thebushidocollective/han",
 	"version": "1.9.0",
-	"description": "Monorepo validation tool for Claude Code hooks",
+	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
 	"type": "module",
@@ -28,7 +28,6 @@
 	},
 	"keywords": [
 		"bushido",
-		"monorepo",
 		"validation",
 		"hooks",
 		"claude",
