@@ -208,10 +208,7 @@ function getEnabledPlugins(): Map<string, string> {
 /**
  * Get plugin directory based on plugin name and marketplace
  */
-function getPluginDir(
-	pluginName: string,
-	marketplace: string,
-): string | null {
+function getPluginDir(pluginName: string, marketplace: string): string | null {
 	const configDir = getClaudeConfigDir();
 	const marketplaceRoot = join(
 		configDir,
@@ -262,9 +259,10 @@ function getPluginDir(
 /**
  * Collect and aggregate all hooks by type across all plugins
  */
-function collectHooks(
-	enabledPlugins: Map<string, string>,
-): { hooksByType: HooksByType; validationResults: ValidationResult[] } {
+function collectHooks(enabledPlugins: Map<string, string>): {
+	hooksByType: HooksByType;
+	validationResults: ValidationResult[];
+} {
 	const hooksByType: HooksByType = {};
 	const validationResults: ValidationResult[] = [];
 
@@ -273,7 +271,9 @@ function collectHooks(
 		if (!pluginDir) {
 			validationResults.push({
 				plugin: pluginName,
-				errors: [`Could not find plugin directory for ${pluginName}@${marketplace}`],
+				errors: [
+					`Could not find plugin directory for ${pluginName}@${marketplace}`,
+				],
 			});
 			continue;
 		}
@@ -411,7 +411,7 @@ export async function testHooks(options?: {
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults} = collectHooks(enabledPlugins);
+	const { hooksByType, validationResults } = collectHooks(enabledPlugins);
 
 	// Display validation results
 	if (validationResults.length > 0) {
@@ -434,11 +434,7 @@ export async function testHooks(options?: {
 	}
 
 	// Execute hooks and render with Ink
-	await executeHooksWithUI(
-		hookTypesFound,
-		hooksByType,
-		verbose,
-	);
+	await executeHooksWithUI(hookTypesFound, hooksByType, verbose);
 }
 
 /**
@@ -490,30 +486,32 @@ async function executeHooksWithUI(
 					}),
 				);
 
-				// Run all hooks of this type in parallel
-				const results = await Promise.all(
-					hooks.map((hook) =>
-						executeHookCommand(hook, hookType, verbose),
-					),
-				);
-
-				// Store results
+				// Initialize results array for this hook type
+				const results: HookResult[] = [];
 				hookResults.set(hookType, results);
 
-				// Check for failures
-				if (results.some((r) => !r.success)) {
-					hadFailures = true;
-				}
+				// Run all hooks of this type in parallel, but update UI as each completes
+				await Promise.all(
+					hooks.map(async (hook) => {
+						const result = await executeHookCommand(hook, hookType, verbose);
+						results.push(result);
 
-				// Update UI with results
-				rerender(
-					React.createElement(HookTestUI, {
-						hookTypes: hookTypesFound,
-						hookStructure,
-						hookResults,
-						currentType,
-						isComplete,
-						verbose,
+						// Check for failures
+						if (!result.success) {
+							hadFailures = true;
+						}
+
+						// Update UI immediately after each hook completes
+						rerender(
+							React.createElement(HookTestUI, {
+								hookTypes: hookTypesFound,
+								hookStructure,
+								hookResults,
+								currentType,
+								isComplete,
+								verbose,
+							}),
+						);
 					}),
 				);
 			}
@@ -557,7 +555,7 @@ async function testHooksValidationOnly(): Promise<void> {
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults} = collectHooks(enabledPlugins);
+	const { hooksByType, validationResults } = collectHooks(enabledPlugins);
 
 	// Display validation results
 	if (validationResults.length > 0) {
