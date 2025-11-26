@@ -61,17 +61,42 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 						const failed = results.filter((r) => !r.success).length;
 						const total = results.length;
 
+						// Group results by plugin
+						const pluginResults = new Map<
+							string,
+							{ passed: number; total: number }
+						>();
+						for (const result of results) {
+							const current = pluginResults.get(result.plugin) || {
+								passed: 0,
+								total: 0,
+							};
+							pluginResults.set(result.plugin, {
+								passed: current.passed + (result.success ? 1 : 0),
+								total: current.total + 1,
+							});
+						}
+
 						return (
-							<Box key={hookType} marginLeft={1}>
-								<Text>
-									{failed === 0 ? (
-										<Text color="green">✓</Text>
-									) : (
-										<Text color="red">✗</Text>
-									)}{" "}
-									{hookType}: {passed}/{total} passed
-									{failed > 0 && <Text color="red"> ({failed} failed)</Text>}
-								</Text>
+							<Box key={hookType} flexDirection="column">
+								<Box>
+									<Text>
+										{" "}
+										{failed === 0 ? (
+											<Text color="green">✓</Text>
+										) : (
+											<Text color="red">✗</Text>
+										)}{" "}
+										{hookType}: {passed}/{total} passed
+									</Text>
+								</Box>
+								{Array.from(pluginResults.entries()).map(([plugin, stats]) => (
+									<Box key={`${hookType}-${plugin}`} marginLeft={2}>
+										<Text dimColor>
+											- {plugin}@han: {stats.passed}/{stats.total} passed
+										</Text>
+									</Box>
+								))}
 							</Box>
 						);
 					})}
@@ -110,7 +135,10 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 									{result.output.length > 0 && (
 										<Box flexDirection="column" marginLeft={2}>
 											{result.output.map((line, i) => (
-												<Text key={`${hookType}-${result.plugin}-${idx}-${i}`} dimColor>
+												<Text
+													key={`${hookType}-${result.plugin}-${idx}-${i}`}
+													dimColor
+												>
 													{line}
 												</Text>
 											))}

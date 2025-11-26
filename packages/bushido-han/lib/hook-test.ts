@@ -308,38 +308,18 @@ export async function testHooks(options?: {
 		process.exit(0);
 	}
 
-	// Render Ink UI
-	const hookResults = new Map<string, HookResult[]>();
-	let currentType: string | null = null;
-	let isComplete = false;
-
-	const { rerender, waitUntilExit, unmount } = render(
-		React.createElement(HookTestUI, {
-			hookTypes: hookTypesFound,
-			hookResults,
-			currentType,
-			isComplete,
-			verbose,
-		}),
-	);
+	console.log("🔍 Testing and executing hooks for installed plugins\n");
 
 	// Execute hooks by type
+	const hookResults = new Map<string, HookResult[]>();
 	let hadFailures = false;
 
 	for (const hookType of hookTypesFound) {
 		const hooks = hooksByType[hookType];
-		currentType = hookType;
 
-		// Update UI
-		rerender(
-			React.createElement(HookTestUI, {
-				hookTypes: hookTypesFound,
-				hookResults,
-				currentType,
-				isComplete,
-				verbose,
-			}),
-		);
+		if (!verbose) {
+			console.log(`\nProcessing: ${hookType} hooks...`);
+		}
 
 		// Run all hooks of this type in parallel
 		const results = await Promise.all(
@@ -362,38 +342,42 @@ export async function testHooks(options?: {
 		if (results.some((r) => !r.success)) {
 			hadFailures = true;
 		}
-
-		// Update UI
-		rerender(
-			React.createElement(HookTestUI, {
-				hookTypes: hookTypesFound,
-				hookResults,
-				currentType,
-				isComplete,
-				verbose,
-			}),
-		);
 	}
 
-	// Mark as complete
-	isComplete = true;
-	currentType = null;
+	// Display summary
+	console.log("\n" + "=".repeat(60));
+	console.log();
+	for (const [hookType, results] of Array.from(hookResults.entries())) {
+		const passed = results.filter((r) => r.success).length;
+		const total = results.length;
+		const failed = total - passed;
 
-	rerender(
-		React.createElement(HookTestUI, {
-			hookTypes: hookTypesFound,
-			hookResults,
-			currentType,
-			isComplete,
-			verbose,
-		}),
-	);
+		// Group results by plugin
+		const pluginResults = new Map<string, { passed: number; total: number }>();
+		for (const result of results) {
+			const current = pluginResults.get(result.plugin) || {
+				passed: 0,
+				total: 0,
+			};
+			pluginResults.set(result.plugin, {
+				passed: current.passed + (result.success ? 1 : 0),
+				total: current.total + 1,
+			});
+		}
 
-	// Wait for user to exit (or auto-exit if verbose)
-	if (!verbose) {
-		await waitUntilExit();
+		const status = failed === 0 ? " ✓" : " ✗";
+		console.log(`${status} ${hookType}: ${passed}/${total} passed`);
+
+		for (const [plugin, stats] of Array.from(pluginResults.entries())) {
+			console.log(`  - ${plugin}@han: ${stats.passed}/${stats.total} passed`);
+		}
+	}
+
+	console.log();
+	if (hadFailures) {
+		console.log("❌ Some hooks failed execution\n");
 	} else {
-		unmount();
+		console.log("✅ All hooks executed successfully\n");
 	}
 
 	process.exit(hadFailures ? 1 : 0);
