@@ -15,6 +15,7 @@ Before stopping work, review the conversation to ensure alignment with the origi
 ## If Misalignment Detected
 
 If you notice the work has drifted from the original intent:
+
 - Briefly acknowledge the misalignment
 - Summarize what was requested vs. what was done
 - Ask the user if they want to continue in the current direction or refocus on the original task
