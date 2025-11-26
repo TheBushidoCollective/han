@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs --test-dir \"grep -qE ':credo' mix.exs\" -- mix do deps.get, credo --strict"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs --test-dir \"grep -qE ':credo' mix.exs\" -- mix credo --strict"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs --test-dir \"grep -qE ':credo' mix.exs\" -- mix do deps.get, credo --strict"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs --test-dir \"grep -qE ':credo' mix.exs\" -- mix credo --strict"
           }
         ]
       }
