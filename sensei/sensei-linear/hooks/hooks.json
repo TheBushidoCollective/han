@@ -2,17 +2,10 @@
   "hooks": {
     "Stop": [
       {
-        "name": "linear-acceptance-criteria-validation",
-        "description": "Validates completed work against Linear issue acceptance criteria for any issues mentioned in the conversation",
         "hooks": [
           {
-            "type": "command",
-            "command": "node",
-            "args": [
-              "-e",
-              "const fs = require('fs'); const issuePattern = /\\b[A-Z]{2,10}-\\d+\\b/g; const context = process.argv.slice(1).join(' '); const issues = [...new Set(context.match(issuePattern) || [])]; if (issues.length === 0) { console.log('No Linear issues found in context'); process.exit(0); } console.log('Found Linear issues:', issues.join(', ')); console.log('\\n⚠️  VALIDATION REQUIRED'); console.log('Before stopping, please validate each issue:'); issues.forEach(issue => { console.log(`  - Use MCP to fetch ${issue} details`); console.log(`  - Review acceptance criteria and requirements`); console.log(`  - Confirm all criteria are met`); }); console.log('\\nAsk Claude: \"Validate that all acceptance criteria for ' + issues.join(', ') + ' are met\"');"
-            ],
-            "showOutput": "always"
+            "type": "prompt",
+            "prompt": "# Linear Acceptance Criteria Validation\n\nBefore stopping, check if any Linear issues (format: ABC-123) were mentioned or worked on in this conversation.\n\n## If Linear issues were found:\n1. Use the Linear MCP tools to fetch the issue details\n2. Review the acceptance criteria and requirements in the issue\n3. Validate that ALL acceptance criteria have been met by the work completed\n4. If any criteria are not met, explain what remains\n\n## If no Linear issues found:\nProceed without validation.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}"
           }
         ]
       }
