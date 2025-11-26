@@ -16,7 +16,9 @@
 		"test": "node dist/test/han.test.js",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"prepack": "npm run build && npm test"
+		"prepack": "npm run build && npm test",
+		"build:binary": "npm run build:bundle && bun build --compile --minify ./dist/bundle.js --outfile ./dist/han",
+		"build:bundle": "esbuild lib/main.ts --bundle --platform=node --target=node20 --outfile=dist/bundle.js --format=esm --alias:react-devtools-core=./lib/shims/react-devtools-core.js --define:__HAN_VERSION__=\\\"$(node -p \"require('./package.json').version\")\\\""
 	},
 	"repository": {
 		"type": "git",
@@ -49,6 +51,7 @@
 		"@types/marked-terminal": "6.1.1",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",
+		"esbuild": "^0.27.0",
 		"typescript": "5.9.3"
 	},
 	"dependencies": {
