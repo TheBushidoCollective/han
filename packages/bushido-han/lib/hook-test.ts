@@ -10,6 +10,8 @@ interface HookCommand {
 	plugin: string;
 	command: string;
 	pluginDir: string;
+	type: "command" | "prompt";
+	timeout?: number;
 }
 
 interface HooksByType {
@@ -23,8 +25,11 @@ interface ValidationResult {
 
 interface HookResult {
 	plugin: string;
+	command: string;
 	success: boolean;
 	output: string[];
+	isPrompt?: boolean;
+	timedOut?: boolean;
 }
 
 // Valid hook event types according to Claude Code spec
@@ -44,30 +49,49 @@ const VALID_HOOK_TYPES = [
  * Execute a single hook command and collect output
  */
 async function executeHookCommand(
-	command: string,
-	plugin: string,
+	hook: HookCommand,
 	hookType: string,
-	pluginDir: string,
 	marketplaceRoot: string,
 	verbose: boolean,
 ): Promise<HookResult> {
+	// Handle prompt type hooks - instant pass
+	if (hook.type === "prompt") {
+		return {
+			plugin: hook.plugin,
+			command: hook.command,
+			success: true,
+			output: [],
+			isPrompt: true,
+		};
+	}
+
 	return new Promise((resolve) => {
-		const child = spawn(command, {
+		const child = spawn(hook.command, {
 			shell: true,
 			env: {
 				...process.env,
-				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
 				CLAUDE_PROJECT_DIR: marketplaceRoot,
 			},
 		});
 
 		const output: string[] = [];
+		let timedOut = false;
+		let timeoutHandle: NodeJS.Timeout | null = null;
+
+		// Set up timeout if specified
+		if (hook.timeout) {
+			timeoutHandle = setTimeout(() => {
+				timedOut = true;
+				child.kill();
+			}, hook.timeout);
+		}
 
 		child.stdout?.on("data", (data) => {
 			const text = data.toString();
 			const lines = text.split("\n").filter((l: string) => l.trim());
 			for (const line of lines) {
-				const formatted = `[${plugin}/${hookType}] ${line}`;
+				const formatted = `[${hook.plugin}/${hookType}] ${line}`;
 				output.push(formatted);
 				if (verbose) {
 					process.stdout.write(`  ${formatted}\n`);
@@ -79,7 +103,7 @@ async function executeHookCommand(
 			const text = data.toString();
 			const lines = text.split("\n").filter((l: string) => l.trim());
 			for (const line of lines) {
-				const formatted = `[${plugin}/${hookType}] ${line}`;
+				const formatted = `[${hook.plugin}/${hookType}] ${line}`;
 				output.push(formatted);
 				if (verbose) {
 					process.stderr.write(`  ${formatted}\n`);
@@ -88,12 +112,29 @@ async function executeHookCommand(
 		});
 
 		child.on("close", (code) => {
-			const success = code === 0;
-			resolve({ plugin, success, output });
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+			}
+			const success = code === 0 && !timedOut;
+			resolve({
+				plugin: hook.plugin,
+				command: hook.command,
+				success,
+				output,
+				timedOut,
+			});
 		});
 
 		child.on("error", (error) => {
-			resolve({ plugin, success: false, output: [error.message] });
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+			}
+			resolve({
+				plugin: hook.plugin,
+				command: hook.command,
+				success: false,
+				output: [error.message],
+			});
 		});
 	});
 }
@@ -197,7 +238,10 @@ function collectHooks(
 					}
 
 					for (const individualHook of hook.hooks) {
-						if (individualHook.type === "command") {
+						const hookTypeValue = individualHook.type;
+
+						// Handle command type hooks
+						if (hookTypeValue === "command") {
 							if (
 								!individualHook.command ||
 								typeof individualHook.command !== "string"
@@ -224,8 +268,21 @@ function collectHooks(
 									plugin,
 									command: individualHook.command,
 									pluginDir,
+									type: "command",
+									timeout: individualHook.timeout,
 								});
 							}
+						} else if (hookTypeValue === "prompt") {
+							// Handle prompt type hooks
+							if (!hooksByType[hookType]) {
+								hooksByType[hookType] = [];
+							}
+							hooksByType[hookType].push({
+								plugin,
+								command: individualHook.prompt || "",
+								pluginDir,
+								type: "prompt",
+							});
 						}
 					}
 				}
@@ -327,11 +384,8 @@ async function executeHooksWithUI(
 	verbose: boolean,
 ): Promise<void> {
 	return new Promise((resolve) => {
-		// Build hook structure first
-		const hookStructure = new Map<
-			string,
-			Array<{ plugin: string; command: string; pluginDir: string }>
-		>();
+		// Build hook structure first (hooksByType already contains HookCommand with type and timeout)
+		const hookStructure = new Map<string, HookCommand[]>();
 		for (const hookType of hookTypesFound) {
 			hookStructure.set(hookType, hooksByType[hookType]);
 		}
@@ -373,14 +427,7 @@ async function executeHooksWithUI(
 				// Run all hooks of this type in parallel
 				const results = await Promise.all(
 					hooks.map((hook) =>
-						executeHookCommand(
-							hook.command,
-							hook.plugin,
-							hookType,
-							hook.pluginDir,
-							marketplaceRoot,
-							verbose,
-						),
+						executeHookCommand(hook, hookType, marketplaceRoot, verbose),
 					),
 				);
 
