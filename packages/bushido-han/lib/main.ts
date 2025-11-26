@@ -172,6 +172,24 @@ hookCommand
 		},
 	);
 
+// Hook test subcommand
+hookCommand
+	.command("test")
+	.description("Validate hook configurations for all installed plugins")
+	.action(async () => {
+		try {
+			const { testHooks } = await import("./hook-test.js");
+			await testHooks();
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error during hook testing:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
 // ============================================
 // Backwards compatibility aliases
 // ============================================
