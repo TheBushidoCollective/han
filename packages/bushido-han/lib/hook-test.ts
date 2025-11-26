@@ -6,6 +6,7 @@ import { getInstalledPlugins } from "./shared.js";
 interface HookCommand {
 	plugin: string;
 	command: string;
+	pluginDir: string;
 }
 
 interface HooksByType {
@@ -37,11 +38,17 @@ async function executeHookCommand(
 	command: string,
 	plugin: string,
 	hookType: string,
+	pluginDir: string,
+	marketplaceRoot: string,
 ): Promise<{ success: boolean; output: string }> {
 	return new Promise((resolve) => {
 		const child = spawn(command, {
 			shell: true,
-			env: { ...process.env },
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: marketplaceRoot,
+			},
 		});
 
 		let stdout = "";
@@ -204,6 +211,7 @@ function collectHooks(
 								hooksByType[hookType].push({
 									plugin,
 									command: individualHook.command,
+									pluginDir,
 								});
 							}
 						}
@@ -295,8 +303,7 @@ export async function testHooks(options?: {
 
 	if (!executeHooks) {
 		console.log("✅ All hooks validated successfully");
-		console.log(
-			"\\nTip: Run with --execute to test hook execution\\n");
+		console.log("\\nTip: Run with --execute to test hook execution\\n");
 		process.exit(0);
 	}
 
@@ -312,7 +319,13 @@ export async function testHooks(options?: {
 		// Run all hooks of this type in parallel (like Claude Code)
 		const results = await Promise.all(
 			hooks.map((hook) =>
-				executeHookCommand(hook.command, hook.plugin, hookType),
+				executeHookCommand(
+					hook.command,
+					hook.plugin,
+					hookType,
+					hook.pluginDir,
+					marketplaceRoot,
+				),
 			),
 		);
 
@@ -324,9 +337,7 @@ export async function testHooks(options?: {
 				`\\n  ⚠️  ${failures.length}/${hooks.length} ${hookType} hook(s) failed\\n`,
 			);
 		} else {
-			console.log(
-				`\\n  ✓ All ${hooks.length} ${hookType} hook(s) passed\\n`,
-			);
+			console.log(`\\n  ✓ All ${hooks.length} ${hookType} hook(s) passed\\n`);
 		}
 	}
 
