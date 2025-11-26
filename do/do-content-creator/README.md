@@ -146,7 +146,7 @@ Write a weekly newsletter for our developer community highlighting new features 
 This plugin is part of the Han marketplace and can be installed via:
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install do-content-creator@han
 ```
 
 Or manually add to your `.claude/settings.json`:

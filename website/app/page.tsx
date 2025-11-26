@@ -97,13 +97,13 @@ export default function Home() {
 							title="Automatic Installation"
 							description="Use the han CLI tool to automatically detect and install appropriate plugins. Use --scope to control where plugins are installed (default: user)."
 							code={`# Install to user settings (default)
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install --auto
 
 # Install to project settings
-npx @thebushidocollective/han install --scope project
+npx @thebushidocollective/han plugin install --auto --scope project
 
 # Install to local settings
-npx @thebushidocollective/han install --scope local`}
+npx @thebushidocollective/han plugin install --auto --scope local`}
 						/>
 						<InstallMethodCard
 							number="2"

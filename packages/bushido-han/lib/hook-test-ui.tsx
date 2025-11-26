@@ -1,6 +1,6 @@
 import { Box, Static, Text } from "ink";
 import Spinner from "ink-spinner";
-import React from "react";
+import type React from "react";
 
 interface HookResult {
 	plugin: string;
@@ -100,7 +100,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	});
 
 	// Helper to render a single hook type
-	const renderHookType = (hookType: string, hookTypeIndex: number, isStatic: boolean) => {
+	const renderHookType = (
+		hookType: string,
+		hookTypeIndex: number,
+		isStatic: boolean,
+	) => {
 		const status = getHookTypeStatus(hookType);
 		const pluginHooks = getPluginHooks(hookType);
 		const results = hookResults.get(hookType) || [];
@@ -110,9 +114,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		// For static items, use their position in completedHookTypes
 		// For active items, check if it's the last active one
 		const isLastInSection = isStatic
-			? hookTypeIndex === completedHookTypes.length - 1 && activeHookTypes.length === 0
+			? hookTypeIndex === completedHookTypes.length - 1 &&
+				activeHookTypes.length === 0
 			: hookTypeIndex === activeHookTypes.length - 1;
-		const isLast = isLastInSection && (isStatic ? activeHookTypes.length === 0 : true);
+		const isLast =
+			isLastInSection && (isStatic ? activeHookTypes.length === 0 : true);
 
 		return (
 			<Box key={hookType} flexDirection="column">
@@ -166,16 +172,19 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 							({totalPassed}/{totalHooks})
 						</Text>
 					)}
-					{status === "pending" && (
-						<Text dimColor> (0/{totalHooks})</Text>
-					)}
+					{status === "pending" && <Text dimColor> (0/{totalHooks})</Text>}
 				</Box>
 
 				{/* Plugin lines */}
 				{Array.from(pluginHooks.entries()).map(
 					([plugin, hooks], pluginIndex) => {
-						const { passed, total, allComplete, hasFailed, results: pluginResults } =
-							getPluginResults(hookType, plugin);
+						const {
+							passed,
+							total,
+							allComplete,
+							hasFailed,
+							results: pluginResults,
+						} = getPluginResults(hookType, plugin);
 						const isLastPlugin = pluginIndex === pluginHooks.size - 1;
 						const pluginStatus =
 							status === "pending"
@@ -199,9 +208,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 									{pluginStatus === "completed" && (
 										<Text color="green">✓ </Text>
 									)}
-									{pluginStatus === "failed" && (
-										<Text color="red">✗ </Text>
-									)}
+									{pluginStatus === "failed" && <Text color="red">✗ </Text>}
 									{pluginStatus === "running" && (
 										<Text color="yellow">
 											<Spinner type="dots" />{" "}
@@ -269,29 +276,21 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 											{cmdStatus === "completed" && (
 												<Text color="green">✓ </Text>
 											)}
-											{cmdStatus === "failed" && (
-												<Text color="red">✗ </Text>
-											)}
+											{cmdStatus === "failed" && <Text color="red">✗ </Text>}
 											{cmdStatus === "running" && (
 												<Text color="yellow">
 													<Spinner type="dots" />{" "}
 												</Text>
 											)}
-											{cmdStatus === "pending" && (
-												<Text dimColor>○ </Text>
-											)}
+											{cmdStatus === "pending" && <Text dimColor>○ </Text>}
 											<Text
 												dimColor={cmdStatus === "pending"}
-												color={
-													cmdStatus === "running" ? "yellow" : undefined
-												}
+												color={cmdStatus === "running" ? "yellow" : undefined}
 											>
 												{hook.type === "prompt" && "[prompt] "}
 												{hook.command}
 											</Text>
-											{result?.timedOut && (
-												<Text color="red"> (timeout)</Text>
-											)}
+											{result?.timedOut && <Text color="red"> (timeout)</Text>}
 										</Box>
 									);
 								})}
@@ -319,7 +318,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 			{/* Active/pending hook types - dynamically re-rendered */}
 			<Box flexDirection="column">
-				{activeHookTypes.map((hookType, index) => renderHookType(hookType, index, false))}
+				{activeHookTypes.map((hookType, index) =>
+					renderHookType(hookType, index, false),
+				)}
 			</Box>
 
 			{/* Completion message */}

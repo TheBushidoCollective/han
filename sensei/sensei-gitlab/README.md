@@ -46,7 +46,7 @@ Once installed, Claude Code gains access to these tools:
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install sensei-gitlab@han
 ```
 
 Or install manually:

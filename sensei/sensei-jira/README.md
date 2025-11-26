@@ -62,7 +62,7 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install sensei-jira@han
 ```
 
 Or install manually:

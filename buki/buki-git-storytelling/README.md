@@ -32,7 +32,7 @@ This buki provides the following skill:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install buki-git-storytelling@han
 ```
 
 Or install manually:

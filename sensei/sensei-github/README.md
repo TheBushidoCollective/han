@@ -69,7 +69,7 @@ Once installed, Claude Code gains access to these tool categories:
 ### Via Han Marketplace (Recommended)
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install sensei-github@han
 ```
 
 Or install manually:

@@ -302,7 +302,7 @@ This dō provides the following agents:
 Install via the Han marketplace:
 
 \`\`\`bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install {plugin-name}
 \`\`\`
 
 Or install manually:
