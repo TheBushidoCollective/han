@@ -1,6 +1,6 @@
 {
   "name": "do-database-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["database", "sql", "query-optimization"]
+  "keywords": [
+    "database",
+    "sql",
+    "query-optimization"
+  ]
 }

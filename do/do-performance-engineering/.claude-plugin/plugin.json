@@ -1,6 +1,6 @@
 {
   "name": "do-performance-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["performance", "optimization", "scalability"]
+  "keywords": [
+    "performance",
+    "optimization",
+    "scalability"
+  ]
 }

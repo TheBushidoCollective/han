@@ -1,6 +1,6 @@
 {
   "name": "do-graphics-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["graphics", "gpu", "shaders"]
+  "keywords": [
+    "graphics",
+    "gpu",
+    "shaders"
+  ]
 }

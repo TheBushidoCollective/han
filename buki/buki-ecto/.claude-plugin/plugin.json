@@ -1,6 +1,6 @@
 {
   "name": "buki-ecto",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ecto skills for database interactions in Elixir",
   "author": {
     "name": "The Bushido Collective",
