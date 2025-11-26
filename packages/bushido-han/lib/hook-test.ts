@@ -143,14 +143,42 @@ async function executeHookCommand(
  * Get the marketplace root directory
  */
 function getMarketplaceRoot(): string | null {
+	// First check if we're in the Han repository itself (for development)
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-
 	if (
 		existsSync(join(projectRoot, "buki")) &&
 		existsSync(join(projectRoot, "do")) &&
 		existsSync(join(projectRoot, "bushido"))
 	) {
 		return projectRoot;
+	}
+
+	// Check CLAUDE_CONFIG_DIR environment variable
+	if (process.env.CLAUDE_CONFIG_DIR) {
+		const hanPath = join(
+			process.env.CLAUDE_CONFIG_DIR,
+			"plugins",
+			"marketplaces",
+			"han",
+		);
+		if (existsSync(hanPath)) {
+			return hanPath;
+		}
+	}
+
+	// Default Claude config location
+	const homeDir = process.env.HOME || process.env.USERPROFILE;
+	if (homeDir) {
+		const defaultHanPath = join(
+			homeDir,
+			".claude",
+			"plugins",
+			"marketplaces",
+			"han",
+		);
+		if (existsSync(defaultHanPath)) {
+			return defaultHanPath;
+		}
 	}
 
 	return null;
@@ -322,11 +350,27 @@ export async function testHooks(options?: {
 
 	const marketplaceRoot = getMarketplaceRoot();
 	if (!marketplaceRoot) {
-		console.error("Error: Could not find marketplace root directory");
+		console.error("Error: Could not find Han marketplace");
 		console.error(
-			"This usually means the Han marketplace is not installed yet.",
+			"\nChecked locations:",
 		);
-		console.error('Run "han plugin install" first to set up the marketplace.');
+		console.error(
+			`  - Current directory: ${process.cwd()}`,
+		);
+		if (process.env.CLAUDE_CONFIG_DIR) {
+			console.error(
+				`  - CLAUDE_CONFIG_DIR: ${join(process.env.CLAUDE_CONFIG_DIR, "plugins", "marketplaces", "han")}`,
+			);
+		}
+		const homeDir = process.env.HOME || process.env.USERPROFILE;
+		if (homeDir) {
+			console.error(
+				`  - Default location: ${join(homeDir, ".claude", "plugins", "marketplaces", "han")}`,
+			);
+		}
+		console.error(
+			"\nMake sure Han plugins are installed via Claude Code.",
+		);
 		process.exit(1);
 	}
 
@@ -485,11 +529,27 @@ async function testHooksValidationOnly(): Promise<void> {
 
 	const marketplaceRoot = getMarketplaceRoot();
 	if (!marketplaceRoot) {
-		console.error("Error: Could not find marketplace root directory");
+		console.error("Error: Could not find Han marketplace");
 		console.error(
-			"This usually means the Han marketplace is not installed yet.",
+			"\nChecked locations:",
 		);
-		console.error('Run "han plugin install" first to set up the marketplace.');
+		console.error(
+			`  - Current directory: ${process.cwd()}`,
+		);
+		if (process.env.CLAUDE_CONFIG_DIR) {
+			console.error(
+				`  - CLAUDE_CONFIG_DIR: ${join(process.env.CLAUDE_CONFIG_DIR, "plugins", "marketplaces", "han")}`,
+			);
+		}
+		const homeDir = process.env.HOME || process.env.USERPROFILE;
+		if (homeDir) {
+			console.error(
+				`  - Default location: ${join(homeDir, ".claude", "plugins", "marketplaces", "han")}`,
+			);
+		}
+		console.error(
+			"\nMake sure Han plugins are installed via Claude Code.",
+		);
 		process.exit(1);
 	}
 
