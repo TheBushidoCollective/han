@@ -4,14 +4,19 @@ import type React from "react";
 
 interface HookResult {
 	plugin: string;
+	command: string;
 	success: boolean;
 	output: string[];
+	isPrompt?: boolean;
+	timedOut?: boolean;
 }
 
 interface HookStructureItem {
 	plugin: string;
 	command: string;
 	pluginDir: string;
+	type: "command" | "prompt";
+	timeout?: number;
 }
 
 interface HookTestUIProps {
@@ -34,9 +39,12 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	// Group hooks by plugin for each hook type
 	const getPluginHooks = (hookType: string) => {
 		const hooks = hookStructure.get(hookType) || [];
-		const pluginMap = new Map<string, number>();
+		const pluginMap = new Map<string, HookStructureItem[]>();
 		for (const hook of hooks) {
-			pluginMap.set(hook.plugin, (pluginMap.get(hook.plugin) || 0) + 1);
+			if (!pluginMap.has(hook.plugin)) {
+				pluginMap.set(hook.plugin, []);
+			}
+			pluginMap.get(hook.plugin)?.push(hook);
 		}
 		return pluginMap;
 	};
@@ -47,7 +55,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		const pluginResults = results.filter((r) => r.plugin === plugin);
 		const passed = pluginResults.filter((r) => r.success).length;
 		const total = pluginResults.length;
-		return { passed, total, allComplete: total > 0 };
+		return { passed, total, allComplete: total > 0, results: pluginResults };
 	};
 
 	// Determine status for each hook type
@@ -123,11 +131,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 							{/* Plugin lines */}
 							{Array.from(pluginHooks.entries()).map(
-								([plugin, count], pluginIndex) => {
-									const { passed, total, allComplete } = getPluginResults(
-										hookType,
-										plugin,
-									);
+								([plugin, hooks], pluginIndex) => {
+									const { passed, total, allComplete, results } =
+										getPluginResults(hookType, plugin);
 									const isLastPlugin = pluginIndex === pluginHooks.size - 1;
 									const pluginStatus =
 										status === "pending"
@@ -139,43 +145,99 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 													: "pending";
 
 									return (
-										<Box key={`${hookType}-${plugin}`} marginLeft={1}>
-											<Text dimColor>
-												{isLast ? "    " : "│   "}
-												{isLastPlugin ? "└─ " : "├─ "}
-											</Text>
-											{pluginStatus === "completed" && (
-												<Text color="green">✓ </Text>
-											)}
-											{pluginStatus === "running" && (
-												<Text color="yellow">
-													<Spinner type="dots" />{" "}
-												</Text>
-											)}
-											{pluginStatus === "pending" && <Text dimColor>○ </Text>}
-											<Text
-												dimColor={pluginStatus === "pending"}
-												color={
-													pluginStatus === "running" ? "yellow" : undefined
-												}
-											>
-												{plugin}
-											</Text>
-											{pluginStatus === "completed" && (
-												<Text color="green">
-													{" "}
-													({passed}/{total})
-												</Text>
-											)}
-											{pluginStatus === "running" && (
+										<Box key={`${hookType}-${plugin}`} flexDirection="column">
+											{/* Plugin name line */}
+											<Box>
 												<Text dimColor>
-													{" "}
-													({passed}/{count})
+													{isLast ? "  " : "│ "}
+													{isLastPlugin ? "└─" : "├─"}{" "}
 												</Text>
-											)}
-											{pluginStatus === "pending" && (
-												<Text dimColor> (0/{count})</Text>
-											)}
+												{pluginStatus === "completed" && (
+													<Text color="green">✓ </Text>
+												)}
+												{pluginStatus === "running" && (
+													<Text color="yellow">
+														<Spinner type="dots" />{" "}
+													</Text>
+												)}
+												{pluginStatus === "pending" && <Text dimColor>○ </Text>}
+												<Text
+													dimColor={pluginStatus === "pending"}
+													color={
+														pluginStatus === "running" ? "yellow" : undefined
+													}
+												>
+													{plugin}
+												</Text>
+												{pluginStatus === "completed" && (
+													<Text color="green">
+														{" "}
+														({passed}/{total})
+													</Text>
+												)}
+												{pluginStatus === "running" && (
+													<Text dimColor>
+														{" "}
+														({passed}/{hooks.length})
+													</Text>
+												)}
+												{pluginStatus === "pending" && (
+													<Text dimColor> (0/{hooks.length})</Text>
+												)}
+											</Box>
+
+											{/* Command lines under plugin */}
+											{hooks.map((hook, cmdIndex) => {
+												const isLastCmd = cmdIndex === hooks.length - 1;
+												const result = results.find(
+													(r) => r.command === hook.command,
+												);
+												const cmdStatus = result
+													? result.success
+														? "completed"
+														: "failed"
+													: pluginStatus === "pending"
+														? "pending"
+														: "running";
+
+												return (
+													<Box key={`${hookType}-${plugin}-cmd-${cmdIndex}`}>
+														<Text dimColor>
+															{isLast ? "  " : "│ "}
+															{isLastPlugin ? "  " : "│ "}
+															{isLastCmd ? "└─" : "├─"}{" "}
+														</Text>
+														{cmdStatus === "completed" && (
+															<Text color="green">✓ </Text>
+														)}
+														{cmdStatus === "failed" && (
+															<Text color="red">✗ </Text>
+														)}
+														{cmdStatus === "running" && (
+															<Text color="yellow">
+																<Spinner type="dots" />{" "}
+															</Text>
+														)}
+														{cmdStatus === "pending" && (
+															<Text dimColor>○ </Text>
+														)}
+														<Text
+															dimColor={cmdStatus === "pending"}
+															color={
+																cmdStatus === "running" ? "yellow" : undefined
+															}
+														>
+															{hook.type === "prompt" && "[prompt] "}
+															{hook.command.length > 60
+																? `${hook.command.slice(0, 60)}...`
+																: hook.command}
+														</Text>
+														{result?.timedOut && (
+															<Text color="red"> (timeout)</Text>
+														)}
+													</Box>
+												);
+											})}
 										</Box>
 									);
 								},
