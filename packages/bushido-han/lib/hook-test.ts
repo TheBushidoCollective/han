@@ -308,79 +308,113 @@ export async function testHooks(options?: {
 		process.exit(0);
 	}
 
-	console.log("🔍 Testing and executing hooks for installed plugins\n");
+	// Execute hooks and render with Ink
+	await executeHooksWithUI(
+		hookTypesFound,
+		hooksByType,
+		marketplaceRoot,
+		verbose,
+	);
+}
 
-	// Execute hooks by type
-	const hookResults = new Map<string, HookResult[]>();
-	let hadFailures = false;
+/**
+ * Execute hooks with Ink UI
+ */
+async function executeHooksWithUI(
+	hookTypesFound: string[],
+	hooksByType: HooksByType,
+	marketplaceRoot: string,
+	verbose: boolean,
+): Promise<void> {
+	return new Promise((resolve) => {
+		const hookResults = new Map<string, HookResult[]>();
+		let currentType: string | null = null;
+		let isComplete = false;
+		let hadFailures = false;
 
-	for (const hookType of hookTypesFound) {
-		const hooks = hooksByType[hookType];
-
-		if (!verbose) {
-			console.log(`\nProcessing: ${hookType} hooks...`);
-		}
-
-		// Run all hooks of this type in parallel
-		const results = await Promise.all(
-			hooks.map((hook) =>
-				executeHookCommand(
-					hook.command,
-					hook.plugin,
-					hookType,
-					hook.pluginDir,
-					marketplaceRoot,
-					verbose,
-				),
-			),
+		const { rerender, unmount } = render(
+			React.createElement(HookTestUI, {
+				hookTypes: hookTypesFound,
+				hookResults,
+				currentType,
+				isComplete,
+				verbose,
+			}),
 		);
 
-		// Store results
-		hookResults.set(hookType, results);
+		// Execute hooks sequentially by type
+		(async () => {
+			for (const hookType of hookTypesFound) {
+				const hooks = hooksByType[hookType];
+				currentType = hookType;
 
-		// Check for failures
-		if (results.some((r) => !r.success)) {
-			hadFailures = true;
-		}
-	}
+				// Update UI to show current hook type
+				rerender(
+					React.createElement(HookTestUI, {
+						hookTypes: hookTypesFound,
+						hookResults,
+						currentType,
+						isComplete,
+						verbose,
+					}),
+				);
 
-	// Display summary
-	console.log("\n" + "=".repeat(60));
-	console.log();
-	for (const [hookType, results] of Array.from(hookResults.entries())) {
-		const passed = results.filter((r) => r.success).length;
-		const total = results.length;
-		const failed = total - passed;
+				// Run all hooks of this type in parallel
+				const results = await Promise.all(
+					hooks.map((hook) =>
+						executeHookCommand(
+							hook.command,
+							hook.plugin,
+							hookType,
+							hook.pluginDir,
+							marketplaceRoot,
+							verbose,
+						),
+					),
+				);
 
-		// Group results by plugin
-		const pluginResults = new Map<string, { passed: number; total: number }>();
-		for (const result of results) {
-			const current = pluginResults.get(result.plugin) || {
-				passed: 0,
-				total: 0,
-			};
-			pluginResults.set(result.plugin, {
-				passed: current.passed + (result.success ? 1 : 0),
-				total: current.total + 1,
-			});
-		}
+				// Store results
+				hookResults.set(hookType, results);
 
-		const status = failed === 0 ? " ✓" : " ✗";
-		console.log(`${status} ${hookType}: ${passed}/${total} passed`);
+				// Check for failures
+				if (results.some((r) => !r.success)) {
+					hadFailures = true;
+				}
 
-		for (const [plugin, stats] of Array.from(pluginResults.entries())) {
-			console.log(`  - ${plugin}@han: ${stats.passed}/${stats.total} passed`);
-		}
-	}
+				// Update UI with results
+				rerender(
+					React.createElement(HookTestUI, {
+						hookTypes: hookTypesFound,
+						hookResults,
+						currentType,
+						isComplete,
+						verbose,
+					}),
+				);
+			}
 
-	console.log();
-	if (hadFailures) {
-		console.log("❌ Some hooks failed execution\n");
-	} else {
-		console.log("✅ All hooks executed successfully\n");
-	}
+			// Mark as complete
+			isComplete = true;
+			currentType = null;
 
-	process.exit(hadFailures ? 1 : 0);
+			// Final render
+			rerender(
+				React.createElement(HookTestUI, {
+					hookTypes: hookTypesFound,
+					hookResults,
+					currentType,
+					isComplete,
+					verbose,
+				}),
+			);
+
+			// Wait a bit for final render, then unmount
+			setTimeout(() => {
+				unmount();
+				process.exit(hadFailures ? 1 : 0);
+			}, 100);
+		})();
+	});
 }
 
 /**
