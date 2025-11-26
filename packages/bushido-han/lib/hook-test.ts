@@ -327,6 +327,15 @@ async function executeHooksWithUI(
 	verbose: boolean,
 ): Promise<void> {
 	return new Promise((resolve) => {
+		// Build hook structure first
+		const hookStructure = new Map<
+			string,
+			Array<{ plugin: string; command: string; pluginDir: string }>
+		>();
+		for (const hookType of hookTypesFound) {
+			hookStructure.set(hookType, hooksByType[hookType]);
+		}
+
 		const hookResults = new Map<string, HookResult[]>();
 		let currentType: string | null = null;
 		let isComplete = false;
@@ -335,6 +344,7 @@ async function executeHooksWithUI(
 		const { rerender, unmount } = render(
 			React.createElement(HookTestUI, {
 				hookTypes: hookTypesFound,
+				hookStructure,
 				hookResults,
 				currentType,
 				isComplete,
@@ -352,6 +362,7 @@ async function executeHooksWithUI(
 				rerender(
 					React.createElement(HookTestUI, {
 						hookTypes: hookTypesFound,
+						hookStructure,
 						hookResults,
 						currentType,
 						isComplete,
@@ -385,6 +396,7 @@ async function executeHooksWithUI(
 				rerender(
 					React.createElement(HookTestUI, {
 						hookTypes: hookTypesFound,
+						hookStructure,
 						hookResults,
 						currentType,
 						isComplete,
@@ -401,6 +413,7 @@ async function executeHooksWithUI(
 			rerender(
 				React.createElement(HookTestUI, {
 					hookTypes: hookTypesFound,
+					hookStructure,
 					hookResults,
 					currentType,
 					isComplete,
