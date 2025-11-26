@@ -266,6 +266,51 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 							</Text>
 						)}
 					</Box>
+
+					{/* Show failed hook output */}
+					{Array.from(hookResults.entries()).map(([hookType, results]) => {
+						const failedResults = results.filter((r) => !r.success);
+						if (failedResults.length === 0) return null;
+
+						return (
+							<Box
+								key={`failed-${hookType}`}
+								flexDirection="column"
+								marginTop={1}
+							>
+								<Text bold color="red">
+									Failed hooks in {hookType}:
+								</Text>
+								{failedResults.map((result, idx) => (
+									<Box
+										key={`failed-${hookType}-${result.plugin}-${idx}`}
+										flexDirection="column"
+										marginLeft={2}
+										marginTop={1}
+									>
+										<Box>
+											<Text color="red">✗ </Text>
+											<Text bold>
+												{result.plugin}: {result.command}
+											</Text>
+											{result.timedOut && <Text color="red"> (timeout)</Text>}
+										</Box>
+										{result.output.length > 0 && (
+											<Box flexDirection="column" marginLeft={2} marginTop={1}>
+												{result.output.map((line, i) => (
+													<Text
+														key={`failed-${hookType}-${result.plugin}-${idx}-line-${i}`}
+													>
+														{line}
+													</Text>
+												))}
+											</Box>
+										)}
+									</Box>
+								))}
+							</Box>
+						);
+					})}
 				</Box>
 			)}
 
