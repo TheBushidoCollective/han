@@ -6,7 +6,9 @@ import ignore from "ignore";
 interface ValidateOptions {
 	failFast: boolean;
 	dirsWith: string | null;
+	testDir?: string | null;
 	command: string;
+	stdinData?: string | null;
 }
 
 // Load .gitignore rules from root directory
@@ -97,12 +99,38 @@ function findDirectoriesWithMarker(
 }
 
 // Run command in directory
-function runCommand(dir: string, cmd: string): boolean {
+function runCommand(
+	dir: string,
+	cmd: string,
+	stdinData?: string | null,
+): boolean {
 	try {
 		execSync(cmd, {
 			cwd: dir,
-			stdio: "inherit",
+			// If stdinData provided, pipe it; otherwise ignore stdin entirely
+			stdio: stdinData
+				? ["pipe", "inherit", "inherit"]
+				: ["ignore", "inherit", "inherit"],
+			input: stdinData || undefined,
 			encoding: "utf8",
+			shell: "/bin/sh",
+			env: process.env,
+		});
+		return true;
+	} catch (_e) {
+		return false;
+	}
+}
+
+// Run test command silently in directory (returns true if exit code 0)
+function testDirCommand(dir: string, cmd: string): boolean {
+	try {
+		execSync(cmd, {
+			cwd: dir,
+			stdio: ["ignore", "ignore", "ignore"],
+			encoding: "utf8",
+			shell: "/bin/sh",
+			env: process.env,
 		});
 		return true;
 	} catch (_e) {
@@ -111,7 +139,13 @@ function runCommand(dir: string, cmd: string): boolean {
 }
 
 export function validate(options: ValidateOptions): void {
-	const { failFast, dirsWith, command: commandToRun } = options;
+	const {
+		failFast,
+		dirsWith,
+		testDir,
+		command: commandToRun,
+		stdinData,
+	} = options;
 
 	// Main execution
 	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -127,7 +161,12 @@ export function validate(options: ValidateOptions): void {
 	// Load .gitignore rules
 	const ig = loadGitignoreRules(rootDir);
 
-	const targetDirs = findDirectoriesWithMarker(rootDir, patterns, ig);
+	let targetDirs = findDirectoriesWithMarker(rootDir, patterns, ig);
+
+	// Filter directories using test command if specified
+	if (testDir && targetDirs.length > 0) {
+		targetDirs = targetDirs.filter((dir) => testDirCommand(dir, testDir));
+	}
 
 	if (targetDirs.length === 0) {
 		console.log(`No directories found with ${dirsWith}`);
@@ -137,7 +176,7 @@ export function validate(options: ValidateOptions): void {
 	const failures: string[] = [];
 
 	for (const dir of targetDirs) {
-		const success = runCommand(dir, commandToRun);
+		const success = runCommand(dir, commandToRun, stdinData);
 
 		if (!success) {
 			const relativePath = dir.replace(`${rootDir}/`, "");

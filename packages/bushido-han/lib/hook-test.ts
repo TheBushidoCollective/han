@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { config as dotenvConfig } from "dotenv";
 import { render } from "ink";
 import React from "react";
 import { HookTestUI } from "./hook-test-ui.js";
@@ -31,6 +32,22 @@ interface HookResult {
 	timedOut?: boolean;
 }
 
+interface MarketplaceSource {
+	source: "directory" | "git" | "github";
+	path?: string;
+	url?: string;
+	repo?: string;
+}
+
+interface MarketplaceConfig {
+	source: MarketplaceSource;
+}
+
+interface ClaudeSettings {
+	extraKnownMarketplaces?: Record<string, MarketplaceConfig>;
+	enabledPlugins?: Record<string, boolean>;
+}
+
 // Valid hook event types according to Claude Code spec
 const VALID_HOOK_TYPES = [
 	"Notification",
@@ -51,6 +68,7 @@ async function executeHookCommand(
 	hook: HookCommand,
 	hookType: string,
 	verbose: boolean,
+	claudeEnvVars: Record<string, string>,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
 	if (hook.type === "prompt") {
@@ -68,6 +86,7 @@ async function executeHookCommand(
 			shell: true,
 			env: {
 				...process.env,
+				...claudeEnvVars,
 				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
 				CLAUDE_PROJECT_DIR: process.cwd(),
 			},
@@ -152,27 +171,90 @@ function getClaudeConfigDir(): string {
 }
 
 /**
- * Get all enabled plugins from settings
+ * Load environment variables from Claude config .env files
+ * Order: user -> project -> local (later files override earlier)
  */
-function getEnabledPlugins(): Map<string, string> {
+function loadClaudeEnvFiles(): Record<string, string> {
+	const envVars: Record<string, string> = {};
+
+	// 1. User config: ~/.claude/.env
+	const userEnvPath = join(getClaudeConfigDir(), ".env");
+	if (existsSync(userEnvPath)) {
+		const result = dotenvConfig({ path: userEnvPath });
+		if (result.parsed) {
+			Object.assign(envVars, result.parsed);
+		}
+	}
+
+	// 2. Project config: <project>/.claude/.env
+	const projectEnvPath = join(process.cwd(), ".claude", ".env");
+	if (existsSync(projectEnvPath)) {
+		const result = dotenvConfig({ path: projectEnvPath });
+		if (result.parsed) {
+			Object.assign(envVars, result.parsed);
+		}
+	}
+
+	// 3. Local config: <project>/.claude/.env.local
+	const localEnvPath = join(process.cwd(), ".claude", ".env.local");
+	if (existsSync(localEnvPath)) {
+		const result = dotenvConfig({ path: localEnvPath });
+		if (result.parsed) {
+			Object.assign(envVars, result.parsed);
+		}
+	}
+
+	return envVars;
+}
+
+/**
+ * Read settings from a file
+ */
+function readSettings(path: string): ClaudeSettings | null {
+	if (!existsSync(path)) {
+		return null;
+	}
+	try {
+		return JSON.parse(readFileSync(path, "utf8"));
+	} catch (_error) {
+		return null;
+	}
+}
+
+/**
+ * Get all enabled plugins and marketplace configurations from settings
+ */
+function getEnabledPluginsAndMarketplaces(): {
+	plugins: Map<string, string>;
+	marketplaces: Map<string, MarketplaceConfig>;
+} {
 	// Map of plugin name -> marketplace name
 	const plugins = new Map<string, string>();
+	// Map of marketplace name -> marketplace config
+	const marketplaces = new Map<string, MarketplaceConfig>();
 
 	// Read project settings
 	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
-	if (existsSync(projectSettingsPath)) {
-		try {
-			const settings = JSON.parse(readFileSync(projectSettingsPath, "utf8"));
-			if (settings.enabledPlugins) {
-				for (const [key, enabled] of Object.entries(settings.enabledPlugins)) {
-					if (enabled && key.includes("@")) {
-						const [pluginName, marketplace] = key.split("@");
-						plugins.set(pluginName, marketplace);
-					}
+	const projectSettings = readSettings(projectSettingsPath);
+	if (projectSettings) {
+		// Collect marketplace configs
+		if (projectSettings.extraKnownMarketplaces) {
+			for (const [name, config] of Object.entries(
+				projectSettings.extraKnownMarketplaces,
+			)) {
+				marketplaces.set(name, config);
+			}
+		}
+		// Collect enabled plugins
+		if (projectSettings.enabledPlugins) {
+			for (const [key, enabled] of Object.entries(
+				projectSettings.enabledPlugins,
+			)) {
+				if (enabled && key.includes("@")) {
+					const [pluginName, marketplace] = key.split("@");
+					plugins.set(pluginName, marketplace);
 				}
 			}
-		} catch (_error) {
-			// Ignore errors reading project settings
 		}
 	}
 
@@ -182,62 +264,42 @@ function getEnabledPlugins(): Map<string, string> {
 		".claude",
 		"settings.local.json",
 	);
-	if (existsSync(localSettingsPath)) {
-		try {
-			const settings = JSON.parse(readFileSync(localSettingsPath, "utf8"));
-			if (settings.enabledPlugins) {
-				for (const [key, enabled] of Object.entries(settings.enabledPlugins)) {
-					if (enabled && key.includes("@")) {
-						const [pluginName, marketplace] = key.split("@");
-						plugins.set(pluginName, marketplace);
-					} else if (!enabled && key.includes("@")) {
-						const [pluginName] = key.split("@");
-						plugins.delete(pluginName);
-					}
+	const localSettings = readSettings(localSettingsPath);
+	if (localSettings) {
+		// Collect marketplace configs (override project)
+		if (localSettings.extraKnownMarketplaces) {
+			for (const [name, config] of Object.entries(
+				localSettings.extraKnownMarketplaces,
+			)) {
+				marketplaces.set(name, config);
+			}
+		}
+		// Collect enabled plugins (override project)
+		if (localSettings.enabledPlugins) {
+			for (const [key, enabled] of Object.entries(
+				localSettings.enabledPlugins,
+			)) {
+				if (enabled && key.includes("@")) {
+					const [pluginName, marketplace] = key.split("@");
+					plugins.set(pluginName, marketplace);
+				} else if (!enabled && key.includes("@")) {
+					const [pluginName] = key.split("@");
+					plugins.delete(pluginName);
 				}
 			}
-		} catch (_error) {
-			// Ignore errors reading local settings
 		}
 	}
 
-	return plugins;
+	return { plugins, marketplaces };
 }
 
 /**
- * Get plugin directory based on plugin name and marketplace
+ * Find plugin in a marketplace root directory
  */
-function getPluginDir(pluginName: string, marketplace: string): string | null {
-	const configDir = getClaudeConfigDir();
-	const marketplaceRoot = join(
-		configDir,
-		"plugins",
-		"marketplaces",
-		marketplace,
-	);
-
-	// Check if we're in the marketplace repo itself (for development)
-	const cwd = process.cwd();
-	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
-		// We're in a marketplace repo, look for plugins here
-		const potentialPaths = [
-			join(cwd, "buki", pluginName),
-			join(cwd, "do", pluginName),
-			join(cwd, "sensei", pluginName),
-			join(cwd, pluginName),
-		];
-		for (const path of potentialPaths) {
-			if (existsSync(path)) {
-				return path;
-			}
-		}
-	}
-
-	// Look in the marketplace directory
-	if (!existsSync(marketplaceRoot)) {
-		return null;
-	}
-
+function findPluginInMarketplace(
+	marketplaceRoot: string,
+	pluginName: string,
+): string | null {
 	// Try different plugin directory structures
 	const potentialPaths = [
 		join(marketplaceRoot, "buki", pluginName),
@@ -256,9 +318,58 @@ function getPluginDir(pluginName: string, marketplace: string): string | null {
 }
 
 /**
+ * Get plugin directory based on plugin name, marketplace, and marketplace config
+ */
+function getPluginDir(
+	pluginName: string,
+	marketplace: string,
+	marketplaceConfig: MarketplaceConfig | undefined,
+): string | null {
+	// If marketplace config specifies a directory source, use that path
+	if (marketplaceConfig?.source?.source === "directory") {
+		const directoryPath = marketplaceConfig.source.path;
+		if (directoryPath) {
+			const found = findPluginInMarketplace(directoryPath, pluginName);
+			if (found) {
+				return found;
+			}
+		}
+	}
+
+	// Check if we're in the marketplace repo itself (for development)
+	const cwd = process.cwd();
+	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
+		// We're in a marketplace repo, look for plugins here
+		const found = findPluginInMarketplace(cwd, pluginName);
+		if (found) {
+			return found;
+		}
+	}
+
+	// Fall back to the default shared config path
+	const configDir = getClaudeConfigDir();
+	const marketplaceRoot = join(
+		configDir,
+		"plugins",
+		"marketplaces",
+		marketplace,
+	);
+
+	// Look in the marketplace directory
+	if (!existsSync(marketplaceRoot)) {
+		return null;
+	}
+
+	return findPluginInMarketplace(marketplaceRoot, pluginName);
+}
+
+/**
  * Collect and aggregate all hooks by type across all plugins
  */
-function collectHooks(enabledPlugins: Map<string, string>): {
+function collectHooks(
+	enabledPlugins: Map<string, string>,
+	marketplaces: Map<string, MarketplaceConfig>,
+): {
 	hooksByType: HooksByType;
 	validationResults: ValidationResult[];
 } {
@@ -266,7 +377,8 @@ function collectHooks(enabledPlugins: Map<string, string>): {
 	const validationResults: ValidationResult[] = [];
 
 	for (const [pluginName, marketplace] of enabledPlugins.entries()) {
-		const pluginDir = getPluginDir(pluginName, marketplace);
+		const marketplaceConfig = marketplaces.get(marketplace);
+		const pluginDir = getPluginDir(pluginName, marketplace, marketplaceConfig);
 		if (!pluginDir) {
 			validationResults.push({
 				plugin: pluginName,
@@ -402,7 +514,8 @@ export async function testHooks(options?: {
 		return;
 	}
 
-	const enabledPlugins = getEnabledPlugins();
+	const { plugins: enabledPlugins, marketplaces } =
+		getEnabledPluginsAndMarketplaces();
 
 	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
@@ -410,7 +523,10 @@ export async function testHooks(options?: {
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults } = collectHooks(enabledPlugins);
+	const { hooksByType, validationResults } = collectHooks(
+		enabledPlugins,
+		marketplaces,
+	);
 
 	// Display validation results
 	if (validationResults.length > 0) {
@@ -445,6 +561,9 @@ async function executeHooksWithUI(
 	verbose: boolean,
 ): Promise<void> {
 	return new Promise((_resolve) => {
+		// Load environment variables from Claude config .env files
+		const claudeEnvVars = loadClaudeEnvFiles();
+
 		// Build hook structure first (hooksByType already contains HookCommand with type and timeout)
 		const hookStructure = new Map<string, HookCommand[]>();
 		for (const hookType of hookTypesFound) {
@@ -492,7 +611,12 @@ async function executeHooksWithUI(
 				// Run all hooks of this type in parallel, but update UI as each completes
 				await Promise.all(
 					hooks.map(async (hook) => {
-						const result = await executeHookCommand(hook, hookType, verbose);
+						const result = await executeHookCommand(
+							hook,
+							hookType,
+							verbose,
+							claudeEnvVars,
+						);
 						results.push(result);
 
 						// Check for failures
@@ -546,7 +670,8 @@ async function executeHooksWithUI(
 async function testHooksValidationOnly(): Promise<void> {
 	console.log("🔍 Validating hooks for installed plugins...\n");
 
-	const enabledPlugins = getEnabledPlugins();
+	const { plugins: enabledPlugins, marketplaces } =
+		getEnabledPluginsAndMarketplaces();
 
 	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
@@ -554,7 +679,10 @@ async function testHooksValidationOnly(): Promise<void> {
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults } = collectHooks(enabledPlugins);
+	const { hooksByType, validationResults } = collectHooks(
+		enabledPlugins,
+		marketplaces,
+	);
 
 	// Display validation results
 	if (validationResults.length > 0) {

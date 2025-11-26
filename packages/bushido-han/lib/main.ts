@@ -138,11 +138,21 @@ hookCommand
 		"--dirs-with <file>",
 		"Only run in directories containing the specified file",
 	)
+	.option(
+		"--test-dir <command>",
+		"Only include directories where this command exits 0 (runs silently)",
+	)
+	.option("--stdin", "Read stdin and pass it to each subcommand")
 	.allowUnknownOption()
 	.action(
 		async (
 			_ignored: string[],
-			options: { failFast?: boolean; dirsWith?: string },
+			options: {
+				failFast?: boolean;
+				dirsWith?: string;
+				testDir?: string;
+				stdin?: boolean;
+			},
 		) => {
 			// Parse command from process.argv after --
 			const separatorIndex = process.argv.indexOf("--");
@@ -163,11 +173,37 @@ hookCommand
 				process.exit(1);
 			}
 
+			// Read stdin if --stdin flag is present
+			let stdinData: string | null = null;
+			if (options.stdin) {
+				const chunks: Buffer[] = [];
+				for await (const chunk of process.stdin) {
+					chunks.push(chunk);
+				}
+				stdinData = Buffer.concat(chunks).toString("utf8");
+			}
+
+			// Quote arguments that contain spaces or special characters
+			const quotedArgs = commandArgs.map((arg) => {
+				if (
+					arg.includes(" ") ||
+					arg.includes("&") ||
+					arg.includes("|") ||
+					arg.includes(";")
+				) {
+					// Escape single quotes and wrap in single quotes
+					return `'${arg.replace(/'/g, "'\\''")}'`;
+				}
+				return arg;
+			});
+
 			const { validate } = await import("./validate.js");
 			validate({
 				failFast: options.failFast || false,
 				dirsWith: options.dirsWith || null,
-				command: commandArgs.join(" "),
+				testDir: options.testDir || null,
+				command: quotedArgs.join(" "),
+				stdinData,
 			});
 		},
 	);
