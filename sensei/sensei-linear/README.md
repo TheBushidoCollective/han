@@ -65,7 +65,7 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install sensei-linear@han
 ```
 
 Or install manually:

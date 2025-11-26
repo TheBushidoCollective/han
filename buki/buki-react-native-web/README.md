@@ -25,7 +25,7 @@ This buki provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han install
+npx @thebushidocollective/han plugin install buki-react-native-web@han
 ```
 
 Or install manually:
