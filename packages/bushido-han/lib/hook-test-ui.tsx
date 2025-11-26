@@ -54,21 +54,26 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		const results = hookResults.get(hookType) || [];
 		const pluginResults = results.filter((r) => r.plugin === plugin);
 		const passed = pluginResults.filter((r) => r.success).length;
+		const failed = pluginResults.filter((r) => !r.success).length;
 		const total = pluginResults.length;
 		// Get expected count from hook structure
 		const expectedHooks = hookStructure.get(hookType) || [];
-		const expectedForPlugin = expectedHooks.filter((h) => h.plugin === plugin).length;
+		const expectedForPlugin = expectedHooks.filter(
+			(h) => h.plugin === plugin,
+		).length;
 		const allComplete = total >= expectedForPlugin;
-		return { passed, total, allComplete, results: pluginResults };
+		const hasFailed = failed > 0;
+		return { passed, failed, total, allComplete, hasFailed, results: pluginResults };
 	};
 
 	// Determine status for each hook type
 	const getHookTypeStatus = (hookType: string) => {
 		const results = hookResults.get(hookType) || [];
 		const expectedHooks = hookStructure.get(hookType) || [];
+		const hasFailed = results.some((r) => !r.success);
 		// Only completed when all expected hooks have results
 		if (results.length >= expectedHooks.length && expectedHooks.length > 0) {
-			return "completed";
+			return hasFailed ? "failed" : "completed";
 		}
 		if (hookType === currentType) {
 			return "running";
@@ -106,6 +111,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 										✓{" "}
 									</Text>
 								)}
+								{status === "failed" && (
+									<Text color="red" bold>
+										✗{" "}
+									</Text>
+								)}
 								{status === "running" && (
 									<Text color="yellow">
 										<Spinner type="dots" />{" "}
@@ -114,13 +124,19 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 								{status === "pending" && <Text dimColor>○ </Text>}
 								<Text
 									bold={status === "running"}
-									color={status === "running" ? "yellow" : undefined}
+									color={status === "running" ? "yellow" : status === "failed" ? "red" : undefined}
 									dimColor={status === "pending"}
 								>
 									{hookType}
 								</Text>
 								{status === "completed" && (
 									<Text color="green">
+										{" "}
+										({totalPassed}/{totalCount})
+									</Text>
+								)}
+								{status === "failed" && (
+									<Text color="red">
 										{" "}
 										({totalPassed}/{totalCount})
 									</Text>
@@ -139,15 +155,17 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 							{/* Plugin lines */}
 							{Array.from(pluginHooks.entries()).map(
 								([plugin, hooks], pluginIndex) => {
-									const { passed, total, allComplete, results } =
+									const { passed, total, allComplete, hasFailed, results } =
 										getPluginResults(hookType, plugin);
 									const isLastPlugin = pluginIndex === pluginHooks.size - 1;
 									const pluginStatus =
 										status === "pending"
 											? "pending"
 											: allComplete
-												? "completed"
-												: status === "running"
+												? hasFailed
+													? "failed"
+													: "completed"
+												: status === "running" || status === "failed"
 													? "running"
 													: "pending";
 
@@ -162,6 +180,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 												{pluginStatus === "completed" && (
 													<Text color="green">✓ </Text>
 												)}
+												{pluginStatus === "failed" && (
+													<Text color="red">✗ </Text>
+												)}
 												{pluginStatus === "running" && (
 													<Text color="yellow">
 														<Spinner type="dots" />{" "}
@@ -171,13 +192,19 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 												<Text
 													dimColor={pluginStatus === "pending"}
 													color={
-														pluginStatus === "running" ? "yellow" : undefined
+														pluginStatus === "running" ? "yellow" : pluginStatus === "failed" ? "red" : undefined
 													}
 												>
 													{plugin}
 												</Text>
 												{pluginStatus === "completed" && (
 													<Text color="green">
+														{" "}
+														({passed}/{total})
+													</Text>
+												)}
+												{pluginStatus === "failed" && (
+													<Text color="red">
 														{" "}
 														({passed}/{total})
 													</Text>
