@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { render } from "ink";
 import React from "react";
 import { HookTestUI } from "./hook-test-ui.js";
-import { getInstalledPlugins } from "./shared.js";
 
 interface HookCommand {
 	plugin: string;

@@ -1,7 +1,7 @@
 import { Box, Text, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface HookResult {
 	plugin: string;
@@ -78,19 +78,22 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	};
 
 	// Determine status for each hook type
-	const getHookTypeStatus = (hookType: string) => {
-		const results = hookResults.get(hookType) || [];
-		const expectedHooks = hookStructure.get(hookType) || [];
-		const hasFailed = results.some((r) => !r.success);
-		// Only completed when all expected hooks have results
-		if (results.length >= expectedHooks.length && expectedHooks.length > 0) {
-			return hasFailed ? "failed" : "completed";
-		}
-		if (hookType === currentType) {
-			return "running";
-		}
-		return "pending";
-	};
+	const getHookTypeStatus = useCallback(
+		(hookType: string) => {
+			const results = hookResults.get(hookType) || [];
+			const expectedHooks = hookStructure.get(hookType) || [];
+			const hasFailed = results.some((r) => !r.success);
+			// Only completed when all expected hooks have results
+			if (results.length >= expectedHooks.length && expectedHooks.length > 0) {
+				return hasFailed ? "failed" : "completed";
+			}
+			if (hookType === currentType) {
+				return "running";
+			}
+			return "pending";
+		},
+		[hookResults, hookStructure, currentType],
+	);
 
 	// Write completed hook types to stdout (above Ink's rendering area)
 	useEffect(() => {
@@ -117,7 +120,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				);
 			}
 		}
-	}, [hookTypes, hookResults, currentType, isComplete, write]);
+	}, [hookTypes, hookResults, isComplete, write, getHookTypeStatus]);
 
 	// Get active (running/pending) hook types for dynamic rendering
 	const activeHookTypes = hookTypes.filter((ht) => {
