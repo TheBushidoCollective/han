@@ -72,78 +72,80 @@ han plugin search [query]
 
 ### han hook test
 
-Validate hook configurations for all installed plugins.
+Validate and test hook configurations for all installed plugins.
 
 ```bash
 # Validate hook structure and syntax only
 han hook test
 
-# Validate AND execute hooks to verify they run successfully
+# Execute hooks with beautiful tree UI showing live progress
 han hook test --execute
+
+# Show detailed output for all hooks
+han hook test --execute --verbose
 ```
 
 **Options:**
 
 - `--execute` - Execute hooks to verify they run successfully (in addition to validation)
+- `--verbose` - Show detailed output for all hooks (only with --execute)
 
-This command:
+**Features:**
 
-- Tests all hooks in currently installed plugins (both project and local scopes)
 - Validates hook JSON structure and syntax
 - Checks for valid hook event types (SessionStart, Stop, UserPromptSubmit, etc.)
 - Ensures hook commands using `han hook run` have proper `--` separator
-- With `--execute`: Runs each hook command to verify it executes successfully
-- Displays clear pass/fail/skip status for each plugin
-- Exits with error code if any hooks fail validation or execution
+- With `--execute`: Beautiful tree UI with live progress tracking
+- Failed hooks automatically show their output for debugging
+- Supports hook timeout property
+- Handles both `type: "command"` and `type: "prompt"` hooks
 
 **Example output (validation only):**
 
 ```
 🔍 Validating hooks for installed plugins...
 
-Results:
-========
+Found hooks:
+  SessionStart: 2 hook(s) from bushido
+  Stop: 6 hook(s) from buki-act, buki-biome, buki-markdownlint, buki-typescript, do-claude-plugin-development
+  SubagentStop: 6 hook(s) from buki-act, buki-biome, buki-markdownlint, buki-typescript, do-claude-plugin-development
+  UserPromptSubmit: 2 hook(s) from bushido
 
-✅ Passed:
-  buki-markdownlint: Valid hooks configuration (Stop, SubagentStop)
-  bushido: Valid hooks configuration (SessionStart, UserPromptSubmit)
+✅ All hooks validated successfully
 
-⊘ Skipped (no hooks):
-  buki-typescript: No hooks.json found
-
-❌ Failed:
-  my-plugin: Unknown event type 'InvalidEvent'
-
-Summary:
-  Total: 4
-  Passed: 2
-  Failed: 1
-  Skipped: 1
+Tip: Run with --execute to test hook execution
 ```
 
 **Example output (with --execute):**
 
 ```
-🔍 Testing and executing hooks for installed plugins...
+🔍 Testing and executing hooks for installed plugins
 
-Results:
-========
+├─ ✓ SessionStart (2/2)
+│ └─ ✓ bushido (2/2)
+│   ├─ ✓ cat "${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md"
+│   └─ ✓ cat "${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md"
+├─ ✓ Stop (5/6)
+│ ├─ ✓ buki-act (1/1)
+│ │ └─ ✓ npx -y @thebushidocollective/han hook run --fail-fast --dirs-with .github/workflows -- "act --dryrun"
+│ ├─ ✓ buki-biome (0/1)
+│ │ └─ ✗ npx -y @thebushidocollective/han hook run --fail-fast --dirs-with biome.json -- npx -y @biomejs/biome check --write
+│ └─ ✓ do-claude-plugin-development (2/2)
+│   ├─ ✓ uvx claudelint ${CLAUDE_PROJECT_DIR} || (echo 'Please fix the claude lint errors...')
+│   └─ ✓ npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json ${CLAUDE_PROJECT_DIR}...
+└─ ✓ UserPromptSubmit (2/2)
+  └─ ✓ bushido (2/2)
+    ├─ ✓ cat "${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md"
+    └─ ✓ cat "${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md"
 
-✅ Passed:
-  buki-markdownlint: Valid hooks configuration (Stop, SubagentStop) (executed successfully)
-  bushido: Valid hooks configuration (SessionStart, UserPromptSubmit) (executed successfully)
+============================================================
 
-⊘ Skipped (no hooks):
-  buki-typescript: No hooks.json found
+❌ Some hooks failed execution
 
-❌ Failed:
-  my-plugin: Hook type 'Stop' failed execution: Command not found
-
-Summary:
-  Total: 4
-  Passed: 2
-  Failed: 1
-  Skipped: 1
+Failed hooks in Stop:
+  ✗ buki-biome: npx @biomejs/biome check --write
+    [buki-biome/Stop] Error: File not found
+    [buki-biome/Stop] Exit code: 1
 ```
 
 ### han uninstall

@@ -152,12 +152,19 @@ npx @thebushidocollective/han plugin install buki-typescript
 npx @thebushidocollective/han plugin search typescript
 ```
 
-### Align Plugins with Codebase
+### Test Hooks
 
-Re-analyze your codebase and sync plugins with current state:
+Validate and test hook configurations with beautiful tree UI:
 
 ```bash
-npx @thebushidocollective/han plugin align
+# Validate hook structure and syntax only
+npx @thebushidocollective/han hook test
+
+# Execute hooks with live progress tracking
+npx @thebushidocollective/han hook test --execute
+
+# Show detailed output for all hooks
+npx @thebushidocollective/han hook test --execute --verbose
 ```
 
 ### Uninstall
