@@ -3,6 +3,24 @@ name: start
 description: Start work on a Jira ticket (transition to In Progress)
 ---
 
+# start
+
+## Name
+
+sensei-jira:start - Start work on a Jira ticket (transition to In Progress)
+
+## Synopsis
+
+```
+/start [arguments]
+```
+
+## Description
+
+Start work on a Jira ticket (transition to In Progress)
+
+## Implementation
+
 Start work on a Jira ticket by transitioning it to "In Progress" and displaying acceptance criteria.
 
 **Usage**: `/start PROJ-123`

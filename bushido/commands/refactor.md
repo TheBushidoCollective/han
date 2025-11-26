@@ -3,6 +3,24 @@ description: Restructure code to improve quality without changing behavior
 disable-model-invocation: false
 ---
 
+# refactor
+
+## Name
+
+bushido:refactor - Restructure code to improve quality without changing behavior
+
+## Synopsis
+
+```
+/refactor [arguments]
+```
+
+## Description
+
+Restructure code to improve quality without changing behavior
+
+## Implementation
+
 Improve code structure, readability, and maintainability without changing external behavior.
 
 ## Process

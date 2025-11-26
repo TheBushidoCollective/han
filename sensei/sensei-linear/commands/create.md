@@ -3,6 +3,24 @@ name: create
 description: Create a new Linear issue interactively
 ---
 
+# create
+
+## Name
+
+sensei-linear:create - Create a new Linear issue interactively
+
+## Synopsis
+
+```
+/create [arguments]
+```
+
+## Description
+
+Create a new Linear issue interactively
+
+## Implementation
+
 Create a new Linear issue through an interactive prompt.
 
 **Usage**: `/create [optional: initial title]`

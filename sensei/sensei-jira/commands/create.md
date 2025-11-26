@@ -3,6 +3,24 @@ name: create
 description: Create a new Jira ticket interactively
 ---
 
+# create
+
+## Name
+
+sensei-jira:create - Create a new Jira ticket interactively
+
+## Synopsis
+
+```
+/create [arguments]
+```
+
+## Description
+
+Create a new Jira ticket interactively
+
+## Implementation
+
 Create a new Jira ticket through an interactive prompt.
 
 **Usage**: `/create [optional: initial summary]`

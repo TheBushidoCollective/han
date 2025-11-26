@@ -3,6 +3,24 @@ name: my-tickets
 description: Show all Jira tickets assigned to you
 ---
 
+# my-tickets
+
+## Name
+
+sensei-jira:my-tickets - Show all Jira tickets assigned to you
+
+## Synopsis
+
+```
+/my-tickets [arguments]
+```
+
+## Description
+
+Show all Jira tickets assigned to you
+
+## Implementation
+
 Retrieve and display all Jira tickets currently assigned to you.
 
 Use the Atlassian MCP tool `atlassian_search_issues` with JQL:

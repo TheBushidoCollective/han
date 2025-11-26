@@ -4,6 +4,22 @@ description: Create a new pull request in a GitHub repository
 
 # Create GitHub Pull Request
 
+## Name
+
+sensei-github:create-pr - Create a new pull request in a GitHub repository
+
+## Synopsis
+
+```
+/create-pr [arguments]
+```
+
+## Description
+
+Create a new pull request in a GitHub repository
+
+## Implementation
+
 Create a new pull request with source and target branches.
 
 ## Usage

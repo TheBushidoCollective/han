@@ -3,6 +3,24 @@ name: comment
 description: Add a comment to a Linear issue
 ---
 
+# comment
+
+## Name
+
+sensei-linear:comment - Add a comment to a Linear issue
+
+## Synopsis
+
+```
+/comment [arguments]
+```
+
+## Description
+
+Add a comment to a Linear issue
+
+## Implementation
+
 Add a comment to a Linear issue.
 
 **Usage**: `/comment ENG-123 [optional: comment text]`

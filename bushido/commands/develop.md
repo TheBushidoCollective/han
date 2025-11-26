@@ -4,6 +4,22 @@ description: Comprehensive 7-phase workflow for developing new features with qua
 
 # Feature Development Workflow
 
+## Name
+
+bushido:develop - Comprehensive 7-phase workflow for developing new features with quality enforcement
+
+## Synopsis
+
+```
+/develop [arguments]
+```
+
+## Description
+
+Comprehensive 7-phase workflow for developing new features with quality enforcement
+
+## Implementation
+
 A comprehensive, structured 7-phase workflow for developing new features with quality enforcement and Bushido principles.
 
 ## Overview

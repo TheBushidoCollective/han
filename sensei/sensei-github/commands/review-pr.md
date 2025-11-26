@@ -4,6 +4,22 @@ description: Get comprehensive review of a GitHub pull request
 
 # Review GitHub Pull Request
 
+## Name
+
+sensei-github:review-pr - Get comprehensive review of a GitHub pull request
+
+## Synopsis
+
+```
+/review-pr [arguments]
+```
+
+## Description
+
+Get comprehensive review of a GitHub pull request
+
+## Implementation
+
 Get a comprehensive review of a pull request including commits, diffs, and checks status.
 
 ## Usage

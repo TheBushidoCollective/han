@@ -4,6 +4,22 @@ description: Create a new merge request in a GitLab project
 
 # Create GitLab Merge Request
 
+## Name
+
+sensei-gitlab:create-mr - Create a new merge request in a GitLab project
+
+## Synopsis
+
+```
+/create-mr [arguments]
+```
+
+## Description
+
+Create a new merge request in a GitLab project
+
+## Implementation
+
 Create a new merge request in a GitLab project with source and target branches.
 
 ## Usage

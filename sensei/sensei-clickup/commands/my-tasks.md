@@ -3,6 +3,24 @@ name: my-tasks
 description: Show all ClickUp tasks assigned to you
 ---
 
+# my-tasks
+
+## Name
+
+sensei-clickup:my-tasks - Show all ClickUp tasks assigned to you
+
+## Synopsis
+
+```
+/my-tasks [arguments]
+```
+
+## Description
+
+Show all ClickUp tasks assigned to you
+
+## Implementation
+
 Retrieve and display all ClickUp tasks currently assigned to you.
 
 Use the ClickUp MCP tool `clickup_search_tasks` with assignee filter set to current user.

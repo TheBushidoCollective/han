@@ -4,6 +4,22 @@ description: View GitHub Actions workflow runs and status
 
 # View GitHub Actions Workflow
 
+## Name
+
+sensei-github:view-workflow - View GitHub Actions workflow runs and status
+
+## Synopsis
+
+```
+/view-workflow [arguments]
+```
+
+## Description
+
+View GitHub Actions workflow runs and status
+
+## Implementation
+
 View the status of GitHub Actions workflow runs for a repository or pull request.
 
 ## Usage

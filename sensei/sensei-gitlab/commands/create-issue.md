@@ -4,6 +4,22 @@ description: Create a new issue in a GitLab project
 
 # Create GitLab Issue
 
+## Name
+
+sensei-gitlab:create-issue - Create a new issue in a GitLab project
+
+## Synopsis
+
+```
+/create-issue [arguments]
+```
+
+## Description
+
+Create a new issue in a GitLab project
+
+## Implementation
+
 Create a new issue in a GitLab project with title, description, and labels.
 
 ## Usage

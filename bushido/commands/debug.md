@@ -3,6 +3,24 @@ description: Investigate and diagnose issues without necessarily fixing them
 disable-model-invocation: false
 ---
 
+# debug
+
+## Name
+
+bushido:debug - Investigate and diagnose issues without necessarily fixing them
+
+## Synopsis
+
+```
+/debug [arguments]
+```
+
+## Description
+
+Investigate and diagnose issues without necessarily fixing them
+
+## Implementation
+
 Investigate and diagnose bugs, errors, or unexpected behavior to understand what's happening and why.
 
 ## Process

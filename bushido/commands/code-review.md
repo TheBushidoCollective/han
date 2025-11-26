@@ -4,6 +4,24 @@ description: Code review a pull request
 disable-model-invocation: false
 ---
 
+# code-review
+
+## Name
+
+bushido:code-review - Code review a pull request
+
+## Synopsis
+
+```
+/code-review [arguments]
+```
+
+## Description
+
+Code review a pull request
+
+## Implementation
+
 Provide a code review for the given pull request.
 
 To do this, follow these steps precisely:

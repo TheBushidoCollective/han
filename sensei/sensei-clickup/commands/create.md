@@ -3,6 +3,24 @@ name: create
 description: Create a new ClickUp task interactively
 ---
 
+# create
+
+## Name
+
+sensei-clickup:create - Create a new ClickUp task interactively
+
+## Synopsis
+
+```
+/create [arguments]
+```
+
+## Description
+
+Create a new ClickUp task interactively
+
+## Implementation
+
 Create a new ClickUp task through an interactive prompt.
 
 **Usage**: `/create [optional: initial task name]`

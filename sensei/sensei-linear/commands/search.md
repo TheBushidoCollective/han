@@ -3,6 +3,24 @@ name: search
 description: Search for Linear issues
 ---
 
+# search
+
+## Name
+
+sensei-linear:search - Search for Linear issues
+
+## Synopsis
+
+```
+/search [arguments]
+```
+
+## Description
+
+Search for Linear issues
+
+## Implementation
+
 Search for Linear issues using filters or text search.
 
 **Usage**:

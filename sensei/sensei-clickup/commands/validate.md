@@ -3,6 +3,24 @@ name: validate
 description: Validate checklist items for a ClickUp task without changing status
 ---
 
+# validate
+
+## Name
+
+sensei-clickup:validate - Validate checklist items for a ClickUp task without changing status
+
+## Synopsis
+
+```
+/validate [arguments]
+```
+
+## Description
+
+Validate checklist items for a ClickUp task without changing status
+
+## Implementation
+
 Validate that all checklist items are complete for a ClickUp task without transitioning status.
 
 **Usage**: `/validate #ABC123` or `/validate ABC123`

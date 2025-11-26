@@ -3,6 +3,24 @@ name: my-issues
 description: Show all Linear issues assigned to you
 ---
 
+# my-issues
+
+## Name
+
+sensei-linear:my-issues - Show all Linear issues assigned to you
+
+## Synopsis
+
+```
+/my-issues [arguments]
+```
+
+## Description
+
+Show all Linear issues assigned to you
+
+## Implementation
+
 Retrieve and display all Linear issues currently assigned to you.
 
 Use the Linear MCP tool `linear_search_issues` with assignee filter set to current user.
