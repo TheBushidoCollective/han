@@ -1,6 +1,6 @@
 {
   "name": "do-security-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["security", "compliance", "vulnerability", "threat"]
+  "keywords": [
+    "security",
+    "compliance",
+    "vulnerability",
+    "threat"
+  ]
 }

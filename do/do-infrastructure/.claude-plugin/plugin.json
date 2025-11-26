@@ -1,6 +1,6 @@
 {
   "name": "do-infrastructure",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agents specialized in infrastructure management, DevOps, and site reliability engineering. Focuses on deployment, monitoring, and system operations.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["infrastructure", "devops", "sre", "deployment", "monitoring"]
+  "keywords": [
+    "infrastructure",
+    "devops",
+    "sre",
+    "deployment",
+    "monitoring"
+  ]
 }

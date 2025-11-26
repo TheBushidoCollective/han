@@ -1,0 +1,131 @@
+name: Bump Website Version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - '!website/package.json'
+      - '!website/package-lock.json'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    # Skip if commit is from bot (prevent loops) or if it's a version bump commit
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Determine version bump type
+        id: bump-type
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # Check for breaking changes (major bump)
+          if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+            echo "Detected: MAJOR (breaking change)"
+          # Check for features (minor bump)
+          elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "Detected: MINOR (new feature)"
+          # Everything else (patch bump) - fix, chore, docs, refactor, etc.
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "Detected: PATCH (fix/chore/other)"
+          fi
+
+      - name: Check for website changes
+        id: check-changes
+        run: |
+          # Get the parent commit
+          PARENT_COMMIT="${{ github.event.before }}"
+
+          # If this is the first commit or before is empty, compare with HEAD~1
+          if [ "$PARENT_COMMIT" = "0000000000000000000000000000000000000000" ] || [ -z "$PARENT_COMMIT" ]; then
+            PARENT_COMMIT="HEAD~1"
+          fi
+
+          # Get list of changed files in website (excluding package.json version changes)
+          CHANGED_FILES=$(git diff --name-only "$PARENT_COMMIT" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          WEBSITE_CHANGES=$(echo "$CHANGED_FILES" | grep "^website/" | grep -v "package.json" | grep -v "package-lock.json" || true)
+
+          if [ -n "$WEBSITE_CHANGES" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Website has changes:"
+            echo "$WEBSITE_CHANGES"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No significant website changes"
+          fi
+
+      - name: Bump version
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: bump-version
+        working-directory: ./website
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Bump based on type
+          case "${{ steps.bump-type.outputs.type }}" in
+            major)
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            minor)
+              NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              ;;
+          esac
+
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "old_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Update package.json
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
+
+      - name: Commit version bump
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          # Check if there are any changes to commit
+          if git diff --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add website/package.json
+
+          # Pull latest changes before committing
+          git pull --rebase --autostash origin main
+
+          git commit -m "chore(website): bump version to ${{ steps.bump-version.outputs.new_version }} [skip ci]"
+          git push origin main

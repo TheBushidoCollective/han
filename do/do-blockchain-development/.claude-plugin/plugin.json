@@ -1,6 +1,6 @@
 {
   "name": "do-blockchain-development",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["blockchain", "web3", "smart-contracts"]
+  "keywords": [
+    "blockchain",
+    "web3",
+    "smart-contracts"
+  ]
 }

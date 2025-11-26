@@ -1,6 +1,6 @@
 {
   "name": "do-prompt-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["prompt-engineering", "ai", "llm"]
+  "keywords": [
+    "prompt-engineering",
+    "ai",
+    "llm"
+  ]
 }
