@@ -1,0 +1,185 @@
+name: Bump Plugin Versions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'buki/**'
+      - 'do/**'
+      - 'sensei/**'
+      - 'bushido/**'
+      - '!**/.claude-plugin/plugin.json'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-versions:
+    runs-on: ubuntu-latest
+    # Skip if commit is from bot (prevent loops) or if it's a version bump commit
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version bump type
+        id: bump-type
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # Check for breaking changes (major bump)
+          if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+            echo "Detected: MAJOR (breaking change)"
+          # Check for features (minor bump)
+          elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "Detected: MINOR (new feature)"
+          # Everything else (patch bump) - fix, chore, docs, refactor, etc.
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "Detected: PATCH (fix/chore/other)"
+          fi
+
+      - name: Find changed plugins
+        id: changed-plugins
+        run: |
+          # Get the parent commit
+          PARENT_COMMIT="${{ github.event.before }}"
+
+          # If this is the first commit or before is empty, compare with HEAD~1
+          if [ "$PARENT_COMMIT" = "0000000000000000000000000000000000000000" ] || [ -z "$PARENT_COMMIT" ]; then
+            PARENT_COMMIT="HEAD~1"
+          fi
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only "$PARENT_COMMIT" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Find unique plugin directories that have changes
+          CHANGED_PLUGINS=""
+
+          # Check each plugin type directory
+          for plugin_type in buki do sensei; do
+            for plugin_dir in $plugin_type/*/; do
+              # Remove trailing slash
+              plugin_dir="${plugin_dir%/}"
+
+              # Check if any changed file is in this plugin directory
+              if echo "$CHANGED_FILES" | grep -q "^$plugin_dir/"; then
+                # Skip if the only change is plugin.json (version bump)
+                PLUGIN_CHANGES=$(echo "$CHANGED_FILES" | grep "^$plugin_dir/" | grep -v ".claude-plugin/plugin.json" || true)
+                if [ -n "$PLUGIN_CHANGES" ]; then
+                  CHANGED_PLUGINS="$CHANGED_PLUGINS $plugin_dir"
+                fi
+              fi
+            done
+          done
+
+          # Check bushido separately (it's not in a subdirectory)
+          if echo "$CHANGED_FILES" | grep -q "^bushido/"; then
+            PLUGIN_CHANGES=$(echo "$CHANGED_FILES" | grep "^bushido/" | grep -v ".claude-plugin/plugin.json" || true)
+            if [ -n "$PLUGIN_CHANGES" ]; then
+              CHANGED_PLUGINS="$CHANGED_PLUGINS bushido"
+            fi
+          fi
+
+          # Trim leading whitespace and output
+          CHANGED_PLUGINS=$(echo "$CHANGED_PLUGINS" | xargs)
+          echo "Changed plugins: $CHANGED_PLUGINS"
+          echo "plugins=$CHANGED_PLUGINS" >> $GITHUB_OUTPUT
+
+          if [ -z "$CHANGED_PLUGINS" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump plugin versions
+        if: steps.changed-plugins.outputs.has_changes == 'true'
+        id: bump-versions
+        run: |
+          BUMP_TYPE="${{ steps.bump-type.outputs.type }}"
+          CHANGED_PLUGINS="${{ steps.changed-plugins.outputs.plugins }}"
+          BUMPED_PLUGINS=""
+
+          for plugin_dir in $CHANGED_PLUGINS; do
+            PLUGIN_JSON="$plugin_dir/.claude-plugin/plugin.json"
+
+            if [ ! -f "$PLUGIN_JSON" ]; then
+              echo "Warning: $PLUGIN_JSON not found, skipping"
+              continue
+            fi
+
+            # Get current version
+            CURRENT_VERSION=$(jq -r '.version' "$PLUGIN_JSON")
+            echo "Plugin: $plugin_dir, Current version: $CURRENT_VERSION"
+
+            # Parse version components
+            MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+            PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
+
+            # Bump based on type
+            case "$BUMP_TYPE" in
+              major)
+                NEW_VERSION="$((MAJOR + 1)).0.0"
+                ;;
+              minor)
+                NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+                ;;
+              patch)
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                ;;
+            esac
+
+            echo "New version: $NEW_VERSION"
+
+            # Update plugin.json
+            jq --arg version "$NEW_VERSION" '.version = $version' "$PLUGIN_JSON" > "$PLUGIN_JSON.tmp"
+            mv "$PLUGIN_JSON.tmp" "$PLUGIN_JSON"
+
+            # Get plugin name for commit message
+            PLUGIN_NAME=$(jq -r '.name' "$PLUGIN_JSON")
+            BUMPED_PLUGINS="$BUMPED_PLUGINS\n- $PLUGIN_NAME: $CURRENT_VERSION -> $NEW_VERSION"
+          done
+
+          echo -e "Bumped plugins:$BUMPED_PLUGINS"
+          echo "bumped_plugins<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$BUMPED_PLUGINS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version bumps
+        if: steps.changed-plugins.outputs.has_changes == 'true'
+        run: |
+          # Check if there are any changes to commit
+          if git diff --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add all plugin.json files
+          git add '**/plugin.json'
+
+          # Pull latest changes before committing
+          git pull --rebase --autostash origin main
+
+          # Create commit message
+          COMMIT_MSG="chore(plugins): bump plugin versions [skip ci]
+
+          Version bumps based on: ${{ steps.bump-type.outputs.type }}
+          ${{ steps.bump-versions.outputs.bumped_plugins }}"
+
+          git commit -m "$COMMIT_MSG"
+          git push origin main
