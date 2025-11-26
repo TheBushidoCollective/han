@@ -1,6 +1,6 @@
 {
   "name": "buki-credo",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced Credo skills for code analysis and style checking in Elixir",
   "author": {
     "name": "The Bushido Collective",
