@@ -51,7 +51,6 @@ const VALID_HOOK_TYPES = [
 async function executeHookCommand(
 	hook: HookCommand,
 	hookType: string,
-	marketplaceRoot: string,
 	verbose: boolean,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
@@ -71,7 +70,7 @@ async function executeHookCommand(
 			env: {
 				...process.env,
 				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
-				CLAUDE_PROJECT_DIR: marketplaceRoot,
+				CLAUDE_PROJECT_DIR: process.cwd(),
 			},
 		});
 
@@ -140,66 +139,123 @@ async function executeHookCommand(
 }
 
 /**
- * Get the marketplace root directory
+ * Get Claude config directory
  */
-function getMarketplaceRoot(): string | null {
-	// First check if we're in the Han repository itself (for development)
-	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-	if (
-		existsSync(join(projectRoot, "buki")) &&
-		existsSync(join(projectRoot, "do")) &&
-		existsSync(join(projectRoot, "bushido"))
-	) {
-		return projectRoot;
-	}
-
-	// Check CLAUDE_CONFIG_DIR environment variable
+function getClaudeConfigDir(): string {
 	if (process.env.CLAUDE_CONFIG_DIR) {
-		const hanPath = join(
-			process.env.CLAUDE_CONFIG_DIR,
-			"plugins",
-			"marketplaces",
-			"han",
-		);
-		if (existsSync(hanPath)) {
-			return hanPath;
-		}
+		return process.env.CLAUDE_CONFIG_DIR;
 	}
-
-	// Default Claude config location
 	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (homeDir) {
-		const defaultHanPath = join(
-			homeDir,
-			".claude",
-			"plugins",
-			"marketplaces",
-			"han",
-		);
-		if (existsSync(defaultHanPath)) {
-			return defaultHanPath;
-		}
+	if (!homeDir) {
+		throw new Error("Could not determine home directory");
 	}
-
-	return null;
+	return join(homeDir, ".claude");
 }
 
 /**
- * Get plugin directory based on plugin name
+ * Get all enabled plugins from settings
  */
-function getPluginDir(plugin: string, marketplaceRoot: string): string | null {
-	if (plugin.startsWith("buki-")) {
-		return join(marketplaceRoot, "buki", plugin);
+function getEnabledPlugins(): Map<string, string> {
+	// Map of plugin name -> marketplace name
+	const plugins = new Map<string, string>();
+
+	// Read project settings
+	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
+	if (existsSync(projectSettingsPath)) {
+		try {
+			const settings = JSON.parse(readFileSync(projectSettingsPath, "utf8"));
+			if (settings.enabledPlugins) {
+				for (const [key, enabled] of Object.entries(settings.enabledPlugins)) {
+					if (enabled && key.includes("@")) {
+						const [pluginName, marketplace] = key.split("@");
+						plugins.set(pluginName, marketplace);
+					}
+				}
+			}
+		} catch (_error) {
+			// Ignore errors reading project settings
+		}
 	}
-	if (plugin.startsWith("do-")) {
-		return join(marketplaceRoot, "do", plugin);
+
+	// Read local settings (can override project settings)
+	const localSettingsPath = join(
+		process.cwd(),
+		".claude",
+		"settings.local.json",
+	);
+	if (existsSync(localSettingsPath)) {
+		try {
+			const settings = JSON.parse(readFileSync(localSettingsPath, "utf8"));
+			if (settings.enabledPlugins) {
+				for (const [key, enabled] of Object.entries(settings.enabledPlugins)) {
+					if (enabled && key.includes("@")) {
+						const [pluginName, marketplace] = key.split("@");
+						plugins.set(pluginName, marketplace);
+					} else if (!enabled && key.includes("@")) {
+						const [pluginName] = key.split("@");
+						plugins.delete(pluginName);
+					}
+				}
+			}
+		} catch (_error) {
+			// Ignore errors reading local settings
+		}
 	}
-	if (plugin.startsWith("sensei-")) {
-		return join(marketplaceRoot, "sensei", plugin);
+
+	return plugins;
+}
+
+/**
+ * Get plugin directory based on plugin name and marketplace
+ */
+function getPluginDir(
+	pluginName: string,
+	marketplace: string,
+): string | null {
+	const configDir = getClaudeConfigDir();
+	const marketplaceRoot = join(
+		configDir,
+		"plugins",
+		"marketplaces",
+		marketplace,
+	);
+
+	// Check if we're in the marketplace repo itself (for development)
+	const cwd = process.cwd();
+	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
+		// We're in a marketplace repo, look for plugins here
+		const potentialPaths = [
+			join(cwd, "buki", pluginName),
+			join(cwd, "do", pluginName),
+			join(cwd, "sensei", pluginName),
+			join(cwd, pluginName),
+		];
+		for (const path of potentialPaths) {
+			if (existsSync(path)) {
+				return path;
+			}
+		}
 	}
-	if (plugin === "bushido") {
-		return join(marketplaceRoot, "bushido");
+
+	// Look in the marketplace directory
+	if (!existsSync(marketplaceRoot)) {
+		return null;
 	}
+
+	// Try different plugin directory structures
+	const potentialPaths = [
+		join(marketplaceRoot, "buki", pluginName),
+		join(marketplaceRoot, "do", pluginName),
+		join(marketplaceRoot, "sensei", pluginName),
+		join(marketplaceRoot, pluginName),
+	];
+
+	for (const path of potentialPaths) {
+		if (existsSync(path)) {
+			return path;
+		}
+	}
+
 	return null;
 }
 
@@ -207,18 +263,17 @@ function getPluginDir(plugin: string, marketplaceRoot: string): string | null {
  * Collect and aggregate all hooks by type across all plugins
  */
 function collectHooks(
-	allPlugins: string[],
-	marketplaceRoot: string,
+	enabledPlugins: Map<string, string>,
 ): { hooksByType: HooksByType; validationResults: ValidationResult[] } {
 	const hooksByType: HooksByType = {};
 	const validationResults: ValidationResult[] = [];
 
-	for (const plugin of allPlugins) {
-		const pluginDir = getPluginDir(plugin, marketplaceRoot);
+	for (const [pluginName, marketplace] of enabledPlugins.entries()) {
+		const pluginDir = getPluginDir(pluginName, marketplace);
 		if (!pluginDir) {
 			validationResults.push({
-				plugin,
-				errors: ["Unknown plugin type"],
+				plugin: pluginName,
+				errors: [`Could not find plugin directory for ${pluginName}@${marketplace}`],
 			});
 			continue;
 		}
@@ -234,7 +289,7 @@ function collectHooks(
 
 			if (!hooksConfig.hooks || typeof hooksConfig.hooks !== "object") {
 				validationResults.push({
-					plugin,
+					plugin: pluginName,
 					errors: ["Invalid hooks.json structure: missing 'hooks' object"],
 				});
 				continue;
@@ -293,7 +348,7 @@ function collectHooks(
 									hooksByType[hookType] = [];
 								}
 								hooksByType[hookType].push({
-									plugin,
+									plugin: pluginName,
 									command: individualHook.command,
 									pluginDir,
 									type: "command",
@@ -306,7 +361,7 @@ function collectHooks(
 								hooksByType[hookType] = [];
 							}
 							hooksByType[hookType].push({
-								plugin,
+								plugin: pluginName,
 								command: individualHook.prompt || "",
 								pluginDir,
 								type: "prompt",
@@ -317,11 +372,11 @@ function collectHooks(
 			}
 
 			if (errors.length > 0) {
-				validationResults.push({ plugin, errors });
+				validationResults.push({ plugin: pluginName, errors });
 			}
 		} catch (error: unknown) {
 			validationResults.push({
-				plugin,
+				plugin: pluginName,
 				errors: [
 					`Failed to parse hooks.json: ${error instanceof Error ? error.message : String(error)}`,
 				],
@@ -348,46 +403,15 @@ export async function testHooks(options?: {
 		return;
 	}
 
-	const marketplaceRoot = getMarketplaceRoot();
-	if (!marketplaceRoot) {
-		console.error("Error: Could not find Han marketplace");
-		console.error(
-			"\nChecked locations:",
-		);
-		console.error(
-			`  - Current directory: ${process.cwd()}`,
-		);
-		if (process.env.CLAUDE_CONFIG_DIR) {
-			console.error(
-				`  - CLAUDE_CONFIG_DIR: ${join(process.env.CLAUDE_CONFIG_DIR, "plugins", "marketplaces", "han")}`,
-			);
-		}
-		const homeDir = process.env.HOME || process.env.USERPROFILE;
-		if (homeDir) {
-			console.error(
-				`  - Default location: ${join(homeDir, ".claude", "plugins", "marketplaces", "han")}`,
-			);
-		}
-		console.error(
-			"\nMake sure Han plugins are installed via Claude Code.",
-		);
-		process.exit(1);
-	}
+	const enabledPlugins = getEnabledPlugins();
 
-	const projectPlugins = getInstalledPlugins("project");
-	const localPlugins = getInstalledPlugins("local");
-	const allPlugins = Array.from(new Set([...projectPlugins, ...localPlugins]));
-
-	if (allPlugins.length === 0) {
+	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
 		process.exit(0);
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults } = collectHooks(
-		allPlugins,
-		marketplaceRoot,
-	);
+	const { hooksByType, validationResults} = collectHooks(enabledPlugins);
 
 	// Display validation results
 	if (validationResults.length > 0) {
@@ -413,7 +437,6 @@ export async function testHooks(options?: {
 	await executeHooksWithUI(
 		hookTypesFound,
 		hooksByType,
-		marketplaceRoot,
 		verbose,
 	);
 }
@@ -424,7 +447,6 @@ export async function testHooks(options?: {
 async function executeHooksWithUI(
 	hookTypesFound: string[],
 	hooksByType: HooksByType,
-	marketplaceRoot: string,
 	verbose: boolean,
 ): Promise<void> {
 	return new Promise((_resolve) => {
@@ -471,7 +493,7 @@ async function executeHooksWithUI(
 				// Run all hooks of this type in parallel
 				const results = await Promise.all(
 					hooks.map((hook) =>
-						executeHookCommand(hook, hookType, marketplaceRoot, verbose),
+						executeHookCommand(hook, hookType, verbose),
 					),
 				);
 
@@ -527,46 +549,15 @@ async function executeHooksWithUI(
 async function testHooksValidationOnly(): Promise<void> {
 	console.log("🔍 Validating hooks for installed plugins...\n");
 
-	const marketplaceRoot = getMarketplaceRoot();
-	if (!marketplaceRoot) {
-		console.error("Error: Could not find Han marketplace");
-		console.error(
-			"\nChecked locations:",
-		);
-		console.error(
-			`  - Current directory: ${process.cwd()}`,
-		);
-		if (process.env.CLAUDE_CONFIG_DIR) {
-			console.error(
-				`  - CLAUDE_CONFIG_DIR: ${join(process.env.CLAUDE_CONFIG_DIR, "plugins", "marketplaces", "han")}`,
-			);
-		}
-		const homeDir = process.env.HOME || process.env.USERPROFILE;
-		if (homeDir) {
-			console.error(
-				`  - Default location: ${join(homeDir, ".claude", "plugins", "marketplaces", "han")}`,
-			);
-		}
-		console.error(
-			"\nMake sure Han plugins are installed via Claude Code.",
-		);
-		process.exit(1);
-	}
+	const enabledPlugins = getEnabledPlugins();
 
-	const projectPlugins = getInstalledPlugins("project");
-	const localPlugins = getInstalledPlugins("local");
-	const allPlugins = Array.from(new Set([...projectPlugins, ...localPlugins]));
-
-	if (allPlugins.length === 0) {
+	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
 		process.exit(0);
 	}
 
 	// Collect all hooks grouped by type
-	const { hooksByType, validationResults } = collectHooks(
-		allPlugins,
-		marketplaceRoot,
-	);
+	const { hooksByType, validationResults} = collectHooks(enabledPlugins);
 
 	// Display validation results
 	if (validationResults.length > 0) {
