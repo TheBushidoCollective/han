@@ -176,10 +176,11 @@ hookCommand
 hookCommand
 	.command("test")
 	.description("Validate hook configurations for all installed plugins")
-	.action(async () => {
+	.option("--execute", "Execute hooks to verify they run successfully")
+	.action(async (options: { execute?: boolean }) => {
 		try {
 			const { testHooks } = await import("./hook-test.js");
-			await testHooks();
+			await testHooks({ execute: options.execute });
 			process.exit(0);
 		} catch (error: unknown) {
 			console.error(
