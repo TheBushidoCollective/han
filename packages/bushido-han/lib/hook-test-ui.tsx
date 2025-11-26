@@ -1,6 +1,7 @@
-import { Box, Static, Text } from "ink";
+import { Box, Text, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
+import { useEffect, useRef } from "react";
 
 interface HookResult {
 	plugin: string;
@@ -36,6 +37,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	isComplete,
 	verbose,
 }) => {
+	const { write } = useStdout();
+	const writtenHookTypes = useRef<Set<string>>(new Set());
+
 	// Group hooks by plugin for each hook type
 	const getPluginHooks = (hookType: string) => {
 		const hooks = hookStructure.get(hookType) || [];
@@ -88,48 +92,38 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		return "pending";
 	};
 
-	// Separate completed hook types from active ones for Static rendering
-	const completedHookTypes = hookTypes.filter((ht) => {
-		const status = getHookTypeStatus(ht);
-		return status === "completed" || status === "failed";
-	});
+	// Write completed hook types to stdout (above Ink's rendering area)
+	useEffect(() => {
+		for (const hookType of hookTypes) {
+			const status = getHookTypeStatus(hookType);
+			if (
+				(status === "completed" || status === "failed") &&
+				!writtenHookTypes.current.has(hookType)
+			) {
+				writtenHookTypes.current.add(hookType);
+				const results = hookResults.get(hookType) || [];
+				const totalPassed = results.filter((r) => r.success).length;
+				const totalCount = results.length;
+				const isLast =
+					hookTypes.indexOf(hookType) === hookTypes.length - 1 && isComplete;
 
+				const prefix = isLast ? "└─ " : "├─ ";
+				const icon = status === "completed" ? "✓" : "✗";
+				const color = status === "completed" ? "\x1b[32m" : "\x1b[31m";
+				const reset = "\x1b[0m";
+
+				write(
+					`${prefix}${color}${icon} ${hookType} (${totalPassed}/${totalCount})${reset}\n`,
+				);
+			}
+		}
+	}, [hookTypes, hookResults, currentType, isComplete, write]);
+
+	// Get active (running/pending) hook types for dynamic rendering
 	const activeHookTypes = hookTypes.filter((ht) => {
 		const status = getHookTypeStatus(ht);
 		return status === "running" || status === "pending";
 	});
-
-	// Helper to render a completed hook type summary (single line)
-	const renderCompletedSummary = (hookType: string, hookTypeIndex: number) => {
-		const status = getHookTypeStatus(hookType);
-		const results = hookResults.get(hookType) || [];
-		const totalPassed = results.filter((r) => r.success).length;
-		const totalCount = results.length;
-		const isLast =
-			hookTypeIndex === completedHookTypes.length - 1 &&
-			activeHookTypes.length === 0;
-
-		return (
-			<Box key={hookType}>
-				<Text dimColor>{isLast ? "└─ " : "├─ "}</Text>
-				{status === "completed" && (
-					<Text color="green" bold>
-						✓{" "}
-					</Text>
-				)}
-				{status === "failed" && (
-					<Text color="red" bold>
-						✗{" "}
-					</Text>
-				)}
-				<Text color={status === "failed" ? "red" : undefined}>{hookType}</Text>
-				<Text color={status === "failed" ? "red" : "green"}>
-					{" "}
-					({totalPassed}/{totalCount})
-				</Text>
-			</Box>
-		);
-	};
 
 	// Helper to render the currently running hook type (expanded view)
 	const renderRunningHookType = (hookType: string, hookTypeIndex: number) => {
@@ -283,26 +277,28 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		);
 	};
 
+	// Check if we should show the header (only before any output is written)
+	const showHeader = writtenHookTypes.current.size === 0;
+
 	return (
-		<Box flexDirection="column" paddingY={1}>
-			{/* Header */}
-			<Box marginBottom={1}>
-				<Text bold color="cyan">
-					🔍 Testing and executing hooks for installed plugins
-				</Text>
-			</Box>
+		<Box flexDirection="column">
+			{/* Header - only shown initially */}
+			{showHeader && (
+				<Box marginBottom={1}>
+					<Text bold color="cyan">
+						🔍 Testing and executing hooks for installed plugins
+					</Text>
+				</Box>
+			)}
 
-			{/* Completed hook types - rendered once via Static (collapsed single line) */}
-			<Static items={completedHookTypes}>
-				{(hookType, index) => renderCompletedSummary(hookType, index)}
-			</Static>
-
-			{/* Active/pending hook types - dynamically re-rendered (expanded for running) */}
-			<Box flexDirection="column">
-				{activeHookTypes.map((hookType, index) =>
-					renderRunningHookType(hookType, index),
-				)}
-			</Box>
+			{/* Active/pending hook types - dynamically re-rendered */}
+			{activeHookTypes.length > 0 && (
+				<Box flexDirection="column">
+					{activeHookTypes.map((hookType, index) =>
+						renderRunningHookType(hookType, index),
+					)}
+				</Box>
+			)}
 
 			{/* Completion message */}
 			{isComplete && (
