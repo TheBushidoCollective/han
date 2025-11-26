@@ -8,12 +8,13 @@ This plugin provides validation hooks that run markdownlint checks:
 
 ### Stop & SubagentStop Hooks
 
-Runs `markdownlint-cli2` in all directories with a `package.json` file to validate Markdown files.
+Runs `markdownlint-cli` in all directories with markdownlint configuration files to validate Markdown files.
 
 The hooks will:
 
-- Discover all directories containing `package.json`
-- Run `markdownlint-cli2` on all `**/*.md` files (excluding `node_modules`)
+- Discover all directories containing `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, or `.markdownlint.yml`
+- Run `markdownlint-cli` on all `**/*.md` files (excluding `node_modules`)
+- Automatically fix fixable issues with `--fix`
 - Stop on the first failure with `--fail-fast`
 - Exit with code 2 if any linting errors are found
 
@@ -23,7 +24,10 @@ Install this plugin in your Claude Code configuration to automatically validate 
 
 ## Configuration
 
-You can configure markdownlint by adding a `.markdownlint.json` or `.markdownlint.jsonc` file to your project root.
+Configure markdownlint by adding a configuration file to directories you want to lint:
+
+- `.markdownlint.json` or `.markdownlint.jsonc` (JSON format)
+- `.markdownlint.yaml` or `.markdownlint.yml` (YAML format)
 
 Example `.markdownlint.json`:
 
