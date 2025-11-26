@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "npx -y markdownlint-cli2 --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json --fix '${CLAUDE_PROJECT_DIR}/**/*.md' '!${CLAUDE_PROJECT_DIR}/**/node_modules/**' || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
+            "command": "npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json ${CLAUDE_PROJECT_DIR} || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
           }
         ]
       }
@@ -23,7 +23,7 @@
           },
           {
             "type": "command",
-            "command": "npx -y markdownlint-cli2 --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json --fix '${CLAUDE_PROJECT_DIR}/**/*.md' '!${CLAUDE_PROJECT_DIR}/**/node_modules/**' || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
+            "command": "npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json ${CLAUDE_PROJECT_DIR} || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)"
           }
         ]
       }

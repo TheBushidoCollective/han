@@ -53,7 +53,7 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 
 ### Getting an API Token
 
-1. Go to https://id.atlassian.com/manage-profile/security/api-tokens
+1. Go to <https://id.atlassian.com/manage-profile/security/api-tokens>
 2. Click "Create API token"
 3. Give it a name (e.g., "Claude Code MCP")
 4. Copy the token immediately (it won't be shown again)
@@ -452,7 +452,7 @@ duedate < now() AND status != Done
 
 **Solution**:
 
-- Regenerate API token at https://id.atlassian.com/manage-profile/security/api-tokens
+- Regenerate API token at <https://id.atlassian.com/manage-profile/security/api-tokens>
 - Ensure email matches your Atlassian account exactly
 - Check for special characters in token (copy entire token)
 - Try wrapping token in quotes if it contains special characters

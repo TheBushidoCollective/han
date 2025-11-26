@@ -56,7 +56,7 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 
 ### Getting an API Key
 
-1. Go to https://linear.app/settings/api
+1. Go to <https://linear.app/settings/api>
 2. Click "Create new API key"
 3. Give it a name (e.g., "Claude Code MCP")
 4. Copy the API key immediately (it won't be shown again)
@@ -492,7 +492,7 @@ Let me validate these issues before we stop...
 
 **Solution**:
 
-- Regenerate API key at https://linear.app/settings/api
+- Regenerate API key at <https://linear.app/settings/api>
 - Ensure no extra spaces or quotes around the key
 - Try wrapping key in single quotes in shell config
 - Verify key has necessary permissions
