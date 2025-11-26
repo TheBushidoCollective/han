@@ -198,7 +198,7 @@ hookCommand
 			});
 
 			const { validate } = await import("./validate.js");
-			validate({
+			await validate({
 				failFast: options.failFast || false,
 				dirsWith: options.dirsWith || null,
 				testDir: options.testDir || null,
@@ -297,7 +297,7 @@ program
 			}
 
 			const { validate } = await import("./validate.js");
-			validate({
+			await validate({
 				failFast: options.failFast || false,
 				dirsWith: options.dirsWith || null,
 				command: commandArgs.join(" "),

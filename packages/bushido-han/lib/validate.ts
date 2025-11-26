@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
-import ignore from "ignore";
+import { dirname } from "node:path";
+import { globby } from "globby";
 
 interface ValidateOptions {
 	failFast: boolean;
@@ -11,90 +10,25 @@ interface ValidateOptions {
 	stdinData?: string | null;
 }
 
-// Load .gitignore rules from root directory
-function loadGitignoreRules(rootDir: string): ReturnType<typeof ignore> {
-	const ig = ignore();
-	const gitignorePath = join(rootDir, ".gitignore");
-
-	if (existsSync(gitignorePath)) {
-		try {
-			const gitignoreContent = readFileSync(gitignorePath, "utf8");
-			ig.add(gitignoreContent);
-		} catch (_e) {
-			// If we can't read .gitignore, continue without it
-		}
-	}
-
-	// Always ignore common patterns
-	ig.add(["node_modules/", ".git/"]);
-
-	return ig;
-}
-
-// Check if a filename matches a pattern (supports * wildcard)
-function matchesPattern(filename: string, pattern: string): boolean {
-	// Convert glob pattern to regex
-	const regexPattern = pattern
-		.replace(/\./g, "\\.")
-		.replace(/\*/g, ".*")
-		.replace(/\?/g, ".");
-	const regex = new RegExp(`^${regexPattern}$`);
-	return regex.test(filename);
-}
-
-// Check if directory contains any of the marker files/patterns
-function hasMarkerFile(dir: string, patterns: string[]): boolean {
-	try {
-		const entries = readdirSync(dir);
-		for (const pattern of patterns) {
-			for (const entry of entries) {
-				if (matchesPattern(entry, pattern)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	} catch (_e) {
-		return false;
-	}
-}
-
-// Recursively find all directories containing a marker file
-function findDirectoriesWithMarker(
+// Find directories containing marker files using globby (respects nested .gitignore files)
+async function findDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
-	ig: ReturnType<typeof ignore>,
-): string[] {
-	const dirs: string[] = [];
+): Promise<string[]> {
+	// Convert marker patterns to glob patterns
+	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
 
-	function searchDir(dir: string): void {
-		// Get relative path from root for gitignore matching
-		const relativePath = relative(rootDir, dir);
+	// Use globby to find all matching files, respecting .gitignore files
+	const matches = await globby(globPatterns, {
+		cwd: rootDir,
+		gitignore: true, // Respect all nested .gitignore files
+		ignore: [".git/**"], // Only hardcode .git as ignored
+		absolute: true,
+		onlyFiles: true,
+	});
 
-		// Skip if this path is git-ignored (only check subdirectories, not root)
-		if (relativePath && ig.ignores(relativePath)) {
-			return;
-		}
-
-		try {
-			// Check if this directory contains any of the marker files
-			if (hasMarkerFile(dir, markerPatterns)) {
-				dirs.push(dir);
-			}
-
-			// Recursively search subdirectories
-			const entries = readdirSync(dir, { withFileTypes: true });
-			for (const entry of entries) {
-				if (entry.isDirectory()) {
-					searchDir(join(dir, entry.name));
-				}
-			}
-		} catch (_e) {
-			// Skip directories we can't read
-		}
-	}
-
-	searchDir(rootDir);
+	// Extract unique directories from matched files
+	const dirs = [...new Set(matches.map((file) => dirname(file)))];
 	return dirs;
 }
 
@@ -138,7 +72,7 @@ function testDirCommand(dir: string, cmd: string): boolean {
 	}
 }
 
-export function validate(options: ValidateOptions): void {
+export async function validate(options: ValidateOptions): Promise<void> {
 	const {
 		failFast,
 		dirsWith,
@@ -158,10 +92,8 @@ export function validate(options: ValidateOptions): void {
 	// Parse comma-delimited patterns
 	const patterns = dirsWith.split(",").map((p) => p.trim());
 
-	// Load .gitignore rules
-	const ig = loadGitignoreRules(rootDir);
-
-	let targetDirs = findDirectoriesWithMarker(rootDir, patterns, ig);
+	// Find directories with marker files (respects nested .gitignore files)
+	let targetDirs = await findDirectoriesWithMarker(rootDir, patterns);
 
 	// Filter directories using test command if specified
 	if (testDir && targetDirs.length > 0) {
