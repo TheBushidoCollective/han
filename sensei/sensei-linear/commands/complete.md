@@ -3,6 +3,24 @@ name: complete
 description: Mark a Linear issue as complete after validating acceptance criteria
 ---
 
+# complete
+
+## Name
+
+sensei-linear:complete - Mark a Linear issue as complete after validating acceptance criteria
+
+## Synopsis
+
+```
+/complete [arguments]
+```
+
+## Description
+
+Mark a Linear issue as complete after validating acceptance criteria
+
+## Implementation
+
 Complete a Linear issue by validating acceptance criteria and transitioning to Done.
 
 **Usage**: `/complete ENG-123`

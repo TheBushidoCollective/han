@@ -3,6 +3,24 @@ name: search
 description: Search for ClickUp tasks
 ---
 
+# search
+
+## Name
+
+sensei-clickup:search - Search for ClickUp tasks
+
+## Synopsis
+
+```
+/search [arguments]
+```
+
+## Description
+
+Search for ClickUp tasks
+
+## Implementation
+
 Search for ClickUp tasks using filters or text search.
 
 **Usage**:

@@ -4,6 +4,22 @@ description: Create a new issue in a GitHub repository
 
 # Create GitHub Issue
 
+## Name
+
+sensei-github:create-issue - Create a new issue in a GitHub repository
+
+## Synopsis
+
+```
+/create-issue [arguments]
+```
+
+## Description
+
+Create a new issue in a GitHub repository
+
+## Implementation
+
 Create a new issue in a GitHub repository with title, body, and labels.
 
 ## Usage

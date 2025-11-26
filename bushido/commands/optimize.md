@@ -3,6 +3,24 @@ description: Optimize code for performance, readability, or efficiency
 disable-model-invocation: false
 ---
 
+# optimize
+
+## Name
+
+bushido:optimize - Optimize code for performance, readability, or efficiency
+
+## Synopsis
+
+```
+/optimize [arguments]
+```
+
+## Description
+
+Optimize code for performance, readability, or efficiency
+
+## Implementation
+
 Optimize the specified code for better performance, maintainability, or resource efficiency.
 
 ## Process

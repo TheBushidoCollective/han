@@ -3,6 +3,24 @@ description: Design system architecture and high-level technical strategy
 disable-model-invocation: false
 ---
 
+# architect
+
+## Name
+
+bushido:architect - Design system architecture and high-level technical strategy
+
+## Synopsis
+
+```
+/architect [arguments]
+```
+
+## Description
+
+Design system architecture and high-level technical strategy
+
+## Implementation
+
 Design system architecture, technical strategy, and high-level structure for significant features or system changes.
 
 ## Process

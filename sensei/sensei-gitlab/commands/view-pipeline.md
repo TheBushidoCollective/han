@@ -4,6 +4,22 @@ description: View CI/CD pipeline status for a merge request or project
 
 # View GitLab Pipeline Status
 
+## Name
+
+sensei-gitlab:view-pipeline - View CI/CD pipeline status for a merge request or project
+
+## Synopsis
+
+```
+/view-pipeline [arguments]
+```
+
+## Description
+
+View CI/CD pipeline status for a merge request or project
+
+## Implementation
+
 View the status of CI/CD pipelines for a merge request or project.
 
 ## Usage

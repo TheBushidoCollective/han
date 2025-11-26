@@ -3,6 +3,24 @@ name: comment
 description: Add a comment to a Jira ticket
 ---
 
+# comment
+
+## Name
+
+sensei-jira:comment - Add a comment to a Jira ticket
+
+## Synopsis
+
+```
+/comment [arguments]
+```
+
+## Description
+
+Add a comment to a Jira ticket
+
+## Implementation
+
 Add a comment to a Jira ticket.
 
 **Usage**: `/comment PROJ-123 [optional: comment text]`

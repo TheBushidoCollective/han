@@ -3,6 +3,24 @@ name: complete
 description: Mark a Jira ticket as complete after validating acceptance criteria
 ---
 
+# complete
+
+## Name
+
+sensei-jira:complete - Mark a Jira ticket as complete after validating acceptance criteria
+
+## Synopsis
+
+```
+/complete [arguments]
+```
+
+## Description
+
+Mark a Jira ticket as complete after validating acceptance criteria
+
+## Implementation
+
 Complete a Jira ticket by validating acceptance criteria and transitioning to Done.
 
 **Usage**: `/complete PROJ-123`

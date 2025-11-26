@@ -3,6 +3,24 @@ description: Generate or update documentation for code, APIs, or systems
 disable-model-invocation: false
 ---
 
+# document
+
+## Name
+
+bushido:document - Generate or update documentation for code, APIs, or systems
+
+## Synopsis
+
+```
+/document [arguments]
+```
+
+## Description
+
+Generate or update documentation for code, APIs, or systems
+
+## Implementation
+
 Create or update documentation including README files, API docs, inline comments, or technical guides.
 
 ## Process

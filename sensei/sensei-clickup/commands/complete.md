@@ -3,6 +3,24 @@ name: complete
 description: Mark a ClickUp task as complete after validating checklist
 ---
 
+# complete
+
+## Name
+
+sensei-clickup:complete - Mark a ClickUp task as complete after validating checklist
+
+## Synopsis
+
+```
+/complete [arguments]
+```
+
+## Description
+
+Mark a ClickUp task as complete after validating checklist
+
+## Implementation
+
 Complete a ClickUp task by validating all checklist items and transitioning to Done.
 
 **Usage**: `/complete #ABC123` or `/complete ABC123`

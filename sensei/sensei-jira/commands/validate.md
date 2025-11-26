@@ -3,6 +3,24 @@ name: validate
 description: Validate acceptance criteria for a Jira ticket without changing status
 ---
 
+# validate
+
+## Name
+
+sensei-jira:validate - Validate acceptance criteria for a Jira ticket without changing status
+
+## Synopsis
+
+```
+/validate [arguments]
+```
+
+## Description
+
+Validate acceptance criteria for a Jira ticket without changing status
+
+## Implementation
+
 Validate that all acceptance criteria are met for a Jira ticket without transitioning status.
 
 **Usage**: `/validate PROJ-123`

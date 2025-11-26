@@ -3,6 +3,24 @@ description: Explain code, concepts, or technical decisions in clear, understand
 disable-model-invocation: false
 ---
 
+# explain
+
+## Name
+
+bushido:explain - Explain code, concepts, or technical decisions in clear, understandable terms
+
+## Synopsis
+
+```
+/explain [arguments]
+```
+
+## Description
+
+Explain code, concepts, or technical decisions in clear, understandable terms
+
+## Implementation
+
 Provide clear, concise explanations of code, technical concepts, or implementation decisions.
 
 ## Process

@@ -3,6 +3,24 @@ description: Debug and fix bugs, errors, or unexpected behavior
 disable-model-invocation: false
 ---
 
+# fix
+
+## Name
+
+bushido:fix - Debug and fix bugs, errors, or unexpected behavior
+
+## Synopsis
+
+```
+/fix [arguments]
+```
+
+## Description
+
+Debug and fix bugs, errors, or unexpected behavior
+
+## Implementation
+
 Investigate, diagnose, and fix bugs or unexpected behavior in the codebase.
 
 ## Process

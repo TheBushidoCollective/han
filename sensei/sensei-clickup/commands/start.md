@@ -3,6 +3,24 @@ name: start
 description: Start work on a ClickUp task (transition to In Progress)
 ---
 
+# start
+
+## Name
+
+sensei-clickup:start - Start work on a ClickUp task (transition to In Progress)
+
+## Synopsis
+
+```
+/start [arguments]
+```
+
+## Description
+
+Start work on a ClickUp task (transition to In Progress)
+
+## Implementation
+
 Start work on a ClickUp task by transitioning it to "In Progress" and displaying checklist.
 
 **Usage**: `/start #ABC123` or `/start ABC123`

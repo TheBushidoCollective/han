@@ -4,6 +4,22 @@ description: Multi-agent code review with confidence-based filtering
 
 # Code Review Workflow
 
+## Name
+
+bushido:review - Multi-agent code review with confidence-based filtering
+
+## Synopsis
+
+```
+/review [arguments]
+```
+
+## Description
+
+Multi-agent code review with confidence-based filtering
+
+## Implementation
+
 Automated multi-agent code review with confidence-based filtering. Runs parallel specialized review agents to identify high-confidence issues across quality, security, and discipline-specific concerns.
 
 ## Overview

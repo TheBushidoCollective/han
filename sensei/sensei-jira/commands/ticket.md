@@ -3,6 +3,24 @@ name: ticket
 description: Get detailed information about a specific Jira ticket
 ---
 
+# ticket
+
+## Name
+
+sensei-jira:ticket - Get detailed information about a specific Jira ticket
+
+## Synopsis
+
+```
+/ticket [arguments]
+```
+
+## Description
+
+Get detailed information about a specific Jira ticket
+
+## Implementation
+
 Retrieve and display comprehensive details for a Jira ticket.
 
 **Usage**: `/ticket PROJ-123`

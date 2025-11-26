@@ -3,6 +3,24 @@ name: start
 description: Start work on a Linear issue (transition to In Progress)
 ---
 
+# start
+
+## Name
+
+sensei-linear:start - Start work on a Linear issue (transition to In Progress)
+
+## Synopsis
+
+```
+/start [arguments]
+```
+
+## Description
+
+Start work on a Linear issue (transition to In Progress)
+
+## Implementation
+
 Start work on a Linear issue by transitioning it to "In Progress" and displaying acceptance criteria.
 
 **Usage**: `/start ENG-123`

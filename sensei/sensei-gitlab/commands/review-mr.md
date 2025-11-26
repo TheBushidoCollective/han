@@ -4,6 +4,22 @@ description: Get comprehensive review of a GitLab merge request
 
 # Review GitLab Merge Request
 
+## Name
+
+sensei-gitlab:review-mr - Get comprehensive review of a GitLab merge request
+
+## Synopsis
+
+```
+/review-mr [arguments]
+```
+
+## Description
+
+Get comprehensive review of a GitLab merge request
+
+## Implementation
+
 Get a comprehensive review of a GitLab merge request including commits, diffs, and pipeline status.
 
 ## Usage

@@ -3,6 +3,24 @@ description: Create tactical implementation plan for a feature or task
 disable-model-invocation: false
 ---
 
+# plan
+
+## Name
+
+bushido:plan - Create tactical implementation plan for a feature or task
+
+## Synopsis
+
+```
+/plan [arguments]
+```
+
+## Description
+
+Create tactical implementation plan for a feature or task
+
+## Implementation
+
 Create a detailed, actionable implementation plan for a specific feature, task, or piece of work.
 
 ## Process

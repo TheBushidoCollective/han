@@ -4,6 +4,22 @@ description: Search for code across your GitLab instance
 
 # Search GitLab Code
 
+## Name
+
+sensei-gitlab:search-code - Search for code across your GitLab instance
+
+## Synopsis
+
+```
+/search-code [arguments]
+```
+
+## Description
+
+Search for code across your GitLab instance
+
+## Implementation
+
 Search for code, files, or implementations across your GitLab instance using semantic or keyword search.
 
 ## Usage

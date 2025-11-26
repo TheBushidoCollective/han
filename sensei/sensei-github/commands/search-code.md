@@ -4,6 +4,22 @@ description: Search for code across GitHub repositories
 
 # Search GitHub Code
 
+## Name
+
+sensei-github:search-code - Search for code across GitHub repositories
+
+## Synopsis
+
+```
+/search-code [arguments]
+```
+
+## Description
+
+Search for code across GitHub repositories
+
+## Implementation
+
 Search for code, files, or implementations across GitHub repositories.
 
 ## Usage

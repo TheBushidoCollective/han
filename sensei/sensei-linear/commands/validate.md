@@ -3,6 +3,24 @@ name: validate
 description: Validate acceptance criteria for a Linear issue without changing status
 ---
 
+# validate
+
+## Name
+
+sensei-linear:validate - Validate acceptance criteria for a Linear issue without changing status
+
+## Synopsis
+
+```
+/validate [arguments]
+```
+
+## Description
+
+Validate acceptance criteria for a Linear issue without changing status
+
+## Implementation
+
 Validate that all acceptance criteria are met for a Linear issue without transitioning status.
 
 **Usage**: `/validate ENG-123`

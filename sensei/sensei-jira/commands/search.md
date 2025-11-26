@@ -3,6 +3,24 @@ name: search
 description: Search for Jira tickets using JQL or text
 ---
 
+# search
+
+## Name
+
+sensei-jira:search - Search for Jira tickets using JQL or text
+
+## Synopsis
+
+```
+/search [arguments]
+```
+
+## Description
+
+Search for Jira tickets using JQL or text
+
+## Implementation
+
 Search for Jira tickets using either JQL (Jira Query Language) or simple text search.
 
 **Usage**:

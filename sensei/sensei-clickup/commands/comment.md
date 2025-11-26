@@ -3,6 +3,24 @@ name: comment
 description: Add a comment to a ClickUp task
 ---
 
+# comment
+
+## Name
+
+sensei-clickup:comment - Add a comment to a ClickUp task
+
+## Synopsis
+
+```
+/comment [arguments]
+```
+
+## Description
+
+Add a comment to a ClickUp task
+
+## Implementation
+
 Add a comment to a ClickUp task.
 
 **Usage**: `/comment #ABC123 [optional: comment text]` or `/comment ABC123 [optional: comment text]`

@@ -3,6 +3,24 @@ name: task
 description: Get detailed information about a specific ClickUp task
 ---
 
+# task
+
+## Name
+
+sensei-clickup:task - Get detailed information about a specific ClickUp task
+
+## Synopsis
+
+```
+/task [arguments]
+```
+
+## Description
+
+Get detailed information about a specific ClickUp task
+
+## Implementation
+
 Retrieve and display comprehensive details for a ClickUp task.
 
 **Usage**: `/task #ABC123` or `/task ABC123`

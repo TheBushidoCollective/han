@@ -3,6 +3,24 @@ name: issue
 description: Get detailed information about a specific Linear issue
 ---
 
+# issue
+
+## Name
+
+sensei-linear:issue - Get detailed information about a specific Linear issue
+
+## Synopsis
+
+```
+/issue [arguments]
+```
+
+## Description
+
+Get detailed information about a specific Linear issue
+
+## Implementation
+
 Retrieve and display comprehensive details for a Linear issue.
 
 **Usage**: `/issue ENG-123`

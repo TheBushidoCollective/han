@@ -3,6 +3,24 @@ description: Write tests for code using test-driven development principles
 disable-model-invocation: false
 ---
 
+# test
+
+## Name
+
+bushido:test - Write tests for code using test-driven development principles
+
+## Synopsis
+
+```
+/test [arguments]
+```
+
+## Description
+
+Write tests for code using test-driven development principles
+
+## Implementation
+
 Write tests for the specified code or feature using test-driven development (TDD) methodology.
 
 ## Process
