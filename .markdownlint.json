@@ -10,6 +10,5 @@
   "MD003": false,
   "MD036": false,
   "default": true,
-  "line-length": false,
-  "ignores": ["node_modules/**", "**/node_modules/**"]
+  "line-length": false
 }

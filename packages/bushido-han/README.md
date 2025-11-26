@@ -70,6 +70,82 @@ Search for plugins in the Han marketplace.
 han plugin search [query]
 ```
 
+### han hook test
+
+Validate hook configurations for all installed plugins.
+
+```bash
+# Validate hook structure and syntax only
+han hook test
+
+# Validate AND execute hooks to verify they run successfully
+han hook test --execute
+```
+
+**Options:**
+
+- `--execute` - Execute hooks to verify they run successfully (in addition to validation)
+
+This command:
+
+- Tests all hooks in currently installed plugins (both project and local scopes)
+- Validates hook JSON structure and syntax
+- Checks for valid hook event types (SessionStart, Stop, UserPromptSubmit, etc.)
+- Ensures hook commands using `han hook run` have proper `--` separator
+- With `--execute`: Runs each hook command to verify it executes successfully
+- Displays clear pass/fail/skip status for each plugin
+- Exits with error code if any hooks fail validation or execution
+
+**Example output (validation only):**
+
+```
+🔍 Validating hooks for installed plugins...
+
+Results:
+========
+
+✅ Passed:
+  buki-markdownlint: Valid hooks configuration (Stop, SubagentStop)
+  bushido: Valid hooks configuration (SessionStart, UserPromptSubmit)
+
+⊘ Skipped (no hooks):
+  buki-typescript: No hooks.json found
+
+❌ Failed:
+  my-plugin: Unknown event type 'InvalidEvent'
+
+Summary:
+  Total: 4
+  Passed: 2
+  Failed: 1
+  Skipped: 1
+```
+
+**Example output (with --execute):**
+
+```
+🔍 Testing and executing hooks for installed plugins...
+
+Results:
+========
+
+✅ Passed:
+  buki-markdownlint: Valid hooks configuration (Stop, SubagentStop) (executed successfully)
+  bushido: Valid hooks configuration (SessionStart, UserPromptSubmit) (executed successfully)
+
+⊘ Skipped (no hooks):
+  buki-typescript: No hooks.json found
+
+❌ Failed:
+  my-plugin: Hook type 'Stop' failed execution: Command not found
+
+Summary:
+  Total: 4
+  Passed: 2
+  Failed: 1
+  Skipped: 1
+```
+
 ### han uninstall
 
 Remove all Han plugins and marketplace configuration.

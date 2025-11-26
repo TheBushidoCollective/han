@@ -470,4 +470,20 @@ test("han plugin uninstall handles non-existent plugin gracefully", () => {
 	}
 });
 
+// Test: han hook test shows help
+test("han hook test shows help", () => {
+	try {
+		const output = execSync(`node ${binPath} hook test --help`, {
+			encoding: "utf8",
+		});
+		strictEqual(
+			output.includes("Validate hook configurations"),
+			true,
+			"Expected help output to mention hook validation",
+		);
+	} catch (error) {
+		throw new Error(`Expected help to show, got error: ${error}`);
+	}
+});
+
 console.log("\nAll tests passed! ✓");

@@ -312,9 +312,9 @@ Contributions welcome! Please read CONTRIBUTING.md for guidelines.
 
 ## Support
 
-- GitHub Issues: https://github.com/thebushidocollective/sensei/issues
-- Documentation: https://thebushido.co
-- Discord: https://discord.gg/bushido
+- GitHub Issues: <https://github.com/thebushidocollective/sensei/issues>
+- Documentation: <https://thebushido.co>
+- Discord: <https://discord.gg/bushido>
 
 ---
 
