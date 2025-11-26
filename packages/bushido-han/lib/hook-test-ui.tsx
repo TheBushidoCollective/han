@@ -201,7 +201,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 														: "running";
 
 												return (
-													<Box key={`${hookType}-${plugin}-cmd-${cmdIndex}`}>
+													<Box
+														key={`${hookType}-${plugin}-${hook.command.slice(0, 20)}`}
+													>
 														<Text dimColor>
 															{isLast ? "  " : "│ "}
 															{isLastPlugin ? "  " : "│ "}
