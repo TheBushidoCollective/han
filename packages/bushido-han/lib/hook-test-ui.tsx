@@ -202,7 +202,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 												return (
 													<Box
-														key={`${hookType}-${plugin}-${hook.command.slice(0, 20)}`}
+														key={`${hookType}-${plugin}-${cmdIndex}-${hook.command.slice(0, 20)}`}
 													>
 														<Text dimColor>
 															{isLast ? "  " : "│ "}
