@@ -1,6 +1,6 @@
-import { Box, Text } from "ink";
+import { Box, Static, Text } from "ink";
 import Spinner from "ink-spinner";
-import type React from "react";
+import React from "react";
 
 interface HookResult {
 	plugin: string;
@@ -63,7 +63,14 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		).length;
 		const allComplete = total >= expectedForPlugin;
 		const hasFailed = failed > 0;
-		return { passed, failed, total, allComplete, hasFailed, results: pluginResults };
+		return {
+			passed,
+			failed,
+			total,
+			allComplete,
+			hasFailed,
+			results: pluginResults,
+		};
 	};
 
 	// Determine status for each hook type
@@ -81,6 +88,221 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		return "pending";
 	};
 
+	// Separate completed hook types from active ones for Static rendering
+	const completedHookTypes = hookTypes.filter((ht) => {
+		const status = getHookTypeStatus(ht);
+		return status === "completed" || status === "failed";
+	});
+
+	const activeHookTypes = hookTypes.filter((ht) => {
+		const status = getHookTypeStatus(ht);
+		return status === "running" || status === "pending";
+	});
+
+	// Helper to render a single hook type
+	const renderHookType = (hookType: string, hookTypeIndex: number, isStatic: boolean) => {
+		const status = getHookTypeStatus(hookType);
+		const pluginHooks = getPluginHooks(hookType);
+		const results = hookResults.get(hookType) || [];
+		const totalPassed = results.filter((r) => r.success).length;
+		const totalCount = results.length;
+		const totalHooks = hookStructure.get(hookType)?.length || 0;
+		// For static items, use their position in completedHookTypes
+		// For active items, check if it's the last active one
+		const isLastInSection = isStatic
+			? hookTypeIndex === completedHookTypes.length - 1 && activeHookTypes.length === 0
+			: hookTypeIndex === activeHookTypes.length - 1;
+		const isLast = isLastInSection && (isStatic ? activeHookTypes.length === 0 : true);
+
+		return (
+			<Box key={hookType} flexDirection="column">
+				{/* Hook type line */}
+				<Box>
+					<Text dimColor>{isLast ? "└─ " : "├─ "}</Text>
+					{status === "completed" && (
+						<Text color="green" bold>
+							✓{" "}
+						</Text>
+					)}
+					{status === "failed" && (
+						<Text color="red" bold>
+							✗{" "}
+						</Text>
+					)}
+					{status === "running" && (
+						<Text color="yellow">
+							<Spinner type="dots" />{" "}
+						</Text>
+					)}
+					{status === "pending" && <Text dimColor>○ </Text>}
+					<Text
+						bold={status === "running"}
+						color={
+							status === "running"
+								? "yellow"
+								: status === "failed"
+									? "red"
+									: undefined
+						}
+						dimColor={status === "pending"}
+					>
+						{hookType}
+					</Text>
+					{status === "completed" && (
+						<Text color="green">
+							{" "}
+							({totalPassed}/{totalCount})
+						</Text>
+					)}
+					{status === "failed" && (
+						<Text color="red">
+							{" "}
+							({totalPassed}/{totalCount})
+						</Text>
+					)}
+					{status === "running" && (
+						<Text dimColor>
+							{" "}
+							({totalPassed}/{totalHooks})
+						</Text>
+					)}
+					{status === "pending" && (
+						<Text dimColor> (0/{totalHooks})</Text>
+					)}
+				</Box>
+
+				{/* Plugin lines */}
+				{Array.from(pluginHooks.entries()).map(
+					([plugin, hooks], pluginIndex) => {
+						const { passed, total, allComplete, hasFailed, results: pluginResults } =
+							getPluginResults(hookType, plugin);
+						const isLastPlugin = pluginIndex === pluginHooks.size - 1;
+						const pluginStatus =
+							status === "pending"
+								? "pending"
+								: allComplete
+									? hasFailed
+										? "failed"
+										: "completed"
+									: status === "running" || status === "failed"
+										? "running"
+										: "pending";
+
+						return (
+							<Box key={`${hookType}-${plugin}`} flexDirection="column">
+								{/* Plugin name line */}
+								<Box>
+									<Text dimColor>
+										{isLast ? "  " : "│ "}
+										{isLastPlugin ? "└─" : "├─"}{" "}
+									</Text>
+									{pluginStatus === "completed" && (
+										<Text color="green">✓ </Text>
+									)}
+									{pluginStatus === "failed" && (
+										<Text color="red">✗ </Text>
+									)}
+									{pluginStatus === "running" && (
+										<Text color="yellow">
+											<Spinner type="dots" />{" "}
+										</Text>
+									)}
+									{pluginStatus === "pending" && <Text dimColor>○ </Text>}
+									<Text
+										dimColor={pluginStatus === "pending"}
+										color={
+											pluginStatus === "running"
+												? "yellow"
+												: pluginStatus === "failed"
+													? "red"
+													: undefined
+										}
+									>
+										{plugin}
+									</Text>
+									{pluginStatus === "completed" && (
+										<Text color="green">
+											{" "}
+											({passed}/{total})
+										</Text>
+									)}
+									{pluginStatus === "failed" && (
+										<Text color="red">
+											{" "}
+											({passed}/{total})
+										</Text>
+									)}
+									{pluginStatus === "running" && (
+										<Text dimColor>
+											{" "}
+											({passed}/{hooks.length})
+										</Text>
+									)}
+									{pluginStatus === "pending" && (
+										<Text dimColor> (0/{hooks.length})</Text>
+									)}
+								</Box>
+
+								{/* Command lines under plugin */}
+								{hooks.map((hook, cmdIndex) => {
+									const isLastCmd = cmdIndex === hooks.length - 1;
+									const result = pluginResults.find(
+										(r) => r.command === hook.command,
+									);
+									const cmdStatus = result
+										? result.success
+											? "completed"
+											: "failed"
+										: pluginStatus === "pending"
+											? "pending"
+											: "running";
+
+									return (
+										<Box
+											key={`${hookType}-${plugin}-${cmdIndex}-${hook.command.slice(0, 20)}`}
+										>
+											<Text dimColor>
+												{isLast ? "  " : "│ "}
+												{isLastPlugin ? "  " : "│ "}
+												{isLastCmd ? "└─" : "├─"}{" "}
+											</Text>
+											{cmdStatus === "completed" && (
+												<Text color="green">✓ </Text>
+											)}
+											{cmdStatus === "failed" && (
+												<Text color="red">✗ </Text>
+											)}
+											{cmdStatus === "running" && (
+												<Text color="yellow">
+													<Spinner type="dots" />{" "}
+												</Text>
+											)}
+											{cmdStatus === "pending" && (
+												<Text dimColor>○ </Text>
+											)}
+											<Text
+												dimColor={cmdStatus === "pending"}
+												color={
+													cmdStatus === "running" ? "yellow" : undefined
+												}
+											>
+												{hook.type === "prompt" && "[prompt] "}
+												{hook.command}
+											</Text>
+											{result?.timedOut && (
+												<Text color="red"> (timeout)</Text>
+											)}
+										</Box>
+									);
+								})}
+							</Box>
+						);
+					},
+				)}
+			</Box>
+		);
+	};
+
 	return (
 		<Box flexDirection="column" paddingY={1}>
 			{/* Header */}
@@ -90,195 +312,14 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				</Text>
 			</Box>
 
-			{/* Tree structure */}
+			{/* Completed hook types - rendered once via Static */}
+			<Static items={completedHookTypes}>
+				{(hookType, index) => renderHookType(hookType, index, true)}
+			</Static>
+
+			{/* Active/pending hook types - dynamically re-rendered */}
 			<Box flexDirection="column">
-				{hookTypes.map((hookType, hookTypeIndex) => {
-					const status = getHookTypeStatus(hookType);
-					const pluginHooks = getPluginHooks(hookType);
-					const results = hookResults.get(hookType) || [];
-					const totalPassed = results.filter((r) => r.success).length;
-					const totalCount = results.length;
-					const totalHooks = hookStructure.get(hookType)?.length || 0;
-					const isLast = hookTypeIndex === hookTypes.length - 1;
-
-					return (
-						<Box key={hookType} flexDirection="column">
-							{/* Hook type line */}
-							<Box>
-								<Text dimColor>{isLast ? "└─ " : "├─ "}</Text>
-								{status === "completed" && (
-									<Text color="green" bold>
-										✓{" "}
-									</Text>
-								)}
-								{status === "failed" && (
-									<Text color="red" bold>
-										✗{" "}
-									</Text>
-								)}
-								{status === "running" && (
-									<Text color="yellow">
-										<Spinner type="dots" />{" "}
-									</Text>
-								)}
-								{status === "pending" && <Text dimColor>○ </Text>}
-								<Text
-									bold={status === "running"}
-									color={status === "running" ? "yellow" : status === "failed" ? "red" : undefined}
-									dimColor={status === "pending"}
-								>
-									{hookType}
-								</Text>
-								{status === "completed" && (
-									<Text color="green">
-										{" "}
-										({totalPassed}/{totalCount})
-									</Text>
-								)}
-								{status === "failed" && (
-									<Text color="red">
-										{" "}
-										({totalPassed}/{totalCount})
-									</Text>
-								)}
-								{status === "running" && (
-									<Text dimColor>
-										{" "}
-										({totalPassed}/{totalHooks})
-									</Text>
-								)}
-								{status === "pending" && (
-									<Text dimColor> (0/{totalHooks})</Text>
-								)}
-							</Box>
-
-							{/* Plugin lines */}
-							{Array.from(pluginHooks.entries()).map(
-								([plugin, hooks], pluginIndex) => {
-									const { passed, total, allComplete, hasFailed, results } =
-										getPluginResults(hookType, plugin);
-									const isLastPlugin = pluginIndex === pluginHooks.size - 1;
-									const pluginStatus =
-										status === "pending"
-											? "pending"
-											: allComplete
-												? hasFailed
-													? "failed"
-													: "completed"
-												: status === "running" || status === "failed"
-													? "running"
-													: "pending";
-
-									return (
-										<Box key={`${hookType}-${plugin}`} flexDirection="column">
-											{/* Plugin name line */}
-											<Box>
-												<Text dimColor>
-													{isLast ? "  " : "│ "}
-													{isLastPlugin ? "└─" : "├─"}{" "}
-												</Text>
-												{pluginStatus === "completed" && (
-													<Text color="green">✓ </Text>
-												)}
-												{pluginStatus === "failed" && (
-													<Text color="red">✗ </Text>
-												)}
-												{pluginStatus === "running" && (
-													<Text color="yellow">
-														<Spinner type="dots" />{" "}
-													</Text>
-												)}
-												{pluginStatus === "pending" && <Text dimColor>○ </Text>}
-												<Text
-													dimColor={pluginStatus === "pending"}
-													color={
-														pluginStatus === "running" ? "yellow" : pluginStatus === "failed" ? "red" : undefined
-													}
-												>
-													{plugin}
-												</Text>
-												{pluginStatus === "completed" && (
-													<Text color="green">
-														{" "}
-														({passed}/{total})
-													</Text>
-												)}
-												{pluginStatus === "failed" && (
-													<Text color="red">
-														{" "}
-														({passed}/{total})
-													</Text>
-												)}
-												{pluginStatus === "running" && (
-													<Text dimColor>
-														{" "}
-														({passed}/{hooks.length})
-													</Text>
-												)}
-												{pluginStatus === "pending" && (
-													<Text dimColor> (0/{hooks.length})</Text>
-												)}
-											</Box>
-
-											{/* Command lines under plugin */}
-											{hooks.map((hook, cmdIndex) => {
-												const isLastCmd = cmdIndex === hooks.length - 1;
-												const result = results.find(
-													(r) => r.command === hook.command,
-												);
-												const cmdStatus = result
-													? result.success
-														? "completed"
-														: "failed"
-													: pluginStatus === "pending"
-														? "pending"
-														: "running";
-
-												return (
-													<Box
-														key={`${hookType}-${plugin}-${cmdIndex}-${hook.command.slice(0, 20)}`}
-													>
-														<Text dimColor>
-															{isLast ? "  " : "│ "}
-															{isLastPlugin ? "  " : "│ "}
-															{isLastCmd ? "└─" : "├─"}{" "}
-														</Text>
-														{cmdStatus === "completed" && (
-															<Text color="green">✓ </Text>
-														)}
-														{cmdStatus === "failed" && (
-															<Text color="red">✗ </Text>
-														)}
-														{cmdStatus === "running" && (
-															<Text color="yellow">
-																<Spinner type="dots" />{" "}
-															</Text>
-														)}
-														{cmdStatus === "pending" && (
-															<Text dimColor>○ </Text>
-														)}
-														<Text
-															dimColor={cmdStatus === "pending"}
-															color={
-																cmdStatus === "running" ? "yellow" : undefined
-															}
-														>
-															{hook.type === "prompt" && "[prompt] "}
-															{hook.command}
-														</Text>
-														{result?.timedOut && (
-															<Text color="red"> (timeout)</Text>
-														)}
-													</Box>
-												);
-											})}
-										</Box>
-									);
-								},
-							)}
-						</Box>
-					);
-				})}
+				{activeHookTypes.map((hookType, index) => renderHookType(hookType, index, false))}
 			</Box>
 
 			{/* Completion message */}
