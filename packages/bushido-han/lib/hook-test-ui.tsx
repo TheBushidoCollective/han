@@ -263,8 +263,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 												<Text
 													color={cmdStatus === "running" ? "yellow" : undefined}
 												>
-													{hook.type === "prompt" && "[prompt] "}
-													{hook.command}
+													{hook.type === "prompt"
+														? "[prompt]"
+														: hook.command.length > 60
+															? `${hook.command.slice(0, 60)}...`
+															: hook.command}
 												</Text>
 												{result?.timedOut && (
 													<Text color="red"> (timeout)</Text>
