@@ -59,7 +59,7 @@ Once installed, Claude Code gains access to these ClickUp MCP tools:
 
 ### Getting an API Token
 
-1. Go to https://app.clickup.com/settings/apps
+1. Go to <https://app.clickup.com/settings/apps>
 2. Click "Apps" in the left sidebar
 3. Click "API Token"
 4. Click "Generate" or use existing token
@@ -562,7 +562,7 @@ Let me validate these tasks before we stop...
 
 **Solution**:
 
-- Regenerate API token at https://app.clickup.com/settings/apps
+- Regenerate API token at <https://app.clickup.com/settings/apps>
 - Ensure no extra spaces or quotes around the token
 - Try wrapping token in single quotes in shell config
 - Verify token hasn't expired

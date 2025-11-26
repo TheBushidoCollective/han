@@ -177,10 +177,11 @@ hookCommand
 	.command("test")
 	.description("Validate hook configurations for all installed plugins")
 	.option("--execute", "Execute hooks to verify they run successfully")
-	.action(async (options: { execute?: boolean }) => {
+	.option("--verbose", "Show detailed output for all hooks")
+	.action(async (options: { execute?: boolean; verbose?: boolean }) => {
 		try {
 			const { testHooks } = await import("./hook-test.js");
-			await testHooks({ execute: options.execute });
+			await testHooks({ execute: options.execute, verbose: options.verbose });
 			process.exit(0);
 		} catch (error: unknown) {
 			console.error(

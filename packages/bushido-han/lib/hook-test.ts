@@ -1,6 +1,9 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { render } from "ink";
+import React from "react";
+import { HookTestUI } from "./hook-test-ui.js";
 import { getInstalledPlugins } from "./shared.js";
 
 interface HookCommand {
@@ -18,6 +21,12 @@ interface ValidationResult {
 	errors: string[];
 }
 
+interface HookResult {
+	plugin: string;
+	success: boolean;
+	output: string[];
+}
+
 // Valid hook event types according to Claude Code spec
 const VALID_HOOK_TYPES = [
 	"Notification",
@@ -32,7 +41,7 @@ const VALID_HOOK_TYPES = [
 ];
 
 /**
- * Execute a single hook command and stream output
+ * Execute a single hook command and collect output
  */
 async function executeHookCommand(
 	command: string,
@@ -40,7 +49,8 @@ async function executeHookCommand(
 	hookType: string,
 	pluginDir: string,
 	marketplaceRoot: string,
-): Promise<{ success: boolean; output: string }> {
+	verbose: boolean,
+): Promise<HookResult> {
 	return new Promise((resolve) => {
 		const child = spawn(command, {
 			shell: true,
@@ -51,37 +61,39 @@ async function executeHookCommand(
 			},
 		});
 
-		let stdout = "";
-		let stderr = "";
+		const output: string[] = [];
 
 		child.stdout?.on("data", (data) => {
 			const text = data.toString();
-			stdout += text;
-			process.stdout.write(`  [${plugin}/${hookType}] ${text}`);
+			const lines = text.split("\n").filter((l: string) => l.trim());
+			for (const line of lines) {
+				const formatted = `[${plugin}/${hookType}] ${line}`;
+				output.push(formatted);
+				if (verbose) {
+					process.stdout.write(`  ${formatted}\n`);
+				}
+			}
 		});
 
 		child.stderr?.on("data", (data) => {
 			const text = data.toString();
-			stderr += text;
-			process.stderr.write(`  [${plugin}/${hookType}] ${text}`);
+			const lines = text.split("\n").filter((l: string) => l.trim());
+			for (const line of lines) {
+				const formatted = `[${plugin}/${hookType}] ${line}`;
+				output.push(formatted);
+				if (verbose) {
+					process.stderr.write(`  ${formatted}\n`);
+				}
+			}
 		});
 
 		child.on("close", (code) => {
 			const success = code === 0;
-			const output = (stderr || stdout).trim();
-
-			if (success) {
-				console.log(`  ✓ ${plugin}/${hookType} completed`);
-			} else {
-				console.error(`  ✗ ${plugin}/${hookType} failed (exit code: ${code})`);
-			}
-
-			resolve({ success, output });
+			resolve({ plugin, success, output });
 		});
 
 		child.on("error", (error) => {
-			console.error(`  ✗ ${plugin}/${hookType} error: ${error.message}`);
-			resolve({ success: false, output: error.message });
+			resolve({ plugin, success: false, output: [error.message] });
 		});
 	});
 }
@@ -240,11 +252,16 @@ function collectHooks(
  */
 export async function testHooks(options?: {
 	execute?: boolean;
+	verbose?: boolean;
 }): Promise<void> {
 	const executeHooks = options?.execute ?? false;
-	const action = executeHooks ? "Testing and executing" : "Validating";
+	const verbose = options?.verbose ?? false;
 
-	console.log(`🔍 ${action} hooks for installed plugins...\\n`);
+	if (!executeHooks) {
+		// Validation-only mode (keep existing console output)
+		await testHooksValidationOnly();
+		return;
+	}
 
 	const marketplaceRoot = getMarketplaceRoot();
 	if (!marketplaceRoot) {
@@ -273,7 +290,149 @@ export async function testHooks(options?: {
 
 	// Display validation results
 	if (validationResults.length > 0) {
-		console.log("\\n❌ Validation Errors:\\n");
+		console.log("\n❌ Validation Errors:\n");
+		for (const result of validationResults) {
+			console.error(`  ${result.plugin}:`);
+			for (const error of result.errors) {
+				console.error(`    - ${error}`);
+			}
+		}
+		console.log();
+		process.exit(1);
+	}
+
+	// Display what hooks were found
+	const hookTypesFound = Object.keys(hooksByType).sort();
+	if (hookTypesFound.length === 0) {
+		console.log("No hooks configured in any installed plugins");
+		process.exit(0);
+	}
+
+	// Render Ink UI
+	const hookResults = new Map<string, HookResult[]>();
+	let currentType: string | null = null;
+	let isComplete = false;
+
+	const { rerender, waitUntilExit, unmount } = render(
+		React.createElement(HookTestUI, {
+			hookTypes: hookTypesFound,
+			hookResults,
+			currentType,
+			isComplete,
+			verbose,
+		}),
+	);
+
+	// Execute hooks by type
+	let hadFailures = false;
+
+	for (const hookType of hookTypesFound) {
+		const hooks = hooksByType[hookType];
+		currentType = hookType;
+
+		// Update UI
+		rerender(
+			React.createElement(HookTestUI, {
+				hookTypes: hookTypesFound,
+				hookResults,
+				currentType,
+				isComplete,
+				verbose,
+			}),
+		);
+
+		// Run all hooks of this type in parallel
+		const results = await Promise.all(
+			hooks.map((hook) =>
+				executeHookCommand(
+					hook.command,
+					hook.plugin,
+					hookType,
+					hook.pluginDir,
+					marketplaceRoot,
+					verbose,
+				),
+			),
+		);
+
+		// Store results
+		hookResults.set(hookType, results);
+
+		// Check for failures
+		if (results.some((r) => !r.success)) {
+			hadFailures = true;
+		}
+
+		// Update UI
+		rerender(
+			React.createElement(HookTestUI, {
+				hookTypes: hookTypesFound,
+				hookResults,
+				currentType,
+				isComplete,
+				verbose,
+			}),
+		);
+	}
+
+	// Mark as complete
+	isComplete = true;
+	currentType = null;
+
+	rerender(
+		React.createElement(HookTestUI, {
+			hookTypes: hookTypesFound,
+			hookResults,
+			currentType,
+			isComplete,
+			verbose,
+		}),
+	);
+
+	// Wait for user to exit (or auto-exit if verbose)
+	if (!verbose) {
+		await waitUntilExit();
+	} else {
+		unmount();
+	}
+
+	process.exit(hadFailures ? 1 : 0);
+}
+
+/**
+ * Validation-only mode (no execution)
+ */
+async function testHooksValidationOnly(): Promise<void> {
+	console.log("🔍 Validating hooks for installed plugins...\n");
+
+	const marketplaceRoot = getMarketplaceRoot();
+	if (!marketplaceRoot) {
+		console.error("Error: Could not find marketplace root directory");
+		console.error(
+			"This usually means the Han marketplace is not installed yet.",
+		);
+		console.error('Run "han plugin install" first to set up the marketplace.');
+		process.exit(1);
+	}
+
+	const projectPlugins = getInstalledPlugins("project");
+	const localPlugins = getInstalledPlugins("local");
+	const allPlugins = Array.from(new Set([...projectPlugins, ...localPlugins]));
+
+	if (allPlugins.length === 0) {
+		console.log("No plugins installed");
+		process.exit(0);
+	}
+
+	// Collect all hooks grouped by type
+	const { hooksByType, validationResults } = collectHooks(
+		allPlugins,
+		marketplaceRoot,
+	);
+
+	// Display validation results
+	if (validationResults.length > 0) {
+		console.log("\n❌ Validation Errors:\n");
 		for (const result of validationResults) {
 			console.error(`  ${result.plugin}:`);
 			for (const error of result.errors) {
@@ -291,7 +450,7 @@ export async function testHooks(options?: {
 		process.exit(0);
 	}
 
-	console.log("\\nFound hooks:");
+	console.log("\nFound hooks:");
 	for (const hookType of hookTypesFound.sort()) {
 		const count = hooksByType[hookType].length;
 		const plugins = [
@@ -301,50 +460,7 @@ export async function testHooks(options?: {
 	}
 	console.log();
 
-	if (!executeHooks) {
-		console.log("✅ All hooks validated successfully");
-		console.log("\\nTip: Run with --execute to test hook execution\\n");
-		process.exit(0);
-	}
-
-	// Execute hooks by type (like Claude Code does)
-	console.log("\\n🚀 Executing hooks...\\n");
-
-	let hadFailures = false;
-
-	for (const hookType of hookTypesFound.sort()) {
-		const hooks = hooksByType[hookType];
-		console.log(`\\n📌 Executing ${hookType} hooks (${hooks.length}):\\n`);
-
-		// Run all hooks of this type in parallel (like Claude Code)
-		const results = await Promise.all(
-			hooks.map((hook) =>
-				executeHookCommand(
-					hook.command,
-					hook.plugin,
-					hookType,
-					hook.pluginDir,
-					marketplaceRoot,
-				),
-			),
-		);
-
-		// Check for failures
-		const failures = results.filter((r) => !r.success);
-		if (failures.length > 0) {
-			hadFailures = true;
-			console.error(
-				`\\n  ⚠️  ${failures.length}/${hooks.length} ${hookType} hook(s) failed\\n`,
-			);
-		} else {
-			console.log(`\\n  ✓ All ${hooks.length} ${hookType} hook(s) passed\\n`);
-		}
-	}
-
-	console.log("\\n" + "=".repeat(60));
-	if (hadFailures) {
-		console.error("\\n❌ Some hooks failed execution\\n");
-		process.exit(1);
-	}
-	console.log("\\n✅ All hooks executed successfully\\n");
+	console.log("✅ All hooks validated successfully");
+	console.log("\nTip: Run with --execute to test hook execution\n");
+	process.exit(0);
 }
