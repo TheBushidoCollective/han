@@ -121,7 +121,7 @@ No issues found. Checked for bugs and CLAUDE.md compliance.
   - You must provide the full sha. Commands like `https://github.com/owner/repo/blob/$(git rev-parse HEAD)/foo/bar` will not work, since your comment will be directly rendered in Markdown.
   - Repo name must match the repo you're code reviewing
 
-  - # sign after the file name
+  - `#` sign after the file name
 
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
