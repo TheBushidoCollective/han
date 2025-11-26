@@ -52,6 +52,7 @@ Once installed, this buki automatically validates your Ruby code:
 ### Object-Oriented Programming
 
 Learn Ruby's elegant OOP features:
+
 - Classes, modules, and inheritance
 - Mixins and composition patterns
 - Method visibility (public, private, protected)
@@ -61,6 +62,7 @@ Learn Ruby's elegant OOP features:
 ### Blocks, Procs, and Lambdas
 
 Master Ruby's functional programming:
+
 - Block syntax and yielding
 - Procs vs Lambdas
 - Closures and scope
@@ -70,6 +72,7 @@ Master Ruby's functional programming:
 ### Metaprogramming
 
 Harness Ruby's dynamic nature:
+
 - Dynamic method definition
 - method_missing and const_missing
 - Reflection and introspection
@@ -79,6 +82,7 @@ Harness Ruby's dynamic nature:
 ### Gems and Bundler
 
 Manage dependencies effectively:
+
 - Gemfile and Bundler commands
 - Creating and publishing gems
 - Gemspec configuration
@@ -88,6 +92,7 @@ Manage dependencies effectively:
 ### Standard Library
 
 Utilize Ruby's built-in power:
+
 - Enumerable methods (map, select, reduce, etc.)
 - Arrays and Hashes
 - File I/O and directories

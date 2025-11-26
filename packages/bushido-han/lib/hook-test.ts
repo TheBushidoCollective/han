@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getInstalledPlugins, readOrCreateSettings } from "./shared.js";
@@ -8,6 +9,7 @@ interface HookTestResult {
 	message: string;
 	hookType?: string;
 	error?: string;
+	executionResults?: Array<{ hookType: string; success: boolean; output?: string }>;
 }
 
 // Valid hook event types according to Claude Code spec
@@ -24,11 +26,36 @@ const VALID_HOOK_TYPES = [
 ];
 
 /**
+ * Execute a hook command and return whether it succeeded
+ */
+function executeHookCommand(command: string): { success: boolean; output?: string } {
+	try {
+		const result = spawnSync(command, {
+			shell: true,
+			encoding: "utf8",
+			env: { ...process.env },
+			timeout: 30000, // 30 second timeout
+		});
+
+		const success = result.status === 0;
+		const output = result.stderr || result.stdout;
+
+		return { success, output: output ? output.trim() : undefined };
+	} catch (error: unknown) {
+		return {
+			success: false,
+			output: error instanceof Error ? error.message : String(error),
+		};
+	}
+}
+
+/**
  * Test a single hook configuration
  */
 function testHookConfig(
 	pluginName: string,
 	hooksPath: string,
+	executeHooks: boolean,
 ): HookTestResult {
 	// Check if hooks.json exists
 	if (!existsSync(hooksPath)) {
@@ -54,6 +81,12 @@ function testHookConfig(
 
 		// Validate each hook type
 		const errors: string[] = [];
+		const executionResults: Array<{
+			hookType: string;
+			success: boolean;
+			output?: string;
+		}> = [];
+
 		for (const hookType of Object.keys(hooksConfig.hooks)) {
 			if (!VALID_HOOK_TYPES.includes(hookType)) {
 				errors.push(`Unknown event type '${hookType}'`);
@@ -74,10 +107,13 @@ function testHookConfig(
 					continue;
 				}
 
-				// Validate individual hook commands
+				// Validate and execute individual hook commands
 				for (const individualHook of hook.hooks) {
 					if (individualHook.type === "command") {
-						if (!individualHook.command || typeof individualHook.command !== "string") {
+						if (
+							!individualHook.command ||
+							typeof individualHook.command !== "string"
+						) {
 							errors.push(
 								`Hook type '${hookType}' has command hook with missing or invalid command`,
 							);
@@ -91,6 +127,22 @@ function testHookConfig(
 									`Hook command uses 'han hook run' but missing '--' separator: ${individualHook.command}`,
 								);
 							}
+
+							// Execute hook if requested
+							if (executeHooks) {
+								const execResult = executeHookCommand(individualHook.command);
+								executionResults.push({
+									hookType,
+									success: execResult.success,
+									output: execResult.output,
+								});
+
+								if (!execResult.success) {
+									errors.push(
+										`Hook type '${hookType}' failed execution: ${execResult.output || "Unknown error"}`,
+									);
+								}
+							}
 						}
 					}
 				}
@@ -102,13 +154,18 @@ function testHookConfig(
 				plugin: pluginName,
 				status: "fail",
 				message: errors.join("; "),
+				executionResults: executionResults.length > 0 ? executionResults : undefined,
 			};
 		}
+
+		const hookTypes = Object.keys(hooksConfig.hooks).join(", ");
+		const executionStatus = executeHooks ? " (executed successfully)" : "";
 
 		return {
 			plugin: pluginName,
 			status: "pass",
-			message: `Valid hooks configuration (${Object.keys(hooksConfig.hooks).join(", ")})`,
+			message: `Valid hooks configuration (${hookTypes})${executionStatus}`,
+			executionResults: executionResults.length > 0 ? executionResults : undefined,
 		};
 	} catch (error: unknown) {
 		return {
@@ -144,8 +201,11 @@ function getMarketplaceRoot(): string | null {
 /**
  * Test all hooks in installed plugins
  */
-export async function testHooks(): Promise<void> {
-	console.log("🔍 Testing hooks for installed plugins...\n");
+export async function testHooks(options?: { execute?: boolean }): Promise<void> {
+	const executeHooks = options?.execute ?? false;
+	const action = executeHooks ? "Testing and executing" : "Validating";
+
+	console.log(`🔍 ${action} hooks for installed plugins...\n`);
 
 	const marketplaceRoot = getMarketplaceRoot();
 	if (!marketplaceRoot) {
@@ -191,7 +251,7 @@ export async function testHooks(): Promise<void> {
 		}
 
 		const hooksPath = join(pluginDir, "hooks", "hooks.json");
-		const result = testHookConfig(plugin, hooksPath);
+		const result = testHookConfig(plugin, hooksPath, executeHooks);
 		results.push(result);
 	}
 
