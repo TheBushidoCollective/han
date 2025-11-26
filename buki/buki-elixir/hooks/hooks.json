@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs -- mix do deps.get, format --check-formatted"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with formatter.exs -- mix do deps.get, format --check-formatted"
           },
           {
             "type": "command",
@@ -27,7 +27,7 @@
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs -- mix do deps.get, format --check-formatted"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with formatter.exs -- mix do deps.get, format --check-formatted"
           },
           {
             "type": "command",
