@@ -31,7 +31,7 @@
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs -- mix test"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with mix.exs -- mix test --stale"
           }
         ]
       }
