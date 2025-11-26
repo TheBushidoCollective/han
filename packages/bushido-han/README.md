@@ -79,6 +79,7 @@ han hook test
 ```
 
 This command:
+
 - Tests all hooks in currently installed plugins (both project and local scopes)
 - Validates hook JSON structure and syntax
 - Checks for valid hook event types (SessionStart, Stop, UserPromptSubmit, etc.)
@@ -87,6 +88,7 @@ This command:
 - Exits with error code if any hooks fail validation
 
 **Example output:**
+
 ```
 🔍 Testing hooks for installed plugins...
 
