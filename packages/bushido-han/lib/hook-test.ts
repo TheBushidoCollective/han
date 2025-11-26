@@ -383,7 +383,7 @@ async function executeHooksWithUI(
 	marketplaceRoot: string,
 	verbose: boolean,
 ): Promise<void> {
-	return new Promise((resolve) => {
+	return new Promise((_resolve) => {
 		// Build hook structure first (hooksByType already contains HookCommand with type and timeout)
 		const hookStructure = new Map<string, HookCommand[]>();
 		for (const hookType of hookTypesFound) {
