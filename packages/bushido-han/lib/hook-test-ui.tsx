@@ -55,12 +55,19 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		const pluginResults = results.filter((r) => r.plugin === plugin);
 		const passed = pluginResults.filter((r) => r.success).length;
 		const total = pluginResults.length;
-		return { passed, total, allComplete: total > 0, results: pluginResults };
+		// Get expected count from hook structure
+		const expectedHooks = hookStructure.get(hookType) || [];
+		const expectedForPlugin = expectedHooks.filter((h) => h.plugin === plugin).length;
+		const allComplete = total >= expectedForPlugin;
+		return { passed, total, allComplete, results: pluginResults };
 	};
 
 	// Determine status for each hook type
 	const getHookTypeStatus = (hookType: string) => {
-		if (hookResults.has(hookType)) {
+		const results = hookResults.get(hookType) || [];
+		const expectedHooks = hookStructure.get(hookType) || [];
+		// Only completed when all expected hooks have results
+		if (results.length >= expectedHooks.length && expectedHooks.length > 0) {
 			return "completed";
 		}
 		if (hookType === currentType) {
