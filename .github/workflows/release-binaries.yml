@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.18.2)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -89,16 +97,17 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
             packages/bushido-han/dist/binaries/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(github.ref, '-') }}
+          prerelease: ${{ contains(inputs.tag || github.ref, '-') }}
 
   update-homebrew:
     needs: build-and-release
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.ref, '-') }}  # Skip for prereleases
+    if: ${{ !contains(inputs.tag || github.ref, '-') }}  # Skip for prereleases
     steps:
       - name: Checkout homebrew-tap
         uses: actions/checkout@v4
@@ -109,7 +118,7 @@ jobs:
 
       - name: Update formula
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.tag || github.ref_name }}
         run: |
           VERSION="${VERSION#v}"
           REPO="TheBushidoCollective/han"
@@ -163,9 +172,11 @@ jobs:
 
       - name: Commit and push
         working-directory: homebrew-tap
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/han.rb
-          git commit -m "Update han to ${GITHUB_REF_NAME}"
+          git commit -m "Update han to ${TAG}"
           git push

@@ -88,49 +88,41 @@ export default function Home() {
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
 						Getting Started
 					</h2>
-					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
-						Three ways to add Han to your Claude Code workflow
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+						Install han globally then add plugins to your projects
+					</p>
+					<p className="text-center text-amber-600 dark:text-amber-400 mb-8 max-w-2xl mx-auto text-sm">
+						Note: Hooks require global installation. Use one of the methods below
+						to install the han CLI globally.
 					</p>
 					<div className="max-w-4xl mx-auto space-y-6">
 						<InstallMethodCard
 							number="1"
-							title="Automatic Installation"
-							description="Use the han CLI tool to automatically detect and install appropriate plugins. Use --scope to control where plugins are installed (default: user)."
-							code={`# Install to user settings (default)
-npx @thebushidocollective/han plugin install --auto
-
-# Install to project settings
-npx @thebushidocollective/han plugin install --auto --scope project
-
-# Install to local settings
-npx @thebushidocollective/han plugin install --auto --scope local`}
+							title="Quick Install (Recommended)"
+							description="Install the han CLI globally with a single command"
+							code="curl -fsSL https://han.guru/install.sh | sh"
 						/>
 						<InstallMethodCard
 							number="2"
-							title="Via claude CLI"
-							description="Use Claude Code's built-in plugin command"
-							code="claude plugin marketplace add thebushidocollective/han"
+							title="Homebrew (macOS & Linux)"
+							description="Install via Homebrew for easy updates"
+							code="brew install thebushidocollective/tap/han"
 						/>
 						<InstallMethodCard
 							number="3"
-							title="Via /plugin Command"
-							description="Use Claude Code's built-in plugin command"
-							code="/plugin marketplace add thebushidocollective/han"
+							title="npm (Global)"
+							description="Install globally via npm"
+							code="npm install -g @thebushidocollective/han"
 						/>
 						<InstallMethodCard
 							number="4"
-							title="Manual Configuration"
-							description="Add to .claude/settings.json"
-							code={`{
-  "extraKnownMarketplaces": {
-    "han": {
-      "source": {
-        "source": "github",
-        "repo": "thebushidocollective/han"
-      }
-    }
-  }
-}`}
+							title="Automatic Plugin Detection"
+							description="After installing han globally, use it to auto-detect and install plugins for your project"
+							code={`# Analyze codebase and recommend plugins
+han plugin install --auto
+
+# Install to project settings (shared via git)
+han plugin install --auto --scope project`}
 						/>
 					</div>
 				</div>
