@@ -4,12 +4,6 @@ Validation and quality enforcement for React Native Web projects, ensuring code 
 
 ## What This Buki Provides
 
-### Validation Hooks
-
-- **TypeScript Validation**: Runs `tsc --noEmit` to ensure type safety
-- **Type Checking**: Validates React Native Web component types and prop types
-- **Cross-Platform Validation**: Ensures code follows React Native Web cross-platform patterns
-
 ### Skills
 
 This buki provides the following skills:
@@ -34,14 +28,6 @@ Or install manually:
 claude plugin marketplace add thebushidocollective/han
 claude plugin install buki-react-native-web@han
 ```
-
-## Usage
-
-Once installed, this buki automatically validates your React Native Web code:
-
-- When you finish a conversation with Claude Code
-- When Claude Code agents complete their work
-- Before commits (when combined with git hooks)
 
 ## Requirements
 

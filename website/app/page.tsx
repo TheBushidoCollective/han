@@ -92,8 +92,8 @@ export default function Home() {
 						Install han globally then add plugins to your projects
 					</p>
 					<p className="text-center text-amber-600 dark:text-amber-400 mb-8 max-w-2xl mx-auto text-sm">
-						Note: Hooks require global installation. Use one of the methods below
-						to install the han CLI globally.
+						Note: Hooks require global installation. Use one of the methods
+						below to install the han CLI globally.
 					</p>
 					<div className="max-w-4xl mx-auto space-y-6">
 						<InstallMethodCard
