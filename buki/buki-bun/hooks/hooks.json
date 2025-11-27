@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
+            "command": "han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
           }
         ]
       }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
+            "command": "han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
           }
         ]
       }

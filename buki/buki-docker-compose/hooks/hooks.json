@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
+            "command": "han hook run --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
+            "command": "han hook run --fail-fast --dirs-with docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml -- docker compose config > /dev/null"
           }
         ]
       }
