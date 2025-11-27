@@ -589,13 +589,6 @@
       ]
     },
     {
-      "name": "buki-testng",
-      "description": "Comprehensive TestNG testing framework skills for Java projects with advanced features like data providers and parallel execution.",
-      "source": "./buki/buki-testng",
-      "category": "Weapon",
-      "keywords": ["testng", "testing", "java", "skill"]
-    },
-    {
       "name": "buki-typescript",
       "description": "Skills for TypeScript type system mastery.",
       "source": "./buki/buki-typescript",
