@@ -112,8 +112,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/bushido-han/package.json
           git pull --rebase --autostash origin main
+          git add packages/bushido-han/package.json
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main
 
