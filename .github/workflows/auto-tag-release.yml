@@ -84,12 +84,8 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
           "
 
-      - name: Sync platform package versions
-        working-directory: ./packages/bushido-han
-        run: node scripts/sync-platform-versions.js
-
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: ./packages/bushido-han
 
       - name: Build package

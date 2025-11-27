@@ -72,6 +72,10 @@ jobs:
             fi
           done
 
+      - name: Sync optionalDependencies versions
+        working-directory: ./packages/bushido-han
+        run: node scripts/sync-platform-versions.js
+
       - name: Build TypeScript
         working-directory: ./packages/bushido-han
         run: npm run build
