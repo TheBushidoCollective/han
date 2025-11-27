@@ -6,6 +6,8 @@ A curated marketplace of Claude Code plugins built on the foundation of the seve
 
 ## Installation
 
+> **Note:** Hooks require global installation. Use one of the methods below to install han globally on your system.
+
 ### Quick Install (Recommended)
 
 ```bash
