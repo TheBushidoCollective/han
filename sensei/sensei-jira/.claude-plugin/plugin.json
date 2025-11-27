@@ -1,6 +1,6 @@
 {
   "name": "sensei-jira",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Official Atlassian MCP server for Jira and Confluence integration with OAuth authentication. Provides ticket management, JQL search, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
@@ -21,7 +21,11 @@
   "mcpServers": {
     "atlassian": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.atlassian.com/v1/sse"
+      ]
     }
   }
 }

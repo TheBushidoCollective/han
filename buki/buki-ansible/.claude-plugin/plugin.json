@@ -1,6 +1,6 @@
 {
   "name": "buki-ansible",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Ansible playbook validation and configuration management best practices",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ansible", "configuration-management", "devops", "automation"]
+  "keywords": [
+    "ansible",
+    "configuration-management",
+    "devops",
+    "automation"
+  ]
 }

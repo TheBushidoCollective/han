@@ -1,6 +1,6 @@
 {
   "name": "do-content-creator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["content", "writing", "marketing", "storytelling", "engagement"]
+  "keywords": [
+    "content",
+    "writing",
+    "marketing",
+    "storytelling",
+    "engagement"
+  ]
 }

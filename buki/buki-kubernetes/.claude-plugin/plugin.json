@@ -1,6 +1,6 @@
 {
   "name": "buki-kubernetes",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Kubernetes manifest validation and best practices",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["kubernetes", "k8s", "devops", "infrastructure"]
+  "keywords": [
+    "kubernetes",
+    "k8s",
+    "devops",
+    "infrastructure"
+  ]
 }

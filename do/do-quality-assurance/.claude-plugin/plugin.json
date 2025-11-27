@@ -1,6 +1,6 @@
 {
   "name": "do-quality-assurance",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["quality", "testing", "qa", "reliability"]
+  "keywords": [
+    "quality",
+    "testing",
+    "qa",
+    "reliability"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "buki-react",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced React skills for hooks, context, and performance optimization.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["react", "hooks", "performance"]
+  "keywords": [
+    "react",
+    "hooks",
+    "performance"
+  ]
 }

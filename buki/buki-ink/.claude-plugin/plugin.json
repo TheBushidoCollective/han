@@ -1,6 +1,6 @@
 {
   "name": "buki-ink",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced Ink skills for building interactive terminal UIs with React components, hooks, and layout patterns.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,12 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ink", "terminal", "cli", "react", "ui", "tui"]
+  "keywords": [
+    "ink",
+    "terminal",
+    "cli",
+    "react",
+    "ui",
+    "tui"
+  ]
 }
