@@ -341,6 +341,20 @@
       "keywords": ["markdownlint", "markdown", "linting", "documentation"]
     },
     {
+      "name": "buki-maven",
+      "description": "Validation and quality enforcement for Apache Maven projects with dependency management, build lifecycle, and plugin configuration skills.",
+      "source": "./buki/buki-maven",
+      "category": "Weapon",
+      "keywords": [
+        "maven",
+        "java",
+        "build",
+        "dependency-management",
+        "pom",
+        "validation"
+      ]
+    },
+    {
       "name": "buki-mocha",
       "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
       "source": "./buki/buki-mocha",
