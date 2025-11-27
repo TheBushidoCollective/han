@@ -1,6 +1,6 @@
 {
 	"name": "@thebushidocollective/han",
-	"version": "1.18.0",
+	"version": "1.18.1",
 	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
@@ -46,15 +46,16 @@
 	},
 	"files": [
 		"bin/",
-		"dist/",
+		"dist/bundle.js",
+		"dist/lib/",
 		"README.md"
 	],
 	"optionalDependencies": {
-		"@thebushidocollective/han-darwin-arm64": "1.17.0",
-		"@thebushidocollective/han-darwin-x64": "1.17.0",
-		"@thebushidocollective/han-linux-x64": "1.17.0",
-		"@thebushidocollective/han-linux-arm64": "1.17.0",
-		"@thebushidocollective/han-win32-x64": "1.17.0"
+		"@thebushidocollective/han-darwin-arm64": "1.18.1",
+		"@thebushidocollective/han-darwin-x64": "1.18.1",
+		"@thebushidocollective/han-linux-x64": "1.18.1",
+		"@thebushidocollective/han-linux-arm64": "1.18.1",
+		"@thebushidocollective/han-win32-x64": "1.18.1"
 	},
 	"devDependencies": {
 		"@anthropic-ai/claude-agent-sdk": "0.1.50",
