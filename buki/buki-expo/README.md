@@ -4,12 +4,6 @@ Validation and quality enforcement for Expo React Native projects.
 
 ## What This Buki Provides
 
-### Validation Hooks
-
-- **TypeScript Type Check**: Runs TypeScript compiler to validate types in Expo projects
-- **Fast Validation**: Provides quick feedback on type errors before commits
-- **Expo Project Detection**: Validates only directories with app.json files
-
 ### Skills
 
 This buki provides the following skills:
@@ -34,16 +28,6 @@ Or install manually:
 claude plugin marketplace add thebushidocollective/han
 claude plugin install buki-expo@han
 ```
-
-## Usage
-
-Once installed, this buki automatically validates your Expo code:
-
-- When you finish a conversation with Claude Code
-- When Claude Code agents complete their work
-- Before commits (when combined with git hooks)
-
-The validation runs `tsc --noEmit` to check for TypeScript type errors without generating output files.
 
 ## Requirements
 
