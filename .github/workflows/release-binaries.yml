@@ -72,6 +72,16 @@ jobs:
             fi
           done
 
+      - name: Build TypeScript
+        working-directory: ./packages/bushido-han
+        run: npm run build
+
+      - name: Publish main package to npm
+        working-directory: ./packages/bushido-han
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public || echo "Failed to publish main package (may already exist)"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
