@@ -205,9 +205,16 @@ export default async function PluginPage({
 							<div className="flex items-center space-x-4 mb-4">
 								<div className="text-6xl">{plugin.metadata.icon}</div>
 								<div>
-									<h1 className="text-5xl font-bold text-gray-900 dark:text-white">
-										{plugin.metadata.title}
-									</h1>
+									<div className="flex items-center gap-3">
+										<h1 className="text-5xl font-bold text-gray-900 dark:text-white">
+											{plugin.metadata.title}
+										</h1>
+										{pluginJson.version && (
+											<span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm font-mono">
+												v{pluginJson.version}
+											</span>
+										)}
+									</div>
 									<p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
 										{plugin.metadata.description}
 									</p>
