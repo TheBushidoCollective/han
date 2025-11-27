@@ -45,79 +45,10 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 
 ## Installation
 
-### Prerequisites
-
-1. **Jira Access**: You need access to a Jira instance (Cloud or Data Center)
-2. **API Token**: Generate an Atlassian API token
-3. **Node.js**: For running the MCP server (comes with Claude Code)
-
-### Getting an API Token
-
-1. Go to <https://id.atlassian.com/manage-profile/security/api-tokens>
-2. Click "Create API token"
-3. Give it a name (e.g., "Claude Code MCP")
-4. Copy the token immediately (it won't be shown again)
-5. Save it securely
-
-### Via Han Marketplace
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install sensei-jira@han
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install sensei-jira@han
-```
-
-### Configuration
-
-Set required environment variables:
-
-```bash
-export ATLASSIAN_API_TOKEN="your-api-token-here"
-export ATLASSIAN_EMAIL="your-email@company.com"
-export ATLASSIAN_SITE_URL="https://your-company.atlassian.net"
-```
-
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`) for persistence:
-
-```bash
-echo 'export ATLASSIAN_API_TOKEN="your-api-token"' >> ~/.zshrc
-echo 'export ATLASSIAN_EMAIL="your-email@company.com"' >> ~/.zshrc
-echo 'export ATLASSIAN_SITE_URL="https://your-company.atlassian.net"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Verify Installation
-
-Test the MCP server connection:
-
-```bash
-# Should connect without errors
-npx -y @modelcontextprotocol/server-atlassian
-```
-
-### Manual Installation
-
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "atlassian": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-atlassian"],
-      "env": {
-        "ATLASSIAN_API_TOKEN": "your-api-token",
-        "ATLASSIAN_EMAIL": "your-email@company.com",
-        "ATLASSIAN_SITE_URL": "https://your-company.atlassian.net"
-      }
-    }
-  }
-}
+han install sensei-jira
 ```
 
 ## Usage

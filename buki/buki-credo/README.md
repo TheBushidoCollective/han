@@ -14,12 +14,8 @@ Advanced Credo skills for code analysis and style checking in Elixir.
 
 ## Installation
 
-Enable in `.claude/settings.json`:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
-```json
-{
-  "enabledPlugins": {
-    "buki-credo@han": true
-  }
-}
+```bash
+han install buki-credo
 ```

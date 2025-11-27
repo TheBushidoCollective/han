@@ -36,6 +36,14 @@ han hook run --fail-fast --dirs-with biome.json -- npx biome check .
 
 This ensures all packages in your monorepo pass Biome validation before work is marked complete.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-biome
+```
+
 ## License
 
 Licensed under MIT - see repository for details.

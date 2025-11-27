@@ -190,6 +190,14 @@ When improving this plugin:
 4. Run validation hooks
 5. Ensure all examples remain accurate
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-claude-plugin-development
+```
+
 ## License
 
 Part of the Bushido Collective Sensei plugin suite.

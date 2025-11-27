@@ -21,17 +21,10 @@ This buki provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install --auto
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install buki-bun@han
+han install buki-bun
 ```
 
 ## Usage

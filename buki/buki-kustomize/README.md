@@ -26,3 +26,11 @@ curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack
 ## Hook Behavior
 
 Validates Kustomize configurations in directories containing `kustomization.yaml` using `kustomize build`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-kustomize
+```

@@ -38,6 +38,14 @@ Once enabled, Claude will automatically apply these foundational principles and 
 - Structural design principles and patterns
 - Professional development standards
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install bushido
+```
+
 ## License
 
 Licensed under MIT -

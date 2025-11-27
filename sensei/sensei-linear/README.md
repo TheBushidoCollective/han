@@ -48,73 +48,10 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 
 ## Installation
 
-### Prerequisites
-
-1. **Linear Workspace**: You need access to a Linear workspace
-2. **API Key**: Generate a Linear API key
-3. **Node.js**: For running the MCP server (comes with Claude Code)
-
-### Getting an API Key
-
-1. Go to <https://linear.app/settings/api>
-2. Click "Create new API key"
-3. Give it a name (e.g., "Claude Code MCP")
-4. Copy the API key immediately (it won't be shown again)
-5. Save it securely
-
-### Via Han Marketplace
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install sensei-linear@han
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install sensei-linear@han
-```
-
-### Configuration
-
-Set required environment variable:
-
-```bash
-export LINEAR_API_KEY="lin_api_xxxxxxxxxxxxxxxxxxxxxxxx"
-```
-
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`) for persistence:
-
-```bash
-echo 'export LINEAR_API_KEY="lin_api_xxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Verify Installation
-
-Test the MCP server connection:
-
-```bash
-# Should connect without errors
-LINEAR_API_KEY="your-key" npx -y @modelcontextprotocol/server-linear
-```
-
-### Manual Installation
-
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "linear": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-linear"],
-      "env": {
-        "LINEAR_API_KEY": "lin_api_xxxxxxxxxxxxxxxxxxxxxxxx"
-      }
-    }
-  }
-}
+han install sensei-linear
 ```
 
 ## Usage

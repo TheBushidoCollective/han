@@ -16,17 +16,10 @@ This buki provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install buki-expo@han
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install buki-expo@han
+han install buki-expo
 ```
 
 ## Requirements

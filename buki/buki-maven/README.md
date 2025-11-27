@@ -19,17 +19,10 @@ This buki provides the following skills:
 
 ## Installation
 
-Install via the Han CLI:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install buki-maven
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install buki-maven@han
+han install buki-maven
 ```
 
 ## Usage

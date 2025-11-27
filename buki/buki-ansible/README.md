@@ -26,3 +26,11 @@ pip install ansible ansible-lint
 ## Hook Behavior
 
 Validates Ansible playbooks in directories containing `.yml` or `.yaml` files using `ansible-lint`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-ansible
+```

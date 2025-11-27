@@ -23,6 +23,14 @@ Use the Graphics Engineer to analyze...
 Each agent brings specialized expertise and perspective
 to their domain.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-graphics-engineering
+```
+
 ## License
 
 Licensed under MIT -

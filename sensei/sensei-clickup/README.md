@@ -51,74 +51,10 @@ Once installed, Claude Code gains access to these ClickUp MCP tools:
 
 ## Installation
 
-### Prerequisites
-
-1. **ClickUp Workspace**: You need access to a ClickUp workspace
-2. **API Token**: Generate a ClickUp API token
-3. **Node.js**: For running the MCP server (comes with Claude Code)
-
-### Getting an API Token
-
-1. Go to <https://app.clickup.com/settings/apps>
-2. Click "Apps" in the left sidebar
-3. Click "API Token"
-4. Click "Generate" or use existing token
-5. Copy the API token
-6. Save it securely
-
-### Via Han Marketplace
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install sensei-clickup@han
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install sensei-clickup@han
-```
-
-### Configuration
-
-Set required environment variable:
-
-```bash
-export CLICKUP_API_TOKEN="pk_xxxxxxxxxxxxxxxxxxxxxxxx"
-```
-
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`) for persistence:
-
-```bash
-echo 'export CLICKUP_API_TOKEN="pk_xxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Verify Installation
-
-Test the MCP server connection:
-
-```bash
-# Should connect without errors
-CLICKUP_API_TOKEN="your-token" npx -y @modelcontextprotocol/server-clickup
-```
-
-### Manual Installation
-
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "clickup": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-clickup"],
-      "env": {
-        "CLICKUP_API_TOKEN": "pk_xxxxxxxxxxxxxxxxxxxxxxxx"
-      }
-    }
-  }
-}
+han install sensei-clickup
 ```
 
 ## Usage

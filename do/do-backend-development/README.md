@@ -22,6 +22,14 @@ Use the Api Designer to analyze...
 Each agent brings specialized expertise and perspective
 to their domain.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-backend-development
+```
+
 ## License
 
 Licensed under MIT -

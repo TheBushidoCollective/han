@@ -14,14 +14,10 @@ Advanced Dialyzer skills for static analysis of Erlang and Elixir code.
 
 ## Installation
 
-This plugin is part of the Han marketplace. Enable it in your `.claude/settings.json`:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
-```json
-{
-  "enabledPlugins": {
-    "buki-dialyzer@han": true
-  }
-}
+```bash
+han install buki-dialyzer
 ```
 
 ## Usage

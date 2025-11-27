@@ -31,3 +31,11 @@ sudo mv terraform /usr/local/bin/
 ## Hook Behavior
 
 Validates Terraform configurations in directories containing `.tf` files using `terraform fmt` and `terraform validate`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-terraform
+```
