@@ -7,26 +7,11 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
-  build-binaries:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            target: bun-darwin-arm64
-            artifact: han-darwin-arm64
-          - os: macos-13
-            target: bun-darwin-x64
-            artifact: han-darwin-x64
-          - os: ubuntu-latest
-            target: bun-linux-x64
-            artifact: han-linux-x64
-          - os: ubuntu-24.04-arm
-            target: bun-linux-arm64
-            artifact: han-linux-arm64
-
-    runs-on: ${{ matrix.os }}
+  build-and-release:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -49,42 +35,48 @@ jobs:
         working-directory: ./packages/bushido-han
         run: npm run build:bundle
 
-      - name: Compile binary
+      - name: Cross-compile binaries
         working-directory: ./packages/bushido-han
         run: |
-          bun build --compile --minify --target=${{ matrix.target }} ./dist/bundle.js --outfile ./dist/${{ matrix.artifact }}
+          mkdir -p dist/binaries
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: packages/bushido-han/dist/${{ matrix.artifact }}
-
-  create-release:
-    needs: build-binaries
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: binaries
+          # Cross-compile for all platforms from single machine
+          bun build --compile --minify --target=bun-darwin-arm64 ./dist/bundle.js --outfile ./dist/binaries/han-darwin-arm64
+          bun build --compile --minify --target=bun-darwin-x64 ./dist/bundle.js --outfile ./dist/binaries/han-darwin-x64
+          bun build --compile --minify --target=bun-linux-x64 ./dist/bundle.js --outfile ./dist/binaries/han-linux-x64
+          bun build --compile --minify --target=bun-linux-arm64 ./dist/bundle.js --outfile ./dist/binaries/han-linux-arm64
+          bun build --compile --minify --target=bun-windows-x64 ./dist/bundle.js --outfile ./dist/binaries/han-windows-x64.exe
 
       - name: Create checksums
+        working-directory: ./packages/bushido-han/dist/binaries
         run: |
-          cd binaries
-          for dir in */; do
-            cd "$dir"
-            for file in *; do
-              sha256sum "$file" > "$file.sha256"
-            done
-            cd ..
+          for file in *; do
+            sha256sum "$file" > "$file.sha256"
+          done
+
+      - name: Build platform packages for npm
+        working-directory: ./packages/bushido-han
+        run: node scripts/build-platform-packages.js
+
+      - name: Publish platform packages to npm
+        working-directory: ./packages/bushido-han
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in dist/npm/*; do
+            if [ -d "$pkg" ]; then
+              echo "Publishing $pkg..."
+              cd "$pkg"
+              npm publish --provenance --access public || echo "Failed to publish $pkg (may already exist)"
+              cd - > /dev/null
+            fi
           done
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            binaries/**/*
+            packages/bushido-han/dist/binaries/*
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}

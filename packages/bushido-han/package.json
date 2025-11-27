@@ -6,7 +6,7 @@
 	"types": "dist/lib/main.d.ts",
 	"type": "module",
 	"bin": {
-		"han": "dist/lib/main.js"
+		"han": "bin/han.js"
 	},
 	"scripts": {
 		"build": "tsc && npm run copy-assets",
@@ -43,9 +43,17 @@
 		"node": ">=20"
 	},
 	"files": [
+		"bin/",
 		"dist/",
 		"README.md"
 	],
+	"optionalDependencies": {
+		"@thebushidocollective/han-darwin-arm64": "1.17.0",
+		"@thebushidocollective/han-darwin-x64": "1.17.0",
+		"@thebushidocollective/han-linux-x64": "1.17.0",
+		"@thebushidocollective/han-linux-arm64": "1.17.0",
+		"@thebushidocollective/han-win32-x64": "1.17.0"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.7",
 		"@types/marked-terminal": "6.1.1",
