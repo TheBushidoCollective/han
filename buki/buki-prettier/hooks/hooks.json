@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"prettier\\\":' package.json\" -- npx prettier --check ."
+            "command": "han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"prettier\\\":' package.json\" -- npx prettier --check ."
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"prettier\\\":' package.json\" -- npx prettier --check ."
+            "command": "han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"prettier\\\":' package.json\" -- npx prettier --check ."
           }
         ]
       }

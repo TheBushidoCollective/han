@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with pom.xml --test-dir \"grep -qE 'checkstyle' pom.xml\" -- mvn checkstyle:check"
+            "command": "han hook run --fail-fast --dirs-with pom.xml --test-dir \"grep -qE 'checkstyle' pom.xml\" -- mvn checkstyle:check"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with pom.xml --test-dir \"grep -qE 'checkstyle' pom.xml\" -- mvn checkstyle:check"
+            "command": "han hook run --fail-fast --dirs-with pom.xml --test-dir \"grep -qE 'checkstyle' pom.xml\" -- mvn checkstyle:check"
           }
         ]
       }

@@ -80,3 +80,78 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
+
+  update-homebrew:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref, '-') }}  # Skip for prereleases
+    steps:
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: TheBushidoCollective/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}"
+          REPO="TheBushidoCollective/han"
+          BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
+
+          # Download checksum files
+          DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-arm64.sha256" | awk '{print $1}')
+          DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-x64.sha256" | awk '{print $1}')
+          LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-arm64.sha256" | awk '{print $1}')
+          LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-x64.sha256" | awk '{print $1}')
+
+          cat > homebrew-tap/Formula/han.rb << EOF
+          # typed: false
+          # frozen_string_literal: true
+
+          class Han < Formula
+            desc "Sophisticated Claude Code Plugins with Superior Accuracy"
+            homepage "https://han.guru"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-arm64"
+                sha256 "${DARWIN_ARM64_SHA}"
+              else
+                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-x64"
+                sha256 "${DARWIN_X64_SHA}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-arm64"
+                sha256 "${LINUX_ARM64_SHA}"
+              else
+                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-x64"
+                sha256 "${LINUX_X64_SHA}"
+              end
+            end
+
+            def install
+              bin.install Dir["*"].first => "han"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/han --version")
+            end
+          end
+          EOF
+
+      - name: Commit and push
+        working-directory: homebrew-tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/han.rb
+          git commit -m "Update han to ${GITHUB_REF_NAME}"
+          git push

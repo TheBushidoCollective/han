@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
+            "command": "han hook run --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
+            "command": "han hook run --fail-fast --dirs-with Chart.yaml -- sh -c 'helm lint . && helm template . --debug > /dev/null'"
           }
         ]
       }

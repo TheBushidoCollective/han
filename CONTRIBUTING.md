@@ -60,7 +60,7 @@ buki-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -70,7 +70,7 @@ buki-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -404,7 +404,7 @@ All buki plugins should use the `han hook run` command:
 ```json
 {
   "type": "command",
-  "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
+  "command": "han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
 }
 ```
 
@@ -425,13 +425,13 @@ Don't add redundant error messages after `han hook run` - it handles errors auto
 **Good:**
 
 ```json
-"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+"command": "han hook run --fail-fast --dirs-with package.json -- npm test"
 ```
 
 **Bad:**
 
 ```json
-"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
+"command": "han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
 ```
 
 ## Review Process

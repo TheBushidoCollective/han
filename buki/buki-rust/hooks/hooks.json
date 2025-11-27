@@ -5,15 +5,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo fmt --check"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo fmt --check"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo test"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo test"
           }
         ]
       }
@@ -23,15 +23,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo fmt --check"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo fmt --check"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with Cargo.toml -- cargo test"
+            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo test"
           }
         ]
       }

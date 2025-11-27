@@ -63,7 +63,7 @@ Create `hooks/hooks.json` with validation hooks:
     {
       "name": "{technology}-validation",
       "description": "Validates {technology} code before stopping",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
+      "command": "han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
       "showOutput": "on-error"
     }
   ],
@@ -71,7 +71,7 @@ Create `hooks/hooks.json` with validation hooks:
     {
       "name": "{technology}-validation",
       "description": "Validates {technology} code when agents complete",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
+      "command": "han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
       "showOutput": "on-error"
     }
   ]
