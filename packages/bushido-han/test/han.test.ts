@@ -3,7 +3,13 @@ import {
 	type ExecSyncOptionsWithStringEncoding,
 	execSync,
 } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePluginRecommendations } from "../lib/shared.js";
@@ -73,12 +79,20 @@ interface ExecError extends Error {
 
 test("shows version", () => {
 	const output = execSync(`${binCommand} --version`, { encoding: "utf8" });
-	strictEqual(/^\d+\.\d+\.\d+/.test(output.trim()), true, `Expected version format, got: ${output}`);
+	strictEqual(
+		/^\d+\.\d+\.\d+/.test(output.trim()),
+		true,
+		`Expected version format, got: ${output}`,
+	);
 });
 
 test("shows help when no command provided", () => {
 	const output = execSync(`${binCommand} --help`, { encoding: "utf8" });
-	strictEqual(output.includes("Usage:"), true, "Expected Usage: in help output");
+	strictEqual(
+		output.includes("Usage:"),
+		true,
+		"Expected Usage: in help output",
+	);
 	strictEqual(output.includes("han"), true, "Expected 'han' in help output");
 });
 
@@ -255,7 +269,10 @@ test("respects .gitignore in subdirectories", () => {
 		mkdirSync(join(testDir, "project", "deps"));
 		mkdirSync(join(testDir, "project", "deps", "lib"));
 		writeFileSync(join(testDir, "project", "package.json"), "{}");
-		writeFileSync(join(testDir, "project", "deps", "lib", "package.json"), "{}");
+		writeFileSync(
+			join(testDir, "project", "deps", "lib", "package.json"),
+			"{}",
+		);
 		writeFileSync(join(testDir, "project", ".gitignore"), "deps/");
 
 		execSync("git init", { cwd: testDir, stdio: "pipe" });
@@ -330,17 +347,21 @@ test("han hook test validates hooks in installed plugins", () => {
 		// Create settings with Han marketplace
 		writeFileSync(
 			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					han: {
-						source: {
-							source: "github",
-							repo: "thebushidocollective/sensei",
+			JSON.stringify(
+				{
+					extraKnownMarketplaces: {
+						han: {
+							source: {
+								source: "github",
+								repo: "thebushidocollective/sensei",
+							},
 						},
 					},
+					enabledPlugins: {},
 				},
-				enabledPlugins: {},
-			}, null, 2),
+				null,
+				2,
+			),
 		);
 
 		// Should pass with no plugins installed
