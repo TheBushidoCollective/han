@@ -29,3 +29,11 @@ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ## Hook Behavior
 
 Validates Helm charts in directories containing `Chart.yaml` using `helm lint` and `helm template`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-helm
+```

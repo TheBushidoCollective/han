@@ -143,23 +143,10 @@ Write a weekly newsletter for our developer community highlighting new features 
 
 ## Installation
 
-This plugin is part of the Han marketplace and can be installed via:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install do-content-creator@han
-```
-
-Or manually add to your `.claude/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": [
-    "https://github.com/thebushidocollective/han"
-  ],
-  "enabledPlugins": [
-    "do-content-creator": true
-  ]
-}
+han install do-content-creator
 ```
 
 ## How to Use

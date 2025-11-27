@@ -12,3 +12,11 @@ Kubernetes manifest validation and best practices for cloud-native deployments.
 - **kubernetes-manifests**: Working with Kubernetes manifest files
 - **kubernetes-resources**: Understanding Kubernetes resources (Pods, Deployments, Services, etc.)
 - **kubernetes-security**: Security best practices for Kubernetes
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-kubernetes
+```

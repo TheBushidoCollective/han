@@ -21,6 +21,14 @@ Use the The Visionary to analyze...
 Each agent brings specialized expertise and perspective
 to their domain.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-product-management
+```
+
 ## License
 
 Licensed under MIT -

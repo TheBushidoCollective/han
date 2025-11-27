@@ -70,8 +70,10 @@ end
 
 ## Installation
 
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
 ```bash
-npx han plugin install buki-tdd
+han install buki-tdd
 ```
 
 ## License

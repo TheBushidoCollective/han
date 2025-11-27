@@ -34,81 +34,11 @@ Once installed, Claude Code gains access to these tools:
 
 ## Installation
 
-### Prerequisites
-
-**GitLab Requirements:**
-
-- GitLab Premium or Ultimate tier
-- GitLab Duo Core, Pro, or Enterprise add-on
-- Beta features enabled (for GitLab 18.4 and earlier)
-- Available on GitLab.com, Self-Managed, or Dedicated instances
-
-### Via Han Marketplace
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install sensei-gitlab@han
+han install sensei-gitlab
 ```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install sensei-gitlab@han
-```
-
-### Authentication
-
-After installation, authenticate with GitLab OAuth:
-
-1. Run `/mcp` in Claude Code
-2. Select the GitLab server
-3. Click "Authenticate" to open the OAuth flow in your browser
-4. Authorize access to your GitLab account
-
-Authentication tokens are stored securely and refreshed automatically.
-
-### Manual Installation
-
-Add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "gitlab": {
-      "type": "http",
-      "url": "https://gitlab.com/api/v4/mcp"
-    }
-  }
-}
-```
-
-Or via CLI:
-
-```bash
-claude mcp add --transport http gitlab https://gitlab.com/api/v4/mcp
-```
-
-### Self-Hosted GitLab
-
-For self-hosted GitLab instances, replace `gitlab.com` with your instance URL:
-
-```json
-{
-  "mcpServers": {
-    "gitlab": {
-      "type": "http",
-      "url": "https://your-gitlab.example.com/api/v4/mcp"
-    }
-  }
-}
-```
-
-### Enable Beta Features (GitLab 18.4 and earlier)
-
-1. Go to Admin Area > Settings > General
-2. Expand "Model Context Protocol"
-3. Enable "Model Context Protocol Beta"
-4. Save changes
 
 ## Usage
 

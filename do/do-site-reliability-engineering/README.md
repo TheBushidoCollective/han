@@ -35,3 +35,11 @@ Use the SRE agent when:
 - Defining SLOs and error budgets
 - Planning capacity and performance
 - Implementing on-call practices
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-site-reliability-engineering
+```

@@ -23,6 +23,14 @@ Use the Logging Engineer to analyze...
 Each agent brings specialized expertise and perspective
 to their domain.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-observability-engineering
+```
+
 ## License
 
 Licensed under MIT -

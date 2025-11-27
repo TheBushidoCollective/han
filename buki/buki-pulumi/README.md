@@ -26,3 +26,11 @@ curl -fsSL https://get.pulumi.com | sh
 ## Hook Behavior
 
 Validates Pulumi projects in directories containing `Pulumi.yaml` using `pulumi preview`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-pulumi
+```

@@ -21,6 +21,14 @@ The hooks will:
 
 Install this plugin in your Claude Code configuration to automatically validate TypeScript compilation on Stop and SubagentStop events.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-typescript
+```
+
 ## License
 
 Licensed under MIT - see repository for details.

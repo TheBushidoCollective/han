@@ -66,80 +66,11 @@ Once installed, Claude Code gains access to these tool categories:
 
 ## Installation
 
-### Via Han Marketplace (Recommended)
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-npx @thebushidocollective/han plugin install sensei-github@han
+han install sensei-github
 ```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install sensei-github@han
-```
-
-### Authentication
-
-**No setup required!** If you have [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated, this plugin automatically uses your existing credentials.
-
-To check if you're authenticated:
-
-```bash
-gh auth status
-```
-
-If not authenticated, run:
-
-```bash
-gh auth login
-```
-
-That's it! The plugin seamlessly uses your `gh` token - no OAuth apps, no environment variables, no configuration files to manage.
-
-#### How It Works
-
-The plugin uses this configuration to automatically pull your `gh` token:
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "sh",
-      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"],
-      "env": {}
-    }
-  }
-}
-```
-
-When the MCP server starts, it runs `gh auth token` to get your current token and passes it to GitHub's official Docker image - no manual copying required!
-
-**Requirements**: Docker must be installed and running on your system.
-
-#### Alternative: Manual Token (Without GitHub CLI)
-
-If you prefer not to use GitHub CLI, you can use a Personal Access Token instead:
-
-1. Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) with scopes: `repo`, `read:org`, `workflow`
-
-2. Update the plugin configuration to use your token directly:
-
-   ```json
-   {
-     "mcpServers": {
-       "github": {
-         "command": "npx",
-         "args": ["-y", "@modelcontextprotocol/server-github"],
-         "env": {
-           "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_your_token_here"
-         }
-       }
-     }
-   }
-   ```
-
-**Note**: Never commit this configuration with your token to version control!
 
 ## Usage
 

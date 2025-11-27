@@ -59,17 +59,10 @@ Docker configuration for act:
 
 ## Installation
 
-Install via Han CLI:
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
 
 ```bash
-han plugins install buki-act
-```
-
-Or clone manually:
-
-```bash
-git clone https://github.com/thebushidocollective/sensei
-cd sensei/buki/buki-act
+han install buki-act
 ```
 
 ## Requirements

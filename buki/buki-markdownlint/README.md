@@ -39,6 +39,14 @@ Example `.markdownlint.json`:
 }
 ```
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-markdownlint
+```
+
 ## License
 
 Licensed under MIT - see repository for details.

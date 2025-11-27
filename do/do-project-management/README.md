@@ -22,6 +22,14 @@ Use the Flow Coordinator to analyze...
 Each agent brings specialized expertise and perspective
 to their domain.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install do-project-management
+```
+
 ## License
 
 Licensed under MIT -

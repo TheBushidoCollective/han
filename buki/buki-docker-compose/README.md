@@ -26,3 +26,11 @@ curl -fsSL https://get.docker.com | sh
 ## Hook Behavior
 
 Validates Docker Compose files (docker-compose.*.yaml, compose.*.yaml) using `docker compose config`.
+
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-docker-compose
+```

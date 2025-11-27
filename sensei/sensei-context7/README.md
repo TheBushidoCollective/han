@@ -18,6 +18,14 @@ is active.
 Tools provided by this server will be available through
 the MCP protocol.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install sensei-context7
+```
+
 ## License
 
 Licensed under MIT -

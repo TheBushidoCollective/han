@@ -124,6 +124,14 @@ This buki's patterns are used in production tools like:
 - `gatsby` - Build progress and development server
 - `@anthropic-ai/claude-agent-sdk` - Claude agent development
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-ink
+```
+
 ## License
 
 MIT

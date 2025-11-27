@@ -38,6 +38,14 @@ han hook run --fail-fast --dirs-with Gemfile -- bundle exec rspec
 This ensures all Ruby packages in your monorepo pass tests before
 work is marked complete.
 
+## Installation
+
+For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+
+```bash
+han install buki-rspec
+```
+
 ## License
 
 Licensed under MIT -
