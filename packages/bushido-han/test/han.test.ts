@@ -3,7 +3,7 @@ import {
 	type ExecSyncOptionsWithStringEncoding,
 	execSync,
 } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePluginRecommendations } from "../lib/shared.js";
@@ -12,8 +12,26 @@ import { parsePluginRecommendations } from "../lib/shared.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Test runs from dist/test, so go up to dist, then to lib/main.js
-const binPath = join(__dirname, "..", "lib", "main.js");
+// Determine which binary to test
+// If HAN_TEST_BINARY env var is set, use the compiled binary
+// Otherwise, use the Node.js version
+const USE_BINARY = process.env.HAN_TEST_BINARY === "true";
+const binPath = USE_BINARY
+	? join(__dirname, "..", "..", "dist", "han")
+	: join(__dirname, "..", "lib", "main.js");
+const binCommand = USE_BINARY ? binPath : `node ${binPath}`;
+
+console.log(`\nTesting: ${USE_BINARY ? "Binary (bun)" : "JavaScript (node)"}`);
+console.log(`Path: ${binPath}\n`);
+
+// Verify binary exists
+if (!existsSync(binPath)) {
+	console.error(`Binary not found at ${binPath}`);
+	if (USE_BINARY) {
+		console.error("Run 'npm run build:binary' first to create the binary");
+	}
+	process.exit(1);
+}
 
 function setup(): string {
 	const testDir = join(__dirname, "fixtures");
@@ -27,14 +45,18 @@ function teardown(): void {
 	rmSync(testDir, { recursive: true, force: true });
 }
 
+let testsPassed = 0;
+let testsFailed = 0;
+
 function test(name: string, fn: () => void): void {
 	try {
 		fn();
 		console.log(`✓ ${name}`);
+		testsPassed++;
 	} catch (error) {
 		console.error(`✗ ${name}`);
-		console.error((error as Error).message);
-		process.exit(1);
+		console.error(`  ${(error as Error).message}`);
+		testsFailed++;
 	}
 }
 
@@ -42,24 +64,43 @@ interface ExecError extends Error {
 	status?: number;
 	code?: number;
 	stderr?: Buffer | string;
+	stdout?: Buffer | string;
 }
 
-// Test: shows help when no command provided
-test("shows help when no command provided", () => {
-	try {
-		execSync(`node ${binPath} --help`, { encoding: "utf8" });
-		// Help command should exit with 0
-	} catch (error) {
-		const execError = error as ExecError;
-		const stdout = execError.message || "";
-		strictEqual(stdout.includes("Usage:") || stdout.includes("han"), true);
-	}
+// ============================================
+// Basic CLI tests
+// ============================================
+
+test("shows version", () => {
+	const output = execSync(`${binCommand} --version`, { encoding: "utf8" });
+	strictEqual(/^\d+\.\d+\.\d+/.test(output.trim()), true, `Expected version format, got: ${output}`);
 });
 
-// Test: shows error when hook run has no command argument or -- separator
+test("shows help when no command provided", () => {
+	const output = execSync(`${binCommand} --help`, { encoding: "utf8" });
+	strictEqual(output.includes("Usage:"), true, "Expected Usage: in help output");
+	strictEqual(output.includes("han"), true, "Expected 'han' in help output");
+});
+
+test("shows plugin command help", () => {
+	const output = execSync(`${binCommand} plugin --help`, { encoding: "utf8" });
+	strictEqual(output.includes("install"), true);
+	strictEqual(output.includes("uninstall"), true);
+});
+
+test("shows hook command help", () => {
+	const output = execSync(`${binCommand} hook --help`, { encoding: "utf8" });
+	strictEqual(output.includes("run"), true);
+	strictEqual(output.includes("test"), true);
+});
+
+// ============================================
+// Hook run tests
+// ============================================
+
 test("shows error when hook run has no command argument", () => {
 	try {
-		execSync(`node ${binPath} hook run`, { encoding: "utf8" });
+		execSync(`${binCommand} hook run`, { encoding: "utf8", stdio: "pipe" });
 		throw new Error("Should have failed");
 	} catch (error) {
 		const execError = error as ExecError;
@@ -72,12 +113,11 @@ test("shows error when hook run has no command argument", () => {
 	}
 });
 
-// Test: passes when no directories match filter
 test("passes when no directories match filter", () => {
 	const testDir = setup();
 	try {
 		const output = execSync(
-			`node ${binPath} hook run --dirs-with nonexistent.txt -- echo test`,
+			`${binCommand} hook run --dirs-with nonexistent.txt -- echo test`,
 			{ cwd: testDir, encoding: "utf8" } as ExecSyncOptionsWithStringEncoding,
 		);
 		strictEqual(
@@ -89,7 +129,6 @@ test("passes when no directories match filter", () => {
 	}
 });
 
-// Test: runs command in matching directories
 test("runs command in matching directories", () => {
 	const testDir = setup();
 	try {
@@ -100,11 +139,11 @@ test("runs command in matching directories", () => {
 		writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
 
 		// Initialize git repo so directories are discovered
-		execSync("git init", { cwd: testDir });
-		execSync("git add .", { cwd: testDir });
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
 		const output = execSync(
-			`node ${binPath} hook run --dirs-with package.json -- echo success`,
+			`${binCommand} hook run --dirs-with package.json -- echo success`,
 			{
 				cwd: testDir,
 				encoding: "utf8",
@@ -119,19 +158,17 @@ test("runs command in matching directories", () => {
 	}
 });
 
-// Test: fails with exit code 2 when command fails
 test("fails with exit code 2 when command fails", () => {
 	const testDir = setup();
 	try {
 		mkdirSync(join(testDir, "pkg1"));
 		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
 
-		// Initialize git repo
-		execSync("git init", { cwd: testDir });
-		execSync("git add .", { cwd: testDir });
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
 		try {
-			execSync(`node ${binPath} hook run --dirs-with package.json -- exit 1`, {
+			execSync(`${binCommand} hook run --dirs-with package.json -- exit 1`, {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: "pipe",
@@ -152,7 +189,6 @@ test("fails with exit code 2 when command fails", () => {
 	}
 });
 
-// Test: stops on first failure with --fail-fast
 test("stops on first failure with --fail-fast", () => {
 	const testDir = setup();
 	try {
@@ -161,13 +197,12 @@ test("stops on first failure with --fail-fast", () => {
 		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
 		writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
 
-		// Initialize git repo
-		execSync("git init", { cwd: testDir });
-		execSync("git add .", { cwd: testDir });
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
 		try {
 			execSync(
-				`node ${binPath} hook run --fail-fast --dirs-with package.json -- exit 1`,
+				`${binCommand} hook run --fail-fast --dirs-with package.json -- exit 1`,
 				{ cwd: testDir, encoding: "utf8", stdio: "pipe" },
 			);
 			throw new Error("Should have failed");
@@ -183,16 +218,155 @@ test("stops on first failure with --fail-fast", () => {
 	}
 });
 
+test("respects --test-dir flag to filter directories", () => {
+	const testDir = setup();
+	try {
+		// Create two directories, only one should match the test
+		mkdirSync(join(testDir, "with-marker"));
+		mkdirSync(join(testDir, "without-marker"));
+		writeFileSync(join(testDir, "with-marker", "package.json"), "{}");
+		writeFileSync(join(testDir, "without-marker", "package.json"), "{}");
+		writeFileSync(join(testDir, "with-marker", "marker.txt"), "marker");
+
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+		const output = execSync(
+			`${binCommand} hook run --dirs-with package.json --test-dir "test -f marker.txt" -- echo found`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			} as ExecSyncOptionsWithStringEncoding,
+		);
+
+		// Should only run in with-marker directory
+		strictEqual(output.includes("1 directory passed"), true);
+	} finally {
+		teardown();
+	}
+});
+
+test("respects .gitignore in subdirectories", () => {
+	const testDir = setup();
+	try {
+		// Create structure with nested .gitignore
+		mkdirSync(join(testDir, "project"));
+		mkdirSync(join(testDir, "project", "deps"));
+		mkdirSync(join(testDir, "project", "deps", "lib"));
+		writeFileSync(join(testDir, "project", "package.json"), "{}");
+		writeFileSync(join(testDir, "project", "deps", "lib", "package.json"), "{}");
+		writeFileSync(join(testDir, "project", ".gitignore"), "deps/");
+
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+		const output = execSync(
+			`${binCommand} hook run --dirs-with package.json -- echo found`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			} as ExecSyncOptionsWithStringEncoding,
+		);
+
+		// Should only find 1 directory (project), not deps/lib
+		strictEqual(output.includes("1 directory"), true);
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// Validate command tests (alias for hook run)
+// ============================================
+
+test("validate command works as alias for hook run", () => {
+	const testDir = setup();
+	try {
+		mkdirSync(join(testDir, "pkg1"));
+		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+		const output = execSync(
+			`${binCommand} validate --dirs-with package.json -- echo success`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			} as ExecSyncOptionsWithStringEncoding,
+		);
+
+		strictEqual(output.includes("success"), true);
+		strictEqual(output.includes("passed validation"), true);
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// Hook test command tests
+// ============================================
+
+test("han hook test shows help", () => {
+	const output = execSync(`${binCommand} hook test --help`, {
+		encoding: "utf8",
+	});
+	strictEqual(
+		output.includes("Validate hook configurations"),
+		true,
+		"Expected help output to mention hook validation",
+	);
+});
+
+test("han hook test validates hooks in installed plugins", () => {
+	const testDir = setup();
+	try {
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create settings with Han marketplace
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					han: {
+						source: {
+							source: "github",
+							repo: "thebushidocollective/sensei",
+						},
+					},
+				},
+				enabledPlugins: {},
+			}, null, 2),
+		);
+
+		// Should pass with no plugins installed
+		const output = execSync(`${binCommand} hook test`, {
+			cwd: testDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+
+		strictEqual(
+			output.includes("No plugins installed") || output.includes("No hooks"),
+			true,
+		);
+	} finally {
+		teardown();
+	}
+});
+
 // ============================================
 // parsePluginRecommendations tests
 // ============================================
 
-// Test: parsePluginRecommendations returns unique plugins (no duplicates)
-test("parsePluginRecommendations returns unique plugins", () => {
+test("parsePluginRecommendations returns unique plugins (no duplicates)", () => {
 	const content = '["bushido", "buki-typescript", "bushido", "buki-react"]';
 	const result = parsePluginRecommendations(content);
 
-	// Verify no duplicates
 	const uniqueResult = [...new Set(result)];
 	deepStrictEqual(
 		result.length,
@@ -201,7 +375,6 @@ test("parsePluginRecommendations returns unique plugins", () => {
 	);
 });
 
-// Test: parsePluginRecommendations always includes bushido
 test("parsePluginRecommendations always includes bushido", () => {
 	const content = '["buki-typescript", "buki-react"]';
 	const result = parsePluginRecommendations(content);
@@ -213,7 +386,6 @@ test("parsePluginRecommendations always includes bushido", () => {
 	);
 });
 
-// Test: parsePluginRecommendations handles JSON array format
 test("parsePluginRecommendations handles JSON array format", () => {
 	const content = 'Based on analysis: ["buki-typescript", "buki-biome"]';
 	const result = parsePluginRecommendations(content);
@@ -223,7 +395,6 @@ test("parsePluginRecommendations handles JSON array format", () => {
 	strictEqual(result.includes("bushido"), true);
 });
 
-// Test: parsePluginRecommendations handles plain text plugin names
 test("parsePluginRecommendations handles plain text plugin names", () => {
 	const content =
 		"I recommend installing buki-typescript for TypeScript and buki-react for React development.";
@@ -234,7 +405,6 @@ test("parsePluginRecommendations handles plain text plugin names", () => {
 	strictEqual(result.includes("bushido"), true);
 });
 
-// Test: parsePluginRecommendations returns bushido when no plugins found
 test("parsePluginRecommendations returns bushido when no plugins found", () => {
 	const content = "No specific plugins needed for this project.";
 	const result = parsePluginRecommendations(content);
@@ -242,14 +412,11 @@ test("parsePluginRecommendations returns bushido when no plugins found", () => {
 	deepStrictEqual(result, ["bushido"]);
 });
 
-// Test: parsePluginRecommendations deduplicates from regex matches
 test("parsePluginRecommendations deduplicates from regex matches", () => {
-	// Content where bushido appears multiple times in plain text
 	const content =
 		"For this project, I recommend bushido and buki-typescript. The bushido plugin is essential.";
 	const result = parsePluginRecommendations(content);
 
-	// Count how many times bushido appears
 	const bushidoCount = result.filter((p) => p === "bushido").length;
 	strictEqual(
 		bushidoCount,
@@ -258,7 +425,6 @@ test("parsePluginRecommendations deduplicates from regex matches", () => {
 	);
 });
 
-// Test: parsePluginRecommendations handles all plugin prefixes
 test("parsePluginRecommendations handles all plugin prefixes", () => {
 	const content =
 		"Install buki-typescript for development, do-blockchain-development for web3, and sensei-gitlab for GitLab integration.";
@@ -269,20 +435,16 @@ test("parsePluginRecommendations handles all plugin prefixes", () => {
 	strictEqual(result.includes("sensei-gitlab"), true);
 });
 
-// Test: parsePluginRecommendations handles empty string
 test("parsePluginRecommendations handles empty string", () => {
 	const result = parsePluginRecommendations("");
 	deepStrictEqual(result, ["bushido"]);
 });
 
-// Test: parsePluginRecommendations handles malformed JSON gracefully
 test("parsePluginRecommendations handles malformed JSON gracefully", () => {
 	const content = '["buki-typescript", buki-react]'; // missing quotes
 	const result = parsePluginRecommendations(content);
 
-	// Should fallback to regex matching
 	strictEqual(result.includes("bushido"), true);
-	// The regex should still find buki-typescript and buki-react
 	strictEqual(result.includes("buki-typescript"), true);
 	strictEqual(result.includes("buki-react"), true);
 });
@@ -297,24 +459,20 @@ function setupClaudeDir(testDir: string): string {
 	return claudeDir;
 }
 
-// Test: han plugin install adds plugin to settings
 test("han plugin install adds plugin to settings", () => {
 	const testDir = setup();
 	try {
 		const claudeDir = setupClaudeDir(testDir);
 		const settingsPath = join(claudeDir, "settings.json");
 
-		// Create initial settings file
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		// Run plugin install
-		execSync(`node ${binPath} plugin install buki-typescript`, {
+		execSync(`${binCommand} plugin install buki-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
 		});
 
-		// Verify settings were updated
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 		strictEqual(
@@ -332,14 +490,12 @@ test("han plugin install adds plugin to settings", () => {
 	}
 });
 
-// Test: han plugin uninstall removes plugin from settings
 test("han plugin uninstall removes plugin from settings", () => {
 	const testDir = setup();
 	try {
 		const claudeDir = setupClaudeDir(testDir);
 		const settingsPath = join(claudeDir, "settings.json");
 
-		// Create settings with an installed plugin
 		writeFileSync(
 			settingsPath,
 			JSON.stringify(
@@ -361,14 +517,12 @@ test("han plugin uninstall removes plugin from settings", () => {
 			),
 		);
 
-		// Run plugin uninstall
-		execSync(`node ${binPath} plugin uninstall buki-typescript`, {
+		execSync(`${binCommand} plugin uninstall buki-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
 		});
 
-		// Verify plugin was removed
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 		strictEqual(
@@ -381,14 +535,12 @@ test("han plugin uninstall removes plugin from settings", () => {
 	}
 });
 
-// Test: han plugin install is idempotent (doesn't duplicate)
 test("han plugin install is idempotent", () => {
 	const testDir = setup();
 	try {
 		const claudeDir = setupClaudeDir(testDir);
 		const settingsPath = join(claudeDir, "settings.json");
 
-		// Create settings with already installed plugin
 		writeFileSync(
 			settingsPath,
 			JSON.stringify(
@@ -410,21 +562,18 @@ test("han plugin install is idempotent", () => {
 			),
 		);
 
-		// Run plugin install again
-		const output = execSync(`node ${binPath} plugin install buki-typescript`, {
+		const output = execSync(`${binCommand} plugin install buki-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
 		});
 
-		// Verify message about already installed (case-insensitive)
 		strictEqual(
 			output.toLowerCase().includes("already installed"),
 			true,
 			"Expected 'already installed' message",
 		);
 
-		// Verify settings weren't duplicated
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 		const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter((k) =>
 			k.includes("buki-typescript"),
@@ -439,19 +588,16 @@ test("han plugin install is idempotent", () => {
 	}
 });
 
-// Test: han plugin uninstall handles non-existent plugin gracefully
 test("han plugin uninstall handles non-existent plugin gracefully", () => {
 	const testDir = setup();
 	try {
 		const claudeDir = setupClaudeDir(testDir);
 		const settingsPath = join(claudeDir, "settings.json");
 
-		// Create empty settings
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		// Run plugin uninstall on non-existent plugin
 		const output = execSync(
-			`node ${binPath} plugin uninstall non-existent-plugin`,
+			`${binCommand} plugin uninstall non-existent-plugin`,
 			{
 				cwd: testDir,
 				encoding: "utf8",
@@ -459,7 +605,6 @@ test("han plugin uninstall handles non-existent plugin gracefully", () => {
 			},
 		);
 
-		// Verify message about not installed (case-insensitive)
 		strictEqual(
 			output.toLowerCase().includes("not installed"),
 			true,
@@ -470,20 +615,45 @@ test("han plugin uninstall handles non-existent plugin gracefully", () => {
 	}
 });
 
-// Test: han hook test shows help
-test("han hook test shows help", () => {
+test("han plugin install multiple plugins at once", () => {
+	const testDir = setup();
 	try {
-		const output = execSync(`node ${binPath} hook test --help`, {
+		const claudeDir = setupClaudeDir(testDir);
+		const settingsPath = join(claudeDir, "settings.json");
+
+		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+
+		execSync(`${binCommand} plugin install buki-typescript buki-react`, {
+			cwd: testDir,
 			encoding: "utf8",
+			stdio: "pipe",
 		});
+
+		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+
 		strictEqual(
-			output.includes("Validate hook configurations"),
+			settings.enabledPlugins?.["buki-typescript@han"],
 			true,
-			"Expected help output to mention hook validation",
+			"Expected buki-typescript@han to be enabled",
 		);
-	} catch (error) {
-		throw new Error(`Expected help to show, got error: ${error}`);
+		strictEqual(
+			settings.enabledPlugins?.["buki-react@han"],
+			true,
+			"Expected buki-react@han to be enabled",
+		);
+	} finally {
+		teardown();
 	}
 });
 
-console.log("\nAll tests passed! ✓");
+// ============================================
+// Summary
+// ============================================
+
+console.log(`\n${"=".repeat(50)}`);
+if (testsFailed === 0) {
+	console.log(`All ${testsPassed} tests passed! ✓`);
+} else {
+	console.log(`${testsPassed} passed, ${testsFailed} failed`);
+	process.exit(1);
+}

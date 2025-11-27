@@ -1,6 +1,11 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync, copyFileSync, chmodSync } from "node:fs";
-import { readFileSync } from "node:fs";
+import {
+	chmodSync,
+	copyFileSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -60,10 +65,7 @@ for (const platform of platforms) {
 
 	// Copy binary
 	const binaryName = platform.os === "win32" ? "han.exe" : "han";
-	copyFileSync(
-		join(binariesDir, platform.binary),
-		join(pkgDir, binaryName),
-	);
+	copyFileSync(join(binariesDir, platform.binary), join(pkgDir, binaryName));
 
 	// Make executable on unix
 	if (platform.os !== "win32") {
