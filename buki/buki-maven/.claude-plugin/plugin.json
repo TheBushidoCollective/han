@@ -1,6 +1,6 @@
 {
   "name": "buki-maven",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Validation and quality enforcement for Apache Maven projects with dependency management, build lifecycle, and plugin configuration skills.",
   "author": {
     "name": "The Bushido Collective",
