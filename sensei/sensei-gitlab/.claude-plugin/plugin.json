@@ -1,6 +1,6 @@
 {
   "name": "sensei-gitlab",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
   "author": {
     "name": "The Bushido Collective",

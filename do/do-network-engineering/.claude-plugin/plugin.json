@@ -1,6 +1,6 @@
 {
   "name": "do-network-engineering",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["network", "protocols", "distributed-systems"]
+  "keywords": [
+    "network",
+    "protocols",
+    "distributed-systems"
+  ]
 }

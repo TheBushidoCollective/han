@@ -1,6 +1,6 @@
 {
   "name": "buki-nextjs",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["nextjs", "react", "ssr"]
+  "keywords": [
+    "nextjs",
+    "react",
+    "ssr"
+  ]
 }

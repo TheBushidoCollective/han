@@ -1,6 +1,6 @@
 {
   "name": "buki-playwright",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced Playwright skills for end-to-end testing, test architecture, and test automation best practices.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["playwright", "testing", "e2e", "automation"]
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "automation"
+  ]
 }

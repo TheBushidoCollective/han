@@ -1,6 +1,6 @@
 {
   "name": "buki-csharp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced C# programming skills for async patterns and LINQ",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["csharp", "c#", "dotnet", "async", "linq"]
+  "keywords": [
+    "csharp",
+    "c#",
+    "dotnet",
+    "async",
+    "linq"
+  ]
 }
