@@ -57,8 +57,8 @@ function tryRunBinary() {
 	}
 }
 
-// Try binary first, fall back to JS implementation
+// Try binary first, fall back to bundled JS implementation
 if (!tryRunBinary()) {
-	// Fall back to JS implementation
-	await import("../dist/lib/main.js");
+	// Fall back to bundled JS implementation (minified, no external deps)
+	await import("../dist/bundle.js");
 }
