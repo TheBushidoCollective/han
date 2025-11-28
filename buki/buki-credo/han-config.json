@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "mix credo --strict",
+      "dirsWith": ["mix.exs"],
+      "dirTest": "grep -qE ':credo' mix.exs"
+    }
+  }
+}

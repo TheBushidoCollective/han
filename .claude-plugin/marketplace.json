@@ -306,6 +306,20 @@
       "keywords": ["junit", "testing", "java", "skill"]
     },
     {
+      "name": "buki-testng",
+      "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
+      "source": "./buki/buki-testng",
+      "category": "Weapon",
+      "keywords": [
+        "testng",
+        "testing",
+        "java",
+        "data-providers",
+        "parallel",
+        "skill"
+      ]
+    },
+    {
       "name": "buki-kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./buki/buki-kotlin",

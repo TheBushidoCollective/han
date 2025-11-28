@@ -140,25 +140,32 @@ program
 const hookCommand = program.command("hook").description("Hook utilities");
 
 // Hook run subcommand
+// Supports two formats:
+// 1. New format: han hook run <hookName> [--fail-fast] [--stdin]
+//    Uses plugin config.json to determine dirsWith and default command
+// 2. Legacy format: han hook run --dirs-with <file> -- <command>
+//    Explicit dirsWith and command specification
 hookCommand
-	.command("run [ignored...]")
+	.command("run [hookNameOrArgs...]")
 	.description(
-		"Run a command across directories. Requires -- before command (e.g., han hook run --dirs-with package.json -- npm test)",
+		"Run a hook across directories.\n" +
+			"New format: han hook run <hookName> [--fail-fast]\n" +
+			"Legacy format: han hook run --dirs-with <file> -- <command>",
 	)
 	.option("--fail-fast", "Stop on first failure")
 	.option(
 		"--dirs-with <file>",
-		"Only run in directories containing the specified file",
+		"(Legacy) Only run in directories containing the specified file",
 	)
 	.option(
 		"--test-dir <command>",
-		"Only include directories where this command exits 0 (runs silently)",
+		"(Legacy) Only include directories where this command exits 0",
 	)
 	.option("--stdin", "Read stdin and pass it to each subcommand")
 	.allowUnknownOption()
 	.action(
 		async (
-			_ignored: string[],
+			hookNameOrArgs: string[],
 			options: {
 				failFast?: boolean;
 				dirsWith?: string;
@@ -166,24 +173,12 @@ hookCommand
 				stdin?: boolean;
 			},
 		) => {
-			// Parse command from process.argv after --
+			// Extract hookName from args (first non-flag argument)
+			const hookName =
+				hookNameOrArgs.length > 0 ? hookNameOrArgs[0] : undefined;
+			// Detect format: check for -- separator (legacy) vs hookName (new)
 			const separatorIndex = process.argv.indexOf("--");
-
-			if (separatorIndex === -1) {
-				console.error(
-					"Error: Command must be specified after -- separator\n\nExample: han hook run --dirs-with package.json -- npm test",
-				);
-				process.exit(1);
-			}
-
-			const commandArgs = process.argv.slice(separatorIndex + 1);
-
-			if (commandArgs.length === 0) {
-				console.error(
-					"Error: No command specified after --\n\nExample: han hook run --dirs-with package.json -- npm test",
-				);
-				process.exit(1);
-			}
+			const isLegacyFormat = separatorIndex !== -1;
 
 			// Read stdin if --stdin flag is present
 			let stdinData: string | null = null;
@@ -195,28 +190,57 @@ hookCommand
 				stdinData = Buffer.concat(chunks).toString("utf8");
 			}
 
-			// Quote arguments that contain spaces or special characters
-			const quotedArgs = commandArgs.map((arg) => {
-				if (
-					arg.includes(" ") ||
-					arg.includes("&") ||
-					arg.includes("|") ||
-					arg.includes(";")
-				) {
-					// Escape single quotes and wrap in single quotes
-					return `'${arg.replace(/'/g, "'\\''")}'`;
-				}
-				return arg;
-			});
+			if (isLegacyFormat) {
+				// Legacy format: han hook run --dirs-with package.json -- npm test
+				const commandArgs = process.argv.slice(separatorIndex + 1);
 
-			const { validate } = await import("./validate.js");
-			await validate({
-				failFast: options.failFast || false,
-				dirsWith: options.dirsWith || null,
-				testDir: options.testDir || null,
-				command: quotedArgs.join(" "),
-				stdinData,
-			});
+				if (commandArgs.length === 0) {
+					console.error(
+						"Error: No command specified after --\n\nExample: han hook run --dirs-with package.json -- npm test",
+					);
+					process.exit(1);
+				}
+
+				// Quote arguments that contain spaces or special characters
+				const quotedArgs = commandArgs.map((arg) => {
+					if (
+						arg.includes(" ") ||
+						arg.includes("&") ||
+						arg.includes("|") ||
+						arg.includes(";")
+					) {
+						return `'${arg.replace(/'/g, "'\\''")}'`;
+					}
+					return arg;
+				});
+
+				const { validate } = await import("./validate.js");
+				await validate({
+					failFast: options.failFast || false,
+					dirsWith: options.dirsWith || null,
+					testDir: options.testDir || null,
+					command: quotedArgs.join(" "),
+					stdinData,
+				});
+			} else {
+				// New format: han hook run <hookName> [--fail-fast]
+				if (!hookName) {
+					console.error(
+						"Error: Hook name is required.\n\n" +
+							"Usage:\n" +
+							"  New format:    han hook run <hookName> [--fail-fast]\n" +
+							"  Legacy format: han hook run --dirs-with <file> -- <command>",
+					);
+					process.exit(1);
+				}
+
+				const { runConfiguredHook } = await import("./validate.js");
+				await runConfiguredHook({
+					hookName,
+					failFast: options.failFast || false,
+					stdinData,
+				});
+			}
 		},
 	);
 

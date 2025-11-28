@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "format": {
+      "command": "npx prettier --check .",
+      "dirsWith": ["package.json"],
+      "dirTest": "grep -qE '\"prettier\":' package.json"
+    }
+  }
+}

@@ -1,5 +1,4 @@
 {
-  "description": "Behavior-Driven Development enforcement hooks",
   "hooks": {
     "UserPromptSubmit": [
       {

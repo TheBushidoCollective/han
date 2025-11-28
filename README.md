@@ -31,13 +31,17 @@ The Bushido Code guides every plugin in this marketplace:
 
 Use the `han` CLI tool to automatically detect and install appropriate plugins:
 
+> **Important:** Han must be installed globally for hooks to work. Hooks run validation commands (tests, linting, etc.) when you stop working, and they require `han` to be available in your PATH. Using `npx` will install plugins but hooks will not function.
+
 ```bash
-# Install globally
+# Install globally (REQUIRED for hooks)
 npm install -g @thebushidocollective/han
 
-# Or use with npx (no installation required)
-npx @thebushidocollective/han plugin install --auto
+# Then install plugins
+han plugin install --auto
 ```
+
+For other installation methods (Homebrew, curl, manual download), visit [han.guru](https://han.guru).
 
 The installer will:
 
@@ -133,23 +137,25 @@ MCP servers that provide external knowledge and integrations.
 
 ## Using the Han CLI
 
+> **Reminder:** Han must be installed globally for hooks to work. See [han.guru](https://han.guru) for installation instructions.
+
 ### Install Plugins
 
 ```bash
 # Interactive mode - browse and select plugins
-npx @thebushidocollective/han plugin install
+han plugin install
 
 # Auto-detect mode - AI analyzes codebase
-npx @thebushidocollective/han plugin install --auto
+han plugin install --auto
 
 # Install specific plugin by name
-npx @thebushidocollective/han plugin install buki-typescript
+han plugin install buki-typescript
 ```
 
 ### Search Plugins
 
 ```bash
-npx @thebushidocollective/han plugin search typescript
+han plugin search typescript
 ```
 
 ### Align Plugins with Codebase
@@ -157,13 +163,13 @@ npx @thebushidocollective/han plugin search typescript
 Re-analyze your codebase and sync plugins with current state:
 
 ```bash
-npx @thebushidocollective/han plugin align
+han plugin align
 ```
 
 ### Uninstall
 
 ```bash
-npx @thebushidocollective/han uninstall
+han uninstall
 ```
 
 ## Philosophy

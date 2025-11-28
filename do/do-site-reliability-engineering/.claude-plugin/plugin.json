@@ -9,12 +9,6 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "sre",
-    "reliability",
-    "monitoring",
-    "incidents",
-    "devops"
-  ],
+  "keywords": ["sre", "reliability", "monitoring", "incidents", "devops"],
   "agentsPath": "agents"
 }

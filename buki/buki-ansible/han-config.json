@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "sh -c 'if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi'",
+      "dirsWith": ["*.yml,*.yaml"]
+    }
+  }
+}

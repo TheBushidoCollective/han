@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
+            "command": "han hook run format --fail-fast"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with *.tf -- sh -c 'terraform fmt -check && terraform validate'"
+            "command": "han hook run format --fail-fast"
           }
         ]
       }

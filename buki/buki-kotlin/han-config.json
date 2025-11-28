@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "test": {
+      "command": "./gradlew test || han hook run --fail-fast --dirs-with pom.xml -- mvn test",
+      "dirsWith": ["build.gradle.kts"]
+    }
+  }
+}

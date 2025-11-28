@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with Cargo.toml -- cargo clippy -- -D warnings"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }

@@ -2,24 +2,20 @@
   "hooks": {
     "Stop": [
       {
-        "name": "bun-type-check",
-        "description": "Validates TypeScript types in Bun projects before stopping",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
+            "command": "han hook run build --fail-fast"
           }
         ]
       }
     ],
     "SubagentStop": [
       {
-        "name": "bun-type-check",
-        "description": "Validates TypeScript types in Bun projects when agents complete",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with bun.lockb -- bun build --target=bun --no-bundle"
+            "command": "han hook run build --fail-fast"
           }
         ]
       }

@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "test": {
+      "command": "sbt test",
+      "dirsWith": ["build.sbt"]
+    }
+  }
+}

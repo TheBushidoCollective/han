@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "test": {
+      "command": "pytest",
+      "dirsWith": ["pyproject.toml"],
+      "dirTest": "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
+    }
+  }
+}

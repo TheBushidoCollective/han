@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with rebar.config -- rebar3 compile warnings_as_errors=true"
+            "command": "han hook run build --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with rebar.config -- rebar3 eunit"
+            "command": "han hook run hook1 --fail-fast"
           }
         ]
       }
@@ -19,11 +19,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with rebar.config -- rebar3 compile warnings_as_errors=true"
+            "command": "han hook run build --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with rebar.config -- rebar3 eunit"
+            "command": "han hook run hook1 --fail-fast"
           }
         ]
       }

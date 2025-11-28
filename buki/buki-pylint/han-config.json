@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "pylint .",
+      "dirsWith": ["pyproject.toml"],
+      "dirTest": "grep -qE '^pylint[^a-zA-Z]|\"pylint\"' pyproject.toml"
+    }
+  }
+}

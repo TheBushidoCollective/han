@@ -5,33 +5,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with mix.exs -- mix compile --warnings-as-errors"
+            "command": "han hook run test --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with formatter.exs -- mix format --check-formatted"
+            "command": "han hook run format --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with mix.exs -- mix test --stale"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run --fail-fast --dirs-with mix.exs -- mix compile --warnings-as-errors"
-          },
-          {
-            "type": "command",
-            "command": "han hook run --fail-fast --dirs-with formatter.exs -- mix format --check-formatted"
-          },
-          {
-            "type": "command",
-            "command": "han hook run --fail-fast --dirs-with mix.exs -- mix test --stale"
+            "command": "han hook run compile --fail-fast"
           }
         ]
       }

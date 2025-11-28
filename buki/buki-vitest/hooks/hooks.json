@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"vitest\\\":' package.json\" -- npx vitest run"
+            "command": "han hook run test --fail-fast"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json --test-dir \"grep -qE '\\\"vitest\\\":' package.json\" -- npx vitest run"
+            "command": "han hook run test --fail-fast"
           }
         ]
       }

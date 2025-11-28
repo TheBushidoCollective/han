@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "test": {
+      "command": "swift test",
+      "dirsWith": ["Package.swift"]
+    }
+  }
+}

@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with shard.yml -- crystal tool format --check"
+            "command": "han hook run format --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with shard.yml -- crystal spec"
+            "command": "han hook run hook1 --fail-fast"
           }
         ]
       }
@@ -19,11 +19,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with shard.yml -- crystal tool format --check"
+            "command": "han hook run format --fail-fast"
           },
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with shard.yml -- crystal spec"
+            "command": "han hook run hook1 --fail-fast"
           }
         ]
       }

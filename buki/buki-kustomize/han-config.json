@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "build": {
+      "command": "kustomize build . > /dev/null",
+      "dirsWith": ["kustomization.yaml"]
+    }
+  }
+}

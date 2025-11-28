@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "build": {
+      "command": "bun build --target=bun --no-bundle",
+      "dirsWith": ["bun.lockb"]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "test": {
+      "command": "npm test",
+      "dirsWith": ["package.json"],
+      "dirTest": "grep -qE '\"vitest\":' package.json"
+    }
+  }
+}

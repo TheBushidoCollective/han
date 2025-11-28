@@ -6,7 +6,7 @@ A curated marketplace of Claude Code plugins built on the foundation of the seve
 
 ## Installation
 
-> **Note:** Hooks require global installation. Use one of the methods below to install han globally on your system.
+> **Important:** Han MUST be installed globally for hooks to work. Hooks run validation commands (tests, linting, compilation) when you stop working, and they require `han` to be available in your PATH. Using `npx` will install plugins but hooks will NOT function.
 
 ### Quick Install (Recommended)
 
@@ -37,6 +37,13 @@ Download the latest binary for your platform from [GitHub Releases](https://gith
 | Linux x64 | [han-linux-x64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-linux-x64) |
 | Linux ARM64 | [han-linux-arm64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-linux-arm64) |
 | Windows x64 | [han-windows-x64.exe](https://github.com/TheBushidoCollective/han/releases/latest/download/han-windows-x64.exe) |
+
+After downloading, move the binary to a directory in your PATH (e.g., `/usr/local/bin`) and make it executable:
+
+```bash
+chmod +x han-darwin-arm64
+mv han-darwin-arm64 /usr/local/bin/han
+```
 
 ## Plugin Categories
 
