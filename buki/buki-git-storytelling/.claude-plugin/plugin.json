@@ -1,6 +1,6 @@
 {
   "name": "buki-git-storytelling",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
   "author": {
     "name": "The Bushido Collective",
