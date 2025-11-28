@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "hook0": {
+      "command": "ruby -c",
+      "dirsWith": ["Gemfile"]
+    }
+  }
+}

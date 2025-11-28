@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "hook0": {
+      "command": "\"act --dryrun\"",
+      "dirsWith": [".github/workflows"]
+    }
+  }
+}

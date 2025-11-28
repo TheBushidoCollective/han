@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "mvn checkstyle:check",
+      "dirsWith": ["pom.xml"],
+      "dirTest": "grep -qE 'checkstyle' pom.xml"
+    }
+  }
+}

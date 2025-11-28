@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "format": {
+      "command": "crystal tool format --check",
+      "dirsWith": ["shard.yml"]
+    },
+    "hook1": {
+      "command": "crystal spec",
+      "dirsWith": ["shard.yml"]
+    }
+  }
+}

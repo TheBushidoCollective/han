@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "test": {
+      "command": "bundle exec rspec",
+      "dirsWith": ["Gemfile"],
+      "dirTest": "grep -qE '^\\s*gem.*rspec' Gemfile"
+    }
+  }
+}

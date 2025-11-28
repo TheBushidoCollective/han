@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "format": {
+      "command": "go fmt ./...",
+      "dirsWith": ["go.mod"]
+    },
+    "vet": {
+      "command": "go vet ./...",
+      "dirsWith": ["go.mod"]
+    },
+    "test": {
+      "command": "go test ./...",
+      "dirsWith": ["go.mod"]
+    }
+  }
+}

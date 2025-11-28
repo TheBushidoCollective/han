@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "format": {
+      "command": "gleam format --check",
+      "dirsWith": ["gleam.toml"]
+    },
+    "test": {
+      "command": "gleam test",
+      "dirsWith": ["gleam.toml"]
+    }
+  }
+}

@@ -112,7 +112,7 @@ test("shows hook command help", () => {
 // Hook run tests
 // ============================================
 
-test("shows error when hook run has no command argument", () => {
+test("shows error when hook run has no hook name or command", () => {
 	try {
 		execSync(`${binCommand} hook run`, { encoding: "utf8", stdio: "pipe" });
 		throw new Error("Should have failed");
@@ -121,7 +121,9 @@ test("shows error when hook run has no command argument", () => {
 		strictEqual(execError.status, 1);
 		const stderr = execError.stderr?.toString() || "";
 		strictEqual(
-			stderr.includes("-- separator") || stderr.includes("error"),
+			stderr.includes("Hook name is required") ||
+				stderr.includes("-- separator") ||
+				stderr.includes("error"),
 			true,
 		);
 	}
@@ -661,6 +663,428 @@ test("han plugin install multiple plugins at once", () => {
 			settings.enabledPlugins?.["buki-react@han"],
 			true,
 			"Expected buki-react@han to be enabled",
+		);
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// Hook run without --dirs-with (current directory)
+// ============================================
+
+test("runs in current directory when no --dirs-with specified", () => {
+	const testDir = setup();
+	try {
+		// Create a marker file to verify we're in the right directory
+		writeFileSync(join(testDir, "marker.txt"), "test");
+
+		const output = execSync(`${binCommand} hook run -- cat marker.txt`, {
+			cwd: testDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("test"),
+			true,
+			"Expected marker content in output",
+		);
+		strictEqual(output.includes("passed"), true, "Expected success message");
+	} finally {
+		teardown();
+	}
+});
+
+test("fails in current directory when command fails and no --dirs-with", () => {
+	const testDir = setup();
+	try {
+		try {
+			execSync(`${binCommand} hook run -- exit 1`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: "pipe",
+			});
+			throw new Error("Should have failed");
+		} catch (error) {
+			const execError = error as ExecError;
+			const exitCode = execError.status || execError.code;
+			strictEqual(exitCode, 2, `Expected exit code 2, got ${exitCode}`);
+		}
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// Hook config tests (han-config.json)
+// ============================================
+
+test("new format requires CLAUDE_PLUGIN_ROOT", () => {
+	const testDir = setup();
+	try {
+		try {
+			execSync(`${binCommand} hook run test`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: "pipe",
+				env: { ...process.env, CLAUDE_PLUGIN_ROOT: undefined },
+			});
+			throw new Error("Should have failed");
+		} catch (error) {
+			const execError = error as ExecError;
+			strictEqual(execError.status, 1);
+			const stderr = execError.stderr?.toString() || "";
+			strictEqual(
+				stderr.includes("CLAUDE_PLUGIN_ROOT"),
+				true,
+				"Expected error about CLAUDE_PLUGIN_ROOT",
+			);
+		}
+	} finally {
+		teardown();
+	}
+});
+
+test("new format loads han-config.json and runs command", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory with han-config.json
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo hook-success",
+					},
+				},
+			}),
+		);
+
+		// Create project with package.json
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(`${binCommand} hook run test`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("hook-success"),
+			true,
+			"Expected hook command output",
+		);
+		strictEqual(output.includes("passed"), true, "Expected success message");
+	} finally {
+		teardown();
+	}
+});
+
+test("new format runs in current directory when dirsWith is empty", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory with han-config.json (no dirsWith)
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					lint: {
+						command: "echo no-dirs-with-success",
+					},
+				},
+			}),
+		);
+
+		// Create project
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+
+		const output = execSync(`${binCommand} hook run lint`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(output.includes("no-dirs-with-success"), true);
+		strictEqual(output.includes("passed"), true);
+	} finally {
+		teardown();
+	}
+});
+
+test("new format reports when hook not found in config", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory with han-config.json
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: { command: "echo test" },
+				},
+			}),
+		);
+
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+
+		const output = execSync(`${binCommand} hook run nonexistent`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("No directories found") || output.includes("nonexistent"),
+			true,
+		);
+	} finally {
+		teardown();
+	}
+});
+
+test("new format with --fail-fast stops on first failure", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["marker.txt"],
+						command: "exit 1",
+					},
+				},
+			}),
+		);
+
+		// Create project with multiple matching directories
+		const projectDir = join(testDir, "project");
+		mkdirSync(join(projectDir, "pkg1"), { recursive: true });
+		mkdirSync(join(projectDir, "pkg2"), { recursive: true });
+		writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
+		writeFileSync(join(projectDir, "pkg2", "marker.txt"), "");
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		try {
+			execSync(`${binCommand} hook run test --fail-fast`, {
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: "pipe",
+				env: {
+					...process.env,
+					CLAUDE_PLUGIN_ROOT: pluginDir,
+					CLAUDE_PROJECT_DIR: projectDir,
+				},
+			});
+			throw new Error("Should have failed");
+		} catch (error) {
+			const execError = error as ExecError;
+			strictEqual(execError.status, 2, "Expected exit code 2");
+		}
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// User override tests (han-config.yml)
+// ============================================
+
+test("han-config.yml can override command", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo original-command",
+					},
+				},
+			}),
+		);
+
+		// Create project with package.json and han-config.yml override
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+		writeFileSync(
+			join(projectDir, "han-config.yml"),
+			"test-plugin:\n  test:\n    command: echo overridden-command\n",
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(`${binCommand} hook run test`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("overridden-command"),
+			true,
+			"Expected overridden command",
+		);
+		strictEqual(
+			output.includes("original-command"),
+			false,
+			"Should not see original command",
+		);
+	} finally {
+		teardown();
+	}
+});
+
+test("han-config.yml can disable hook", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo should-not-run",
+					},
+				},
+			}),
+		);
+
+		// Create project with disabled hook
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+		writeFileSync(
+			join(projectDir, "han-config.yml"),
+			"test-plugin:\n  test:\n    enabled: false\n",
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(`${binCommand} hook run test`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("should-not-run"),
+			false,
+			"Should not run disabled hook",
+		);
+		strictEqual(output.includes("disabled"), true, "Expected disabled message");
+	} finally {
+		teardown();
+	}
+});
+
+test("han-config.yml override only affects specific directory", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo default",
+					},
+				},
+			}),
+		);
+
+		// Create project with two packages, only one with override
+		const projectDir = join(testDir, "project");
+		mkdirSync(join(projectDir, "pkg1"), { recursive: true });
+		mkdirSync(join(projectDir, "pkg2"), { recursive: true });
+		writeFileSync(join(projectDir, "pkg1", "package.json"), "{}");
+		writeFileSync(join(projectDir, "pkg2", "package.json"), "{}");
+		writeFileSync(
+			join(projectDir, "pkg1", "han-config.yml"),
+			"test-plugin:\n  test:\n    command: echo custom\n",
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(`${binCommand} hook run test`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		// Should see both default and custom
+		strictEqual(
+			output.includes("default"),
+			true,
+			"Expected default in non-overridden dir",
+		);
+		strictEqual(
+			output.includes("custom"),
+			true,
+			"Expected custom in overridden dir",
 		);
 	} finally {
 		teardown();

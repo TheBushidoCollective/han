@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "bundle exec rubocop",
+      "dirsWith": ["Gemfile"],
+      "dirTest": "grep -qE '^\\s*gem.*rubocop' Gemfile"
+    }
+  }
+}

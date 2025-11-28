@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with pyproject.toml --test-dir \"grep -qE '^pylint[^a-zA-Z]|\\\"pylint\\\"' pyproject.toml\" -- pylint **/*.py"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with pyproject.toml --test-dir \"grep -qE '^pylint[^a-zA-Z]|\\\"pylint\\\"' pyproject.toml\" -- pylint **/*.py"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }

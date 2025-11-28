@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "format": {
+      "command": "cargo fmt --check",
+      "dirsWith": ["Cargo.toml"]
+    },
+    "lint": {
+      "command": "cargo clippy -- -D warnings",
+      "dirsWith": ["Cargo.toml"]
+    },
+    "test": {
+      "command": "cargo test",
+      "dirsWith": ["Cargo.toml"]
+    }
+  }
+}

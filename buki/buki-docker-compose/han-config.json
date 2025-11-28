@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "hook0": {
+      "command": "docker compose config > /dev/null",
+      "dirsWith": [
+        "docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml"
+      ]
+    }
+  }
+}

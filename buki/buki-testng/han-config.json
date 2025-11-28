@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "test": {
+      "command": "mvn test",
+      "dirsWith": ["pom.xml"]
+    }
+  }
+}

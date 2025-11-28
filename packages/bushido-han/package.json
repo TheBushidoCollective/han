@@ -53,8 +53,8 @@
 	"optionalDependencies": {
 		"@thebushidocollective/han-darwin-arm64": "1.18.1",
 		"@thebushidocollective/han-darwin-x64": "1.18.1",
-		"@thebushidocollective/han-linux-x64": "1.18.1",
 		"@thebushidocollective/han-linux-arm64": "1.18.1",
+		"@thebushidocollective/han-linux-x64": "1.18.1",
 		"@thebushidocollective/han-win32-x64": "1.18.1"
 	},
 	"devDependencies": {
@@ -73,6 +73,7 @@
 		"ink-text-input": "^6.0.0",
 		"marked-terminal": "7.3.0",
 		"react": "19.2.0",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"yaml": "^2.8.1"
 	}
 }

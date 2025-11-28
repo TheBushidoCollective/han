@@ -103,3 +103,20 @@ Version bumps happen automatically via GitHub Actions:
 - Plugin names follow patterns: `buki-*`, `do-*`, `sensei-*`
 - Always include `bushido` as a dependency in recommendations
 - MCP servers in sensei plugins should use HTTP transport with OAuth when available
+
+## Important: Global Installation Required for Hooks
+
+Han must be installed globally for hooks to work. Hooks use `han hook run` commands which require `han` to be available in the PATH. When writing documentation or installation instructions, always emphasize global installation:
+
+```bash
+# Global installation (REQUIRED for hooks)
+npm install -g @thebushidocollective/han
+
+# Or via Homebrew
+brew install thebushidocollective/tap/han
+
+# Or via curl
+curl -fsSL https://han.guru/install.sh | sh
+```
+
+Using `npx` will install plugins but hooks will NOT function.

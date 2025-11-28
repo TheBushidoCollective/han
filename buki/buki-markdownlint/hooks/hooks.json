@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx @thebushidocollective/han@latest hook run --fail-fast --dirs-with '.markdownlint.*' -- npx markdownlint-cli --fix . --ignore node_modules"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx @thebushidocollective/han@latest hook run --fail-fast --dirs-with '.markdownlint.*' -- npx markdownlint-cli --fix . --ignore node_modules"
+            "command": "han hook run lint --fail-fast"
           }
         ]
       }

@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "test": {
+      "command": "npx cypress run",
+      "dirsWith": ["package.json"],
+      "dirTest": "grep -qE '\"cypress\":' package.json"
+    }
+  }
+}
