@@ -12,6 +12,9 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// This will be replaced by esbuild with the actual prompt content when bundling
+declare const __DETECT_PLUGINS_PROMPT__: string | undefined;
+
 export const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
 
 export type MarketplaceSource =
@@ -148,11 +151,50 @@ export function removeInvalidPlugins(
 }
 
 /**
- * Read the base prompt from markdown file
+ * Get the base prompt - uses esbuild define in bundled mode, file read in development
  */
 function getBasePrompt(): string {
+	// In bundled mode, __DETECT_PLUGINS_PROMPT__ is replaced by esbuild with the file content
+	if (typeof __DETECT_PLUGINS_PROMPT__ !== "undefined") {
+		return __DETECT_PLUGINS_PROMPT__;
+	}
+	// Fallback for development mode (running via tsc)
 	const promptPath = path.join(__dirname, "detect-plugins-prompt.md");
 	return readFileSync(promptPath, "utf-8");
+}
+
+/**
+ * Find the Claude CLI executable in PATH
+ */
+function findClaudeExecutable(): string {
+	try {
+		const claudePath = execSync("which claude", {
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		}).trim();
+		if (claudePath) {
+			return claudePath;
+		}
+	} catch {
+		// Not found via which
+	}
+
+	// Fallback to common locations
+	const commonPaths = [
+		"/usr/local/bin/claude",
+		"/opt/homebrew/bin/claude",
+		join(process.env.HOME || "", ".local/bin/claude"),
+	];
+
+	for (const p of commonPaths) {
+		if (existsSync(p)) {
+			return p;
+		}
+	}
+
+	throw new Error(
+		"Claude CLI not found. Please install Claude Code: https://claude.ai/code",
+	);
 }
 
 /**
@@ -281,12 +323,14 @@ export async function detectPluginsWithAgent(
 	let responseContent = "";
 
 	try {
+		const claudePath = findClaudeExecutable();
 		const agent = query({
 			prompt,
 			options: {
 				model: "haiku",
 				includePartialMessages: true,
 				allowedTools,
+				pathToClaudeCodeExecutable: claudePath,
 			},
 		});
 
