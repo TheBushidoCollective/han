@@ -37,7 +37,7 @@ export function getProjectRoot(): string {
  * e.g., /Users/jwaldrip/dev/src/github.com/foo -> -Users-jwaldrip-dev-src-github-com-foo
  */
 export function getProjectSlug(projectPath: string): string {
-	return projectPath.replace(/\//g, "-");
+	return projectPath.replace(/[/.]/g, "-");
 }
 
 /**
@@ -54,10 +54,7 @@ export function getCacheDir(): string {
 /**
  * Get the cache file path for a plugin/hook combination
  */
-export function getCacheFilePath(
-	pluginName: string,
-	hookName: string,
-): string {
+export function getCacheFilePath(pluginName: string, hookName: string): string {
 	const cacheDir = getCacheDir();
 	// Sanitize plugin name for filename (replace / with _)
 	const sanitizedPluginName = pluginName.replace(/\//g, "_");
@@ -137,10 +134,7 @@ export async function findFilesWithGlob(
 /**
  * Build a manifest of file hashes for given files
  */
-export function buildManifest(
-	files: string[],
-	rootDir: string,
-): CacheManifest {
+export function buildManifest(files: string[], rootDir: string): CacheManifest {
 	const manifest: CacheManifest = {};
 	for (const file of files) {
 		const relativePath = relative(rootDir, file);
