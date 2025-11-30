@@ -127,4 +127,12 @@ jobs:
           git push origin "$TAG"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Created tag: $TAG"
-          echo "release-binaries.yml will handle publishing on tag push"
+
+      - name: Trigger release workflow
+        if: steps.check-tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          TAG="v${{ steps.bump-version.outputs.new_version }}"
+          echo "Triggering release-binaries workflow for $TAG"
+          gh workflow run release-binaries.yml --field tag="$TAG"
