@@ -1,6 +1,6 @@
 {
   "name": "buki-bun",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Validation and quality enforcement for Bun.js projects.",
   "author": {
     "name": "The Bushido Collective",

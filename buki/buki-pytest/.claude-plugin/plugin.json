@@ -1,6 +1,6 @@
 {
   "name": "buki-pytest",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["pytest", "testing", "python"]
+  "keywords": [
+    "pytest",
+    "testing",
+    "python"
+  ]
 }
