@@ -625,31 +625,18 @@ export default async function PluginPage({
 								</h2>
 								<div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
 									<p className="text-gray-600 dark:text-gray-300 mb-4">
-										This plugin&apos;s hooks can be customized per-directory using a{" "}
+										Override hook behavior per-directory with a{" "}
 										<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm">han-config.yml</code>{" "}
 										file in your project.
 									</p>
 
-									<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-										Default Hook Configuration
-									</h3>
-									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-6 scrollbar-custom">
-										<code>{JSON.stringify(hanConfig, null, 2)}</code>
-									</pre>
-
-									<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-										Override Example
-									</h3>
-									<p className="text-gray-600 dark:text-gray-300 mb-3 text-sm">
-										Create a <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">han-config.yml</code> file to customize hook behavior:
-									</p>
 									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4 scrollbar-custom">
 										<code>{`# han-config.yml
 ${plugin.metadata.name}:
 ${Object.entries(hanConfig.hooks).map(([hookName, hookDef]) => `  ${hookName}:
-    enabled: true  # Set to false to disable
-    # command: "${hookDef.command || ''}"  # Override command
-${hookDef.ifChanged ? `    # if_changed:  # Override file patterns
+    # enabled: false  # Disable this hook
+    # command: "${hookDef.command || ''}"
+${hookDef.ifChanged ? `    # if_changed:
 ${hookDef.ifChanged.map(p => `    #   - "${p}"`).join('\n')}` : ''}`).join('\n')}`}</code>
 									</pre>
 
