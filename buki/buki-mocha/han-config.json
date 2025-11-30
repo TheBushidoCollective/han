@@ -3,7 +3,8 @@
     "test": {
       "command": "npm test",
       "dirsWith": ["package.json"],
-      "dirTest": "grep -qE '\"mocha\":' package.json"
+      "dirTest": "grep -qE '\"mocha\":' package.json",
+      "ifChanged": ["**/*.{js,jsx,ts,tsx,mjs,cjs}", "test/**/*", ".mocharc.*"]
     }
   }
 }

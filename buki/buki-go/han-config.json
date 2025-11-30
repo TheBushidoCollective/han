@@ -2,15 +2,18 @@
   "hooks": {
     "format": {
       "command": "go fmt ./...",
-      "dirsWith": ["go.mod"]
+      "dirsWith": ["go.mod"],
+      "ifChanged": ["**/*.go", "**/*.tmpl", "go.mod", "go.sum"]
     },
     "vet": {
       "command": "go vet ./...",
-      "dirsWith": ["go.mod"]
+      "dirsWith": ["go.mod"],
+      "ifChanged": ["**/*.go", "**/*.tmpl", "go.mod", "go.sum"]
     },
     "test": {
       "command": "go test ./...",
-      "dirsWith": ["go.mod"]
+      "dirsWith": ["go.mod"],
+      "ifChanged": ["**/*.go", "**/*.tmpl", "go.mod", "go.sum"]
     }
   }
 }

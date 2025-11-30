@@ -103,6 +103,67 @@ buki-{technology}/
 └── README.md                # Plugin documentation
 ```
 
+## Validation Hooks
+
+Buki plugins include validation hooks that run automatically during your Claude Code session:
+
+- **SessionStart**: Prime the cache by hashing relevant files
+- **Stop**: Validate code quality before completing work
+- **SubagentStop**: Validate after subagent tasks complete
+
+### Hook Configuration
+
+Each buki plugin has a `han-config.json` that defines its hooks:
+
+```json
+{
+  "hooks": {
+    "lint": {
+      "command": "npx eslint --fix .",
+      "dirsWith": ["eslint.config.js", ".eslintrc.js"],
+      "ifChanged": ["**/*.{js,jsx,ts,tsx}"]
+    }
+  }
+}
+```
+
+- **command**: The validation command to run
+- **dirsWith**: Only run in directories containing these files
+- **ifChanged**: Glob patterns for change detection (enables caching)
+
+### Smart Caching
+
+Hooks use intelligent caching to avoid redundant runs:
+
+1. File hashes are stored in `~/.claude/projects/{project}/han/`
+2. On each hook run with `--cache`, files matching `ifChanged` patterns are checked
+3. If no files have changed since the last successful run, the hook is skipped
+4. Cache persists across Claude Code sessions
+
+This means your linter won't run if you haven't modified any source files, and your tests won't run if nothing has changed.
+
+### Customizing Hooks
+
+You can override hook behavior per-directory with a `han-config.yml` file:
+
+```yaml
+buki-eslint:
+  lint:
+    enabled: false  # Disable this hook in this directory
+    # Or override the command:
+    # command: "npm run lint:custom"
+    # Or override which files trigger the hook:
+    # if_changed:
+    #   - "src/**/*.ts"
+    #   - "!src/**/*.test.ts"
+```
+
+Available override options:
+
+- **enabled**: Set to `false` to disable the hook in this directory
+- **command**: Override the command to run
+- **if_changed**: Override the glob patterns for change detection (replaces plugin defaults)
+
 ## Quality Standards
 
 All buki plugins enforce quality through:

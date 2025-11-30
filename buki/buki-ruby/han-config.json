@@ -2,7 +2,8 @@
   "hooks": {
     "hook0": {
       "command": "ruby -c",
-      "dirsWith": ["Gemfile"]
+      "dirsWith": ["Gemfile"],
+      "ifChanged": ["**/*.rb", "**/*.erb", "Gemfile"]
     }
   }
 }

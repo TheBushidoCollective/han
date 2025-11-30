@@ -126,16 +126,27 @@ export default async function PluginPage({
 	}));
 
 	// Load plugin metadata for tags
-	const pluginJsonPath = path.join(
+	const pluginDir = path.join(
 		process.cwd(),
 		"..",
 		plugin.metadata.category === "bushido"
 			? "bushido"
 			: `${plugin.metadata.category}/${plugin.metadata.name}`,
-		".claude-plugin/plugin.json",
 	);
+	const pluginJsonPath = path.join(pluginDir, ".claude-plugin/plugin.json");
 	const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
 	const tags = pluginJson.keywords || [];
+
+	// Load han-config.json if it exists (for hook configuration)
+	const hanConfigPath = path.join(pluginDir, "han-config.json");
+	let hanConfig: { hooks?: Record<string, { command?: string; dirsWith?: string[]; ifChanged?: string[] }> } | null = null;
+	if (fs.existsSync(hanConfigPath)) {
+		try {
+			hanConfig = JSON.parse(fs.readFileSync(hanConfigPath, "utf-8"));
+		} catch {
+			hanConfig = null;
+		}
+	}
 
 	// Find related plugins
 	const allPlugins = getAllPluginsAcrossCategories();
@@ -351,6 +362,15 @@ export default async function PluginPage({
 									>
 										<span>🪝</span>
 										<span>Hooks</span>
+									</a>
+								)}
+								{hanConfig && hanConfig.hooks && Object.keys(hanConfig.hooks).length > 0 && (
+									<a
+										href="#configuration"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										<span>⚙️</span>
+										<span>Configuration</span>
 									</a>
 								)}
 								{relatedPlugins.length > 0 && (
@@ -593,6 +613,63 @@ export default async function PluginPage({
 											)}
 										</div>
 									))}
+								</div>
+							</section>
+						)}
+
+						{/* Configuration Section */}
+						{hanConfig && hanConfig.hooks && Object.keys(hanConfig.hooks).length > 0 && (
+							<section id="configuration" className="scroll-mt-32 mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+									Configuration
+								</h2>
+								<div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+									<p className="text-gray-600 dark:text-gray-300 mb-4">
+										This plugin&apos;s hooks can be customized per-directory using a{" "}
+										<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm">han-config.yml</code>{" "}
+										file in your project.
+									</p>
+
+									<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+										Default Hook Configuration
+									</h3>
+									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-6 scrollbar-custom">
+										<code>{JSON.stringify(hanConfig, null, 2)}</code>
+									</pre>
+
+									<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+										Override Example
+									</h3>
+									<p className="text-gray-600 dark:text-gray-300 mb-3 text-sm">
+										Create a <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">han-config.yml</code> file to customize hook behavior:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4 scrollbar-custom">
+										<code>{`# han-config.yml
+${plugin.metadata.name}:
+${Object.entries(hanConfig.hooks).map(([hookName, hookDef]) => `  ${hookName}:
+    enabled: true  # Set to false to disable
+    # command: "${hookDef.command || ''}"  # Override command
+${hookDef.ifChanged ? `    # if_changed:  # Override file patterns
+${hookDef.ifChanged.map(p => `    #   - "${p}"`).join('\n')}` : ''}`).join('\n')}`}</code>
+									</pre>
+
+									<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+										Available Options
+									</h3>
+									<ul className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
+										<li className="flex items-start gap-2">
+											<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded shrink-0">enabled</code>
+											<span>Set to <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">false</code> to disable the hook in this directory</span>
+										</li>
+										<li className="flex items-start gap-2">
+											<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded shrink-0">command</code>
+											<span>Override the command that runs for this hook</span>
+										</li>
+										<li className="flex items-start gap-2">
+											<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded shrink-0">if_changed</code>
+											<span>Override the glob patterns for change detection (replaces plugin defaults)</span>
+										</li>
+									</ul>
 								</div>
 							</section>
 						)}

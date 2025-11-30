@@ -2,7 +2,8 @@
   "hooks": {
     "format": {
       "command": "sh -c 'terraform fmt -check && terraform validate'",
-      "dirsWith": ["*.tf"]
+      "dirsWith": ["*.tf"],
+      "ifChanged": ["**/*.tf", "**/*.tfvars"]
     }
   }
 }

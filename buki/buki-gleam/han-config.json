@@ -2,11 +2,13 @@
   "hooks": {
     "format": {
       "command": "gleam format --check",
-      "dirsWith": ["gleam.toml"]
+      "dirsWith": ["gleam.toml"],
+      "ifChanged": ["**/*.gleam", "gleam.toml"]
     },
     "test": {
       "command": "gleam test",
-      "dirsWith": ["gleam.toml"]
+      "dirsWith": ["gleam.toml"],
+      "ifChanged": ["**/*.gleam", "gleam.toml"]
     }
   }
 }

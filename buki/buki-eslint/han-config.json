@@ -3,7 +3,8 @@
     "lint": {
       "command": "npx eslint . --max-warnings 0",
       "dirsWith": ["package.json"],
-      "dirTest": "grep -qE '\"eslint\":' package.json"
+      "dirTest": "grep -qE '\"eslint\":' package.json",
+      "ifChanged": ["**/*.{js,jsx,ts,tsx,mjs,cjs}"]
     }
   }
 }

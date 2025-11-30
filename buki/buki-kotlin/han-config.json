@@ -2,7 +2,8 @@
   "hooks": {
     "test": {
       "command": "./gradlew test || han hook run --fail-fast --dirs-with pom.xml -- mvn test",
-      "dirsWith": ["build.gradle.kts"]
+      "dirsWith": ["build.gradle.kts"],
+      "ifChanged": ["**/*.kt", "**/*.kts", "build.gradle.kts", "settings.gradle.kts", "gradle.properties"]
     }
   }
 }

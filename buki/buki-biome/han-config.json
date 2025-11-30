@@ -2,7 +2,8 @@
   "hooks": {
     "lint": {
       "command": "npx -y @biomejs/biome check --write",
-      "dirsWith": ["biome.json"]
+      "dirsWith": ["biome.json"],
+      "ifChanged": ["**/*.{js,jsx,ts,tsx,json,jsonc}"]
     }
   }
 }

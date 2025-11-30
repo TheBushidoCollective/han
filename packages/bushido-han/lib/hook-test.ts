@@ -69,6 +69,7 @@ async function executeHookCommand(
 	hookType: string,
 	verbose: boolean,
 	claudeEnvVars: Record<string, string>,
+	cache?: boolean,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
 	if (hook.type === "prompt") {
@@ -81,8 +82,20 @@ async function executeHookCommand(
 		};
 	}
 
+	// Modify command to include --cache if enabled and the command uses 'han hook run'
+	let commandToRun = hook.command;
+	if (cache && commandToRun.includes("han hook run")) {
+		// Add --cache flag if not already present
+		if (!commandToRun.includes("--cache")) {
+			commandToRun = commandToRun.replace(
+				/han hook run/,
+				"han hook run --cache",
+			);
+		}
+	}
+
 	return new Promise((resolve) => {
-		const child = spawn(hook.command, {
+		const child = spawn(commandToRun, {
 			shell: true,
 			env: {
 				...process.env,
@@ -504,9 +517,11 @@ function collectHooks(
 export async function testHooks(options?: {
 	execute?: boolean;
 	verbose?: boolean;
+	cache?: boolean;
 }): Promise<void> {
 	const executeHooks = options?.execute ?? false;
 	const verbose = options?.verbose ?? false;
+	const cache = options?.cache ?? false;
 
 	if (!executeHooks) {
 		// Validation-only mode (keep existing console output)
@@ -549,7 +564,7 @@ export async function testHooks(options?: {
 	}
 
 	// Execute hooks and render with Ink
-	await executeHooksWithUI(hookTypesFound, hooksByType, verbose);
+	await executeHooksWithUI(hookTypesFound, hooksByType, verbose, cache);
 }
 
 /**
@@ -559,6 +574,7 @@ async function executeHooksWithUI(
 	hookTypesFound: string[],
 	hooksByType: HooksByType,
 	verbose: boolean,
+	cache: boolean,
 ): Promise<void> {
 	return new Promise((_resolve) => {
 		// Load environment variables from Claude config .env files
@@ -616,6 +632,7 @@ async function executeHooksWithUI(
 							hookType,
 							verbose,
 							claudeEnvVars,
+							cache,
 						);
 						results.push(result);
 

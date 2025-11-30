@@ -1,11 +1,21 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run validate --cache"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run validate --fail-fast"
+            "command": "han hook run validate --fail-fast --cache"
           }
         ]
       }
@@ -15,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run validate --fail-fast"
+            "command": "han hook run validate --fail-fast --cache"
           }
         ]
       }

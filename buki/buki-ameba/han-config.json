@@ -3,7 +3,8 @@
     "lint": {
       "command": "crystal tool format --check && ameba",
       "dirsWith": ["shard.yml"],
-      "dirTest": "grep -qE 'ameba' shard.yml"
+      "dirTest": "grep -qE 'ameba' shard.yml",
+      "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", ".ameba.yml"]
     }
   }
 }

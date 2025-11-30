@@ -2,7 +2,8 @@
   "hooks": {
     "test": {
       "command": "swift test",
-      "dirsWith": ["Package.swift"]
+      "dirsWith": ["Package.swift"],
+      "ifChanged": ["**/*.swift", "Package.swift", "Package.resolved"]
     }
   }
 }

@@ -2,7 +2,8 @@
   "hooks": {
     "test": {
       "command": "sbt test",
-      "dirsWith": ["build.sbt"]
+      "dirsWith": ["build.sbt"],
+      "ifChanged": ["**/*.scala", "**/*.sc", "**/*.sbt", "build.sbt", "project/**/*"]
     }
   }
 }

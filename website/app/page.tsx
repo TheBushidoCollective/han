@@ -91,124 +91,39 @@ export default function Home() {
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
 						Install han globally then add plugins to your projects
 					</p>
-					<p className="text-center text-amber-600 dark:text-amber-400 mb-8 max-w-2xl mx-auto text-sm">
-						Note: Hooks require global installation. Use one of the methods
-						below to install the han CLI globally.
-					</p>
-					<div className="max-w-4xl mx-auto space-y-6">
-						<InstallMethodCard
-							number="1"
-							title="Quick Install (Recommended)"
-							description="Install the han CLI globally with a single command"
-							code="curl -fsSL https://han.guru/install.sh | sh"
-						/>
-						<InstallMethodCard
-							number="2"
-							title="Homebrew (macOS & Linux)"
-							description="Install via Homebrew for easy updates"
-							code="brew install thebushidocollective/tap/han"
-						/>
-						<InstallMethodCard
-							number="3"
-							title="npm (Global)"
-							description="Install globally via npm"
-							code="npm install -g @thebushidocollective/han"
-						/>
-						<InstallMethodCard
-							number="4"
-							title="Automatic Plugin Detection"
-							description="After installing han globally, use it to auto-detect and install plugins for your project"
-							code={`# Analyze codebase and recommend plugins
-han plugin install --auto
-
-# Install to project settings (shared via git)
-han plugin install --auto --scope project`}
-						/>
-					</div>
-				</div>
-			</section>
-
-			{/* Learning Paths */}
-			<section id="learning-paths" className="py-24">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						Learning Paths
-					</h2>
-					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
-						Choose your path to mastery
-					</p>
-					<div className="grid md:grid-cols-3 gap-8">
-						<PathCard
-							title="Shu - 守"
-							subtitle="Beginner's Path"
-							items={[
-								{
-									text: "Learn the seven virtues with ",
-									link: "/plugins/bushido",
-									linkText: "bushido",
-								},
-								{
-									text: "Choose your primary discipline (one ",
-									link: "/plugins/do",
-									linkText: "Dō",
-									after: ")",
-								},
-								{
-									text: "Master one weapon first (one ",
-									link: "/plugins/buki",
-									linkText: "Buki",
-									after: ")",
-								},
-							]}
-						/>
-						<PathCard
-							title="Ha - 破"
-							subtitle="Intermediate Path"
-							items={[
-								{
-									text: "Practice several disciplines (multiple ",
-									link: "/plugins/do",
-									linkText: "Dō",
-									after: ")",
-								},
-								{
-									text: "Expand your arsenal (multiple ",
-									link: "/plugins/buki",
-									linkText: "Buki",
-									after: ")",
-								},
-								{
-									text: "Seek wisdom from teachers (",
-									link: "/plugins/sensei",
-									linkText: "Sensei",
-									after: ")",
-								},
-							]}
-						/>
-						<PathCard
-							title="Ri - 離"
-							subtitle="Advanced Path"
-							items={[
-								{
-									text: "Master multiple ways (all ",
-									link: "/plugins/do",
-									linkText: "Dō",
-									after: ")",
-								},
-								{
-									text: "Contribute new weapons (create ",
-									link: "/plugins/buki",
-									linkText: "Buki",
-									after: ")",
-								},
-								{
-									text: "Share wisdom with others (become ",
-									link: "/plugins/sensei",
-									linkText: "Sensei",
-									after: ")",
-								},
-							]}
-						/>
+					<div className="max-w-2xl mx-auto">
+						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+								Quick Install
+							</h3>
+							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+								Install the han CLI globally with a single command:
+							</p>
+							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4">
+								<code>curl -fsSL https://han.guru/install.sh | sh</code>
+							</pre>
+							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+								Then auto-detect and install plugins for your project:
+							</p>
+							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+								<code>han plugin install --auto</code>
+							</pre>
+						</div>
+						<div className="mt-6 text-center">
+							<Link
+								href="/docs#installation"
+								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+							>
+								More installation methods
+							</Link>
+							<span className="text-gray-500 dark:text-gray-400 mx-2">|</span>
+							<Link
+								href="/docs"
+								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+							>
+								Full documentation
+							</Link>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -303,72 +218,3 @@ function CategoryCard({
 	);
 }
 
-function InstallMethodCard({
-	number,
-	title,
-	description,
-	code,
-}: {
-	number: string;
-	title: string;
-	description: string;
-	code: string;
-}) {
-	return (
-		<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-			<div className="flex items-center mb-4">
-				<div className="w-8 h-8 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full flex items-center justify-center font-bold mr-3">
-					{number}
-				</div>
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-					{title}
-				</h3>
-			</div>
-			<p className="text-gray-600 dark:text-gray-300 mb-4">{description}</p>
-			<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-				<code>{code}</code>
-			</pre>
-		</div>
-	);
-}
-
-function PathCard({
-	title,
-	subtitle,
-	items,
-}: {
-	title: string;
-	subtitle: string;
-	items: Array<{
-		text: string;
-		link: string;
-		linkText: string;
-		after?: string;
-	}>;
-}) {
-	return (
-		<div className="bg-white dark:bg-gray-700 p-6 rounded-lg border-2 border-gray-200 dark:border-gray-600">
-			<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-				{title}
-			</h3>
-			<p className="text-gray-600 dark:text-gray-400 mb-4">{subtitle}</p>
-			<ul className="space-y-3">
-				{items.map((item) => (
-					<li key={item.link} className="flex items-start">
-						<span className="text-gray-900 dark:text-white mr-2">•</span>
-						<span className="text-gray-700 dark:text-gray-300">
-							{item.text}
-							<Link
-								href={item.link}
-								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-							>
-								{item.linkText}
-							</Link>
-							{item.after}
-						</span>
-					</li>
-				))}
-			</ul>
-		</div>
-	);
-}

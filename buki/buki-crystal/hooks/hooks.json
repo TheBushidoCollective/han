@@ -1,15 +1,29 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run format --cache"
+          },
+          {
+            "type": "command",
+            "command": "han hook run hook1 --cache"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast"
+            "command": "han hook run format --fail-fast --cache"
           },
           {
             "type": "command",
-            "command": "han hook run hook1 --fail-fast"
+            "command": "han hook run hook1 --fail-fast --cache"
           }
         ]
       }
@@ -19,11 +33,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast"
+            "command": "han hook run format --fail-fast --cache"
           },
           {
             "type": "command",
-            "command": "han hook run hook1 --fail-fast"
+            "command": "han hook run hook1 --fail-fast --cache"
           }
         ]
       }
