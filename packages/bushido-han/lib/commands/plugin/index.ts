@@ -3,6 +3,9 @@ import { registerPluginInstall } from "./install.js";
 import { registerPluginSearch } from "./search.js";
 import { registerPluginUninstall } from "./uninstall.js";
 
+/**
+ * Register all plugin management commands under `han plugin`
+ */
 export function registerPluginCommands(program: Command): void {
 	const pluginCommand = program
 		.command("plugin")
