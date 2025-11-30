@@ -24,7 +24,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use PAT instead of GITHUB_TOKEN so tag push triggers release-binaries workflow
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
