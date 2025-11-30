@@ -2,7 +2,8 @@
   "hooks": {
     "build": {
       "command": "kustomize build . > /dev/null",
-      "dirsWith": ["kustomization.yaml"]
+      "dirsWith": ["kustomization.yaml"],
+      "ifChanged": ["**/*.yaml", "**/*.yml", "kustomization.yaml"]
     }
   }
 }

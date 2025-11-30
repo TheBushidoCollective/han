@@ -141,7 +141,7 @@ const hookCommand = program.command("hook").description("Hook utilities");
 
 // Hook run subcommand
 // Supports two formats:
-// 1. New format: han hook run <hookName> [--fail-fast] [--stdin]
+// 1. New format: han hook run <hookName> [--fail-fast] [--stdin] [--cache]
 //    Uses plugin config.json to determine dirsWith and default command
 // 2. Legacy format: han hook run --dirs-with <file> -- <command>
 //    Explicit dirsWith and command specification
@@ -149,7 +149,7 @@ hookCommand
 	.command("run [hookNameOrArgs...]")
 	.description(
 		"Run a hook across directories.\n" +
-			"New format: han hook run <hookName> [--fail-fast]\n" +
+			"New format: han hook run <hookName> [--fail-fast] [--cache]\n" +
 			"Legacy format: han hook run --dirs-with <file> -- <command>",
 	)
 	.option("--fail-fast", "Stop on first failure")
@@ -162,6 +162,10 @@ hookCommand
 		"(Legacy) Only include directories where this command exits 0",
 	)
 	.option("--stdin", "Read stdin and pass it to each subcommand")
+	.option(
+		"--cache",
+		"Only run if files matching ifChanged patterns have changed since last successful run",
+	)
 	.allowUnknownOption()
 	.action(
 		async (
@@ -171,6 +175,7 @@ hookCommand
 				dirsWith?: string;
 				testDir?: string;
 				stdin?: boolean;
+				cache?: boolean;
 			},
 		) => {
 			// Extract hookName from args (first non-flag argument)
@@ -223,12 +228,12 @@ hookCommand
 					stdinData,
 				});
 			} else {
-				// New format: han hook run <hookName> [--fail-fast]
+				// New format: han hook run <hookName> [--fail-fast] [--cache]
 				if (!hookName) {
 					console.error(
 						"Error: Hook name is required.\n\n" +
 							"Usage:\n" +
-							"  New format:    han hook run <hookName> [--fail-fast]\n" +
+							"  New format:    han hook run <hookName> [--fail-fast] [--cache]\n" +
 							"  Legacy format: han hook run --dirs-with <file> -- <command>",
 					);
 					process.exit(1);
@@ -239,6 +244,7 @@ hookCommand
 					hookName,
 					failFast: options.failFast || false,
 					stdinData,
+					cache: options.cache || false,
 				});
 			}
 		},
@@ -250,19 +256,29 @@ hookCommand
 	.description("Validate hook configurations for all installed plugins")
 	.option("--execute", "Execute hooks to verify they run successfully")
 	.option("--verbose", "Show detailed output for all hooks")
-	.action(async (options: { execute?: boolean; verbose?: boolean }) => {
-		try {
-			const { testHooks } = await import("./hook-test.js");
-			await testHooks({ execute: options.execute, verbose: options.verbose });
-			process.exit(0);
-		} catch (error: unknown) {
-			console.error(
-				"Error during hook testing:",
-				error instanceof Error ? error.message : error,
-			);
-			process.exit(1);
-		}
-	});
+	.option(
+		"--cache",
+		"Prime the cache manifest after successful hook execution (use with --execute)",
+	)
+	.action(
+		async (options: { execute?: boolean; verbose?: boolean; cache?: boolean }) => {
+			try {
+				const { testHooks } = await import("./hook-test.js");
+				await testHooks({
+					execute: options.execute,
+					verbose: options.verbose,
+					cache: options.cache,
+				});
+				process.exit(0);
+			} catch (error: unknown) {
+				console.error(
+					"Error during hook testing:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		},
+	);
 
 // ============================================
 // Backwards compatibility aliases

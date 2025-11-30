@@ -3,7 +3,8 @@
     "lint": {
       "command": "mix credo --strict",
       "dirsWith": ["mix.exs"],
-      "dirTest": "grep -qE ':credo' mix.exs"
+      "dirTest": "grep -qE ':credo' mix.exs",
+      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", ".credo.exs"]
     }
   }
 }

@@ -2,7 +2,8 @@
   "hooks": {
     "typecheck": {
       "command": "npx tsc --noEmit",
-      "dirsWith": ["tsconfig.json"]
+      "dirsWith": ["tsconfig.json"],
+      "ifChanged": ["**/*.{ts,tsx,mts,cts}", "tsconfig*.json"]
     }
   }
 }

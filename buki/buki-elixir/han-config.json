@@ -2,19 +2,23 @@
   "hooks": {
     "test": {
       "dirsWith": ["mix.exs"],
-      "command": "mix test --stale"
+      "command": "mix test --stale",
+      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", "mix.exs", "mix.lock"]
     },
     "format": {
       "dirsWith": [".formatter.exs"],
-      "command": "mix format --check-formatted"
+      "command": "mix format --check-formatted",
+      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", ".formatter.exs"]
     },
     "compile": {
       "dirsWith": ["mix.exs"],
-      "command": "mix compile --warnings-as-errors"
+      "command": "mix compile --warnings-as-errors",
+      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", "mix.exs", "mix.lock"]
     },
     "typecheck": {
       "dirsWith": ["mix.exs"],
-      "command": "mix dialyzer"
+      "command": "mix dialyzer",
+      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", "mix.exs", "mix.lock"]
     }
   }
 }

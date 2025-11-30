@@ -143,6 +143,11 @@ export default function InstallationTabs({
 					<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto">
 						<code>claude plugin install {pluginName}@han</code>
 					</pre>
+					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
+						Note: For hooks to work, you must also install{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						globally and ensure it&apos;s in your PATH.
+					</p>
 				</div>
 			)}
 
@@ -154,6 +159,11 @@ export default function InstallationTabs({
 					<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto">
 						<code>/plugin install {pluginName}@han</code>
 					</pre>
+					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
+						Note: For hooks to work, you must also install{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						globally and ensure it&apos;s in your PATH.
+					</p>
 				</div>
 			)}
 
@@ -169,6 +179,11 @@ export default function InstallationTabs({
   }
 }`}</code>
 					</pre>
+					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
+						Note: For hooks to work, you must also install{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						globally and ensure it&apos;s in your PATH.
+					</p>
 				</div>
 			)}
 		</div>

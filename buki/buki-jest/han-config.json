@@ -3,7 +3,8 @@
     "test": {
       "command": "npm test",
       "dirsWith": ["package.json"],
-      "dirTest": "grep -qE '\"jest\":' package.json"
+      "dirTest": "grep -qE '\"jest\":' package.json",
+      "ifChanged": ["**/*.{js,jsx,ts,tsx,mjs,cjs}", "**/*.test.{js,jsx,ts,tsx}", "**/*.spec.{js,jsx,ts,tsx}", "jest.config.*"]
     }
   }
 }

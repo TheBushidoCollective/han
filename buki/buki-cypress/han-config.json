@@ -3,7 +3,8 @@
     "test": {
       "command": "npx cypress run",
       "dirsWith": ["package.json"],
-      "dirTest": "grep -qE '\"cypress\":' package.json"
+      "dirTest": "grep -qE '\"cypress\":' package.json",
+      "ifChanged": ["**/*.{js,jsx,ts,tsx}", "cypress/**/*", "cypress.config.*"]
     }
   }
 }

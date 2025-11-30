@@ -2,7 +2,8 @@
   "hooks": {
     "lint": {
       "command": "npx markdownlint-cli --fix . --ignore node_modules",
-      "dirsWith": ["'.markdownlint.*'"]
+      "dirsWith": ["'.markdownlint.*'"],
+      "ifChanged": ["**/*.md", ".markdownlint.*"]
     }
   }
 }

@@ -2,7 +2,8 @@
   "hooks": {
     "hook0": {
       "command": "\"act --dryrun\"",
-      "dirsWith": [".github/workflows"]
+      "dirsWith": [".github/workflows"],
+      "ifChanged": [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
     }
   }
 }

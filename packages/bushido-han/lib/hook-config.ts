@@ -11,6 +11,12 @@ export interface PluginHookDefinition {
 	dirsWith?: string[];
 	dirTest?: string;
 	command: string;
+	/**
+	 * Glob patterns relative to each target directory.
+	 * When --cache is enabled, the hook will only run if files matching
+	 * these patterns have changed since the last successful execution.
+	 */
+	ifChanged?: string[];
 }
 
 export interface PluginConfig {
@@ -23,6 +29,11 @@ export interface PluginConfig {
 export interface UserHookOverride {
 	enabled?: boolean;
 	command?: string;
+	/**
+	 * Override glob patterns for change detection.
+	 * Replaces the plugin's ifChanged patterns entirely.
+	 */
+	if_changed?: string[];
 }
 
 export interface UserConfig {
@@ -38,6 +49,10 @@ export interface ResolvedHookConfig {
 	enabled: boolean;
 	command: string;
 	directory: string;
+	/**
+	 * Glob patterns for change detection (from ifChanged in han-config.json)
+	 */
+	ifChanged?: string[];
 }
 
 /**
@@ -180,10 +195,14 @@ export async function resolveHookConfigs(
 		// Resolve command (user override or plugin default)
 		const command = userOverride?.command || hookDef.command;
 
+		// Resolve ifChanged patterns (user override replaces plugin default)
+		const ifChanged = userOverride?.if_changed || hookDef.ifChanged;
+
 		configs.push({
 			enabled,
 			command,
 			directory: dir,
+			ifChanged,
 		});
 	}
 

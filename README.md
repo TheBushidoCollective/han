@@ -66,6 +66,8 @@ Then install individual plugins:
 /plugin install buki-typescript@han
 ```
 
+> **Note:** For hooks to work, you must also install `han` globally and ensure it's in your PATH. See [Automatic Installation](#automatic-installation-recommended) above.
+
 ### Manual Installation
 
 Add the Han marketplace to your Claude Code settings (`.claude/settings.json`):
@@ -87,6 +89,8 @@ Add the Han marketplace to your Claude Code settings (`.claude/settings.json`):
 ```
 
 Then browse available plugins using Claude Code's plugin interface.
+
+> **Note:** For hooks to work, you must also install `han` globally and ensure it's in your PATH. See [Automatic Installation](#automatic-installation-recommended) above.
 
 ## Plugin Categories
 
@@ -201,6 +205,36 @@ Buki plugins include validation hooks that enforce quality standards:
 - Check formatting
 
 These hooks prevent you from continuing with broken code, embodying the Bushido virtues of Discipline and Justice.
+
+### Smart Hook Caching
+
+Buki plugins use intelligent caching to avoid redundant validation runs:
+
+- **Session Start**: Hooks prime their cache by hashing relevant files
+- **Stop/SubagentStop**: Hooks only run if files have changed since the last successful run
+- **Per-Project Cache**: Cache is stored in `~/.claude/projects/{project}/han/` and persists across sessions
+
+This means if you haven't modified any TypeScript files, the TypeScript compiler won't run again. If you haven't touched any files matching the linter's patterns, linting is skipped.
+
+#### How It Works
+
+1. Each hook defines `ifChanged` patterns in `han-config.json`:
+
+   ```json
+   {
+     "hooks": {
+       "lint": {
+         "command": "npx biome check --write",
+         "dirsWith": ["biome.json"],
+         "ifChanged": ["**/*.{js,jsx,ts,tsx,json}"]
+       }
+     }
+   }
+   ```
+
+2. On SessionStart, hooks run with `--cache` to prime the manifest
+3. On Stop, hooks check if any matching files changed before running
+4. After successful execution, the cache manifest is updated
 
 ## Learning Paths
 

@@ -2,6 +2,12 @@ import { execSync } from "node:child_process";
 import { dirname } from "node:path";
 import { globby } from "globby";
 import {
+	buildManifest,
+	checkForChanges,
+	findFilesWithGlob,
+	saveCacheManifest,
+} from "./hook-cache.js";
+import {
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
 	resolveHookConfigs,
@@ -154,16 +160,38 @@ export interface RunConfiguredHookOptions {
 	hookName: string;
 	failFast: boolean;
 	stdinData?: string | null;
+	/**
+	 * When true, check if files have changed before running hooks.
+	 * If no changes detected, skip the hook and exit 0.
+	 * After successful execution, update the cache manifest.
+	 */
+	cache?: boolean;
+}
+
+/**
+ * Generate a cache key for a directory-specific hook cache
+ */
+function getCacheKeyForDirectory(
+	hookName: string,
+	directory: string,
+	projectRoot: string,
+): string {
+	const relativeDirPath =
+		directory
+			.replace(projectRoot, "")
+			.replace(/^\//, "")
+			.replace(/\//g, "_") || "root";
+	return `${hookName}_${relativeDirPath}`;
 }
 
 /**
  * Run a hook using plugin config and user overrides.
- * This is the new format: `han hook run <hookName> [--fail-fast]`
+ * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
  */
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { hookName, failFast, stdinData } = options;
+	const { hookName, failFast, stdinData, cache } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -198,9 +226,57 @@ export async function runConfiguredHook(
 		process.exit(0);
 	}
 
-	const failures: Array<{ dir: string; command: string }> = [];
+	// If --cache is enabled, filter to only directories with changes
+	let configsToRun = enabledConfigs;
+	if (cache) {
+		const configsWithChanges: ResolvedHookConfig[] = [];
+		const skippedDirs: string[] = [];
 
-	for (const config of enabledConfigs) {
+		for (const config of enabledConfigs) {
+			// If no ifChanged patterns, always run
+			if (!config.ifChanged || config.ifChanged.length === 0) {
+				configsWithChanges.push(config);
+				continue;
+			}
+
+			const cacheKey = getCacheKeyForDirectory(
+				hookName,
+				config.directory,
+				projectRoot,
+			);
+			const hasChanges = await checkForChanges(
+				pluginName,
+				cacheKey,
+				config.directory,
+				config.ifChanged,
+			);
+
+			if (hasChanges) {
+				configsWithChanges.push(config);
+			} else {
+				const relativePath = config.directory.replace(`${projectRoot}/`, "");
+				skippedDirs.push(relativePath);
+			}
+		}
+
+		if (skippedDirs.length > 0) {
+			console.log(
+				`Skipping ${skippedDirs.length} director${skippedDirs.length === 1 ? "y" : "ies"} (no changes detected)`,
+			);
+		}
+
+		if (configsWithChanges.length === 0) {
+			console.log("No changes detected in any directories. Nothing to run.");
+			process.exit(0);
+		}
+
+		configsToRun = configsWithChanges;
+	}
+
+	const failures: Array<{ dir: string; command: string }> = [];
+	const successfulConfigs: ResolvedHookConfig[] = [];
+
+	for (const config of configsToRun) {
 		const relativePath = config.directory.replace(`${projectRoot}/`, "");
 		console.log(`Running "${config.command}" in ${relativePath}...`);
 
@@ -216,6 +292,27 @@ export async function runConfiguredHook(
 			if (failFast) {
 				process.exit(2);
 			}
+		} else {
+			successfulConfigs.push(config);
+		}
+	}
+
+	// Update cache manifest for successful executions
+	if (cache && successfulConfigs.length > 0) {
+		for (const config of successfulConfigs) {
+			if (config.ifChanged && config.ifChanged.length > 0) {
+				const cacheKey = getCacheKeyForDirectory(
+					hookName,
+					config.directory,
+					projectRoot,
+				);
+				const files = await findFilesWithGlob(
+					config.directory,
+					config.ifChanged,
+				);
+				const manifest = buildManifest(files, config.directory);
+				saveCacheManifest(pluginName, cacheKey, manifest);
+			}
 		}
 	}
 
@@ -230,7 +327,7 @@ export async function runConfiguredHook(
 	}
 
 	console.log(
-		`\n✅ All ${enabledConfigs.length} director${enabledConfigs.length === 1 ? "y" : "ies"} passed`,
+		`\n✅ All ${configsToRun.length} director${configsToRun.length === 1 ? "y" : "ies"} passed`,
 	);
 	process.exit(0);
 }

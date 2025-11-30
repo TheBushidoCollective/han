@@ -1,11 +1,21 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run format --cache"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast"
+            "command": "han hook run format --fail-fast --cache"
           }
         ]
       }
@@ -15,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast"
+            "command": "han hook run format --fail-fast --cache"
           }
         ]
       }
