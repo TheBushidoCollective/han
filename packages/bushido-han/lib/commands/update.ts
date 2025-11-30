@@ -60,13 +60,13 @@ function getCurrentVersion(): string {
 }
 
 /**
- * Get the latest version from npm
+ * Get the latest version from npm with timeout
  */
 async function getLatestVersion(): Promise<string> {
 	try {
 		const result = execSync(
 			"npm view @thebushidocollective/han version 2>/dev/null",
-			{ encoding: "utf8" },
+			{ encoding: "utf8", timeout: 5000 },
 		).trim();
 		return result;
 	} catch {
@@ -140,8 +140,20 @@ export async function checkAndAutoUpdate(): Promise<boolean> {
 		return false;
 	}
 
-	// Skip for update command itself
 	const args = process.argv.slice(2);
+
+	// Skip for version/help flags - these should be fast
+	if (
+		args.includes("--version") ||
+		args.includes("-V") ||
+		args.includes("--help") ||
+		args.includes("-h") ||
+		args.length === 0
+	) {
+		return false;
+	}
+
+	// Skip for update command itself
 	if (args[0] === "update") {
 		return false;
 	}
