@@ -1,12 +1,16 @@
 import { execSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, readlinkSync } from "node:fs";
+import { existsSync, readFileSync, readlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 
 type InstallMethod = "homebrew" | "npm" | "standalone" | "unknown";
 
 // Cache file for update check (avoid checking too frequently)
 const UPDATE_CHECK_INTERVAL = 1000 * 60 * 60; // 1 hour
+
+// Version injected at build time for binary builds
+declare const __HAN_VERSION__: string | undefined;
 
 /**
  * Detect how han was installed
@@ -49,11 +53,21 @@ function detectInstallMethod(): InstallMethod {
 }
 
 /**
- * Get the current version
+ * Get the current version from package.json (not by spawning han)
  */
 function getCurrentVersion(): string {
+	// Use build-time injected version if available
+	if (typeof __HAN_VERSION__ !== "undefined") {
+		return __HAN_VERSION__;
+	}
+	// Otherwise read from package.json
 	try {
-		return execSync("han --version", { encoding: "utf8" }).trim();
+		const __dirname = dirname(fileURLToPath(import.meta.url));
+		// Go up 3 levels: commands -> lib -> dist -> package.json
+		const packageJson = JSON.parse(
+			readFileSync(join(__dirname, "..", "..", "..", "package.json"), "utf-8"),
+		);
+		return packageJson.version;
 	} catch {
 		return "unknown";
 	}
