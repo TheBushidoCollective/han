@@ -49,6 +49,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 }) => {
 	const { write } = useStdout();
 	const writtenHookTypes = useRef<Set<string>>(new Set());
+	const lastAutoSelectedType = useRef<string | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [expandedType, setExpandedType] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -202,18 +203,17 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		}
 	});
 
-	// Auto-expand and select running hook type
+	// Auto-expand and select running hook type (only when it changes)
 	useEffect(() => {
-		if (currentType && !isComplete) {
+		if (currentType && !isComplete && currentType !== lastAutoSelectedType.current) {
+			lastAutoSelectedType.current = currentType;
 			setExpandedType(currentType);
-			const idx = flatItems.findIndex(
-				(i) => i.type === "hookType" && i.hookType === currentType,
-			);
+			const idx = hookTypes.indexOf(currentType);
 			if (idx !== -1) {
 				setSelectedIndex(idx);
 			}
 		}
-	}, [currentType, isComplete, flatItems]);
+	}, [currentType, isComplete, hookTypes]);
 
 	// Write completion summary to stdout when done
 	useEffect(() => {
