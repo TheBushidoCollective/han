@@ -1,6 +1,6 @@
 {
   "name": "buki-typescript",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "TypeScript compiler validation and type checking for TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["typescript", "tsc", "type-checking", "validation", "compiler"]
+  "keywords": [
+    "typescript",
+    "tsc",
+    "type-checking",
+    "validation",
+    "compiler"
+  ]
 }
