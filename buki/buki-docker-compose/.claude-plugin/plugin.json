@@ -1,6 +1,6 @@
 {
   "name": "buki-docker-compose",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Docker Compose validation and best practices",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["docker", "docker-compose", "containers", "devops"]
+  "keywords": [
+    "docker",
+    "docker-compose",
+    "containers",
+    "devops"
+  ]
 }
