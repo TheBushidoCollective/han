@@ -30,8 +30,8 @@ export interface UserHookOverride {
 	enabled?: boolean;
 	command?: string;
 	/**
-	 * Override glob patterns for change detection.
-	 * Replaces the plugin's ifChanged patterns entirely.
+	 * Additional glob patterns for change detection.
+	 * These patterns are merged with (added to) the plugin's ifChanged patterns.
 	 */
 	if_changed?: string[];
 }
@@ -143,6 +143,37 @@ function testDirCommand(dir: string, cmd: string): boolean {
 }
 
 /**
+ * Merge plugin and user ifChanged patterns.
+ * User patterns are added to plugin defaults, with duplicates removed.
+ */
+function mergeIfChangedPatterns(
+	pluginPatterns?: string[],
+	userPatterns?: string[],
+): string[] | undefined {
+	if (!pluginPatterns && !userPatterns) {
+		return undefined;
+	}
+
+	const merged = new Set<string>();
+
+	// Add plugin patterns first
+	if (pluginPatterns) {
+		for (const pattern of pluginPatterns) {
+			merged.add(pattern);
+		}
+	}
+
+	// Add user patterns (these extend the defaults)
+	if (userPatterns) {
+		for (const pattern of userPatterns) {
+			merged.add(pattern);
+		}
+	}
+
+	return Array.from(merged);
+}
+
+/**
  * Resolve hook configurations for all target directories
  */
 export async function resolveHookConfigs(
@@ -195,8 +226,11 @@ export async function resolveHookConfigs(
 		// Resolve command (user override or plugin default)
 		const command = userOverride?.command || hookDef.command;
 
-		// Resolve ifChanged patterns (user override replaces plugin default)
-		const ifChanged = userOverride?.if_changed || hookDef.ifChanged;
+		// Resolve ifChanged patterns (user patterns are merged with plugin defaults)
+		const ifChanged = mergeIfChangedPatterns(
+			hookDef.ifChanged,
+			userOverride?.if_changed,
+		);
 
 		configs.push({
 			enabled,

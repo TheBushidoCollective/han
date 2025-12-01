@@ -12,12 +12,12 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parsePluginRecommendations } from "../lib/shared.js";
 import {
 	detectInstallMethod,
 	getCurrentVersion,
 	getLatestVersion,
 } from "../lib/commands/update.js";
+import { parsePluginRecommendations } from "../lib/shared.js";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1094,6 +1094,56 @@ test("han-config.yml override only affects specific directory", () => {
 			true,
 			"Expected custom in overridden dir",
 		);
+	} finally {
+		teardown();
+	}
+});
+
+test("han-config.yml if_changed merges with plugin defaults", async () => {
+	// Test that user if_changed patterns ADD to plugin defaults rather than replacing
+	const { resolveHookConfigs } = await import("../lib/hook-config.js");
+
+	const testDir = setup();
+	try {
+		// Create plugin directory with ifChanged patterns
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					lint: {
+						command: "echo lint",
+						dirsWith: ["package.json"],
+						ifChanged: ["**/*.ts", "**/*.js"],
+					},
+				},
+			}),
+		);
+
+		// Create project with han-config.yml that adds more patterns
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+		writeFileSync(
+			join(projectDir, "han-config.yml"),
+			"test-plugin:\n  lint:\n    if_changed:\n      - '**/*.json'\n      - '**/*.md'\n",
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const configs = await resolveHookConfigs(pluginDir, "lint", projectDir);
+
+		strictEqual(configs.length, 1, "Expected 1 config");
+
+		const patterns = configs[0].ifChanged ?? [];
+		// Should have both plugin patterns AND user patterns (merged)
+		strictEqual(patterns.includes("**/*.ts"), true, "Expected plugin pattern **/*.ts");
+		strictEqual(patterns.includes("**/*.js"), true, "Expected plugin pattern **/*.js");
+		strictEqual(patterns.includes("**/*.json"), true, "Expected user pattern **/*.json");
+		strictEqual(patterns.includes("**/*.md"), true, "Expected user pattern **/*.md");
+		strictEqual(patterns.length, 4, "Expected 4 merged patterns");
 	} finally {
 		teardown();
 	}
