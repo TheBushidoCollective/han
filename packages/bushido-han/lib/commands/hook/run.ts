@@ -1,5 +1,71 @@
 import type { Command } from "commander";
 
+/**
+ * Check if stdin has data available without blocking
+ * Returns the stdin data if available, null otherwise
+ */
+async function tryReadStdin(): Promise<string | null> {
+	// Check if stdin is a TTY (interactive terminal) - if so, no data to read
+	if (process.stdin.isTTY) {
+		return null;
+	}
+
+	// Set a short timeout to check for available data
+	return new Promise((resolve) => {
+		let data = "";
+		let resolved = false;
+
+		const timeout = setTimeout(() => {
+			if (!resolved) {
+				resolved = true;
+				process.stdin.removeAllListeners();
+				process.stdin.pause();
+				resolve(data || null);
+			}
+		}, 100); // 100ms timeout
+
+		process.stdin.setEncoding("utf8");
+		process.stdin.on("data", (chunk) => {
+			data += chunk;
+		});
+
+		process.stdin.on("end", () => {
+			if (!resolved) {
+				resolved = true;
+				clearTimeout(timeout);
+				resolve(data || null);
+			}
+		});
+
+		process.stdin.on("error", () => {
+			if (!resolved) {
+				resolved = true;
+				clearTimeout(timeout);
+				resolve(null);
+			}
+		});
+
+		// Resume stdin to start reading
+		process.stdin.resume();
+	});
+}
+
+/**
+ * Check if we're in a nested stop hook scenario
+ * Claude Code sets stop_hook_active: true in stdin when a stop hook is already running
+ */
+function isStopHookActive(stdinData: string | null): boolean {
+	if (!stdinData) return false;
+
+	try {
+		const parsed = JSON.parse(stdinData);
+		return parsed.stop_hook_active === true;
+	} catch {
+		// Not JSON or invalid JSON - that's fine, just means it's not a Claude hook context
+		return false;
+	}
+}
+
 export function registerHookRun(hookCommand: Command): void {
 	// Supports two formats:
 	// 1. New format: han hook run <hookName> [--fail-fast] [--stdin] [--cache]
@@ -39,19 +105,21 @@ export function registerHookRun(hookCommand: Command): void {
 					cache?: boolean;
 				},
 			) => {
+				// Always try to read stdin to check for stop_hook_active
+				const stdinData = await tryReadStdin();
+
+				// Check if we're in a nested stop hook - if so, exit immediately to prevent loops
+				if (isStopHookActive(stdinData)) {
+					process.exit(0);
+				}
+
 				const hookName =
 					hookNameOrArgs.length > 0 ? hookNameOrArgs[0] : undefined;
 				const separatorIndex = process.argv.indexOf("--");
 				const isLegacyFormat = separatorIndex !== -1;
 
-				let stdinData: string | null = null;
-				if (options.stdin) {
-					const chunks: Buffer[] = [];
-					for await (const chunk of process.stdin) {
-						chunks.push(chunk);
-					}
-					stdinData = Buffer.concat(chunks).toString("utf8");
-				}
+				// If --stdin was specified but we already read the data, use it
+				// Otherwise, stdinData will be passed to subcommands if available
 
 				if (isLegacyFormat) {
 					const commandArgs = process.argv.slice(separatorIndex + 1);
