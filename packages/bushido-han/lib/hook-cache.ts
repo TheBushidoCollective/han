@@ -6,15 +6,41 @@ import { globby, globbyStream } from "globby";
 // Try to load native module for better performance
 // Falls back to JavaScript implementation if not available
 let nativeModule: typeof import("../../han-native") | null = null;
-try {
-	// Use dynamic import with require for optional native module
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	nativeModule =
-		require("../../han-native") as typeof import("../../han-native");
-} catch {
-	// Native module not available, will use JS fallback
-	nativeModule = null;
+
+/**
+ * Try to load the native module from various locations:
+ * 1. Same directory as the executable (for platform packages)
+ * 2. Relative path from source (for development)
+ */
+function tryLoadNativeModule(): typeof import("../../han-native") | null {
+	const possiblePaths = [
+		// For compiled binary: .node file next to executable
+		join(dirname(process.execPath), "han-native.node"),
+		// For development: relative path from lib
+		join(dirname(new URL(import.meta.url).pathname), "../../han-native"),
+	];
+
+	for (const modulePath of possiblePaths) {
+		try {
+			if (modulePath.endsWith(".node")) {
+				// Direct .node file loading
+				if (existsSync(modulePath)) {
+					// eslint-disable-next-line @typescript-eslint/no-require-imports
+					return require(modulePath) as typeof import("../../han-native");
+				}
+			} else {
+				// Package directory loading
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
+				return require(modulePath) as typeof import("../../han-native");
+			}
+		} catch {
+			// Continue to next path
+		}
+	}
+	return null;
 }
+
+nativeModule = tryLoadNativeModule();
 
 /**
  * Cache manifest structure stored per plugin/hook combination
