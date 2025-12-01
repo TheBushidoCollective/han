@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "hook0": {
+    "preview": {
       "command": "pulumi preview --non-interactive --suppress-outputs || true",
       "dirsWith": ["Pulumi.yaml"],
       "ifChanged": [
