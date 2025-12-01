@@ -1,7 +1,7 @@
 {
   "hooks": {
     "lint": {
-      "command": "sh -c 'helm lint . && helm template . --debug > /dev/null'",
+      "command": "helm lint . && helm template . --debug > /dev/null",
       "dirsWith": ["Chart.yaml"],
       "ifChanged": [
         "**/*.yaml",
