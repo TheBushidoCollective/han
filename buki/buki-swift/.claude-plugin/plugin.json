@@ -1,6 +1,6 @@
 {
   "name": "buki-swift",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["swift", "ios", "protocol-oriented", "concurrency"]
+  "keywords": [
+    "swift",
+    "ios",
+    "protocol-oriented",
+    "concurrency"
+  ]
 }
