@@ -18,6 +18,7 @@ interface ValidateOptions {
 	testDir?: string | null;
 	command: string;
 	stdinData?: string | null;
+	verbose?: boolean;
 }
 
 /**
@@ -30,22 +31,39 @@ function findDirectoriesWithMarker(
 	return findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
 
-// Run command in directory (suppresses output - we'll tell the agent how to reproduce)
+// Run command in directory
+// When verbose=false, suppresses output and we'll tell the agent how to reproduce
+// When verbose=true, inherits stdio to show full output
 function runCommand(
 	dir: string,
 	cmd: string,
 	stdinData?: string | null,
+	verbose?: boolean,
 ): boolean {
 	try {
-		execSync(cmd, {
-			cwd: dir,
-			// Suppress output - we give the agent a concise instruction instead
-			stdio: stdinData ? ["pipe", "pipe", "pipe"] : ["ignore", "pipe", "pipe"],
-			input: stdinData || undefined,
-			encoding: "utf8",
-			shell: "/bin/sh",
-			env: process.env,
-		});
+		if (verbose) {
+			// Verbose mode: show full output
+			execSync(cmd, {
+				cwd: dir,
+				stdio: stdinData ? ["pipe", "inherit", "inherit"] : "inherit",
+				input: stdinData || undefined,
+				encoding: "utf8",
+				shell: "/bin/sh",
+				env: process.env,
+			});
+		} else {
+			// Quiet mode: suppress output, we give the agent a concise instruction instead
+			execSync(cmd, {
+				cwd: dir,
+				stdio: stdinData
+					? ["pipe", "pipe", "pipe"]
+					: ["ignore", "pipe", "pipe"],
+				input: stdinData || undefined,
+				encoding: "utf8",
+				shell: "/bin/sh",
+				env: process.env,
+			});
+		}
 		return true;
 	} catch (_e) {
 		return false;
@@ -75,13 +93,14 @@ export function validate(options: ValidateOptions): void {
 		testDir,
 		command: commandToRun,
 		stdinData,
+		verbose,
 	} = options;
 
 	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
-		const success = runCommand(rootDir, commandToRun, stdinData);
+		const success = runCommand(rootDir, commandToRun, stdinData, verbose);
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
@@ -109,7 +128,7 @@ export function validate(options: ValidateOptions): void {
 		}
 
 		processedCount++;
-		const success = runCommand(dir, commandToRun, stdinData);
+		const success = runCommand(dir, commandToRun, stdinData, verbose);
 
 		if (!success) {
 			const relativePath =
@@ -170,6 +189,11 @@ export interface RunConfiguredHookOptions {
 	 * After successful execution, update the cache manifest.
 	 */
 	cache?: boolean;
+	/**
+	 * When true, show full command output instead of suppressing it.
+	 * Also settable via HAN_HOOK_VERBOSE=1 environment variable.
+	 */
+	verbose?: boolean;
 }
 
 /**
@@ -191,7 +215,7 @@ function getCacheKeyForDirectory(
  * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
  */
 export function runConfiguredHook(options: RunConfiguredHookOptions): void {
-	const { hookName, failFast, stdinData, cache } = options;
+	const { hookName, failFast, stdinData, cache, verbose } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -250,7 +274,12 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
 
-		const success = runCommand(config.directory, config.command, stdinData);
+		const success = runCommand(
+			config.directory,
+			config.command,
+			stdinData,
+			verbose,
+		);
 
 		if (!success) {
 			failures.push({ dir: relativePath, command: config.command });

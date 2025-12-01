@@ -93,6 +93,10 @@ export function registerHookRun(hookCommand: Command): void {
 			"--cache",
 			"Only run if files matching ifChanged patterns have changed since last successful run",
 		)
+		.option(
+			"--verbose",
+			"Show full command output (also settable via HAN_HOOK_VERBOSE=1)",
+		)
 		.allowUnknownOption()
 		.action(
 			async (
@@ -103,6 +107,7 @@ export function registerHookRun(hookCommand: Command): void {
 					testDir?: string;
 					stdin?: boolean;
 					cache?: boolean;
+					verbose?: boolean;
 				},
 			) => {
 				// Always try to read stdin to check for stop_hook_active
@@ -120,6 +125,12 @@ export function registerHookRun(hookCommand: Command): void {
 
 				// If --stdin was specified but we already read the data, use it
 				// Otherwise, stdinData will be passed to subcommands if available
+
+				// Determine verbose mode from option or environment variable
+				const verbose =
+					options.verbose ||
+					process.env.HAN_HOOK_VERBOSE === "1" ||
+					process.env.HAN_HOOK_VERBOSE === "true";
 
 				if (isLegacyFormat) {
 					const commandArgs = process.argv.slice(separatorIndex + 1);
@@ -150,6 +161,7 @@ export function registerHookRun(hookCommand: Command): void {
 						testDir: options.testDir || null,
 						command: quotedArgs.join(" "),
 						stdinData,
+						verbose,
 					});
 				} else {
 					if (!hookName) {
@@ -168,6 +180,7 @@ export function registerHookRun(hookCommand: Command): void {
 						failFast: options.failFast || false,
 						stdinData,
 						cache: options.cache || false,
+						verbose,
 					});
 				}
 			},
