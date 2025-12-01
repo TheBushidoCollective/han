@@ -40,9 +40,7 @@ function runCommand(
 		execSync(cmd, {
 			cwd: dir,
 			// Suppress output - we give the agent a concise instruction instead
-			stdio: stdinData
-				? ["pipe", "pipe", "pipe"]
-				: ["ignore", "pipe", "pipe"],
+			stdio: stdinData ? ["pipe", "pipe", "pipe"] : ["ignore", "pipe", "pipe"],
 			input: stdinData || undefined,
 			encoding: "utf8",
 			shell: "/bin/sh",
@@ -114,12 +112,15 @@ export function validate(options: ValidateOptions): void {
 		const success = runCommand(dir, commandToRun, stdinData);
 
 		if (!success) {
-			const relativePath = dir.replace(`${rootDir}/`, "");
+			const relativePath = dir === rootDir ? "." : dir.replace(`${rootDir}/`, "");
 			failures.push(relativePath);
 
 			if (failFast) {
+				const cmdStr = relativePath === "."
+					? commandToRun
+					: `cd ${relativePath} && ${commandToRun}`;
 				console.error(
-					`\n❌ The command \`cd ${relativePath} && ${commandToRun}\` failed.\n\n` +
+					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
 						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
@@ -138,7 +139,8 @@ export function validate(options: ValidateOptions): void {
 				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
 		for (const dir of failures) {
-			console.error(`  • \`cd ${dir} && ${commandToRun}\``);
+			const cmdStr = dir === "." ? commandToRun : `cd ${dir} && ${commandToRun}`;
+			console.error(`  • \`${cmdStr}\``);
 		}
 		console.error(
 			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
@@ -240,7 +242,9 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 		}
 
 		// Run the hook
-		const relativePath = config.directory.replace(`${projectRoot}/`, "");
+		const relativePath = config.directory === projectRoot
+			? "."
+			: config.directory.replace(`${projectRoot}/`, "");
 
 		const success = runCommand(config.directory, config.command, stdinData);
 
@@ -248,8 +252,11 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 			failures.push({ dir: relativePath, command: config.command });
 
 			if (failFast) {
+				const cmdStr = relativePath === "."
+					? config.command
+					: `cd ${relativePath} && ${config.command}`;
 				console.error(
-					`\n❌ The command \`cd ${relativePath} && ${config.command}\` failed.\n\n` +
+					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
 						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
@@ -309,7 +316,10 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
 		for (const failure of failures) {
-			console.error(`  • \`cd ${failure.dir} && ${failure.command}\``);
+			const cmdStr = failure.dir === "."
+				? failure.command
+				: `cd ${failure.dir} && ${failure.command}`;
+			console.error(`  • \`${cmdStr}\``);
 		}
 		console.error(
 			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
