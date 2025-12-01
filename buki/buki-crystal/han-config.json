@@ -5,7 +5,7 @@
       "dirsWith": ["shard.yml"],
       "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", "shard.lock"]
     },
-    "hook1": {
+    "test": {
       "command": "crystal spec",
       "dirsWith": ["shard.yml"],
       "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", "shard.lock"]

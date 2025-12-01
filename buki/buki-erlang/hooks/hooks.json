@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "han hook run hook1 --cache"
+            "command": "han hook run test --cache"
           }
         ]
       }
@@ -23,7 +23,7 @@
           },
           {
             "type": "command",
-            "command": "han hook run hook1 --fail-fast --cache"
+            "command": "han hook run test --fail-fast --cache"
           }
         ]
       }
@@ -37,7 +37,7 @@
           },
           {
             "type": "command",
-            "command": "han hook run hook1 --fail-fast --cache"
+            "command": "han hook run test --fail-fast --cache"
           }
         ]
       }

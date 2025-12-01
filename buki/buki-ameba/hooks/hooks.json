@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run hook0 --cache"
+            "command": "han hook run lint --cache"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run hook0 --fail-fast --cache"
+            "command": "han hook run lint --fail-fast --cache"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run hook0 --fail-fast --cache"
+            "command": "han hook run lint --fail-fast --cache"
           }
         ]
       }
