@@ -1,6 +1,6 @@
 {
   "name": "buki-python",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Advanced Python skills for type system, async patterns, and data modeling.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["python", "types", "async"]
+  "keywords": [
+    "python",
+    "types",
+    "async"
+  ]
 }

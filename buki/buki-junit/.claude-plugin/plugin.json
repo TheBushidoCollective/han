@@ -1,6 +1,6 @@
 {
   "name": "buki-junit",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
   "author": {
     "name": "The Bushido Collective",

@@ -1,6 +1,6 @@
 {
   "name": "buki-elixir",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
   "author": {
     "name": "The Bushido Collective",

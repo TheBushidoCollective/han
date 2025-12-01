@@ -1,6 +1,6 @@
 {
   "name": "buki-act",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
   "author": {
     "name": "The Bushido Collective",

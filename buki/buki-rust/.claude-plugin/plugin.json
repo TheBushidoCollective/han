@@ -1,6 +1,6 @@
 {
   "name": "buki-rust",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Advanced Rust skills for ownership, error handling, and async programming.",
   "author": {
     "name": "The Bushido Collective",

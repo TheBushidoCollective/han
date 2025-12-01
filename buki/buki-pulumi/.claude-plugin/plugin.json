@@ -1,6 +1,6 @@
 {
   "name": "buki-pulumi",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Pulumi infrastructure-as-code validation",
   "author": {
     "name": "The Bushido Collective",
