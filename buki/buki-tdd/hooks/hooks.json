@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md\"",
+            "command": "echo 'Read and follow the TDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md'",
             "timeout": 30000
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md\"",
+            "command": "echo 'Read and follow the TDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md'",
             "timeout": 30000
           }
         ]
