@@ -1,0 +1,20 @@
+{
+  "rustc": 16243257175721966122,
+  "features": "[\"alloc\", \"default\", \"race\", \"std\"]",
+  "declared_features": "[\"alloc\", \"atomic-polyfill\", \"critical-section\", \"default\", \"parking_lot\", \"portable-atomic\", \"race\", \"std\", \"unstable\"]",
+  "target": 17524666916136250164,
+  "profile": 17984201634715228204,
+  "path": 16838730789911898418,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/once_cell-7a3dbecdcc94fafa/dep-lib-once_cell",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

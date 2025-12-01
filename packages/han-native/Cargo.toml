@@ -1,0 +1,36 @@
+[package]
+name = "han-native"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Bushido Collective"]
+description = "High-performance native bindings for Han CLI hook operations"
+license = "MIT"
+repository = "https://github.com/thebushidocollective/han"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# napi-rs for Node.js bindings
+napi = { version = "2", default-features = false, features = ["napi8", "async", "serde-json"] }
+napi-derive = "2"
+# Fast glob matching
+globset = "0.4"
+# Gitignore-aware file traversal
+ignore = "0.4"
+# Native SHA256
+sha2 = "0.10"
+# Parallel iteration
+rayon = "1.10"
+# Serde for JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true

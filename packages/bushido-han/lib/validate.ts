@@ -13,6 +13,19 @@ import {
 	streamHookConfigs,
 } from "./hook-config.js";
 
+// Try to load native module for better performance
+// Falls back to JavaScript implementation if not available
+let nativeModule: typeof import("../../han-native") | null = null;
+try {
+	// Use dynamic import with require for optional native module
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	nativeModule =
+		require("../../han-native") as typeof import("../../han-native");
+} catch {
+	// Native module not available, will use JS fallback
+	nativeModule = null;
+}
+
 interface ValidateOptions {
 	failFast: boolean;
 	dirsWith: string | null;
@@ -23,10 +36,24 @@ interface ValidateOptions {
 
 // Stream directories containing marker files (respects nested .gitignore files)
 // Yields directories one at a time for early exit on fail-fast
+// Uses native module for better performance when available
 async function* streamDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
 ): AsyncGenerator<string> {
+	// Use native module if available (much faster, synchronous but yields for compatibility)
+	if (nativeModule) {
+		const directories = nativeModule.findDirectoriesWithMarkers(
+			rootDir,
+			markerPatterns,
+		);
+		for (const dir of directories) {
+			yield dir;
+		}
+		return;
+	}
+
+	// JavaScript fallback
 	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
 	const seenDirs = new Set<string>();
 

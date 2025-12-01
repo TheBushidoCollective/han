@@ -1,0 +1,28 @@
+{
+  "rustc": 16243257175721966122,
+  "features": "[\"regex\", \"semver\", \"strict\", \"type-def\"]",
+  "declared_features": "[\"noop\", \"regex\", \"semver\", \"strict\", \"type-def\"]",
+  "target": 7459870077939534063,
+  "profile": 17984201634715228204,
+  "path": 3184743715515156932,
+  "deps": [
+    [3056178850035811329, "regex", false, 15735908057293820607],
+    [3722963349756955755, "once_cell", false, 3079626842979213884],
+    [7988640081342112296, "syn", false, 15272524679838665513],
+    [9869581871423326951, "quote", false, 14163403465096166651],
+    [13475460906694513802, "convert_case", false, 2074958603986622788],
+    [14285738760999836560, "proc_macro2", false, 543668503940033870],
+    [18361894353739432590, "semver", false, 8340184484998401818]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/napi-derive-backend-3c457711d1a7213a/dep-lib-napi_derive_backend",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}
