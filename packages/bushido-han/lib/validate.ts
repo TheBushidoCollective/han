@@ -191,7 +191,7 @@ export interface RunConfiguredHookOptions {
 	cache?: boolean;
 	/**
 	 * When true, show full command output instead of suppressing it.
-	 * Also settable via HAN_HOOK_VERBOSE=1 environment variable.
+	 * Also settable via HAN_HOOK_RUN_VERBOSE=1 environment variable.
 	 */
 	verbose?: boolean;
 }
