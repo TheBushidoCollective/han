@@ -304,9 +304,8 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				<Box marginTop={1} flexDirection="column">
 					<Text dimColor>{"─".repeat(60)}</Text>
 					{result?.output && result.output.length > 0 ? (
-						result.output.map((line, i) => (
-							<Text key={`output-line-${i}`}>{line}</Text>
-						))
+						// biome-ignore lint/suspicious/noArrayIndexKey: output lines have no unique identifier
+						result.output.map((line, i) => <Text key={i}>{line}</Text>)
 					) : status === "running" ? (
 						<Text dimColor>Waiting for output...</Text>
 					) : (
@@ -433,8 +432,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 		const pluginArray = Array.from(pluginHooks.keys());
 		const isLastPlugin = pluginArray.indexOf(plugin) === pluginArray.length - 1;
-		const isLastType =
-			hookTypes.indexOf(hookType) === hookTypes.length - 1;
+		const isLastType = hookTypes.indexOf(hookType) === hookTypes.length - 1;
 
 		return (
 			<Box key={`plugin-${hookType}-${plugin}`}>
@@ -518,8 +516,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		const pluginArray = Array.from(pluginHooks.keys());
 		const isLastPlugin = pluginArray.indexOf(plugin) === pluginArray.length - 1;
 		const isLastCmd = cmdIndex === hooks.length - 1;
-		const isLastType =
-			hookTypes.indexOf(hookType) === hookTypes.length - 1;
+		const isLastType = hookTypes.indexOf(hookType) === hookTypes.length - 1;
 
 		return (
 			<Box key={`cmd-${hookType}-${plugin}-${cmdIndex}`}>
@@ -550,9 +547,10 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					{hook?.type === "prompt" ? "[prompt]" : command}
 				</Text>
 				{result?.timedOut && <Text color="red"> (timeout)</Text>}
-				{isSelected && (cmdStatus === "completed" || cmdStatus === "failed") && (
-					<Text dimColor> (Enter to view output)</Text>
-				)}
+				{isSelected &&
+					(cmdStatus === "completed" || cmdStatus === "failed") && (
+						<Text dimColor> (Enter to view output)</Text>
+					)}
 			</Box>
 		);
 	};

@@ -30,6 +30,6 @@ for (const pkg of platformPackages) {
 	packageJson.optionalDependencies[pkg] = version;
 }
 
-writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, "\t") + "\n");
+writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, "\t")}\n`);
 
 console.log(`Updated optionalDependencies to version ${version}`);
