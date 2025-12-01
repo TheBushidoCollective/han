@@ -71,22 +71,69 @@ export default function DocsPage() {
 							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
 								Installation Methods
 							</h2>
-							<p className="text-gray-600 dark:text-gray-300 mb-4">
-								Han must be installed globally for hooks to work. Choose your
-								preferred method:
-							</p>
-							<p className="text-amber-600 dark:text-amber-400 mb-8 text-sm">
-								Note: Hooks require global installation. They run validation
-								commands (tests, linting, etc.) and need{" "}
-								<code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">
-									han
-								</code>{" "}
-								to be available in your PATH.
+							<p className="text-gray-600 dark:text-gray-300 mb-8">
+								Plugins can be installed directly through Claude Code or using
+								the han CLI. No global installation required - hooks use npx
+								automatically.
 							</p>
 
 							<div className="space-y-6">
 								<InstallMethod
-									title="Quick Install (Recommended)"
+									title="In Claude Code (Recommended)"
+									description="Install plugins directly from within a Claude Code session"
+									code="/plugin install bushido@han"
+								/>
+								<InstallMethod
+									title="Claude CLI"
+									description="Install from the command line with Claude CLI"
+									code="claude plugin install bushido@han"
+								/>
+								<InstallMethod
+									title="npx (No Installation)"
+									description="Use han without installing - npx fetches the latest version"
+									code="npx @thebushidocollective/han plugin install --auto"
+								/>
+							</div>
+						</section>
+
+						{/* Installing Plugins */}
+						<section id="installing-plugins" className="scroll-mt-8 mb-16">
+							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+								Installing Plugins
+							</h3>
+							<p className="text-gray-600 dark:text-gray-300 mb-6">
+								Install plugins using any of these methods:
+							</p>
+							<div className="space-y-6">
+								<InstallMethod
+									title="Automatic Detection"
+									description="Let han analyze your codebase and recommend plugins"
+									code={`# Analyze codebase and recommend plugins
+npx @thebushidocollective/han plugin install --auto
+
+# Install to project settings (shared via git)
+npx @thebushidocollective/han plugin install --auto --scope project`}
+								/>
+								<InstallMethod
+									title="Manual Plugin Install"
+									description="Install specific plugins by name"
+									code="npx @thebushidocollective/han plugin install buki-typescript"
+								/>
+							</div>
+						</section>
+
+						{/* Optional Global Installation */}
+						<section id="alternative-methods" className="scroll-mt-8 mb-16">
+							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+								Optional: Global Installation
+							</h3>
+							<p className="text-gray-600 dark:text-gray-300 mb-6">
+								For convenience, you can install han globally. This is optional -
+								hooks work without it using npx.
+							</p>
+							<div className="space-y-6">
+								<InstallMethod
+									title="Quick Install"
 									description="Install the han CLI globally with a single command"
 									code="curl -fsSL https://han.guru/install.sh | sh"
 								/>
@@ -99,65 +146,6 @@ export default function DocsPage() {
 									title="npm (Global)"
 									description="Install globally via npm"
 									code="npm install -g @thebushidocollective/han"
-								/>
-							</div>
-						</section>
-
-						{/* Installing Plugins */}
-						<section id="installing-plugins" className="scroll-mt-8 mb-16">
-							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-								Installing Plugins
-							</h3>
-							<p className="text-gray-600 dark:text-gray-300 mb-6">
-								After installing han globally, you can add plugins to your
-								project:
-							</p>
-							<div className="space-y-6">
-								<InstallMethod
-									title="Automatic Detection"
-									description="Let han analyze your codebase and recommend plugins"
-									code={`# Analyze codebase and recommend plugins
-han plugin install --auto
-
-# Install to project settings (shared via git)
-han plugin install --auto --scope project`}
-								/>
-								<InstallMethod
-									title="Manual Plugin Install"
-									description="Install specific plugins by name"
-									code="han plugin install buki-typescript"
-								/>
-							</div>
-						</section>
-
-						{/* Alternative Methods */}
-						<section id="alternative-methods" className="scroll-mt-8 mb-16">
-							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-								Alternative Methods
-							</h3>
-							<p className="text-amber-600 dark:text-amber-400 mb-6 text-sm">
-								These methods install plugins but require han to be installed
-								globally for hooks to work.
-							</p>
-							<div className="space-y-6">
-								<InstallMethod
-									title="Claude CLI"
-									description="From the command line with Claude CLI"
-									code="claude plugin install buki-biome@han"
-								/>
-								<InstallMethod
-									title="In Claude Code Session"
-									description="From within a Claude Code session"
-									code="/plugin install buki-biome@han"
-								/>
-								<InstallMethod
-									title="Manual Configuration"
-									description="Add directly to .claude/settings.json"
-									code={`{
-  "enabledPlugins": {
-    "buki-biome@han": true
-  }
-}`}
 								/>
 							</div>
 						</section>
