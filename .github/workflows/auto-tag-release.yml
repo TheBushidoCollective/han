@@ -33,7 +33,7 @@ jobs:
           node-version: '24'
 
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Build native module
         working-directory: ./packages/han-native
