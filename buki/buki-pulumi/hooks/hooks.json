@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run preview --fail-fast --cache"
+            "command": "han hook run preview --fail-fast --cache",
+            "timeout": 60000
           }
         ]
       }
@@ -15,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run preview --fail-fast --cache"
+            "command": "han hook run preview --fail-fast --cache",
+            "timeout": 60000
           }
         ]
       }
