@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run build --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run build --fail-fast --cache",
             "timeout": 300000
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run build --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run build --fail-fast --cache",
             "timeout": 300000
           }
         ]

@@ -10,12 +10,12 @@ import {
 	checkAndAutoUpdate,
 	registerUpdateCommand,
 } from "./commands/update.js";
+import { HAN_VERSION } from "./build-info.generated.js";
 
 // Version is injected at build time for binary builds, otherwise read from package.json
-declare const __HAN_VERSION__: string | undefined;
 const version = (() => {
-	if (typeof __HAN_VERSION__ !== "undefined") {
-		return __HAN_VERSION__;
+	if (HAN_VERSION) {
+		return HAN_VERSION;
 	}
 	try {
 		const __dirname = dirname(fileURLToPath(import.meta.url));

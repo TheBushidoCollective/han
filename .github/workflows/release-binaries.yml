@@ -113,31 +113,41 @@ jobs:
         working-directory: ./packages/bushido-han
         run: npm ci
 
-      - name: Build bundle
-        working-directory: ./packages/bushido-han
-        run: npm run build:bundle
+      - name: Copy native modules to bushido-han for embedding
+        run: |
+          # Copy native modules to bushido-han/native/ for Bun to embed during compilation
+          # Each platform build will use the appropriate native module
+          mkdir -p packages/bushido-han/native
+          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/bushido-han/native/
+          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/bushido-han/native/
+          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/bushido-han/native/
+          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/bushido-han/native/
+          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/bushido-han/native/
 
-      - name: Cross-compile binaries
+      - name: Cross-compile binaries with embedded native modules
         working-directory: ./packages/bushido-han
         run: |
           mkdir -p dist/binaries
 
-          # Cross-compile for all platforms from single machine
-          bun build --compile --minify --target=bun-darwin-arm64 ./dist/bundle.js --outfile ./dist/binaries/han-darwin-arm64
-          bun build --compile --minify --target=bun-darwin-x64 ./dist/bundle.js --outfile ./dist/binaries/han-darwin-x64
-          bun build --compile --minify --target=bun-linux-x64 ./dist/bundle.js --outfile ./dist/binaries/han-linux-x64
-          bun build --compile --minify --target=bun-linux-arm64 ./dist/bundle.js --outfile ./dist/binaries/han-linux-arm64
-          bun build --compile --minify --target=bun-windows-x64 ./dist/bundle.js --outfile ./dist/binaries/han-windows-x64.exe
+          # Build for each platform - native module is embedded via direct require in hook-cache.ts
+          # For darwin-arm64 (uses han-native.darwin-arm64.node)
+          bun scripts/build-bundle.js bun-darwin-arm64
 
-      - name: Copy native modules to binaries directory
-        run: |
-          # Copy native modules with platform-specific names for the release
-          # These will be installed alongside the binary by Homebrew
-          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/bushido-han/dist/binaries/
-          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/bushido-han/dist/binaries/
-          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/bushido-han/dist/binaries/
-          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/bushido-han/dist/binaries/
-          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/bushido-han/dist/binaries/
+          # For darwin-x64 (need to swap the native module)
+          cp native/han-native.darwin-x64.node native/han-native.darwin-arm64.node
+          bun scripts/build-bundle.js bun-darwin-x64
+
+          # For linux-x64
+          cp native/han-native.linux-x64-gnu.node native/han-native.darwin-arm64.node
+          bun scripts/build-bundle.js bun-linux-x64
+
+          # For linux-arm64
+          cp native/han-native.linux-arm64-gnu.node native/han-native.darwin-arm64.node
+          bun scripts/build-bundle.js bun-linux-arm64
+
+          # For windows-x64
+          cp native/han-native.win32-x64-msvc.node native/han-native.darwin-arm64.node
+          bun scripts/build-bundle.js bun-windows-x64
 
       - name: Create checksums
         working-directory: ./packages/bushido-han/dist/binaries
@@ -208,17 +218,11 @@ jobs:
           REPO="TheBushidoCollective/han"
           BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
 
-          # Download checksum files for binaries
+          # Download checksum files for binaries (native modules are now embedded)
           DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-arm64.sha256" | awk '{print $1}')
           DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-x64.sha256" | awk '{print $1}')
           LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-arm64.sha256" | awk '{print $1}')
           LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-x64.sha256" | awk '{print $1}')
-
-          # Download checksum files for native modules
-          NATIVE_DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-native.darwin-arm64.node.sha256" | awk '{print $1}')
-          NATIVE_DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-native.darwin-x64.node.sha256" | awk '{print $1}')
-          NATIVE_LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-native.linux-arm64-gnu.node.sha256" | awk '{print $1}')
-          NATIVE_LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-native.linux-x64-gnu.node.sha256" | awk '{print $1}')
 
           cat > homebrew-tap/Formula/han.rb << EOF
           # typed: false
@@ -234,19 +238,9 @@ jobs:
               if Hardware::CPU.arm?
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-arm64"
                 sha256 "${DARWIN_ARM64_SHA}"
-
-                resource "native_module" do
-                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.darwin-arm64.node"
-                  sha256 "${NATIVE_DARWIN_ARM64_SHA}"
-                end
               else
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-x64"
                 sha256 "${DARWIN_X64_SHA}"
-
-                resource "native_module" do
-                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.darwin-x64.node"
-                  sha256 "${NATIVE_DARWIN_X64_SHA}"
-                end
               end
             end
 
@@ -254,27 +248,14 @@ jobs:
               if Hardware::CPU.arm?
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-arm64"
                 sha256 "${LINUX_ARM64_SHA}"
-
-                resource "native_module" do
-                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.linux-arm64-gnu.node"
-                  sha256 "${NATIVE_LINUX_ARM64_SHA}"
-                end
               else
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-x64"
                 sha256 "${LINUX_X64_SHA}"
-
-                resource "native_module" do
-                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.linux-x64-gnu.node"
-                  sha256 "${NATIVE_LINUX_X64_SHA}"
-                end
               end
             end
 
             def install
               bin.install Dir["han-*"].first => "han"
-              resource("native_module").stage do
-                bin.install Dir["*.node"].first => "han-native.node"
-              end
             end
 
             test do
