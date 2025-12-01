@@ -1,6 +1,6 @@
 {
   "name": "buki-ansible",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Ansible playbook validation and configuration management best practices",
   "author": {
     "name": "The Bushido Collective",

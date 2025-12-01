@@ -1,6 +1,6 @@
 {
   "name": "buki-markdownlint",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Markdown linting and style checking with markdownlint.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["markdownlint", "markdown", "linting", "documentation"]
+  "keywords": [
+    "markdownlint",
+    "markdown",
+    "linting",
+    "documentation"
+  ]
 }
