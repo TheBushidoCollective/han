@@ -103,6 +103,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
 			console.error(
 				`\nFailed when trying to run \`${commandToRun}\` in root directory\n`,
 			);
+			console.error(
+				"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+			);
 			process.exit(2);
 		}
 		console.log("\n✅ All 1 directory passed validation");
@@ -134,6 +137,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
 			);
 
 			if (failFast) {
+				console.error(
+					"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+				);
 				process.exit(2);
 			}
 		}
@@ -151,6 +157,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		for (const dir of failures) {
 			console.error(`  - ${dir}`);
 		}
+		console.error(
+			"\n📋 Instructions: Review the error output above for each failure, fix the issues in your code, then run the hook again to verify all directories pass.\n",
+		);
 		process.exit(2);
 	}
 
@@ -266,6 +275,9 @@ export async function runConfiguredHook(
 			);
 
 			if (failFast) {
+				console.error(
+					"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+				);
 				process.exit(2);
 			}
 		} else {
@@ -327,6 +339,9 @@ export async function runConfiguredHook(
 		for (const failure of failures) {
 			console.error(`  - ${failure.dir}`);
 		}
+		console.error(
+			"\n📋 Instructions: Review the error output above for each failure, fix the issues in your code, then run the hook again to verify all directories pass.\n",
+		);
 		process.exit(2);
 	}
 
