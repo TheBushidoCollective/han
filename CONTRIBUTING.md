@@ -34,7 +34,7 @@ Create validation hooks for languages, frameworks, or tools.
 **Requirements:**
 
 - Include validation hooks for Stop and SubagentStop events
-- Use `han hook run` command for validating various commands.
+- Use `npx @thebushidocollective/han hook run` command for validating various commands.
 - Provide clear error messages
 - Include README.md with usage examples
 
@@ -60,7 +60,7 @@ buki-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -70,7 +70,7 @@ buki-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -187,7 +187,7 @@ Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-se
 **What Claude Will Generate:**
 
 - `buki-{name}/.claude-plugin/marketplace.json` - Plugin metadata
-- `buki-{name}/hooks/hooks.json` - Validation hooks with proper `han hook run` usage
+- `buki-{name}/hooks/hooks.json` - Validation hooks with proper `npx @thebushidocollective/han hook run` usage
 - `buki-{name}/README.md` - Installation and usage documentation
 - `buki-{name}/skills/{skill-name}/SKILL.md` - Comprehensive skill documentation
 
@@ -269,7 +269,7 @@ When you request plugin generation, Claude will:
 - ✅ Use proper directory structure
 - ✅ Follow naming conventions (buki-*, do-*, sensei-*)
 - ✅ Include marketplace.json with metadata
-- ✅ Create hooks.json with `han hook run` patterns
+- ✅ Create hooks.json with `npx @thebushidocollective/han hook run` patterns
 - ✅ Generate comprehensive README.md files
 - ✅ Write detailed SKILL.md files with examples
 - ✅ Follow code style and formatting guidelines
@@ -281,7 +281,7 @@ When you request plugin generation, Claude will:
 
 After Claude generates files, review:
 
-1. **Hook Commands**: Ensure they use `han hook run --fail-fast --dirs-with`
+1. **Hook Commands**: Ensure they use `npx -y @thebushidocollective/han hook run --fail-fast --dirs-with`
 2. **Marker Files**: Verify marker files match project types
 3. **Skills**: Check that skills are comprehensive and accurate
 4. **Examples**: Ensure code examples are correct and follow best practices
@@ -397,14 +397,14 @@ npm test
 
 ## Validation Hook Guidelines
 
-### Use han hook run
+### Use npx @thebushidocollective/han hook run
 
-All buki plugins should use the `han hook run` command:
+All buki plugins should use the `npx @thebushidocollective/han hook run` command:
 
 ```json
 {
   "type": "command",
-  "command": "han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
+  "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
 }
 ```
 
@@ -420,18 +420,18 @@ All buki plugins should use the `han hook run` command:
 
 ### Error Messages
 
-Don't add redundant error messages after `han hook run` - it handles errors automatically.
+Don't add redundant error messages after the hook command - it handles errors automatically.
 
 **Good:**
 
 ```json
-"command": "han hook run --fail-fast --dirs-with package.json -- npm test"
+"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
 ```
 
 **Bad:**
 
 ```json
-"command": "han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
+"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
 ```
 
 ## Review Process

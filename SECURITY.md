@@ -64,7 +64,7 @@ When using han and plugins:
 
 - Only install plugins from trusted sources
 - Review hook commands before installation
-- Keep han updated to the latest version
+- Use npx to always get the latest version
 - Use `han plugin list` to audit installed plugins
 - Report suspicious plugins to maintainers
 

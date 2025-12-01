@@ -3,14 +3,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
+import { HAN_VERSION } from "./build-info.generated.js";
 import { registerAliasCommands } from "./commands/aliases.js";
 import { registerHookCommands } from "./commands/hook/index.js";
 import { registerPluginCommands } from "./commands/plugin/index.js";
-import {
-	checkAndAutoUpdate,
-	registerUpdateCommand,
-} from "./commands/update.js";
-import { HAN_VERSION } from "./build-info.generated.js";
 
 // Version is injected at build time for binary builds, otherwise read from package.json
 const version = (() => {
@@ -38,20 +34,6 @@ program
 // Register command groups
 registerPluginCommands(program);
 registerHookCommands(program);
-registerUpdateCommand(program);
 registerAliasCommands(program);
 
-// Main entry point with auto-update support
-async function main() {
-	// Check for updates and auto-update if available
-	// If an update happens, this will re-exec and not return
-	const reexecing = await checkAndAutoUpdate();
-	if (reexecing) {
-		// Wait indefinitely - the child process will exit for us
-		await new Promise(() => {});
-	}
-
-	program.parse();
-}
-
-main();
+program.parse();

@@ -6,44 +6,13 @@ A curated marketplace of Claude Code plugins built on the foundation of the seve
 
 ## Installation
 
-> **Important:** Han MUST be installed globally for hooks to work. Hooks run validation commands (tests, linting, compilation) when you stop working, and they require `han` to be available in your PATH. Using `npx` will install plugins but hooks will NOT function.
-
-### Quick Install (Recommended)
+Use npx to run han (no installation required):
 
 ```bash
-curl -fsSL https://han.guru/install.sh | sh
+npx @thebushidocollective/han plugin install
 ```
 
-### Homebrew (macOS & Linux)
-
-```bash
-brew install thebushidocollective/tap/han
-```
-
-### npm
-
-```bash
-npm install -g @thebushidocollective/han
-```
-
-### Manual Download
-
-Download the latest binary for your platform from [GitHub Releases](https://github.com/TheBushidoCollective/han/releases/latest):
-
-| Platform | Download |
-|----------|----------|
-| macOS Apple Silicon | [han-darwin-arm64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-darwin-arm64) |
-| macOS Intel | [han-darwin-x64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-darwin-x64) |
-| Linux x64 | [han-linux-x64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-linux-x64) |
-| Linux ARM64 | [han-linux-arm64](https://github.com/TheBushidoCollective/han/releases/latest/download/han-linux-arm64) |
-| Windows x64 | [han-windows-x64.exe](https://github.com/TheBushidoCollective/han/releases/latest/download/han-windows-x64.exe) |
-
-After downloading, move the binary to a directory in your PATH (e.g., `/usr/local/bin`) and make it executable:
-
-```bash
-chmod +x han-darwin-arm64
-mv han-darwin-arm64 /usr/local/bin/han
-```
+This always uses the latest version automatically.
 
 ## Plugin Categories
 
@@ -56,19 +25,19 @@ Han organizes plugins into four categories inspired by Japanese samurai traditio
 
 ## Commands
 
-### han plugin install
+### plugin install
 
 Install plugins interactively or automatically.
 
 ```bash
 # Interactive mode - browse and select plugins
-han plugin install
+npx @thebushidocollective/han plugin install
 
 # Auto-detect mode - AI analyzes codebase and recommends plugins
-han plugin install --auto
+npx @thebushidocollective/han plugin install --auto
 
 # Install specific plugin by name
-han plugin install <plugin-name>
+npx @thebushidocollective/han plugin install <plugin-name>
 ```
 
 **Options:**
@@ -83,61 +52,61 @@ han plugin install <plugin-name>
   - `project`: Install to `.claude/settings.json` (shared via git)
   - `local`: Install to `.claude/settings.local.json` (git-ignored)
 
-### han plugin uninstall
+### plugin uninstall
 
 Remove a specific plugin.
 
 ```bash
-han plugin uninstall <plugin-name> [--scope <project|local>]
+npx @thebushidocollective/han plugin uninstall <plugin-name> [--scope <project|local>]
 ```
 
-### han plugin search
+### plugin search
 
 Search for plugins in the Han marketplace.
 
 ```bash
-han plugin search [query]
+npx @thebushidocollective/han plugin search [query]
 ```
 
-### han hook run
+### hook run
 
 Run a command in directories matching a pattern.
 
 ```bash
-han hook run --dirs-with <pattern> -- <command>
+npx @thebushidocollective/han hook run --dirs-with <pattern> -- <command>
 ```
 
 **Examples:**
 
 ```bash
 # Run npm test in all directories with package.json
-han hook run --dirs-with package.json -- npm test
+npx @thebushidocollective/han hook run --dirs-with package.json -- npm test
 
 # Run mix compile in Elixir projects
-han hook run --dirs-with mix.exs -- mix compile --warnings-as-errors
+npx @thebushidocollective/han hook run --dirs-with mix.exs -- mix compile --warnings-as-errors
 
 # Only run in directories passing a test command
-han hook run --dirs-with mix.exs --test-dir "grep -qE ':credo' mix.exs" -- mix credo
+npx @thebushidocollective/han hook run --dirs-with mix.exs --test-dir "grep -qE ':credo' mix.exs" -- mix credo
 ```
 
-### han hook test
+### hook test
 
 Validate hook configurations for all installed plugins.
 
 ```bash
 # Validate hook structure and syntax only
-han hook test
+npx @thebushidocollective/han hook test
 
 # Validate AND execute hooks to verify they run successfully
-han hook test --execute
+npx @thebushidocollective/han hook test --execute
 ```
 
-### han uninstall
+### uninstall
 
 Remove all Han plugins and marketplace configuration.
 
 ```bash
-han uninstall
+npx @thebushidocollective/han uninstall
 ```
 
 ## Philosophy
