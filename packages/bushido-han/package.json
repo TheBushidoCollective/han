@@ -18,9 +18,9 @@
 		"test:all": "npm run test && npm run build:binary && npm run test:binary",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"prepack": "npm run build && npm run build:bundle && npm test",
-		"build:binary": "npm run build:bundle && bun build --compile --minify ./dist/bundle.js --outfile ./dist/han",
-		"build:bundle": "node scripts/build-bundle.js"
+		"prepack": "npm run build && npm test",
+		"build:binary": "bun scripts/build-bundle.js",
+		"build:bundle": "bun scripts/build-bundle.js"
 	},
 	"repository": {
 		"type": "git",
@@ -46,7 +46,6 @@
 	},
 	"files": [
 		"bin/",
-		"dist/bundle.js",
 		"dist/lib/",
 		"README.md"
 	],
@@ -72,6 +71,7 @@
 		"ink-text-input": "^6.0.0",
 		"marked-terminal": "7.3.0",
 		"react": "19.2.0",
+		"react-devtools-core": "^6.1.5",
 		"typescript": "5.9.3",
 		"yaml": "^2.8.1"
 	}

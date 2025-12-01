@@ -8,12 +8,10 @@ import {
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.js";
+import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// This will be replaced by esbuild with the actual prompt content when bundling
-declare const __DETECT_PLUGINS_PROMPT__: string | undefined;
 
 export const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
 
@@ -151,12 +149,12 @@ export function removeInvalidPlugins(
 }
 
 /**
- * Get the base prompt - uses esbuild define in bundled mode, file read in development
+ * Get the base prompt - uses generated build-info in bundled mode, file read in development
  */
 function getBasePrompt(): string {
-	// In bundled mode, __DETECT_PLUGINS_PROMPT__ is replaced by esbuild with the file content
-	if (typeof __DETECT_PLUGINS_PROMPT__ !== "undefined") {
-		return __DETECT_PLUGINS_PROMPT__;
+	// In bundled mode, DETECT_PLUGINS_PROMPT is set by the build script
+	if (DETECT_PLUGINS_PROMPT) {
+		return DETECT_PLUGINS_PROMPT;
 	}
 	// Fallback for development mode (running via tsc)
 	const promptPath = path.join(__dirname, "detect-plugins-prompt.md");

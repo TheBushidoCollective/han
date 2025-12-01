@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
-// Create require function for ESM context
-const require = createRequire(import.meta.url);
+// Create require function for ESM context (used for dynamic paths in Node.js)
+const dynamicRequire = createRequire(import.meta.url);
 
 /**
  * Native module type definition
@@ -11,32 +11,33 @@ const require = createRequire(import.meta.url);
 type NativeModule = typeof import("../../han-native");
 
 /**
- * Load the native module from various locations:
- * 1. Same directory as the executable (for Homebrew/binary installs)
- * 2. npm package (for npm installs)
- * 3. Relative path (for monorepo development)
+ * Cached native module instance
+ */
+let cachedNativeModule: NativeModule | null = null;
+
+/**
+ * Load the native module.
+ * Order of attempts:
+ * 1. npm package (for npm installs)
+ * 2. Monorepo path (for development)
+ * 3. Embedded path (for Bun compiled binaries - static require for Bun to detect)
+ * 4. Next to executable (legacy fallback)
  *
  * @throws Error if native module cannot be loaded
  */
 function loadNativeModule(): NativeModule {
-	const errors: string[] = [];
-
-	// For compiled binaries: look for .node file next to the executable
-	const executableDir = dirname(process.execPath);
-	const nodeFilePath = join(executableDir, "han-native.node");
-	if (existsSync(nodeFilePath)) {
-		try {
-			return require(nodeFilePath) as NativeModule;
-		} catch (e) {
-			errors.push(
-				`${nodeFilePath}: ${e instanceof Error ? e.message : String(e)}`,
-			);
-		}
+	if (cachedNativeModule) {
+		return cachedNativeModule;
 	}
 
-	// For npm installs: try the package
+	const errors: string[] = [];
+
+	// For npm installs: try the package first (most common case)
 	try {
-		return require("@thebushidocollective/han-native") as NativeModule;
+		cachedNativeModule = dynamicRequire(
+			"@thebushidocollective/han-native",
+		) as NativeModule;
+		return cachedNativeModule;
 	} catch (e) {
 		errors.push(
 			`@thebushidocollective/han-native: ${e instanceof Error ? e.message : String(e)}`,
@@ -51,9 +52,36 @@ function loadNativeModule(): NativeModule {
 		: "../../han-native";
 	const monorepoPath = join(currentDir, relativeToHanNative);
 	try {
-		return require(monorepoPath) as NativeModule;
+		cachedNativeModule = dynamicRequire(monorepoPath) as NativeModule;
+		return cachedNativeModule;
 	} catch (e) {
 		errors.push(`${monorepoPath}: ${e instanceof Error ? e.message : String(e)}`);
+	}
+
+	// For Bun compiled binaries: embedded native module
+	// This MUST be a bare require with a static string literal for Bun to detect and embed
+	try {
+		// @ts-ignore - require is available globally, need static string for Bun embedding
+		cachedNativeModule = require("../native/han-native.darwin-arm64.node") as NativeModule;
+		return cachedNativeModule;
+	} catch (e) {
+		errors.push(
+			`embedded: ${e instanceof Error ? e.message : String(e)}`,
+		);
+	}
+
+	// Legacy fallback: look for .node file next to the executable
+	const executableDir = dirname(process.execPath);
+	const nodeFilePath = join(executableDir, "han-native.node");
+	if (existsSync(nodeFilePath)) {
+		try {
+			cachedNativeModule = dynamicRequire(nodeFilePath) as NativeModule;
+			return cachedNativeModule;
+		} catch (e) {
+			errors.push(
+				`${nodeFilePath}: ${e instanceof Error ? e.message : String(e)}`,
+			);
+		}
 	}
 
 	throw new Error(

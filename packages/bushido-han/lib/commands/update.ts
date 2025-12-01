@@ -3,11 +3,27 @@ import { existsSync, readFileSync, readlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
+import { HAN_VERSION } from "../build-info.generated.js";
 
 export type InstallMethod = "homebrew" | "npm" | "standalone" | "unknown";
 
-// Version injected at build time for binary builds
-declare const __HAN_VERSION__: string | undefined;
+/**
+ * Detect if running via npx
+ * npx runs from a temporary cache directory like ~/.npm/_npx/
+ */
+export function isRunningViaNpx(): boolean {
+	const scriptPath = process.argv[1] || "";
+	// npx creates temporary directories with _npx in the path
+	if (scriptPath.includes("_npx")) {
+		return true;
+	}
+	// Also check npm_execpath which is set when running via npm/npx
+	const npmExecPath = process.env.npm_execpath || "";
+	if (npmExecPath.includes("npx")) {
+		return true;
+	}
+	return false;
+}
 
 /**
  * Detect how han was installed
@@ -54,8 +70,8 @@ export function detectInstallMethod(): InstallMethod {
  */
 export function getCurrentVersion(): string {
 	// Use build-time injected version if available
-	if (typeof __HAN_VERSION__ !== "undefined") {
-		return __HAN_VERSION__;
+	if (HAN_VERSION) {
+		return HAN_VERSION;
 	}
 	// Otherwise read from package.json
 	try {
@@ -148,6 +164,12 @@ async function performUpdateAndReexec(): Promise<boolean> {
 export async function checkAndAutoUpdate(): Promise<boolean> {
 	// Skip if explicitly disabled or already checking
 	if (process.env.HAN_SKIP_UPDATE_CHECK === "1") {
+		return false;
+	}
+
+	// Skip if running via npx - npx handles versioning automatically
+	// (uses local package.json version if specified, otherwise fetches latest)
+	if (isRunningViaNpx()) {
 		return false;
 	}
 
