@@ -1,0 +1,13 @@
+{
+  "name": "buki-ios",
+  "version": "1.0.0",
+  "description": "iOS development validation with Xcode build hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"]
+}

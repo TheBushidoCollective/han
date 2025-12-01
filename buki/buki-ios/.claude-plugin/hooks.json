@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run ios-build --fail-fast --cache"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "ios-build": {
+      "dirsWith": "*.xcodeproj,*.xcworkspace",
+      "command": "xcodebuild -scheme \"$(xcodebuild -list -json 2>/dev/null | grep -o '\"[^\"]*\"' | head -1 | tr -d '\"')\" -destination 'platform=iOS Simulator,name=iPhone 16' build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -20 || exit 1",
+      "ifChanged": ["**/*.swift", "**/*.m", "**/*.h", "**/*.xib", "**/*.storyboard", "**/project.pbxproj", "**/Package.swift"]
+    }
+  }
+}
