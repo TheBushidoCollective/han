@@ -1,6 +1,6 @@
 {
   "name": "buki-vitest",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Comprehensive Vitest testing framework skills for modern Vite-powered JavaScript and TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",

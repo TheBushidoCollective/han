@@ -1,6 +1,6 @@
 {
   "name": "buki-rubocop",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
   "author": {
     "name": "The Bushido Collective",

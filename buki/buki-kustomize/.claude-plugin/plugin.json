@@ -1,6 +1,6 @@
 {
   "name": "buki-kustomize",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Kustomize configuration validation for Kubernetes",
   "author": {
     "name": "The Bushido Collective",
