@@ -90,7 +90,7 @@ for (const platform of platforms) {
 
 	writeFileSync(
 		join(pkgDir, "package.json"),
-		JSON.stringify(pkgJson, null, 2) + "\n",
+		`${JSON.stringify(pkgJson, null, 2)}\n`,
 	);
 
 	// Create README
