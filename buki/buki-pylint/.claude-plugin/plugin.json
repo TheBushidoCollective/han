@@ -1,6 +1,6 @@
 {
   "name": "buki-pylint",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["pylint", "linting", "python"]
+  "keywords": [
+    "pylint",
+    "linting",
+    "python"
+  ]
 }
