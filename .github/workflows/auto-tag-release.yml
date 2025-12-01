@@ -32,6 +32,15 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Build native module
+        working-directory: ./packages/han-native
+        run: |
+          npm ci
+          npm run build
+
       - name: Determine version bump type
         id: bump-type
         env:

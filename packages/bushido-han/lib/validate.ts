@@ -26,7 +26,9 @@ function loadNativeModule(): typeof import("../../han-native") {
 	const currentDir = dirname(new URL(import.meta.url).pathname);
 	// Determine if we're in dist/lib or lib
 	const isInDist = currentDir.includes("/dist/");
-	const relativeToHanNative = isInDist ? "../../../han-native" : "../../han-native";
+	const relativeToHanNative = isInDist
+		? "../../../han-native"
+		: "../../han-native";
 
 	const possiblePaths = [
 		// For compiled binary: .node file next to executable
@@ -49,7 +51,9 @@ function loadNativeModule(): typeof import("../../han-native") {
 				return require(modulePath) as typeof import("../../han-native");
 			}
 		} catch (e) {
-			errors.push(`${modulePath}: ${e instanceof Error ? e.message : String(e)}`);
+			errors.push(
+				`${modulePath}: ${e instanceof Error ? e.message : String(e)}`,
+			);
 		}
 	}
 
