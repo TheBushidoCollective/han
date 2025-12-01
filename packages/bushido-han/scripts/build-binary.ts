@@ -63,7 +63,12 @@ const proc = Bun.spawn(
 		`--target=${target}`,
 		join(__dirname, "..", "dist", "bundle.js"),
 		"--outfile",
-		join(__dirname, "..", "dist", target === "bun" ? "han" : `han-${target.replace("bun-", "")}`),
+		join(
+			__dirname,
+			"..",
+			"dist",
+			target === "bun" ? "han" : `han-${target.replace("bun-", "")}`,
+		),
 	],
 	{
 		cwd: join(__dirname, ".."),
