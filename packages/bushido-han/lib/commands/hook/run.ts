@@ -95,7 +95,7 @@ export function registerHookRun(hookCommand: Command): void {
 		)
 		.option(
 			"--verbose",
-			"Show full command output (also settable via HAN_HOOK_VERBOSE=1)",
+			"Show full command output (also settable via HAN_HOOK_RUN_VERBOSE=1)",
 		)
 		.allowUnknownOption()
 		.action(
@@ -129,8 +129,8 @@ export function registerHookRun(hookCommand: Command): void {
 				// Determine verbose mode from option or environment variable
 				const verbose =
 					options.verbose ||
-					process.env.HAN_HOOK_VERBOSE === "1" ||
-					process.env.HAN_HOOK_VERBOSE === "true";
+					process.env.HAN_HOOK_RUN_VERBOSE === "1" ||
+					process.env.HAN_HOOK_RUN_VERBOSE === "true";
 
 				if (isLegacyFormat) {
 					const commandArgs = process.argv.slice(separatorIndex + 1);
