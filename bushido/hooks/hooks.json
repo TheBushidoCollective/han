@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\""
+            "command": "echo 'Read and follow the Bushido principles in ${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md'"
           },
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md\""
+            "command": "echo 'Read and follow the time estimate rules in ${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md'"
           }
         ]
       }
@@ -30,11 +30,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md\""
+            "command": "echo 'Read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md'"
           },
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md\""
+            "command": "echo 'Read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md'"
           }
         ]
       }

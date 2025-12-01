@@ -4,7 +4,16 @@
       "dirsWith": "build.gradle,build.gradle.kts",
       "testDir": "test -f gradlew && grep -q 'com.android' build.gradle* 2>/dev/null",
       "command": "./gradlew assembleDebug --no-daemon -q 2>&1 | tail -30 || exit 1",
-      "ifChanged": ["**/*.kt", "**/*.java", "**/*.xml", "**/build.gradle", "**/build.gradle.kts", "**/settings.gradle", "**/settings.gradle.kts", "**/gradle.properties"]
+      "ifChanged": [
+        "**/*.kt",
+        "**/*.java",
+        "**/*.xml",
+        "**/build.gradle",
+        "**/build.gradle.kts",
+        "**/settings.gradle",
+        "**/settings.gradle.kts",
+        "**/gradle.properties"
+      ]
     }
   }
 }

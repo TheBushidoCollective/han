@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md\"",
+            "command": "echo 'Read and follow the BDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md'",
             "timeout": 30000
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md\"",
+            "command": "echo 'Read and follow the BDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md'",
             "timeout": 30000
           }
         ]
