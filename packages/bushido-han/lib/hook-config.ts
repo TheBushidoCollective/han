@@ -1,47 +1,55 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { globbyStream } from "globby";
 import YAML from "yaml";
 
-// Try to load native module for better performance
-// Falls back to JavaScript implementation if not available
-let nativeModule: typeof import("../../han-native") | null = null;
+const require = createRequire(import.meta.url);
 
 /**
- * Try to load the native module from various locations:
+ * Load the native module from various locations:
  * 1. Same directory as the executable (for platform packages)
  * 2. Relative path from source (for development)
+ * @throws Error if native module cannot be loaded
  */
-function tryLoadNativeModule(): typeof import("../../han-native") | null {
+function loadNativeModule(): typeof import("../../han-native") {
+	const currentDir = dirname(new URL(import.meta.url).pathname);
+	// Determine if we're in dist/lib or lib
+	const isInDist = currentDir.includes("/dist/");
+	const relativeToHanNative = isInDist ? "../../../han-native" : "../../han-native";
+
 	const possiblePaths = [
 		// For compiled binary: .node file next to executable
 		join(dirname(process.execPath), "han-native.node"),
-		// For development: relative path from lib
-		join(dirname(new URL(import.meta.url).pathname), "../../han-native"),
+		// For development: relative path to han-native package
+		join(currentDir, relativeToHanNative),
 	];
+
+	const errors: string[] = [];
 
 	for (const modulePath of possiblePaths) {
 		try {
 			if (modulePath.endsWith(".node")) {
 				// Direct .node file loading
 				if (existsSync(modulePath)) {
-					// eslint-disable-next-line @typescript-eslint/no-require-imports
 					return require(modulePath) as typeof import("../../han-native");
 				}
 			} else {
 				// Package directory loading
-				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				return require(modulePath) as typeof import("../../han-native");
 			}
-		} catch {
-			// Continue to next path
+		} catch (e) {
+			errors.push(`${modulePath}: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
-	return null;
+
+	throw new Error(
+		`Failed to load han-native module. Tried:\n${errors.join("\n")}\n\n` +
+			"This is a required dependency. Please ensure han is installed correctly.",
+	);
 }
 
-nativeModule = tryLoadNativeModule();
+const nativeModule = loadNativeModule();
 
 /**
  * Plugin hook configuration (from han-config.json)
@@ -143,43 +151,13 @@ export function getPluginNameFromRoot(pluginRoot: string): string {
 }
 
 /**
- * Stream directories containing marker files (respects nested .gitignore files)
- * Yields directories one at a time for early exit on fail-fast
- * Uses native module for better performance when available
+ * Find directories containing marker files (respects nested .gitignore files)
  */
-async function* streamDirectoriesWithMarker(
+function findDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
-): AsyncGenerator<string> {
-	// Use native module if available (much faster, synchronous but yields for compatibility)
-	if (nativeModule) {
-		const directories = nativeModule.findDirectoriesWithMarkers(
-			rootDir,
-			markerPatterns,
-		);
-		for (const dir of directories) {
-			yield dir;
-		}
-		return;
-	}
-
-	// JavaScript fallback
-	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
-	const seenDirs = new Set<string>();
-
-	for await (const match of globbyStream(globPatterns, {
-		cwd: rootDir,
-		gitignore: true,
-		ignore: [".git/**"],
-		absolute: true,
-		onlyFiles: true,
-	})) {
-		const dir = dirname(match.toString());
-		if (!seenDirs.has(dir)) {
-			seenDirs.add(dir);
-			yield dir;
-		}
-	}
+): string[] {
+	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
 
 /**
@@ -232,24 +210,23 @@ function mergeIfChangedPatterns(
 }
 
 /**
- * Stream hook configurations for target directories
- * Yields configs one at a time for early exit on fail-fast
+ * Get hook configurations for target directories
  */
-export async function* streamHookConfigs(
+export function getHookConfigs(
 	pluginRoot: string,
 	hookName: string,
 	projectRoot: string,
-): AsyncGenerator<ResolvedHookConfig> {
+): ResolvedHookConfig[] {
 	const pluginConfig = loadPluginConfig(pluginRoot);
 
 	if (!pluginConfig) {
-		return;
+		return [];
 	}
 
 	const hookDef = pluginConfig.hooks[hookName];
 
 	if (!hookDef) {
-		return;
+		return [];
 	}
 
 	const pluginName = getPluginNameFromRoot(pluginRoot);
@@ -272,41 +249,22 @@ export async function* streamHookConfigs(
 
 	// No dirsWith specified - run in project root only
 	if (!hookDef.dirsWith || hookDef.dirsWith.length === 0) {
-		yield resolveConfigForDir(projectRoot);
-		return;
+		return [resolveConfigForDir(projectRoot)];
 	}
 
-	// Stream directories and yield configs as they're found
-	for await (const dir of streamDirectoriesWithMarker(
-		projectRoot,
-		hookDef.dirsWith,
-	)) {
+	// Find directories and filter with dirTest if specified
+	const directories = findDirectoriesWithMarker(projectRoot, hookDef.dirsWith);
+	const configs: ResolvedHookConfig[] = [];
+
+	for (const dir of directories) {
 		// Filter with dirTest if specified
 		if (hookDef.dirTest && !testDirCommand(dir, hookDef.dirTest)) {
 			continue;
 		}
 
-		yield resolveConfigForDir(dir);
+		configs.push(resolveConfigForDir(dir));
 	}
-}
 
-/**
- * Resolve hook configurations for all target directories
- * @deprecated Use streamHookConfigs for better performance with fail-fast
- */
-export async function resolveHookConfigs(
-	pluginRoot: string,
-	hookName: string,
-	projectRoot: string,
-): Promise<ResolvedHookConfig[]> {
-	const configs: ResolvedHookConfig[] = [];
-	for await (const config of streamHookConfigs(
-		pluginRoot,
-		hookName,
-		projectRoot,
-	)) {
-		configs.push(config);
-	}
 	return configs;
 }
 

@@ -1101,7 +1101,7 @@ test("han-config.yml override only affects specific directory", () => {
 
 test("han-config.yml if_changed merges with plugin defaults", async () => {
 	// Test that user if_changed patterns ADD to plugin defaults rather than replacing
-	const { resolveHookConfigs } = await import("../lib/hook-config.js");
+	const { getHookConfigs } = await import("../lib/hook-config.js");
 
 	const testDir = setup();
 	try {
@@ -1133,7 +1133,7 @@ test("han-config.yml if_changed merges with plugin defaults", async () => {
 		execSync("git init", { cwd: projectDir, stdio: "pipe" });
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const configs = await resolveHookConfigs(pluginDir, "lint", projectDir);
+		const configs = getHookConfigs(pluginDir, "lint", projectDir);
 
 		strictEqual(configs.length, 1, "Expected 1 config");
 

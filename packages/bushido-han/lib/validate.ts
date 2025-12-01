@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { globbyStream } from "globby";
 import {
 	buildManifest,
 	checkForChanges,
@@ -9,49 +9,57 @@ import {
 	saveCacheManifest,
 } from "./hook-cache.js";
 import {
+	getHookConfigs,
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
-	streamHookConfigs,
 } from "./hook-config.js";
 
-// Try to load native module for better performance
-// Falls back to JavaScript implementation if not available
-let nativeModule: typeof import("../../han-native") | null = null;
+const require = createRequire(import.meta.url);
 
 /**
- * Try to load the native module from various locations:
+ * Load the native module from various locations:
  * 1. Same directory as the executable (for platform packages)
  * 2. Relative path from source (for development)
+ * @throws Error if native module cannot be loaded
  */
-function tryLoadNativeModule(): typeof import("../../han-native") | null {
+function loadNativeModule(): typeof import("../../han-native") {
+	const currentDir = dirname(new URL(import.meta.url).pathname);
+	// Determine if we're in dist/lib or lib
+	const isInDist = currentDir.includes("/dist/");
+	const relativeToHanNative = isInDist ? "../../../han-native" : "../../han-native";
+
 	const possiblePaths = [
 		// For compiled binary: .node file next to executable
 		join(dirname(process.execPath), "han-native.node"),
-		// For development: relative path from lib
-		join(dirname(new URL(import.meta.url).pathname), "../../han-native"),
+		// For development: relative path to han-native package
+		join(currentDir, relativeToHanNative),
 	];
+
+	const errors: string[] = [];
 
 	for (const modulePath of possiblePaths) {
 		try {
 			if (modulePath.endsWith(".node")) {
 				// Direct .node file loading
 				if (existsSync(modulePath)) {
-					// eslint-disable-next-line @typescript-eslint/no-require-imports
 					return require(modulePath) as typeof import("../../han-native");
 				}
 			} else {
 				// Package directory loading
-				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				return require(modulePath) as typeof import("../../han-native");
 			}
-		} catch {
-			// Continue to next path
+		} catch (e) {
+			errors.push(`${modulePath}: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
-	return null;
+
+	throw new Error(
+		`Failed to load han-native module. Tried:\n${errors.join("\n")}\n\n` +
+			"This is a required dependency. Please ensure han is installed correctly.",
+	);
 }
 
-nativeModule = tryLoadNativeModule();
+const nativeModule = loadNativeModule();
 
 interface ValidateOptions {
 	failFast: boolean;
@@ -61,42 +69,14 @@ interface ValidateOptions {
 	stdinData?: string | null;
 }
 
-// Stream directories containing marker files (respects nested .gitignore files)
-// Yields directories one at a time for early exit on fail-fast
-// Uses native module for better performance when available
-async function* streamDirectoriesWithMarker(
+/**
+ * Find directories containing marker files (respects nested .gitignore files)
+ */
+function findDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
-): AsyncGenerator<string> {
-	// Use native module if available (much faster, synchronous but yields for compatibility)
-	if (nativeModule) {
-		const directories = nativeModule.findDirectoriesWithMarkers(
-			rootDir,
-			markerPatterns,
-		);
-		for (const dir of directories) {
-			yield dir;
-		}
-		return;
-	}
-
-	// JavaScript fallback
-	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
-	const seenDirs = new Set<string>();
-
-	for await (const match of globbyStream(globPatterns, {
-		cwd: rootDir,
-		gitignore: true,
-		ignore: [".git/**"],
-		absolute: true,
-		onlyFiles: true,
-	})) {
-		const dir = dirname(match.toString());
-		if (!seenDirs.has(dir)) {
-			seenDirs.add(dir);
-			yield dir;
-		}
-	}
+): string[] {
+	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
 
 // Run command in directory
@@ -139,7 +119,7 @@ function testDirCommand(dir: string, cmd: string): boolean {
 	}
 }
 
-export async function validate(options: ValidateOptions): Promise<void> {
+export function validate(options: ValidateOptions): void {
 	const {
 		failFast,
 		dirsWith,
@@ -172,8 +152,10 @@ export async function validate(options: ValidateOptions): Promise<void> {
 	const failures: string[] = [];
 	let processedCount = 0;
 
-	// Stream directories and process each one as it's found
-	for await (const dir of streamDirectoriesWithMarker(rootDir, patterns)) {
+	// Find directories
+	const directories = findDirectoriesWithMarker(rootDir, patterns);
+
+	for (const dir of directories) {
 		// Filter with test command if specified
 		if (testDir && !testDirCommand(dir, testDir)) {
 			continue;
@@ -255,11 +237,8 @@ function getCacheKeyForDirectory(
 /**
  * Run a hook using plugin config and user overrides.
  * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
- * Uses streaming to process directories as they're found for fast fail-fast.
  */
-export async function runConfiguredHook(
-	options: RunConfiguredHookOptions,
-): Promise<void> {
+export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 	const { hookName, failFast, stdinData, cache } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
@@ -281,12 +260,10 @@ export async function runConfiguredHook(
 	let disabledCount = 0;
 	let skippedCount = 0;
 
-	// Stream configs and process each one as it's found
-	for await (const config of streamHookConfigs(
-		pluginRoot,
-		hookName,
-		projectRoot,
-	)) {
+	// Get all configs
+	const configs = getHookConfigs(pluginRoot, hookName, projectRoot);
+
+	for (const config of configs) {
 		totalFound++;
 
 		// Skip disabled hooks
@@ -302,7 +279,7 @@ export async function runConfiguredHook(
 				config.directory,
 				projectRoot,
 			);
-			const hasChanges = await checkForChanges(
+			const hasChanges = checkForChanges(
 				pluginName,
 				cacheKey,
 				config.directory,
@@ -376,10 +353,7 @@ export async function runConfiguredHook(
 					config.directory,
 					projectRoot,
 				);
-				const files = await findFilesWithGlob(
-					config.directory,
-					config.ifChanged,
-				);
+				const files = findFilesWithGlob(config.directory, config.ifChanged);
 				const manifest = buildManifest(files, config.directory);
 				saveCacheManifest(pluginName, cacheKey, manifest);
 			}
