@@ -1,0 +1,28 @@
+{
+  "rustc": 16243257175721966122,
+  "features": "[]",
+  "declared_features": "[\"simd-accel\"]",
+  "target": 12334212417946013711,
+  "profile": 17665183640080672258,
+  "path": 16504918036133621187,
+  "deps": [
+    [198136567835728122, "memchr", false, 6909766253886367874],
+    [3030539787503978792, "regex_automata", false, 12244425241047577111],
+    [11781824977070132858, "same_file", false, 6533418293957140127],
+    [12921325478209092965, "globset", false, 403136983391965243],
+    [13066042571740262168, "log", false, 16800791651826132150],
+    [15622660310229662834, "walkdir", false, 317594125282932354],
+    [17472578983440242455, "crossbeam_deque", false, 3574891277232702505]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/ignore-08b4ad6314aa0aa8/dep-lib-ignore",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

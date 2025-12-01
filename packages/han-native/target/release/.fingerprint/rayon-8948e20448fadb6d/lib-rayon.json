@@ -1,0 +1,23 @@
+{
+  "rustc": 16243257175721966122,
+  "features": "[]",
+  "declared_features": "[\"web_spin_lock\"]",
+  "target": 4732152328429177609,
+  "profile": 17665183640080672258,
+  "path": 4561198360815805537,
+  "deps": [
+    [3746573929696391749, "rayon_core", false, 10981807392528970538],
+    [12170264697963848012, "either", false, 5091530656716656184]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/rayon-8948e20448fadb6d/dep-lib-rayon",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

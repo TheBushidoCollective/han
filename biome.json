@@ -5,6 +5,10 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
+  "files": {
+    "includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json"],
+    "ignoreUnknown": true
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -26,5 +30,20 @@
       "trailingCommas": "es5"
     },
     "jsxRuntime": "reactClassic"
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/han-native/index.js"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNodejsImportProtocol": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    }
+  ]
 }

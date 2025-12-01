@@ -3,6 +3,19 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { globby, globbyStream } from "globby";
 
+// Try to load native module for better performance
+// Falls back to JavaScript implementation if not available
+let nativeModule: typeof import("../../han-native") | null = null;
+try {
+	// Use dynamic import with require for optional native module
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	nativeModule =
+		require("../../han-native") as typeof import("../../han-native");
+} catch {
+	// Native module not available, will use JS fallback
+	nativeModule = null;
+}
+
 /**
  * Cache manifest structure stored per plugin/hook combination
  * Path: ~/.claude/projects/{project-slug}/han/{plugin_name}_{hook_name}.json
@@ -63,8 +76,15 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
 
 /**
  * Compute SHA256 hash of file contents
+ * Uses native module for better performance when available
  */
 export function computeFileHash(filePath: string): string {
+	// Use native module if available
+	if (nativeModule) {
+		return nativeModule.computeFileHash(filePath);
+	}
+
+	// JavaScript fallback
 	try {
 		const content = readFileSync(filePath);
 		return createHash("sha256").update(content).digest("hex");
@@ -116,11 +136,18 @@ export function saveCacheManifest(
 
 /**
  * Find files matching glob patterns in a directory (respects gitignore)
+ * Uses native module for better performance when available
  */
 export async function findFilesWithGlob(
 	rootDir: string,
 	patterns: string[],
 ): Promise<string[]> {
+	// Use native module if available (synchronous but much faster)
+	if (nativeModule) {
+		return nativeModule.findFilesWithGlob(rootDir, patterns);
+	}
+
+	// JavaScript fallback
 	const matches = await globby(patterns, {
 		cwd: rootDir,
 		gitignore: true,
@@ -133,8 +160,15 @@ export async function findFilesWithGlob(
 
 /**
  * Build a manifest of file hashes for given files
+ * Uses native module for parallel hashing when available
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
+	// Use native module if available (parallel hashing)
+	if (nativeModule) {
+		return nativeModule.buildManifest(files, rootDir);
+	}
+
+	// JavaScript fallback
 	const manifest: CacheManifest = {};
 	for (const file of files) {
 		const relativePath = relative(rootDir, file);
@@ -187,6 +221,7 @@ export function hasChanges(
 /**
  * Stream files and check for changes with early exit on first change detected.
  * Returns true if changes detected, false if no changes.
+ * Uses native module for better performance when available.
  */
 async function streamingHasChanges(
 	rootDir: string,
@@ -197,6 +232,12 @@ async function streamingHasChanges(
 		return true;
 	}
 
+	// Use native module if available (much faster)
+	if (nativeModule) {
+		return nativeModule.hasChanges(rootDir, patterns, cachedManifest);
+	}
+
+	// JavaScript fallback
 	const seenPaths = new Set<string>();
 
 	// Stream files and check each one immediately
