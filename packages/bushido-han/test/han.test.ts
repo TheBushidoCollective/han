@@ -1139,10 +1139,26 @@ test("han-config.yml if_changed merges with plugin defaults", async () => {
 
 		const patterns = configs[0].ifChanged ?? [];
 		// Should have both plugin patterns AND user patterns (merged)
-		strictEqual(patterns.includes("**/*.ts"), true, "Expected plugin pattern **/*.ts");
-		strictEqual(patterns.includes("**/*.js"), true, "Expected plugin pattern **/*.js");
-		strictEqual(patterns.includes("**/*.json"), true, "Expected user pattern **/*.json");
-		strictEqual(patterns.includes("**/*.md"), true, "Expected user pattern **/*.md");
+		strictEqual(
+			patterns.includes("**/*.ts"),
+			true,
+			"Expected plugin pattern **/*.ts",
+		);
+		strictEqual(
+			patterns.includes("**/*.js"),
+			true,
+			"Expected plugin pattern **/*.js",
+		);
+		strictEqual(
+			patterns.includes("**/*.json"),
+			true,
+			"Expected user pattern **/*.json",
+		);
+		strictEqual(
+			patterns.includes("**/*.md"),
+			true,
+			"Expected user pattern **/*.md",
+		);
 		strictEqual(patterns.length, 4, "Expected 4 merged patterns");
 	} finally {
 		teardown();

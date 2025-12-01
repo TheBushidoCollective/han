@@ -145,7 +145,9 @@ export default function InstallationTabs({
 					</pre>
 					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
 						Note: For hooks to work, you must also install{" "}
-						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+							han
+						</code>{" "}
 						globally and ensure it&apos;s in your PATH.
 					</p>
 				</div>
@@ -161,7 +163,9 @@ export default function InstallationTabs({
 					</pre>
 					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
 						Note: For hooks to work, you must also install{" "}
-						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+							han
+						</code>{" "}
 						globally and ensure it&apos;s in your PATH.
 					</p>
 				</div>
@@ -181,7 +185,9 @@ export default function InstallationTabs({
 					</pre>
 					<p className="text-amber-600 dark:text-amber-400 mt-3 text-sm">
 						Note: For hooks to work, you must also install{" "}
-						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">han</code>{" "}
+						<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+							han
+						</code>{" "}
 						globally and ensure it&apos;s in your PATH.
 					</p>
 				</div>

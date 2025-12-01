@@ -3,12 +3,24 @@
     "build": {
       "command": "rebar3 compile warnings_as_errors=true",
       "dirsWith": ["rebar.config"],
-      "ifChanged": ["**/*.erl", "**/*.hrl", "**/*.app.src", "rebar.config", "rebar.lock"]
+      "ifChanged": [
+        "**/*.erl",
+        "**/*.hrl",
+        "**/*.app.src",
+        "rebar.config",
+        "rebar.lock"
+      ]
     },
     "hook1": {
       "command": "rebar3 eunit",
       "dirsWith": ["rebar.config"],
-      "ifChanged": ["**/*.erl", "**/*.hrl", "**/*.app.src", "rebar.config", "rebar.lock"]
+      "ifChanged": [
+        "**/*.erl",
+        "**/*.hrl",
+        "**/*.app.src",
+        "rebar.config",
+        "rebar.lock"
+      ]
     }
   }
 }

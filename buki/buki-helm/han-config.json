@@ -3,7 +3,13 @@
     "lint": {
       "command": "sh -c 'helm lint . && helm template . --debug > /dev/null'",
       "dirsWith": ["Chart.yaml"],
-      "ifChanged": ["**/*.yaml", "**/*.yml", "**/*.tpl", "Chart.yaml", "values.yaml"]
+      "ifChanged": [
+        "**/*.yaml",
+        "**/*.yml",
+        "**/*.tpl",
+        "Chart.yaml",
+        "values.yaml"
+      ]
     }
   }
 }

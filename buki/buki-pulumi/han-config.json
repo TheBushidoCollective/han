@@ -3,7 +3,14 @@
     "hook0": {
       "command": "pulumi preview --non-interactive --suppress-outputs || true",
       "dirsWith": ["Pulumi.yaml"],
-      "ifChanged": ["**/*.ts", "**/*.js", "**/*.py", "**/*.go", "Pulumi.yaml", "Pulumi.*.yaml"]
+      "ifChanged": [
+        "**/*.ts",
+        "**/*.js",
+        "**/*.py",
+        "**/*.go",
+        "Pulumi.yaml",
+        "Pulumi.*.yaml"
+      ]
     }
   }
 }
