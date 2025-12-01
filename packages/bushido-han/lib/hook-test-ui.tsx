@@ -29,6 +29,16 @@ interface HookTestUIProps {
 	verbose: boolean;
 }
 
+type ViewMode = "list" | "detail";
+
+interface FlatItem {
+	type: "hookType" | "plugin" | "command";
+	hookType: string;
+	plugin?: string;
+	command?: string;
+	commandIndex?: number;
+}
+
 export const HookTestUI: React.FC<HookTestUIProps> = ({
 	hookTypes,
 	hookStructure,
@@ -40,7 +50,46 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	const { write } = useStdout();
 	const writtenHookTypes = useRef<Set<string>>(new Set());
 	const [selectedIndex, setSelectedIndex] = useState(0);
-	const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
+	const [expandedType, setExpandedType] = useState<string | null>(null);
+	const [viewMode, setViewMode] = useState<ViewMode>("list");
+	const [detailItem, setDetailItem] = useState<FlatItem | null>(null);
+
+	// Build flat list of navigable items based on expansion state
+	const getFlatItems = useCallback((): FlatItem[] => {
+		const items: FlatItem[] = [];
+
+		for (const hookType of hookTypes) {
+			items.push({ type: "hookType", hookType });
+
+			if (expandedType === hookType) {
+				const hooks = hookStructure.get(hookType) || [];
+				const pluginMap = new Map<string, HookStructureItem[]>();
+				for (const hook of hooks) {
+					if (!pluginMap.has(hook.plugin)) {
+						pluginMap.set(hook.plugin, []);
+					}
+					pluginMap.get(hook.plugin)?.push(hook);
+				}
+
+				for (const [plugin, pluginHooks] of pluginMap) {
+					items.push({ type: "plugin", hookType, plugin });
+					for (let i = 0; i < pluginHooks.length; i++) {
+						items.push({
+							type: "command",
+							hookType,
+							plugin,
+							command: pluginHooks[i].command,
+							commandIndex: i,
+						});
+					}
+				}
+			}
+		}
+
+		return items;
+	}, [hookTypes, hookStructure, expandedType]);
+
+	const flatItems = getFlatItems();
 
 	// Group hooks by plugin for each hook type
 	const getPluginHooks = (hookType: string) => {
@@ -95,37 +144,76 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		[hookResults, hookStructure, currentType],
 	);
 
+	// Get result for a specific command
+	const getCommandResult = (
+		hookType: string,
+		plugin: string,
+		command: string,
+	): HookResult | undefined => {
+		const results = hookResults.get(hookType) || [];
+		return results.find((r) => r.plugin === plugin && r.command === command);
+	};
+
 	// Handle keyboard input
 	useInput((input, key) => {
+		if (viewMode === "detail") {
+			// In detail view, Esc goes back to list
+			if (key.escape) {
+				setViewMode("list");
+				setDetailItem(null);
+			}
+			return;
+		}
+
+		// List mode navigation
 		if (key.upArrow) {
 			setSelectedIndex((prev) => Math.max(0, prev - 1));
 		} else if (key.downArrow) {
-			setSelectedIndex((prev) => Math.min(hookTypes.length - 1, prev + 1));
+			setSelectedIndex((prev) => Math.min(flatItems.length - 1, prev + 1));
 		} else if (key.return || input === " ") {
-			const hookType = hookTypes[selectedIndex];
-			if (hookType) {
-				setExpandedTypes((prev) => {
-					const next = new Set(prev);
-					if (next.has(hookType)) {
-						next.delete(hookType);
-					} else {
-						next.add(hookType);
-					}
-					return next;
-				});
+			const item = flatItems[selectedIndex];
+			if (!item) return;
+
+			if (item.type === "hookType") {
+				// Toggle expansion (accordion - only one open at a time)
+				if (expandedType === item.hookType) {
+					setExpandedType(null);
+				} else {
+					setExpandedType(item.hookType);
+					// Keep selection on the hook type row
+				}
+			} else if (item.type === "command" && item.plugin && item.command) {
+				// View command output
+				setDetailItem(item);
+				setViewMode("detail");
+			}
+		} else if (key.escape) {
+			// Collapse current expansion
+			if (expandedType) {
+				// Find the index of the expanded type and select it
+				const typeIndex = flatItems.findIndex(
+					(i) => i.type === "hookType" && i.hookType === expandedType,
+				);
+				if (typeIndex !== -1) {
+					setSelectedIndex(typeIndex);
+				}
+				setExpandedType(null);
 			}
 		}
 	});
 
-	// Auto-select running hook type
+	// Auto-expand and select running hook type
 	useEffect(() => {
-		if (currentType) {
-			const idx = hookTypes.indexOf(currentType);
+		if (currentType && !isComplete) {
+			setExpandedType(currentType);
+			const idx = flatItems.findIndex(
+				(i) => i.type === "hookType" && i.hookType === currentType,
+			);
 			if (idx !== -1) {
 				setSelectedIndex(idx);
 			}
 		}
-	}, [currentType, hookTypes]);
+	}, [currentType, isComplete, flatItems]);
 
 	// Write completion summary to stdout when done
 	useEffect(() => {
@@ -152,208 +240,329 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		}
 	}, [isComplete, hookTypes, hookResults, write, getHookTypeStatus]);
 
-	// Render a single hook type row
-	const renderHookTypeRow = (hookType: string, index: number) => {
+	// Render detail view for a command
+	const renderDetailView = () => {
+		if (!detailItem || !detailItem.plugin || !detailItem.command) return null;
+
+		const result = getCommandResult(
+			detailItem.hookType,
+			detailItem.plugin,
+			detailItem.command,
+		);
+		const status = result
+			? result.success
+				? "completed"
+				: "failed"
+			: "running";
+
+		return (
+			<Box flexDirection="column">
+				{/* Header */}
+				<Box marginBottom={1}>
+					<Text bold color="cyan">
+						📋 Command Output
+					</Text>
+					<Text dimColor> (Esc to go back)</Text>
+				</Box>
+
+				{/* Command info */}
+				<Box flexDirection="column" marginBottom={1}>
+					<Box>
+						<Text dimColor>Hook Type: </Text>
+						<Text bold>{detailItem.hookType}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Plugin: </Text>
+						<Text bold>{detailItem.plugin}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Command: </Text>
+						<Text>{detailItem.command}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Status: </Text>
+						{status === "completed" && (
+							<Text color="green" bold>
+								✓ Passed
+							</Text>
+						)}
+						{status === "failed" && (
+							<Text color="red" bold>
+								✗ Failed
+							</Text>
+						)}
+						{status === "running" && (
+							<Text color="yellow">
+								<Spinner type="dots" /> Running...
+							</Text>
+						)}
+						{result?.timedOut && <Text color="red"> (timeout)</Text>}
+					</Box>
+				</Box>
+
+				{/* Output */}
+				<Box marginTop={1} flexDirection="column">
+					<Text dimColor>{"─".repeat(60)}</Text>
+					{result?.output && result.output.length > 0 ? (
+						result.output.map((line, i) => (
+							<Text key={`output-line-${i}`}>{line}</Text>
+						))
+					) : status === "running" ? (
+						<Text dimColor>Waiting for output...</Text>
+					) : (
+						<Text dimColor>No output</Text>
+					)}
+				</Box>
+			</Box>
+		);
+	};
+
+	// Render list item based on type
+	const renderListItem = (item: FlatItem, index: number) => {
+		const isSelected = index === selectedIndex;
+
+		if (item.type === "hookType") {
+			return renderHookTypeRow(item.hookType, isSelected);
+		}
+		if (item.type === "plugin" && item.plugin) {
+			return renderPluginRow(item.hookType, item.plugin, isSelected);
+		}
+		if (item.type === "command" && item.plugin && item.command !== undefined) {
+			return renderCommandRow(
+				item.hookType,
+				item.plugin,
+				item.command,
+				item.commandIndex ?? 0,
+				isSelected,
+			);
+		}
+		return null;
+	};
+
+	// Render a hook type row
+	const renderHookTypeRow = (hookType: string, isSelected: boolean) => {
 		const status = getHookTypeStatus(hookType);
 		const results = hookResults.get(hookType) || [];
 		const totalPassed = results.filter((r) => r.success).length;
 		const totalHooks = hookStructure.get(hookType)?.length || 0;
 		const totalCount = results.length;
-		const isSelected = index === selectedIndex;
-		const isExpanded = expandedTypes.has(hookType);
-		const isLast = index === hookTypes.length - 1;
+		const isExpanded = expandedType === hookType;
+		const isLast = hookTypes.indexOf(hookType) === hookTypes.length - 1;
 
 		return (
-			<Box key={hookType} flexDirection="column">
-				{/* Hook type line */}
-				<Box>
-					<Text dimColor>{isLast ? "└─ " : "├─ "}</Text>
-					{isSelected && <Text color="cyan">▸ </Text>}
-					{!isSelected && <Text> </Text>}
-					{status === "completed" && (
-						<Text color="green" bold>
-							✓{" "}
-						</Text>
-					)}
-					{status === "failed" && (
-						<Text color="red" bold>
-							✗{" "}
-						</Text>
-					)}
-					{status === "running" && (
-						<Text color="yellow">
-							<Spinner type="dots" />{" "}
-						</Text>
-					)}
-					{status === "pending" && <Text dimColor>○ </Text>}
-					<Text
-						bold={isSelected || status === "running"}
-						color={
-							status === "running"
-								? "yellow"
-								: status === "failed"
-									? "red"
-									: isSelected
-										? "cyan"
-										: undefined
-						}
-						dimColor={status === "pending" && !isSelected}
-					>
-						{hookType}
+			<Box key={`type-${hookType}`}>
+				<Text dimColor>{isLast && !isExpanded ? "└─ " : "├─ "}</Text>
+				{isSelected && <Text color="cyan">▸ </Text>}
+				{!isSelected && <Text> </Text>}
+				{status === "completed" && (
+					<Text color="green" bold>
+						✓{" "}
 					</Text>
-					{status === "completed" && (
-						<Text color="green">
-							{" "}
-							({totalPassed}/{totalCount})
-						</Text>
-					)}
-					{status === "failed" && (
-						<Text color="red">
-							{" "}
-							({totalPassed}/{totalCount})
-						</Text>
-					)}
-					{status === "running" && (
-						<Text dimColor>
-							{" "}
-							({totalPassed}/{totalHooks})
-						</Text>
-					)}
-					{status === "pending" && <Text dimColor> (0/{totalHooks})</Text>}
-					{/* Expand indicator */}
-					<Text dimColor> {isExpanded ? "▾" : "▸"}</Text>
-				</Box>
-
-				{/* Expanded details */}
-				{isExpanded && renderExpandedDetails(hookType, isLast)}
+				)}
+				{status === "failed" && (
+					<Text color="red" bold>
+						✗{" "}
+					</Text>
+				)}
+				{status === "running" && (
+					<Text color="yellow">
+						<Spinner type="dots" />{" "}
+					</Text>
+				)}
+				{status === "pending" && <Text dimColor>○ </Text>}
+				<Text
+					bold={isSelected || status === "running"}
+					color={
+						status === "running"
+							? "yellow"
+							: status === "failed"
+								? "red"
+								: isSelected
+									? "cyan"
+									: undefined
+					}
+					dimColor={status === "pending" && !isSelected}
+				>
+					{hookType}
+				</Text>
+				{status === "completed" && (
+					<Text color="green">
+						{" "}
+						({totalPassed}/{totalCount})
+					</Text>
+				)}
+				{status === "failed" && (
+					<Text color="red">
+						{" "}
+						({totalPassed}/{totalCount})
+					</Text>
+				)}
+				{status === "running" && (
+					<Text dimColor>
+						{" "}
+						({totalPassed}/{totalHooks})
+					</Text>
+				)}
+				{status === "pending" && <Text dimColor> (0/{totalHooks})</Text>}
+				<Text dimColor> {isExpanded ? "▾" : "▸"}</Text>
 			</Box>
 		);
 	};
 
-	// Render expanded details for a hook type
-	const renderExpandedDetails = (hookType: string, isLastType: boolean) => {
-		const pluginHooks = getPluginHooks(hookType);
+	// Render a plugin row
+	const renderPluginRow = (
+		hookType: string,
+		plugin: string,
+		isSelected: boolean,
+	) => {
 		const status = getHookTypeStatus(hookType);
+		const pluginHooks = getPluginHooks(hookType);
+		const { passed, total, allComplete, hasFailed } = getPluginResults(
+			hookType,
+			plugin,
+		);
+		const hooks = pluginHooks.get(plugin) || [];
+		const pluginStatus =
+			status === "pending"
+				? "pending"
+				: allComplete
+					? hasFailed
+						? "failed"
+						: "completed"
+					: "running";
 
-		return Array.from(pluginHooks.entries()).map(
-			([plugin, hooks], pluginIndex) => {
-				const {
-					passed,
-					total,
-					allComplete,
-					hasFailed,
-					results: pluginResults,
-				} = getPluginResults(hookType, plugin);
-				const isLastPlugin = pluginIndex === pluginHooks.size - 1;
-				const pluginStatus =
-					status === "pending"
-						? "pending"
-						: allComplete
-							? hasFailed
-								? "failed"
-								: "completed"
-							: "running";
+		const pluginArray = Array.from(pluginHooks.keys());
+		const isLastPlugin = pluginArray.indexOf(plugin) === pluginArray.length - 1;
+		const isLastType =
+			hookTypes.indexOf(hookType) === hookTypes.length - 1;
 
-				return (
-					<Box key={`${hookType}-${plugin}`} flexDirection="column">
-						{/* Plugin name line */}
-						<Box>
-							<Text dimColor>
-								{isLastType ? "  " : "│ "}
-								{"  "}
-								{isLastPlugin ? "└─" : "├─"}{" "}
-							</Text>
-							{pluginStatus === "completed" && <Text color="green">✓ </Text>}
-							{pluginStatus === "failed" && <Text color="red">✗ </Text>}
-							{pluginStatus === "running" && (
-								<Text color="yellow">
-									<Spinner type="dots" />{" "}
-								</Text>
-							)}
-							{pluginStatus === "pending" && <Text dimColor>○ </Text>}
-							<Text
-								dimColor={pluginStatus === "pending"}
-								color={
-									pluginStatus === "running"
-										? "yellow"
-										: pluginStatus === "failed"
-											? "red"
-											: undefined
-								}
-							>
-								{plugin}
-							</Text>
-							{pluginStatus === "completed" && (
-								<Text color="green">
-									{" "}
-									({passed}/{total})
-								</Text>
-							)}
-							{pluginStatus === "failed" && (
-								<Text color="red">
-									{" "}
-									({passed}/{total})
-								</Text>
-							)}
-							{pluginStatus === "running" && (
-								<Text dimColor>
-									{" "}
-									({passed}/{hooks.length})
-								</Text>
-							)}
-							{pluginStatus === "pending" && (
-								<Text dimColor> (0/{hooks.length})</Text>
-							)}
-						</Box>
-
-						{/* Command lines under plugin */}
-						{hooks.map((hook, cmdIndex) => {
-							const isLastCmd = cmdIndex === hooks.length - 1;
-							const result = pluginResults.find(
-								(r) => r.command === hook.command,
-							);
-							const cmdStatus = result
-								? result.success
-									? "completed"
-									: "failed"
-								: pluginStatus === "pending"
-									? "pending"
-									: "running";
-
-							return (
-								<Box
-									key={`${hookType}-${plugin}-${cmdIndex}-${hook.command.slice(0, 20)}`}
-								>
-									<Text dimColor>
-										{isLastType ? "  " : "│ "}
-										{"  "}
-										{isLastPlugin ? "  " : "│ "}
-										{isLastCmd ? "└─" : "├─"}{" "}
-									</Text>
-									{cmdStatus === "completed" && <Text color="green">✓ </Text>}
-									{cmdStatus === "failed" && <Text color="red">✗ </Text>}
-									{cmdStatus === "running" && (
-										<Text color="yellow">
-											<Spinner type="dots" />{" "}
-										</Text>
-									)}
-									{cmdStatus === "pending" && <Text dimColor>○ </Text>}
-									<Text
-										dimColor={cmdStatus === "pending"}
-										color={cmdStatus === "running" ? "yellow" : undefined}
-									>
-										{hook.type === "prompt" ? "[prompt]" : hook.command}
-									</Text>
-									{result?.timedOut && <Text color="red"> (timeout)</Text>}
-								</Box>
-							);
-						})}
-					</Box>
-				);
-			},
+		return (
+			<Box key={`plugin-${hookType}-${plugin}`}>
+				<Text dimColor>
+					{isLastType ? "  " : "│ "}
+					{"  "}
+					{isLastPlugin ? "└─" : "├─"}{" "}
+				</Text>
+				{isSelected && <Text color="cyan">▸ </Text>}
+				{!isSelected && <Text> </Text>}
+				{pluginStatus === "completed" && <Text color="green">✓ </Text>}
+				{pluginStatus === "failed" && <Text color="red">✗ </Text>}
+				{pluginStatus === "running" && (
+					<Text color="yellow">
+						<Spinner type="dots" />{" "}
+					</Text>
+				)}
+				{pluginStatus === "pending" && <Text dimColor>○ </Text>}
+				<Text
+					dimColor={pluginStatus === "pending" && !isSelected}
+					bold={isSelected}
+					color={
+						isSelected
+							? "cyan"
+							: pluginStatus === "running"
+								? "yellow"
+								: pluginStatus === "failed"
+									? "red"
+									: undefined
+					}
+				>
+					{plugin}
+				</Text>
+				{pluginStatus === "completed" && (
+					<Text color="green">
+						{" "}
+						({passed}/{total})
+					</Text>
+				)}
+				{pluginStatus === "failed" && (
+					<Text color="red">
+						{" "}
+						({passed}/{total})
+					</Text>
+				)}
+				{pluginStatus === "running" && (
+					<Text dimColor>
+						{" "}
+						({passed}/{hooks.length})
+					</Text>
+				)}
+				{pluginStatus === "pending" && (
+					<Text dimColor> (0/{hooks.length})</Text>
+				)}
+			</Box>
 		);
 	};
 
+	// Render a command row
+	const renderCommandRow = (
+		hookType: string,
+		plugin: string,
+		command: string,
+		cmdIndex: number,
+		isSelected: boolean,
+	) => {
+		const status = getHookTypeStatus(hookType);
+		const { results: pluginResults } = getPluginResults(hookType, plugin);
+		const pluginHooks = getPluginHooks(hookType);
+		const hooks = pluginHooks.get(plugin) || [];
+		const hook = hooks[cmdIndex];
+		const result = pluginResults.find((r) => r.command === command);
+		const cmdStatus = result
+			? result.success
+				? "completed"
+				: "failed"
+			: status === "pending"
+				? "pending"
+				: "running";
+
+		const pluginArray = Array.from(pluginHooks.keys());
+		const isLastPlugin = pluginArray.indexOf(plugin) === pluginArray.length - 1;
+		const isLastCmd = cmdIndex === hooks.length - 1;
+		const isLastType =
+			hookTypes.indexOf(hookType) === hookTypes.length - 1;
+
+		return (
+			<Box key={`cmd-${hookType}-${plugin}-${cmdIndex}`}>
+				<Text dimColor>
+					{isLastType ? "  " : "│ "}
+					{"  "}
+					{isLastPlugin ? "  " : "│ "}
+					{"  "}
+					{isLastCmd ? "└─" : "├─"}{" "}
+				</Text>
+				{isSelected && <Text color="cyan">▸ </Text>}
+				{!isSelected && <Text> </Text>}
+				{cmdStatus === "completed" && <Text color="green">✓ </Text>}
+				{cmdStatus === "failed" && <Text color="red">✗ </Text>}
+				{cmdStatus === "running" && (
+					<Text color="yellow">
+						<Spinner type="dots" />{" "}
+					</Text>
+				)}
+				{cmdStatus === "pending" && <Text dimColor>○ </Text>}
+				<Text
+					dimColor={cmdStatus === "pending" && !isSelected}
+					bold={isSelected}
+					color={
+						isSelected ? "cyan" : cmdStatus === "running" ? "yellow" : undefined
+					}
+				>
+					{hook?.type === "prompt" ? "[prompt]" : command}
+				</Text>
+				{result?.timedOut && <Text color="red"> (timeout)</Text>}
+				{isSelected && (cmdStatus === "completed" || cmdStatus === "failed") && (
+					<Text dimColor> (Enter to view output)</Text>
+				)}
+			</Box>
+		);
+	};
+
+	// Detail view
+	if (viewMode === "detail") {
+		return renderDetailView();
+	}
+
+	// List view
 	return (
 		<Box flexDirection="column">
 			{/* Header */}
@@ -362,16 +571,14 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					🔍 Hook Test
 				</Text>
 				{!isComplete && (
-					<Text dimColor> (↑↓ navigate, Enter to expand/collapse)</Text>
+					<Text dimColor> (↑↓ navigate, Enter expand/view, Esc collapse)</Text>
 				)}
 			</Box>
 
 			{/* Hook types list */}
 			{!isComplete && (
 				<Box flexDirection="column">
-					{hookTypes.map((hookType, index) =>
-						renderHookTypeRow(hookType, index),
-					)}
+					{flatItems.map((item, index) => renderListItem(item, index))}
 				</Box>
 			)}
 
