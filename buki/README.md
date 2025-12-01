@@ -107,7 +107,6 @@ buki-{technology}/
 
 Buki plugins include validation hooks that run automatically during your Claude Code session:
 
-- **SessionStart**: Prime the cache by hashing relevant files
 - **Stop**: Validate code quality before completing work
 - **SubagentStop**: Validate after subagent tasks complete
 
@@ -162,7 +161,7 @@ Available override options:
 
 - **enabled**: Set to `false` to disable the hook in this directory
 - **command**: Override the command to run
-- **if_changed**: Override the glob patterns for change detection (replaces plugin defaults)
+- **if_changed**: Additional glob patterns for change detection (merged with plugin defaults)
 
 ## Quality Standards
 

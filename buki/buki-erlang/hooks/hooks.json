@@ -1,19 +1,5 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run build --cache"
-          },
-          {
-            "type": "command",
-            "command": "han hook run test --cache"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
