@@ -77,8 +77,13 @@ function testDirCommand(dir: string, cmd: string): boolean {
 }
 
 export function validate(options: ValidateOptions): void {
-	const { failFast, dirsWith, testDir, command: commandToRun, verbose } =
-		options;
+	const {
+		failFast,
+		dirsWith,
+		testDir,
+		command: commandToRun,
+		verbose,
+	} = options;
 
 	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 

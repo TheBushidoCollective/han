@@ -12,6 +12,7 @@ You have uncommitted changes. Following the git storytelling principle, you must
 ## Commit Strategy
 
 Break your work into logical commits that someone reading the git history can follow:
+
 - Each commit should be a single logical change
 - Commits should build on each other to tell the story
 - A reviewer should be able to understand the development process by reading the commit history
@@ -19,6 +20,7 @@ Break your work into logical commits that someone reading the git history can fo
 ## Commit Message Format
 
 Use conventional commits format:
+
 - `feat:` for new features
 - `fix:` for bug fixes
 - `refactor:` for code refactoring
@@ -29,6 +31,7 @@ Use conventional commits format:
 ## Example
 
 If you added a new feature with tests, you might create:
+
 1. `feat: add user authentication endpoint`
 2. `test: add tests for authentication endpoint`
 3. `docs: update API documentation for auth`
