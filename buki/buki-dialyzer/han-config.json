@@ -2,9 +2,7 @@
   "hooks": {
     "typecheck": {
       "command": "mix dialyzer --plt",
-      "dirsWith": [
-        "mix.exs"
-      ],
+      "dirsWith": ["mix.exs"],
       "dirTest": "grep -qE ':dialyxir' mix.exs",
       "ifChanged": [
         "**/*.ex",

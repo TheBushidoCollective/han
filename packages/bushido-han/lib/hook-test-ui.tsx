@@ -52,6 +52,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	const lastAutoSelectedType = useRef<string | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [expandedType, setExpandedType] = useState<string | null>(null);
+	const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null); // "hookType:plugin" format
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
 	const [detailItem, setDetailItem] = useState<FlatItem | null>(null);
 
@@ -74,21 +75,25 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 				for (const [plugin, pluginHooks] of pluginMap) {
 					items.push({ type: "plugin", hookType, plugin });
-					for (let i = 0; i < pluginHooks.length; i++) {
-						items.push({
-							type: "command",
-							hookType,
-							plugin,
-							command: pluginHooks[i].command,
-							commandIndex: i,
-						});
+					// Only show commands if this plugin is expanded
+					const pluginKey = `${hookType}:${plugin}`;
+					if (expandedPlugin === pluginKey) {
+						for (let i = 0; i < pluginHooks.length; i++) {
+							items.push({
+								type: "command",
+								hookType,
+								plugin,
+								command: pluginHooks[i].command,
+								commandIndex: i,
+							});
+						}
 					}
 				}
 			}
 		}
 
 		return items;
-	}, [hookTypes, hookStructure, expandedType]);
+	}, [hookTypes, hookStructure, expandedType, expandedPlugin]);
 
 	const flatItems = getFlatItems();
 
@@ -179,9 +184,18 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				// Toggle expansion (accordion - only one open at a time)
 				if (expandedType === item.hookType) {
 					setExpandedType(null);
+					setExpandedPlugin(null);
 				} else {
 					setExpandedType(item.hookType);
-					// Keep selection on the hook type row
+					setExpandedPlugin(null);
+				}
+			} else if (item.type === "plugin" && item.plugin) {
+				// Toggle plugin expansion
+				const pluginKey = `${item.hookType}:${item.plugin}`;
+				if (expandedPlugin === pluginKey) {
+					setExpandedPlugin(null);
+				} else {
+					setExpandedPlugin(pluginKey);
 				}
 			} else if (item.type === "command" && item.plugin && item.command) {
 				// View command output
@@ -189,8 +203,19 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				setViewMode("detail");
 			}
 		} else if (key.escape) {
-			// Collapse current expansion
-			if (expandedType) {
+			// Collapse in order: plugin first, then hook type
+			if (expandedPlugin) {
+				// Find the plugin row and select it
+				const pluginIndex = flatItems.findIndex(
+					(i) =>
+						i.type === "plugin" &&
+						`${i.hookType}:${i.plugin}` === expandedPlugin,
+				);
+				if (pluginIndex !== -1) {
+					setSelectedIndex(pluginIndex);
+				}
+				setExpandedPlugin(null);
+			} else if (expandedType) {
 				// Find the index of the expanded type and select it
 				const typeIndex = flatItems.findIndex(
 					(i) => i.type === "hookType" && i.hookType === expandedType,
@@ -437,13 +462,15 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		const pluginArray = Array.from(pluginHooks.keys());
 		const isLastPlugin = pluginArray.indexOf(plugin) === pluginArray.length - 1;
 		const isLastType = hookTypes.indexOf(hookType) === hookTypes.length - 1;
+		const pluginKey = `${hookType}:${plugin}`;
+		const isPluginExpanded = expandedPlugin === pluginKey;
 
 		return (
 			<Box key={`plugin-${hookType}-${plugin}`}>
 				<Text dimColor>
 					{isLastType ? "  " : "│ "}
 					{"  "}
-					{isLastPlugin ? "└─" : "├─"}{" "}
+					{isLastPlugin && !isPluginExpanded ? "└─" : "├─"}{" "}
 				</Text>
 				{isSelected && <Text color="cyan">▸ </Text>}
 				{!isSelected && <Text> </Text>}
@@ -491,6 +518,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				{pluginStatus === "pending" && (
 					<Text dimColor> (0/{hooks.length})</Text>
 				)}
+				<Text dimColor> {isPluginExpanded ? "▾" : "▸"}</Text>
 			</Box>
 		);
 	};
