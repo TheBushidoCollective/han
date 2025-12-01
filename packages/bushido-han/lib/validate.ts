@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { dirname } from "node:path";
-import { globby } from "globby";
+import { globbyStream } from "globby";
 import {
 	buildManifest,
 	checkForChanges,
@@ -10,7 +10,7 @@ import {
 import {
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
-	resolveHookConfigs,
+	streamHookConfigs,
 } from "./hook-config.js";
 
 interface ValidateOptions {
@@ -21,26 +21,28 @@ interface ValidateOptions {
 	stdinData?: string | null;
 }
 
-// Find directories containing marker files using globby (respects nested .gitignore files)
-async function findDirectoriesWithMarker(
+// Stream directories containing marker files (respects nested .gitignore files)
+// Yields directories one at a time for early exit on fail-fast
+async function* streamDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
-): Promise<string[]> {
-	// Convert marker patterns to glob patterns
+): AsyncGenerator<string> {
 	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
+	const seenDirs = new Set<string>();
 
-	// Use globby to find all matching files, respecting .gitignore files
-	const matches = await globby(globPatterns, {
+	for await (const match of globbyStream(globPatterns, {
 		cwd: rootDir,
-		gitignore: true, // Respect all nested .gitignore files
-		ignore: [".git/**"], // Only hardcode .git as ignored
+		gitignore: true,
+		ignore: [".git/**"],
 		absolute: true,
 		onlyFiles: true,
-	});
-
-	// Extract unique directories from matched files
-	const dirs = [...new Set(matches.map((file) => dirname(file)))];
-	return dirs;
+	})) {
+		const dir = dirname(match.toString());
+		if (!seenDirs.has(dir)) {
+			seenDirs.add(dir);
+			yield dir;
+		}
+	}
 }
 
 // Run command in directory
@@ -92,35 +94,35 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		stdinData,
 	} = options;
 
-	// Main execution
 	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-	let targetDirs: string[];
-
+	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
-		// No dirsWith specified - run in current directory only
-		targetDirs = [rootDir];
-	} else {
-		// Parse comma-delimited patterns
-		const patterns = dirsWith.split(",").map((p) => p.trim());
-
-		// Find directories with marker files (respects nested .gitignore files)
-		targetDirs = await findDirectoriesWithMarker(rootDir, patterns);
-
-		// Filter directories using test command if specified
-		if (testDir && targetDirs.length > 0) {
-			targetDirs = targetDirs.filter((dir) => testDirCommand(dir, testDir));
+		const success = runCommand(rootDir, commandToRun, stdinData);
+		if (!success) {
+			console.error(
+				`\nFailed when trying to run \`${commandToRun}\` in root directory\n`,
+			);
+			process.exit(2);
 		}
-
-		if (targetDirs.length === 0) {
-			console.log(`No directories found with ${dirsWith}`);
-			process.exit(0);
-		}
+		console.log("\n✅ All 1 directory passed validation");
+		process.exit(0);
 	}
 
-	const failures: string[] = [];
+	// Parse comma-delimited patterns
+	const patterns = dirsWith.split(",").map((p) => p.trim());
 
-	for (const dir of targetDirs) {
+	const failures: string[] = [];
+	let processedCount = 0;
+
+	// Stream directories and process each one as it's found
+	for await (const dir of streamDirectoriesWithMarker(rootDir, patterns)) {
+		// Filter with test command if specified
+		if (testDir && !testDirCommand(dir, testDir)) {
+			continue;
+		}
+
+		processedCount++;
 		const success = runCommand(dir, commandToRun, stdinData);
 
 		if (!success) {
@@ -137,6 +139,11 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		}
 	}
 
+	if (processedCount === 0) {
+		console.log(`No directories found with ${dirsWith}`);
+		process.exit(0);
+	}
+
 	if (failures.length > 0) {
 		console.error(
 			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation:\n`,
@@ -148,7 +155,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
 	}
 
 	console.log(
-		`\n✅ All ${targetDirs.length} director${targetDirs.length === 1 ? "y" : "ies"} passed validation`,
+		`\n✅ All ${processedCount} director${processedCount === 1 ? "y" : "ies"} passed validation`,
 	);
 	process.exit(0);
 }
@@ -185,6 +192,7 @@ function getCacheKeyForDirectory(
 /**
  * Run a hook using plugin config and user overrides.
  * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
+ * Uses streaming to process directories as they're found for fast fail-fast.
  */
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
@@ -204,39 +212,28 @@ export async function runConfiguredHook(
 
 	const pluginName = getPluginNameFromRoot(pluginRoot);
 
-	// Resolve all hook configs (finds directories, applies user overrides)
-	const configs = await resolveHookConfigs(pluginRoot, hookName, projectRoot);
+	const failures: Array<{ dir: string; command: string }> = [];
+	const successfulConfigs: ResolvedHookConfig[] = [];
+	let totalFound = 0;
+	let disabledCount = 0;
+	let skippedCount = 0;
 
-	if (configs.length === 0) {
-		console.log(
-			`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
-		);
-		process.exit(0);
-	}
+	// Stream configs and process each one as it's found
+	for await (const config of streamHookConfigs(
+		pluginRoot,
+		hookName,
+		projectRoot,
+	)) {
+		totalFound++;
 
-	// Filter to only enabled hooks
-	const enabledConfigs = configs.filter((c) => c.enabled);
+		// Skip disabled hooks
+		if (!config.enabled) {
+			disabledCount++;
+			continue;
+		}
 
-	if (enabledConfigs.length === 0) {
-		console.log(
-			`All directories have hook "${hookName}" disabled via han-config.yml`,
-		);
-		process.exit(0);
-	}
-
-	// If --cache is enabled, filter to only directories with changes
-	let configsToRun = enabledConfigs;
-	if (cache) {
-		const configsWithChanges: ResolvedHookConfig[] = [];
-		const skippedDirs: string[] = [];
-
-		for (const config of enabledConfigs) {
-			// If no ifChanged patterns, always run
-			if (!config.ifChanged || config.ifChanged.length === 0) {
-				configsWithChanges.push(config);
-				continue;
-			}
-
+		// If --cache is enabled, check for changes
+		if (cache && config.ifChanged && config.ifChanged.length > 0) {
 			const cacheKey = getCacheKeyForDirectory(
 				hookName,
 				config.directory,
@@ -249,32 +246,13 @@ export async function runConfiguredHook(
 				config.ifChanged,
 			);
 
-			if (hasChanges) {
-				configsWithChanges.push(config);
-			} else {
-				const relativePath = config.directory.replace(`${projectRoot}/`, "");
-				skippedDirs.push(relativePath);
+			if (!hasChanges) {
+				skippedCount++;
+				continue;
 			}
 		}
 
-		if (skippedDirs.length > 0) {
-			console.log(
-				`Skipping ${skippedDirs.length} director${skippedDirs.length === 1 ? "y" : "ies"} (no changes detected)`,
-			);
-		}
-
-		if (configsWithChanges.length === 0) {
-			console.log("No changes detected in any directories. Nothing to run.");
-			process.exit(0);
-		}
-
-		configsToRun = configsWithChanges;
-	}
-
-	const failures: Array<{ dir: string; command: string }> = [];
-	const successfulConfigs: ResolvedHookConfig[] = [];
-
-	for (const config of configsToRun) {
+		// Run the hook
 		const relativePath = config.directory.replace(`${projectRoot}/`, "");
 		console.log(`Running "${config.command}" in ${relativePath}...`);
 
@@ -293,6 +271,34 @@ export async function runConfiguredHook(
 		} else {
 			successfulConfigs.push(config);
 		}
+	}
+
+	// Handle edge cases
+	if (totalFound === 0) {
+		console.log(
+			`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
+		);
+		process.exit(0);
+	}
+
+	if (disabledCount === totalFound) {
+		console.log(
+			`All directories have hook "${hookName}" disabled via han-config.yml`,
+		);
+		process.exit(0);
+	}
+
+	const ranCount = successfulConfigs.length + failures.length;
+
+	if (skippedCount > 0) {
+		console.log(
+			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+		);
+	}
+
+	if (ranCount === 0 && skippedCount > 0) {
+		console.log("No changes detected in any directories. Nothing to run.");
+		process.exit(0);
 	}
 
 	// Update cache manifest for successful executions
@@ -325,7 +331,7 @@ export async function runConfiguredHook(
 	}
 
 	console.log(
-		`\n✅ All ${configsToRun.length} director${configsToRun.length === 1 ? "y" : "ies"} passed`,
+		`\n✅ All ${ranCount} director${ranCount === 1 ? "y" : "ies"} passed`,
 	);
 	process.exit(0);
 }
