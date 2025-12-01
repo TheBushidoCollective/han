@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://han.guru
+    about: Check out the documentation before opening an issue
+  - name: Discussions
+    url: https://github.com/TheBushidoCollective/han/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
