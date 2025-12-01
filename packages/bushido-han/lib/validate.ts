@@ -17,7 +17,6 @@ interface ValidateOptions {
 	dirsWith: string | null;
 	testDir?: string | null;
 	command: string;
-	stdinData?: string | null;
 	verbose?: boolean;
 }
 
@@ -34,19 +33,13 @@ function findDirectoriesWithMarker(
 // Run command in directory
 // When verbose=false, suppresses output and we'll tell the agent how to reproduce
 // When verbose=true, inherits stdio to show full output
-function runCommand(
-	dir: string,
-	cmd: string,
-	stdinData?: string | null,
-	verbose?: boolean,
-): boolean {
+function runCommand(dir: string, cmd: string, verbose?: boolean): boolean {
 	try {
 		if (verbose) {
 			// Verbose mode: show full output
 			execSync(cmd, {
 				cwd: dir,
-				stdio: stdinData ? ["pipe", "inherit", "inherit"] : "inherit",
-				input: stdinData || undefined,
+				stdio: "inherit",
 				encoding: "utf8",
 				shell: "/bin/sh",
 				env: process.env,
@@ -55,10 +48,7 @@ function runCommand(
 			// Quiet mode: suppress output, we give the agent a concise instruction instead
 			execSync(cmd, {
 				cwd: dir,
-				stdio: stdinData
-					? ["pipe", "pipe", "pipe"]
-					: ["ignore", "pipe", "pipe"],
-				input: stdinData || undefined,
+				stdio: ["ignore", "pipe", "pipe"],
 				encoding: "utf8",
 				shell: "/bin/sh",
 				env: process.env,
@@ -87,20 +77,14 @@ function testDirCommand(dir: string, cmd: string): boolean {
 }
 
 export function validate(options: ValidateOptions): void {
-	const {
-		failFast,
-		dirsWith,
-		testDir,
-		command: commandToRun,
-		stdinData,
-		verbose,
-	} = options;
+	const { failFast, dirsWith, testDir, command: commandToRun, verbose } =
+		options;
 
 	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
-		const success = runCommand(rootDir, commandToRun, stdinData, verbose);
+		const success = runCommand(rootDir, commandToRun, verbose);
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
@@ -128,7 +112,7 @@ export function validate(options: ValidateOptions): void {
 		}
 
 		processedCount++;
-		const success = runCommand(dir, commandToRun, stdinData, verbose);
+		const success = runCommand(dir, commandToRun, verbose);
 
 		if (!success) {
 			const relativePath =
@@ -182,7 +166,6 @@ export function validate(options: ValidateOptions): void {
 export interface RunConfiguredHookOptions {
 	hookName: string;
 	failFast: boolean;
-	stdinData?: string | null;
 	/**
 	 * When true, check if files have changed before running hooks.
 	 * If no changes detected, skip the hook and exit 0.
@@ -215,7 +198,7 @@ function getCacheKeyForDirectory(
  * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
  */
 export function runConfiguredHook(options: RunConfiguredHookOptions): void {
-	const { hookName, failFast, stdinData, cache, verbose } = options;
+	const { hookName, failFast, cache, verbose } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -274,12 +257,7 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
 
-		const success = runCommand(
-			config.directory,
-			config.command,
-			stdinData,
-			verbose,
-		);
+		const success = runCommand(config.directory, config.command, verbose);
 
 		if (!success) {
 			failures.push({ dir: relativePath, command: config.command });
