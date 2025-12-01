@@ -55,19 +55,19 @@ function loadNativeModule(): NativeModule {
 		cachedNativeModule = dynamicRequire(monorepoPath) as NativeModule;
 		return cachedNativeModule;
 	} catch (e) {
-		errors.push(`${monorepoPath}: ${e instanceof Error ? e.message : String(e)}`);
+		errors.push(
+			`${monorepoPath}: ${e instanceof Error ? e.message : String(e)}`,
+		);
 	}
 
 	// For Bun compiled binaries: embedded native module
 	// This MUST be a bare require with a static string literal for Bun to detect and embed
 	try {
-		// @ts-ignore - require is available globally, need static string for Bun embedding
-		cachedNativeModule = require("../native/han-native.darwin-arm64.node") as NativeModule;
+		cachedNativeModule =
+			require("../native/han-native.darwin-arm64.node") as NativeModule;
 		return cachedNativeModule;
 	} catch (e) {
-		errors.push(
-			`embedded: ${e instanceof Error ? e.message : String(e)}`,
-		);
+		errors.push(`embedded: ${e instanceof Error ? e.message : String(e)}`);
 	}
 
 	// Legacy fallback: look for .node file next to the executable
