@@ -2,17 +2,6 @@
 # Git Storytelling Hook
 # Commits work early and often to tell the story of development
 
-# Read stdin (JSON from Claude Code hook)
-stdin_data=$(cat)
-
-# Check if stop_hook_active is true (we're in a recursive hook call)
-stop_hook_active=$(echo "$stdin_data" | grep -o '"stop_hook_active"[[:space:]]*:[[:space:]]*true' || true)
-
-if [ -n "$stop_hook_active" ]; then
-    echo "Skipping commit - already in a stop hook"
-    exit 0
-fi
-
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Not a git repository, skipping commit"
