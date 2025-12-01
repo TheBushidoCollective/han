@@ -10,8 +10,8 @@ Functional programming paradigm, patterns, and best practices.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-functional-programming
+npx @thebushidocollective/han plugin install buki-functional-programming
 ```

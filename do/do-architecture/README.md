@@ -24,10 +24,10 @@ to their domain.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-architecture
+npx @thebushidocollective/han plugin install do-architecture
 ```
 
 ## License

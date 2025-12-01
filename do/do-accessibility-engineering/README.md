@@ -25,10 +25,10 @@ to their domain.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-accessibility-engineering
+npx @thebushidocollective/han plugin install do-accessibility-engineering
 ```
 
 ## License

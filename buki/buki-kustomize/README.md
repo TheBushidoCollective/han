@@ -29,8 +29,8 @@ Validates Kustomize configurations in directories containing `kustomization.yaml
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-kustomize
+npx @thebushidocollective/han plugin install buki-kustomize
 ```

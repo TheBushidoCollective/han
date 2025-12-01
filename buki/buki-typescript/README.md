@@ -23,10 +23,10 @@ Install this plugin in your Claude Code configuration to automatically validate 
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-typescript
+npx @thebushidocollective/han plugin install buki-typescript
 ```
 
 ## License

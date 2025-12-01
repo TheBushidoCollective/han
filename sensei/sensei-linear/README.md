@@ -48,10 +48,10 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-linear
+npx @thebushidocollective/han plugin install sensei-linear
 ```
 
 ## Usage

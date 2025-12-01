@@ -21,10 +21,10 @@ Once enabled, Claude will automatically apply these skills when working with rel
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-objective-c
+npx @thebushidocollective/han plugin install buki-objective-c
 ```
 
 ## License

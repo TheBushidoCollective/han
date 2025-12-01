@@ -6,8 +6,8 @@ Provides expertise in SIP, RTP, codec selection, QoS, network design, and troubl
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-voip-engineering
+npx @thebushidocollective/han plugin install do-voip-engineering
 ```

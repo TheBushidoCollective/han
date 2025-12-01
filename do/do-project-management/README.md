@@ -24,10 +24,10 @@ to their domain.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-project-management
+npx @thebushidocollective/han plugin install do-project-management
 ```
 
 ## License

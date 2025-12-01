@@ -59,10 +59,10 @@ Docker configuration for act:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-act
+npx @thebushidocollective/han plugin install buki-act
 ```
 
 ## Requirements

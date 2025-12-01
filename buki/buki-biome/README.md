@@ -38,10 +38,10 @@ This ensures all packages in your monorepo pass Biome validation before work is 
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-biome
+npx @thebushidocollective/han plugin install buki-biome
 ```
 
 ## License

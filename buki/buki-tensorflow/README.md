@@ -10,8 +10,8 @@ TensorFlow machine learning and deep learning framework skills.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-tensorflow
+npx @thebushidocollective/han plugin install buki-tensorflow
 ```

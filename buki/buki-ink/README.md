@@ -126,10 +126,10 @@ This buki's patterns are used in production tools like:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-ink
+npx @thebushidocollective/han plugin install buki-ink
 ```
 
 ## License

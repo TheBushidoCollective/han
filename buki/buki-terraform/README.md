@@ -34,8 +34,8 @@ Validates Terraform configurations in directories containing `.tf` files using `
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-terraform
+npx @thebushidocollective/han plugin install buki-terraform
 ```

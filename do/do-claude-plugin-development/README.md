@@ -192,10 +192,10 @@ When improving this plugin:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-claude-plugin-development
+npx @thebushidocollective/han plugin install do-claude-plugin-development
 ```
 
 ## License

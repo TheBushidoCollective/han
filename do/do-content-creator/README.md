@@ -143,10 +143,10 @@ Write a weekly newsletter for our developer community highlighting new features 
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-content-creator
+npx @thebushidocollective/han plugin install do-content-creator
 ```
 
 ## How to Use

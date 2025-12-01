@@ -33,12 +33,6 @@ export default function DocsPage() {
 								Installing Plugins
 							</a>
 							<a
-								href="#alternative-methods"
-								className="block py-2 px-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ml-3"
-							>
-								Alternative Methods
-							</a>
-							<a
 								href="#hook-caching"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
@@ -72,26 +66,33 @@ export default function DocsPage() {
 								Installation Methods
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
-								Plugins can be installed directly through Claude Code or using
-								the han CLI. No global installation required - hooks use npx
-								automatically.
+								No installation required - use npx to install plugins instantly.
+								Hooks run automatically via npx.
 							</p>
 
 							<div className="space-y-6">
 								<InstallMethod
-									title="In Claude Code (Recommended)"
+									title="npx (Recommended)"
+									description="Use han without installing - npx fetches the latest version"
+									code="npx @thebushidocollective/han plugin install --auto"
+								/>
+								<InstallMethod
+									title="Claude Code"
 									description="Install plugins directly from within a Claude Code session"
-									code="/plugin install bushido@han"
+									code={`# First add the Han marketplace
+/marketplace add han
+
+# Then install plugins
+/plugin install bushido@han`}
 								/>
 								<InstallMethod
 									title="Claude CLI"
 									description="Install from the command line with Claude CLI"
-									code="claude plugin install bushido@han"
-								/>
-								<InstallMethod
-									title="npx (No Installation)"
-									description="Use han without installing - npx fetches the latest version"
-									code="npx @thebushidocollective/han plugin install --auto"
+									code={`# First add the Han marketplace
+claude marketplace add han
+
+# Then install plugins
+claude plugin install bushido@han`}
 								/>
 							</div>
 						</section>
@@ -118,34 +119,6 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 									title="Manual Plugin Install"
 									description="Install specific plugins by name"
 									code="npx @thebushidocollective/han plugin install buki-typescript"
-								/>
-							</div>
-						</section>
-
-						{/* Optional Global Installation */}
-						<section id="alternative-methods" className="scroll-mt-8 mb-16">
-							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-								Optional: Global Installation
-							</h3>
-							<p className="text-gray-600 dark:text-gray-300 mb-6">
-								For convenience, you can install han globally. This is optional -
-								hooks work without it using npx.
-							</p>
-							<div className="space-y-6">
-								<InstallMethod
-									title="Quick Install"
-									description="Install the han CLI globally with a single command"
-									code="curl -fsSL https://han.guru/install.sh | sh"
-								/>
-								<InstallMethod
-									title="Homebrew (macOS & Linux)"
-									description="Install via Homebrew for easy updates"
-									code="brew install thebushidocollective/tap/han"
-								/>
-								<InstallMethod
-									title="npm (Global)"
-									description="Install globally via npm"
-									code="npm install -g @thebushidocollective/han"
 								/>
 							</div>
 						</section>

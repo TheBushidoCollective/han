@@ -14,8 +14,8 @@ Advanced Credo skills for code analysis and style checking in Elixir.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-credo
+npx @thebushidocollective/han plugin install buki-credo
 ```

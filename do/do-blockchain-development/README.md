@@ -25,10 +25,10 @@ to their domain.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-blockchain-development
+npx @thebushidocollective/han plugin install do-blockchain-development
 ```
 
 ## License

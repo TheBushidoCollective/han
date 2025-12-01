@@ -29,8 +29,8 @@ Validates Pulumi projects in directories containing `Pulumi.yaml` using `pulumi 
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-pulumi
+npx @thebushidocollective/han plugin install buki-pulumi
 ```

@@ -41,10 +41,10 @@ Example `.markdownlint.json`:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-markdownlint
+npx @thebushidocollective/han plugin install buki-markdownlint
 ```
 
 ## License
