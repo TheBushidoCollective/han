@@ -195,10 +195,7 @@ test("fails with exit code 2 when command fails", () => {
 			const exitCode = execError.status || execError.code;
 			strictEqual(exitCode, 2, `Expected exit code 2, got ${exitCode}`);
 			const stderr = execError.stderr?.toString() || "";
-			strictEqual(
-				stderr.includes("failed") || stderr.includes("Spawn"),
-				true,
-			);
+			strictEqual(stderr.includes("failed") || stderr.includes("Spawn"), true);
 		}
 	} finally {
 		teardown();
@@ -958,11 +955,7 @@ test("han-config.yml can override command", () => {
 		} as ExecSyncOptionsWithStringEncoding);
 
 		// Command output is suppressed, check that it passed (proving the command ran)
-		strictEqual(
-			output.includes("passed"),
-			true,
-			"Expected success message",
-		);
+		strictEqual(output.includes("passed"), true, "Expected success message");
 	} finally {
 		teardown();
 	}
