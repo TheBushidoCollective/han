@@ -1,15 +1,5 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run format --cache"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
