@@ -20,10 +20,10 @@ the MCP protocol.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-playwright-mcp
+npx @thebushidocollective/han plugin install sensei-playwright-mcp
 ```
 
 ## License

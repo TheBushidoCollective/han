@@ -22,10 +22,10 @@ to their domain.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install do-enforce-planning
+npx @thebushidocollective/han plugin install do-enforce-planning
 ```
 
 ## License

@@ -40,10 +40,10 @@ Once enabled, Claude will automatically apply these foundational principles and 
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install bushido
+npx @thebushidocollective/han plugin install bushido
 ```
 
 ## License

@@ -10,8 +10,8 @@ Comprehensive Cucumber BDD testing skills for behavior-driven development.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-cucumber
+npx @thebushidocollective/han plugin install buki-cucumber
 ```

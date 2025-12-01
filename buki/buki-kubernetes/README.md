@@ -15,8 +15,8 @@ Kubernetes manifest validation and best practices for cloud-native deployments.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-kubernetes
+npx @thebushidocollective/han plugin install buki-kubernetes
 ```

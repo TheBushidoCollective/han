@@ -40,10 +40,10 @@ work is marked complete.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-rspec
+npx @thebushidocollective/han plugin install buki-rspec
 ```
 
 ## License

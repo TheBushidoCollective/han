@@ -16,10 +16,10 @@ This buki provides the following skills:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-expo
+npx @thebushidocollective/han plugin install buki-expo
 ```
 
 ## Requirements

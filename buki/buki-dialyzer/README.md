@@ -14,10 +14,10 @@ Advanced Dialyzer skills for static analysis of Erlang and Elixir code.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-dialyzer
+npx @thebushidocollective/han plugin install buki-dialyzer
 ```
 
 ## Usage

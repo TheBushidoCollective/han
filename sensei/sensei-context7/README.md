@@ -20,10 +20,10 @@ the MCP protocol.
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-context7
+npx @thebushidocollective/han plugin install sensei-context7
 ```
 
 ## License

@@ -29,8 +29,8 @@ Validates Ansible playbooks in directories containing `.yml` or `.yaml` files us
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-ansible
+npx @thebushidocollective/han plugin install buki-ansible
 ```

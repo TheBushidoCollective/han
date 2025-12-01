@@ -89,25 +89,24 @@ export default function Home() {
 						Getting Started
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-						Install plugins directly with Claude or use the han CLI
+						No installation required - use npx to get started instantly
 					</p>
 					<div className="max-w-2xl mx-auto">
 						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-								Install with Claude
+								Install with npx
 							</h3>
 							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								The easiest way to get started - install plugins directly from
-								within Claude Code:
+								Auto-detect and install plugins for your project:
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4">
-								<code>/plugin install bushido@han</code>
+								<code>npx @thebushidocollective/han plugin install --auto</code>
 							</pre>
 							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								Or use the han CLI for auto-detection:
+								Or install a specific plugin:
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>npx @thebushidocollective/han plugin install --auto</code>
+								<code>npx @thebushidocollective/han plugin install bushido</code>
 							</pre>
 						</div>
 						<div className="mt-6 text-center">

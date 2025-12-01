@@ -66,10 +66,10 @@ Once installed, Claude Code gains access to these tool categories:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-github
+npx @thebushidocollective/han plugin install sensei-github
 ```
 
 ## Usage

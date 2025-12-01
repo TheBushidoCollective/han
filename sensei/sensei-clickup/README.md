@@ -51,10 +51,10 @@ Once installed, Claude Code gains access to these ClickUp MCP tools:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-clickup
+npx @thebushidocollective/han plugin install sensei-clickup
 ```
 
 ## Usage

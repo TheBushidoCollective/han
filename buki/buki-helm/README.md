@@ -32,8 +32,8 @@ Validates Helm charts in directories containing `Chart.yaml` using `helm lint` a
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-helm
+npx @thebushidocollective/han plugin install buki-helm
 ```

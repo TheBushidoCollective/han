@@ -16,10 +16,10 @@ This buki provides the following skills:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-react-native-web
+npx @thebushidocollective/han plugin install buki-react-native-web
 ```
 
 ## Requirements

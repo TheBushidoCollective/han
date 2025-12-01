@@ -45,10 +45,10 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-jira
+npx @thebushidocollective/han plugin install sensei-jira
 ```
 
 ## Usage

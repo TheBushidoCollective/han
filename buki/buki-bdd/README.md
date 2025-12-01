@@ -11,8 +11,8 @@ Comprehensive Behavior-Driven Development principles, practices, and collaborati
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install buki-bdd
+npx @thebushidocollective/han plugin install buki-bdd
 ```

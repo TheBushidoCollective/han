@@ -34,10 +34,10 @@ Once installed, Claude Code gains access to these tools:
 
 ## Installation
 
-For `han` CLI installation instructions, visit [han.guru](https://han.guru).
+Install with npx (no installation required):
 
 ```bash
-han install sensei-gitlab
+npx @thebushidocollective/han plugin install sensei-gitlab
 ```
 
 ## Usage
