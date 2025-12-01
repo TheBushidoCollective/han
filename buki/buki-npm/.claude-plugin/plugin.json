@@ -1,0 +1,13 @@
+{
+  "name": "buki-npm",
+  "version": "1.0.0",
+  "description": "NPM package manager skills with dependency validation hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["npm", "package-manager", "dependencies", "node"]
+}

@@ -10,6 +10,13 @@
   },
   "plugins": [
     {
+      "name": "buki-absinthe-graphql",
+      "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
+      "source": "./buki/buki-absinthe-graphql",
+      "category": "Weapon",
+      "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"]
+    },
+    {
       "name": "buki-act",
       "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
       "source": "./buki/buki-act",
@@ -23,6 +30,13 @@
         "local-testing",
         "docker"
       ]
+    },
+    {
+      "name": "buki-android",
+      "description": "Android development validation with Gradle build hooks.",
+      "source": "./buki/buki-android",
+      "category": "Weapon",
+      "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
     },
     {
       "name": "buki-ameba",
@@ -285,6 +299,13 @@
       "keywords": ["ink", "terminal", "cli", "react", "ui", "skill"]
     },
     {
+      "name": "buki-ios",
+      "description": "iOS development validation with Xcode build hooks.",
+      "source": "./buki/buki-ios",
+      "category": "Weapon",
+      "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"]
+    },
+    {
       "name": "buki-java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
       "source": "./buki/buki-java",
@@ -325,6 +346,13 @@
       "source": "./buki/buki-kotlin",
       "category": "Weapon",
       "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"]
+    },
+    {
+      "name": "buki-lerna",
+      "description": "Lerna monorepo management skills with bootstrap validation hooks.",
+      "source": "./buki/buki-lerna",
+      "category": "Weapon",
+      "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"]
     },
     {
       "name": "buki-kubernetes",
@@ -402,6 +430,13 @@
       "source": "./buki/buki-nim",
       "category": "Weapon",
       "keywords": ["nim", "systems-programming", "metaprogramming", "skill"]
+    },
+    {
+      "name": "buki-npm",
+      "description": "NPM package manager skills with dependency validation hooks.",
+      "source": "./buki/buki-npm",
+      "category": "Weapon",
+      "keywords": ["npm", "package-manager", "dependencies", "node"]
     },
     {
       "name": "buki-objective-c",
@@ -629,6 +664,13 @@
       "source": "./buki/buki-vue",
       "category": "Weapon",
       "keywords": ["vue", "composition-api", "reactivity", "skill"]
+    },
+    {
+      "name": "buki-yarn",
+      "description": "Yarn package manager skills with dependency validation hooks.",
+      "source": "./buki/buki-yarn",
+      "category": "Weapon",
+      "keywords": ["yarn", "package-manager", "dependencies", "node"]
     },
     {
       "name": "buki-git-storytelling",
