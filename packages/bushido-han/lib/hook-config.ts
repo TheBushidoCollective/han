@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { globby } from "globby";
+import { globbyStream } from "globby";
 import YAML from "yaml";
 
 /**
@@ -104,24 +104,29 @@ export function getPluginNameFromRoot(pluginRoot: string): string {
 }
 
 /**
- * Find directories containing marker files using globby (respects nested .gitignore files)
+ * Stream directories containing marker files (respects nested .gitignore files)
+ * Yields directories one at a time for early exit on fail-fast
  */
-async function findDirectoriesWithMarker(
+async function* streamDirectoriesWithMarker(
 	rootDir: string,
 	markerPatterns: string[],
-): Promise<string[]> {
+): AsyncGenerator<string> {
 	const globPatterns = markerPatterns.map((pattern) => `**/${pattern}`);
+	const seenDirs = new Set<string>();
 
-	const matches = await globby(globPatterns, {
+	for await (const match of globbyStream(globPatterns, {
 		cwd: rootDir,
 		gitignore: true,
 		ignore: [".git/**"],
 		absolute: true,
 		onlyFiles: true,
-	});
-
-	const dirs = [...new Set(matches.map((file) => dirname(file)))];
-	return dirs;
+	})) {
+		const dir = dirname(match.toString());
+		if (!seenDirs.has(dir)) {
+			seenDirs.add(dir);
+			yield dir;
+		}
+	}
 }
 
 /**
@@ -174,72 +179,81 @@ function mergeIfChangedPatterns(
 }
 
 /**
+ * Stream hook configurations for target directories
+ * Yields configs one at a time for early exit on fail-fast
+ */
+export async function* streamHookConfigs(
+	pluginRoot: string,
+	hookName: string,
+	projectRoot: string,
+): AsyncGenerator<ResolvedHookConfig> {
+	const pluginConfig = loadPluginConfig(pluginRoot);
+
+	if (!pluginConfig) {
+		return;
+	}
+
+	const hookDef = pluginConfig.hooks[hookName];
+
+	if (!hookDef) {
+		return;
+	}
+
+	const pluginName = getPluginNameFromRoot(pluginRoot);
+
+	// Helper to resolve config for a directory
+	const resolveConfigForDir = (dir: string): ResolvedHookConfig => {
+		const userConfig = loadUserConfig(dir);
+		const userOverride = userConfig?.[pluginName]?.[hookName];
+
+		return {
+			enabled: userOverride?.enabled !== false,
+			command: userOverride?.command || hookDef.command,
+			directory: dir,
+			ifChanged: mergeIfChangedPatterns(
+				hookDef.ifChanged,
+				userOverride?.if_changed,
+			),
+		};
+	};
+
+	// No dirsWith specified - run in project root only
+	if (!hookDef.dirsWith || hookDef.dirsWith.length === 0) {
+		yield resolveConfigForDir(projectRoot);
+		return;
+	}
+
+	// Stream directories and yield configs as they're found
+	for await (const dir of streamDirectoriesWithMarker(
+		projectRoot,
+		hookDef.dirsWith,
+	)) {
+		// Filter with dirTest if specified
+		if (hookDef.dirTest && !testDirCommand(dir, hookDef.dirTest)) {
+			continue;
+		}
+
+		yield resolveConfigForDir(dir);
+	}
+}
+
+/**
  * Resolve hook configurations for all target directories
+ * @deprecated Use streamHookConfigs for better performance with fail-fast
  */
 export async function resolveHookConfigs(
 	pluginRoot: string,
 	hookName: string,
 	projectRoot: string,
 ): Promise<ResolvedHookConfig[]> {
-	const pluginConfig = loadPluginConfig(pluginRoot);
-
-	if (!pluginConfig) {
-		return [];
-	}
-
-	const hookDef = pluginConfig.hooks[hookName];
-
-	if (!hookDef) {
-		return [];
-	}
-
-	const pluginName = getPluginNameFromRoot(pluginRoot);
-
-	// Find target directories
-	let targetDirs: string[];
-
-	if (!hookDef.dirsWith || hookDef.dirsWith.length === 0) {
-		// No dirsWith specified - run in project root only
-		targetDirs = [projectRoot];
-	} else {
-		// Find all directories matching the dirsWith patterns
-		targetDirs = await findDirectoriesWithMarker(projectRoot, hookDef.dirsWith);
-	}
-
-	// Filter directories using dirTest command if specified
-	if (hookDef.dirTest && targetDirs.length > 0) {
-		targetDirs = targetDirs.filter((dir) =>
-			testDirCommand(dir, hookDef.dirTest as string),
-		);
-	}
-
 	const configs: ResolvedHookConfig[] = [];
-
-	for (const dir of targetDirs) {
-		// Load user overrides for this directory
-		const userConfig = loadUserConfig(dir);
-		const userOverride = userConfig?.[pluginName]?.[hookName];
-
-		// Resolve enabled status (default: true)
-		const enabled = userOverride?.enabled !== false;
-
-		// Resolve command (user override or plugin default)
-		const command = userOverride?.command || hookDef.command;
-
-		// Resolve ifChanged patterns (user patterns are merged with plugin defaults)
-		const ifChanged = mergeIfChangedPatterns(
-			hookDef.ifChanged,
-			userOverride?.if_changed,
-		);
-
-		configs.push({
-			enabled,
-			command,
-			directory: dir,
-			ifChanged,
-		});
+	for await (const config of streamHookConfigs(
+		pluginRoot,
+		hookName,
+		projectRoot,
+	)) {
+		configs.push(config);
 	}
-
 	return configs;
 }
 

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { globby } from "globby";
+import { globby, globbyStream } from "globby";
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -146,6 +146,7 @@ export function buildManifest(files: string[], rootDir: string): CacheManifest {
 /**
  * Check if any files have changed compared to the cached manifest
  * Returns true if changes detected, false if no changes
+ * @deprecated Use streamingHasChanges for better performance with early exit
  */
 export function hasChanges(
 	currentFiles: string[],
@@ -184,6 +185,52 @@ export function hasChanges(
 }
 
 /**
+ * Stream files and check for changes with early exit on first change detected.
+ * Returns true if changes detected, false if no changes.
+ */
+async function streamingHasChanges(
+	rootDir: string,
+	patterns: string[],
+	cachedManifest: CacheManifest | null,
+): Promise<boolean> {
+	if (!cachedManifest) {
+		return true;
+	}
+
+	const seenPaths = new Set<string>();
+
+	// Stream files and check each one immediately
+	for await (const match of globbyStream(patterns, {
+		cwd: rootDir,
+		gitignore: true,
+		ignore: [".git/**"],
+		absolute: true,
+		onlyFiles: true,
+	})) {
+		const file = match.toString();
+		const relativePath = relative(rootDir, file);
+		seenPaths.add(relativePath);
+
+		const currentHash = computeFileHash(file);
+		const cachedHash = cachedManifest[relativePath];
+
+		// File is new or modified - exit immediately
+		if (cachedHash !== currentHash) {
+			return true;
+		}
+	}
+
+	// Check for deleted files (files in cache but not found)
+	for (const cachedPath of Object.keys(cachedManifest)) {
+		if (!seenPaths.has(cachedPath)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Track files and update the cache manifest
  * This is called after a successful hook execution
  */
@@ -199,7 +246,8 @@ export async function trackFiles(
 }
 
 /**
- * Check if files have changed since last tracked state
+ * Check if files have changed since last tracked state.
+ * Uses streaming with early exit - returns true on first change detected.
  * Returns true if changes detected (hook should run), false if no changes (skip hook)
  */
 export async function checkForChanges(
@@ -209,6 +257,5 @@ export async function checkForChanges(
 	patterns: string[],
 ): Promise<boolean> {
 	const cachedManifest = loadCacheManifest(pluginName, hookName);
-	const currentFiles = await findFilesWithGlob(rootDir, patterns);
-	return hasChanges(currentFiles, rootDir, cachedManifest);
+	return streamingHasChanges(rootDir, patterns, cachedManifest);
 }
