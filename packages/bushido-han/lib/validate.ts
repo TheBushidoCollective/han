@@ -30,7 +30,7 @@ function findDirectoriesWithMarker(
 	return findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
 
-// Run command in directory
+// Run command in directory (suppresses output - we'll tell the agent how to reproduce)
 function runCommand(
 	dir: string,
 	cmd: string,
@@ -39,10 +39,10 @@ function runCommand(
 	try {
 		execSync(cmd, {
 			cwd: dir,
-			// If stdinData provided, pipe it; otherwise ignore stdin entirely
+			// Suppress output - we give the agent a concise instruction instead
 			stdio: stdinData
-				? ["pipe", "inherit", "inherit"]
-				: ["ignore", "inherit", "inherit"],
+				? ["pipe", "pipe", "pipe"]
+				: ["ignore", "pipe", "pipe"],
 			input: stdinData || undefined,
 			encoding: "utf8",
 			shell: "/bin/sh",
@@ -86,10 +86,8 @@ export function validate(options: ValidateOptions): void {
 		const success = runCommand(rootDir, commandToRun, stdinData);
 		if (!success) {
 			console.error(
-				`\nFailed when trying to run \`${commandToRun}\` in root directory\n`,
-			);
-			console.error(
-				"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
+					`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 			);
 			process.exit(2);
 		}
@@ -119,13 +117,10 @@ export function validate(options: ValidateOptions): void {
 			const relativePath = dir.replace(`${rootDir}/`, "");
 			failures.push(relativePath);
 
-			console.error(
-				`\nFailed when trying to run \`${commandToRun}\` in directory: \`${relativePath}\`\n`,
-			);
-
 			if (failFast) {
 				console.error(
-					"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+					`\n❌ The command \`cd ${relativePath} && ${commandToRun}\` failed.\n\n` +
+						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -139,13 +134,14 @@ export function validate(options: ValidateOptions): void {
 
 	if (failures.length > 0) {
 		console.error(
-			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation:\n`,
+			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation.\n\n` +
+				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
 		for (const dir of failures) {
-			console.error(`  - ${dir}`);
+			console.error(`  • \`cd ${dir} && ${commandToRun}\``);
 		}
 		console.error(
-			"\n📋 Instructions: Review the error output above for each failure, fix the issues in your code, then run the hook again to verify all directories pass.\n",
+			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
 		);
 		process.exit(2);
 	}
@@ -245,20 +241,16 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 
 		// Run the hook
 		const relativePath = config.directory.replace(`${projectRoot}/`, "");
-		console.log(`Running "${config.command}" in ${relativePath}...`);
 
 		const success = runCommand(config.directory, config.command, stdinData);
 
 		if (!success) {
 			failures.push({ dir: relativePath, command: config.command });
 
-			console.error(
-				`\nFailed when trying to run \`${config.command}\` in directory: \`${relativePath}\`\n`,
-			);
-
 			if (failFast) {
 				console.error(
-					"\n📋 Instructions: Review the error output above, fix the issues in your code, then run the hook again to verify.\n",
+					`\n❌ The command \`cd ${relativePath} && ${config.command}\` failed.\n\n` +
+						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -313,13 +305,14 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 
 	if (failures.length > 0) {
 		console.error(
-			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed:\n`,
+			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n\n` +
+				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
 		for (const failure of failures) {
-			console.error(`  - ${failure.dir}`);
+			console.error(`  • \`cd ${failure.dir} && ${failure.command}\``);
 		}
 		console.error(
-			"\n📋 Instructions: Review the error output above for each failure, fix the issues in your code, then run the hook again to verify all directories pass.\n",
+			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
 		);
 		process.exit(2);
 	}
