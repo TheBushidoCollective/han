@@ -2,9 +2,7 @@
   "hooks": {
     "lint": {
       "command": "mix credo",
-      "dirsWith": [
-        "mix.exs"
-      ],
+      "dirsWith": ["mix.exs"],
       "dirTest": "grep -qE ':credo' mix.exs",
       "ifChanged": [
         "**/*.ex",
