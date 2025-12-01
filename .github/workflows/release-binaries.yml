@@ -35,9 +35,47 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin,x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,x86_64-pc-windows-msvc
+
+      - name: Setup Zig (for cross-compilation)
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+
       - name: Install dependencies
         working-directory: ./packages/bushido-han
         run: npm ci
+
+      - name: Install han-native dependencies
+        working-directory: ./packages/han-native
+        run: npm ci
+
+      - name: Build native modules for all platforms
+        working-directory: ./packages/han-native
+        run: |
+          mkdir -p dist/native
+
+          # Build for each platform using napi-rs with zig
+          npx napi build --platform --release --target aarch64-apple-darwin --zig
+          mv han-native.darwin-arm64.node dist/native/
+
+          npx napi build --platform --release --target x86_64-apple-darwin --zig
+          mv han-native.darwin-x64.node dist/native/
+
+          npx napi build --platform --release --target x86_64-unknown-linux-gnu --zig
+          mv han-native.linux-x64-gnu.node dist/native/
+
+          npx napi build --platform --release --target aarch64-unknown-linux-gnu --zig
+          mv han-native.linux-arm64-gnu.node dist/native/
+
+          npx napi build --platform --release --target x86_64-pc-windows-msvc --zig
+          mv han-native.win32-x64-msvc.node dist/native/
 
       - name: Build bundle
         working-directory: ./packages/bushido-han

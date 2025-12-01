@@ -2,6 +2,7 @@
 import {
 	chmodSync,
 	copyFileSync,
+	existsSync,
 	mkdirSync,
 	readFileSync,
 	writeFileSync,
@@ -24,35 +25,41 @@ const platforms = [
 		os: "darwin",
 		cpu: "arm64",
 		binary: "han-darwin-arm64",
+		nativeModule: "han-native.darwin-arm64.node",
 	},
 	{
 		name: "darwin-x64",
 		os: "darwin",
 		cpu: "x64",
 		binary: "han-darwin-x64",
+		nativeModule: "han-native.darwin-x64.node",
 	},
 	{
 		name: "linux-x64",
 		os: "linux",
 		cpu: "x64",
 		binary: "han-linux-x64",
+		nativeModule: "han-native.linux-x64-gnu.node",
 	},
 	{
 		name: "linux-arm64",
 		os: "linux",
 		cpu: "arm64",
 		binary: "han-linux-arm64",
+		nativeModule: "han-native.linux-arm64-gnu.node",
 	},
 	{
 		name: "win32-x64",
 		os: "win32",
 		cpu: "x64",
 		binary: "han-windows-x64.exe",
+		nativeModule: "han-native.win32-x64-msvc.node",
 	},
 ];
 
 const npmDir = join(rootDir, "dist", "npm");
 const binariesDir = join(rootDir, "dist", "binaries");
+const nativeDir = join(rootDir, "..", "han-native", "dist", "native");
 
 // Create platform-specific packages
 for (const platform of platforms) {
@@ -72,6 +79,19 @@ for (const platform of platforms) {
 		chmodSync(join(pkgDir, binaryName), 0o755);
 	}
 
+	// Copy native module if it exists
+	const nativeModuleName = "han-native.node";
+	const nativeModuleSrc = join(nativeDir, platform.nativeModule);
+	const files = [binaryName];
+
+	if (existsSync(nativeModuleSrc)) {
+		copyFileSync(nativeModuleSrc, join(pkgDir, nativeModuleName));
+		files.push(nativeModuleName);
+		console.log(`  - Included native module: ${platform.nativeModule}`);
+	} else {
+		console.log(`  - Native module not found: ${nativeModuleSrc} (skipping)`);
+	}
+
 	// Create package.json
 	const pkgJson = {
 		name: `${scope}/${pkgName}`,
@@ -85,7 +105,7 @@ for (const platform of platforms) {
 		license: "MIT",
 		os: [platform.os],
 		cpu: [platform.cpu],
-		files: [binaryName],
+		files,
 	};
 
 	writeFileSync(
