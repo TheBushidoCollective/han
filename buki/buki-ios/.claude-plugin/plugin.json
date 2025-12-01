@@ -1,6 +1,6 @@
 {
   "name": "buki-ios",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "iOS development validation with Xcode build hooks.",
   "author": {
     "name": "The Bushido Collective",
