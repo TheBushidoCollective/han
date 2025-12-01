@@ -542,8 +542,16 @@ export async function testHooks(options?: {
 		process.exit(0);
 	}
 
-	// Execute hooks and render with Ink
-	await executeHooksWithUI(hookTypesFound, hooksByType, verbose);
+	// Check if we have a TTY with raw mode support for interactive UI
+	const isTTY = process.stdin.isTTY && process.stdout.isTTY;
+
+	if (isTTY) {
+		// Execute hooks with interactive UI
+		await executeHooksWithUI(hookTypesFound, hooksByType, verbose);
+	} else {
+		// Execute hooks with simple console output (non-interactive mode)
+		await executeHooksWithConsole(hookTypesFound, hooksByType, verbose);
+	}
 }
 
 /**
@@ -656,6 +664,84 @@ async function executeHooksWithUI(
 			}, 100);
 		})();
 	});
+}
+
+/**
+ * Execute hooks with simple console output (for non-TTY environments)
+ */
+async function executeHooksWithConsole(
+	hookTypesFound: string[],
+	hooksByType: HooksByType,
+	verbose: boolean,
+): Promise<void> {
+	// Load environment variables from Claude config .env files
+	const claudeEnvVars = loadClaudeEnvFiles();
+
+	console.log("🔍 Running hook tests...\n");
+
+	let hadFailures = false;
+	const allResults: Map<string, HookResult[]> = new Map();
+
+	// Execute hooks sequentially by type
+	for (const hookType of hookTypesFound) {
+		const hooks = hooksByType[hookType];
+		const hookCount = hooks.length;
+
+		process.stdout.write(`${hookType}: `);
+
+		// Run all hooks of this type in parallel
+		const results = await Promise.all(
+			hooks.map((hook) =>
+				executeHookCommand(hook, hookType, verbose, claudeEnvVars),
+			),
+		);
+
+		allResults.set(hookType, results);
+
+		const passed = results.filter((r) => r.success).length;
+		const failed = results.filter((r) => !r.success).length;
+
+		if (failed > 0) {
+			hadFailures = true;
+			console.log(`✗ ${passed}/${hookCount} passed`);
+		} else {
+			console.log(`✓ ${passed}/${hookCount} passed`);
+		}
+	}
+
+	console.log();
+
+	// Show failed hook output
+	for (const [hookType, results] of allResults.entries()) {
+		const failedResults = results.filter((r) => !r.success);
+		if (failedResults.length === 0) continue;
+
+		console.log(`\n❌ Failed hooks in ${hookType}:`);
+		for (const result of failedResults) {
+			console.log(`  ✗ ${result.plugin}: ${result.command}`);
+			if (result.timedOut) {
+				console.log("    (timeout)");
+			}
+			if (result.output.length > 0) {
+				for (const line of result.output.slice(0, 10)) {
+					console.log(`    ${line}`);
+				}
+				if (result.output.length > 10) {
+					console.log(`    ... and ${result.output.length - 10} more lines`);
+				}
+			}
+		}
+	}
+
+	// Summary
+	console.log();
+	if (hadFailures) {
+		console.log("❌ Some hooks failed execution");
+	} else {
+		console.log("✅ All hooks executed successfully");
+	}
+
+	process.exit(hadFailures ? 1 : 0);
 }
 
 /**
