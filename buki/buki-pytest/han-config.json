@@ -4,7 +4,13 @@
       "command": "pytest",
       "dirsWith": ["pyproject.toml"],
       "dirTest": "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml",
-      "ifChanged": ["**/*.py", "**/*.pyi", "pyproject.toml", "pytest.ini", "conftest.py"]
+      "ifChanged": [
+        "**/*.py",
+        "**/*.pyi",
+        "pyproject.toml",
+        "pytest.ini",
+        "conftest.py"
+      ]
     }
   }
 }

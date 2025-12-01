@@ -217,4 +217,3 @@ function CategoryCard({
 		</Link>
 	);
 }
-

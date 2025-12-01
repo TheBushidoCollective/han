@@ -4,7 +4,15 @@
       "command": "mix dialyzer",
       "dirsWith": ["mix.exs"],
       "dirTest": "grep -qE ':dialyxir' mix.exs",
-      "ifChanged": ["**/*.ex", "**/*.exs", "**/*.eex", "**/*.leex", "**/*.heex", "mix.exs", "mix.lock"]
+      "ifChanged": [
+        "**/*.ex",
+        "**/*.exs",
+        "**/*.eex",
+        "**/*.leex",
+        "**/*.heex",
+        "mix.exs",
+        "mix.lock"
+      ]
     }
   }
 }

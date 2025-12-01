@@ -3,7 +3,14 @@
     "build": {
       "command": "bun build --target=bun --no-bundle",
       "dirsWith": ["bun.lockb"],
-      "ifChanged": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "bun.lockb", "bunfig.toml"]
+      "ifChanged": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.js",
+        "**/*.jsx",
+        "bun.lockb",
+        "bunfig.toml"
+      ]
     }
   }
 }

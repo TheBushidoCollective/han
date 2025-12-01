@@ -5,7 +5,13 @@
       "dirsWith": [
         "docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml"
       ],
-      "ifChanged": ["docker-compose*.yaml", "docker-compose*.yml", "compose*.yaml", "compose*.yml", ".env"]
+      "ifChanged": [
+        "docker-compose*.yaml",
+        "docker-compose*.yml",
+        "compose*.yaml",
+        "compose*.yml",
+        ".env"
+      ]
     }
   }
 }

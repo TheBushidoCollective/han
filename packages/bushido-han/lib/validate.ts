@@ -177,10 +177,8 @@ function getCacheKeyForDirectory(
 	projectRoot: string,
 ): string {
 	const relativeDirPath =
-		directory
-			.replace(projectRoot, "")
-			.replace(/^\//, "")
-			.replace(/\//g, "_") || "root";
+		directory.replace(projectRoot, "").replace(/^\//, "").replace(/\//g, "_") ||
+		"root";
 	return `${hookName}_${relativeDirPath}`;
 }
 
