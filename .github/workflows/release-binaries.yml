@@ -129,6 +129,15 @@ jobs:
           bun build --compile --minify --target=bun-linux-arm64 ./dist/bundle.js --outfile ./dist/binaries/han-linux-arm64
           bun build --compile --minify --target=bun-windows-x64 ./dist/bundle.js --outfile ./dist/binaries/han-windows-x64.exe
 
+      - name: Copy native modules to binaries directory
+        run: |
+          # Copy native modules with platform-specific names for the release
+          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/bushido-han/dist/binaries/
+          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/bushido-han/dist/binaries/
+          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/bushido-han/dist/binaries/
+          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/bushido-han/dist/binaries/
+          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/bushido-han/dist/binaries/
+
       - name: Create checksums
         working-directory: ./packages/bushido-han/dist/binaries
         run: |
@@ -198,11 +207,17 @@ jobs:
           REPO="TheBushidoCollective/han"
           BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
 
-          # Download checksum files
+          # Download checksum files for binaries
           DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-arm64.sha256" | awk '{print $1}')
           DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-x64.sha256" | awk '{print $1}')
           LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-arm64.sha256" | awk '{print $1}')
           LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-x64.sha256" | awk '{print $1}')
+
+          # Download checksum files for native modules
+          NATIVE_DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-native.darwin-arm64.node.sha256" | awk '{print $1}')
+          NATIVE_DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-native.darwin-x64.node.sha256" | awk '{print $1}')
+          NATIVE_LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-native.linux-arm64-gnu.node.sha256" | awk '{print $1}')
+          NATIVE_LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-native.linux-x64-gnu.node.sha256" | awk '{print $1}')
 
           cat > homebrew-tap/Formula/han.rb << EOF
           # typed: false
@@ -218,9 +233,19 @@ jobs:
               if Hardware::CPU.arm?
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-arm64"
                 sha256 "${DARWIN_ARM64_SHA}"
+
+                resource "native_module" do
+                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.darwin-arm64.node"
+                  sha256 "${NATIVE_DARWIN_ARM64_SHA}"
+                end
               else
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-x64"
                 sha256 "${DARWIN_X64_SHA}"
+
+                resource "native_module" do
+                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.darwin-x64.node"
+                  sha256 "${NATIVE_DARWIN_X64_SHA}"
+                end
               end
             end
 
@@ -228,14 +253,27 @@ jobs:
               if Hardware::CPU.arm?
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-arm64"
                 sha256 "${LINUX_ARM64_SHA}"
+
+                resource "native_module" do
+                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.linux-arm64-gnu.node"
+                  sha256 "${NATIVE_LINUX_ARM64_SHA}"
+                end
               else
                 url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-x64"
                 sha256 "${LINUX_X64_SHA}"
+
+                resource "native_module" do
+                  url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-native.linux-x64-gnu.node"
+                  sha256 "${NATIVE_LINUX_X64_SHA}"
+                end
               end
             end
 
             def install
-              bin.install Dir["*"].first => "han"
+              bin.install Dir["han-*"].first => "han"
+              resource("native_module").stage do
+                bin.install Dir["*.node"].first => "han-native.node"
+              end
             end
 
             test do
