@@ -47,6 +47,7 @@ Support the community and its members. Follow through on commitments. Contribute
 ## Scope
 
 This Code of Conduct applies to:
+
 - GitHub issues, pull requests, and discussions
 - Community forums and chat channels
 - Events and meetups (online or in-person)
@@ -55,6 +56,7 @@ This Code of Conduct applies to:
 ## Enforcement
 
 Violations of this Code of Conduct may result in:
+
 1. A warning with explanation of the violation
 2. Temporary suspension from community spaces
 3. Permanent ban from the community
@@ -64,6 +66,7 @@ Decisions are made by project maintainers and are final.
 ## Reporting
 
 If you experience or witness unacceptable behavior, please report it by:
+
 - Opening a private issue to maintainers
 - Emailing the project maintainers directly
 

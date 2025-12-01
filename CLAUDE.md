@@ -104,19 +104,19 @@ Version bumps happen automatically via GitHub Actions:
 - Always include `bushido` as a dependency in recommendations
 - MCP servers in sensei plugins should use HTTP transport with OAuth when available
 
-## Important: Global Installation Required for Hooks
+## Plugin Installation
 
-Han must be installed globally for hooks to work. Hooks use `han hook run` commands which require `han` to be available in the PATH. When writing documentation or installation instructions, always emphasize global installation:
+Plugins can be installed directly through Claude Code - no global han installation required. Hooks use npx automatically.
 
 ```bash
-# Global installation (REQUIRED for hooks)
-npm install -g @thebushidocollective/han
+# Install from within Claude Code
+/plugin install bushido@han
 
-# Or via Homebrew
-brew install thebushidocollective/tap/han
+# Or via Claude CLI
+claude plugin install bushido@han
 
-# Or via curl
-curl -fsSL https://han.guru/install.sh | sh
+# Or use npx for CLI features
+npx @thebushidocollective/han plugin install --auto
 ```
 
-Using `npx` will install plugins but hooks will NOT function.
+Global installation via Homebrew or install.sh is optional but provides faster execution for frequent CLI usage.
