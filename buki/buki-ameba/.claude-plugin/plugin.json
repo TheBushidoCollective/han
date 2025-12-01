@@ -1,6 +1,6 @@
 {
   "name": "buki-ameba",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Ameba skills for Crystal code analysis",
   "author": {
     "name": "The Bushido Collective",

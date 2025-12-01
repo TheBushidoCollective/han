@@ -1,6 +1,6 @@
 {
   "name": "do-game-development",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["game-development", "game-engine", "gameplay"]
+  "keywords": [
+    "game-development",
+    "game-engine",
+    "gameplay"
+  ]
 }

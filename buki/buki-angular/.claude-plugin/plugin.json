@@ -1,6 +1,6 @@
 {
   "name": "buki-angular",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["angular", "rxjs", "signals"]
+  "keywords": [
+    "angular",
+    "rxjs",
+    "signals"
+  ]
 }

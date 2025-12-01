@@ -1,6 +1,6 @@
 {
   "name": "buki-apollo-graphql",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Advanced Apollo GraphQL skills for client and server development",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["apollo", "graphql", "client", "server"]
+  "keywords": [
+    "apollo",
+    "graphql",
+    "client",
+    "server"
+  ]
 }

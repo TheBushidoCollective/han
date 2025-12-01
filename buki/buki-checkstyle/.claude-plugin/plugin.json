@@ -1,6 +1,6 @@
 {
   "name": "buki-checkstyle",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
   "author": {
     "name": "The Bushido Collective",

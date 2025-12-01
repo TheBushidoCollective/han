@@ -1,6 +1,6 @@
 {
   "name": "buki-php",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Advanced PHP programming skills for modern PHP and security patterns",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["php", "composer", "security", "web"]
+  "keywords": [
+    "php",
+    "composer",
+    "security",
+    "web"
+  ]
 }

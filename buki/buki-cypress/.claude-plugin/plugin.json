@@ -1,6 +1,6 @@
 {
   "name": "buki-cypress",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
   "author": {
     "name": "The Bushido Collective",

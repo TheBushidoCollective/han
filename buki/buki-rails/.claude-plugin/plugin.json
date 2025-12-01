@@ -1,6 +1,6 @@
 {
   "name": "buki-rails",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire"]
+  "keywords": [
+    "rails",
+    "ruby",
+    "mvc",
+    "active-record",
+    "hotwire"
+  ]
 }
