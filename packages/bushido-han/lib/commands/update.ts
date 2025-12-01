@@ -4,10 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 
-type InstallMethod = "homebrew" | "npm" | "standalone" | "unknown";
-
-// Cache file for update check (avoid checking too frequently)
-const UPDATE_CHECK_INTERVAL = 1000 * 60 * 60; // 1 hour
+export type InstallMethod = "homebrew" | "npm" | "standalone" | "unknown";
 
 // Version injected at build time for binary builds
 declare const __HAN_VERSION__: string | undefined;
@@ -15,7 +12,7 @@ declare const __HAN_VERSION__: string | undefined;
 /**
  * Detect how han was installed
  */
-function detectInstallMethod(): InstallMethod {
+export function detectInstallMethod(): InstallMethod {
 	try {
 		const hanPath = execSync("which han", { encoding: "utf8" }).trim();
 
@@ -55,7 +52,7 @@ function detectInstallMethod(): InstallMethod {
 /**
  * Get the current version from package.json (not by spawning han)
  */
-function getCurrentVersion(): string {
+export function getCurrentVersion(): string {
 	// Use build-time injected version if available
 	if (typeof __HAN_VERSION__ !== "undefined") {
 		return __HAN_VERSION__;
@@ -76,7 +73,7 @@ function getCurrentVersion(): string {
 /**
  * Get the latest version from npm with timeout
  */
-async function getLatestVersion(): Promise<string> {
+export async function getLatestVersion(): Promise<string> {
 	try {
 		const result = execSync(
 			"npm view @thebushidocollective/han version 2>/dev/null",

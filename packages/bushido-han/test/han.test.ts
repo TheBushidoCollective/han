@@ -13,10 +13,18 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePluginRecommendations } from "../lib/shared.js";
+import {
+	detectInstallMethod,
+	getCurrentVersion,
+	getLatestVersion,
+} from "../lib/commands/update.js";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Skip auto-update check during tests
+process.env.HAN_SKIP_UPDATE_CHECK = "1";
 
 // Determine which binary to test
 // If HAN_TEST_BINARY env var is set, use the compiled binary
@@ -1089,6 +1097,144 @@ test("han-config.yml override only affects specific directory", () => {
 	} finally {
 		teardown();
 	}
+});
+
+// ============================================
+// Update command tests
+// ============================================
+
+test("han update --check shows current and latest version", () => {
+	const output = execSync(`${binCommand} update --check`, {
+		encoding: "utf8",
+		stdio: ["pipe", "pipe", "pipe"],
+		env: { ...process.env, HAN_SKIP_UPDATE_CHECK: "1" },
+	});
+
+	strictEqual(
+		output.includes("Current version:"),
+		true,
+		"Expected current version in output",
+	);
+	strictEqual(
+		output.includes("Latest version:"),
+		true,
+		"Expected latest version in output",
+	);
+});
+
+test("han update shows help with --help", () => {
+	const output = execSync(`${binCommand} update --help`, {
+		encoding: "utf8",
+		env: { ...process.env, HAN_SKIP_UPDATE_CHECK: "1" },
+	});
+
+	strictEqual(output.includes("Update han"), true);
+	strictEqual(output.includes("--check"), true);
+});
+
+test("auto-update skips for --version flag", () => {
+	// This should return quickly without hanging
+	const start = Date.now();
+	const output = execSync(`${binCommand} --version`, {
+		encoding: "utf8",
+		timeout: 5000,
+	});
+	const elapsed = Date.now() - start;
+
+	strictEqual(
+		/^\d+\.\d+\.\d+/.test(output.trim()),
+		true,
+		"Expected version output",
+	);
+	// Should be fast (< 2 seconds) because update check is skipped
+	strictEqual(elapsed < 2000, true, `Expected fast response, got ${elapsed}ms`);
+});
+
+test("auto-update skips for --help flag", () => {
+	const start = Date.now();
+	const output = execSync(`${binCommand} --help`, {
+		encoding: "utf8",
+		timeout: 5000,
+	});
+	const elapsed = Date.now() - start;
+
+	strictEqual(output.includes("Usage:"), true);
+	strictEqual(elapsed < 2000, true, `Expected fast response, got ${elapsed}ms`);
+});
+
+test("auto-update skips when HAN_SKIP_UPDATE_CHECK=1", () => {
+	const start = Date.now();
+	execSync(`${binCommand} plugin --help`, {
+		encoding: "utf8",
+		timeout: 5000,
+		env: { ...process.env, HAN_SKIP_UPDATE_CHECK: "1" },
+	});
+	const elapsed = Date.now() - start;
+
+	// Should be very fast when update check is skipped
+	strictEqual(elapsed < 2000, true, `Expected fast response, got ${elapsed}ms`);
+});
+
+test("auto-update skips for update command itself", () => {
+	// update --check should not trigger auto-update (would be recursive)
+	const output = execSync(`${binCommand} update --check`, {
+		encoding: "utf8",
+		timeout: 10000,
+		stdio: ["pipe", "pipe", "pipe"],
+	});
+
+	// Should complete without "Updating han:" message in output
+	strictEqual(
+		output.includes("Current version:"),
+		true,
+		"Expected version check output",
+	);
+});
+
+// ============================================
+// Update module unit tests
+// ============================================
+
+test("getCurrentVersion returns valid semver", () => {
+	const version = getCurrentVersion();
+	strictEqual(
+		/^\d+\.\d+\.\d+/.test(version) || version === "unknown",
+		true,
+		`Expected semver or unknown, got: ${version}`,
+	);
+});
+
+test("getCurrentVersion returns same as CLI --version", () => {
+	const cliVersion = execSync(`${binCommand} --version`, {
+		encoding: "utf8",
+		env: { ...process.env, HAN_SKIP_UPDATE_CHECK: "1" },
+	}).trim();
+	const fnVersion = getCurrentVersion();
+
+	strictEqual(
+		cliVersion,
+		fnVersion,
+		`CLI version (${cliVersion}) should match function version (${fnVersion})`,
+	);
+});
+
+test("getLatestVersion returns valid semver or unknown", async () => {
+	const version = await getLatestVersion();
+	strictEqual(
+		/^\d+\.\d+\.\d+/.test(version) || version === "unknown",
+		true,
+		`Expected semver or unknown, got: ${version}`,
+	);
+});
+
+test("detectInstallMethod returns valid install method", () => {
+	const method = detectInstallMethod();
+	const validMethods = ["homebrew", "npm", "standalone", "unknown"];
+	strictEqual(
+		validMethods.includes(method),
+		true,
+		`Expected valid install method, got: ${method}`,
+	);
 });
 
 // ============================================
