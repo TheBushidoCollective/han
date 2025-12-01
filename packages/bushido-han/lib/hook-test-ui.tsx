@@ -205,7 +205,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 	// Auto-expand and select running hook type (only when it changes)
 	useEffect(() => {
-		if (currentType && !isComplete && currentType !== lastAutoSelectedType.current) {
+		if (
+			currentType &&
+			!isComplete &&
+			currentType !== lastAutoSelectedType.current
+		) {
 			lastAutoSelectedType.current = currentType;
 			setExpandedType(currentType);
 			const idx = hookTypes.indexOf(currentType);
