@@ -62,8 +62,8 @@ export default function DocsPage() {
 								Documentation
 							</h1>
 							<p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl">
-								Everything you need to know about installing, configuring, and using
-								Han plugins.
+								Everything you need to know about installing, configuring, and
+								using Han plugins.
 							</p>
 						</div>
 
@@ -73,12 +73,15 @@ export default function DocsPage() {
 								Installation Methods
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-4">
-								Han must be installed globally for hooks to work. Choose your preferred method:
+								Han must be installed globally for hooks to work. Choose your
+								preferred method:
 							</p>
 							<p className="text-amber-600 dark:text-amber-400 mb-8 text-sm">
-								Note: Hooks require global installation. They run validation commands
-								(tests, linting, etc.) and need{" "}
-								<code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">han</code>{" "}
+								Note: Hooks require global installation. They run validation
+								commands (tests, linting, etc.) and need{" "}
+								<code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">
+									han
+								</code>{" "}
 								to be available in your PATH.
 							</p>
 
@@ -107,7 +110,8 @@ export default function DocsPage() {
 								Installing Plugins
 							</h3>
 							<p className="text-gray-600 dark:text-gray-300 mb-6">
-								After installing han globally, you can add plugins to your project:
+								After installing han globally, you can add plugins to your
+								project:
 							</p>
 							<div className="space-y-6">
 								<InstallMethod
@@ -133,7 +137,8 @@ han plugin install --auto --scope project`}
 								Alternative Methods
 							</h3>
 							<p className="text-amber-600 dark:text-amber-400 mb-6 text-sm">
-								These methods install plugins but require han to be installed globally for hooks to work.
+								These methods install plugins but require han to be installed
+								globally for hooks to work.
 							</p>
 							<div className="space-y-6">
 								<InstallMethod
@@ -164,8 +169,9 @@ han plugin install --auto --scope project`}
 								Smart Hook Caching
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
-								Plugins use intelligent caching to avoid redundant validation runs,
-								saving time by only running hooks when relevant files have changed.
+								Plugins use intelligent caching to avoid redundant validation
+								runs, saving time by only running hooks when relevant files have
+								changed.
 							</p>
 
 							<div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -192,8 +198,14 @@ han plugin install --auto --scope project`}
 								</h3>
 								<p className="text-gray-600 dark:text-gray-300 mb-4">
 									Each plugin defines{" "}
-									<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">ifChanged</code>{" "}
-									patterns in its <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">han-config.json</code>:
+									<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+										ifChanged
+									</code>{" "}
+									patterns in its{" "}
+									<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+										han-config.json
+									</code>
+									:
 								</p>
 								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
 									<code>{`{
@@ -207,9 +219,12 @@ han plugin install --auto --scope project`}
 }`}</code>
 								</pre>
 								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
-									The <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">ifChanged</code> patterns
-									determine which files are tracked. If none of those files have changed,
-									the hook is skipped entirely.
+									The{" "}
+									<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+										ifChanged
+									</code>{" "}
+									patterns determine which files are tracked. If none of those
+									files have changed, the hook is skipped entirely.
 								</p>
 							</div>
 
@@ -233,7 +248,9 @@ han plugin install --auto --scope project`}
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
 								Override hook behavior per-directory with a{" "}
-								<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">han-config.yml</code>{" "}
+								<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+									han-config.yml
+								</code>{" "}
 								file in your project.
 							</p>
 
@@ -247,9 +264,8 @@ buki-eslint:
   lint:
     enabled: false  # Disable this hook
     # command: "npm run lint:custom"  # Override command
-    # if_changed:  # Override file patterns
-    #   - "src/**/*.ts"
-    #   - "!src/**/*.test.ts"`}</code>
+    # if_changed:  # Add additional file patterns (merged with defaults)
+    #   - "custom/**/*.ts"`}</code>
 								</pre>
 							</div>
 
@@ -259,16 +275,31 @@ buki-eslint:
 								</h3>
 								<ul className="space-y-3 text-gray-600 dark:text-gray-300">
 									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">enabled</code>
-										<span>Set to <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">false</code> to disable the hook in this directory</span>
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											enabled
+										</code>
+										<span>
+											Set to{" "}
+											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+												false
+											</code>{" "}
+											to disable the hook in this directory
+										</span>
 									</li>
 									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">command</code>
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											command
+										</code>
 										<span>Override the command that runs for this hook</span>
 									</li>
 									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">if_changed</code>
-										<span>Override the glob patterns for change detection (replaces plugin defaults)</span>
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											if_changed
+										</code>
+										<span>
+											Additional glob patterns for change detection (merged with
+											plugin defaults)
+										</span>
 									</li>
 								</ul>
 							</div>
@@ -306,7 +337,9 @@ function InstallMethod({
 			<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{title}
 			</h4>
-			<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">{description}</p>
+			<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+				{description}
+			</p>
 			<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
 				<code>{code}</code>
 			</pre>
