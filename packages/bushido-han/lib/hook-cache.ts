@@ -2,47 +2,58 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
+// Create require function for ESM context
 const require = createRequire(import.meta.url);
 
 /**
+ * Native module type definition
+ */
+type NativeModule = typeof import("../../han-native");
+
+/**
  * Load the native module from various locations:
- * 1. Same directory as the executable (for platform packages)
- * 2. Relative path from source (for development)
+ * 1. Same directory as the executable (for Homebrew/binary installs)
+ * 2. npm package (for npm installs)
+ * 3. Relative path (for monorepo development)
+ *
  * @throws Error if native module cannot be loaded
  */
-function loadNativeModule(): typeof import("../../han-native") {
+function loadNativeModule(): NativeModule {
+	const errors: string[] = [];
+
+	// For compiled binaries: look for .node file next to the executable
+	const executableDir = dirname(process.execPath);
+	const nodeFilePath = join(executableDir, "han-native.node");
+	if (existsSync(nodeFilePath)) {
+		try {
+			return require(nodeFilePath) as NativeModule;
+		} catch (e) {
+			errors.push(
+				`${nodeFilePath}: ${e instanceof Error ? e.message : String(e)}`,
+			);
+		}
+	}
+
+	// For npm installs: try the package
+	try {
+		return require("@thebushidocollective/han-native") as NativeModule;
+	} catch (e) {
+		errors.push(
+			`@thebushidocollective/han-native: ${e instanceof Error ? e.message : String(e)}`,
+		);
+	}
+
+	// For monorepo development: try relative path
 	const currentDir = dirname(new URL(import.meta.url).pathname);
-	// Determine if we're in dist/lib or lib
 	const isInDist = currentDir.includes("/dist/");
 	const relativeToHanNative = isInDist
 		? "../../../han-native"
 		: "../../han-native";
-
-	const possiblePaths = [
-		// For compiled binary: .node file next to executable
-		join(dirname(process.execPath), "han-native.node"),
-		// For development: relative path to han-native package
-		join(currentDir, relativeToHanNative),
-	];
-
-	const errors: string[] = [];
-
-	for (const modulePath of possiblePaths) {
-		try {
-			if (modulePath.endsWith(".node")) {
-				// Direct .node file loading
-				if (existsSync(modulePath)) {
-					return require(modulePath) as typeof import("../../han-native");
-				}
-			} else {
-				// Package directory loading
-				return require(modulePath) as typeof import("../../han-native");
-			}
-		} catch (e) {
-			errors.push(
-				`${modulePath}: ${e instanceof Error ? e.message : String(e)}`,
-			);
-		}
+	const monorepoPath = join(currentDir, relativeToHanNative);
+	try {
+		return require(monorepoPath) as NativeModule;
+	} catch (e) {
+		errors.push(`${monorepoPath}: ${e instanceof Error ? e.message : String(e)}`);
 	}
 
 	throw new Error(
@@ -217,4 +228,14 @@ export function checkForChanges(
 ): boolean {
 	const cachedManifest = loadCacheManifest(pluginName, hookName);
 	return hasChanges(rootDir, patterns, cachedManifest);
+}
+
+/**
+ * Find directories containing marker files (respects nested .gitignore files)
+ */
+export function findDirectoriesWithMarkers(
+	rootDir: string,
+	markerPatterns: string[],
+): string[] {
+	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
 }

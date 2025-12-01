@@ -132,6 +132,7 @@ jobs:
       - name: Copy native modules to binaries directory
         run: |
           # Copy native modules with platform-specific names for the release
+          # These will be installed alongside the binary by Homebrew
           cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/bushido-han/dist/binaries/
           cp packages/han-native/dist/native/han-native.darwin-x64.node packages/bushido-han/dist/binaries/
           cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/bushido-han/dist/binaries/
