@@ -3,12 +3,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.js";
 import {
 	analyzeCodebase,
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.js";
-import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

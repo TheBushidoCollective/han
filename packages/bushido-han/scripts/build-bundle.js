@@ -20,7 +20,7 @@
  *   - bun-linux-arm64
  *   - bun-windows-x64
  */
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,7 +41,13 @@ const target = Bun.argv[2] || "bun";
 const isCurrentPlatform = target === "bun";
 const outfile = isCurrentPlatform
 	? join(__dirname, "..", "dist", "han")
-	: join(__dirname, "..", "dist", "binaries", `han-${target.replace("bun-", "")}`);
+	: join(
+			__dirname,
+			"..",
+			"dist",
+			"binaries",
+			`han-${target.replace("bun-", "")}`,
+		);
 
 console.log(`Building han v${version} for ${target}...`);
 

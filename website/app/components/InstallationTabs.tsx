@@ -68,7 +68,9 @@ export default function InstallationTabs({
 						Install this plugin with npx (no installation required):
 					</p>
 					<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto">
-						<code>npx @thebushidocollective/han plugin install {pluginName}</code>
+						<code>
+							npx @thebushidocollective/han plugin install {pluginName}
+						</code>
 					</pre>
 				</div>
 			)}
