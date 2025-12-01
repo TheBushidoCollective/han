@@ -1,6 +1,6 @@
 {
   "name": "buki-tdd",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.",
   "author": {
     "name": "The Bushido Collective",
