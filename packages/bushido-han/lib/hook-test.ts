@@ -92,6 +92,8 @@ async function executeHookCommand(
 				...claudeEnvVars,
 				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
 				CLAUDE_PROJECT_DIR: process.cwd(),
+				// Enable verbose output for hook run commands during testing
+				HAN_HOOK_VERBOSE: "1",
 			},
 		});
 
