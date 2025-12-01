@@ -5,15 +5,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast --cache"
+            "command": "han hook run format --fail-fast --cache",
+            "timeout": 120000
           },
           {
             "type": "command",
-            "command": "han hook run lint --fail-fast --cache"
+            "command": "han hook run lint --fail-fast --cache",
+            "timeout": 120000
           },
           {
             "type": "command",
-            "command": "han hook run test --fail-fast --cache"
+            "command": "han hook run test --fail-fast --cache",
+            "timeout": 900000
           }
         ]
       }
@@ -23,15 +26,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run format --fail-fast --cache"
+            "command": "han hook run format --fail-fast --cache",
+            "timeout": 120000
           },
           {
             "type": "command",
-            "command": "han hook run lint --fail-fast --cache"
+            "command": "han hook run lint --fail-fast --cache",
+            "timeout": 120000
           },
           {
             "type": "command",
-            "command": "han hook run test --fail-fast --cache"
+            "command": "han hook run test --fail-fast --cache",
+            "timeout": 900000
           }
         ]
       }
