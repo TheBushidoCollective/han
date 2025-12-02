@@ -1,9 +1,26 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { render } from "ink";
 import React from "react";
 import { HookTestUI } from "./hook-test-ui.js";
+
+/**
+ * Wait for user to press Enter
+ */
+function waitForEnter(): Promise<void> {
+	return new Promise((resolve) => {
+		const rl = createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+		rl.question("\nPress Enter to return to list...", () => {
+			rl.close();
+			resolve();
+		});
+	});
+}
 
 /**
  * Get Claude config directory
@@ -589,6 +606,13 @@ async function executeHooksWithUI(
 		let lastRerenderTime = 0;
 		const RERENDER_THROTTLE_MS = 50; // Max 20 rerenders per second
 
+		// Handler for viewing output - defined first, used by doRerender
+		let handleViewOutput: (
+			hookType: string,
+			plugin: string,
+			command: string,
+		) => Promise<void>;
+
 		// Helper to trigger rerender (throttled for live output, immediate for state changes)
 		const doRerender = (immediate = false) => {
 			const now = Date.now();
@@ -606,6 +630,7 @@ async function executeHooksWithUI(
 						isComplete,
 						verbose,
 						liveOutput,
+						onViewOutput: handleViewOutput,
 					}),
 				);
 			} else if (!rerenderPending) {
@@ -622,7 +647,62 @@ async function executeHooksWithUI(
 		// Set up live output callback (throttled)
 		liveOutput.onUpdate = () => doRerender(false);
 
-		const { rerender, unmount } = render(
+		// Handler for viewing output - unmounts Ink, prints to stdout, waits, remounts
+		handleViewOutput = async (
+			hookType: string,
+			plugin: string,
+			command: string,
+		) => {
+			// Get the output for this command
+			const results = hookResults.get(hookType) || [];
+			const result = results.find(
+				(r) => r.plugin === plugin && r.command === command,
+			);
+			const output = result?.output || [];
+
+			// Unmount Ink to release terminal
+			unmount();
+
+			// Print output directly to stdout
+			console.log("\n" + "─".repeat(60));
+			console.log(`Hook Type: ${hookType}`);
+			console.log(`Plugin: ${plugin}`);
+			console.log(`Command: ${command}`);
+			console.log(
+				`Status: ${result?.success ? "✓ Passed" : "✗ Failed"}${result?.timedOut ? " (timeout)" : ""}`,
+			);
+			console.log("─".repeat(60));
+
+			if (output.length > 0) {
+				for (const line of output) {
+					console.log(line);
+				}
+			} else {
+				console.log("(no output)");
+			}
+
+			// Wait for user
+			await waitForEnter();
+
+			// Remount Ink with current state
+			const newRender = render(
+				React.createElement(HookTestUI, {
+					hookTypes: hookTypesFound,
+					hookStructure,
+					hookResults,
+					currentType,
+					isComplete,
+					verbose,
+					liveOutput,
+					onViewOutput: handleViewOutput,
+				}),
+			);
+			// Update rerender/unmount references
+			rerender = newRender.rerender;
+			unmount = newRender.unmount;
+		};
+
+		let { rerender, unmount } = render(
 			React.createElement(HookTestUI, {
 				hookTypes: hookTypesFound,
 				hookStructure,
@@ -631,6 +711,7 @@ async function executeHooksWithUI(
 				isComplete,
 				verbose,
 				liveOutput,
+				onViewOutput: handleViewOutput,
 			}),
 		);
 
