@@ -101,7 +101,7 @@ pub fn find_files_with_glob(root_dir: String, patterns: Vec<String>) -> Vec<Stri
     results
 }
 
-/// Find directories containing marker files (e.g., mix.exs, Cargo.toml)
+/// Find directories containing marker files or directories (e.g., mix.exs, Cargo.toml, *.xcodeproj)
 /// Returns absolute directory paths
 #[napi]
 pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> Vec<String> {
@@ -141,12 +141,25 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
         .build();
 
     for entry in walker.flatten() {
-        if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
+        let file_type = entry.file_type();
+        let is_file = file_type.map(|ft| ft.is_file()).unwrap_or(false);
+        let is_dir = file_type.map(|ft| ft.is_dir()).unwrap_or(false);
+
+        // Match both files and directories (for bundle dirs like *.xcodeproj, *.xcworkspace)
+        if is_file || is_dir {
             let path = entry.path();
             if let Ok(relative) = path.strip_prefix(&root) {
                 let relative_str = relative.to_string_lossy();
                 if glob_set.is_match(relative_str.as_ref()) {
-                    if let Some(parent) = path.parent() {
+                    // For files, use parent directory; for directories, use the directory itself's parent
+                    let target_dir = if is_file {
+                        path.parent()
+                    } else {
+                        // For directory markers (like *.xcodeproj), the parent is the project dir
+                        path.parent()
+                    };
+
+                    if let Some(parent) = target_dir {
                         // Canonicalize the directory path
                         if let Ok(abs_dir) = fs::canonicalize(parent) {
                             if let Some(dir_str) = abs_dir.to_str() {
