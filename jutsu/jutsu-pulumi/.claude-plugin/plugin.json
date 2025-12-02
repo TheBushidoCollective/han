@@ -1,6 +1,6 @@
 {
   "name": "jutsu-pulumi",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Pulumi infrastructure-as-code validation",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["pulumi", "infrastructure", "iac", "devops"]
+  "keywords": [
+    "pulumi",
+    "infrastructure",
+    "iac",
+    "devops"
+  ]
 }

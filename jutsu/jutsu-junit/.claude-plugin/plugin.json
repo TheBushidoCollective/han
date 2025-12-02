@@ -1,6 +1,6 @@
 {
   "name": "jutsu-junit",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["junit", "testing", "java"]
+  "keywords": [
+    "junit",
+    "testing",
+    "java"
+  ]
 }
