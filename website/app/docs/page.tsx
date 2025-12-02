@@ -223,14 +223,14 @@ export default function DocsPage() {
 							</div>
 
 							<div className="bg-gray-900 dark:bg-gray-950 text-white p-8 rounded-lg">
-								<blockquote className="text-xl italic mb-4">
-									"Plugins that practice what they preach."
-								</blockquote>
+								<p className="text-2xl font-medium mb-4">
+									AI capability + Real verification = Shipping with confidence
+								</p>
 								<p className="text-gray-400">
 									When you install a Han plugin, you&apos;re not just getting
 									prompts—you&apos;re getting a complete system that teaches,
-									executes, and validates. Knowledge without enforcement is just
-									advice. Han plugins enforce the standards they teach.
+									executes, and validates. The AI generates, real tools verify,
+									and you ship with confidence. No hallucinations slip through.
 								</p>
 							</div>
 						</section>

@@ -89,8 +89,8 @@ export default function Home() {
 					</div>
 
 					<div className="mt-16 text-center">
-						<p className="text-gray-500 dark:text-gray-400 italic text-lg">
-							"Plugins that practice what they preach."
+						<p className="text-xl text-gray-700 dark:text-gray-200 font-medium">
+							AI capability + Real verification = Shipping with confidence
 						</p>
 					</div>
 				</div>
