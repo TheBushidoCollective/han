@@ -10,17 +10,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'Read and follow the BDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md'",
-            "timeout": 30000
-          }
-        ]
-      }
     ]
   }
 }

@@ -20,27 +20,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run format --fail-fast --cache",
-            "timeout": 120000
-          },
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run vet --fail-fast --cache",
-            "timeout": 60000
-          },
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run test --fail-fast --cache",
-            "timeout": 900000
-          }
-        ]
-      }
     ]
   }
 }
