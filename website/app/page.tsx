@@ -48,8 +48,8 @@ export default function Home() {
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-3xl mx-auto text-lg">
 						Every Han plugin is a complete mastery system built on three
-						pillars. Not just what to do, but how to do it right, with validation
-						that ensures excellence.
+						pillars. Not just what to do, but how to do it right, with
+						validation that ensures excellence.
 					</p>
 
 					<div className="grid md:grid-cols-3 gap-8 lg:gap-12">
