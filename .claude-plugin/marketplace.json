@@ -592,6 +592,13 @@
       "keywords": ["scala", "functional", "jvm", "type-system", "skill"]
     },
     {
+      "name": "jutsu-shellcheck",
+      "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck with portability and error handling skills.",
+      "source": "./jutsu/jutsu-shellcheck",
+      "category": "Technique",
+      "keywords": ["bash", "shell", "shellcheck", "scripting", "validation", "posix"]
+    },
+    {
       "name": "jutsu-sip",
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
       "source": "./jutsu/jutsu-sip",
