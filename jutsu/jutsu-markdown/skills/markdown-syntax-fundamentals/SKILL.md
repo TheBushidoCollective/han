@@ -112,6 +112,7 @@ Use `backticks` for inline code like `const x = 1`
 ```
 
 Anchor IDs are auto-generated from headings:
+
 - Lowercase
 - Spaces become hyphens
 - Special characters removed
@@ -222,7 +223,7 @@ Use three or more hyphens, asterisks, or underscores.
 \`Not code\`
 ```
 
-Characters that can be escaped: `\ ` * _ { } [ ] ( ) # + - . ! |`
+Characters that can be escaped: `\` `` ` `` `*` `_` `{` `}` `[` `]` `(` `)` `#` `+` `-` `.` `!` `|`
 
 ## Line Breaks
 

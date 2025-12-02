@@ -162,6 +162,7 @@ npm install
 npm run build
 npm start
 ```
+
 ```
 
 ### Command Examples
@@ -358,13 +359,13 @@ graph LR
 
 ### ASCII Diagrams
 
-```markdown
+````markdown
 ```
 ┌─────────┐     ┌─────────┐     ┌─────────┐
 │ Client  │────▶│ Server  │────▶│Database │
 └─────────┘     └─────────┘     └─────────┘
 ```
-```
+````
 
 ## Best Practices
 
