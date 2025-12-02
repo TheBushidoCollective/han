@@ -1,10 +1,6 @@
 {
 	"name": "@thebushidocollective/han",
-<<<<<<< Updated upstream
 	"version": "1.32.0",
-=======
-	"version": "1.31.12",
->>>>>>> Stashed changes
 	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
