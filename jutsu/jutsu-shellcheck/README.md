@@ -73,21 +73,25 @@ external-sources=true
 ### Installing ShellCheck
 
 **macOS:**
+
 ```bash
 brew install shellcheck
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 apt-get install shellcheck
 ```
 
 **Fedora:**
+
 ```bash
 dnf install ShellCheck
 ```
 
 **From source:**
+
 ```bash
 cabal update
 cabal install ShellCheck
@@ -101,7 +105,7 @@ cabal install ShellCheck
 | SC2046 | Quote this to prevent word splitting |
 | SC2034 | Variable appears unused |
 | SC2155 | Declare and assign separately to avoid masking return values |
-| SC2164 | Use `cd ... || exit` in case cd fails |
+| SC2164 | Use `cd ... \|\| exit` in case cd fails |
 | SC2006 | Use `$(...)` instead of legacy backticks |
 
 ## Overriding Hooks
