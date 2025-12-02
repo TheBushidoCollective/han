@@ -384,7 +384,7 @@ test("han hook test validates hooks in installed plugins", () => {
 // ============================================
 
 test("parsePluginRecommendations returns unique plugins (no duplicates)", () => {
-	const content = '["bushido", "buki-typescript", "bushido", "buki-react"]';
+	const content = '["bushido", "jutsu-typescript", "bushido", "jutsu-react"]';
 	const result = parsePluginRecommendations(content);
 
 	const uniqueResult = [...new Set(result)];
@@ -396,7 +396,7 @@ test("parsePluginRecommendations returns unique plugins (no duplicates)", () => 
 });
 
 test("parsePluginRecommendations always includes bushido", () => {
-	const content = '["buki-typescript", "buki-react"]';
+	const content = '["jutsu-typescript", "jutsu-react"]';
 	const result = parsePluginRecommendations(content);
 
 	strictEqual(
@@ -407,21 +407,21 @@ test("parsePluginRecommendations always includes bushido", () => {
 });
 
 test("parsePluginRecommendations handles JSON array format", () => {
-	const content = 'Based on analysis: ["buki-typescript", "buki-biome"]';
+	const content = 'Based on analysis: ["jutsu-typescript", "jutsu-biome"]';
 	const result = parsePluginRecommendations(content);
 
-	strictEqual(result.includes("buki-typescript"), true);
-	strictEqual(result.includes("buki-biome"), true);
+	strictEqual(result.includes("jutsu-typescript"), true);
+	strictEqual(result.includes("jutsu-biome"), true);
 	strictEqual(result.includes("bushido"), true);
 });
 
 test("parsePluginRecommendations handles plain text plugin names", () => {
 	const content =
-		"I recommend installing buki-typescript for TypeScript and buki-react for React development.";
+		"I recommend installing jutsu-typescript for TypeScript and jutsu-react for React development.";
 	const result = parsePluginRecommendations(content);
 
-	strictEqual(result.includes("buki-typescript"), true);
-	strictEqual(result.includes("buki-react"), true);
+	strictEqual(result.includes("jutsu-typescript"), true);
+	strictEqual(result.includes("jutsu-react"), true);
 	strictEqual(result.includes("bushido"), true);
 });
 
@@ -434,7 +434,7 @@ test("parsePluginRecommendations returns bushido when no plugins found", () => {
 
 test("parsePluginRecommendations deduplicates from regex matches", () => {
 	const content =
-		"For this project, I recommend bushido and buki-typescript. The bushido plugin is essential.";
+		"For this project, I recommend bushido and jutsu-typescript. The bushido plugin is essential.";
 	const result = parsePluginRecommendations(content);
 
 	const bushidoCount = result.filter((p) => p === "bushido").length;
@@ -447,12 +447,12 @@ test("parsePluginRecommendations deduplicates from regex matches", () => {
 
 test("parsePluginRecommendations handles all plugin prefixes", () => {
 	const content =
-		"Install buki-typescript for development, do-blockchain-development for web3, and sensei-gitlab for GitLab integration.";
+		"Install jutsu-typescript for development, do-blockchain-development for web3, and hashi-gitlab for GitLab integration.";
 	const result = parsePluginRecommendations(content);
 
-	strictEqual(result.includes("buki-typescript"), true);
+	strictEqual(result.includes("jutsu-typescript"), true);
 	strictEqual(result.includes("do-blockchain-development"), true);
-	strictEqual(result.includes("sensei-gitlab"), true);
+	strictEqual(result.includes("hashi-gitlab"), true);
 });
 
 test("parsePluginRecommendations handles empty string", () => {
@@ -461,12 +461,12 @@ test("parsePluginRecommendations handles empty string", () => {
 });
 
 test("parsePluginRecommendations handles malformed JSON gracefully", () => {
-	const content = '["buki-typescript", buki-react]'; // missing quotes
+	const content = '["jutsu-typescript", jutsu-react]'; // missing quotes
 	const result = parsePluginRecommendations(content);
 
 	strictEqual(result.includes("bushido"), true);
-	strictEqual(result.includes("buki-typescript"), true);
-	strictEqual(result.includes("buki-react"), true);
+	strictEqual(result.includes("jutsu-typescript"), true);
+	strictEqual(result.includes("jutsu-react"), true);
 });
 
 // ============================================
@@ -487,7 +487,7 @@ test("han plugin install adds plugin to settings", () => {
 
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(`${binCommand} plugin install buki-typescript`, {
+		execSync(`${binCommand} plugin install jutsu-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
@@ -501,9 +501,9 @@ test("han plugin install adds plugin to settings", () => {
 			"Expected Han marketplace to be added",
 		);
 		strictEqual(
-			settings.enabledPlugins?.["buki-typescript@han"],
+			settings.enabledPlugins?.["jutsu-typescript@han"],
 			true,
-			"Expected buki-typescript@han to be enabled",
+			"Expected jutsu-typescript@han to be enabled",
 		);
 	} finally {
 		teardown();
@@ -529,7 +529,7 @@ test("han plugin uninstall removes plugin from settings", () => {
 						},
 					},
 					enabledPlugins: {
-						"buki-typescript@han": true,
+						"jutsu-typescript@han": true,
 					},
 				},
 				null,
@@ -537,7 +537,7 @@ test("han plugin uninstall removes plugin from settings", () => {
 			),
 		);
 
-		execSync(`${binCommand} plugin uninstall buki-typescript`, {
+		execSync(`${binCommand} plugin uninstall jutsu-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
@@ -546,9 +546,9 @@ test("han plugin uninstall removes plugin from settings", () => {
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 		strictEqual(
-			settings.enabledPlugins?.["buki-typescript@han"],
+			settings.enabledPlugins?.["jutsu-typescript@han"],
 			undefined,
-			"Expected buki-typescript@han to be removed",
+			"Expected jutsu-typescript@han to be removed",
 		);
 	} finally {
 		teardown();
@@ -574,7 +574,7 @@ test("han plugin install is idempotent", () => {
 						},
 					},
 					enabledPlugins: {
-						"buki-typescript@han": true,
+						"jutsu-typescript@han": true,
 					},
 				},
 				null,
@@ -582,7 +582,7 @@ test("han plugin install is idempotent", () => {
 			),
 		);
 
-		const output = execSync(`${binCommand} plugin install buki-typescript`, {
+		const output = execSync(`${binCommand} plugin install jutsu-typescript`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
@@ -596,12 +596,12 @@ test("han plugin install is idempotent", () => {
 
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 		const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter((k) =>
-			k.includes("buki-typescript"),
+			k.includes("jutsu-typescript"),
 		);
 		strictEqual(
 			pluginKeys.length,
 			1,
-			"Expected exactly one buki-typescript entry",
+			"Expected exactly one jutsu-typescript entry",
 		);
 	} finally {
 		teardown();
@@ -643,7 +643,7 @@ test("han plugin install multiple plugins at once", () => {
 
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(`${binCommand} plugin install buki-typescript buki-react`, {
+		execSync(`${binCommand} plugin install jutsu-typescript jutsu-react`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
@@ -652,14 +652,14 @@ test("han plugin install multiple plugins at once", () => {
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 		strictEqual(
-			settings.enabledPlugins?.["buki-typescript@han"],
+			settings.enabledPlugins?.["jutsu-typescript@han"],
 			true,
-			"Expected buki-typescript@han to be enabled",
+			"Expected jutsu-typescript@han to be enabled",
 		);
 		strictEqual(
-			settings.enabledPlugins?.["buki-react@han"],
+			settings.enabledPlugins?.["jutsu-react@han"],
 			true,
-			"Expected buki-react@han to be enabled",
+			"Expected jutsu-react@han to be enabled",
 		);
 	} finally {
 		teardown();

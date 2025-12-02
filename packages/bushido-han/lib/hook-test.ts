@@ -350,9 +350,9 @@ function findPluginInMarketplace(
 ): string | null {
 	// Try different plugin directory structures
 	const potentialPaths = [
-		join(marketplaceRoot, "buki", pluginName),
+		join(marketplaceRoot, "jutsu", pluginName),
 		join(marketplaceRoot, "do", pluginName),
-		join(marketplaceRoot, "sensei", pluginName),
+		join(marketplaceRoot, "hashi", pluginName),
 		join(marketplaceRoot, pluginName),
 	];
 

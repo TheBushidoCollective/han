@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-cypress",
+  "version": "1.7.3",
+  "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["cypress", "testing", "e2e", "javascript"]
+}

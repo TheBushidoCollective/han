@@ -65,17 +65,17 @@ export default function Home() {
 							description="Specialized agents for development disciplines and practices"
 						/>
 						<CategoryCard
-							href="/plugins/buki"
-							icon={getCategoryIcon("buki")}
-							title="Buki"
-							subtitle="武器 - Weapons"
+							href="/plugins/jutsu"
+							icon={getCategoryIcon("jutsu")}
+							title="Jutsu"
+							subtitle="術 - Techniques"
 							description="Language and tool skills with validation hooks for quality"
 						/>
 						<CategoryCard
-							href="/plugins/sensei"
-							icon={getCategoryIcon("sensei")}
-							title="Sensei"
-							subtitle="先生 - Teachers"
+							href="/plugins/hashi"
+							icon={getCategoryIcon("hashi")}
+							title="Hashi"
+							subtitle="橋 - Bridges"
 							description="MCP servers providing external knowledge and integrations"
 						/>
 					</div>

@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-fastapi",
+  "version": "1.1.2",
+  "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["fastapi", "python", "async"]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-csharp",
+  "version": "1.1.2",
+  "description": "Advanced C# programming skills for async patterns and LINQ",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["csharp", "c#", "dotnet", "async", "linq"]
+}

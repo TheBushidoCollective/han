@@ -8,9 +8,9 @@ import Sidebar from "../../components/Sidebar";
 export async function generateStaticParams() {
 	return [
 		{ category: "bushido" },
-		{ category: "buki" },
+		{ category: "jutsu" },
 		{ category: "do" },
-		{ category: "sensei" },
+		{ category: "hashi" },
 	];
 }
 
@@ -21,9 +21,9 @@ const categoryData = {
 		description:
 			"Core principles and best practices for software development. These skills embody the fundamental disciplines that guide exceptional engineering.",
 	},
-	buki: {
-		title: "Buki",
-		subtitle: "武器 - Weapons",
+	jutsu: {
+		title: "Jutsu",
+		subtitle: "術 - Techniques",
 		description:
 			"Language and tool skills with validation hooks for maintaining quality. Each Buki plugin provides specialized knowledge for a specific programming language, framework, or development tool.",
 	},
@@ -33,9 +33,9 @@ const categoryData = {
 		description:
 			"Specialized discipline agents for focused expertise areas. Each Dō plugin contains agents that embody specific engineering disciplines and methodologies.",
 	},
-	sensei: {
-		title: "Sensei",
-		subtitle: "先生 - Teacher",
+	hashi: {
+		title: "Hashi",
+		subtitle: "橋 - Bridge",
 		description:
 			"MCP servers that extend Claude Code's capabilities. These plugins integrate external services and tools to enhance Claude's abilities.",
 	},
@@ -68,7 +68,7 @@ export default async function CategoryPage({
 }) {
 	const { category } = await params;
 
-	if (!["bushido", "buki", "do", "sensei"].includes(category)) {
+	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
@@ -78,7 +78,7 @@ export default async function CategoryPage({
 	const plugins = getAllPlugins(categoryKey);
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+	const jutsuPlugins = getAllPlugins("jutsu").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -86,7 +86,7 @@ export default async function CategoryPage({
 		name: p.name,
 		title: p.title,
 	}));
-	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+	const hashiPlugins = getAllPlugins("hashi").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -115,9 +115,9 @@ export default async function CategoryPage({
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
 					<Sidebar
-						bukiPlugins={bukiPlugins}
+						jutsuPlugins={jutsuPlugins}
 						doPlugins={doPlugins}
-						senseiPlugins={senseiPlugins}
+						hashiPlugins={hashiPlugins}
 					/>
 					<main className="flex-1 min-w-0">
 						<div className="mb-12">

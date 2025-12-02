@@ -40,9 +40,9 @@ export async function generateStaticParams() {
 
 const categoryLabels = {
 	bushido: "Bushido",
-	buki: "Buki",
+	jutsu: "Jutsu",
 	do: "Dō",
-	sensei: "Sensei",
+	hashi: "Hashi",
 } as const;
 
 export async function generateMetadata({
@@ -52,7 +52,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { category, slug, hookfile } = await params;
 
-	if (!["bushido", "buki", "do", "sensei"].includes(category)) {
+	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
 		return {
 			title: "Hook File Not Found - Han",
 		};
@@ -61,7 +61,7 @@ export async function generateMetadata({
 	const pluginSlug =
 		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "buki" | "do" | "sensei",
+		category as "bushido" | "jutsu" | "do" | "hashi",
 		pluginSlug,
 	);
 
@@ -85,14 +85,14 @@ export default async function HookFilePage({
 	const { category, slug, hookfile } = await params;
 
 	// Validate category
-	if (!["bushido", "buki", "do", "sensei"].includes(category)) {
+	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
 	const pluginSlug =
 		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "buki" | "do" | "sensei",
+		category as "bushido" | "jutsu" | "do" | "hashi",
 		pluginSlug,
 	);
 
@@ -101,7 +101,7 @@ export default async function HookFilePage({
 	}
 
 	// Get plugins for sidebar
-	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+	const jutsuPlugins = getAllPlugins("jutsu").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -109,7 +109,7 @@ export default async function HookFilePage({
 		name: p.name,
 		title: p.title,
 	}));
-	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+	const hashiPlugins = getAllPlugins("hashi").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -184,9 +184,9 @@ export default async function HookFilePage({
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
 					<Sidebar
-						bukiPlugins={bukiPlugins}
+						jutsuPlugins={jutsuPlugins}
 						doPlugins={doPlugins}
-						senseiPlugins={senseiPlugins}
+						hashiPlugins={hashiPlugins}
 					/>
 					<main className="flex-1 min-w-0">
 						{/* Header */}

@@ -65,14 +65,14 @@ export function uninstall(): void {
 		}
 	}
 
-	// Remove all Han plugins (those starting with buki-, do-, sensei-, or named bushido)
+	// Remove all Han plugins (those starting with jutsu-, do-, hashi-, or named bushido)
 	if (settings.plugins) {
 		const before = settings.plugins.length;
 		settings.plugins = settings.plugins.filter(
 			(plugin) =>
-				!plugin.startsWith("buki-") &&
+				!plugin.startsWith("jutsu-") &&
 				!plugin.startsWith("do-") &&
-				!plugin.startsWith("sensei-") &&
+				!plugin.startsWith("hashi-") &&
 				plugin !== "bushido",
 		);
 		const after = settings.plugins.length;

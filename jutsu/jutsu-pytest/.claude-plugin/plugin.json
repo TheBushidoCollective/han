@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-pytest",
+  "version": "1.7.3",
+  "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["pytest", "testing", "python"]
+}

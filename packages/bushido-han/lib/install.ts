@@ -109,9 +109,9 @@ export async function install(
 	const existingPlugins = getInstalledPlugins(scope);
 	const hanPlugins = existingPlugins.filter(
 		(p) =>
-			p.startsWith("buki-") ||
+			p.startsWith("jutsu-") ||
 			p.startsWith("do-") ||
-			p.startsWith("sensei-") ||
+			p.startsWith("hashi-") ||
 			p === "bushido",
 	);
 	if (hanPlugins.length > 0) {

@@ -7,15 +7,15 @@ import { getCategoryIcon } from "../../lib/constants";
 import SidebarScrollContainer from "./SidebarScrollContainer";
 
 interface SidebarProps {
-	bukiPlugins: Array<{ name: string; title: string }>;
+	jutsuPlugins: Array<{ name: string; title: string }>;
 	doPlugins: Array<{ name: string; title: string }>;
-	senseiPlugins: Array<{ name: string; title: string }>;
+	hashiPlugins: Array<{ name: string; title: string }>;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-	bukiPlugins,
+	jutsuPlugins,
 	doPlugins,
-	senseiPlugins,
+	hashiPlugins,
 }) => {
 	const pathname = usePathname();
 
@@ -115,20 +115,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 					{/* Buki */}
 					<div>
 						<Link
-							href="/plugins/buki"
-							className={`${getLinkClass("/plugins/buki")} mb-2`}
+							href="/plugins/jutsu"
+							className={`${getLinkClass("/plugins/jutsu")} mb-2`}
 						>
-							{getCategoryIcon("buki")} Buki
+							{getCategoryIcon("jutsu")} Buki
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Technology skills and validations
 						</p>
 						<ul className="space-y-1 ml-4">
-							{bukiPlugins.map((plugin) => (
+							{jutsuPlugins.map((plugin) => (
 								<li key={plugin.name}>
 									<Link
-										href={`/plugins/buki/${plugin.name}`}
-										className={getSubLinkClass(`/plugins/buki/${plugin.name}`)}
+										href={`/plugins/jutsu/${plugin.name}`}
+										className={getSubLinkClass(`/plugins/jutsu/${plugin.name}`)}
 									>
 										{plugin.title}
 									</Link>
@@ -140,21 +140,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 					{/* Sensei */}
 					<div>
 						<Link
-							href="/plugins/sensei"
-							className={`${getLinkClass("/plugins/sensei")} mb-2`}
+							href="/plugins/hashi"
+							className={`${getLinkClass("/plugins/hashi")} mb-2`}
 						>
-							{getCategoryIcon("sensei")} Sensei
+							{getCategoryIcon("hashi")} Sensei
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							MCP servers for external integrations
 						</p>
 						<ul className="space-y-1 ml-4">
-							{senseiPlugins.map((plugin) => (
+							{hashiPlugins.map((plugin) => (
 								<li key={plugin.name}>
 									<Link
-										href={`/plugins/sensei/${plugin.name}`}
+										href={`/plugins/hashi/${plugin.name}`}
 										className={getSubLinkClass(
-											`/plugins/sensei/${plugin.name}`,
+											`/plugins/hashi/${plugin.name}`,
 										)}
 									>
 										{plugin.title}

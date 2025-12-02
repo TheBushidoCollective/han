@@ -28,7 +28,7 @@ success() {
 
 # Find all plugin directories
 find_plugins() {
-    find buki do sensei bushido -maxdepth 3 -name "plugin.json" -path "*/.claude-plugin/*" 2>/dev/null | while read -r plugin_json; do
+    find jutsu do hashi bushido -maxdepth 3 -name "plugin.json" -path "*/.claude-plugin/*" 2>/dev/null | while read -r plugin_json; do
         dirname "$(dirname "$plugin_json")"
     done
 }

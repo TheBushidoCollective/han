@@ -2,10 +2,7 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	type LiveOutputState,
-	makeLiveOutputKey,
-} from "./hook-test.js";
+import { type LiveOutputState, makeLiveOutputKey } from "./hook-test.js";
 
 interface HookResult {
 	plugin: string;
