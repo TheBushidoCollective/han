@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { resolve } from "node:path";
 import {
 	buildManifest,
 	checkForChanges,
@@ -13,16 +14,35 @@ import {
 } from "./hook-config.js";
 
 /**
- * Wrap a command to source CLAUDE_ENV_FILE first if it's set.
- * This mimics what Claude Code does when running hooks.
+ * Get the absolute path to CLAUDE_ENV_FILE.
+ * Resolves relative paths against CLAUDE_PROJECT_DIR or cwd.
+ */
+function getAbsoluteEnvFilePath(): string | null {
+	const envFile = process.env.CLAUDE_ENV_FILE;
+	if (!envFile) return null;
+
+	// If already absolute, use as-is
+	if (envFile.startsWith("/")) return envFile;
+
+	// Resolve relative path against project dir or cwd
+	const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	return resolve(projectDir, envFile);
+}
+
+/**
+ * Wrap a command to set up the proper environment.
+ * - If CLAUDE_ENV_FILE is set, source it first (mimics Claude Code's behavior)
+ * - Otherwise, use a login shell to get the user's full PATH (mise, etc.)
  */
 function wrapCommandWithEnvFile(cmd: string): string {
-	const envFile = process.env.CLAUDE_ENV_FILE;
+	const envFile = getAbsoluteEnvFilePath();
 	if (envFile) {
 		// Source the env file before running the command
 		return `source "${envFile}" && ${cmd}`;
 	}
-	return cmd;
+	// No CLAUDE_ENV_FILE - use login shell to get user's environment
+	// This ensures PATH includes version managers like mise, asdf, etc.
+	return `/bin/bash -l -c ${JSON.stringify(cmd)}`;
 }
 
 interface ValidateOptions {
@@ -109,7 +129,7 @@ export function validate(options: ValidateOptions): void {
 			);
 			process.exit(2);
 		}
-		console.log("\n✅ All 1 directory passed validation");
+		// Silent success - no need for a message when running a single command
 		process.exit(0);
 	}
 
