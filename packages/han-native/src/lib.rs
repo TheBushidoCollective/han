@@ -114,9 +114,13 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
     // Build glob matchers for markers
     let mut glob_builder = globset::GlobSetBuilder::new();
     for marker in &markers {
-        // Convert marker to glob pattern (e.g., "mix.exs" -> "**/mix.exs")
-        let pattern = format!("**/{}", marker);
-        if let Ok(glob) = globset::Glob::new(&pattern) {
+        // Add pattern for root level (e.g., "mix.exs", "*.xcodeproj")
+        if let Ok(glob) = globset::Glob::new(marker) {
+            glob_builder.add(glob);
+        }
+        // Add pattern for nested levels (e.g., "**/mix.exs", "**/*.xcodeproj")
+        let nested_pattern = format!("**/{}", marker);
+        if let Ok(glob) = globset::Glob::new(&nested_pattern) {
             glob_builder.add(glob);
         }
     }
