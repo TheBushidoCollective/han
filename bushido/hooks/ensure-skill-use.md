@@ -2,6 +2,17 @@
 
 **ALWAYS review available skills BEFORE starting work.**
 
+## Skills to always assess for use
+
+- professional-honesty
+- proof-of-work
+- solid-principles
+- structural-design-principles
+- orthogonality-principle
+- simplicity-principles
+- boy-scout-rule
+- baseline-restorer
+
 ## Process
 
 1. Check `<available_skills>` in system prompt
