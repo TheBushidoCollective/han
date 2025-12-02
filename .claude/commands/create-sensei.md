@@ -18,11 +18,12 @@ Create the following directory structure:
 sensei/sensei-{service-name}/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
-├── hooks.json               # Claude Code hooks (at plugin root, optional)
+├── hooks/
+│   └── hooks.json           # Claude Code hooks (optional)
 └── README.md               # Plugin documentation
 ```
 
-**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. All other files (`hooks.json`, etc.) go at the plugin root level.
+**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. Hook files go in the `hooks/` directory.
 
 Note: Sensei plugins typically don't include skills or agents - they provide tools through MCP servers.
 
