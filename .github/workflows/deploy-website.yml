@@ -8,6 +8,10 @@ on:
       - 'website/**'
       - '.github/workflows/deploy-website.yml'
       - '.claude-plugin/marketplace.json'
+      - 'buki/**'
+      - 'do/**'
+      - 'sensei/**'
+      - 'bushido/**'
   workflow_dispatch:
 
 permissions:
