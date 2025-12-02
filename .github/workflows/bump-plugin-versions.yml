@@ -157,11 +157,6 @@ jobs:
           echo -e "$BUMPED_PLUGINS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Update config hashes
-        if: steps.changed-plugins.outputs.has_changes == 'true'
-        run: |
-          ./scripts/update-config-hashes.sh
-
       - name: Commit version bumps
         if: steps.changed-plugins.outputs.has_changes == 'true'
         run: |
