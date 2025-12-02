@@ -72,7 +72,7 @@ export default function DocsPage() {
 								The Three Pillars
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
-								Han plugins are not just prompts or skills—they are complete
+								Han plugins are not just prompts or skills. They are complete
 								mastery systems. Every plugin is built on three foundational
 								pillars that work together to ensure not just capability, but
 								excellence.
@@ -96,7 +96,7 @@ export default function DocsPage() {
 											</h3>
 											<p className="text-gray-600 dark:text-gray-300 mb-4">
 												Deep expertise distilled into skills and patterns. Not
-												just answers, but understanding—the wisdom to know why,
+												just answers, but understanding: the wisdom to know why,
 												not just how. Each skill contains hundreds of lines of
 												carefully crafted guidance, best practices, and
 												real-world examples.
@@ -109,7 +109,7 @@ export default function DocsPage() {
 													<p className="text-sm text-gray-600 dark:text-gray-300">
 														Framework-specific expertise loaded on-demand.
 														TypeScript patterns, React hooks, testing
-														strategies—deep knowledge when you need it.
+														strategies. Deep knowledge when you need it.
 													</p>
 												</div>
 												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
@@ -156,7 +156,7 @@ export default function DocsPage() {
 													<p className="text-sm text-gray-600 dark:text-gray-300">
 														Specialized subagents for complex tasks. Frontend
 														development, accessibility engineering,
-														documentation—each with deep domain expertise.
+														documentation. Each with deep domain expertise.
 													</p>
 												</div>
 												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
@@ -165,7 +165,7 @@ export default function DocsPage() {
 													</h4>
 													<p className="text-sm text-gray-600 dark:text-gray-300">
 														Slash commands for common workflows. Code review,
-														debugging, refactoring—complex multi-step processes
+														debugging, refactoring. Complex multi-step processes
 														simplified to a single invocation.
 													</p>
 												</div>
@@ -191,7 +191,7 @@ export default function DocsPage() {
 											</h3>
 											<p className="text-gray-600 dark:text-gray-300 mb-4">
 												Validation hooks that enforce quality automatically.
-												Every change verified, every standard upheld—excellence
+												Every change verified, every standard upheld. Excellence
 												through enforcement. This is what separates Han plugins
 												from simple prompt collections.
 											</p>
@@ -202,7 +202,7 @@ export default function DocsPage() {
 													</h4>
 													<p className="text-sm text-gray-600 dark:text-gray-300">
 														Automatic quality gates that run on every change.
-														Linting, formatting, type checking—enforced
+														Linting, formatting, type checking. Enforced
 														consistently without manual intervention.
 													</p>
 												</div>
@@ -213,7 +213,7 @@ export default function DocsPage() {
 													<p className="text-sm text-gray-600 dark:text-gray-300">
 														Intelligent change detection ensures hooks only run
 														when needed. Fast feedback without redundant
-														validation—discipline without delay.
+														validation. Discipline without delay.
 													</p>
 												</div>
 											</div>
@@ -228,7 +228,7 @@ export default function DocsPage() {
 								</p>
 								<p className="text-gray-400">
 									When you install a Han plugin, you&apos;re not just getting
-									prompts—you&apos;re getting a complete system that teaches,
+									prompts. You&apos;re getting a complete system that teaches,
 									executes, and validates. The AI generates, real tools verify,
 									and you ship with confidence. No hallucinations slip through.
 								</p>
