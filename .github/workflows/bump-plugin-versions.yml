@@ -157,6 +157,11 @@ jobs:
           echo -e "$BUMPED_PLUGINS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Update config hashes
+        if: steps.changed-plugins.outputs.has_changes == 'true'
+        run: |
+          ./scripts/update-config-hashes.sh
+
       - name: Commit version bumps
         if: steps.changed-plugins.outputs.has_changes == 'true'
         run: |
@@ -169,8 +174,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Add all plugin.json files
-          git add '**/plugin.json'
+          # Add all plugin.json files and marketplace.json
+          git add '**/plugin.json' '.claude-plugin/marketplace.json'
 
           # Pull latest changes before committing
           git pull --rebase --autostash origin main
