@@ -33,6 +33,9 @@ interface HookTestUIProps {
 
 type ViewMode = "list" | "detail";
 
+/** Maximum lines to show in detail view at once */
+const MAX_OUTPUT_LINES = 50;
+
 interface FlatItem {
 	type: "hookType" | "plugin" | "command";
 	hookType: string;
@@ -58,6 +61,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null); // "hookType:plugin" format
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
 	const [detailItem, setDetailItem] = useState<FlatItem | null>(null);
+	const [detailScrollOffset, setDetailScrollOffset] = useState(0);
 
 	// Build flat list of navigable items based on expansion state
 	const getFlatItems = useCallback((): FlatItem[] => {
@@ -170,6 +174,11 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 			if (key.escape) {
 				setViewMode("list");
 				setDetailItem(null);
+				setDetailScrollOffset(0);
+			} else if (key.upArrow) {
+				setDetailScrollOffset((prev) => Math.max(0, prev - 5));
+			} else if (key.downArrow) {
+				setDetailScrollOffset((prev) => prev + 5);
 			}
 			return;
 		}
@@ -299,7 +308,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 			: "running";
 
 		// Get output - use result output if complete, otherwise use live output
-		const outputLines =
+		const allOutputLines =
 			result?.output && result.output.length > 0
 				? result.output
 				: getLiveOutput(
@@ -308,6 +317,17 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 						detailItem.command,
 					);
 
+		// Paginate output to prevent UI freeze
+		const totalLines = allOutputLines.length;
+		const maxOffset = Math.max(0, totalLines - MAX_OUTPUT_LINES);
+		const safeOffset = Math.min(detailScrollOffset, maxOffset);
+		const visibleLines = allOutputLines.slice(
+			safeOffset,
+			safeOffset + MAX_OUTPUT_LINES,
+		);
+		const hasMoreAbove = safeOffset > 0;
+		const hasMoreBelow = safeOffset + MAX_OUTPUT_LINES < totalLines;
+
 		return (
 			<Box flexDirection="column">
 				{/* Header */}
@@ -315,7 +335,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					<Text bold color="cyan">
 						📋 Command Output
 					</Text>
-					<Text dimColor> (Esc to go back)</Text>
+					<Text dimColor> (Esc to go back, ↑↓ to scroll)</Text>
 				</Box>
 
 				{/* Command info */}
@@ -351,18 +371,33 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 						)}
 						{result?.timedOut && <Text color="red"> (timeout)</Text>}
 					</Box>
+					{totalLines > MAX_OUTPUT_LINES && (
+						<Box>
+							<Text dimColor>
+								Lines: {safeOffset + 1}-
+								{Math.min(safeOffset + MAX_OUTPUT_LINES, totalLines)} of{" "}
+								{totalLines}
+							</Text>
+						</Box>
+					)}
 				</Box>
 
 				{/* Output */}
 				<Box marginTop={1} flexDirection="column">
 					<Text dimColor>{"─".repeat(60)}</Text>
-					{outputLines.length > 0 ? (
+					{hasMoreAbove && <Text dimColor>↑ ... {safeOffset} more lines above</Text>}
+					{visibleLines.length > 0 ? (
 						// biome-ignore lint/suspicious/noArrayIndexKey: output lines have no unique identifier
-						outputLines.map((line, i) => <Text key={i}>{line}</Text>)
+						visibleLines.map((line, i) => <Text key={i}>{line}</Text>)
 					) : status === "running" ? (
 						<Text dimColor>Waiting for output...</Text>
 					) : (
 						<Text dimColor>No output</Text>
+					)}
+					{hasMoreBelow && (
+						<Text dimColor>
+							↓ ... {totalLines - safeOffset - MAX_OUTPUT_LINES} more lines below
+						</Text>
 					)}
 				</Box>
 			</Box>
