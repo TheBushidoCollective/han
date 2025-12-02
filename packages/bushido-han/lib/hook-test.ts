@@ -629,7 +629,6 @@ async function executeHooksWithUI(
 						currentType,
 						isComplete,
 						verbose,
-						liveOutput,
 						onViewOutput: handleViewOutput,
 					}),
 				);
@@ -664,7 +663,7 @@ async function executeHooksWithUI(
 			unmount();
 
 			// Print output directly to stdout
-			console.log("\n" + "─".repeat(60));
+			console.log(`\n${"─".repeat(60)}`);
 			console.log(`Hook Type: ${hookType}`);
 			console.log(`Plugin: ${plugin}`);
 			console.log(`Command: ${command}`);
@@ -693,7 +692,6 @@ async function executeHooksWithUI(
 					currentType,
 					isComplete,
 					verbose,
-					liveOutput,
 					onViewOutput: handleViewOutput,
 				}),
 			);
@@ -710,7 +708,6 @@ async function executeHooksWithUI(
 				currentType,
 				isComplete,
 				verbose,
-				liveOutput,
 				onViewOutput: handleViewOutput,
 			}),
 		);
