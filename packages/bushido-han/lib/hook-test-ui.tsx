@@ -2,7 +2,7 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type LiveOutputState, makeLiveOutputKey } from "./hook-test.js";
+import type { LiveOutputState } from "./hook-test.js";
 
 interface HookResult {
 	plugin: string;
@@ -29,12 +29,9 @@ interface HookTestUIProps {
 	isComplete: boolean;
 	verbose: boolean;
 	liveOutput?: LiveOutputState;
+	/** Called when user wants to view command output - parent handles display */
+	onViewOutput?: (hookType: string, plugin: string, command: string) => void;
 }
-
-type ViewMode = "list" | "detail";
-
-/** Maximum lines to show in detail view at once */
-const MAX_OUTPUT_LINES = 50;
 
 interface FlatItem {
 	type: "hookType" | "plugin" | "command";
@@ -52,6 +49,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	isComplete,
 	verbose,
 	liveOutput,
+	onViewOutput,
 }) => {
 	const { write } = useStdout();
 	const writtenHookTypes = useRef<Set<string>>(new Set());
@@ -59,9 +57,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [expandedType, setExpandedType] = useState<string | null>(null);
 	const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null); // "hookType:plugin" format
-	const [viewMode, setViewMode] = useState<ViewMode>("list");
-	const [detailItem, setDetailItem] = useState<FlatItem | null>(null);
-	const [detailScrollOffset, setDetailScrollOffset] = useState(0);
 
 	// Build flat list of navigable items based on expansion state
 	const getFlatItems = useCallback((): FlatItem[] => {
@@ -169,20 +164,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 
 	// Handle keyboard input
 	useInput((input, key) => {
-		if (viewMode === "detail") {
-			// In detail view, Esc goes back to list
-			if (key.escape) {
-				setViewMode("list");
-				setDetailItem(null);
-				setDetailScrollOffset(0);
-			} else if (key.upArrow) {
-				setDetailScrollOffset((prev) => Math.max(0, prev - 5));
-			} else if (key.downArrow) {
-				setDetailScrollOffset((prev) => prev + 5);
-			}
-			return;
-		}
-
 		// List mode navigation
 		if (key.upArrow) {
 			setSelectedIndex((prev) => Math.max(0, prev - 1));
@@ -210,9 +191,8 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					setExpandedPlugin(pluginKey);
 				}
 			} else if (item.type === "command" && item.plugin && item.command) {
-				// View command output
-				setDetailItem(item);
-				setViewMode("detail");
+				// View command output - delegate to parent for better performance
+				onViewOutput?.(item.hookType, item.plugin, item.command);
 			}
 		} else if (key.escape) {
 			// Collapse in order: plugin first, then hook type
@@ -280,129 +260,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 			}
 		}
 	}, [isComplete, hookTypes, hookResults, write, getHookTypeStatus]);
-
-	// Get live output for a command that's still running
-	const getLiveOutput = (
-		hookType: string,
-		plugin: string,
-		command: string,
-	): string[] => {
-		if (!liveOutput) return [];
-		const key = makeLiveOutputKey(hookType, plugin, command);
-		return liveOutput.outputs.get(key) || [];
-	};
-
-	// Render detail view for a command
-	const renderDetailView = () => {
-		if (!detailItem || !detailItem.plugin || !detailItem.command) return null;
-
-		const result = getCommandResult(
-			detailItem.hookType,
-			detailItem.plugin,
-			detailItem.command,
-		);
-		const status = result
-			? result.success
-				? "completed"
-				: "failed"
-			: "running";
-
-		// Get output - use result output if complete, otherwise use live output
-		const allOutputLines =
-			result?.output && result.output.length > 0
-				? result.output
-				: getLiveOutput(
-						detailItem.hookType,
-						detailItem.plugin,
-						detailItem.command,
-					);
-
-		// Paginate output to prevent UI freeze
-		const totalLines = allOutputLines.length;
-		const maxOffset = Math.max(0, totalLines - MAX_OUTPUT_LINES);
-		const safeOffset = Math.min(detailScrollOffset, maxOffset);
-		const visibleLines = allOutputLines.slice(
-			safeOffset,
-			safeOffset + MAX_OUTPUT_LINES,
-		);
-		const hasMoreAbove = safeOffset > 0;
-		const hasMoreBelow = safeOffset + MAX_OUTPUT_LINES < totalLines;
-
-		return (
-			<Box flexDirection="column">
-				{/* Header */}
-				<Box marginBottom={1}>
-					<Text bold color="cyan">
-						📋 Command Output
-					</Text>
-					<Text dimColor> (Esc to go back, ↑↓ to scroll)</Text>
-				</Box>
-
-				{/* Command info */}
-				<Box flexDirection="column" marginBottom={1}>
-					<Box>
-						<Text dimColor>Hook Type: </Text>
-						<Text bold>{detailItem.hookType}</Text>
-					</Box>
-					<Box>
-						<Text dimColor>Plugin: </Text>
-						<Text bold>{detailItem.plugin}</Text>
-					</Box>
-					<Box>
-						<Text dimColor>Command: </Text>
-						<Text>{detailItem.command}</Text>
-					</Box>
-					<Box>
-						<Text dimColor>Status: </Text>
-						{status === "completed" && (
-							<Text color="green" bold>
-								✓ Passed
-							</Text>
-						)}
-						{status === "failed" && (
-							<Text color="red" bold>
-								✗ Failed
-							</Text>
-						)}
-						{status === "running" && (
-							<Text color="yellow">
-								<Spinner type="dots" /> Running...
-							</Text>
-						)}
-						{result?.timedOut && <Text color="red"> (timeout)</Text>}
-					</Box>
-					{totalLines > MAX_OUTPUT_LINES && (
-						<Box>
-							<Text dimColor>
-								Lines: {safeOffset + 1}-
-								{Math.min(safeOffset + MAX_OUTPUT_LINES, totalLines)} of{" "}
-								{totalLines}
-							</Text>
-						</Box>
-					)}
-				</Box>
-
-				{/* Output */}
-				<Box marginTop={1} flexDirection="column">
-					<Text dimColor>{"─".repeat(60)}</Text>
-					{hasMoreAbove && <Text dimColor>↑ ... {safeOffset} more lines above</Text>}
-					{visibleLines.length > 0 ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: output lines have no unique identifier
-						visibleLines.map((line, i) => <Text key={i}>{line}</Text>)
-					) : status === "running" ? (
-						<Text dimColor>Waiting for output...</Text>
-					) : (
-						<Text dimColor>No output</Text>
-					)}
-					{hasMoreBelow && (
-						<Text dimColor>
-							↓ ... {totalLines - safeOffset - MAX_OUTPUT_LINES} more lines below
-						</Text>
-					)}
-				</Box>
-			</Box>
-		);
-	};
 
 	// Render list item based on type
 	const renderListItem = (item: FlatItem, index: number) => {
@@ -646,12 +503,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		);
 	};
 
-	// Detail view
-	if (viewMode === "detail") {
-		return renderDetailView();
-	}
-
-	// List view
 	return (
 		<Box flexDirection="column">
 			{/* Header */}
