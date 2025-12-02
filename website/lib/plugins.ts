@@ -32,6 +32,7 @@ export interface SkillMetadata {
 export interface HookCommand {
 	type: string;
 	command: string;
+	timeout?: number;
 }
 
 export interface HookFile {
@@ -40,9 +41,14 @@ export interface HookFile {
 	content: string;
 }
 
+export interface HookEntry {
+	command: string;
+	timeout?: number;
+}
+
 export interface HookSection {
 	section: string;
-	commands: string[];
+	commands: HookEntry[];
 	files: HookFile[];
 }
 
@@ -61,6 +67,7 @@ export interface MCPServerMetadata {
 
 interface Hook {
 	command?: string;
+	timeout?: number;
 }
 
 interface HookArray {
@@ -340,7 +347,7 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 
 		if (hooksData.hooks) {
 			for (const [section, hookArrays] of Object.entries(hooksData.hooks)) {
-				const commands: string[] = [];
+				const commands: HookEntry[] = [];
 				const referencedFiles: HookFile[] = [];
 
 				// Each section contains an array of hook objects
@@ -348,7 +355,10 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 					if (hookArray.hooks) {
 						for (const hook of hookArray.hooks) {
 							if (hook.command) {
-								commands.push(hook.command);
+								commands.push({
+									command: hook.command,
+									timeout: hook.timeout,
+								});
 
 								// Extract file references from commands
 								// Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md"
