@@ -676,14 +676,15 @@ test("runs in current directory when no --dirs-with specified", () => {
 		// Create a marker file to verify we're in the right directory
 		writeFileSync(join(testDir, "marker.txt"), "test");
 
-		const output = execSync(`${binCommand} hook run -- cat marker.txt`, {
+		// Should complete without throwing (exit code 0)
+		// Single command runs now exit silently on success
+		execSync(`${binCommand} hook run -- cat marker.txt`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
 		} as ExecSyncOptionsWithStringEncoding);
 
-		// Command output is suppressed, only check for success message
-		strictEqual(output.includes("passed"), true, "Expected success message");
+		// If we get here, the command succeeded
 	} finally {
 		teardown();
 	}
