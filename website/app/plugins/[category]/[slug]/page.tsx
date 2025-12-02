@@ -587,13 +587,17 @@ export default async function PluginPage({
 												</div>
 											</div>
 											<div className="space-y-3 mb-4">
-												{hookSection.commands.map((command) => (
-													<pre
-														key={command}
-														className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom"
-													>
-														<code>{command}</code>
-													</pre>
+												{hookSection.commands.map((entry, idx) => (
+													<div key={idx} className="relative">
+														<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom">
+															<code>{entry.command}</code>
+														</pre>
+														{entry.timeout && (
+															<span className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
+																⏱️ {entry.timeout >= 60000 ? `${entry.timeout / 60000}m` : `${entry.timeout / 1000}s`}
+															</span>
+														)}
+													</div>
 												))}
 											</div>
 											{hookSection.files.length > 0 && (
