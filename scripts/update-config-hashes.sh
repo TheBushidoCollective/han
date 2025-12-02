@@ -12,9 +12,9 @@ compute_config_hash() {
     local plugin_dir="${plugin_source#./}"
     local hash_input=""
 
-    # Include han-config.json if it exists
-    if [ -f "$plugin_dir/hooks/han-config.json" ]; then
-        hash_input+=$(cat "$plugin_dir/hooks/han-config.json")
+    # Include han-config.json if it exists (at plugin root)
+    if [ -f "$plugin_dir/han-config.json" ]; then
+        hash_input+=$(cat "$plugin_dir/han-config.json")
     fi
 
     # Include any han-config.yml files (user overrides in target directories)

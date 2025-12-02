@@ -56,7 +56,7 @@ export interface ResolvedHookConfig {
 }
 
 /**
- * Load plugin config from han-config.json in the plugin root directory
+ * Load plugin config from han-config.json at the plugin root
  * @param pluginRoot - The plugin directory, typically from CLAUDE_PLUGIN_ROOT env var
  */
 export function loadPluginConfig(pluginRoot: string): PluginConfig | null {

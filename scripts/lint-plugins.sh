@@ -58,25 +58,25 @@ validate_claude_plugin_dir() {
     fi
 }
 
-# Validate hooks.json location (should be in hooks/ directory)
-validate_hooks_location() {
+# Validate file locations
+validate_file_locations() {
     local plugin_dir="$1"
 
-    # Check for hooks.json at plugin root (wrong location)
+    # Check for hooks.json at plugin root (wrong location - should be in hooks/)
     if [ -f "$plugin_dir/hooks.json" ]; then
         error "$plugin_dir/hooks.json: Should be in hooks/hooks.json"
     fi
 
-    # Check for han-config.json at plugin root (wrong location)
-    if [ -f "$plugin_dir/han-config.json" ]; then
-        error "$plugin_dir/han-config.json: Should be in hooks/han-config.json"
+    # Check for han-config.json in hooks/ (wrong location - should be at plugin root)
+    if [ -f "$plugin_dir/hooks/han-config.json" ]; then
+        error "$plugin_dir/hooks/han-config.json: Should be at plugin root ($plugin_dir/han-config.json)"
     fi
 }
 
-# Validate han-config.json structure
+# Validate han-config.json structure (at plugin root)
 validate_han_config() {
     local plugin_dir="$1"
-    local han_config="$plugin_dir/hooks/han-config.json"
+    local han_config="$plugin_dir/han-config.json"
 
     if [ ! -f "$han_config" ]; then
         return  # han-config.json is optional
@@ -236,7 +236,7 @@ main() {
         ((plugin_count++))
 
         validate_claude_plugin_dir "$plugin_dir"
-        validate_hooks_location "$plugin_dir"
+        validate_file_locations "$plugin_dir"
         validate_plugin_json "$plugin_dir"
         validate_han_config "$plugin_dir"
         validate_hooks_json "$plugin_dir"
