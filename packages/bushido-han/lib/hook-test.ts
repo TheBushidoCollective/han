@@ -626,23 +626,43 @@ async function executeHooksWithUI(
 			outputs: new Map(),
 		};
 
-		// Helper to trigger rerender
-		const doRerender = () => {
-			rerender(
-				React.createElement(HookTestUI, {
-					hookTypes: hookTypesFound,
-					hookStructure,
-					hookResults,
-					currentType,
-					isComplete,
-					verbose,
-					liveOutput,
-				}),
-			);
+		// Throttle rerenders to prevent overwhelming Ink
+		let rerenderPending = false;
+		let lastRerenderTime = 0;
+		const RERENDER_THROTTLE_MS = 50; // Max 20 rerenders per second
+
+		// Helper to trigger rerender (throttled for live output, immediate for state changes)
+		const doRerender = (immediate = false) => {
+			const now = Date.now();
+			const timeSinceLastRerender = now - lastRerenderTime;
+
+			if (immediate || timeSinceLastRerender >= RERENDER_THROTTLE_MS) {
+				lastRerenderTime = now;
+				rerenderPending = false;
+				rerender(
+					React.createElement(HookTestUI, {
+						hookTypes: hookTypesFound,
+						hookStructure,
+						hookResults,
+						currentType,
+						isComplete,
+						verbose,
+						liveOutput,
+					}),
+				);
+			} else if (!rerenderPending) {
+				// Schedule a rerender for later
+				rerenderPending = true;
+				setTimeout(() => {
+					if (rerenderPending) {
+						doRerender(true);
+					}
+				}, RERENDER_THROTTLE_MS - timeSinceLastRerender);
+			}
 		};
 
-		// Set up live output callback
-		liveOutput.onUpdate = doRerender;
+		// Set up live output callback (throttled)
+		liveOutput.onUpdate = () => doRerender(false);
 
 		const { rerender, unmount } = render(
 			React.createElement(HookTestUI, {
@@ -658,52 +678,59 @@ async function executeHooksWithUI(
 
 		// Execute hooks sequentially by type
 		(async () => {
-			for (const hookType of hookTypesFound) {
-				const hooks = hooksByType[hookType];
-				currentType = hookType;
+			try {
+				for (const hookType of hookTypesFound) {
+					const hooks = hooksByType[hookType];
+					currentType = hookType;
 
-				// Update UI to show current hook type
-				doRerender();
+					// Update UI to show current hook type (immediate)
+					doRerender(true);
 
-				// Initialize results array for this hook type
-				const results: HookResult[] = [];
-				hookResults.set(hookType, results);
+					// Initialize results array for this hook type
+					const results: HookResult[] = [];
+					hookResults.set(hookType, results);
 
-				// Run all hooks of this type in parallel, but update UI as each completes
-				await Promise.all(
-					hooks.map(async (hook) => {
-						const result = await executeHookCommand(
-							hook,
-							hookType,
-							verbose,
-							claudeEnvVars,
-							liveOutput,
-						);
-						results.push(result);
+					// Run all hooks of this type in parallel, but update UI as each completes
+					await Promise.all(
+						hooks.map(async (hook) => {
+							const result = await executeHookCommand(
+								hook,
+								hookType,
+								verbose,
+								claudeEnvVars,
+								liveOutput,
+							);
+							results.push(result);
 
-						// Check for failures
-						if (!result.success) {
-							hadFailures = true;
-						}
+							// Check for failures
+							if (!result.success) {
+								hadFailures = true;
+							}
 
-						// Update UI immediately after each hook completes
-						doRerender();
-					}),
-				);
-			}
+							// Update UI immediately after each hook completes
+							doRerender(true);
+						}),
+					);
+				}
 
-			// Mark as complete
-			isComplete = true;
-			currentType = null;
+				// Mark as complete
+				isComplete = true;
+				currentType = null;
 
-			// Final render
-			doRerender();
+				// Final render (immediate)
+				doRerender(true);
 
-			// Wait a bit for final render, then unmount
-			setTimeout(() => {
+				// Wait a bit for final render, then unmount
+				setTimeout(() => {
+					unmount();
+					process.exit(hadFailures ? 1 : 0);
+				}, 100);
+			} catch (error) {
+				// If something goes wrong, make sure we clean up and show the error
 				unmount();
-				process.exit(hadFailures ? 1 : 0);
-			}, 100);
+				console.error("\n\nHook test crashed:", error);
+				process.exit(1);
+			}
 		})();
 	});
 }
