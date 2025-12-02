@@ -46,7 +46,10 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 		const hookPath = `hooks.${hookName}`;
 
 		if (typeof hookDef !== "object" || hookDef === null) {
-			errors.push({ path: hookPath, message: "Hook definition must be an object" });
+			errors.push({
+				path: hookPath,
+				message: "Hook definition must be an object",
+			});
 			continue;
 		}
 
@@ -107,7 +110,8 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			) {
 				errors.push({
 					path: `${hookPath}.idleTimeout`,
-					message: "'idleTimeout' must be a non-negative integer (milliseconds)",
+					message:
+						"'idleTimeout' must be a non-negative integer (milliseconds)",
 				});
 			}
 		}
@@ -236,7 +240,12 @@ export function validateUserConfig(config: unknown): ValidationResult {
 			}
 
 			// Check for unknown properties
-			const validProperties = ["enabled", "command", "if_changed", "idle_timeout"];
+			const validProperties = [
+				"enabled",
+				"command",
+				"if_changed",
+				"idle_timeout",
+			];
 			for (const key of Object.keys(override)) {
 				if (!validProperties.includes(key)) {
 					errors.push({

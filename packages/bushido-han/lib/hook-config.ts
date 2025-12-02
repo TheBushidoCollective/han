@@ -244,7 +244,10 @@ export function getHookConfigs(
 		// Resolve idle timeout: user override takes precedence
 		// User can set to false/0 to disable, or a number to override
 		let idleTimeout: number | undefined;
-		if (userOverride?.idle_timeout === false || userOverride?.idle_timeout === 0) {
+		if (
+			userOverride?.idle_timeout === false ||
+			userOverride?.idle_timeout === 0
+		) {
 			idleTimeout = undefined; // Disabled
 		} else if (typeof userOverride?.idle_timeout === "number") {
 			idleTimeout = userOverride.idle_timeout;

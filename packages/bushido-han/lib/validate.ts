@@ -1,5 +1,7 @@
 import { execSync, spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
 	buildManifest,
 	checkForChanges,
@@ -12,6 +14,74 @@ import {
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
 } from "./hook-config.js";
+
+/**
+ * Check if debug mode is enabled via HAN_DEBUG environment variable
+ */
+function isDebugMode(): boolean {
+	const debug = process.env.HAN_DEBUG;
+	return debug === "1" || debug === "true";
+}
+
+/**
+ * Get the han temp directory for output files
+ */
+function getHanTempDir(): string {
+	const dir = join(tmpdir(), "han-hook-output");
+	mkdirSync(dir, { recursive: true });
+	return dir;
+}
+
+/**
+ * Generate a unique filename for hook output
+ */
+function generateOutputFilename(hookName: string, directory: string): string {
+	const timestamp = Date.now();
+	const sanitizedDir = directory.replace(/[^a-zA-Z0-9]/g, "_").slice(-30);
+	return `${hookName}_${sanitizedDir}_${timestamp}`;
+}
+
+/**
+ * Write debug info to a file
+ */
+function writeDebugFile(
+	basePath: string,
+	info: Record<string, unknown>,
+): string {
+	const debugPath = `${basePath}.debug.txt`;
+	const lines: string[] = [
+		"=== Han Hook Debug Info ===",
+		`Timestamp: ${new Date().toISOString()}`,
+		"",
+		"=== Environment ===",
+		`NODE_VERSION: ${process.version}`,
+		`PLATFORM: ${process.platform}`,
+		`ARCH: ${process.arch}`,
+		`CWD: ${process.cwd()}`,
+		`CLAUDE_PROJECT_DIR: ${process.env.CLAUDE_PROJECT_DIR || "(not set)"}`,
+		`CLAUDE_PLUGIN_ROOT: ${process.env.CLAUDE_PLUGIN_ROOT || "(not set)"}`,
+		`CLAUDE_ENV_FILE: ${process.env.CLAUDE_ENV_FILE || "(not set)"}`,
+		`PATH: ${process.env.PATH || "(not set)"}`,
+		"",
+		"=== Hook Info ===",
+	];
+
+	for (const [key, value] of Object.entries(info)) {
+		lines.push(`${key}: ${JSON.stringify(value)}`);
+	}
+
+	writeFileSync(debugPath, lines.join("\n"), "utf-8");
+	return debugPath;
+}
+
+/**
+ * Write output to a file
+ */
+function writeOutputFile(basePath: string, output: string): string {
+	const outputPath = `${basePath}.output.txt`;
+	writeFileSync(outputPath, output, "utf-8");
+	return outputPath;
+}
 
 /**
  * Get the absolute path to CLAUDE_ENV_FILE.
@@ -95,20 +165,33 @@ function runCommandSync(dir: string, cmd: string, verbose?: boolean): boolean {
 interface RunCommandResult {
 	success: boolean;
 	idleTimedOut?: boolean;
+	/** Path to the output file containing stdout/stderr (only on failure) */
+	outputFile?: string;
+	/** Path to the debug file (only when HAN_DEBUG=true) */
+	debugFile?: string;
+}
+
+interface RunCommandOptions {
+	dir: string;
+	cmd: string;
+	verbose?: boolean;
+	idleTimeout?: number;
+	/** Hook name for generating output filenames */
+	hookName?: string;
 }
 
 // Run command in directory (async version with idle timeout support)
-// When verbose=false, suppresses output and we'll tell the agent how to reproduce
+// When verbose=false, captures output to temp file on failure
 // When verbose=true, shows full output
 async function runCommand(
-	dir: string,
-	cmd: string,
-	verbose?: boolean,
-	idleTimeout?: number,
+	options: RunCommandOptions,
 ): Promise<RunCommandResult> {
+	const { dir, cmd, verbose, idleTimeout, hookName = "hook" } = options;
 	const wrappedCmd = wrapCommandWithEnvFile(cmd);
+	const debug = isDebugMode();
+	const startTime = Date.now();
 
-	return new Promise((resolve) => {
+	return new Promise((resolvePromise) => {
 		const child = spawn(wrappedCmd, {
 			cwd: dir,
 			shell: "/bin/bash",
@@ -117,6 +200,7 @@ async function runCommand(
 
 		let idleTimeoutHandle: NodeJS.Timeout | null = null;
 		let idleTimedOut = false;
+		const outputChunks: string[] = [];
 
 		// Reset idle timeout on output
 		const resetIdleTimeout = () => {
@@ -139,34 +223,64 @@ async function runCommand(
 			}, idleTimeout);
 		}
 
-		// Track output for idle timeout (only when not inheriting stdio)
+		// Capture output and track for idle timeout (only when not inheriting stdio)
 		if (!verbose) {
-			child.stdout?.on("data", () => {
+			child.stdout?.on("data", (data) => {
+				outputChunks.push(data.toString());
 				resetIdleTimeout();
 			});
-			child.stderr?.on("data", () => {
+			child.stderr?.on("data", (data) => {
+				outputChunks.push(data.toString());
 				resetIdleTimeout();
 			});
 		}
 
-		child.on("close", (code) => {
+		const finalizeResult = (success: boolean) => {
 			if (idleTimeoutHandle) {
 				clearTimeout(idleTimeoutHandle);
 			}
-			resolve({
-				success: code === 0 && !idleTimedOut,
+
+			const result: RunCommandResult = {
+				success,
 				idleTimedOut,
-			});
+			};
+
+			// Write output and debug files on failure (or always in debug mode)
+			if (!success || debug) {
+				const tempDir = getHanTempDir();
+				const basePath = join(tempDir, generateOutputFilename(hookName, dir));
+
+				// Write output file if we captured any output
+				if (outputChunks.length > 0) {
+					result.outputFile = writeOutputFile(basePath, outputChunks.join(""));
+				}
+
+				// Write debug file in debug mode
+				if (debug) {
+					const duration = Date.now() - startTime;
+					result.debugFile = writeDebugFile(basePath, {
+						hookName,
+						command: cmd,
+						wrappedCommand: wrappedCmd,
+						directory: dir,
+						idleTimeout: idleTimeout ?? null,
+						idleTimedOut,
+						exitSuccess: success,
+						durationMs: duration,
+						outputLength: outputChunks.join("").length,
+					});
+				}
+			}
+
+			resolvePromise(result);
+		};
+
+		child.on("close", (code) => {
+			finalizeResult(code === 0 && !idleTimedOut);
 		});
 
 		child.on("error", () => {
-			if (idleTimeoutHandle) {
-				clearTimeout(idleTimeoutHandle);
-			}
-			resolve({
-				success: false,
-				idleTimedOut: false,
-			});
+			finalizeResult(false);
 		});
 	});
 }
@@ -335,6 +449,8 @@ export async function runConfiguredHook(
 		dir: string;
 		command: string;
 		idleTimedOut?: boolean;
+		outputFile?: string;
+		debugFile?: string;
 	}> = [];
 	const successfulConfigs: ResolvedHookConfig[] = [];
 	let totalFound = 0;
@@ -379,18 +495,21 @@ export async function runConfiguredHook(
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
 
-		const result = await runCommand(
-			config.directory,
-			config.command,
+		const result = await runCommand({
+			dir: config.directory,
+			cmd: config.command,
 			verbose,
-			config.idleTimeout,
-		);
+			idleTimeout: config.idleTimeout,
+			hookName,
+		});
 
 		if (!result.success) {
 			failures.push({
 				dir: relativePath,
 				command: config.command,
 				idleTimedOut: result.idleTimedOut,
+				outputFile: result.outputFile,
+				debugFile: result.debugFile,
 			});
 
 			if (failFast) {
@@ -401,9 +520,17 @@ export async function runConfiguredHook(
 				const reason = result.idleTimedOut
 					? " (idle timeout - no output received)"
 					: "";
+
+				const outputRef = result.outputFile
+					? `\n\nOutput saved to: ${result.outputFile}`
+					: "";
+				const debugRef = result.debugFile
+					? `\nDebug info saved to: ${result.debugFile}`
+					: "";
+
 				console.error(
-					`\n❌ The command \`${cmdStr}\` failed${reason}.\n\n` +
-						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
+					`\n❌ The command \`${cmdStr}\` failed${reason}.${outputRef}${debugRef}\n\n` +
+						`Review the output file above and fix all issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -461,35 +588,43 @@ export async function runConfiguredHook(
 		const regularFailures = failures.filter((f) => !f.idleTimedOut);
 
 		console.error(
-			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n\n` +
-				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
+			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n`,
 		);
 
-		for (const failure of regularFailures) {
+		// Helper to format failure with output file reference
+		const formatFailure = (failure: (typeof failures)[0]) => {
 			const cmdStr =
 				failure.dir === "."
 					? failure.command
 					: `cd ${failure.dir} && ${failure.command}`;
-			console.error(`  • \`${cmdStr}\``);
+			let msg = `  • \`${cmdStr}\``;
+			if (failure.outputFile) {
+				msg += `\n    Output: ${failure.outputFile}`;
+			}
+			if (failure.debugFile) {
+				msg += `\n    Debug: ${failure.debugFile}`;
+			}
+			return msg;
+		};
+
+		if (regularFailures.length > 0) {
+			console.error("\nFailed commands:\n");
+			for (const failure of regularFailures) {
+				console.error(formatFailure(failure));
+			}
 		}
 
 		if (idleTimeoutFailures.length > 0) {
 			console.error(`\n⏰ Idle timeout failures (no output received):\n`);
 			for (const failure of idleTimeoutFailures) {
-				const cmdStr =
-					failure.dir === "."
-						? failure.command
-						: `cd ${failure.dir} && ${failure.command}`;
-				console.error(`  • \`${cmdStr}\``);
+				console.error(formatFailure(failure));
 			}
 			console.error(
-				`\nThese commands hung without producing output. Check for blocking operations or infinite loops.\n`,
+				`\nThese commands hung without producing output. Check for blocking operations or infinite loops.`,
 			);
 		}
 
-		console.error(
-			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
-		);
+		console.error(`\nReview the output files above and fix all issues.\n`);
 		process.exit(2);
 	}
 
