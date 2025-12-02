@@ -1,22 +1,23 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createInterface } from "node:readline";
 import { render } from "ink";
 import React from "react";
 import { HookTestUI } from "./hook-test-ui.js";
 
 /**
- * Wait for user to press Enter
+ * Wait for user to press any key
+ * Uses raw mode to capture keypress without readline interference
  */
-function waitForEnter(): Promise<void> {
+function waitForKeypress(): Promise<void> {
 	return new Promise((resolve) => {
-		const rl = createInterface({
-			input: process.stdin,
-			output: process.stdout,
-		});
-		rl.question("\nPress Enter to return to list...", () => {
-			rl.close();
+		process.stdout.write("\nPress any key to return to list...");
+
+		// Ensure stdin is in raw mode for keypress capture
+		process.stdin.setRawMode(true);
+		process.stdin.resume();
+		process.stdin.once("data", () => {
+			process.stdout.write("\n");
 			resolve();
 		});
 	});
@@ -681,7 +682,7 @@ async function executeHooksWithUI(
 			}
 
 			// Wait for user
-			await waitForEnter();
+			await waitForKeypress();
 
 			// Remount Ink with current state
 			const newRender = render(
