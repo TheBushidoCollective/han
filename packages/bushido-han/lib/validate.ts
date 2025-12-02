@@ -1,11 +1,12 @@
 import { execSync } from "node:child_process";
 import {
+	buildManifest,
 	checkForChanges,
 	findDirectoriesWithMarkers,
-	trackFiles,
+	findFilesWithGlob,
+	saveCacheManifest,
 } from "./hook-cache.js";
 import {
-	getConfigFilePaths,
 	getHookConfigs,
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
@@ -235,20 +236,18 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 			continue;
 		}
 
-		// If --cache is enabled, check for changes (files AND config files)
+		// If --cache is enabled, check for changes
 		if (cache && config.ifChanged && config.ifChanged.length > 0) {
 			const cacheKey = getCacheKeyForDirectory(
 				hookName,
 				config.directory,
 				projectRoot,
 			);
-			const configFiles = getConfigFilePaths(pluginRoot, config.directory);
 			const hasChanges = checkForChanges(
 				pluginName,
 				cacheKey,
 				config.directory,
 				config.ifChanged,
-				configFiles,
 			);
 
 			if (!hasChanges) {
@@ -321,14 +320,9 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 					config.directory,
 					projectRoot,
 				);
-				const configFiles = getConfigFilePaths(pluginRoot, config.directory);
-				trackFiles(
-					pluginName,
-					cacheKey,
-					config.directory,
-					config.ifChanged,
-					configFiles,
-				);
+				const files = findFilesWithGlob(config.directory, config.ifChanged);
+				const manifest = buildManifest(files, config.directory);
+				saveCacheManifest(pluginName, cacheKey, manifest);
 			}
 		}
 	}

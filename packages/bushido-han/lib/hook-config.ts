@@ -249,30 +249,3 @@ export function listAvailableHooks(pluginRoot: string): string[] {
 
 	return Object.keys(pluginConfig.hooks);
 }
-
-/**
- * Get the paths to config files that should be tracked for cache invalidation.
- * Returns absolute paths to han-config.json (plugin) and han-config.yml (user) if they exist.
- *
- * @param pluginRoot - The plugin root directory (CLAUDE_PLUGIN_ROOT)
- * @param targetDirectory - The target directory where user config might exist
- * @returns Array of absolute paths to config files that exist
- */
-export function getConfigFilePaths(
-	pluginRoot: string,
-	targetDirectory: string,
-): string[] {
-	const paths: string[] = [];
-
-	const pluginConfigPath = join(pluginRoot, "han-config.json");
-	if (existsSync(pluginConfigPath)) {
-		paths.push(pluginConfigPath);
-	}
-
-	const userConfigPath = join(targetDirectory, "han-config.yml");
-	if (existsSync(userConfigPath)) {
-		paths.push(userConfigPath);
-	}
-
-	return paths;
-}
