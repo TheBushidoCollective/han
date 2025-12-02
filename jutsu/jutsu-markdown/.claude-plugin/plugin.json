@@ -1,6 +1,6 @@
 {
   "name": "jutsu-markdown",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Markdown documentation skills and linting with markdownlint.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["markdown", "markdownlint", "documentation", "linting", "formatting"]
+  "keywords": [
+    "markdown",
+    "markdownlint",
+    "documentation",
+    "linting",
+    "formatting"
+  ]
 }
