@@ -15,6 +15,14 @@ Markdown documentation skills and linting with markdownlint.
 
 This jutsu provides the following skills:
 
+#### Markdown Fundamentals
+
+- **markdown-syntax-fundamentals**: Core markdown syntax for headings, text formatting, lists, links, images, code blocks, and blockquotes
+- **markdown-tables**: Table syntax, alignment, escaping, and best practices for complex table layouts
+- **markdown-documentation**: Writing effective technical documentation, READMEs, changelogs, and API docs
+
+#### Markdownlint
+
 - **markdownlint-configuration**: Configure markdownlint rules and options including rule management, configuration files, and style inheritance
 - **markdownlint-custom-rules**: Create custom linting rules including rule structure, parser integration, and automatic fixing
 - **markdownlint-integration**: Integrate markdownlint into development workflows including CLI usage, programmatic API, and CI/CD pipelines
