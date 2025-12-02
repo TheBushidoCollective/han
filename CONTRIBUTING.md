@@ -41,7 +41,7 @@ Create validation hooks for languages, frameworks, or tools.
 **Structure:**
 
 ```
-buki-{name}/
+jutsu-{name}/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── hooks/
@@ -111,12 +111,12 @@ Add MCP servers that provide external knowledge and integrations.
 - Follow MCP server specifications
 - Include clear documentation
 - Provide value beyond what's available in Claude's knowledge
-- Add to `/sensei/` directory
+- Add to `/hashi/` directory
 
 **Structure:**
 
 ```
-sensei-{name}/
+hashi-{name}/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── .mcp.json
@@ -186,10 +186,10 @@ Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-se
 
 **What Claude Will Generate:**
 
-- `buki-{name}/.claude-plugin/marketplace.json` - Plugin metadata
-- `buki-{name}/hooks/hooks.json` - Validation hooks with proper `npx @thebushidocollective/han hook run` usage
-- `buki-{name}/README.md` - Installation and usage documentation
-- `buki-{name}/skills/{skill-name}/SKILL.md` - Comprehensive skill documentation
+- `jutsu-{name}/.claude-plugin/marketplace.json` - Plugin metadata
+- `jutsu-{name}/hooks/hooks.json` - Validation hooks with proper `npx @thebushidocollective/han hook run` usage
+- `jutsu-{name}/README.md` - Installation and usage documentation
+- `jutsu-{name}/skills/{skill-name}/SKILL.md` - Comprehensive skill documentation
 
 ### Creating a Dō Discipline Agent
 
@@ -267,7 +267,7 @@ Multiple complete plugins with all necessary files, maintaining consistency acro
 When you request plugin generation, Claude will:
 
 - ✅ Use proper directory structure
-- ✅ Follow naming conventions (buki-*, do-*, sensei-*)
+- ✅ Follow naming conventions (jutsu-*, do-*, hashi-*)
 - ✅ Include marketplace.json with metadata
 - ✅ Create hooks.json with `npx @thebushidocollective/han hook run` patterns
 - ✅ Generate comprehensive README.md files
@@ -316,7 +316,7 @@ git checkout -b feature/your-feature-name
 
 ### 4. Test Thoroughly
 
-For buki plugins:
+For jutsu plugins:
 
 ```bash
 # Test validation hooks work correctly
@@ -358,9 +358,9 @@ npm test
 
 ### Buki (Weapons)
 
-- `buki-{tool-name}` - e.g., `buki-jest`, `buki-typescript`
+- `jutsu-{tool-name}` - e.g., `jutsu-jest`, `jutsu-typescript`
 - Use lowercase, hyphenated names
-- Name after the tool, not the language (e.g., `buki-pytest` not `buki-python-testing`)
+- Name after the tool, not the language (e.g., `jutsu-pytest` not `jutsu-python-testing`)
 
 ### Dō (Disciplines)
 
@@ -370,7 +370,7 @@ npm test
 
 ### Sensei (Teachers)
 
-- `sensei-{service}` - e.g., `sensei-context7`, `sensei-github`
+- `hashi-{service}` - e.g., `hashi-context7`, `hashi-github`
 - Name after the knowledge source or service
 
 ## Code Style
@@ -399,7 +399,7 @@ npm test
 
 ### Use npx @thebushidocollective/han hook run
 
-All buki plugins should use the `npx @thebushidocollective/han hook run` command:
+All jutsu plugins should use the `npx @thebushidocollective/han hook run` command:
 
 ```json
 {

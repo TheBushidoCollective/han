@@ -5,9 +5,9 @@
 Han is a curated marketplace of Claude Code plugins built on Bushido principles. The codebase consists of:
 
 - **bushido/** - Core foundation plugin with quality principles
-- **buki/** - Weapon plugins (language/tool skills with validation hooks)
+- **jutsu/** - Technique plugins (language/tool skills with validation hooks)
 - **do/** - Discipline plugins (specialized agents)
-- **sensei/** - Teacher plugins (MCP servers for external integrations)
+- **hashi/** - Bridge plugins (MCP servers for external integrations)
 - **packages/bushido-han/** - CLI tool for plugin installation and management
 
 ## Development Commands
@@ -100,9 +100,9 @@ Version bumps happen automatically via GitHub Actions:
 ## Conventions
 
 - Use `npx biome format --write .` for formatting
-- Plugin names follow patterns: `buki-*`, `do-*`, `sensei-*`
+- Plugin names follow patterns: `jutsu-*`, `do-*`, `hashi-*`
 - Always include `bushido` as a dependency in recommendations
-- MCP servers in sensei plugins should use HTTP transport with OAuth when available
+- MCP servers in hashi plugins should use HTTP transport with OAuth when available
 
 ## Plugin Installation
 

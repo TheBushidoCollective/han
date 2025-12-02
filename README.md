@@ -63,7 +63,7 @@ Then install individual plugins:
 
 ```
 /plugin install bushido@han
-/plugin install buki-typescript@han
+/plugin install jutsu-typescript@han
 ```
 
 > **Note:** For hooks to work, you must also install `han` globally and ensure it's in your PATH. See [Automatic Installation](#automatic-installation-recommended) above.
@@ -112,7 +112,7 @@ Language and tool plugins that provide validation hooks for your development wor
 
 Each buki plugin includes validation hooks that run on Stop and SubagentStop events, ensuring code quality before you continue.
 
-**Browse all buki plugins:** Check the `/buki` directory in this repository.
+**Browse all jutsu plugins:** Check the `/buki` directory in this repository.
 
 ### 🛤️ Dō (The Way)
 
@@ -137,7 +137,7 @@ MCP servers that provide external knowledge and integrations.
 - API references
 - External service integrations
 
-**Browse all sensei plugins:** Check the `/sensei` directory in this repository.
+**Browse all hashi plugins:** Check the `/sensei` directory in this repository.
 
 ## Using the Han CLI
 
@@ -153,7 +153,7 @@ han plugin install
 han plugin install --auto
 
 # Install specific plugin by name
-han plugin install buki-typescript
+han plugin install jutsu-typescript
 ```
 
 ### Search Plugins

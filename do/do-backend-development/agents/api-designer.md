@@ -783,7 +783,7 @@ When evaluating or recommending API technologies, consider:
 
 **Note**: For implementation-specific guidance:
 
-- GraphQL with Elixir/Absinthe: See buki-elixir plugin
+- GraphQL with Elixir/Absinthe: See jutsu-elixir plugin
 - REST with specific frameworks: See relevant Buki plugin
 - API gateway configuration: See infrastructure plugins
 

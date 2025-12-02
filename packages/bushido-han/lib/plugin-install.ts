@@ -15,35 +15,35 @@ import {
 function showAvailablePlugins(marketplacePlugins: MarketplacePlugin[]): void {
 	console.error("Available plugins:");
 
-	const bukis = marketplacePlugins
-		.filter((p) => p.name.startsWith("buki-"))
+	const jutsus = marketplacePlugins
+		.filter((p) => p.name.startsWith("jutsu-"))
 		.map((p) => p.name);
 	const dos = marketplacePlugins
 		.filter((p) => p.name.startsWith("do-"))
 		.map((p) => p.name);
-	const senseis = marketplacePlugins
-		.filter((p) => p.name.startsWith("sensei-"))
+	const hashis = marketplacePlugins
+		.filter((p) => p.name.startsWith("hashi-"))
 		.map((p) => p.name);
 	const others = marketplacePlugins
 		.filter(
 			(p) =>
-				!p.name.startsWith("buki-") &&
+				!p.name.startsWith("jutsu-") &&
 				!p.name.startsWith("do-") &&
-				!p.name.startsWith("sensei-"),
+				!p.name.startsWith("hashi-"),
 		)
 		.map((p) => p.name);
 
 	if (others.length > 0) {
 		console.error(`  Core: ${others.join(", ")}`);
 	}
-	if (bukis.length > 0) {
-		console.error(`  Bukis: ${bukis.join(", ")}`);
+	if (jutsus.length > 0) {
+		console.error(`  Jutsus: ${jutsus.join(", ")}`);
 	}
 	if (dos.length > 0) {
 		console.error(`  Dōs: ${dos.join(", ")}`);
 	}
-	if (senseis.length > 0) {
-		console.error(`  Senseis: ${senseis.join(", ")}`);
+	if (hashis.length > 0) {
+		console.error(`  Hashis: ${hashis.join(", ")}`);
 	}
 
 	console.error("\nTip: Use 'han plugin search <query>' to find plugins.");

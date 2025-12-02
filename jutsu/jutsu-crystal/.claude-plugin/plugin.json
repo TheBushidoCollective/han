@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-crystal",
+  "version": "1.7.3",
+  "description": "Crystal language development skills and best practices.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["crystal", "language"]
+}

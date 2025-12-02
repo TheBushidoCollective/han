@@ -1,0 +1,33 @@
+# Angular
+
+Advanced Angular skills for dependency injection, RxJS, and signals.
+
+## Skills
+
+This plugin provides the following skills:
+
+- **Angular Dependency Injection**
+- **Angular Rxjs Patterns**
+- **Angular Signals**
+
+## Usage
+
+Once enabled, Claude will automatically apply these skills when working with relevant code. The plugin provides context and expertise that Claude uses to:
+
+- Write idiomatic code following best practices
+- Suggest appropriate patterns and architectures
+- Catch common mistakes and anti-patterns
+- Provide framework-specific guidance
+
+## Installation
+
+Install with npx (no installation required):
+
+```bash
+npx @thebushidocollective/han plugin install jutsu-angular
+```
+
+## License
+
+Licensed under MIT -
+see repository for details.

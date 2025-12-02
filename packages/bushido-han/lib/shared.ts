@@ -435,7 +435,7 @@ export function parsePluginRecommendations(content: string): string[] {
 	}
 
 	// Fallback: look for plugin names mentioned
-	const pluginPattern = /(buki-[\w-]+|do-[\w-]+|sensei-[\w-]+|bushido)/g;
+	const pluginPattern = /(jutsu-[\w-]+|do-[\w-]+|hashi-[\w-]+|bushido)/g;
 	const matches = content.match(pluginPattern);
 	if (matches) {
 		// Ensure bushido is included and deduplicate

@@ -1,0 +1,22 @@
+{
+  "name": "jutsu-react-native-web",
+  "version": "1.2.3",
+  "description": "Validation and quality enforcement for React Native Web projects.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "react-native-web",
+    "react-native",
+    "react",
+    "web",
+    "validation",
+    "typescript",
+    "quality",
+    "enforcement"
+  ]
+}

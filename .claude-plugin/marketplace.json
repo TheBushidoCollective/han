@@ -10,18 +10,18 @@
   },
   "plugins": [
     {
-      "name": "buki-absinthe-graphql",
+      "name": "jutsu-absinthe-graphql",
       "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
-      "source": "./buki/buki-absinthe-graphql",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-absinthe-graphql",
+      "category": "Technique",
       "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"],
       "configHash": null
     },
     {
-      "name": "buki-act",
+      "name": "jutsu-act",
       "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
-      "source": "./buki/buki-act",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-act",
+      "category": "Technique",
       "keywords": [
         "github-actions",
         "act",
@@ -34,10 +34,10 @@
       "configHash": "1d72e2ccff00"
     },
     {
-      "name": "buki-android",
+      "name": "jutsu-android",
       "description": "Android development validation with Gradle build hooks.",
-      "source": "./buki/buki-android",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-android",
+      "category": "Technique",
       "keywords": [
         "android",
         "gradle",
@@ -49,26 +49,26 @@
       "configHash": "ac4b75c21031"
     },
     {
-      "name": "buki-ameba",
+      "name": "jutsu-ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
-      "source": "./buki/buki-ameba",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ameba",
+      "category": "Technique",
       "keywords": ["crystal", "linting", "style", "analysis"],
       "configHash": "0313a519736b"
     },
     {
-      "name": "buki-angular",
+      "name": "jutsu-angular",
       "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
-      "source": "./buki/buki-angular",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-angular",
+      "category": "Technique",
       "keywords": ["angular", "rxjs", "signals", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-ansible",
+      "name": "jutsu-ansible",
       "description": "Ansible playbook validation and configuration management best practices",
-      "source": "./buki/buki-ansible",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ansible",
+      "category": "Technique",
       "keywords": [
         "ansible",
         "configuration-management",
@@ -78,18 +78,18 @@
       "configHash": "6c1ba0c1e889"
     },
     {
-      "name": "buki-apollo-graphql",
+      "name": "jutsu-apollo-graphql",
       "description": "Advanced Apollo GraphQL skills for client and server development",
-      "source": "./buki/buki-apollo-graphql",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-apollo-graphql",
+      "category": "Technique",
       "keywords": ["apollo", "graphql", "client", "server", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-bdd",
+      "name": "jutsu-bdd",
       "description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns",
-      "source": "./buki/buki-bdd",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-bdd",
+      "category": "Technique",
       "keywords": [
         "bdd",
         "behavior-driven-development",
@@ -100,10 +100,10 @@
       "configHash": "6a3ed1771f15"
     },
     {
-      "name": "buki-biome",
+      "name": "jutsu-biome",
       "description": "Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.",
-      "source": "./buki/buki-biome",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-biome",
+      "category": "Technique",
       "keywords": [
         "biome",
         "linting",
@@ -115,10 +115,10 @@
       "configHash": "0b29333edd05"
     },
     {
-      "name": "buki-bun",
+      "name": "jutsu-bun",
       "description": "Validation and quality enforcement for Bun.js projects with runtime, testing, bundler, package manager, and SQLite skills.",
-      "source": "./buki/buki-bun",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-bun",
+      "category": "Technique",
       "keywords": [
         "bun",
         "javascript",
@@ -130,66 +130,66 @@
       "configHash": "260b0544c7da"
     },
     {
-      "name": "buki-c",
+      "name": "jutsu-c",
       "description": "Advanced C programming skills for systems programming and memory management",
-      "source": "./buki/buki-c",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-c",
+      "category": "Technique",
       "keywords": ["c", "systems-programming", "memory-management", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-checkstyle",
+      "name": "jutsu-checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
-      "source": "./buki/buki-checkstyle",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-checkstyle",
+      "category": "Technique",
       "keywords": ["checkstyle", "linting", "java", "skill"],
       "configHash": "83faa73ce985"
     },
     {
-      "name": "buki-clippy",
+      "name": "jutsu-clippy",
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
-      "source": "./buki/buki-clippy",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-clippy",
+      "category": "Technique",
       "keywords": ["clippy", "linting", "rust", "skill"],
       "configHash": "3577b6fefb0d"
     },
     {
-      "name": "buki-cpp",
+      "name": "jutsu-cpp",
       "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
-      "source": "./buki/buki-cpp",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-cpp",
+      "category": "Technique",
       "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-credo",
+      "name": "jutsu-credo",
       "description": "Credo skills for Elixir code analysis and style checking",
-      "source": "./buki/buki-credo",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-credo",
+      "category": "Technique",
       "keywords": ["elixir", "linting", "style", "analysis"],
       "configHash": "605888c67669"
     },
     {
-      "name": "buki-crystal",
+      "name": "jutsu-crystal",
       "description": "Skills for Crystal language development.",
-      "source": "./buki/buki-crystal",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-crystal",
+      "category": "Technique",
       "keywords": ["crystal", "language", "performance"],
       "configHash": "3fb88e6bf09c"
     },
     {
-      "name": "buki-csharp",
+      "name": "jutsu-csharp",
       "description": "Advanced C# programming skills for async patterns and LINQ",
-      "source": "./buki/buki-csharp",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-csharp",
+      "category": "Technique",
       "keywords": ["csharp", "c#", "dotnet", "async", "linq", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-cucumber",
+      "name": "jutsu-cucumber",
       "description": "Comprehensive Cucumber BDD testing skills for behavior-driven development with Gherkin syntax",
-      "source": "./buki/buki-cucumber",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-cucumber",
+      "category": "Technique",
       "keywords": [
         "cucumber",
         "bdd",
@@ -200,58 +200,58 @@
       "configHash": null
     },
     {
-      "name": "buki-cypress",
+      "name": "jutsu-cypress",
       "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
-      "source": "./buki/buki-cypress",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-cypress",
+      "category": "Technique",
       "keywords": ["cypress", "testing", "e2e", "javascript", "skill"],
       "configHash": "6f6efea4c01b"
     },
     {
-      "name": "buki-dialyzer",
+      "name": "jutsu-dialyzer",
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
-      "source": "./buki/buki-dialyzer",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-dialyzer",
+      "category": "Technique",
       "keywords": ["elixir", "erlang", "static-analysis", "types"],
       "configHash": "3d74062a8a12"
     },
     {
-      "name": "buki-django",
+      "name": "jutsu-django",
       "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
-      "source": "./buki/buki-django",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-django",
+      "category": "Technique",
       "keywords": ["django", "python", "orm", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-docker-compose",
+      "name": "jutsu-docker-compose",
       "description": "Docker Compose validation and best practices for container orchestration",
-      "source": "./buki/buki-docker-compose",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-docker-compose",
+      "category": "Technique",
       "keywords": ["docker", "docker-compose", "containers", "devops"],
       "configHash": "73832ec6ccb9"
     },
     {
-      "name": "buki-ecto",
+      "name": "jutsu-ecto",
       "description": "Ecto skills for database interactions in Elixir",
-      "source": "./buki/buki-ecto",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ecto",
+      "category": "Technique",
       "keywords": ["elixir", "database", "orm", "ecto"],
       "configHash": null
     },
     {
-      "name": "buki-elixir",
+      "name": "jutsu-elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
-      "source": "./buki/buki-elixir",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-elixir",
+      "category": "Technique",
       "keywords": ["elixir", "otp", "ecto", "skill"],
       "configHash": "522f7a4d1e7b"
     },
     {
-      "name": "buki-erlang",
+      "name": "jutsu-erlang",
       "description": "Advanced Erlang programming skills for concurrent and distributed systems",
-      "source": "./buki/buki-erlang",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-erlang",
+      "category": "Technique",
       "keywords": [
         "erlang",
         "beam",
@@ -263,34 +263,34 @@
       "configHash": "a5bcd6540296"
     },
     {
-      "name": "buki-eslint",
+      "name": "jutsu-eslint",
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
-      "source": "./buki/buki-eslint",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-eslint",
+      "category": "Technique",
       "keywords": ["eslint", "linting", "javascript", "typescript", "skill"],
       "configHash": "25af0143a971"
     },
     {
-      "name": "buki-expo",
+      "name": "jutsu-expo",
       "description": "Validation and quality enforcement for Expo React Native projects with config, router, modules, updates, and build skills.",
-      "source": "./buki/buki-expo",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-expo",
+      "category": "Technique",
       "keywords": ["expo", "react-native", "mobile", "ios", "android"],
       "configHash": null
     },
     {
-      "name": "buki-fastapi",
+      "name": "jutsu-fastapi",
       "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
-      "source": "./buki/buki-fastapi",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-fastapi",
+      "category": "Technique",
       "keywords": ["fastapi", "python", "async", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-functional-programming",
+      "name": "jutsu-functional-programming",
       "description": "Functional programming paradigm, patterns, and best practices across languages",
-      "source": "./buki/buki-functional-programming",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-functional-programming",
+      "category": "Technique",
       "keywords": [
         "functional-programming",
         "fp",
@@ -300,82 +300,82 @@
       "configHash": null
     },
     {
-      "name": "buki-gleam",
+      "name": "jutsu-gleam",
       "description": "Advanced Gleam programming skills for functional BEAM development",
-      "source": "./buki/buki-gleam",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-gleam",
+      "category": "Technique",
       "keywords": ["gleam", "beam", "functional", "erlang", "skill"],
       "configHash": "e4d39f9fb6d4"
     },
     {
-      "name": "buki-go",
+      "name": "jutsu-go",
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
-      "source": "./buki/buki-go",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-go",
+      "category": "Technique",
       "keywords": ["go", "golang", "concurrency", "skill"],
       "configHash": "359e1dd38370"
     },
     {
-      "name": "buki-graphql",
+      "name": "jutsu-graphql",
       "description": "Skills for GraphQL schema design and queries.",
-      "source": "./buki/buki-graphql",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-graphql",
+      "category": "Technique",
       "keywords": ["graphql", "api", "queries"],
       "configHash": null
     },
     {
-      "name": "buki-helm",
+      "name": "jutsu-helm",
       "description": "Helm chart validation and best practices for Kubernetes package management",
-      "source": "./buki/buki-helm",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-helm",
+      "category": "Technique",
       "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"],
       "configHash": "9e37f54937b8"
     },
     {
-      "name": "buki-ink",
+      "name": "jutsu-ink",
       "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
-      "source": "./buki/buki-ink",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ink",
+      "category": "Technique",
       "keywords": ["ink", "terminal", "cli", "react", "ui", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-ios",
+      "name": "jutsu-ios",
       "description": "iOS development validation with Xcode build hooks.",
-      "source": "./buki/buki-ios",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ios",
+      "category": "Technique",
       "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"],
       "configHash": "651f28663474"
     },
     {
-      "name": "buki-java",
+      "name": "jutsu-java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
-      "source": "./buki/buki-java",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-java",
+      "category": "Technique",
       "keywords": ["java", "streams", "concurrency", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-jest",
+      "name": "jutsu-jest",
       "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
-      "source": "./buki/buki-jest",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-jest",
+      "category": "Technique",
       "keywords": ["jest", "testing", "javascript", "typescript", "skill"],
       "configHash": "2e1341599c1f"
     },
     {
-      "name": "buki-junit",
+      "name": "jutsu-junit",
       "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
-      "source": "./buki/buki-junit",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-junit",
+      "category": "Technique",
       "keywords": ["junit", "testing", "java", "skill"],
       "configHash": "23bb04919acf"
     },
     {
-      "name": "buki-testng",
+      "name": "jutsu-testng",
       "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
-      "source": "./buki/buki-testng",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-testng",
+      "category": "Technique",
       "keywords": [
         "testng",
         "testing",
@@ -387,58 +387,58 @@
       "configHash": "99f014eff059"
     },
     {
-      "name": "buki-kotlin",
+      "name": "jutsu-kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
-      "source": "./buki/buki-kotlin",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-kotlin",
+      "category": "Technique",
       "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"],
       "configHash": "66e4c689207e"
     },
     {
-      "name": "buki-lerna",
+      "name": "jutsu-lerna",
       "description": "Lerna monorepo management skills with bootstrap validation hooks.",
-      "source": "./buki/buki-lerna",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-lerna",
+      "category": "Technique",
       "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"],
       "configHash": "7809e84460e4"
     },
     {
-      "name": "buki-kubernetes",
+      "name": "jutsu-kubernetes",
       "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
-      "source": "./buki/buki-kubernetes",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-kubernetes",
+      "category": "Technique",
       "keywords": ["kubernetes", "k8s", "devops", "infrastructure"],
       "configHash": null
     },
     {
-      "name": "buki-kustomize",
+      "name": "jutsu-kustomize",
       "description": "Kustomize configuration validation for Kubernetes customization",
-      "source": "./buki/buki-kustomize",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-kustomize",
+      "category": "Technique",
       "keywords": ["kustomize", "kubernetes", "k8s", "devops"],
       "configHash": "6c81134a69d7"
     },
     {
-      "name": "buki-lua",
+      "name": "jutsu-lua",
       "description": "Advanced Lua programming skills for embedded scripting and game development",
-      "source": "./buki/buki-lua",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-lua",
+      "category": "Technique",
       "keywords": ["lua", "scripting", "embedded", "gaming", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-markdownlint",
+      "name": "jutsu-markdownlint",
       "description": "Markdownlint configuration and validation for consistent markdown formatting",
-      "source": "./buki/buki-markdownlint",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-markdownlint",
+      "category": "Technique",
       "keywords": ["markdownlint", "markdown", "linting", "documentation"],
       "configHash": "d4fd9bc99ecc"
     },
     {
-      "name": "buki-maven",
+      "name": "jutsu-maven",
       "description": "Validation and quality enforcement for Apache Maven projects with dependency management, build lifecycle, and plugin configuration skills.",
-      "source": "./buki/buki-maven",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-maven",
+      "category": "Technique",
       "keywords": [
         "maven",
         "java",
@@ -450,18 +450,18 @@
       "configHash": "681c5c170399"
     },
     {
-      "name": "buki-mocha",
+      "name": "jutsu-mocha",
       "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
-      "source": "./buki/buki-mocha",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-mocha",
+      "category": "Technique",
       "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"],
       "configHash": "796ce17b27d7"
     },
     {
-      "name": "buki-monorepo",
+      "name": "jutsu-monorepo",
       "description": "Advanced monorepo development skills for architecture, tooling, and workflow management across multiple packages and projects.",
-      "source": "./buki/buki-monorepo",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-monorepo",
+      "category": "Technique",
       "keywords": [
         "monorepo",
         "workspace",
@@ -473,50 +473,50 @@
       "configHash": null
     },
     {
-      "name": "buki-nestjs",
+      "name": "jutsu-nestjs",
       "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
-      "source": "./buki/buki-nestjs",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-nestjs",
+      "category": "Technique",
       "keywords": ["nestjs", "typescript", "nodejs", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-nextjs",
+      "name": "jutsu-nextjs",
       "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
-      "source": "./buki/buki-nextjs",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-nextjs",
+      "category": "Technique",
       "keywords": ["nextjs", "react", "ssr", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-nim",
+      "name": "jutsu-nim",
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
-      "source": "./buki/buki-nim",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-nim",
+      "category": "Technique",
       "keywords": ["nim", "systems-programming", "metaprogramming", "skill"],
       "configHash": "a6494213411d"
     },
     {
-      "name": "buki-npm",
+      "name": "jutsu-npm",
       "description": "NPM package manager skills with dependency validation hooks.",
-      "source": "./buki/buki-npm",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-npm",
+      "category": "Technique",
       "keywords": ["npm", "package-manager", "dependencies", "node"],
       "configHash": "9c56658a9aae"
     },
     {
-      "name": "buki-objective-c",
+      "name": "jutsu-objective-c",
       "description": "Advanced Objective-C programming skills for iOS and macOS development",
-      "source": "./buki/buki-objective-c",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-objective-c",
+      "category": "Technique",
       "keywords": ["objective-c", "objc", "ios", "macos", "arc", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-oop",
+      "name": "jutsu-oop",
       "description": "Object-Oriented Programming principles, design patterns, and best practices",
-      "source": "./buki/buki-oop",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-oop",
+      "category": "Technique",
       "keywords": [
         "oop",
         "object-oriented",
@@ -526,34 +526,34 @@
       "configHash": null
     },
     {
-      "name": "buki-phoenix",
+      "name": "jutsu-phoenix",
       "description": "Phoenix Framework skills for building web applications",
-      "source": "./buki/buki-phoenix",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-phoenix",
+      "category": "Technique",
       "keywords": ["elixir", "phoenix", "web", "framework"],
       "configHash": null
     },
     {
-      "name": "buki-php",
+      "name": "jutsu-php",
       "description": "Advanced PHP programming skills for modern PHP and security patterns",
-      "source": "./buki/buki-php",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-php",
+      "category": "Technique",
       "keywords": ["php", "composer", "security", "web", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-playwright",
+      "name": "jutsu-playwright",
       "description": "Advanced Playwright skills for end-to-end testing, test architecture, and test automation best practices.",
-      "source": "./buki/buki-playwright",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-playwright",
+      "category": "Technique",
       "keywords": ["playwright", "testing", "e2e", "automation", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-prettier",
+      "name": "jutsu-prettier",
       "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
-      "source": "./buki/buki-prettier",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-prettier",
+      "category": "Technique",
       "keywords": [
         "prettier",
         "formatting",
@@ -564,66 +564,66 @@
       "configHash": "f25230e06cb2"
     },
     {
-      "name": "buki-pulumi",
+      "name": "jutsu-pulumi",
       "description": "Pulumi infrastructure-as-code validation and best practices",
-      "source": "./buki/buki-pulumi",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-pulumi",
+      "category": "Technique",
       "keywords": ["pulumi", "infrastructure", "iac", "devops"],
       "configHash": "819c714d19df"
     },
     {
-      "name": "buki-pylint",
+      "name": "jutsu-pylint",
       "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
-      "source": "./buki/buki-pylint",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-pylint",
+      "category": "Technique",
       "keywords": ["pylint", "linting", "python", "skill"],
       "configHash": "fecd3c3651b9"
     },
     {
-      "name": "buki-pytest",
+      "name": "jutsu-pytest",
       "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
-      "source": "./buki/buki-pytest",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-pytest",
+      "category": "Technique",
       "keywords": ["pytest", "testing", "python", "skill"],
       "configHash": "db31533e9abc"
     },
     {
-      "name": "buki-python",
+      "name": "jutsu-python",
       "description": "Advanced Python skills for type system, async patterns, and data modeling.",
-      "source": "./buki/buki-python",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-python",
+      "category": "Technique",
       "keywords": ["python", "types", "async", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-rails",
+      "name": "jutsu-rails",
       "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
-      "source": "./buki/buki-rails",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-rails",
+      "category": "Technique",
       "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-react",
+      "name": "jutsu-react",
       "description": "Advanced React skills for hooks, context, and performance optimization.",
-      "source": "./buki/buki-react",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-react",
+      "category": "Technique",
       "keywords": ["react", "hooks", "performance", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-react-native",
+      "name": "jutsu-react-native",
       "description": "Validation and quality enforcement for React Native mobile applications with components, navigation, styling, and native modules.",
-      "source": "./buki/buki-react-native",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-react-native",
+      "category": "Technique",
       "keywords": ["react-native", "mobile", "ios", "android", "native"],
       "configHash": null
     },
     {
-      "name": "buki-react-native-web",
+      "name": "jutsu-react-native-web",
       "description": "Validation and quality enforcement for React Native Web projects with cross-platform components, styling, navigation, performance, and testing.",
-      "source": "./buki/buki-react-native-web",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-react-native-web",
+      "category": "Technique",
       "keywords": [
         "react-native-web",
         "react-native",
@@ -635,74 +635,74 @@
       "configHash": null
     },
     {
-      "name": "buki-relay",
+      "name": "jutsu-relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
-      "source": "./buki/buki-relay",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-relay",
+      "category": "Technique",
       "keywords": ["relay", "graphql", "react", "fragments", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-rspec",
+      "name": "jutsu-rspec",
       "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
-      "source": "./buki/buki-rspec",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-rspec",
+      "category": "Technique",
       "keywords": ["rspec", "testing", "ruby", "bdd", "skill"],
       "configHash": "10a77cb745cf"
     },
     {
-      "name": "buki-ruby",
+      "name": "jutsu-ruby",
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
-      "source": "./buki/buki-ruby",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-ruby",
+      "category": "Technique",
       "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"],
       "configHash": "213ef4b38e77"
     },
     {
-      "name": "buki-rubocop",
+      "name": "jutsu-rubocop",
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
-      "source": "./buki/buki-rubocop",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-rubocop",
+      "category": "Technique",
       "keywords": ["rubocop", "linting", "ruby", "skill"],
       "configHash": "e46e5d50b2e3"
     },
     {
-      "name": "buki-rust",
+      "name": "jutsu-rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
-      "source": "./buki/buki-rust",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-rust",
+      "category": "Technique",
       "keywords": ["rust", "ownership", "async", "skill"],
       "configHash": "6eff2f6ff89a"
     },
     {
-      "name": "buki-scala",
+      "name": "jutsu-scala",
       "description": "Advanced Scala programming skills for functional programming and type systems",
-      "source": "./buki/buki-scala",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-scala",
+      "category": "Technique",
       "keywords": ["scala", "functional", "jvm", "type-system", "skill"],
       "configHash": "8f20a4ee3db8"
     },
     {
-      "name": "buki-sip",
+      "name": "jutsu-sip",
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
-      "source": "./buki/buki-sip",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-sip",
+      "category": "Technique",
       "keywords": ["sip", "voip", "telecommunications", "real-time"],
       "configHash": null
     },
     {
-      "name": "buki-swift",
+      "name": "jutsu-swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
-      "source": "./buki/buki-swift",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-swift",
+      "category": "Technique",
       "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"],
       "configHash": "4c7a6da2f6e7"
     },
     {
-      "name": "buki-tensorflow",
+      "name": "jutsu-tensorflow",
       "description": "TensorFlow machine learning and deep learning framework skills",
-      "source": "./buki/buki-tensorflow",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-tensorflow",
+      "category": "Technique",
       "keywords": [
         "tensorflow",
         "machine-learning",
@@ -712,18 +712,18 @@
       "configHash": null
     },
     {
-      "name": "buki-terraform",
+      "name": "jutsu-terraform",
       "description": "Terraform configuration validation and infrastructure-as-code best practices",
-      "source": "./buki/buki-terraform",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-terraform",
+      "category": "Technique",
       "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"],
       "configHash": "a49ec532fc6a"
     },
     {
-      "name": "buki-tdd",
+      "name": "jutsu-tdd",
       "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement",
-      "source": "./buki/buki-tdd",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-tdd",
+      "category": "Technique",
       "keywords": [
         "tdd",
         "test-driven-development",
@@ -734,18 +734,18 @@
       "configHash": "6a3ed1771f15"
     },
     {
-      "name": "buki-typescript",
+      "name": "jutsu-typescript",
       "description": "Skills for TypeScript type system mastery.",
-      "source": "./buki/buki-typescript",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-typescript",
+      "category": "Technique",
       "keywords": ["typescript", "types", "language"],
       "configHash": "192e4ed71cfb"
     },
     {
-      "name": "buki-vitest",
+      "name": "jutsu-vitest",
       "description": "Comprehensive Vitest testing framework skills for modern Vite-powered JavaScript and TypeScript projects.",
-      "source": "./buki/buki-vitest",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-vitest",
+      "category": "Technique",
       "keywords": [
         "vitest",
         "testing",
@@ -757,26 +757,26 @@
       "configHash": "0eb6cccc4fba"
     },
     {
-      "name": "buki-vue",
+      "name": "jutsu-vue",
       "description": "Advanced Vue skills for Composition API, components, and reactivity.",
-      "source": "./buki/buki-vue",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-vue",
+      "category": "Technique",
       "keywords": ["vue", "composition-api", "reactivity", "skill"],
       "configHash": null
     },
     {
-      "name": "buki-yarn",
+      "name": "jutsu-yarn",
       "description": "Yarn package manager skills with dependency validation hooks.",
-      "source": "./buki/buki-yarn",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-yarn",
+      "category": "Technique",
       "keywords": ["yarn", "package-manager", "dependencies", "node"],
       "configHash": "ed9fe1b555fc"
     },
     {
-      "name": "buki-git-storytelling",
+      "name": "jutsu-git-storytelling",
       "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
-      "source": "./buki/buki-git-storytelling",
-      "category": "Weapon",
+      "source": "./jutsu/jutsu-git-storytelling",
+      "category": "Technique",
       "keywords": [
         "git",
         "storytelling",
@@ -795,10 +795,10 @@
       "configHash": null
     },
     {
-      "name": "sensei-clickup",
+      "name": "hashi-clickup",
       "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
-      "source": "./sensei/sensei-clickup",
-      "category": "Teacher",
+      "source": "./hashi/hashi-clickup",
+      "category": "Bridge",
       "keywords": [
         "mcp",
         "clickup",
@@ -811,26 +811,26 @@
       "configHash": null
     },
     {
-      "name": "sensei-context7",
+      "name": "hashi-context7",
       "description": "MCP server for library documentation and framework examples.",
-      "source": "./sensei/sensei-context7",
-      "category": "Teacher",
+      "source": "./hashi/hashi-context7",
+      "category": "Bridge",
       "keywords": ["mcp", "documentation", "context"],
       "configHash": null
     },
     {
-      "name": "sensei-playwright-mcp",
+      "name": "hashi-playwright-mcp",
       "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
-      "source": "./sensei/sensei-playwright-mcp",
-      "category": "Teacher",
+      "source": "./hashi/hashi-playwright-mcp",
+      "category": "Bridge",
       "keywords": ["mcp", "playwright", "testing", "automation", "server"],
       "configHash": null
     },
     {
-      "name": "sensei-gitlab",
+      "name": "hashi-gitlab",
       "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
-      "source": "./sensei/sensei-gitlab",
-      "category": "Teacher",
+      "source": "./hashi/hashi-gitlab",
+      "category": "Bridge",
       "keywords": [
         "mcp",
         "gitlab",
@@ -844,10 +844,10 @@
       "configHash": null
     },
     {
-      "name": "sensei-github",
+      "name": "hashi-github",
       "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
-      "source": "./sensei/sensei-github",
-      "category": "Teacher",
+      "source": "./hashi/hashi-github",
+      "category": "Bridge",
       "keywords": [
         "mcp",
         "github",
@@ -862,10 +862,10 @@
       "configHash": null
     },
     {
-      "name": "sensei-jira",
+      "name": "hashi-jira",
       "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
-      "source": "./sensei/sensei-jira",
-      "category": "Teacher",
+      "source": "./hashi/hashi-jira",
+      "category": "Bridge",
       "keywords": [
         "mcp",
         "jira",
@@ -878,10 +878,10 @@
       "configHash": null
     },
     {
-      "name": "sensei-linear",
+      "name": "hashi-linear",
       "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
-      "source": "./sensei/sensei-linear",
-      "category": "Teacher",
+      "source": "./hashi/hashi-linear",
+      "category": "Bridge",
       "keywords": [
         "mcp",
         "linear",

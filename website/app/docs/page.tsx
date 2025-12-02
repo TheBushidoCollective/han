@@ -118,7 +118,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 								<InstallMethod
 									title="Manual Plugin Install"
 									description="Install specific plugins by name"
-									code="npx @thebushidocollective/han plugin install buki-typescript"
+									code="npx @thebushidocollective/han plugin install jutsu-typescript"
 								/>
 							</div>
 						</section>
@@ -220,7 +220,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 								</h3>
 								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
 									<code>{`# han-config.yml in your project directory
-buki-eslint:
+jutsu-eslint:
   lint:
     enabled: false  # Disable this hook
     # command: "npm run lint:custom"  # Override command

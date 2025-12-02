@@ -3,17 +3,17 @@
  * server and client components
  */
 export function getCategoryIcon(
-	category: "bushido" | "buki" | "do" | "sensei",
+	category: "bushido" | "jutsu" | "do" | "hashi",
 ): string {
 	switch (category) {
 		case "bushido":
 			return "⛩️";
-		case "buki":
-			return "⚔️";
+		case "jutsu":
+			return "🎯";
 		case "do":
 			return "🛤️";
-		case "sensei":
-			return "🏮";
+		case "hashi":
+			return "🌉";
 		default:
 			return "📦";
 	}

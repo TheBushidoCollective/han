@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-elixir",
+  "version": "1.8.3",
+  "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["elixir", "otp", "ecto"]
+}

@@ -96,7 +96,7 @@ export function loadUserConfig(directory: string): UserConfig | null {
 
 /**
  * Extract plugin name from CLAUDE_PLUGIN_ROOT path
- * e.g., /path/to/buki-elixir -> buki-elixir
+ * e.g., /path/to/jutsu-elixir -> jutsu-elixir
  */
 export function getPluginNameFromRoot(pluginRoot: string): string {
 	const parts = pluginRoot.split("/");

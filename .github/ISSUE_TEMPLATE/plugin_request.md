@@ -14,7 +14,7 @@ assignees: ''
 
 ## Plugin Name
 
-<!-- e.g., buki-mypy, do-devops, sensei-jira -->
+<!-- e.g., jutsu-mypy, do-devops, hashi-jira -->
 
 ## Description
 

@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-cpp",
+  "version": "1.1.2",
+  "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["cpp", "c++", "modern-cpp", "templates"]
+}

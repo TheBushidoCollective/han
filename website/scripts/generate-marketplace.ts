@@ -11,7 +11,7 @@ interface SourcePlugin {
 	name: string;
 	description: string;
 	source: string; // e.g., "./buki/buki-react"
-	category: "Core" | "Weapon" | "Discipline" | "Teacher";
+	category: "Core" | "Technique" | "Discipline" | "Bridge";
 	keywords: string[];
 	configHash: string | null;
 }
@@ -39,7 +39,7 @@ interface PublicPlugin {
 	name: string;
 	description: string;
 	source: PublicPluginSource;
-	category: "Core" | "Weapon" | "Discipline" | "Teacher";
+	category: "Core" | "Technique" | "Discipline" | "Bridge";
 	keywords: string[];
 	configHash: string | null;
 }

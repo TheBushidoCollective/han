@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default function PluginsPage() {
-	const bukiPlugins = getAllPlugins("buki").map((p) => ({
+	const jutsuPlugins = getAllPlugins("jutsu").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -19,7 +19,7 @@ export default function PluginsPage() {
 		name: p.name,
 		title: p.title,
 	}));
-	const senseiPlugins = getAllPlugins("sensei").map((p) => ({
+	const hashiPlugins = getAllPlugins("hashi").map((p) => ({
 		name: p.name,
 		title: p.title,
 	}));
@@ -31,9 +31,9 @@ export default function PluginsPage() {
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 				<div className="flex gap-12">
 					<Sidebar
-						bukiPlugins={bukiPlugins}
+						jutsuPlugins={jutsuPlugins}
 						doPlugins={doPlugins}
-						senseiPlugins={senseiPlugins}
+						hashiPlugins={hashiPlugins}
 					/>
 					<main className="flex-1 min-w-0">
 						<h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
@@ -63,18 +63,18 @@ export default function PluginsPage() {
 								pluginCount={30}
 							/>
 							<CategoryLink
-								href="/plugins/buki"
-								icon={getCategoryIcon("buki")}
-								title="Buki"
-								subtitle="武器 - Weapons"
+								href="/plugins/jutsu"
+								icon={getCategoryIcon("jutsu")}
+								title="Jutsu"
+								subtitle="術 - Techniques"
 								description="Language and tool skills with validation hooks for maintaining quality."
 								pluginCount={69}
 							/>
 							<CategoryLink
-								href="/plugins/sensei"
-								icon={getCategoryIcon("sensei")}
-								title="Sensei"
-								subtitle="先生 - Teachers"
+								href="/plugins/hashi"
+								icon={getCategoryIcon("hashi")}
+								title="Hashi"
+								subtitle="橋 - Bridges"
 								description="MCP servers providing external knowledge and integrations."
 								pluginCount={2}
 							/>
