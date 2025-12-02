@@ -389,6 +389,7 @@ val searchResults = _searchQuery
 ### GlobalScope Usage
 
 Bad:
+
 ```kotlin
 GlobalScope.launch {  // Never cancelled, leaks memory
     fetchData()
@@ -396,6 +397,7 @@ GlobalScope.launch {  // Never cancelled, leaks memory
 ```
 
 Good:
+
 ```kotlin
 viewModelScope.launch {  // Properly scoped
     fetchData()
@@ -405,6 +407,7 @@ viewModelScope.launch {  // Properly scoped
 ### Blocking Calls on Main Thread
 
 Bad:
+
 ```kotlin
 fun loadData() {
     runBlocking {  // Blocks main thread!
@@ -414,6 +417,7 @@ fun loadData() {
 ```
 
 Good:
+
 ```kotlin
 fun loadData() {
     viewModelScope.launch {
@@ -427,6 +431,7 @@ fun loadData() {
 ### Flow Collection Without Lifecycle
 
 Bad:
+
 ```kotlin
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     lifecycleScope.launch {
@@ -438,6 +443,7 @@ override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 ```
 
 Good:
+
 ```kotlin
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     viewLifecycleOwner.lifecycleScope.launch {
@@ -451,6 +457,7 @@ override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 ### Creating New Flow on Each Call
 
 Bad:
+
 ```kotlin
 // Creates new flow each time
 fun getUsers(): Flow<List<User>> = userDao.getAllUsers()
@@ -459,6 +466,7 @@ fun getUsers(): Flow<List<User>> = userDao.getAllUsers()
 ```
 
 Good:
+
 ```kotlin
 // Shared flow, single subscription
 val users: StateFlow<List<User>> = userDao.getAllUsers()
