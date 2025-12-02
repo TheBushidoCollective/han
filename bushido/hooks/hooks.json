@@ -6,11 +6,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the Bushido principles in ${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md'"
+            "command": "echo 'Read and follow the Bushido principles in ${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md'",
+            "timeout": 30000
           },
           {
             "type": "command",
-            "command": "echo 'Read and follow the time estimate rules in ${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md'"
+            "command": "echo 'Read and follow the time estimate rules in ${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md'",
+            "timeout": 30000
           }
         ]
       }
@@ -20,7 +22,8 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "# Review Task Alignment\n\nBefore stopping work, review the conversation to ensure alignment with the original task:\n\n## Review Checklist\n\n1. **Original Intent**: Does the most recent work align with the user's initial request or the established goal?\n\n2. **Scope Adherence**: Have we stayed within the original scope, or have we drifted into tangential work?\n\n3. **User Expectations**: Does the current state match what the user asked for in their most recent prompt?\n\n4. **Completion Status**: If the original task is incomplete, acknowledge what remains to be done.\n\n## If Misalignment Detected\n\nIf you notice the work has drifted from the original intent:\n\n- Briefly acknowledge the misalignment\n- Summarize what was requested vs. what was done\n- Ask the user if they want to continue in the current direction or refocus on the original task\n\n## If Aligned\n\nIf the work aligns with the original request, proceed with stopping without additional commentary.\n\n---\n\n**Note**: This is an internal check. Only mention misalignment if it's significant enough to warrant user attention.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}"
+            "prompt": "# Review Task Alignment\n\nBefore stopping work, review the conversation to ensure alignment with the original task:\n\n## Review Checklist\n\n1. **Original Intent**: Does the most recent work align with the user's initial request or the established goal?\n\n2. **Scope Adherence**: Have we stayed within the original scope, or have we drifted into tangential work?\n\n3. **User Expectations**: Does the current state match what the user asked for in their most recent prompt?\n\n4. **Completion Status**: If the original task is incomplete, acknowledge what remains to be done.\n\n## If Misalignment Detected\n\nIf you notice the work has drifted from the original intent:\n\n- Briefly acknowledge the misalignment\n- Summarize what was requested vs. what was done\n- Ask the user if they want to continue in the current direction or refocus on the original task\n\n## If Aligned\n\nIf the work aligns with the original request, proceed with stopping without additional commentary.\n\n---\n\n**Note**: This is an internal check. Only mention misalignment if it's significant enough to warrant user attention.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
+            "timeout": 30000
           }
         ]
       }
@@ -30,11 +33,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md'"
+            "command": "echo 'Read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md'",
+            "timeout": 30000
           },
           {
             "type": "command",
-            "command": "echo 'Read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md'"
+            "command": "echo 'Read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md'",
+            "timeout": 30000
           }
         ]
       }

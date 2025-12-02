@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "# Jira Acceptance Criteria Validation\n\nBefore stopping, check if any Jira tickets (format: ABC-123) were mentioned or worked on in this conversation.\n\n## If Jira tickets were found:\n1. Use the Jira MCP tools to fetch the ticket details\n2. Review the acceptance criteria in the ticket\n3. Validate that ALL acceptance criteria have been met by the work completed\n4. If any criteria are not met, explain what remains\n\n## If no Jira tickets found:\nProceed without validation.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}"
+            "prompt": "# Jira Acceptance Criteria Validation\n\nBefore stopping, check if any Jira tickets (format: ABC-123) were mentioned or worked on in this conversation.\n\n## If Jira tickets were found:\n1. Use the Jira MCP tools to fetch the ticket details\n2. Review the acceptance criteria in the ticket\n3. Validate that ALL acceptance criteria have been met by the work completed\n4. If any criteria are not met, explain what remains\n\n## If no Jira tickets found:\nProceed without validation.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
+            "timeout": 60000
           }
         ]
       }

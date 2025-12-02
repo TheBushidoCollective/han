@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "# Linear Acceptance Criteria Validation\n\nBefore stopping, check if any Linear issues (format: ABC-123) were mentioned or worked on in this conversation.\n\n## If Linear issues were found:\n1. Use the Linear MCP tools to fetch the issue details\n2. Review the acceptance criteria and requirements in the issue\n3. Validate that ALL acceptance criteria have been met by the work completed\n4. If any criteria are not met, explain what remains\n\n## If no Linear issues found:\nProceed without validation.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}"
+            "prompt": "# Linear Acceptance Criteria Validation\n\nBefore stopping, check if any Linear issues (format: ABC-123) were mentioned or worked on in this conversation.\n\n## If Linear issues were found:\n1. Use the Linear MCP tools to fetch the issue details\n2. Review the acceptance criteria and requirements in the issue\n3. Validate that ALL acceptance criteria have been met by the work completed\n4. If any criteria are not met, explain what remains\n\n## If no Linear issues found:\nProceed without validation.\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
+            "timeout": 60000
           }
         ]
       }
