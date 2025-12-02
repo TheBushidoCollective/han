@@ -122,8 +122,8 @@ test("shows error when hook run has no hook name or command", () => {
 		const stderr = execError.stderr?.toString() || "";
 		strictEqual(
 			stderr.includes("Hook name is required") ||
-			stderr.includes("-- separator") ||
-			stderr.includes("error"),
+				stderr.includes("-- separator") ||
+				stderr.includes("error"),
 			true,
 		);
 	}
