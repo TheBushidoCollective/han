@@ -1,6 +1,6 @@
 {
   "name": "buki-eslint",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["eslint", "linting", "javascript", "typescript"]
+  "keywords": [
+    "eslint",
+    "linting",
+    "javascript",
+    "typescript"
+  ]
 }

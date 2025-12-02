@@ -1,6 +1,6 @@
 {
   "name": "buki-scala",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Advanced Scala programming skills for functional programming and type systems",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["scala", "functional", "jvm", "type-system"]
+  "keywords": [
+    "scala",
+    "functional",
+    "jvm",
+    "type-system"
+  ]
 }

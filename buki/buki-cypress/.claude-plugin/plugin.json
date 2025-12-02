@@ -1,6 +1,6 @@
 {
   "name": "buki-cypress",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["cypress", "testing", "e2e", "javascript"]
+  "keywords": [
+    "cypress",
+    "testing",
+    "e2e",
+    "javascript"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "buki-rubocop",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rubocop", "linting", "ruby"]
+  "keywords": [
+    "rubocop",
+    "linting",
+    "ruby"
+  ]
 }
