@@ -9,12 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "android",
-    "gradle",
-    "kotlin",
-    "java",
-    "build",
-    "validation"
-  ]
+  "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
 }

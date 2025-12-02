@@ -14,13 +14,7 @@
       "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
       "source": "./jutsu/jutsu-absinthe-graphql",
       "category": "Technique",
-      "keywords": [
-        "absinthe",
-        "graphql",
-        "elixir",
-        "api",
-        "subscriptions"
-      ]
+      "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"]
     },
     {
       "name": "jutsu-act",
@@ -42,38 +36,21 @@
       "description": "Android development validation with Gradle build hooks.",
       "source": "./jutsu/jutsu-android",
       "category": "Technique",
-      "keywords": [
-        "android",
-        "gradle",
-        "kotlin",
-        "java",
-        "build",
-        "validation"
-      ]
+      "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
     },
     {
       "name": "jutsu-ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
       "source": "./jutsu/jutsu-ameba",
       "category": "Technique",
-      "keywords": [
-        "crystal",
-        "linting",
-        "style",
-        "analysis"
-      ]
+      "keywords": ["crystal", "linting", "style", "analysis"]
     },
     {
       "name": "jutsu-angular",
       "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
       "source": "./jutsu/jutsu-angular",
       "category": "Technique",
-      "keywords": [
-        "angular",
-        "rxjs",
-        "signals",
-        "skill"
-      ]
+      "keywords": ["angular", "rxjs", "signals", "skill"]
     },
     {
       "name": "jutsu-ansible",
@@ -92,13 +69,7 @@
       "description": "Advanced Apollo GraphQL skills for client and server development",
       "source": "./jutsu/jutsu-apollo-graphql",
       "category": "Technique",
-      "keywords": [
-        "apollo",
-        "graphql",
-        "client",
-        "server",
-        "skill"
-      ]
+      "keywords": ["apollo", "graphql", "client", "server", "skill"]
     },
     {
       "name": "jutsu-bdd",
@@ -146,86 +117,49 @@
       "description": "Advanced C programming skills for systems programming and memory management",
       "source": "./jutsu/jutsu-c",
       "category": "Technique",
-      "keywords": [
-        "c",
-        "systems-programming",
-        "memory-management",
-        "skill"
-      ]
+      "keywords": ["c", "systems-programming", "memory-management", "skill"]
     },
     {
       "name": "jutsu-checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
       "source": "./jutsu/jutsu-checkstyle",
       "category": "Technique",
-      "keywords": [
-        "checkstyle",
-        "linting",
-        "java",
-        "skill"
-      ]
+      "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
       "name": "jutsu-clippy",
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
       "source": "./jutsu/jutsu-clippy",
       "category": "Technique",
-      "keywords": [
-        "clippy",
-        "linting",
-        "rust",
-        "skill"
-      ]
+      "keywords": ["clippy", "linting", "rust", "skill"]
     },
     {
       "name": "jutsu-cpp",
       "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
       "source": "./jutsu/jutsu-cpp",
       "category": "Technique",
-      "keywords": [
-        "cpp",
-        "c++",
-        "modern-cpp",
-        "templates",
-        "skill"
-      ]
+      "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"]
     },
     {
       "name": "jutsu-credo",
       "description": "Credo skills for Elixir code analysis and style checking",
       "source": "./jutsu/jutsu-credo",
       "category": "Technique",
-      "keywords": [
-        "elixir",
-        "linting",
-        "style",
-        "analysis"
-      ]
+      "keywords": ["elixir", "linting", "style", "analysis"]
     },
     {
       "name": "jutsu-crystal",
       "description": "Skills for Crystal language development.",
       "source": "./jutsu/jutsu-crystal",
       "category": "Technique",
-      "keywords": [
-        "crystal",
-        "language",
-        "performance"
-      ]
+      "keywords": ["crystal", "language", "performance"]
     },
     {
       "name": "jutsu-csharp",
       "description": "Advanced C# programming skills for async patterns and LINQ",
       "source": "./jutsu/jutsu-csharp",
       "category": "Technique",
-      "keywords": [
-        "csharp",
-        "c#",
-        "dotnet",
-        "async",
-        "linq",
-        "skill"
-      ]
+      "keywords": ["csharp", "c#", "dotnet", "async", "linq", "skill"]
     },
     {
       "name": "jutsu-cucumber",
@@ -245,73 +179,42 @@
       "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
       "source": "./jutsu/jutsu-cypress",
       "category": "Technique",
-      "keywords": [
-        "cypress",
-        "testing",
-        "e2e",
-        "javascript",
-        "skill"
-      ]
+      "keywords": ["cypress", "testing", "e2e", "javascript", "skill"]
     },
     {
       "name": "jutsu-dialyzer",
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
       "source": "./jutsu/jutsu-dialyzer",
       "category": "Technique",
-      "keywords": [
-        "elixir",
-        "erlang",
-        "static-analysis",
-        "types"
-      ]
+      "keywords": ["elixir", "erlang", "static-analysis", "types"]
     },
     {
       "name": "jutsu-django",
       "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
       "source": "./jutsu/jutsu-django",
       "category": "Technique",
-      "keywords": [
-        "django",
-        "python",
-        "orm",
-        "skill"
-      ]
+      "keywords": ["django", "python", "orm", "skill"]
     },
     {
       "name": "jutsu-docker-compose",
       "description": "Docker Compose validation and best practices for container orchestration",
       "source": "./jutsu/jutsu-docker-compose",
       "category": "Technique",
-      "keywords": [
-        "docker",
-        "docker-compose",
-        "containers",
-        "devops"
-      ]
+      "keywords": ["docker", "docker-compose", "containers", "devops"]
     },
     {
       "name": "jutsu-ecto",
       "description": "Ecto skills for database interactions in Elixir",
       "source": "./jutsu/jutsu-ecto",
       "category": "Technique",
-      "keywords": [
-        "elixir",
-        "database",
-        "orm",
-        "ecto"
-      ]
+      "keywords": ["elixir", "database", "orm", "ecto"]
     },
     {
       "name": "jutsu-elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./jutsu/jutsu-elixir",
       "category": "Technique",
-      "keywords": [
-        "elixir",
-        "otp",
-        "ecto",
-        "skill"
-      ]
+      "keywords": ["elixir", "otp", "ecto", "skill"]
     },
     {
       "name": "jutsu-erlang",
@@ -332,38 +235,21 @@
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
       "source": "./jutsu/jutsu-eslint",
       "category": "Technique",
-      "keywords": [
-        "eslint",
-        "linting",
-        "javascript",
-        "typescript",
-        "skill"
-      ]
+      "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
     },
     {
       "name": "jutsu-expo",
       "description": "Validation and quality enforcement for Expo React Native projects with config, router, modules, updates, and build skills.",
       "source": "./jutsu/jutsu-expo",
       "category": "Technique",
-      "keywords": [
-        "expo",
-        "react-native",
-        "mobile",
-        "ios",
-        "android"
-      ]
+      "keywords": ["expo", "react-native", "mobile", "ios", "android"]
     },
     {
       "name": "jutsu-fastapi",
       "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
       "source": "./jutsu/jutsu-fastapi",
       "category": "Technique",
-      "keywords": [
-        "fastapi",
-        "python",
-        "async",
-        "skill"
-      ]
+      "keywords": ["fastapi", "python", "async", "skill"]
     },
     {
       "name": "jutsu-functional-programming",
@@ -382,114 +268,63 @@
       "description": "Advanced Gleam programming skills for functional BEAM development",
       "source": "./jutsu/jutsu-gleam",
       "category": "Technique",
-      "keywords": [
-        "gleam",
-        "beam",
-        "functional",
-        "erlang",
-        "skill"
-      ]
+      "keywords": ["gleam", "beam", "functional", "erlang", "skill"]
     },
     {
       "name": "jutsu-go",
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
       "source": "./jutsu/jutsu-go",
       "category": "Technique",
-      "keywords": [
-        "go",
-        "golang",
-        "concurrency",
-        "skill"
-      ]
+      "keywords": ["go", "golang", "concurrency", "skill"]
     },
     {
       "name": "jutsu-graphql",
       "description": "Skills for GraphQL schema design and queries.",
       "source": "./jutsu/jutsu-graphql",
       "category": "Technique",
-      "keywords": [
-        "graphql",
-        "api",
-        "queries"
-      ]
+      "keywords": ["graphql", "api", "queries"]
     },
     {
       "name": "jutsu-helm",
       "description": "Helm chart validation and best practices for Kubernetes package management",
       "source": "./jutsu/jutsu-helm",
       "category": "Technique",
-      "keywords": [
-        "helm",
-        "kubernetes",
-        "k8s",
-        "charts",
-        "devops"
-      ]
+      "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
     },
     {
       "name": "jutsu-ink",
       "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
       "source": "./jutsu/jutsu-ink",
       "category": "Technique",
-      "keywords": [
-        "ink",
-        "terminal",
-        "cli",
-        "react",
-        "ui",
-        "skill"
-      ]
+      "keywords": ["ink", "terminal", "cli", "react", "ui", "skill"]
     },
     {
       "name": "jutsu-ios",
       "description": "iOS development validation with Xcode build hooks.",
       "source": "./jutsu/jutsu-ios",
       "category": "Technique",
-      "keywords": [
-        "ios",
-        "xcode",
-        "swift",
-        "build",
-        "validation",
-        "apple"
-      ]
+      "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"]
     },
     {
       "name": "jutsu-java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
       "source": "./jutsu/jutsu-java",
       "category": "Technique",
-      "keywords": [
-        "java",
-        "streams",
-        "concurrency",
-        "skill"
-      ]
+      "keywords": ["java", "streams", "concurrency", "skill"]
     },
     {
       "name": "jutsu-jest",
       "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
       "source": "./jutsu/jutsu-jest",
       "category": "Technique",
-      "keywords": [
-        "jest",
-        "testing",
-        "javascript",
-        "typescript",
-        "skill"
-      ]
+      "keywords": ["jest", "testing", "javascript", "typescript", "skill"]
     },
     {
       "name": "jutsu-junit",
       "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
       "source": "./jutsu/jutsu-junit",
       "category": "Technique",
-      "keywords": [
-        "junit",
-        "testing",
-        "java",
-        "skill"
-      ]
+      "keywords": ["junit", "testing", "java", "skill"]
     },
     {
       "name": "jutsu-testng",
@@ -510,75 +345,42 @@
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./jutsu/jutsu-kotlin",
       "category": "Technique",
-      "keywords": [
-        "kotlin",
-        "coroutines",
-        "android",
-        "jvm",
-        "skill"
-      ]
+      "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"]
     },
     {
       "name": "jutsu-lerna",
       "description": "Lerna monorepo management skills with bootstrap validation hooks.",
       "source": "./jutsu/jutsu-lerna",
       "category": "Technique",
-      "keywords": [
-        "lerna",
-        "monorepo",
-        "packages",
-        "workspaces",
-        "node"
-      ]
+      "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"]
     },
     {
       "name": "jutsu-kubernetes",
       "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
       "source": "./jutsu/jutsu-kubernetes",
       "category": "Technique",
-      "keywords": [
-        "kubernetes",
-        "k8s",
-        "devops",
-        "infrastructure"
-      ]
+      "keywords": ["kubernetes", "k8s", "devops", "infrastructure"]
     },
     {
       "name": "jutsu-kustomize",
       "description": "Kustomize configuration validation for Kubernetes customization",
       "source": "./jutsu/jutsu-kustomize",
       "category": "Technique",
-      "keywords": [
-        "kustomize",
-        "kubernetes",
-        "k8s",
-        "devops"
-      ]
+      "keywords": ["kustomize", "kubernetes", "k8s", "devops"]
     },
     {
       "name": "jutsu-lua",
       "description": "Advanced Lua programming skills for embedded scripting and game development",
       "source": "./jutsu/jutsu-lua",
       "category": "Technique",
-      "keywords": [
-        "lua",
-        "scripting",
-        "embedded",
-        "gaming",
-        "skill"
-      ]
+      "keywords": ["lua", "scripting", "embedded", "gaming", "skill"]
     },
     {
       "name": "jutsu-markdownlint",
       "description": "Markdownlint configuration and validation for consistent markdown formatting",
       "source": "./jutsu/jutsu-markdownlint",
       "category": "Technique",
-      "keywords": [
-        "markdownlint",
-        "markdown",
-        "linting",
-        "documentation"
-      ]
+      "keywords": ["markdownlint", "markdown", "linting", "documentation"]
     },
     {
       "name": "jutsu-maven",
@@ -599,139 +401,77 @@
       "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
       "source": "./jutsu/jutsu-mocha",
       "category": "Technique",
-      "keywords": [
-        "mocha",
-        "testing",
-        "javascript",
-        "nodejs",
-        "skill"
-      ]
+      "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"]
     },
     {
       "name": "jutsu-monorepo",
       "description": "Advanced monorepo development skills for architecture, tooling, and workflow management across multiple packages and projects.",
       "source": "./jutsu/jutsu-monorepo",
       "category": "Technique",
-      "keywords": [
-        "monorepo",
-        "workspace",
-        "turborepo",
-        "nx",
-        "lerna",
-        "skill"
-      ]
+      "keywords": ["monorepo", "workspace", "turborepo", "nx", "lerna", "skill"]
     },
     {
       "name": "jutsu-nestjs",
       "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
       "source": "./jutsu/jutsu-nestjs",
       "category": "Technique",
-      "keywords": [
-        "nestjs",
-        "typescript",
-        "nodejs",
-        "skill"
-      ]
+      "keywords": ["nestjs", "typescript", "nodejs", "skill"]
     },
     {
       "name": "jutsu-nextjs",
       "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
       "source": "./jutsu/jutsu-nextjs",
       "category": "Technique",
-      "keywords": [
-        "nextjs",
-        "react",
-        "ssr",
-        "skill"
-      ]
+      "keywords": ["nextjs", "react", "ssr", "skill"]
     },
     {
       "name": "jutsu-nim",
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
       "source": "./jutsu/jutsu-nim",
       "category": "Technique",
-      "keywords": [
-        "nim",
-        "systems-programming",
-        "metaprogramming",
-        "skill"
-      ]
+      "keywords": ["nim", "systems-programming", "metaprogramming", "skill"]
     },
     {
       "name": "jutsu-npm",
       "description": "NPM package manager skills with dependency validation hooks.",
       "source": "./jutsu/jutsu-npm",
       "category": "Technique",
-      "keywords": [
-        "npm",
-        "package-manager",
-        "dependencies",
-        "node"
-      ]
+      "keywords": ["npm", "package-manager", "dependencies", "node"]
     },
     {
       "name": "jutsu-objective-c",
       "description": "Advanced Objective-C programming skills for iOS and macOS development",
       "source": "./jutsu/jutsu-objective-c",
       "category": "Technique",
-      "keywords": [
-        "objective-c",
-        "objc",
-        "ios",
-        "macos",
-        "arc",
-        "skill"
-      ]
+      "keywords": ["objective-c", "objc", "ios", "macos", "arc", "skill"]
     },
     {
       "name": "jutsu-oop",
       "description": "Object-Oriented Programming principles, design patterns, and best practices",
       "source": "./jutsu/jutsu-oop",
       "category": "Technique",
-      "keywords": [
-        "oop",
-        "object-oriented",
-        "design-patterns",
-        "encapsulation"
-      ]
+      "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
       "name": "jutsu-phoenix",
       "description": "Phoenix Framework skills for building web applications",
       "source": "./jutsu/jutsu-phoenix",
       "category": "Technique",
-      "keywords": [
-        "elixir",
-        "phoenix",
-        "web",
-        "framework"
-      ]
+      "keywords": ["elixir", "phoenix", "web", "framework"]
     },
     {
       "name": "jutsu-php",
       "description": "Advanced PHP programming skills for modern PHP and security patterns",
       "source": "./jutsu/jutsu-php",
       "category": "Technique",
-      "keywords": [
-        "php",
-        "composer",
-        "security",
-        "web",
-        "skill"
-      ]
+      "keywords": ["php", "composer", "security", "web", "skill"]
     },
     {
       "name": "jutsu-playwright",
       "description": "Advanced Playwright skills for end-to-end testing, test architecture, and test automation best practices.",
       "source": "./jutsu/jutsu-playwright",
       "category": "Technique",
-      "keywords": [
-        "playwright",
-        "testing",
-        "e2e",
-        "automation",
-        "skill"
-      ]
+      "keywords": ["playwright", "testing", "e2e", "automation", "skill"]
     },
     {
       "name": "jutsu-prettier",
@@ -751,87 +491,49 @@
       "description": "Pulumi infrastructure-as-code validation and best practices",
       "source": "./jutsu/jutsu-pulumi",
       "category": "Technique",
-      "keywords": [
-        "pulumi",
-        "infrastructure",
-        "iac",
-        "devops"
-      ]
+      "keywords": ["pulumi", "infrastructure", "iac", "devops"]
     },
     {
       "name": "jutsu-pylint",
       "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
       "source": "./jutsu/jutsu-pylint",
       "category": "Technique",
-      "keywords": [
-        "pylint",
-        "linting",
-        "python",
-        "skill"
-      ]
+      "keywords": ["pylint", "linting", "python", "skill"]
     },
     {
       "name": "jutsu-pytest",
       "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
       "source": "./jutsu/jutsu-pytest",
       "category": "Technique",
-      "keywords": [
-        "pytest",
-        "testing",
-        "python",
-        "skill"
-      ]
+      "keywords": ["pytest", "testing", "python", "skill"]
     },
     {
       "name": "jutsu-python",
       "description": "Advanced Python skills for type system, async patterns, and data modeling.",
       "source": "./jutsu/jutsu-python",
       "category": "Technique",
-      "keywords": [
-        "python",
-        "types",
-        "async",
-        "skill"
-      ]
+      "keywords": ["python", "types", "async", "skill"]
     },
     {
       "name": "jutsu-rails",
       "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
       "source": "./jutsu/jutsu-rails",
       "category": "Technique",
-      "keywords": [
-        "rails",
-        "ruby",
-        "mvc",
-        "active-record",
-        "hotwire",
-        "skill"
-      ]
+      "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire", "skill"]
     },
     {
       "name": "jutsu-react",
       "description": "Advanced React skills for hooks, context, and performance optimization.",
       "source": "./jutsu/jutsu-react",
       "category": "Technique",
-      "keywords": [
-        "react",
-        "hooks",
-        "performance",
-        "skill"
-      ]
+      "keywords": ["react", "hooks", "performance", "skill"]
     },
     {
       "name": "jutsu-react-native",
       "description": "Validation and quality enforcement for React Native mobile applications with components, navigation, styling, and native modules.",
       "source": "./jutsu/jutsu-react-native",
       "category": "Technique",
-      "keywords": [
-        "react-native",
-        "mobile",
-        "ios",
-        "android",
-        "native"
-      ]
+      "keywords": ["react-native", "mobile", "ios", "android", "native"]
     },
     {
       "name": "jutsu-react-native-web",
@@ -852,102 +554,56 @@
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./jutsu/jutsu-relay",
       "category": "Technique",
-      "keywords": [
-        "relay",
-        "graphql",
-        "react",
-        "fragments",
-        "skill"
-      ]
+      "keywords": ["relay", "graphql", "react", "fragments", "skill"]
     },
     {
       "name": "jutsu-rspec",
       "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
       "source": "./jutsu/jutsu-rspec",
       "category": "Technique",
-      "keywords": [
-        "rspec",
-        "testing",
-        "ruby",
-        "bdd",
-        "skill"
-      ]
+      "keywords": ["rspec", "testing", "ruby", "bdd", "skill"]
     },
     {
       "name": "jutsu-ruby",
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
       "source": "./jutsu/jutsu-ruby",
       "category": "Technique",
-      "keywords": [
-        "ruby",
-        "metaprogramming",
-        "blocks",
-        "gems",
-        "oop",
-        "skill"
-      ]
+      "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"]
     },
     {
       "name": "jutsu-rubocop",
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
       "source": "./jutsu/jutsu-rubocop",
       "category": "Technique",
-      "keywords": [
-        "rubocop",
-        "linting",
-        "ruby",
-        "skill"
-      ]
+      "keywords": ["rubocop", "linting", "ruby", "skill"]
     },
     {
       "name": "jutsu-rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
       "source": "./jutsu/jutsu-rust",
       "category": "Technique",
-      "keywords": [
-        "rust",
-        "ownership",
-        "async",
-        "skill"
-      ]
+      "keywords": ["rust", "ownership", "async", "skill"]
     },
     {
       "name": "jutsu-scala",
       "description": "Advanced Scala programming skills for functional programming and type systems",
       "source": "./jutsu/jutsu-scala",
       "category": "Technique",
-      "keywords": [
-        "scala",
-        "functional",
-        "jvm",
-        "type-system",
-        "skill"
-      ]
+      "keywords": ["scala", "functional", "jvm", "type-system", "skill"]
     },
     {
       "name": "jutsu-sip",
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
       "source": "./jutsu/jutsu-sip",
       "category": "Technique",
-      "keywords": [
-        "sip",
-        "voip",
-        "telecommunications",
-        "real-time"
-      ]
+      "keywords": ["sip", "voip", "telecommunications", "real-time"]
     },
     {
       "name": "jutsu-swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
       "source": "./jutsu/jutsu-swift",
       "category": "Technique",
-      "keywords": [
-        "swift",
-        "ios",
-        "protocol-oriented",
-        "concurrency",
-        "skill"
-      ]
+      "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"]
     },
     {
       "name": "jutsu-tensorflow",
@@ -966,13 +622,7 @@
       "description": "Terraform configuration validation and infrastructure-as-code best practices",
       "source": "./jutsu/jutsu-terraform",
       "category": "Technique",
-      "keywords": [
-        "terraform",
-        "infrastructure",
-        "iac",
-        "devops",
-        "hashicorp"
-      ]
+      "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"]
     },
     {
       "name": "jutsu-tdd",
@@ -992,11 +642,7 @@
       "description": "Skills for TypeScript type system mastery.",
       "source": "./jutsu/jutsu-typescript",
       "category": "Technique",
-      "keywords": [
-        "typescript",
-        "types",
-        "language"
-      ]
+      "keywords": ["typescript", "types", "language"]
     },
     {
       "name": "jutsu-vitest",
@@ -1017,24 +663,14 @@
       "description": "Advanced Vue skills for Composition API, components, and reactivity.",
       "source": "./jutsu/jutsu-vue",
       "category": "Technique",
-      "keywords": [
-        "vue",
-        "composition-api",
-        "reactivity",
-        "skill"
-      ]
+      "keywords": ["vue", "composition-api", "reactivity", "skill"]
     },
     {
       "name": "jutsu-yarn",
       "description": "Yarn package manager skills with dependency validation hooks.",
       "source": "./jutsu/jutsu-yarn",
       "category": "Technique",
-      "keywords": [
-        "yarn",
-        "package-manager",
-        "dependencies",
-        "node"
-      ]
+      "keywords": ["yarn", "package-manager", "dependencies", "node"]
     },
     {
       "name": "jutsu-git-storytelling",
@@ -1054,12 +690,7 @@
       "description": "The seven virtues, enforcement hooks, and foundational quality skills.",
       "source": "./bushido",
       "category": "Core",
-      "keywords": [
-        "philosophy",
-        "quality",
-        "testing",
-        "principles"
-      ]
+      "keywords": ["philosophy", "quality", "testing", "principles"]
     },
     {
       "name": "hashi-clickup",
@@ -1081,24 +712,14 @@
       "description": "MCP server for library documentation and framework examples.",
       "source": "./hashi/hashi-context7",
       "category": "Bridge",
-      "keywords": [
-        "mcp",
-        "documentation",
-        "context"
-      ]
+      "keywords": ["mcp", "documentation", "context"]
     },
     {
       "name": "hashi-playwright-mcp",
       "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
       "source": "./hashi/hashi-playwright-mcp",
       "category": "Bridge",
-      "keywords": [
-        "mcp",
-        "playwright",
-        "testing",
-        "automation",
-        "server"
-      ]
+      "keywords": ["mcp", "playwright", "testing", "automation", "server"]
     },
     {
       "name": "hashi-gitlab",
@@ -1168,86 +789,49 @@
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",
       "category": "Discipline",
-      "keywords": [
-        "accessibility",
-        "wcag",
-        "inclusive-design",
-        "agent"
-      ]
+      "keywords": ["accessibility", "wcag", "inclusive-design", "agent"]
     },
     {
       "name": "do-api-engineering",
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
       "source": "./do/do-api-engineering",
       "category": "Discipline",
-      "keywords": [
-        "api",
-        "rest",
-        "graphql",
-        "agent"
-      ]
+      "keywords": ["api", "rest", "graphql", "agent"]
     },
     {
       "name": "do-architecture",
       "description": "Agents for system design and architectural thinking.",
       "source": "./do/do-architecture",
       "category": "Discipline",
-      "keywords": [
-        "architecture",
-        "design",
-        "patterns"
-      ]
+      "keywords": ["architecture", "design", "patterns"]
     },
     {
       "name": "do-backend-development",
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
       "source": "./do/do-backend-development",
       "category": "Discipline",
-      "keywords": [
-        "backend",
-        "api",
-        "architecture",
-        "data",
-        "server",
-        "agent"
-      ]
+      "keywords": ["backend", "api", "architecture", "data", "server", "agent"]
     },
     {
       "name": "do-blockchain-development",
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
       "source": "./do/do-blockchain-development",
       "category": "Discipline",
-      "keywords": [
-        "blockchain",
-        "web3",
-        "smart-contracts",
-        "agent"
-      ]
+      "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
     },
     {
       "name": "do-claude-plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
       "source": "./do/do-claude-plugin-development",
       "category": "Discipline",
-      "keywords": [
-        "plugin",
-        "development",
-        "claude-code",
-        "quality",
-        "agent"
-      ]
+      "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
     {
       "name": "do-compiler-development",
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
       "source": "./do/do-compiler-development",
       "category": "Discipline",
-      "keywords": [
-        "compiler",
-        "language-design",
-        "parsing",
-        "agent"
-      ]
+      "keywords": ["compiler", "language-design", "parsing", "agent"]
     },
     {
       "name": "do-content-creator",
@@ -1268,233 +852,133 @@
       "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
       "source": "./do/do-data-engineering",
       "category": "Discipline",
-      "keywords": [
-        "data-engineering",
-        "etl",
-        "streaming",
-        "agent"
-      ]
+      "keywords": ["data-engineering", "etl", "streaming", "agent"]
     },
     {
       "name": "do-database-engineering",
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
       "source": "./do/do-database-engineering",
       "category": "Discipline",
-      "keywords": [
-        "database",
-        "sql",
-        "query-optimization",
-        "agent"
-      ]
+      "keywords": ["database", "sql", "query-optimization", "agent"]
     },
     {
       "name": "do-embedded-development",
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
       "source": "./do/do-embedded-development",
       "category": "Discipline",
-      "keywords": [
-        "embedded-systems",
-        "firmware",
-        "iot",
-        "agent"
-      ]
+      "keywords": ["embedded-systems", "firmware", "iot", "agent"]
     },
     {
       "name": "do-enforce-planning",
       "description": "Enforces planning before implementation work begins",
       "source": "./do/do-enforce-planning",
       "category": "Discipline",
-      "keywords": [
-        "planning",
-        "workflow",
-        "agent",
-        "hook"
-      ]
+      "keywords": ["planning", "workflow", "agent", "hook"]
     },
     {
       "name": "do-frontend-development",
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
       "source": "./do/do-frontend-development",
       "category": "Discipline",
-      "keywords": [
-        "frontend",
-        "ui",
-        "ux",
-        "design",
-        "presentation",
-        "agent"
-      ]
+      "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"]
     },
     {
       "name": "do-game-development",
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
       "source": "./do/do-game-development",
       "category": "Discipline",
-      "keywords": [
-        "game-development",
-        "game-engine",
-        "gameplay",
-        "agent"
-      ]
+      "keywords": ["game-development", "game-engine", "gameplay", "agent"]
     },
     {
       "name": "do-graphics-engineering",
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
       "source": "./do/do-graphics-engineering",
       "category": "Discipline",
-      "keywords": [
-        "graphics",
-        "gpu",
-        "shaders",
-        "agent"
-      ]
+      "keywords": ["graphics", "gpu", "shaders", "agent"]
     },
     {
       "name": "do-infrastructure",
       "description": "Agents for operational excellence and reliability engineering.",
       "source": "./do/do-infrastructure",
       "category": "Discipline",
-      "keywords": [
-        "devops",
-        "sre",
-        "deployment",
-        "operations"
-      ]
+      "keywords": ["devops", "sre", "deployment", "operations"]
     },
     {
       "name": "do-machine-learning-engineering",
       "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
       "source": "./do/do-machine-learning-engineering",
       "category": "Discipline",
-      "keywords": [
-        "ml-engineering",
-        "mlops",
-        "inference",
-        "agent"
-      ]
+      "keywords": ["ml-engineering", "mlops", "inference", "agent"]
     },
     {
       "name": "do-mobile-development",
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
       "source": "./do/do-mobile-development",
       "category": "Discipline",
-      "keywords": [
-        "mobile",
-        "ios",
-        "android",
-        "development",
-        "agent"
-      ]
+      "keywords": ["mobile", "ios", "android", "development", "agent"]
     },
     {
       "name": "do-network-engineering",
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
       "source": "./do/do-network-engineering",
       "category": "Discipline",
-      "keywords": [
-        "network",
-        "protocols",
-        "distributed-systems",
-        "agent"
-      ]
+      "keywords": ["network", "protocols", "distributed-systems", "agent"]
     },
     {
       "name": "do-observability-engineering",
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
       "source": "./do/do-observability-engineering",
       "category": "Discipline",
-      "keywords": [
-        "observability",
-        "monitoring",
-        "tracing",
-        "agent"
-      ]
+      "keywords": ["observability", "monitoring", "tracing", "agent"]
     },
     {
       "name": "do-performance-engineering",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
       "source": "./do/do-performance-engineering",
       "category": "Discipline",
-      "keywords": [
-        "performance",
-        "optimization",
-        "scalability",
-        "agent"
-      ]
+      "keywords": ["performance", "optimization", "scalability", "agent"]
     },
     {
       "name": "do-platform-engineering",
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
       "source": "./do/do-platform-engineering",
       "category": "Discipline",
-      "keywords": [
-        "platform-engineering",
-        "infrastructure",
-        "devex",
-        "agent"
-      ]
+      "keywords": ["platform-engineering", "infrastructure", "devex", "agent"]
     },
     {
       "name": "do-product-management",
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
       "source": "./do/do-product-management",
       "category": "Discipline",
-      "keywords": [
-        "product",
-        "strategy",
-        "vision",
-        "planning",
-        "agent"
-      ]
+      "keywords": ["product", "strategy", "vision", "planning", "agent"]
     },
     {
       "name": "do-project-management",
       "description": "Agents for workflow orchestration and team coordination.",
       "source": "./do/do-project-management",
       "category": "Discipline",
-      "keywords": [
-        "project-management",
-        "coordination",
-        "workflow"
-      ]
+      "keywords": ["project-management", "coordination", "workflow"]
     },
     {
       "name": "do-prompt-engineering",
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
       "source": "./do/do-prompt-engineering",
       "category": "Discipline",
-      "keywords": [
-        "prompt-engineering",
-        "ai",
-        "llm",
-        "agent"
-      ]
+      "keywords": ["prompt-engineering", "ai", "llm", "agent"]
     },
     {
       "name": "do-quality-assurance",
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
       "source": "./do/do-quality-assurance",
       "category": "Discipline",
-      "keywords": [
-        "quality",
-        "testing",
-        "qa",
-        "reliability",
-        "agent"
-      ]
+      "keywords": ["quality", "testing", "qa", "reliability", "agent"]
     },
     {
       "name": "do-security-engineering",
       "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
       "source": "./do/do-security-engineering",
       "category": "Discipline",
-      "keywords": [
-        "security",
-        "compliance",
-        "vulnerability",
-        "threat",
-        "agent"
-      ]
+      "keywords": ["security", "compliance", "vulnerability", "threat", "agent"]
     },
     {
       "name": "do-site-reliability-engineering",
@@ -1515,25 +999,14 @@
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
       "source": "./do/do-technical-documentation",
       "category": "Discipline",
-      "keywords": [
-        "documentation",
-        "technical-writing",
-        "knowledge",
-        "agent"
-      ]
+      "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
     },
     {
       "name": "do-voip-engineering",
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
       "source": "./do/do-voip-engineering",
       "category": "Discipline",
-      "keywords": [
-        "voip",
-        "telecommunications",
-        "sip",
-        "rtp",
-        "engineering"
-      ]
+      "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
     }
   ]
 }
