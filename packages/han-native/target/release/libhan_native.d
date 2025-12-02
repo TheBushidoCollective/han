@@ -1,1 +1,1 @@
-/Users/jwaldrip/dev/src/github.com/thebushidocollective/sensei/packages/han-native/target/release/libhan_native.dylib: /Users/jwaldrip/dev/src/github.com/thebushidocollective/sensei/packages/han-native/build.rs /Users/jwaldrip/dev/src/github.com/thebushidocollective/sensei/packages/han-native/src/lib.rs
+/home/runner/work/han/han/packages/han-native/target/release/libhan_native.so: /home/runner/work/han/han/packages/han-native/build.rs /home/runner/work/han/han/packages/han-native/src/lib.rs
