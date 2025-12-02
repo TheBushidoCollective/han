@@ -112,13 +112,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 						</ul>
 					</div>
 
-					{/* Buki */}
+					{/* Jutsu */}
 					<div>
 						<Link
 							href="/plugins/jutsu"
 							className={`${getLinkClass("/plugins/jutsu")} mb-2`}
 						>
-							{getCategoryIcon("jutsu")} Buki
+							{getCategoryIcon("jutsu")} Jutsu
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							Technology skills and validations
@@ -137,13 +137,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 						</ul>
 					</div>
 
-					{/* Sensei */}
+					{/* Hashi */}
 					<div>
 						<Link
 							href="/plugins/hashi"
 							className={`${getLinkClass("/plugins/hashi")} mb-2`}
 						>
-							{getCategoryIcon("hashi")} Sensei
+							{getCategoryIcon("hashi")} Hashi
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
 							MCP servers for external integrations

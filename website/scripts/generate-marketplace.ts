@@ -10,7 +10,7 @@ import path from "node:path";
 interface SourcePlugin {
 	name: string;
 	description: string;
-	source: string; // e.g., "./buki/buki-react"
+	source: string; // e.g., "./jutsu/jutsu-react"
 	category: "Core" | "Technique" | "Discipline" | "Bridge";
 	keywords: string[];
 	configHash: string | null;
@@ -67,7 +67,7 @@ function transformMarketplace(source: SourceMarketplace): PublicMarketplace {
 		source: {
 			type: "github" as const,
 			repo: REPO,
-			path: plugin.source.replace("./", ""), // "./buki/buki-react" -> "buki/buki-react"
+			path: plugin.source.replace("./", ""), // "./jutsu/jutsu-react" -> "jutsu/jutsu-react"
 		},
 		category: plugin.category,
 		keywords: plugin.keywords,

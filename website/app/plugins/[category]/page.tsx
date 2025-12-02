@@ -25,7 +25,7 @@ const categoryData = {
 		title: "Jutsu",
 		subtitle: "術 - Techniques",
 		description:
-			"Language and tool skills with validation hooks for maintaining quality. Each Buki plugin provides specialized knowledge for a specific programming language, framework, or development tool.",
+			"Language and tool skills with validation hooks for maintaining quality. Each Jutsu plugin provides specialized knowledge for a specific programming language, framework, or development tool.",
 	},
 	do: {
 		title: "Dō",
