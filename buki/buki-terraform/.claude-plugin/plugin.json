@@ -1,6 +1,6 @@
 {
   "name": "buki-terraform",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Terraform configuration validation and infrastructure-as-code best practices",
   "author": {
     "name": "The Bushido Collective",

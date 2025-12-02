@@ -1,6 +1,6 @@
 {
   "name": "buki-kotlin",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
   "author": {
     "name": "The Bushido Collective",
