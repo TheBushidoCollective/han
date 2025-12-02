@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the planning enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-planning.md'"
+            "command": "echo 'Read and follow the planning enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-planning.md'",
+            "timeout": 30000
           }
         ]
       }

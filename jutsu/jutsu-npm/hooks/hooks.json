@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run npm-install --fail-fast --cache"
+            "command": "npx -y @thebushidocollective/han hook run npm-install --fail-fast --cache",
+            "timeout": 300000
           }
         ]
       }
@@ -15,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run npm-install --fail-fast --cache"
+            "command": "npx -y @thebushidocollective/han hook run npm-install --fail-fast --cache",
+            "timeout": 300000
           }
         ]
       }
