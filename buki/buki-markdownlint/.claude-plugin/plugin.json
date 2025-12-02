@@ -1,6 +1,6 @@
 {
   "name": "buki-markdownlint",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Markdown linting and style checking with markdownlint.",
   "author": {
     "name": "The Bushido Collective",

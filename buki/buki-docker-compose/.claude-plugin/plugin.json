@@ -1,6 +1,6 @@
 {
   "name": "buki-docker-compose",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Docker Compose validation and best practices",
   "author": {
     "name": "The Bushido Collective",

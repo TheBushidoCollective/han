@@ -1,6 +1,6 @@
 {
   "name": "buki-testng",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
   "author": {
     "name": "The Bushido Collective",

@@ -1,6 +1,6 @@
 {
   "name": "buki-typescript",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "TypeScript compiler validation and type checking for TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",

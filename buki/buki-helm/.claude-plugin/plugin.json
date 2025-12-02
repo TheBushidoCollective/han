@@ -1,6 +1,6 @@
 {
   "name": "buki-helm",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Helm chart validation and best practices",
   "author": {
     "name": "The Bushido Collective",
