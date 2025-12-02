@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { resolve } from "node:path";
 import {
 	buildManifest,
@@ -63,10 +63,10 @@ function findDirectoriesWithMarker(
 	return findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
 
-// Run command in directory
+// Run command in directory (sync version for legacy format)
 // When verbose=false, suppresses output and we'll tell the agent how to reproduce
 // When verbose=true, inherits stdio to show full output
-function runCommand(dir: string, cmd: string, verbose?: boolean): boolean {
+function runCommandSync(dir: string, cmd: string, verbose?: boolean): boolean {
 	const wrappedCmd = wrapCommandWithEnvFile(cmd);
 	try {
 		if (verbose) {
@@ -90,6 +90,87 @@ function runCommand(dir: string, cmd: string, verbose?: boolean): boolean {
 	} catch (_e) {
 		return false;
 	}
+}
+
+interface RunCommandResult {
+	success: boolean;
+	idleTimedOut?: boolean;
+}
+
+// Run command in directory (async version with idle timeout support)
+// When verbose=false, suppresses output and we'll tell the agent how to reproduce
+// When verbose=true, shows full output
+async function runCommand(
+	dir: string,
+	cmd: string,
+	verbose?: boolean,
+	idleTimeout?: number,
+): Promise<RunCommandResult> {
+	const wrappedCmd = wrapCommandWithEnvFile(cmd);
+
+	return new Promise((resolve) => {
+		const child = spawn(wrappedCmd, {
+			cwd: dir,
+			shell: "/bin/bash",
+			stdio: verbose ? "inherit" : ["ignore", "pipe", "pipe"],
+		});
+
+		let lastOutputTime = Date.now();
+		let idleTimeoutHandle: NodeJS.Timeout | null = null;
+		let idleTimedOut = false;
+
+		// Reset idle timeout on output
+		const resetIdleTimeout = () => {
+			lastOutputTime = Date.now();
+			if (idleTimeoutHandle) {
+				clearTimeout(idleTimeoutHandle);
+			}
+			if (idleTimeout && idleTimeout > 0) {
+				idleTimeoutHandle = setTimeout(() => {
+					idleTimedOut = true;
+					child.kill();
+				}, idleTimeout);
+			}
+		};
+
+		// Start initial idle timeout
+		if (idleTimeout && idleTimeout > 0) {
+			idleTimeoutHandle = setTimeout(() => {
+				idleTimedOut = true;
+				child.kill();
+			}, idleTimeout);
+		}
+
+		// Track output for idle timeout (only when not inheriting stdio)
+		if (!verbose) {
+			child.stdout?.on("data", () => {
+				resetIdleTimeout();
+			});
+			child.stderr?.on("data", () => {
+				resetIdleTimeout();
+			});
+		}
+
+		child.on("close", (code) => {
+			if (idleTimeoutHandle) {
+				clearTimeout(idleTimeoutHandle);
+			}
+			resolve({
+				success: code === 0 && !idleTimedOut,
+				idleTimedOut,
+			});
+		});
+
+		child.on("error", () => {
+			if (idleTimeoutHandle) {
+				clearTimeout(idleTimeoutHandle);
+			}
+			resolve({
+				success: false,
+				idleTimedOut: false,
+			});
+		});
+	});
 }
 
 // Run test command silently in directory (returns true if exit code 0)
@@ -121,7 +202,7 @@ export function validate(options: ValidateOptions): void {
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
-		const success = runCommand(rootDir, commandToRun, verbose);
+		const success = runCommandSync(rootDir, commandToRun, verbose);
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
@@ -149,7 +230,7 @@ export function validate(options: ValidateOptions): void {
 		}
 
 		processedCount++;
-		const success = runCommand(dir, commandToRun, verbose);
+		const success = runCommandSync(dir, commandToRun, verbose);
 
 		if (!success) {
 			const relativePath =
@@ -234,7 +315,9 @@ function getCacheKeyForDirectory(
  * Run a hook using plugin config and user overrides.
  * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
  */
-export function runConfiguredHook(options: RunConfiguredHookOptions): void {
+export async function runConfiguredHook(
+	options: RunConfiguredHookOptions,
+): Promise<void> {
 	const { hookName, failFast, cache, verbose } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
@@ -250,7 +333,11 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 
 	const pluginName = getPluginNameFromRoot(pluginRoot);
 
-	const failures: Array<{ dir: string; command: string }> = [];
+	const failures: Array<{
+		dir: string;
+		command: string;
+		idleTimedOut?: boolean;
+	}> = [];
 	const successfulConfigs: ResolvedHookConfig[] = [];
 	let totalFound = 0;
 	let disabledCount = 0;
@@ -294,18 +381,30 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
 
-		const success = runCommand(config.directory, config.command, verbose);
+		const result = await runCommand(
+			config.directory,
+			config.command,
+			verbose,
+			config.idleTimeout,
+		);
 
-		if (!success) {
-			failures.push({ dir: relativePath, command: config.command });
+		if (!result.success) {
+			failures.push({
+				dir: relativePath,
+				command: config.command,
+				idleTimedOut: result.idleTimedOut,
+			});
 
 			if (failFast) {
 				const cmdStr =
 					relativePath === "."
 						? config.command
 						: `cd ${relativePath} && ${config.command}`;
+				const reason = result.idleTimedOut
+					? " (idle timeout - no output received)"
+					: "";
 				console.error(
-					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
+					`\n❌ The command \`${cmdStr}\` failed${reason}.\n\n` +
 						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
@@ -360,17 +459,36 @@ export function runConfiguredHook(options: RunConfiguredHookOptions): void {
 	}
 
 	if (failures.length > 0) {
+		const idleTimeoutFailures = failures.filter((f) => f.idleTimedOut);
+		const regularFailures = failures.filter((f) => !f.idleTimedOut);
+
 		console.error(
 			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n\n` +
 				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
-		for (const failure of failures) {
+
+		for (const failure of regularFailures) {
 			const cmdStr =
 				failure.dir === "."
 					? failure.command
 					: `cd ${failure.dir} && ${failure.command}`;
 			console.error(`  • \`${cmdStr}\``);
 		}
+
+		if (idleTimeoutFailures.length > 0) {
+			console.error(`\n⏰ Idle timeout failures (no output received):\n`);
+			for (const failure of idleTimeoutFailures) {
+				const cmdStr =
+					failure.dir === "."
+						? failure.command
+						: `cd ${failure.dir} && ${failure.command}`;
+				console.error(`  • \`${cmdStr}\``);
+			}
+			console.error(
+				`\nThese commands hung without producing output. Check for blocking operations or infinite loops.\n`,
+			);
+		}
+
 		console.error(
 			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
 		);

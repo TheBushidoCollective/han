@@ -1,0 +1,62 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://han.guru/schemas/han-config-override.schema.json",
+	"title": "Han User Override Configuration",
+	"description": "Configuration schema for han-config.yml files that override plugin defaults",
+	"type": "object",
+	"additionalProperties": {
+		"$ref": "#/definitions/pluginOverrides"
+	},
+	"definitions": {
+		"pluginOverrides": {
+			"type": "object",
+			"description": "Overrides for a specific plugin (keyed by plugin name, e.g., 'jutsu-biome')",
+			"additionalProperties": {
+				"$ref": "#/definitions/hookOverride"
+			}
+		},
+		"hookOverride": {
+			"type": "object",
+			"description": "Override settings for a specific hook",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"description": "Whether this hook is enabled for this directory. Set to false to disable.",
+					"default": true
+				},
+				"command": {
+					"type": "string",
+					"description": "Override the command to execute for this hook"
+				},
+				"if_changed": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Additional glob patterns for change detection. These patterns are merged with (added to) the plugin's ifChanged patterns."
+				},
+				"idle_timeout": {
+					"oneOf": [
+						{
+							"type": "integer",
+							"minimum": 1,
+							"description": "Override the idle timeout in milliseconds"
+						},
+						{
+							"type": "boolean",
+							"const": false,
+							"description": "Set to false to disable idle timeout checking"
+						},
+						{
+							"type": "integer",
+							"const": 0,
+							"description": "Set to 0 to disable idle timeout checking"
+						}
+					],
+					"description": "Override the idle timeout. Set to a number (milliseconds), false, or 0 to disable."
+				}
+			},
+			"additionalProperties": false
+		}
+	}
+}

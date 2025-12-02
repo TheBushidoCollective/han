@@ -2,6 +2,11 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import YAML from "yaml";
+import {
+	formatValidationErrors,
+	validatePluginConfig,
+	validateUserConfig,
+} from "./config-validator.js";
 import { findDirectoriesWithMarkers } from "./hook-cache.js";
 
 /**
@@ -17,6 +22,13 @@ export interface PluginHookDefinition {
 	 * these patterns have changed since the last successful execution.
 	 */
 	ifChanged?: string[];
+	/**
+	 * Maximum time in milliseconds to wait for output before considering
+	 * the hook as hanging. If no output is received within this period,
+	 * the hook will be terminated and reported as failed.
+	 * Default: no idle timeout (only overall timeout applies)
+	 */
+	idleTimeout?: number;
 }
 
 export interface PluginConfig {
@@ -34,6 +46,11 @@ export interface UserHookOverride {
 	 * These patterns are merged with (added to) the plugin's ifChanged patterns.
 	 */
 	if_changed?: string[];
+	/**
+	 * Override the idle timeout in milliseconds.
+	 * Set to 0 or false to disable idle timeout checking.
+	 */
+	idle_timeout?: number | false;
 }
 
 export interface UserConfig {
@@ -53,13 +70,22 @@ export interface ResolvedHookConfig {
 	 * Glob patterns for change detection (from ifChanged in han-config.json)
 	 */
 	ifChanged?: string[];
+	/**
+	 * Maximum time in milliseconds to wait for output before considering
+	 * the hook as hanging. undefined means no idle timeout.
+	 */
+	idleTimeout?: number;
 }
 
 /**
  * Load plugin config from han-config.json at the plugin root
  * @param pluginRoot - The plugin directory, typically from CLAUDE_PLUGIN_ROOT env var
+ * @param validate - Whether to validate the config (default: true)
  */
-export function loadPluginConfig(pluginRoot: string): PluginConfig | null {
+export function loadPluginConfig(
+	pluginRoot: string,
+	validate = true,
+): PluginConfig | null {
 	const configPath = join(pluginRoot, "han-config.json");
 
 	if (!existsSync(configPath)) {
@@ -68,7 +94,17 @@ export function loadPluginConfig(pluginRoot: string): PluginConfig | null {
 
 	try {
 		const content = readFileSync(configPath, "utf-8");
-		return JSON.parse(content) as PluginConfig;
+		const config = JSON.parse(content);
+
+		if (validate) {
+			const result = validatePluginConfig(config);
+			if (!result.valid) {
+				console.error(formatValidationErrors(configPath, result));
+				return null;
+			}
+		}
+
+		return config as PluginConfig;
 	} catch (error) {
 		console.error(`Error loading plugin config from ${configPath}:`, error);
 		return null;
@@ -77,8 +113,13 @@ export function loadPluginConfig(pluginRoot: string): PluginConfig | null {
 
 /**
  * Load user override config from han-config.yml in a directory
+ * @param directory - The directory containing the han-config.yml file
+ * @param validate - Whether to validate the config (default: true)
  */
-export function loadUserConfig(directory: string): UserConfig | null {
+export function loadUserConfig(
+	directory: string,
+	validate = true,
+): UserConfig | null {
 	const configPath = join(directory, "han-config.yml");
 
 	if (!existsSync(configPath)) {
@@ -87,7 +128,18 @@ export function loadUserConfig(directory: string): UserConfig | null {
 
 	try {
 		const content = readFileSync(configPath, "utf-8");
-		return YAML.parse(content) as UserConfig;
+		const config = YAML.parse(content);
+
+		if (validate) {
+			const result = validateUserConfig(config);
+			if (!result.valid) {
+				console.error(formatValidationErrors(configPath, result));
+				// Don't return null for user config - just warn and continue
+				// This allows partial overrides to work even if some fields are invalid
+			}
+		}
+
+		return config as UserConfig;
 	} catch (error) {
 		console.error(`Error loading user config from ${configPath}:`, error);
 		return null;
@@ -189,6 +241,17 @@ export function getHookConfigs(
 		const userConfig = loadUserConfig(dir);
 		const userOverride = userConfig?.[pluginName]?.[hookName];
 
+		// Resolve idle timeout: user override takes precedence
+		// User can set to false/0 to disable, or a number to override
+		let idleTimeout: number | undefined;
+		if (userOverride?.idle_timeout === false || userOverride?.idle_timeout === 0) {
+			idleTimeout = undefined; // Disabled
+		} else if (typeof userOverride?.idle_timeout === "number") {
+			idleTimeout = userOverride.idle_timeout;
+		} else {
+			idleTimeout = hookDef.idleTimeout;
+		}
+
 		return {
 			enabled: userOverride?.enabled !== false,
 			command: userOverride?.command || hookDef.command,
@@ -197,6 +260,7 @@ export function getHookConfigs(
 				hookDef.ifChanged,
 				userOverride?.if_changed,
 			),
+			idleTimeout,
 		};
 	};
 
