@@ -17,15 +17,17 @@ Create the following directory structure:
 ```
 do/do-{discipline-name}/
 ├── .claude-plugin/
-│   ├── plugin.json          # Plugin metadata
-│   └── marketplace.json     # Marketplace configuration (optional)
+│   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
 ├── agents/
 │   └── {agent-name}.md     # Agent definition
+├── hooks.json               # Claude Code hooks (at plugin root, optional)
 ├── skills/
 │   └── {skill-name}/
 │       └── SKILL.md        # Skill documentation (optional)
 └── README.md               # Plugin documentation
 ```
+
+**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. All other files (`hooks.json`, etc.) go at the plugin root level.
 
 ## Step 1: Create plugin.json
 
