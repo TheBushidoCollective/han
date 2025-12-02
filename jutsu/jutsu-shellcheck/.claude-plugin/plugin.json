@@ -1,6 +1,6 @@
 {
   "name": "jutsu-shellcheck",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck.",
   "author": {
     "name": "The Bushido Collective",
