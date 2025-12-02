@@ -178,7 +178,6 @@ $ npm --version
 
 Always show complete, valid examples:
 
-```markdown
 Create `config.json`:
 
 ```json
@@ -190,7 +189,6 @@ Create `config.json`:
     "name": "myapp"
   }
 }
-```
 ```
 
 ## Admonitions and Callouts
@@ -228,23 +226,20 @@ Create `config.json`:
 
 ### Endpoint Documentation
 
-```markdown
-## Create User
+#### Create User
 
 Creates a new user account.
 
-### Request
+**Request:** `POST /api/users`
 
-`POST /api/users`
-
-#### Headers
+**Headers:**
 
 | Header | Value | Required |
 |--------|-------|:--------:|
 | Content-Type | application/json | ✅ |
 | Authorization | Bearer {token} | ✅ |
 
-#### Body
+**Body:**
 
 ```json
 {
@@ -253,9 +248,7 @@ Creates a new user account.
 }
 ```
 
-### Response
-
-#### Success (201)
+**Response (201):**
 
 ```json
 {
@@ -265,23 +258,21 @@ Creates a new user account.
 }
 ```
 
-#### Error (400)
+**Error (400):**
 
 ```json
 {
   "error": "Invalid email format"
 }
 ```
-```
 
 ### Function Documentation
 
-```markdown
-## `parseConfig(path, options?)`
+#### `parseConfig(path, options?)`
 
 Parses a configuration file.
 
-### Parameters
+**Parameters:**
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
@@ -289,20 +280,17 @@ Parses a configuration file.
 | options.strict | boolean | false | Throw on unknown keys |
 | options.env | boolean | true | Expand environment variables |
 
-### Returns
+**Returns:** `Config` - Parsed configuration object
 
-`Config` - Parsed configuration object
-
-### Throws
+**Throws:**
 
 - `FileNotFoundError` - Config file doesn't exist
 - `ParseError` - Invalid JSON/YAML syntax
 
-### Example
+**Example:**
 
 ```javascript
 const config = parseConfig('./config.json', { strict: true });
-```
 ```
 
 ## Changelogs
