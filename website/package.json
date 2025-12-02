@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
-		"prebuild": "tsx scripts/generate-search-index.ts",
+		"prebuild": "tsx scripts/generate-marketplace.ts && tsx scripts/generate-search-index.ts",
 		"build": "next build",
 		"start": "npx serve@latest out -p 3000",
 		"export": "next build && next export",
