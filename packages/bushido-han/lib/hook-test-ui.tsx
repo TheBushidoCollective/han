@@ -2,7 +2,6 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LiveOutputState } from "./hook-test.js";
 
 interface HookResult {
 	plugin: string;
@@ -28,7 +27,6 @@ interface HookTestUIProps {
 	currentType: string | null;
 	isComplete: boolean;
 	verbose: boolean;
-	liveOutput?: LiveOutputState;
 	/** Called when user wants to view command output - parent handles display */
 	onViewOutput?: (hookType: string, plugin: string, command: string) => void;
 }
@@ -48,7 +46,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	currentType,
 	isComplete,
 	verbose,
-	liveOutput,
 	onViewOutput,
 }) => {
 	const { write } = useStdout();
@@ -151,16 +148,6 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		},
 		[hookResults, hookStructure, currentType],
 	);
-
-	// Get result for a specific command
-	const getCommandResult = (
-		hookType: string,
-		plugin: string,
-		command: string,
-	): HookResult | undefined => {
-		const results = hookResults.get(hookType) || [];
-		return results.find((r) => r.plugin === plugin && r.command === command);
-	};
 
 	// Handle keyboard input
 	useInput((input, key) => {
