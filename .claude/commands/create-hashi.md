@@ -351,7 +351,7 @@ Claude: {uses {tool-name} tool to accomplish task}
 
 ## Related Plugins
 
-{List related hashis or bukis}
+{List related hashis or jutsus}
 
 - **hashi-{related}**: {What it provides}
 - **jutsu-{related}**: {What it provides}

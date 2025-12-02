@@ -110,9 +110,9 @@ Language and tool plugins that provide validation hooks for your development wor
 - **Linting & Formatting** - ESLint, Biome, Prettier, Pylint, RuboCop, Clippy, Checkstyle, Markdownlint
 - **Language-Specific** - TypeScript, Go, Rust, Elixir, Crystal, Swift, Kotlin, Scala, and more
 
-Each buki plugin includes validation hooks that run on Stop and SubagentStop events, ensuring code quality before you continue.
+Each jutsu plugin includes validation hooks that run on Stop and SubagentStop events, ensuring code quality before you continue.
 
-**Browse all jutsu plugins:** Check the `/buki` directory in this repository.
+**Browse all jutsu plugins:** Check the `/jutsu` directory in this repository.
 
 ### 🛤️ Dō (The Way)
 
@@ -137,7 +137,7 @@ MCP servers that provide external knowledge and integrations.
 - API references
 - External service integrations
 
-**Browse all hashi plugins:** Check the `/sensei` directory in this repository.
+**Browse all hashi plugins:** Check the `/hashi` directory in this repository.
 
 ## Using the Han CLI
 
@@ -276,9 +276,9 @@ We welcome contributions that honor the Bushido Code. See [CONTRIBUTING.md](CONT
 ```text
 han/
 ├── bushido/              # Core foundation plugin
-├── buki/                 # Weapon plugins (tools & validation)
+├── jutsu/                 # Weapon plugins (tools & validation)
 ├── do/                   # Discipline plugins (specialized agents)
-├── sensei/               # Teacher plugins (MCP servers)
+├── hashi/               # Teacher plugins (MCP servers)
 └── packages/
     └── bushido-han/      # CLI tool for installation & validation
 ```

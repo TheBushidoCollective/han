@@ -26,7 +26,7 @@
 - [ ] New feature (non-breaking change that adds functionality)
 - [ ] Breaking change (fix or feature that changes existing behavior)
 - [ ] Documentation update
-- [ ] New plugin (buki, do, or sensei)
+- [ ] New plugin (jutsu, do, or hashi)
 
 ## Testing
 

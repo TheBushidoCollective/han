@@ -6,7 +6,7 @@ MCP server for Atlassian Jira integration with automatic acceptance criteria val
 
 ### MCP Server: Atlassian
 
-This sensei connects Claude Code to Atlassian Jira and provides complete ticket lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tickets complete.
+This hashi connects Claude Code to Atlassian Jira and provides complete ticket lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tickets complete.
 
 **Key Capabilities:**
 
@@ -20,7 +20,7 @@ This sensei connects Claude Code to Atlassian Jira and provides complete ticket 
 
 ### Automatic Validation
 
-When you stop a Claude Code session, this sensei automatically:
+When you stop a Claude Code session, this hashi automatically:
 
 1. **Scans the conversation** for any Jira ticket keys (e.g., PROJ-123)
 2. **Reminds you to validate** that work meets acceptance criteria

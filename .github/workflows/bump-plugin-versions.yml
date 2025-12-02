@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - 'buki/**'
-      - 'do/**'
-      - 'sensei/**'
-      - 'bushido/**'
-      - '!**/.claude-plugin/plugin.json'
+      - "jutsu/**"
+      - "do/**"
+      - "hashi/**"
+      - "bushido/**"
+      - "!**/.claude-plugin/plugin.json"
 
 permissions:
   contents: write
@@ -68,7 +68,7 @@ jobs:
           CHANGED_PLUGINS=""
 
           # Check each plugin type directory
-          for plugin_type in buki do sensei; do
+          for plugin_type in jutsu do hashi; do
             for plugin_dir in $plugin_type/*/; do
               # Remove trailing slash
               plugin_dir="${plugin_dir%/}"

@@ -6,7 +6,7 @@ MCP server for ClickUp integration with automatic acceptance criteria validation
 
 ### MCP Server: ClickUp
 
-This sensei connects Claude Code to ClickUp and provides complete task lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tasks complete.
+This hashi connects Claude Code to ClickUp and provides complete task lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tasks complete.
 
 **Key Capabilities:**
 
@@ -22,7 +22,7 @@ This sensei connects Claude Code to ClickUp and provides complete task lifecycle
 
 ### Automatic Validation
 
-When you stop a Claude Code session, this sensei automatically:
+When you stop a Claude Code session, this hashi automatically:
 
 1. **Scans the conversation** for any ClickUp task references (e.g., #ABC123, task-id: xyz)
 2. **Reminds you to validate** that work meets acceptance criteria

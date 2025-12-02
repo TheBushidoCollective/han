@@ -142,9 +142,9 @@ Claude Code can help you generate high-quality plugins and contributions. You ca
 
 Han provides three slash commands for creating plugins with comprehensive guidance:
 
-- **`/create-buki`** - Create a new buki (weapon) plugin with validation hooks
+- **`/create-jutsu`** - Create a new jutsu (weapon) plugin with validation hooks
 - **`/create-do`** - Create a new dō (discipline) plugin with specialized agents
-- **`/create-sensei`** - Create a new sensei (teacher) MCP server plugin
+- **`/create-hashi`** - Create a new hashi (teacher) MCP server plugin
 
 These commands provide detailed, step-by-step instructions for creating each plugin type, including:
 
@@ -157,7 +157,7 @@ These commands provide detailed, step-by-step instructions for creating each plu
 **Example usage:**
 
 ```
-/create-buki
+/create-jutsu
 ```
 
 Then follow the comprehensive instructions provided by the command.
@@ -171,7 +171,7 @@ You can also use natural language prompts to create plugins. Here are example pr
 **Example Prompt:**
 
 ```
-Add a buki for <tool-name> that validates <what it validates>.
+Add a jutsu for <tool-name> that validates <what it validates>.
 It should use --dirs-with <marker-file> and run <validation-command>.
 Include skills for <skill-topics>.
 ```
@@ -179,7 +179,7 @@ Include skills for <skill-topics>.
 **Real Example:**
 
 ```
-Add a buki for kubernetes that validates manifests.
+Add a jutsu for kubernetes that validates manifests.
 It should use --dirs-with *.yaml,*.yml and run kubeconform.
 Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-security.
 ```
@@ -239,14 +239,14 @@ Include examples of good and bad refactoring practices.
 **Example Prompt:**
 
 ```
-Add bukis for <tool1>, <tool2>, and <tool3> along with other comparable deployment tools.
+Add jutsus for <tool1>, <tool2>, and <tool3> along with other comparable deployment tools.
 Also create a dō acting as an <expert-role>.
 ```
 
 **Real Example:**
 
 ```
-Add bukis for kubernetes, helm, and terraform along with other comparable deployment tools.
+Add jutsus for kubernetes, helm, and terraform along with other comparable deployment tools.
 Also create a dō acting as an SRE.
 ```
 
@@ -343,7 +343,7 @@ npm test
 
 **PR Title Format:**
 
-- `feat(buki): add markdownlint plugin`
+- `feat(jutsu): add markdownlint plugin`
 - `fix(han): improve error messages`
 - `docs: update contributing guidelines`
 

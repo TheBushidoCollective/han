@@ -1,22 +1,22 @@
 {
   "enabledPlugins": {
-    "buki-act@han": true,
-    "buki-biome@han": true,
-    "buki-ink@han": true,
-    "buki-markdownlint@han": true,
-    "buki-nextjs@han": true,
-    "buki-playwright@han": true,
-    "buki-react@han": true,
-    "buki-typescript@han": true,
+    "jutsu-act@han": true,
+    "jutsu-biome@han": true,
+    "jutsu-ink@han": true,
+    "jutsu-markdownlint@han": true,
+    "jutsu-nextjs@han": true,
+    "jutsu-playwright@han": true,
+    "jutsu-react@han": true,
+    "jutsu-typescript@han": true,
     "bushido@han": true,
     "do-claude-plugin-development@han": true,
     "do-frontend-development@han": true,
     "do-technical-documentation@han": true,
     "do-prompt-engineering@han": true,
     "do-accessibility-engineering@han": true,
-    "sensei-context7@han": true,
-    "sensei-github@han": true,
-    "sensei-playwright-mcp@han": true
+    "hashi-context7@han": true,
+    "hashi-github@han": true,
+    "hashi-playwright-mcp@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

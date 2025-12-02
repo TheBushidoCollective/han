@@ -8,7 +8,7 @@ Connect Claude Code to the GitHub API for comprehensive repository management, i
 
 ### MCP Server: github
 
-This sensei uses the official [GitHub MCP Server](https://github.com/github/github-mcp-server) to provide direct access to the GitHub API with 100+ tools for:
+This hashi uses the official [GitHub MCP Server](https://github.com/github/github-mcp-server) to provide direct access to the GitHub API with 100+ tools for:
 
 - **Repository Management**: Create, fork, and manage repositories
 - **File Operations**: Read, create, update, and delete files with automatic branch creation
