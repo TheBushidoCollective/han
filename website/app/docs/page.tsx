@@ -21,6 +21,12 @@ export default function DocsPage() {
 								Documentation
 							</p>
 							<a
+								href="#philosophy"
+								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+							>
+								The Three Pillars
+							</a>
+							<a
 								href="#installation"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
@@ -59,6 +65,175 @@ export default function DocsPage() {
 								using Han plugins.
 							</p>
 						</div>
+
+						{/* Philosophy - The Three Pillars */}
+						<section id="philosophy" className="scroll-mt-8 mb-16">
+							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+								The Three Pillars
+							</h2>
+							<p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
+								Han plugins are not just prompts or skills—they are complete
+								mastery systems. Every plugin is built on three foundational
+								pillars that work together to ensure not just capability, but
+								excellence.
+							</p>
+
+							<div className="space-y-8 mb-12">
+								{/* Knowledge Pillar */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
+									<div className="flex items-start gap-6">
+										<div className="text-center shrink-0">
+											<span className="text-5xl font-bold text-gray-900 dark:text-white">
+												知
+											</span>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
+												Chi
+											</p>
+										</div>
+										<div>
+											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+												Knowledge
+											</h3>
+											<p className="text-gray-600 dark:text-gray-300 mb-4">
+												Deep expertise distilled into skills and patterns. Not
+												just answers, but understanding—the wisdom to know why,
+												not just how. Each skill contains hundreds of lines of
+												carefully crafted guidance, best practices, and
+												real-world examples.
+											</p>
+											<div className="grid md:grid-cols-2 gap-4">
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Skills
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Framework-specific expertise loaded on-demand.
+														TypeScript patterns, React hooks, testing
+														strategies—deep knowledge when you need it.
+													</p>
+												</div>
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Anti-Patterns
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Learn what to avoid, not just what to do. Common
+														pitfalls, security vulnerabilities, and performance
+														traps identified before they become problems.
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{/* Action Pillar */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
+									<div className="flex items-start gap-6">
+										<div className="text-center shrink-0">
+											<span className="text-5xl font-bold text-gray-900 dark:text-white">
+												行
+											</span>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
+												Kō
+											</p>
+										</div>
+										<div>
+											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+												Action
+											</h3>
+											<p className="text-gray-600 dark:text-gray-300 mb-4">
+												Specialized agents and commands that execute with
+												precision. From code review to refactoring, automated
+												workflows that embody expertise. Knowledge becomes
+												action through purpose-built automation.
+											</p>
+											<div className="grid md:grid-cols-2 gap-4">
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Agents
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Specialized subagents for complex tasks. Frontend
+														development, accessibility engineering,
+														documentation—each with deep domain expertise.
+													</p>
+												</div>
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Commands
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Slash commands for common workflows. Code review,
+														debugging, refactoring—complex multi-step processes
+														simplified to a single invocation.
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{/* Discipline Pillar */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
+									<div className="flex items-start gap-6">
+										<div className="text-center shrink-0">
+											<span className="text-5xl font-bold text-gray-900 dark:text-white">
+												律
+											</span>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
+												Ritsu
+											</p>
+										</div>
+										<div>
+											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+												Discipline
+											</h3>
+											<p className="text-gray-600 dark:text-gray-300 mb-4">
+												Validation hooks that enforce quality automatically.
+												Every change verified, every standard upheld—excellence
+												through enforcement. This is what separates Han plugins
+												from simple prompt collections.
+											</p>
+											<div className="grid md:grid-cols-2 gap-4">
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Validation Hooks
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Automatic quality gates that run on every change.
+														Linting, formatting, type checking—enforced
+														consistently without manual intervention.
+													</p>
+												</div>
+												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+														Smart Caching
+													</h4>
+													<p className="text-sm text-gray-600 dark:text-gray-300">
+														Intelligent change detection ensures hooks only run
+														when needed. Fast feedback without redundant
+														validation—discipline without delay.
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div className="bg-gray-900 dark:bg-gray-950 text-white p-8 rounded-lg">
+								<blockquote className="text-xl italic mb-4">
+									"Plugins that practice what they preach."
+								</blockquote>
+								<p className="text-gray-400">
+									When you install a Han plugin, you&apos;re not just getting
+									prompts—you&apos;re getting a complete system that teaches,
+									executes, and validates. Knowledge without enforcement is just
+									advice. Han plugins enforce the standards they teach.
+								</p>
+							</div>
+						</section>
 
 						{/* Installation Methods */}
 						<section id="installation" className="scroll-mt-8 mb-16">

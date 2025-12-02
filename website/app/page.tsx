@@ -40,6 +40,62 @@ export default function Home() {
 				</div>
 			</section>
 
+			{/* The Han Difference - Three Pillars */}
+			<section className="bg-white dark:bg-gray-800 py-24">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
+						More Than Just Prompts
+					</h2>
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-3xl mx-auto text-lg">
+						Every Han plugin is a complete mastery system built on three
+						pillars. Not just what to do, but how to do it right—with validation
+						that ensures excellence.
+					</p>
+
+					<div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+						<PillarCard
+							kanji="知"
+							reading="Chi"
+							title="Knowledge"
+							description="Deep expertise distilled into skills and patterns. Not just answers, but understanding—the wisdom to know why, not just how."
+							features={[
+								"Framework-specific best practices",
+								"Anti-patterns and pitfalls to avoid",
+								"Real-world code examples",
+							]}
+						/>
+						<PillarCard
+							kanji="行"
+							reading="Kō"
+							title="Action"
+							description="Specialized agents and commands that execute with precision. From code review to refactoring, automated workflows that embody expertise."
+							features={[
+								"Purpose-built development agents",
+								"Slash commands for common tasks",
+								"Multi-step workflow automation",
+							]}
+						/>
+						<PillarCard
+							kanji="律"
+							reading="Ritsu"
+							title="Discipline"
+							description="Validation hooks that enforce quality automatically. Every change verified, every standard upheld—excellence through enforcement."
+							features={[
+								"Automatic linting and formatting",
+								"Pre-commit quality gates",
+								"Smart caching for fast feedback",
+							]}
+						/>
+					</div>
+
+					<div className="mt-16 text-center">
+						<p className="text-gray-500 dark:text-gray-400 italic text-lg">
+							"Plugins that practice what they preach."
+						</p>
+					</div>
+				</div>
+			</section>
+
 			{/* Plugin Categories */}
 			<section id="plugins" className="py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -217,5 +273,47 @@ function CategoryCard({
 			</p>
 			<p className="text-gray-600 dark:text-gray-300">{description}</p>
 		</Link>
+	);
+}
+
+function PillarCard({
+	kanji,
+	reading,
+	title,
+	description,
+	features,
+}: {
+	kanji: string;
+	reading: string;
+	title: string;
+	description: string;
+	features: string[];
+}) {
+	return (
+		<div className="text-center">
+			<div className="mb-6">
+				<span className="text-7xl font-bold text-gray-900 dark:text-white">
+					{kanji}
+				</span>
+				<p className="text-sm text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">
+					{reading}
+				</p>
+			</div>
+			<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+				{title}
+			</h3>
+			<p className="text-gray-600 dark:text-gray-300 mb-6">{description}</p>
+			<ul className="text-left space-y-2">
+				{features.map((feature) => (
+					<li
+						key={feature}
+						className="flex items-start gap-2 text-gray-600 dark:text-gray-300"
+					>
+						<span className="text-gray-400 dark:text-gray-500 mt-1">-</span>
+						<span>{feature}</span>
+					</li>
+				))}
+			</ul>
+		</div>
 	);
 }
