@@ -222,6 +222,7 @@ struct TaskListView: View {
 ### Avoid Large Monolithic Views
 
 Bad:
+
 ```swift
 struct BadView: View {
     var body: some View {
@@ -237,6 +238,7 @@ Good: Extract into focused subviews.
 ### Don't Use @ObservedObject for Owned State
 
 Bad:
+
 ```swift
 struct BadView: View {
     @ObservedObject var viewModel = ViewModel() // Re-created on every view init!
@@ -244,6 +246,7 @@ struct BadView: View {
 ```
 
 Good:
+
 ```swift
 struct GoodView: View {
     @StateObject private var viewModel = ViewModel()
@@ -253,6 +256,7 @@ struct GoodView: View {
 ### Avoid Side Effects in View Body
 
 Bad:
+
 ```swift
 var body: some View {
     let _ = print("View rendered") // Side effect!
@@ -265,11 +269,13 @@ Good: Use `.task`, `.onAppear`, or `.onChange` for side effects.
 ### Don't Force Unwrap in Views
 
 Bad:
+
 ```swift
 Text(user!.name) // Crash risk
 ```
 
 Good:
+
 ```swift
 if let user {
     Text(user.name)

@@ -358,6 +358,7 @@ func userPublisher(id: String) -> AnyPublisher<User, Error> {
 ### Blocking the Main Thread
 
 Bad:
+
 ```swift
 // DON'T do this
 func loadData() {
@@ -371,6 +372,7 @@ func loadData() {
 ```
 
 Good:
+
 ```swift
 func loadData() async {
     data = await fetchData()
@@ -380,6 +382,7 @@ func loadData() async {
 ### Ignoring Cancellation
 
 Bad:
+
 ```swift
 func processItems(_ items: [Item]) async {
     for item in items {
@@ -389,6 +392,7 @@ func processItems(_ items: [Item]) async {
 ```
 
 Good:
+
 ```swift
 func processItems(_ items: [Item]) async throws {
     for item in items {
@@ -401,6 +405,7 @@ func processItems(_ items: [Item]) async throws {
 ### Data Races with Shared Mutable State
 
 Bad:
+
 ```swift
 class Counter {
     var count = 0 // Not thread-safe!
@@ -412,6 +417,7 @@ class Counter {
 ```
 
 Good:
+
 ```swift
 actor Counter {
     var count = 0

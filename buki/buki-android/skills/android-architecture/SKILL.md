@@ -420,6 +420,7 @@ Good: Use MVVM with clear separation of concerns.
 ### Network Calls in ViewModel
 
 Bad:
+
 ```kotlin
 class BadViewModel : ViewModel() {
     fun loadData() {
@@ -434,6 +435,7 @@ Good: Inject repository through constructor.
 ### Exposing Mutable State
 
 Bad:
+
 ```kotlin
 class BadViewModel : ViewModel() {
     val uiState = MutableStateFlow(UiState())  // Mutable exposed!
@@ -441,6 +443,7 @@ class BadViewModel : ViewModel() {
 ```
 
 Good:
+
 ```kotlin
 class GoodViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(UiState())

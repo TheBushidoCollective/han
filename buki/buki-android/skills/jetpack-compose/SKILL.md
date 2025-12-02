@@ -344,6 +344,7 @@ fun ContactList(contacts: Map<Char, List<Contact>>) {
 ### Avoid Side Effects in Composition
 
 Bad:
+
 ```kotlin
 @Composable
 fun BadExample(viewModel: ViewModel) {
@@ -354,6 +355,7 @@ fun BadExample(viewModel: ViewModel) {
 ```
 
 Good:
+
 ```kotlin
 @Composable
 fun GoodExample(viewModel: ViewModel) {
@@ -368,6 +370,7 @@ fun GoodExample(viewModel: ViewModel) {
 ### Don't Read State in Remember Block
 
 Bad:
+
 ```kotlin
 @Composable
 fun BadCounter(initial: Int) {
@@ -377,6 +380,7 @@ fun BadCounter(initial: Int) {
 ```
 
 Good:
+
 ```kotlin
 @Composable
 fun GoodCounter(initial: Int) {
@@ -387,6 +391,7 @@ fun GoodCounter(initial: Int) {
 ### Avoid Heavy Computation During Composition
 
 Bad:
+
 ```kotlin
 @Composable
 fun BadList(items: List<Item>) {
@@ -397,6 +402,7 @@ fun BadList(items: List<Item>) {
 ```
 
 Good:
+
 ```kotlin
 @Composable
 fun GoodList(items: List<Item>) {

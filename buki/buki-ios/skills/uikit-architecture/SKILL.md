@@ -223,6 +223,7 @@ class ItemListViewController: UIViewController {
 ### UIKit and SwiftUI Integration
 
 Hosting SwiftUI in UIKit:
+
 ```swift
 class SettingsViewController: UIViewController {
     override func viewDidLoad() {
@@ -241,6 +242,7 @@ class SettingsViewController: UIViewController {
 ```
 
 Wrapping UIKit in SwiftUI:
+
 ```swift
 struct MapViewRepresentable: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
@@ -335,6 +337,7 @@ class NetworkViewController: UIViewController {
 Bad: Putting everything in one view controller.
 
 Good: Extract into separate types:
+
 - ViewModels for presentation logic
 - Coordinators for navigation
 - Custom views for UI components
@@ -349,11 +352,13 @@ Good: Use coordinators with programmatic navigation.
 ### Force Casting Cells
 
 Bad:
+
 ```swift
 let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! CustomCell
 ```
 
 Good:
+
 ```swift
 guard let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as? CustomCell else {
     fatalError("Unable to dequeue CustomCell")
