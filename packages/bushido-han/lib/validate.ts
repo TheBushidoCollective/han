@@ -115,13 +115,11 @@ async function runCommand(
 			stdio: verbose ? "inherit" : ["ignore", "pipe", "pipe"],
 		});
 
-		let lastOutputTime = Date.now();
 		let idleTimeoutHandle: NodeJS.Timeout | null = null;
 		let idleTimedOut = false;
 
 		// Reset idle timeout on output
 		const resetIdleTimeout = () => {
-			lastOutputTime = Date.now();
 			if (idleTimeoutHandle) {
 				clearTimeout(idleTimeoutHandle);
 			}
