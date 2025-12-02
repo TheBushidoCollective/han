@@ -18,16 +18,19 @@ Create the following directory structure:
 buki/buki-{name}/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
+├── han-config.json          # Han hook configurations (at plugin root)
 ├── hooks/
-│   ├── hooks.json           # Claude Code hooks
-│   └── han-config.json      # Han hook configurations (optional)
+│   └── hooks.json           # Claude Code hooks
 ├── skills/
 │   └── {skill-name}/
 │       └── SKILL.md        # Skill documentation
 └── README.md               # Plugin documentation
 ```
 
-**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. Hook files (`hooks.json`, `han-config.json`) go in the `hooks/` directory at the plugin root level.
+**IMPORTANT**:
+- Only `plugin.json` goes inside `.claude-plugin/`
+- `hooks.json` goes in the `hooks/` directory
+- `han-config.json` stays at the plugin root (NOT in hooks/)
 
 ## Step 1: Create plugin.json
 
