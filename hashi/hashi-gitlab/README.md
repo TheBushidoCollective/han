@@ -8,7 +8,7 @@ Official GitLab MCP server integration for comprehensive project management, iss
 
 The official GitLab MCP server enables AI assistants to securely interact with your GitLab instance through OAuth 2.0 authentication. This integration provides full access to GitLab's project management, issue tracking, merge request workflows, CI/CD pipelines, and intelligent code search capabilities.
 
-This sensei connects Claude Code to GitLab and provides:
+This hashi connects Claude Code to GitLab and provides:
 
 - **Issue Management**: Create, read, and manage GitLab issues across projects
 - **Merge Request Operations**: Create MRs, view commits, diffs, and pipeline status

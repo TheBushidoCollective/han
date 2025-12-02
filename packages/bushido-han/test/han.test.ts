@@ -122,8 +122,8 @@ test("shows error when hook run has no hook name or command", () => {
 		const stderr = execError.stderr?.toString() || "";
 		strictEqual(
 			stderr.includes("Hook name is required") ||
-				stderr.includes("-- separator") ||
-				stderr.includes("error"),
+			stderr.includes("-- separator") ||
+			stderr.includes("error"),
 			true,
 		);
 	}
@@ -352,7 +352,7 @@ test("han hook test validates hooks in installed plugins", () => {
 						han: {
 							source: {
 								source: "github",
-								repo: "thebushidocollective/sensei",
+								repo: "thebushidocollective/hashi",
 							},
 						},
 					},
@@ -524,7 +524,7 @@ test("han plugin uninstall removes plugin from settings", () => {
 						han: {
 							source: {
 								source: "github",
-								repo: "thebushidocollective/sensei",
+								repo: "thebushidocollective/hashi",
 							},
 						},
 					},
@@ -569,7 +569,7 @@ test("han plugin install is idempotent", () => {
 						han: {
 							source: {
 								source: "github",
-								repo: "thebushidocollective/sensei",
+								repo: "thebushidocollective/hashi",
 							},
 						},
 					},

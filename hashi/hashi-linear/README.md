@@ -6,7 +6,7 @@ MCP server for Linear integration with automatic acceptance criteria validation.
 
 ### MCP Server: Linear
 
-This sensei connects Claude Code to Linear and provides complete issue lifecycle management with built-in validation to ensure work meets acceptance criteria before marking issues complete.
+This hashi connects Claude Code to Linear and provides complete issue lifecycle management with built-in validation to ensure work meets acceptance criteria before marking issues complete.
 
 **Key Capabilities:**
 
@@ -21,7 +21,7 @@ This sensei connects Claude Code to Linear and provides complete issue lifecycle
 
 ### Automatic Validation
 
-When you stop a Claude Code session, this sensei automatically:
+When you stop a Claude Code session, this hashi automatically:
 
 1. **Scans the conversation** for any Linear issue identifiers (e.g., ENG-123, PROD-456)
 2. **Reminds you to validate** that work meets acceptance criteria

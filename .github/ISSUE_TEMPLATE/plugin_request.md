@@ -1,6 +1,6 @@
 ---
 name: Plugin Request
-about: Request a new buki, do, or sensei plugin
+about: Request a new jutsu, do, or hashi plugin
 title: "[PLUGIN] "
 labels: plugin-request
 assignees: ''
