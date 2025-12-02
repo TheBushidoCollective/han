@@ -10,17 +10,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'Read and follow the TDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md'",
-            "timeout": 30000
-          }
-        ]
-      }
     ]
   }
 }
