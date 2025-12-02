@@ -1,6 +1,6 @@
 {
   "name": "buki-lerna",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Lerna monorepo management skills with bootstrap validation hooks.",
   "author": {
     "name": "The Bushido Collective",
