@@ -106,11 +106,11 @@ console.log(
 	`  - Core: ${publicMarketplace.plugins.filter((p) => p.category === "Core").length}`,
 );
 console.log(
-	`  - Weapon: ${publicMarketplace.plugins.filter((p) => p.category === "Weapon").length}`,
+	`  - Technique: ${publicMarketplace.plugins.filter((p) => p.category === "Technique").length}`,
 );
 console.log(
 	`  - Discipline: ${publicMarketplace.plugins.filter((p) => p.category === "Discipline").length}`,
 );
 console.log(
-	`  - Teacher: ${publicMarketplace.plugins.filter((p) => p.category === "Teacher").length}`,
+	`  - Bridge: ${publicMarketplace.plugins.filter((p) => p.category === "Bridge").length}`,
 );
