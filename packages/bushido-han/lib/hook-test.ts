@@ -1,10 +1,23 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { config as dotenvConfig } from "dotenv";
 import { render } from "ink";
 import React from "react";
 import { HookTestUI } from "./hook-test-ui.js";
+
+/**
+ * Get Claude config directory
+ */
+function getClaudeConfigDir(): string {
+	if (process.env.CLAUDE_CONFIG_DIR) {
+		return process.env.CLAUDE_CONFIG_DIR;
+	}
+	const homeDir = process.env.HOME || process.env.USERPROFILE;
+	if (!homeDir) {
+		throw new Error("Could not determine home directory");
+	}
+	return join(homeDir, ".claude");
+}
 
 /** Default timeout for hooks (30 seconds per Claude docs) */
 const DEFAULT_HOOK_TIMEOUT = 30000;
@@ -86,13 +99,13 @@ const VALID_HOOK_TYPES = [
 ];
 
 /**
- * Execute a single hook command and collect output
+ * Execute a single hook command and collect output.
+ * The command itself (e.g. han hook run) will source CLAUDE_ENV_FILE if set.
  */
 async function executeHookCommand(
 	hook: HookCommand,
 	hookType: string,
 	verbose: boolean,
-	claudeEnvVars: Record<string, string>,
 	liveOutput?: LiveOutputState,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
@@ -119,7 +132,6 @@ async function executeHookCommand(
 			shell: true,
 			env: {
 				...process.env,
-				...claudeEnvVars,
 				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
 				CLAUDE_PROJECT_DIR: process.cwd(),
 				// Enable verbose output for hook run commands during testing
@@ -202,57 +214,6 @@ async function executeHookCommand(
 			});
 		});
 	});
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		throw new Error("Could not determine home directory");
-	}
-	return join(homeDir, ".claude");
-}
-
-/**
- * Load environment variables from Claude config .env files
- * Order: user -> project -> local (later files override earlier)
- */
-function loadClaudeEnvFiles(): Record<string, string> {
-	const envVars: Record<string, string> = {};
-
-	// 1. User config: ~/.claude/.env
-	const userEnvPath = join(getClaudeConfigDir(), ".env");
-	if (existsSync(userEnvPath)) {
-		const result = dotenvConfig({ path: userEnvPath });
-		if (result.parsed) {
-			Object.assign(envVars, result.parsed);
-		}
-	}
-
-	// 2. Project config: <project>/.claude/.env
-	const projectEnvPath = join(process.cwd(), ".claude", ".env");
-	if (existsSync(projectEnvPath)) {
-		const result = dotenvConfig({ path: projectEnvPath });
-		if (result.parsed) {
-			Object.assign(envVars, result.parsed);
-		}
-	}
-
-	// 3. Local config: <project>/.claude/.env.local
-	const localEnvPath = join(process.cwd(), ".claude", ".env.local");
-	if (existsSync(localEnvPath)) {
-		const result = dotenvConfig({ path: localEnvPath });
-		if (result.parsed) {
-			Object.assign(envVars, result.parsed);
-		}
-	}
-
-	return envVars;
 }
 
 /**
@@ -607,9 +568,6 @@ async function executeHooksWithUI(
 	verbose: boolean,
 ): Promise<void> {
 	return new Promise((_resolve) => {
-		// Load environment variables from Claude config .env files
-		const claudeEnvVars = loadClaudeEnvFiles();
-
 		// Build hook structure first (hooksByType already contains HookCommand with type and timeout)
 		const hookStructure = new Map<string, HookCommand[]>();
 		for (const hookType of hookTypesFound) {
@@ -697,7 +655,6 @@ async function executeHooksWithUI(
 								hook,
 								hookType,
 								verbose,
-								claudeEnvVars,
 								liveOutput,
 							);
 							results.push(result);
@@ -743,9 +700,6 @@ async function executeHooksWithConsole(
 	hooksByType: HooksByType,
 	verbose: boolean,
 ): Promise<void> {
-	// Load environment variables from Claude config .env files
-	const claudeEnvVars = loadClaudeEnvFiles();
-
 	console.log("🔍 Running hook tests...\n");
 
 	let hadFailures = false;
@@ -760,9 +714,7 @@ async function executeHooksWithConsole(
 
 		// Run all hooks of this type in parallel
 		const results = await Promise.all(
-			hooks.map((hook) =>
-				executeHookCommand(hook, hookType, verbose, claudeEnvVars),
-			),
+			hooks.map((hook) => executeHookCommand(hook, hookType, verbose)),
 		);
 
 		allResults.set(hookType, results);

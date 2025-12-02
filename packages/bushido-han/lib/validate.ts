@@ -12,6 +12,19 @@ import {
 	type ResolvedHookConfig,
 } from "./hook-config.js";
 
+/**
+ * Wrap a command to source CLAUDE_ENV_FILE first if it's set.
+ * This mimics what Claude Code does when running hooks.
+ */
+function wrapCommandWithEnvFile(cmd: string): string {
+	const envFile = process.env.CLAUDE_ENV_FILE;
+	if (envFile) {
+		// Source the env file before running the command
+		return `source "${envFile}" && ${cmd}`;
+	}
+	return cmd;
+}
+
 interface ValidateOptions {
 	failFast: boolean;
 	dirsWith: string | null;
@@ -34,24 +47,23 @@ function findDirectoriesWithMarker(
 // When verbose=false, suppresses output and we'll tell the agent how to reproduce
 // When verbose=true, inherits stdio to show full output
 function runCommand(dir: string, cmd: string, verbose?: boolean): boolean {
+	const wrappedCmd = wrapCommandWithEnvFile(cmd);
 	try {
 		if (verbose) {
 			// Verbose mode: show full output
-			execSync(cmd, {
+			execSync(wrappedCmd, {
 				cwd: dir,
 				stdio: "inherit",
 				encoding: "utf8",
-				shell: "/bin/sh",
-				env: process.env,
+				shell: "/bin/bash",
 			});
 		} else {
 			// Quiet mode: suppress output, we give the agent a concise instruction instead
-			execSync(cmd, {
+			execSync(wrappedCmd, {
 				cwd: dir,
 				stdio: ["ignore", "pipe", "pipe"],
 				encoding: "utf8",
-				shell: "/bin/sh",
-				env: process.env,
+				shell: "/bin/bash",
 			});
 		}
 		return true;
@@ -62,13 +74,13 @@ function runCommand(dir: string, cmd: string, verbose?: boolean): boolean {
 
 // Run test command silently in directory (returns true if exit code 0)
 function testDirCommand(dir: string, cmd: string): boolean {
+	const wrappedCmd = wrapCommandWithEnvFile(cmd);
 	try {
-		execSync(cmd, {
+		execSync(wrappedCmd, {
 			cwd: dir,
 			stdio: ["ignore", "ignore", "ignore"],
 			encoding: "utf8",
-			shell: "/bin/sh",
-			env: process.env,
+			shell: "/bin/bash",
 		});
 		return true;
 	} catch (_e) {
