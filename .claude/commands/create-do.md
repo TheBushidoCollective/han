@@ -20,14 +20,15 @@ do/do-{discipline-name}/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
 ├── agents/
 │   └── {agent-name}.md     # Agent definition
-├── hooks.json               # Claude Code hooks (at plugin root, optional)
+├── hooks/
+│   └── hooks.json           # Claude Code hooks (optional)
 ├── skills/
 │   └── {skill-name}/
 │       └── SKILL.md        # Skill documentation (optional)
 └── README.md               # Plugin documentation
 ```
 
-**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. All other files (`hooks.json`, etc.) go at the plugin root level.
+**IMPORTANT**: Only `plugin.json` goes inside `.claude-plugin/`. Hook files go in the `hooks/` directory.
 
 ## Step 1: Create plugin.json
 
