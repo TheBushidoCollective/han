@@ -178,6 +178,44 @@ jobs:
         working-directory: ./packages/bushido-han
         run: node scripts/sync-platform-versions.js
 
+      - name: Verify platform packages are available on npm
+        working-directory: ./packages/bushido-han
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          PACKAGES=(
+            "@thebushidocollective/han-darwin-arm64"
+            "@thebushidocollective/han-darwin-x64"
+            "@thebushidocollective/han-linux-x64"
+            "@thebushidocollective/han-linux-arm64"
+            "@thebushidocollective/han-win32-x64"
+          )
+
+          echo "Verifying all platform packages are available at version $VERSION..."
+
+          for pkg in "${PACKAGES[@]}"; do
+            echo "Checking $pkg@$VERSION..."
+            MAX_RETRIES=30
+            RETRY_COUNT=0
+
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if npm view "$pkg@$VERSION" version 2>/dev/null | grep -q "$VERSION"; then
+                echo "✓ $pkg@$VERSION is available"
+                break
+              fi
+
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "✗ $pkg@$VERSION not available after $MAX_RETRIES attempts"
+                exit 1
+              fi
+
+              echo "  Waiting for $pkg@$VERSION to propagate (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+              sleep 10
+            done
+          done
+
+          echo "All platform packages verified!"
+
       - name: Build TypeScript
         working-directory: ./packages/bushido-han
         run: npm run build
