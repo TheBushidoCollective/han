@@ -13,6 +13,7 @@ interface SourcePlugin {
 	source: string; // e.g., "./jutsu/jutsu-react"
 	category: "Core" | "Technique" | "Discipline" | "Bridge";
 	keywords: string[];
+	configHash: string | null;
 }
 
 interface SourceMarketplace {
@@ -40,6 +41,7 @@ interface PublicPlugin {
 	source: PublicPluginSource;
 	category: "Core" | "Technique" | "Discipline" | "Bridge";
 	keywords: string[];
+	configHash: string | null;
 }
 
 interface PublicMarketplace {
@@ -69,6 +71,7 @@ function transformMarketplace(source: SourceMarketplace): PublicMarketplace {
 		},
 		category: plugin.category,
 		keywords: plugin.keywords,
+		configHash: plugin.configHash,
 	}));
 
 	return {

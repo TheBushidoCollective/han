@@ -93,12 +93,11 @@ function loadNativeModule(): NativeModule {
 const nativeModule = loadNativeModule();
 
 /**
- * Cache manifest structure stored per plugin/hook combination.
- * Maps relative file paths to their content hashes.
+ * Cache manifest structure stored per plugin/hook combination
  * Path: ~/.claude/projects/{project-slug}/han/{plugin_name}_{hook_name}.json
  */
 export interface CacheManifest {
-	[filePath: string]: string; // relative or absolute path -> file content hash
+	[filePath: string]: string; // relative path -> file content hash
 }
 
 /**
@@ -159,7 +158,7 @@ export function computeFileHash(filePath: string): string {
 }
 
 /**
- * Load cache manifest from disk.
+ * Load cache manifest from disk
  */
 export function loadCacheManifest(
 	pluginName: string,
@@ -209,11 +208,10 @@ export function findFilesWithGlob(
 }
 
 /**
- * Build a manifest of file hashes for given files.
- * Files can be relative (resolved from rootDir) or absolute paths.
+ * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
-	return nativeModule.buildManifest(files, rootDir) as CacheManifest;
+	return nativeModule.buildManifest(files, rootDir);
 }
 
 /**
@@ -232,69 +230,32 @@ function hasChanges(
 }
 
 /**
- * Track files and update the cache manifest.
- * This is called after a successful hook execution.
- *
- * @param pluginName - Plugin identifier
- * @param hookName - Hook identifier
- * @param rootDir - Root directory for file patterns
- * @param patterns - Glob patterns to match files
- * @param additionalFiles - Optional additional absolute file paths to track (e.g., config files)
+ * Track files and update the cache manifest
+ * This is called after a successful hook execution
  */
 export function trackFiles(
 	pluginName: string,
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
-	additionalFiles?: string[],
 ): boolean {
-	const matchedFiles = findFilesWithGlob(rootDir, patterns);
-	const allFiles = additionalFiles
-		? [...matchedFiles, ...additionalFiles]
-		: matchedFiles;
-	const manifest = buildManifest(allFiles, rootDir);
+	const files = findFilesWithGlob(rootDir, patterns);
+	const manifest = buildManifest(files, rootDir);
 	return saveCacheManifest(pluginName, hookName, manifest);
 }
 
 /**
  * Check if files have changed since last tracked state.
- * Returns true if changes detected (hook should run), false if no changes (skip hook).
- *
- * @param pluginName - Plugin identifier
- * @param hookName - Hook identifier
- * @param rootDir - Root directory for file patterns
- * @param patterns - Glob patterns to match files
- * @param additionalFiles - Optional additional absolute file paths to check (e.g., config files)
+ * Returns true if changes detected (hook should run), false if no changes (skip hook)
  */
 export function checkForChanges(
 	pluginName: string,
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
-	additionalFiles?: string[],
 ): boolean {
 	const cachedManifest = loadCacheManifest(pluginName, hookName);
-	if (!cachedManifest) {
-		return true;
-	}
-
-	// Check glob pattern files
-	if (hasChanges(rootDir, patterns, cachedManifest)) {
-		return true;
-	}
-
-	// Check additional files (e.g., config files)
-	if (additionalFiles && additionalFiles.length > 0) {
-		for (const filePath of additionalFiles) {
-			const currentHash = computeFileHash(filePath);
-			const cachedHash = cachedManifest[filePath];
-			if (currentHash !== cachedHash) {
-				return true;
-			}
-		}
-	}
-
-	return false;
+	return hasChanges(rootDir, patterns, cachedManifest);
 }
 
 /**
