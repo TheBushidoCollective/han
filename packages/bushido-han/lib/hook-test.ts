@@ -35,6 +35,27 @@ interface HookResult {
 	timedOut?: boolean;
 }
 
+/**
+ * Live output state for streaming output to UI during execution
+ */
+export interface LiveOutputState {
+	// Map of "hookType:plugin:command" -> output lines
+	outputs: Map<string, string[]>;
+	// Callback to trigger UI rerender
+	onUpdate?: () => void;
+}
+
+/**
+ * Create a key for the live output map
+ */
+export function makeLiveOutputKey(
+	hookType: string,
+	plugin: string,
+	command: string,
+): string {
+	return `${hookType}:${plugin}:${command}`;
+}
+
 interface MarketplaceSource {
 	source: "directory" | "git" | "github";
 	path?: string;
@@ -72,6 +93,7 @@ async function executeHookCommand(
 	hookType: string,
 	verbose: boolean,
 	claudeEnvVars: Record<string, string>,
+	liveOutput?: LiveOutputState,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
 	if (hook.type === "prompt") {
@@ -82,6 +104,14 @@ async function executeHookCommand(
 			output: [],
 			isPrompt: true,
 		};
+	}
+
+	// Create live output key and initialize if streaming is enabled
+	const liveKey = liveOutput
+		? makeLiveOutputKey(hookType, hook.plugin, hook.command)
+		: null;
+	if (liveOutput && liveKey) {
+		liveOutput.outputs.set(liveKey, []);
 	}
 
 	return new Promise((resolve) => {
@@ -117,6 +147,13 @@ async function executeHookCommand(
 				if (verbose) {
 					process.stdout.write(`  ${formatted}\n`);
 				}
+				// Stream to live output
+				if (liveOutput && liveKey) {
+					const liveLines = liveOutput.outputs.get(liveKey) || [];
+					liveLines.push(formatted);
+					liveOutput.outputs.set(liveKey, liveLines);
+					liveOutput.onUpdate?.();
+				}
 			}
 		});
 
@@ -128,6 +165,13 @@ async function executeHookCommand(
 				output.push(formatted);
 				if (verbose) {
 					process.stderr.write(`  ${formatted}\n`);
+				}
+				// Stream to live output
+				if (liveOutput && liveKey) {
+					const liveLines = liveOutput.outputs.get(liveKey) || [];
+					liveLines.push(formatted);
+					liveOutput.outputs.set(liveKey, liveLines);
+					liveOutput.onUpdate?.();
 				}
 			}
 		});
@@ -577,6 +621,29 @@ async function executeHooksWithUI(
 		let isComplete = false;
 		let hadFailures = false;
 
+		// Create live output state for streaming
+		const liveOutput: LiveOutputState = {
+			outputs: new Map(),
+		};
+
+		// Helper to trigger rerender
+		const doRerender = () => {
+			rerender(
+				React.createElement(HookTestUI, {
+					hookTypes: hookTypesFound,
+					hookStructure,
+					hookResults,
+					currentType,
+					isComplete,
+					verbose,
+					liveOutput,
+				}),
+			);
+		};
+
+		// Set up live output callback
+		liveOutput.onUpdate = doRerender;
+
 		const { rerender, unmount } = render(
 			React.createElement(HookTestUI, {
 				hookTypes: hookTypesFound,
@@ -585,6 +652,7 @@ async function executeHooksWithUI(
 				currentType,
 				isComplete,
 				verbose,
+				liveOutput,
 			}),
 		);
 
@@ -595,16 +663,7 @@ async function executeHooksWithUI(
 				currentType = hookType;
 
 				// Update UI to show current hook type
-				rerender(
-					React.createElement(HookTestUI, {
-						hookTypes: hookTypesFound,
-						hookStructure,
-						hookResults,
-						currentType,
-						isComplete,
-						verbose,
-					}),
-				);
+				doRerender();
 
 				// Initialize results array for this hook type
 				const results: HookResult[] = [];
@@ -618,6 +677,7 @@ async function executeHooksWithUI(
 							hookType,
 							verbose,
 							claudeEnvVars,
+							liveOutput,
 						);
 						results.push(result);
 
@@ -627,16 +687,7 @@ async function executeHooksWithUI(
 						}
 
 						// Update UI immediately after each hook completes
-						rerender(
-							React.createElement(HookTestUI, {
-								hookTypes: hookTypesFound,
-								hookStructure,
-								hookResults,
-								currentType,
-								isComplete,
-								verbose,
-							}),
-						);
+						doRerender();
 					}),
 				);
 			}
@@ -646,16 +697,7 @@ async function executeHooksWithUI(
 			currentType = null;
 
 			// Final render
-			rerender(
-				React.createElement(HookTestUI, {
-					hookTypes: hookTypesFound,
-					hookStructure,
-					hookResults,
-					currentType,
-					isComplete,
-					verbose,
-				}),
-			);
+			doRerender();
 
 			// Wait a bit for final render, then unmount
 			setTimeout(() => {

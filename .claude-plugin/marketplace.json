@@ -14,13 +14,7 @@
       "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
       "source": "./buki/buki-absinthe-graphql",
       "category": "Weapon",
-      "keywords": [
-        "absinthe",
-        "graphql",
-        "elixir",
-        "api",
-        "subscriptions"
-      ],
+      "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"],
       "configHash": null
     },
     {
@@ -59,12 +53,7 @@
       "description": "Ameba skills for Crystal code analysis and style checking",
       "source": "./buki/buki-ameba",
       "category": "Weapon",
-      "keywords": [
-        "crystal",
-        "linting",
-        "style",
-        "analysis"
-      ],
+      "keywords": ["crystal", "linting", "style", "analysis"],
       "configHash": "0313a519736b"
     },
     {
@@ -72,12 +61,7 @@
       "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
       "source": "./buki/buki-angular",
       "category": "Weapon",
-      "keywords": [
-        "angular",
-        "rxjs",
-        "signals",
-        "skill"
-      ],
+      "keywords": ["angular", "rxjs", "signals", "skill"],
       "configHash": null
     },
     {
@@ -98,13 +82,7 @@
       "description": "Advanced Apollo GraphQL skills for client and server development",
       "source": "./buki/buki-apollo-graphql",
       "category": "Weapon",
-      "keywords": [
-        "apollo",
-        "graphql",
-        "client",
-        "server",
-        "skill"
-      ],
+      "keywords": ["apollo", "graphql", "client", "server", "skill"],
       "configHash": null
     },
     {
@@ -156,12 +134,7 @@
       "description": "Advanced C programming skills for systems programming and memory management",
       "source": "./buki/buki-c",
       "category": "Weapon",
-      "keywords": [
-        "c",
-        "systems-programming",
-        "memory-management",
-        "skill"
-      ],
+      "keywords": ["c", "systems-programming", "memory-management", "skill"],
       "configHash": null
     },
     {
@@ -169,12 +142,7 @@
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
       "source": "./buki/buki-checkstyle",
       "category": "Weapon",
-      "keywords": [
-        "checkstyle",
-        "linting",
-        "java",
-        "skill"
-      ],
+      "keywords": ["checkstyle", "linting", "java", "skill"],
       "configHash": "83faa73ce985"
     },
     {
@@ -182,12 +150,7 @@
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
       "source": "./buki/buki-clippy",
       "category": "Weapon",
-      "keywords": [
-        "clippy",
-        "linting",
-        "rust",
-        "skill"
-      ],
+      "keywords": ["clippy", "linting", "rust", "skill"],
       "configHash": "3577b6fefb0d"
     },
     {
@@ -195,13 +158,7 @@
       "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
       "source": "./buki/buki-cpp",
       "category": "Weapon",
-      "keywords": [
-        "cpp",
-        "c++",
-        "modern-cpp",
-        "templates",
-        "skill"
-      ],
+      "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"],
       "configHash": null
     },
     {
@@ -209,12 +166,7 @@
       "description": "Credo skills for Elixir code analysis and style checking",
       "source": "./buki/buki-credo",
       "category": "Weapon",
-      "keywords": [
-        "elixir",
-        "linting",
-        "style",
-        "analysis"
-      ],
+      "keywords": ["elixir", "linting", "style", "analysis"],
       "configHash": "605888c67669"
     },
     {
@@ -222,11 +174,7 @@
       "description": "Skills for Crystal language development.",
       "source": "./buki/buki-crystal",
       "category": "Weapon",
-      "keywords": [
-        "crystal",
-        "language",
-        "performance"
-      ],
+      "keywords": ["crystal", "language", "performance"],
       "configHash": "3fb88e6bf09c"
     },
     {
@@ -234,14 +182,7 @@
       "description": "Advanced C# programming skills for async patterns and LINQ",
       "source": "./buki/buki-csharp",
       "category": "Weapon",
-      "keywords": [
-        "csharp",
-        "c#",
-        "dotnet",
-        "async",
-        "linq",
-        "skill"
-      ],
+      "keywords": ["csharp", "c#", "dotnet", "async", "linq", "skill"],
       "configHash": null
     },
     {
@@ -263,13 +204,7 @@
       "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
       "source": "./buki/buki-cypress",
       "category": "Weapon",
-      "keywords": [
-        "cypress",
-        "testing",
-        "e2e",
-        "javascript",
-        "skill"
-      ],
+      "keywords": ["cypress", "testing", "e2e", "javascript", "skill"],
       "configHash": "6f6efea4c01b"
     },
     {
@@ -277,12 +212,7 @@
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
       "source": "./buki/buki-dialyzer",
       "category": "Weapon",
-      "keywords": [
-        "elixir",
-        "erlang",
-        "static-analysis",
-        "types"
-      ],
+      "keywords": ["elixir", "erlang", "static-analysis", "types"],
       "configHash": "3d74062a8a12"
     },
     {
@@ -290,12 +220,7 @@
       "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
       "source": "./buki/buki-django",
       "category": "Weapon",
-      "keywords": [
-        "django",
-        "python",
-        "orm",
-        "skill"
-      ],
+      "keywords": ["django", "python", "orm", "skill"],
       "configHash": null
     },
     {
@@ -303,12 +228,7 @@
       "description": "Docker Compose validation and best practices for container orchestration",
       "source": "./buki/buki-docker-compose",
       "category": "Weapon",
-      "keywords": [
-        "docker",
-        "docker-compose",
-        "containers",
-        "devops"
-      ],
+      "keywords": ["docker", "docker-compose", "containers", "devops"],
       "configHash": "73832ec6ccb9"
     },
     {
@@ -316,12 +236,7 @@
       "description": "Ecto skills for database interactions in Elixir",
       "source": "./buki/buki-ecto",
       "category": "Weapon",
-      "keywords": [
-        "elixir",
-        "database",
-        "orm",
-        "ecto"
-      ],
+      "keywords": ["elixir", "database", "orm", "ecto"],
       "configHash": null
     },
     {
@@ -329,12 +244,7 @@
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./buki/buki-elixir",
       "category": "Weapon",
-      "keywords": [
-        "elixir",
-        "otp",
-        "ecto",
-        "skill"
-      ],
+      "keywords": ["elixir", "otp", "ecto", "skill"],
       "configHash": "522f7a4d1e7b"
     },
     {
@@ -357,13 +267,7 @@
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
       "source": "./buki/buki-eslint",
       "category": "Weapon",
-      "keywords": [
-        "eslint",
-        "linting",
-        "javascript",
-        "typescript",
-        "skill"
-      ],
+      "keywords": ["eslint", "linting", "javascript", "typescript", "skill"],
       "configHash": "25af0143a971"
     },
     {
@@ -371,13 +275,7 @@
       "description": "Validation and quality enforcement for Expo React Native projects with config, router, modules, updates, and build skills.",
       "source": "./buki/buki-expo",
       "category": "Weapon",
-      "keywords": [
-        "expo",
-        "react-native",
-        "mobile",
-        "ios",
-        "android"
-      ],
+      "keywords": ["expo", "react-native", "mobile", "ios", "android"],
       "configHash": null
     },
     {
@@ -385,12 +283,7 @@
       "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
       "source": "./buki/buki-fastapi",
       "category": "Weapon",
-      "keywords": [
-        "fastapi",
-        "python",
-        "async",
-        "skill"
-      ],
+      "keywords": ["fastapi", "python", "async", "skill"],
       "configHash": null
     },
     {
@@ -411,13 +304,7 @@
       "description": "Advanced Gleam programming skills for functional BEAM development",
       "source": "./buki/buki-gleam",
       "category": "Weapon",
-      "keywords": [
-        "gleam",
-        "beam",
-        "functional",
-        "erlang",
-        "skill"
-      ],
+      "keywords": ["gleam", "beam", "functional", "erlang", "skill"],
       "configHash": "e4d39f9fb6d4"
     },
     {
@@ -425,12 +312,7 @@
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
       "source": "./buki/buki-go",
       "category": "Weapon",
-      "keywords": [
-        "go",
-        "golang",
-        "concurrency",
-        "skill"
-      ],
+      "keywords": ["go", "golang", "concurrency", "skill"],
       "configHash": "359e1dd38370"
     },
     {
@@ -438,11 +320,7 @@
       "description": "Skills for GraphQL schema design and queries.",
       "source": "./buki/buki-graphql",
       "category": "Weapon",
-      "keywords": [
-        "graphql",
-        "api",
-        "queries"
-      ],
+      "keywords": ["graphql", "api", "queries"],
       "configHash": null
     },
     {
@@ -450,13 +328,7 @@
       "description": "Helm chart validation and best practices for Kubernetes package management",
       "source": "./buki/buki-helm",
       "category": "Weapon",
-      "keywords": [
-        "helm",
-        "kubernetes",
-        "k8s",
-        "charts",
-        "devops"
-      ],
+      "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"],
       "configHash": "9e37f54937b8"
     },
     {
@@ -464,14 +336,7 @@
       "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
       "source": "./buki/buki-ink",
       "category": "Weapon",
-      "keywords": [
-        "ink",
-        "terminal",
-        "cli",
-        "react",
-        "ui",
-        "skill"
-      ],
+      "keywords": ["ink", "terminal", "cli", "react", "ui", "skill"],
       "configHash": null
     },
     {
@@ -479,14 +344,7 @@
       "description": "iOS development validation with Xcode build hooks.",
       "source": "./buki/buki-ios",
       "category": "Weapon",
-      "keywords": [
-        "ios",
-        "xcode",
-        "swift",
-        "build",
-        "validation",
-        "apple"
-      ],
+      "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"],
       "configHash": "651f28663474"
     },
     {
@@ -494,12 +352,7 @@
       "description": "Advanced Java skills for streams, concurrency, and generics.",
       "source": "./buki/buki-java",
       "category": "Weapon",
-      "keywords": [
-        "java",
-        "streams",
-        "concurrency",
-        "skill"
-      ],
+      "keywords": ["java", "streams", "concurrency", "skill"],
       "configHash": null
     },
     {
@@ -507,13 +360,7 @@
       "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
       "source": "./buki/buki-jest",
       "category": "Weapon",
-      "keywords": [
-        "jest",
-        "testing",
-        "javascript",
-        "typescript",
-        "skill"
-      ],
+      "keywords": ["jest", "testing", "javascript", "typescript", "skill"],
       "configHash": "2e1341599c1f"
     },
     {
@@ -521,12 +368,7 @@
       "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
       "source": "./buki/buki-junit",
       "category": "Weapon",
-      "keywords": [
-        "junit",
-        "testing",
-        "java",
-        "skill"
-      ],
+      "keywords": ["junit", "testing", "java", "skill"],
       "configHash": "23bb04919acf"
     },
     {
@@ -549,13 +391,7 @@
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./buki/buki-kotlin",
       "category": "Weapon",
-      "keywords": [
-        "kotlin",
-        "coroutines",
-        "android",
-        "jvm",
-        "skill"
-      ],
+      "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"],
       "configHash": "66e4c689207e"
     },
     {
@@ -563,13 +399,7 @@
       "description": "Lerna monorepo management skills with bootstrap validation hooks.",
       "source": "./buki/buki-lerna",
       "category": "Weapon",
-      "keywords": [
-        "lerna",
-        "monorepo",
-        "packages",
-        "workspaces",
-        "node"
-      ],
+      "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"],
       "configHash": "7809e84460e4"
     },
     {
@@ -577,12 +407,7 @@
       "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
       "source": "./buki/buki-kubernetes",
       "category": "Weapon",
-      "keywords": [
-        "kubernetes",
-        "k8s",
-        "devops",
-        "infrastructure"
-      ],
+      "keywords": ["kubernetes", "k8s", "devops", "infrastructure"],
       "configHash": null
     },
     {
@@ -590,12 +415,7 @@
       "description": "Kustomize configuration validation for Kubernetes customization",
       "source": "./buki/buki-kustomize",
       "category": "Weapon",
-      "keywords": [
-        "kustomize",
-        "kubernetes",
-        "k8s",
-        "devops"
-      ],
+      "keywords": ["kustomize", "kubernetes", "k8s", "devops"],
       "configHash": "6c81134a69d7"
     },
     {
@@ -603,13 +423,7 @@
       "description": "Advanced Lua programming skills for embedded scripting and game development",
       "source": "./buki/buki-lua",
       "category": "Weapon",
-      "keywords": [
-        "lua",
-        "scripting",
-        "embedded",
-        "gaming",
-        "skill"
-      ],
+      "keywords": ["lua", "scripting", "embedded", "gaming", "skill"],
       "configHash": null
     },
     {
@@ -617,12 +431,7 @@
       "description": "Markdownlint configuration and validation for consistent markdown formatting",
       "source": "./buki/buki-markdownlint",
       "category": "Weapon",
-      "keywords": [
-        "markdownlint",
-        "markdown",
-        "linting",
-        "documentation"
-      ],
+      "keywords": ["markdownlint", "markdown", "linting", "documentation"],
       "configHash": "d4fd9bc99ecc"
     },
     {
@@ -645,13 +454,7 @@
       "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
       "source": "./buki/buki-mocha",
       "category": "Weapon",
-      "keywords": [
-        "mocha",
-        "testing",
-        "javascript",
-        "nodejs",
-        "skill"
-      ],
+      "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"],
       "configHash": "796ce17b27d7"
     },
     {
@@ -674,12 +477,7 @@
       "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
       "source": "./buki/buki-nestjs",
       "category": "Weapon",
-      "keywords": [
-        "nestjs",
-        "typescript",
-        "nodejs",
-        "skill"
-      ],
+      "keywords": ["nestjs", "typescript", "nodejs", "skill"],
       "configHash": null
     },
     {
@@ -687,12 +485,7 @@
       "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
       "source": "./buki/buki-nextjs",
       "category": "Weapon",
-      "keywords": [
-        "nextjs",
-        "react",
-        "ssr",
-        "skill"
-      ],
+      "keywords": ["nextjs", "react", "ssr", "skill"],
       "configHash": null
     },
     {
@@ -700,12 +493,7 @@
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
       "source": "./buki/buki-nim",
       "category": "Weapon",
-      "keywords": [
-        "nim",
-        "systems-programming",
-        "metaprogramming",
-        "skill"
-      ],
+      "keywords": ["nim", "systems-programming", "metaprogramming", "skill"],
       "configHash": "a6494213411d"
     },
     {
@@ -713,12 +501,7 @@
       "description": "NPM package manager skills with dependency validation hooks.",
       "source": "./buki/buki-npm",
       "category": "Weapon",
-      "keywords": [
-        "npm",
-        "package-manager",
-        "dependencies",
-        "node"
-      ],
+      "keywords": ["npm", "package-manager", "dependencies", "node"],
       "configHash": "9c56658a9aae"
     },
     {
@@ -726,14 +509,7 @@
       "description": "Advanced Objective-C programming skills for iOS and macOS development",
       "source": "./buki/buki-objective-c",
       "category": "Weapon",
-      "keywords": [
-        "objective-c",
-        "objc",
-        "ios",
-        "macos",
-        "arc",
-        "skill"
-      ],
+      "keywords": ["objective-c", "objc", "ios", "macos", "arc", "skill"],
       "configHash": null
     },
     {
@@ -754,12 +530,7 @@
       "description": "Phoenix Framework skills for building web applications",
       "source": "./buki/buki-phoenix",
       "category": "Weapon",
-      "keywords": [
-        "elixir",
-        "phoenix",
-        "web",
-        "framework"
-      ],
+      "keywords": ["elixir", "phoenix", "web", "framework"],
       "configHash": null
     },
     {
@@ -767,13 +538,7 @@
       "description": "Advanced PHP programming skills for modern PHP and security patterns",
       "source": "./buki/buki-php",
       "category": "Weapon",
-      "keywords": [
-        "php",
-        "composer",
-        "security",
-        "web",
-        "skill"
-      ],
+      "keywords": ["php", "composer", "security", "web", "skill"],
       "configHash": null
     },
     {
@@ -781,13 +546,7 @@
       "description": "Advanced Playwright skills for end-to-end testing, test architecture, and test automation best practices.",
       "source": "./buki/buki-playwright",
       "category": "Weapon",
-      "keywords": [
-        "playwright",
-        "testing",
-        "e2e",
-        "automation",
-        "skill"
-      ],
+      "keywords": ["playwright", "testing", "e2e", "automation", "skill"],
       "configHash": null
     },
     {
@@ -809,12 +568,7 @@
       "description": "Pulumi infrastructure-as-code validation and best practices",
       "source": "./buki/buki-pulumi",
       "category": "Weapon",
-      "keywords": [
-        "pulumi",
-        "infrastructure",
-        "iac",
-        "devops"
-      ],
+      "keywords": ["pulumi", "infrastructure", "iac", "devops"],
       "configHash": "819c714d19df"
     },
     {
@@ -822,12 +576,7 @@
       "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
       "source": "./buki/buki-pylint",
       "category": "Weapon",
-      "keywords": [
-        "pylint",
-        "linting",
-        "python",
-        "skill"
-      ],
+      "keywords": ["pylint", "linting", "python", "skill"],
       "configHash": "fecd3c3651b9"
     },
     {
@@ -835,12 +584,7 @@
       "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
       "source": "./buki/buki-pytest",
       "category": "Weapon",
-      "keywords": [
-        "pytest",
-        "testing",
-        "python",
-        "skill"
-      ],
+      "keywords": ["pytest", "testing", "python", "skill"],
       "configHash": "db31533e9abc"
     },
     {
@@ -848,12 +592,7 @@
       "description": "Advanced Python skills for type system, async patterns, and data modeling.",
       "source": "./buki/buki-python",
       "category": "Weapon",
-      "keywords": [
-        "python",
-        "types",
-        "async",
-        "skill"
-      ],
+      "keywords": ["python", "types", "async", "skill"],
       "configHash": null
     },
     {
@@ -861,14 +600,7 @@
       "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
       "source": "./buki/buki-rails",
       "category": "Weapon",
-      "keywords": [
-        "rails",
-        "ruby",
-        "mvc",
-        "active-record",
-        "hotwire",
-        "skill"
-      ],
+      "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire", "skill"],
       "configHash": null
     },
     {
@@ -876,12 +608,7 @@
       "description": "Advanced React skills for hooks, context, and performance optimization.",
       "source": "./buki/buki-react",
       "category": "Weapon",
-      "keywords": [
-        "react",
-        "hooks",
-        "performance",
-        "skill"
-      ],
+      "keywords": ["react", "hooks", "performance", "skill"],
       "configHash": null
     },
     {
@@ -889,13 +616,7 @@
       "description": "Validation and quality enforcement for React Native mobile applications with components, navigation, styling, and native modules.",
       "source": "./buki/buki-react-native",
       "category": "Weapon",
-      "keywords": [
-        "react-native",
-        "mobile",
-        "ios",
-        "android",
-        "native"
-      ],
+      "keywords": ["react-native", "mobile", "ios", "android", "native"],
       "configHash": null
     },
     {
@@ -918,13 +639,7 @@
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./buki/buki-relay",
       "category": "Weapon",
-      "keywords": [
-        "relay",
-        "graphql",
-        "react",
-        "fragments",
-        "skill"
-      ],
+      "keywords": ["relay", "graphql", "react", "fragments", "skill"],
       "configHash": null
     },
     {
@@ -932,13 +647,7 @@
       "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
       "source": "./buki/buki-rspec",
       "category": "Weapon",
-      "keywords": [
-        "rspec",
-        "testing",
-        "ruby",
-        "bdd",
-        "skill"
-      ],
+      "keywords": ["rspec", "testing", "ruby", "bdd", "skill"],
       "configHash": "10a77cb745cf"
     },
     {
@@ -946,14 +655,7 @@
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
       "source": "./buki/buki-ruby",
       "category": "Weapon",
-      "keywords": [
-        "ruby",
-        "metaprogramming",
-        "blocks",
-        "gems",
-        "oop",
-        "skill"
-      ],
+      "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"],
       "configHash": "213ef4b38e77"
     },
     {
@@ -961,12 +663,7 @@
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
       "source": "./buki/buki-rubocop",
       "category": "Weapon",
-      "keywords": [
-        "rubocop",
-        "linting",
-        "ruby",
-        "skill"
-      ],
+      "keywords": ["rubocop", "linting", "ruby", "skill"],
       "configHash": "e46e5d50b2e3"
     },
     {
@@ -974,12 +671,7 @@
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
       "source": "./buki/buki-rust",
       "category": "Weapon",
-      "keywords": [
-        "rust",
-        "ownership",
-        "async",
-        "skill"
-      ],
+      "keywords": ["rust", "ownership", "async", "skill"],
       "configHash": "6eff2f6ff89a"
     },
     {
@@ -987,13 +679,7 @@
       "description": "Advanced Scala programming skills for functional programming and type systems",
       "source": "./buki/buki-scala",
       "category": "Weapon",
-      "keywords": [
-        "scala",
-        "functional",
-        "jvm",
-        "type-system",
-        "skill"
-      ],
+      "keywords": ["scala", "functional", "jvm", "type-system", "skill"],
       "configHash": "8f20a4ee3db8"
     },
     {
@@ -1001,12 +687,7 @@
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
       "source": "./buki/buki-sip",
       "category": "Weapon",
-      "keywords": [
-        "sip",
-        "voip",
-        "telecommunications",
-        "real-time"
-      ],
+      "keywords": ["sip", "voip", "telecommunications", "real-time"],
       "configHash": null
     },
     {
@@ -1014,13 +695,7 @@
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
       "source": "./buki/buki-swift",
       "category": "Weapon",
-      "keywords": [
-        "swift",
-        "ios",
-        "protocol-oriented",
-        "concurrency",
-        "skill"
-      ],
+      "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"],
       "configHash": "4c7a6da2f6e7"
     },
     {
@@ -1041,13 +716,7 @@
       "description": "Terraform configuration validation and infrastructure-as-code best practices",
       "source": "./buki/buki-terraform",
       "category": "Weapon",
-      "keywords": [
-        "terraform",
-        "infrastructure",
-        "iac",
-        "devops",
-        "hashicorp"
-      ],
+      "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"],
       "configHash": "a49ec532fc6a"
     },
     {
@@ -1069,11 +738,7 @@
       "description": "Skills for TypeScript type system mastery.",
       "source": "./buki/buki-typescript",
       "category": "Weapon",
-      "keywords": [
-        "typescript",
-        "types",
-        "language"
-      ],
+      "keywords": ["typescript", "types", "language"],
       "configHash": "192e4ed71cfb"
     },
     {
@@ -1096,12 +761,7 @@
       "description": "Advanced Vue skills for Composition API, components, and reactivity.",
       "source": "./buki/buki-vue",
       "category": "Weapon",
-      "keywords": [
-        "vue",
-        "composition-api",
-        "reactivity",
-        "skill"
-      ],
+      "keywords": ["vue", "composition-api", "reactivity", "skill"],
       "configHash": null
     },
     {
@@ -1109,12 +769,7 @@
       "description": "Yarn package manager skills with dependency validation hooks.",
       "source": "./buki/buki-yarn",
       "category": "Weapon",
-      "keywords": [
-        "yarn",
-        "package-manager",
-        "dependencies",
-        "node"
-      ],
+      "keywords": ["yarn", "package-manager", "dependencies", "node"],
       "configHash": "ed9fe1b555fc"
     },
     {
@@ -1136,12 +791,7 @@
       "description": "The seven virtues, enforcement hooks, and foundational quality skills.",
       "source": "./bushido",
       "category": "Core",
-      "keywords": [
-        "philosophy",
-        "quality",
-        "testing",
-        "principles"
-      ],
+      "keywords": ["philosophy", "quality", "testing", "principles"],
       "configHash": null
     },
     {
@@ -1165,11 +815,7 @@
       "description": "MCP server for library documentation and framework examples.",
       "source": "./sensei/sensei-context7",
       "category": "Teacher",
-      "keywords": [
-        "mcp",
-        "documentation",
-        "context"
-      ],
+      "keywords": ["mcp", "documentation", "context"],
       "configHash": null
     },
     {
@@ -1177,13 +823,7 @@
       "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
       "source": "./sensei/sensei-playwright-mcp",
       "category": "Teacher",
-      "keywords": [
-        "mcp",
-        "playwright",
-        "testing",
-        "automation",
-        "server"
-      ],
+      "keywords": ["mcp", "playwright", "testing", "automation", "server"],
       "configHash": null
     },
     {
@@ -1258,12 +898,7 @@
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",
       "category": "Discipline",
-      "keywords": [
-        "accessibility",
-        "wcag",
-        "inclusive-design",
-        "agent"
-      ],
+      "keywords": ["accessibility", "wcag", "inclusive-design", "agent"],
       "configHash": null
     },
     {
@@ -1271,12 +906,7 @@
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
       "source": "./do/do-api-engineering",
       "category": "Discipline",
-      "keywords": [
-        "api",
-        "rest",
-        "graphql",
-        "agent"
-      ],
+      "keywords": ["api", "rest", "graphql", "agent"],
       "configHash": null
     },
     {
@@ -1284,11 +914,7 @@
       "description": "Agents for system design and architectural thinking.",
       "source": "./do/do-architecture",
       "category": "Discipline",
-      "keywords": [
-        "architecture",
-        "design",
-        "patterns"
-      ],
+      "keywords": ["architecture", "design", "patterns"],
       "configHash": null
     },
     {
@@ -1296,14 +922,7 @@
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
       "source": "./do/do-backend-development",
       "category": "Discipline",
-      "keywords": [
-        "backend",
-        "api",
-        "architecture",
-        "data",
-        "server",
-        "agent"
-      ],
+      "keywords": ["backend", "api", "architecture", "data", "server", "agent"],
       "configHash": null
     },
     {
@@ -1311,12 +930,7 @@
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
       "source": "./do/do-blockchain-development",
       "category": "Discipline",
-      "keywords": [
-        "blockchain",
-        "web3",
-        "smart-contracts",
-        "agent"
-      ],
+      "keywords": ["blockchain", "web3", "smart-contracts", "agent"],
       "configHash": null
     },
     {
@@ -1324,13 +938,7 @@
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
       "source": "./do/do-claude-plugin-development",
       "category": "Discipline",
-      "keywords": [
-        "plugin",
-        "development",
-        "claude-code",
-        "quality",
-        "agent"
-      ],
+      "keywords": ["plugin", "development", "claude-code", "quality", "agent"],
       "configHash": null
     },
     {
@@ -1338,12 +946,7 @@
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
       "source": "./do/do-compiler-development",
       "category": "Discipline",
-      "keywords": [
-        "compiler",
-        "language-design",
-        "parsing",
-        "agent"
-      ],
+      "keywords": ["compiler", "language-design", "parsing", "agent"],
       "configHash": null
     },
     {
@@ -1366,12 +969,7 @@
       "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
       "source": "./do/do-data-engineering",
       "category": "Discipline",
-      "keywords": [
-        "data-engineering",
-        "etl",
-        "streaming",
-        "agent"
-      ],
+      "keywords": ["data-engineering", "etl", "streaming", "agent"],
       "configHash": null
     },
     {
@@ -1379,12 +977,7 @@
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
       "source": "./do/do-database-engineering",
       "category": "Discipline",
-      "keywords": [
-        "database",
-        "sql",
-        "query-optimization",
-        "agent"
-      ],
+      "keywords": ["database", "sql", "query-optimization", "agent"],
       "configHash": null
     },
     {
@@ -1392,12 +985,7 @@
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
       "source": "./do/do-embedded-development",
       "category": "Discipline",
-      "keywords": [
-        "embedded-systems",
-        "firmware",
-        "iot",
-        "agent"
-      ],
+      "keywords": ["embedded-systems", "firmware", "iot", "agent"],
       "configHash": null
     },
     {
@@ -1405,12 +993,7 @@
       "description": "Enforces planning before implementation work begins",
       "source": "./do/do-enforce-planning",
       "category": "Discipline",
-      "keywords": [
-        "planning",
-        "workflow",
-        "agent",
-        "hook"
-      ],
+      "keywords": ["planning", "workflow", "agent", "hook"],
       "configHash": null
     },
     {
@@ -1418,14 +1001,7 @@
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
       "source": "./do/do-frontend-development",
       "category": "Discipline",
-      "keywords": [
-        "frontend",
-        "ui",
-        "ux",
-        "design",
-        "presentation",
-        "agent"
-      ],
+      "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"],
       "configHash": null
     },
     {
@@ -1433,12 +1009,7 @@
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
       "source": "./do/do-game-development",
       "category": "Discipline",
-      "keywords": [
-        "game-development",
-        "game-engine",
-        "gameplay",
-        "agent"
-      ],
+      "keywords": ["game-development", "game-engine", "gameplay", "agent"],
       "configHash": null
     },
     {
@@ -1446,12 +1017,7 @@
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
       "source": "./do/do-graphics-engineering",
       "category": "Discipline",
-      "keywords": [
-        "graphics",
-        "gpu",
-        "shaders",
-        "agent"
-      ],
+      "keywords": ["graphics", "gpu", "shaders", "agent"],
       "configHash": null
     },
     {
@@ -1459,12 +1025,7 @@
       "description": "Agents for operational excellence and reliability engineering.",
       "source": "./do/do-infrastructure",
       "category": "Discipline",
-      "keywords": [
-        "devops",
-        "sre",
-        "deployment",
-        "operations"
-      ],
+      "keywords": ["devops", "sre", "deployment", "operations"],
       "configHash": null
     },
     {
@@ -1472,12 +1033,7 @@
       "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
       "source": "./do/do-machine-learning-engineering",
       "category": "Discipline",
-      "keywords": [
-        "ml-engineering",
-        "mlops",
-        "inference",
-        "agent"
-      ],
+      "keywords": ["ml-engineering", "mlops", "inference", "agent"],
       "configHash": null
     },
     {
@@ -1485,13 +1041,7 @@
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
       "source": "./do/do-mobile-development",
       "category": "Discipline",
-      "keywords": [
-        "mobile",
-        "ios",
-        "android",
-        "development",
-        "agent"
-      ],
+      "keywords": ["mobile", "ios", "android", "development", "agent"],
       "configHash": null
     },
     {
@@ -1499,12 +1049,7 @@
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
       "source": "./do/do-network-engineering",
       "category": "Discipline",
-      "keywords": [
-        "network",
-        "protocols",
-        "distributed-systems",
-        "agent"
-      ],
+      "keywords": ["network", "protocols", "distributed-systems", "agent"],
       "configHash": null
     },
     {
@@ -1512,12 +1057,7 @@
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
       "source": "./do/do-observability-engineering",
       "category": "Discipline",
-      "keywords": [
-        "observability",
-        "monitoring",
-        "tracing",
-        "agent"
-      ],
+      "keywords": ["observability", "monitoring", "tracing", "agent"],
       "configHash": null
     },
     {
@@ -1525,12 +1065,7 @@
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
       "source": "./do/do-performance-engineering",
       "category": "Discipline",
-      "keywords": [
-        "performance",
-        "optimization",
-        "scalability",
-        "agent"
-      ],
+      "keywords": ["performance", "optimization", "scalability", "agent"],
       "configHash": null
     },
     {
@@ -1538,12 +1073,7 @@
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
       "source": "./do/do-platform-engineering",
       "category": "Discipline",
-      "keywords": [
-        "platform-engineering",
-        "infrastructure",
-        "devex",
-        "agent"
-      ],
+      "keywords": ["platform-engineering", "infrastructure", "devex", "agent"],
       "configHash": null
     },
     {
@@ -1551,13 +1081,7 @@
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
       "source": "./do/do-product-management",
       "category": "Discipline",
-      "keywords": [
-        "product",
-        "strategy",
-        "vision",
-        "planning",
-        "agent"
-      ],
+      "keywords": ["product", "strategy", "vision", "planning", "agent"],
       "configHash": null
     },
     {
@@ -1565,11 +1089,7 @@
       "description": "Agents for workflow orchestration and team coordination.",
       "source": "./do/do-project-management",
       "category": "Discipline",
-      "keywords": [
-        "project-management",
-        "coordination",
-        "workflow"
-      ],
+      "keywords": ["project-management", "coordination", "workflow"],
       "configHash": null
     },
     {
@@ -1577,12 +1097,7 @@
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
       "source": "./do/do-prompt-engineering",
       "category": "Discipline",
-      "keywords": [
-        "prompt-engineering",
-        "ai",
-        "llm",
-        "agent"
-      ],
+      "keywords": ["prompt-engineering", "ai", "llm", "agent"],
       "configHash": null
     },
     {
@@ -1590,13 +1105,7 @@
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
       "source": "./do/do-quality-assurance",
       "category": "Discipline",
-      "keywords": [
-        "quality",
-        "testing",
-        "qa",
-        "reliability",
-        "agent"
-      ],
+      "keywords": ["quality", "testing", "qa", "reliability", "agent"],
       "configHash": null
     },
     {
@@ -1633,12 +1142,7 @@
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
       "source": "./do/do-technical-documentation",
       "category": "Discipline",
-      "keywords": [
-        "documentation",
-        "technical-writing",
-        "knowledge",
-        "agent"
-      ],
+      "keywords": ["documentation", "technical-writing", "knowledge", "agent"],
       "configHash": null
     },
     {
@@ -1646,13 +1150,7 @@
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
       "source": "./do/do-voip-engineering",
       "category": "Discipline",
-      "keywords": [
-        "voip",
-        "telecommunications",
-        "sip",
-        "rtp",
-        "engineering"
-      ],
+      "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"],
       "configHash": null
     }
   ]

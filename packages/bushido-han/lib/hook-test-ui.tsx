@@ -2,6 +2,10 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type LiveOutputState,
+	makeLiveOutputKey,
+} from "./hook-test.js";
 
 interface HookResult {
 	plugin: string;
@@ -27,6 +31,7 @@ interface HookTestUIProps {
 	currentType: string | null;
 	isComplete: boolean;
 	verbose: boolean;
+	liveOutput?: LiveOutputState;
 }
 
 type ViewMode = "list" | "detail";
@@ -46,6 +51,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	currentType,
 	isComplete,
 	verbose,
+	liveOutput,
 }) => {
 	const { write } = useStdout();
 	const writtenHookTypes = useRef<Set<string>>(new Set());
@@ -269,6 +275,17 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		}
 	}, [isComplete, hookTypes, hookResults, write, getHookTypeStatus]);
 
+	// Get live output for a command that's still running
+	const getLiveOutput = (
+		hookType: string,
+		plugin: string,
+		command: string,
+	): string[] => {
+		if (!liveOutput) return [];
+		const key = makeLiveOutputKey(hookType, plugin, command);
+		return liveOutput.outputs.get(key) || [];
+	};
+
 	// Render detail view for a command
 	const renderDetailView = () => {
 		if (!detailItem || !detailItem.plugin || !detailItem.command) return null;
@@ -283,6 +300,16 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				? "completed"
 				: "failed"
 			: "running";
+
+		// Get output - use result output if complete, otherwise use live output
+		const outputLines =
+			result?.output && result.output.length > 0
+				? result.output
+				: getLiveOutput(
+						detailItem.hookType,
+						detailItem.plugin,
+						detailItem.command,
+					);
 
 		return (
 			<Box flexDirection="column">
@@ -332,9 +359,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				{/* Output */}
 				<Box marginTop={1} flexDirection="column">
 					<Text dimColor>{"─".repeat(60)}</Text>
-					{result?.output && result.output.length > 0 ? (
+					{outputLines.length > 0 ? (
 						// biome-ignore lint/suspicious/noArrayIndexKey: output lines have no unique identifier
-						result.output.map((line, i) => <Text key={i}>{line}</Text>)
+						outputLines.map((line, i) => <Text key={i}>{line}</Text>)
 					) : status === "running" ? (
 						<Text dimColor>Waiting for output...</Text>
 					) : (
