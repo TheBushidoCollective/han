@@ -49,20 +49,20 @@ test("parseQuery extracts multiple components", () => {
 });
 
 test("parseQuery extracts category filter", () => {
-	const result = parseQuery("category:buki");
+	const result = parseQuery("category:jutsu");
 	strictEqual(result.textQuery, "");
 	deepStrictEqual(result.categoryFilters, ["jutsu"]);
 });
 
 test("parseQuery extracts multiple categories", () => {
-	const result = parseQuery("categories:buki,do,sensei");
+	const result = parseQuery("categories:jutsu,do,hashi");
 	strictEqual(result.textQuery, "");
 	deepStrictEqual(result.categoryFilters, ["jutsu", "do", "hashi"]);
 });
 
 test("parseQuery handles mixed query with text and filters", () => {
 	const result = parseQuery(
-		"typescript tag:react component:skill category:buki",
+		"typescript tag:react component:skill category:jutsu",
 	);
 	strictEqual(result.textQuery, "typescript");
 	deepStrictEqual(result.tagFilters, ["react"]);
@@ -72,7 +72,7 @@ test("parseQuery handles mixed query with text and filters", () => {
 
 test("parseQuery handles complex mixed query", () => {
 	const result = parseQuery(
-		"linting tags:eslint,biome category:buki formatting",
+		"linting tags:eslint,biome category:jutsu formatting",
 	);
 	strictEqual(result.textQuery, "linting formatting");
 	deepStrictEqual(result.tagFilters, ["eslint", "biome"]);
@@ -80,7 +80,7 @@ test("parseQuery handles complex mixed query", () => {
 });
 
 test("parseQuery is case-insensitive for filter prefixes", () => {
-	const result = parseQuery("TAG:typescript COMPONENT:skill CATEGORY:buki");
+	const result = parseQuery("TAG:typescript COMPONENT:skill CATEGORY:jutsu");
 	deepStrictEqual(result.tagFilters, ["typescript"]);
 	deepStrictEqual(result.componentFilters, ["skill"]);
 	deepStrictEqual(result.categoryFilters, ["jutsu"]);
