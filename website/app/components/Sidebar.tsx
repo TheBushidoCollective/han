@@ -153,9 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 								<li key={plugin.name}>
 									<Link
 										href={`/plugins/hashi/${plugin.name}`}
-										className={getSubLinkClass(
-											`/plugins/hashi/${plugin.name}`,
-										)}
+										className={getSubLinkClass(`/plugins/hashi/${plugin.name}`)}
 									>
 										{plugin.title}
 									</Link>
