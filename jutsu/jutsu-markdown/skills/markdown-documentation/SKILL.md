@@ -169,12 +169,10 @@ npm start
 
 Show both command and output:
 
-````markdown
 ```bash
 $ npm --version
 10.2.0
 ```
-````
 
 ### Configuration Examples
 
