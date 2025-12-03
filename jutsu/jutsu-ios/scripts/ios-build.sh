@@ -6,16 +6,11 @@ set -e
 
 # Get the first scheme from xcodebuild -list
 get_scheme() {
-    local json_output
-    json_output=$(xcodebuild -list -json 2>/dev/null) || return 1
-
-    # Try jq first (clean), fall back to sed (portable)
-    if command -v jq &>/dev/null; then
-        echo "$json_output" | jq -r '.project.schemes[0] // .workspace.schemes[0] // empty'
-    else
-        # Fallback: collapse newlines and extract with sed
-        echo "$json_output" | tr '\n' ' ' | sed -n 's/.*"schemes"[^[]*\[[^"]*"\([^"]*\)".*/\1/p'
-    fi
+    xcodebuild -list -json 2>/dev/null | node -e '
+        const data = JSON.parse(require("fs").readFileSync(0));
+        const schemes = data.project?.schemes || data.workspace?.schemes || [];
+        if (schemes[0]) console.log(schemes[0]);
+    '
 }
 
 # Main build function
