@@ -1,6 +1,6 @@
 {
   "name": "jutsu-kustomize",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "description": "Kustomize configuration validation for Kubernetes",
   "author": {
     "name": "The Bushido Collective",

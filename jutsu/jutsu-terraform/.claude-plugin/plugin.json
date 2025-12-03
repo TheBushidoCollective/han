@@ -1,6 +1,6 @@
 {
   "name": "jutsu-terraform",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "description": "Terraform configuration validation and infrastructure-as-code best practices",
   "author": {
     "name": "The Bushido Collective",

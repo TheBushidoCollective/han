@@ -1,6 +1,6 @@
 {
   "name": "jutsu-lerna",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "Lerna monorepo management skills with bootstrap validation hooks.",
   "author": {
     "name": "The Bushido Collective",

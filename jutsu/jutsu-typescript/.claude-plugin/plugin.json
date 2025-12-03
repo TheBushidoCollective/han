@@ -1,6 +1,6 @@
 {
   "name": "jutsu-typescript",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "description": "TypeScript compiler validation and type checking for TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",
