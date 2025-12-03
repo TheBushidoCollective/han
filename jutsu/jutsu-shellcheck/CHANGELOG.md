@@ -9,16 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-
 - add jutsu-shellcheck plugin for shell script validation ([9a303a5](../../commit/9a303a5))
 
 ### Fixed
-
 
 - resolve markdownlint warnings in README ([a6d2496](../../commit/a6d2496))
 
 ### Changed
 
-
 - update hooks.json to new hook command format ([fa1974d](../../commit/fa1974d))
-
