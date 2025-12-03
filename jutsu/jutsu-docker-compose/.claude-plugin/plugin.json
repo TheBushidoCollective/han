@@ -1,6 +1,6 @@
 {
   "name": "jutsu-docker-compose",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Docker Compose validation and best practices",
   "author": {
     "name": "The Bushido Collective",

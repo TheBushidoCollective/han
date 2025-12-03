@@ -1,6 +1,6 @@
 {
   "name": "jutsu-bun",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Validation and quality enforcement for Bun.js projects.",
   "author": {
     "name": "The Bushido Collective",

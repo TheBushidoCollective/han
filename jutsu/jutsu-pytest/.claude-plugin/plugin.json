@@ -1,6 +1,6 @@
 {
   "name": "jutsu-pytest",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
   "author": {
     "name": "The Bushido Collective",

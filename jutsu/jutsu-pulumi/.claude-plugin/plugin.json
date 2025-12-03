@@ -1,6 +1,6 @@
 {
   "name": "jutsu-pulumi",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Pulumi infrastructure-as-code validation",
   "author": {
     "name": "The Bushido Collective",
