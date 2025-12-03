@@ -800,6 +800,27 @@
     ]
   },
   {
+    "id": "jutsu-gitlab-ci",
+    "name": "jutsu-gitlab-ci",
+    "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations.",
+    "category": "jutsu",
+    "tags": [
+      "gitlab",
+      "gitlab-ci",
+      "ci-cd",
+      "pipelines",
+      "validation",
+      "devops",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/jutsu/jutsu-gitlab-ci",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-gleam",
     "name": "jutsu-gleam",
     "description": "Advanced Gleam programming skills for functional BEAM development",
@@ -1121,17 +1142,18 @@
     ]
   },
   {
-    "id": "jutsu-markdownlint",
-    "name": "jutsu-markdownlint",
-    "description": "Markdown linting and style checking with markdownlint.",
+    "id": "jutsu-markdown",
+    "name": "jutsu-markdown",
+    "description": "Markdown documentation skills and linting with markdownlint.",
     "category": "jutsu",
     "tags": [
-      "markdownlint",
       "markdown",
+      "markdownlint",
+      "documentation",
       "linting",
-      "documentation"
+      "formatting"
     ],
-    "path": "/plugins/jutsu/jutsu-markdownlint",
+    "path": "/plugins/jutsu/jutsu-markdown",
     "components": [
       "skill",
       "hook"
@@ -1750,6 +1772,46 @@
     "path": "/plugins/do/do-security-engineering",
     "components": [
       "agent"
+    ]
+  },
+  {
+    "id": "jutsu-sentry",
+    "name": "jutsu-sentry",
+    "description": "Best practices and patterns for Sentry error monitoring and observability.",
+    "category": "jutsu",
+    "tags": [
+      "sentry",
+      "error-monitoring",
+      "observability",
+      "performance",
+      "tracing",
+      "quality",
+      "debugging"
+    ],
+    "path": "/plugins/jutsu/jutsu-sentry",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-shellcheck",
+    "name": "jutsu-shellcheck",
+    "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck.",
+    "category": "jutsu",
+    "tags": [
+      "bash",
+      "shell",
+      "shellcheck",
+      "validation",
+      "linting",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/jutsu/jutsu-shellcheck",
+    "components": [
+      "skill",
+      "hook"
     ]
   },
   {
