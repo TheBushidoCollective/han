@@ -487,7 +487,92 @@ export async function runConfiguredHook(
 		process.exit(1);
 	}
 
-	// Wrap with resource lock
+	// Get all configs
+	let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
+
+	// If --only is specified, filter to just that directory
+	if (only) {
+		const onlyAbsolute = only.startsWith("/") ? only : join(projectRoot, only);
+		const normalizedOnly = onlyAbsolute.replace(/\/$/, ""); // Remove trailing slash
+
+		configs = configs.filter((config) => {
+			const normalizedDir = config.directory.replace(/\/$/, "");
+			return normalizedDir === normalizedOnly;
+		});
+
+		if (configs.length === 0) {
+			console.error(
+				`Error: No hook configuration found for directory "${only}".\n` +
+					`The --only flag requires a directory that matches one of the hook's target directories.`,
+			);
+			process.exit(1);
+		}
+	}
+
+	// Phase 1: Check cache and categorize configs BEFORE acquiring lock
+	// This avoids holding a slot while just checking hashes
+	const configsToRun: ResolvedHookConfig[] = [];
+	let totalFound = 0;
+	let disabledCount = 0;
+	let skippedCount = 0;
+
+	for (const config of configs) {
+		totalFound++;
+
+		// Skip disabled hooks
+		if (!config.enabled) {
+			disabledCount++;
+			continue;
+		}
+
+		// If --cache is enabled, check for changes (no lock needed for this)
+		if (cache && config.ifChanged && config.ifChanged.length > 0) {
+			const cacheKey = getCacheKeyForDirectory(
+				hookName,
+				config.directory,
+				projectRoot,
+			);
+			const hasChanges = checkForChanges(
+				pluginName,
+				cacheKey,
+				config.directory,
+				config.ifChanged,
+			);
+
+			if (!hasChanges) {
+				skippedCount++;
+				continue;
+			}
+		}
+
+		// This config needs to run
+		configsToRun.push(config);
+	}
+
+	// Handle edge cases before acquiring lock
+	if (totalFound === 0) {
+		console.log(
+			`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
+		);
+		process.exit(0);
+	}
+
+	if (disabledCount === totalFound) {
+		console.log(
+			`All directories have hook "${hookName}" disabled via han-config.yml`,
+		);
+		process.exit(0);
+	}
+
+	if (configsToRun.length === 0 && skippedCount > 0) {
+		console.log(
+			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+		);
+		console.log("No changes detected in any directories. Nothing to run.");
+		process.exit(0);
+	}
+
+	// Phase 2: Acquire lock and run hooks (only if there's work to do)
 	await withSlot(hookName, pluginName, async () => {
 		const failures: Array<{
 			dir: string;
@@ -497,63 +582,8 @@ export async function runConfiguredHook(
 			debugFile?: string;
 		}> = [];
 		const successfulConfigs: ResolvedHookConfig[] = [];
-		let totalFound = 0;
-		let disabledCount = 0;
-		let skippedCount = 0;
 
-		// Get all configs
-		let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
-
-		// If --only is specified, filter to just that directory
-		if (only) {
-			const onlyAbsolute = only.startsWith("/")
-				? only
-				: join(projectRoot, only);
-			const normalizedOnly = onlyAbsolute.replace(/\/$/, ""); // Remove trailing slash
-
-			configs = configs.filter((config) => {
-				const normalizedDir = config.directory.replace(/\/$/, "");
-				return normalizedDir === normalizedOnly;
-			});
-
-			if (configs.length === 0) {
-				console.error(
-					`Error: No hook configuration found for directory "${only}".\n` +
-						`The --only flag requires a directory that matches one of the hook's target directories.`,
-				);
-				process.exit(1);
-			}
-		}
-
-		for (const config of configs) {
-			totalFound++;
-
-			// Skip disabled hooks
-			if (!config.enabled) {
-				disabledCount++;
-				continue;
-			}
-
-			// If --cache is enabled, check for changes
-			if (cache && config.ifChanged && config.ifChanged.length > 0) {
-				const cacheKey = getCacheKeyForDirectory(
-					hookName,
-					config.directory,
-					projectRoot,
-				);
-				const hasChanges = checkForChanges(
-					pluginName,
-					cacheKey,
-					config.directory,
-					config.ifChanged,
-				);
-
-				if (!hasChanges) {
-					skippedCount++;
-					continue;
-				}
-			}
-
+		for (const config of configsToRun) {
 			// Run the hook
 			const relativePath =
 				config.directory === projectRoot
@@ -606,32 +636,13 @@ export async function runConfiguredHook(
 			}
 		}
 
-		// Handle edge cases
-		if (totalFound === 0) {
-			console.log(
-				`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
-			);
-			process.exit(0);
-		}
-
-		if (disabledCount === totalFound) {
-			console.log(
-				`All directories have hook "${hookName}" disabled via han-config.yml`,
-			);
-			process.exit(0);
-		}
-
 		const ranCount = successfulConfigs.length + failures.length;
 
+		// Report skipped directories if any
 		if (skippedCount > 0) {
 			console.log(
 				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 			);
-		}
-
-		if (ranCount === 0 && skippedCount > 0) {
-			console.log("No changes detected in any directories. Nothing to run.");
-			process.exit(0);
 		}
 
 		// Update cache manifest for successful executions
