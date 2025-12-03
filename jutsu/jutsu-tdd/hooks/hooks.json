@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the TDD enforcement rules in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md'",
+            "command": "echo '<must-read-first reason=\"TDD workflow enforcement\">Before starting any work read and follow the TDD enforcement guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-tdd.md if you haven\\'t already</must-read-first>'",
             "timeout": 30000
           }
         ]
