@@ -9,8 +9,11 @@ get_scheme() {
     local json_output
     json_output=$(xcodebuild -list -json 2>/dev/null) || return 1
 
-    # Try to extract scheme from project or workspace
-    echo "$json_output" | grep -A1 '"schemes"' | grep -o '"[^"]*"' | head -1 | tr -d '"'
+    # Extract first scheme from the schemes array
+    # grep -A2 gets the "schemes" key and the first array element
+    # tail -1 skips the "schemes" line itself
+    # Then extract the quoted string
+    echo "$json_output" | grep -A2 '"schemes"' | tail -1 | grep -o '"[^"]*"' | tr -d '"'
 }
 
 # Main build function
