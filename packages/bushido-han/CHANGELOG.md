@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.3] - 2025-12-03
+
+### Added
+
+- inject dispatch hooks on plugin install ([1d3119b9](../../commit/1d3119b9))
+- add hook dispatch command for Claude Code bug workaround ([96cf0d24](../../commit/96cf0d24))
+- add npx cache self-repair and remove JS fallback ([37ae33f9](../../commit/37ae33f9))
+- require explicit plugin name in hook run command ([a314da59](../../commit/a314da59))
+
+### Fixed
+
+- remove double blank lines from CHANGELOGs ([dbe3a96f](../../commit/dbe3a96f))
+- remove double blank lines from CHANGELOGs ([97cb0320](../../commit/97cb0320))
+- remove double blank lines from CHANGELOGs ([480d6c7d](../../commit/480d6c7d))
+- remove double blank lines from CHANGELOGs ([35141f73](../../commit/35141f73))
+- remove double blank lines from CHANGELOGs ([d3773c3e](../../commit/d3773c3e))
+- use local plugin store for hook dispatch ([c80f1c99](../../commit/c80f1c99))
+- remove double blank lines from existing CHANGELOGs ([b829c36c](../../commit/b829c36c))
+- remove double blank lines from CHANGELOG files ([58eb3336](../../commit/58eb3336))
+- fix markdown formatting in CHANGELOG files ([21ca9a75](../../commit/21ca9a75))
+- remove trailing blank lines from CHANGELOG files ([999bbf73](../../commit/999bbf73))
+- clear log lines when transitioning to plugin selector ([2e40ee6c](../../commit/2e40ee6c))
+- resolve Ink UI navigation in hook test execution ([22e916b6](../../commit/22e916b6))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad3](../../commit/d56a0ad3))
+- update tests for new hook command format ([615d195b](../../commit/615d195b))
+
+
 ## [1.36.2] - 2025-12-03
 
 ### Added
