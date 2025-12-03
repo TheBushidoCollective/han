@@ -1,6 +1,6 @@
 {
   "name": "jutsu-go",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
   "author": {
     "name": "The Bushido Collective",

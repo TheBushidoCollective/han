@@ -1,6 +1,6 @@
 {
   "name": "jutsu-dialyzer",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Advanced Dialyzer skills for static analysis of Erlang/Elixir code",
   "author": {
     "name": "The Bushido Collective",
