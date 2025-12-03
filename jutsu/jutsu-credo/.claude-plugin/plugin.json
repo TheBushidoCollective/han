@@ -1,6 +1,6 @@
 {
   "name": "jutsu-credo",
-  "version": "1.8.11",
+  "version": "1.8.12",
   "description": "Advanced Credo skills for code analysis and style checking in Elixir",
   "author": {
     "name": "The Bushido Collective",
