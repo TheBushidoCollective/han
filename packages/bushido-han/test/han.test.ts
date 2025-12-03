@@ -1342,7 +1342,11 @@ test("cache includes plugin files - plugin script change invalidates cache", () 
 			["**/*.swift"],
 			pluginDir,
 		);
-		strictEqual(hasChanges, true, "Expected changes when plugin script changed");
+		strictEqual(
+			hasChanges,
+			true,
+			"Expected changes when plugin script changed",
+		);
 	} finally {
 		// Restore original CLAUDE_PROJECT_DIR
 		if (originalProjectDir === undefined) {
@@ -1411,11 +1415,7 @@ test("cache includes han-config.yml - local config change invalidates cache", ()
 			["**/*.swift"],
 			pluginDir,
 		);
-		strictEqual(
-			hasChanges,
-			true,
-			"Expected changes when han-config.yml added",
-		);
+		strictEqual(hasChanges, true, "Expected changes when han-config.yml added");
 	} finally {
 		// Restore original CLAUDE_PROJECT_DIR
 		if (originalProjectDir === undefined) {
