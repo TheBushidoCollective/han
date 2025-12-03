@@ -1,6 +1,6 @@
 {
   "name": "jutsu-yarn",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Yarn package manager skills with dependency validation hooks.",
   "author": {
     "name": "The Bushido Collective",
