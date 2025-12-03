@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkForChanges, trackFiles } from "../lib/hook-cache.js";
 import { parsePluginRecommendations } from "../lib/shared.js";
 
 // Get __dirname equivalent in ES modules
@@ -1278,6 +1279,150 @@ test("han-config.yml if_changed merges with plugin defaults", async () => {
 		);
 		strictEqual(patterns.length, 4, "Expected 4 merged patterns");
 	} finally {
+		teardown();
+	}
+});
+
+// ============================================
+// Cache invalidation tests
+// ============================================
+
+test("cache includes plugin files - plugin script change invalidates cache", () => {
+	const testDir = setup();
+	const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
+	try {
+		// Create a plugin directory with a script
+		const pluginDir = join(testDir, "cache-test-plugin-files");
+		const pluginClaudeDir = join(pluginDir, ".claude-plugin");
+		const scriptsDir = join(pluginDir, "scripts");
+		mkdirSync(pluginClaudeDir, { recursive: true });
+		mkdirSync(scriptsDir, { recursive: true });
+
+		writeFileSync(
+			join(pluginClaudeDir, "plugin.json"),
+			JSON.stringify({ name: "cache-test-plugin-files", version: "1.0.0" }),
+		);
+		writeFileSync(join(scriptsDir, "build.sh"), "#!/bin/bash\necho test");
+
+		// Create a project directory with source files
+		const projectDir = join(testDir, "project-plugin-files");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "app.swift"), "// Swift code");
+
+		// Set CLAUDE_PROJECT_DIR to isolate cache for this test
+		process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+		// Track initial state
+		trackFiles(
+			"cache-test-plugin-files",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+
+		// No changes - should return false
+		const noChanges = checkForChanges(
+			"cache-test-plugin-files",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+		strictEqual(noChanges, false, "Expected no changes when nothing changed");
+
+		// Modify plugin script
+		writeFileSync(join(scriptsDir, "build.sh"), "#!/bin/bash\necho modified");
+
+		// Should detect change
+		const hasChanges = checkForChanges(
+			"cache-test-plugin-files",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+		strictEqual(hasChanges, true, "Expected changes when plugin script changed");
+	} finally {
+		// Restore original CLAUDE_PROJECT_DIR
+		if (originalProjectDir === undefined) {
+			delete process.env.CLAUDE_PROJECT_DIR;
+		} else {
+			process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
+		}
+		teardown();
+	}
+});
+
+test("cache includes han-config.yml - local config change invalidates cache", () => {
+	const testDir = setup();
+	const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
+	try {
+		// Create a plugin directory with visible files (hidden dirs like .claude-plugin are skipped by glob)
+		const pluginDir = join(testDir, "cache-test-han-config");
+		const pluginClaudeDir = join(pluginDir, ".claude-plugin");
+		mkdirSync(pluginClaudeDir, { recursive: true });
+
+		writeFileSync(
+			join(pluginClaudeDir, "plugin.json"),
+			JSON.stringify({ name: "cache-test-han-config", version: "1.0.0" }),
+		);
+		// Add a visible file so plugin tracking works (hidden dirs are skipped)
+		writeFileSync(join(pluginDir, "README.md"), "# Test Plugin");
+
+		// Create a project directory with source files
+		const projectDir = join(testDir, "project-han-config");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "app.swift"), "// Swift code");
+
+		// Set CLAUDE_PROJECT_DIR to isolate cache for this test
+		process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+		// Track initial state
+		trackFiles(
+			"cache-test-han-config",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+
+		// No changes - should return false
+		const noChanges = checkForChanges(
+			"cache-test-han-config",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+		strictEqual(noChanges, false, "Expected no changes when nothing changed");
+
+		// Add han-config.yml to project directory
+		writeFileSync(
+			join(projectDir, "han-config.yml"),
+			"cache-test-han-config:\n  build-hook:\n    command: custom-command\n",
+		);
+
+		// Should detect change
+		const hasChanges = checkForChanges(
+			"cache-test-han-config",
+			"build-hook",
+			projectDir,
+			["**/*.swift"],
+			pluginDir,
+		);
+		strictEqual(
+			hasChanges,
+			true,
+			"Expected changes when han-config.yml added",
+		);
+	} finally {
+		// Restore original CLAUDE_PROJECT_DIR
+		if (originalProjectDir === undefined) {
+			delete process.env.CLAUDE_PROJECT_DIR;
+		} else {
+			process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
+		}
 		teardown();
 	}
 });

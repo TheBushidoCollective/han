@@ -232,30 +232,76 @@ function hasChanges(
 /**
  * Track files and update the cache manifest
  * This is called after a successful hook execution
+ *
+ * @param pluginName - Plugin name for cache key
+ * @param hookName - Hook name for cache key
+ * @param rootDir - Project directory to track
+ * @param patterns - Glob patterns for project files
+ * @param pluginRoot - Optional plugin directory to also track
  */
 export function trackFiles(
 	pluginName: string,
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
+	pluginRoot?: string,
 ): boolean {
-	const files = findFilesWithGlob(rootDir, patterns);
+	// Always include han-config.yml (can override command or disable hook)
+	const patternsWithConfig = [...patterns, "han-config.yml"];
+
+	// Track project files
+	const files = findFilesWithGlob(rootDir, patternsWithConfig);
 	const manifest = buildManifest(files, rootDir);
-	return saveCacheManifest(pluginName, hookName, manifest);
+	const projectSaved = saveCacheManifest(pluginName, hookName, manifest);
+
+	// Track plugin files if pluginRoot provided
+	let pluginSaved = true;
+	if (pluginRoot) {
+		const pluginCacheKey = `__plugin__`;
+		const pluginFiles = findFilesWithGlob(pluginRoot, ["**/*"]);
+		const pluginManifest = buildManifest(pluginFiles, pluginRoot);
+		pluginSaved = saveCacheManifest(pluginName, pluginCacheKey, pluginManifest);
+	}
+
+	return projectSaved && pluginSaved;
 }
 
 /**
  * Check if files have changed since last tracked state.
  * Returns true if changes detected (hook should run), false if no changes (skip hook)
+ *
+ * @param pluginName - Plugin name for cache key
+ * @param hookName - Hook name for cache key
+ * @param rootDir - Project directory to check for changes
+ * @param patterns - Glob patterns for project files
+ * @param pluginRoot - Optional plugin directory to also check for changes
  */
 export function checkForChanges(
 	pluginName: string,
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
+	pluginRoot?: string,
 ): boolean {
+	// Always include han-config.yml (can override command or disable hook)
+	const patternsWithConfig = [...patterns, "han-config.yml"];
+
+	// Check project files
 	const cachedManifest = loadCacheManifest(pluginName, hookName);
-	return hasChanges(rootDir, patterns, cachedManifest);
+	if (hasChanges(rootDir, patternsWithConfig, cachedManifest)) {
+		return true;
+	}
+
+	// Check plugin files if pluginRoot provided
+	if (pluginRoot) {
+		const pluginCacheKey = `__plugin__`;
+		const cachedPluginManifest = loadCacheManifest(pluginName, pluginCacheKey);
+		if (hasChanges(pluginRoot, ["**/*"], cachedPluginManifest)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /**
