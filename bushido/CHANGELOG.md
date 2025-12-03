@@ -10,4 +10,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - improve hook output with cat and important tags ([f449cc55](../../commit/f449cc55))
-
