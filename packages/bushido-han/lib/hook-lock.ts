@@ -279,7 +279,9 @@ export async function acquireSlot(
 		const slotIndex = tryAcquireSlot(manager, hookName, pluginName);
 
 		if (slotIndex >= 0) {
-			debugLog(`Acquired slot-${slotIndex} for ${pluginName || "unknown"}:${hookName}`);
+			debugLog(
+				`Acquired slot-${slotIndex} for ${pluginName || "unknown"}:${hookName}`,
+			);
 			return slotIndex;
 		}
 
