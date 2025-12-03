@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2025-12-03
+
+### Added
+
+- add hook dispatch command for Claude Code bug workaround ([96cf0d2](../../commit/96cf0d2))
+- add npx cache self-repair and remove JS fallback ([37ae33f](../../commit/37ae33f))
+- require explicit plugin name in hook run command ([a314da5](../../commit/a314da5))
+- capture hook output to temp files and add debug mode ([e5f6a41](../../commit/e5f6a41))
+- add idle timeout for hooks and config schema validation ([c452a48](../../commit/c452a48))
+
+### Fixed
+
+- remove double blank lines from existing CHANGELOGs ([b829c36](../../commit/b829c36))
+- remove double blank lines from CHANGELOG files ([58eb333](../../commit/58eb333))
+- fix markdown formatting in CHANGELOG files ([21ca9a7](../../commit/21ca9a7))
+- remove trailing blank lines from CHANGELOG files ([999bbf7](../../commit/999bbf7))
+- clear log lines when transitioning to plugin selector ([2e40ee6](../../commit/2e40ee6))
+- resolve Ink UI navigation in hook test execution ([22e916b](../../commit/22e916b))
+- resolve merge conflict in package.json ([3604b2d](../../commit/3604b2d))
+- remove unused lastOutputTime variable ([8e800f9](../../commit/8e800f9))
+- restore keyboard navigation after viewing hook output ([dc91922](../../commit/dc91922))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad](../../commit/d56a0ad))
+- update tests for new hook command format ([615d195](../../commit/615d195))
+
+
 ## [1.34.3] - 2025-12-03
 
 ### Added
