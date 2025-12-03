@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.6] - 2025-12-03
+
+### Added
+
+- add resource management for hook execution ([b16796f2](../../commit/b16796f2))
+
+### Fixed
+
+- check cache before acquiring lock slot ([17e6a2c6](../../commit/17e6a2c6))
+- remove double blank lines from CHANGELOGs ([6e6f236a](../../commit/6e6f236a))
+- remove double blank lines from CHANGELOGs ([dbe3a96f](../../commit/dbe3a96f))
+
+### Changed
+
+- acquire/release lock per directory for better interleaving ([c235c8de](../../commit/c235c8de))
+
+### Other
+
+- add comprehensive tests for hook-lock feature ([d9fd3c1e](../../commit/d9fd3c1e))
+
 ## [1.36.5] - 2025-12-03
 
 ### Added
