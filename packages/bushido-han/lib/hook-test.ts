@@ -8,6 +8,8 @@ import { HookTestUI } from "./hook-test-ui.js";
 /**
  * Wait for user to press any key
  * Uses raw mode to capture keypress without readline interference
+ * Note: Does NOT reset stdin state - caller must handle this if needed,
+ * or let Ink take over stdin management when remounting.
  */
 function waitForKeypress(): Promise<void> {
 	return new Promise((resolve) => {
@@ -17,9 +19,9 @@ function waitForKeypress(): Promise<void> {
 		process.stdin.setRawMode(true);
 		process.stdin.resume();
 		process.stdin.once("data", () => {
-			// Reset stdin state before resolving
-			process.stdin.setRawMode(false);
-			process.stdin.pause();
+			// Don't reset stdin state - Ink will take over stdin management
+			// when it remounts. Resetting to non-raw mode and pausing here
+			// would prevent Ink's useInput from receiving keyboard events.
 			process.stdout.write("\n");
 			resolve();
 		});
