@@ -179,6 +179,8 @@ interface RunCommandOptions {
 	idleTimeout?: number;
 	/** Hook name for generating output filenames */
 	hookName?: string;
+	/** Plugin root directory for CLAUDE_PLUGIN_ROOT env var */
+	pluginRoot?: string;
 }
 
 // Run command in directory (async version with idle timeout support)
@@ -187,7 +189,8 @@ interface RunCommandOptions {
 async function runCommand(
 	options: RunCommandOptions,
 ): Promise<RunCommandResult> {
-	const { dir, cmd, verbose, idleTimeout, hookName = "hook" } = options;
+	const { dir, cmd, verbose, idleTimeout, hookName = "hook", pluginRoot } =
+		options;
 	const wrappedCmd = wrapCommandWithEnvFile(cmd);
 	const debug = isDebugMode();
 	const startTime = Date.now();
@@ -197,6 +200,10 @@ async function runCommand(
 			cwd: dir,
 			shell: "/bin/bash",
 			stdio: verbose ? "inherit" : ["ignore", "pipe", "pipe"],
+			env: {
+				...process.env,
+				...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: pluginRoot } : {}),
+			},
 		});
 
 		let idleTimeoutHandle: NodeJS.Timeout | null = null;
@@ -832,6 +839,7 @@ export async function runConfiguredHook(
 				verbose,
 				idleTimeout: config.idleTimeout,
 				hookName,
+				pluginRoot,
 			});
 		});
 
