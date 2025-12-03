@@ -10,4 +10,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - clarify commit behavior for unrelated changes ([bdfb4b18](../../commit/bdfb4b18))
-
