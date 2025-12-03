@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.0] - 2025-12-03
+
+### Added
+
+- inject dispatch hooks on plugin install ([1d3119b](../../commit/1d3119b))
+- add hook dispatch command for Claude Code bug workaround ([96cf0d2](../../commit/96cf0d2))
+- add npx cache self-repair and remove JS fallback ([37ae33f](../../commit/37ae33f))
+- require explicit plugin name in hook run command ([a314da5](../../commit/a314da5))
+- capture hook output to temp files and add debug mode ([e5f6a41](../../commit/e5f6a41))
+
+### Fixed
+
+- remove double blank lines from CHANGELOGs ([d3773c3](../../commit/d3773c3))
+- use local plugin store for hook dispatch ([c80f1c9](../../commit/c80f1c9))
+- remove double blank lines from existing CHANGELOGs ([b829c36](../../commit/b829c36))
+- remove double blank lines from CHANGELOG files ([58eb333](../../commit/58eb333))
+- fix markdown formatting in CHANGELOG files ([21ca9a7](../../commit/21ca9a7))
+- remove trailing blank lines from CHANGELOG files ([999bbf7](../../commit/999bbf7))
+- clear log lines when transitioning to plugin selector ([2e40ee6](../../commit/2e40ee6))
+- resolve Ink UI navigation in hook test execution ([22e916b](../../commit/22e916b))
+- resolve merge conflict in package.json ([3604b2d](../../commit/3604b2d))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad](../../commit/d56a0ad))
+- update tests for new hook command format ([615d195](../../commit/615d195))
+
+
 ## [1.35.1] - 2025-12-03
 
 ### Added
