@@ -8,7 +8,7 @@ Use Task tool for:
 - ✅ Extensive codebase search/exploration
 - ✅ Complex work needing focused attention
 - ✅ Multiple independent perspectives
-- ✅ **Running tests, builds, or commands when explicitly requested by user**
+- ✅ **Running commands that may have exhaustive output (tests, builds, linters)**
 
 ❌ Don't use for simple operations - use Read/Grep/Glob instead.
 
