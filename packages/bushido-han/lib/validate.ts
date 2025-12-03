@@ -189,8 +189,14 @@ interface RunCommandOptions {
 async function runCommand(
 	options: RunCommandOptions,
 ): Promise<RunCommandResult> {
-	const { dir, cmd, verbose, idleTimeout, hookName = "hook", pluginRoot } =
-		options;
+	const {
+		dir,
+		cmd,
+		verbose,
+		idleTimeout,
+		hookName = "hook",
+		pluginRoot,
+	} = options;
 	const wrappedCmd = wrapCommandWithEnvFile(cmd);
 	const debug = isDebugMode();
 	const startTime = Date.now();
