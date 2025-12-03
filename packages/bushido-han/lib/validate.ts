@@ -14,6 +14,7 @@ import {
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
 } from "./hook-config.js";
+import { withSlot } from "./hook-lock.js";
 
 /**
  * Check if debug mode is enabled via HAN_DEBUG environment variable
@@ -301,7 +302,7 @@ function testDirCommand(dir: string, cmd: string): boolean {
 	}
 }
 
-export function validate(options: ValidateOptions): void {
+export async function validate(options: ValidateOptions): Promise<void> {
 	const {
 		failFast,
 		dirsWith,
@@ -310,84 +311,87 @@ export function validate(options: ValidateOptions): void {
 		verbose,
 	} = options;
 
-	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	// Wrap with resource lock
+	await withSlot("legacy-validate", undefined, async () => {
+		const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-	// No dirsWith specified - run in current directory only
-	if (!dirsWith) {
-		const success = runCommandSync(rootDir, commandToRun, verbose);
-		if (!success) {
-			console.error(
-				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
-					`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
-			);
-			process.exit(2);
-		}
-		// Silent success - no need for a message when running a single command
-		process.exit(0);
-	}
-
-	// Parse comma-delimited patterns
-	const patterns = dirsWith.split(",").map((p) => p.trim());
-
-	const failures: string[] = [];
-	let processedCount = 0;
-
-	// Find directories
-	const directories = findDirectoriesWithMarker(rootDir, patterns);
-
-	for (const dir of directories) {
-		// Filter with test command if specified
-		if (testDir && !testDirCommand(dir, testDir)) {
-			continue;
-		}
-
-		processedCount++;
-		const success = runCommandSync(dir, commandToRun, verbose);
-
-		if (!success) {
-			const relativePath =
-				dir === rootDir ? "." : dir.replace(`${rootDir}/`, "");
-			failures.push(relativePath);
-
-			if (failFast) {
-				const cmdStr =
-					relativePath === "."
-						? commandToRun
-						: `cd ${relativePath} && ${commandToRun}`;
+		// No dirsWith specified - run in current directory only
+		if (!dirsWith) {
+			const success = runCommandSync(rootDir, commandToRun, verbose);
+			if (!success) {
 				console.error(
-					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
+					`\n❌ The command \`${commandToRun}\` failed.\n\n` +
 						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
 				);
 				process.exit(2);
 			}
+			// Silent success - no need for a message when running a single command
+			process.exit(0);
 		}
-	}
 
-	if (processedCount === 0) {
-		console.log(`No directories found with ${dirsWith}`);
+		// Parse comma-delimited patterns
+		const patterns = dirsWith.split(",").map((p) => p.trim());
+
+		const failures: string[] = [];
+		let processedCount = 0;
+
+		// Find directories
+		const directories = findDirectoriesWithMarker(rootDir, patterns);
+
+		for (const dir of directories) {
+			// Filter with test command if specified
+			if (testDir && !testDirCommand(dir, testDir)) {
+				continue;
+			}
+
+			processedCount++;
+			const success = runCommandSync(dir, commandToRun, verbose);
+
+			if (!success) {
+				const relativePath =
+					dir === rootDir ? "." : dir.replace(`${rootDir}/`, "");
+				failures.push(relativePath);
+
+				if (failFast) {
+					const cmdStr =
+						relativePath === "."
+							? commandToRun
+							: `cd ${relativePath} && ${commandToRun}`;
+					console.error(
+						`\n❌ The command \`${cmdStr}\` failed.\n\n` +
+							`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
+					);
+					process.exit(2);
+				}
+			}
+		}
+
+		if (processedCount === 0) {
+			console.log(`No directories found with ${dirsWith}`);
+			process.exit(0);
+		}
+
+		if (failures.length > 0) {
+			console.error(
+				`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation.\n\n` +
+					`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
+			);
+			for (const dir of failures) {
+				const cmdStr =
+					dir === "." ? commandToRun : `cd ${dir} && ${commandToRun}`;
+				console.error(`  • \`${cmdStr}\``);
+			}
+			console.error(
+				`\nEach subagent should run the command, review the output, and fix all issues.\n`,
+			);
+			process.exit(2);
+		}
+
+		console.log(
+			`\n✅ All ${processedCount} director${processedCount === 1 ? "y" : "ies"} passed validation`,
+		);
 		process.exit(0);
-	}
-
-	if (failures.length > 0) {
-		console.error(
-			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation.\n\n` +
-				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
-		);
-		for (const dir of failures) {
-			const cmdStr =
-				dir === "." ? commandToRun : `cd ${dir} && ${commandToRun}`;
-			console.error(`  • \`${cmdStr}\``);
-		}
-		console.error(
-			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
-		);
-		process.exit(2);
-	}
-
-	console.log(
-		`\n✅ All ${processedCount} director${processedCount === 1 ? "y" : "ies"} passed validation`,
-	);
-	process.exit(0);
+	});
 }
 
 /**
@@ -483,213 +487,218 @@ export async function runConfiguredHook(
 		process.exit(1);
 	}
 
-	const failures: Array<{
-		dir: string;
-		command: string;
-		idleTimedOut?: boolean;
-		outputFile?: string;
-		debugFile?: string;
-	}> = [];
-	const successfulConfigs: ResolvedHookConfig[] = [];
-	let totalFound = 0;
-	let disabledCount = 0;
-	let skippedCount = 0;
+	// Wrap with resource lock
+	await withSlot(hookName, pluginName, async () => {
+		const failures: Array<{
+			dir: string;
+			command: string;
+			idleTimedOut?: boolean;
+			outputFile?: string;
+			debugFile?: string;
+		}> = [];
+		const successfulConfigs: ResolvedHookConfig[] = [];
+		let totalFound = 0;
+		let disabledCount = 0;
+		let skippedCount = 0;
 
-	// Get all configs
-	let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
+		// Get all configs
+		let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
 
-	// If --only is specified, filter to just that directory
-	if (only) {
-		const onlyAbsolute = only.startsWith("/") ? only : join(projectRoot, only);
-		const normalizedOnly = onlyAbsolute.replace(/\/$/, ""); // Remove trailing slash
+		// If --only is specified, filter to just that directory
+		if (only) {
+			const onlyAbsolute = only.startsWith("/")
+				? only
+				: join(projectRoot, only);
+			const normalizedOnly = onlyAbsolute.replace(/\/$/, ""); // Remove trailing slash
 
-		configs = configs.filter((config) => {
-			const normalizedDir = config.directory.replace(/\/$/, "");
-			return normalizedDir === normalizedOnly;
-		});
-
-		if (configs.length === 0) {
-			console.error(
-				`Error: No hook configuration found for directory "${only}".\n` +
-					`The --only flag requires a directory that matches one of the hook's target directories.`,
-			);
-			process.exit(1);
-		}
-	}
-
-	for (const config of configs) {
-		totalFound++;
-
-		// Skip disabled hooks
-		if (!config.enabled) {
-			disabledCount++;
-			continue;
-		}
-
-		// If --cache is enabled, check for changes
-		if (cache && config.ifChanged && config.ifChanged.length > 0) {
-			const cacheKey = getCacheKeyForDirectory(
-				hookName,
-				config.directory,
-				projectRoot,
-			);
-			const hasChanges = checkForChanges(
-				pluginName,
-				cacheKey,
-				config.directory,
-				config.ifChanged,
-			);
-
-			if (!hasChanges) {
-				skippedCount++;
-				continue;
-			}
-		}
-
-		// Run the hook
-		const relativePath =
-			config.directory === projectRoot
-				? "."
-				: config.directory.replace(`${projectRoot}/`, "");
-
-		const result = await runCommand({
-			dir: config.directory,
-			cmd: config.command,
-			verbose,
-			idleTimeout: config.idleTimeout,
-			hookName,
-		});
-
-		if (!result.success) {
-			failures.push({
-				dir: relativePath,
-				command: config.command,
-				idleTimedOut: result.idleTimedOut,
-				outputFile: result.outputFile,
-				debugFile: result.debugFile,
+			configs = configs.filter((config) => {
+				const normalizedDir = config.directory.replace(/\/$/, "");
+				return normalizedDir === normalizedOnly;
 			});
 
-			if (failFast) {
-				const reason = result.idleTimedOut
-					? " (idle timeout - no output received)"
-					: "";
-
-				const outputRef = result.outputFile
-					? `\n\nOutput saved to: ${result.outputFile}`
-					: "";
-				const debugRef = result.debugFile
-					? `\nDebug info saved to: ${result.debugFile}`
-					: "";
-
-				// Build the targeted re-run command
-				const rerunCmd = buildHookCommand(pluginName, hookName, {
-					cached: cache,
-					only: relativePath === "." ? undefined : relativePath,
-				});
-
+			if (configs.length === 0) {
 				console.error(
-					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
-						`To re-run after fixing:\n  ${rerunCmd}\n`,
+					`Error: No hook configuration found for directory "${only}".\n` +
+						`The --only flag requires a directory that matches one of the hook's target directories.`,
 				);
-				process.exit(2);
+				process.exit(1);
 			}
-		} else {
-			successfulConfigs.push(config);
 		}
-	}
 
-	// Handle edge cases
-	if (totalFound === 0) {
-		console.log(
-			`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
-		);
-		process.exit(0);
-	}
+		for (const config of configs) {
+			totalFound++;
 
-	if (disabledCount === totalFound) {
-		console.log(
-			`All directories have hook "${hookName}" disabled via han-config.yml`,
-		);
-		process.exit(0);
-	}
+			// Skip disabled hooks
+			if (!config.enabled) {
+				disabledCount++;
+				continue;
+			}
 
-	const ranCount = successfulConfigs.length + failures.length;
-
-	if (skippedCount > 0) {
-		console.log(
-			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
-		);
-	}
-
-	if (ranCount === 0 && skippedCount > 0) {
-		console.log("No changes detected in any directories. Nothing to run.");
-		process.exit(0);
-	}
-
-	// Update cache manifest for successful executions
-	if (cache && successfulConfigs.length > 0) {
-		for (const config of successfulConfigs) {
-			if (config.ifChanged && config.ifChanged.length > 0) {
+			// If --cache is enabled, check for changes
+			if (cache && config.ifChanged && config.ifChanged.length > 0) {
 				const cacheKey = getCacheKeyForDirectory(
 					hookName,
 					config.directory,
 					projectRoot,
 				);
-				const files = findFilesWithGlob(config.directory, config.ifChanged);
-				const manifest = buildManifest(files, config.directory);
-				saveCacheManifest(pluginName, cacheKey, manifest);
+				const hasChanges = checkForChanges(
+					pluginName,
+					cacheKey,
+					config.directory,
+					config.ifChanged,
+				);
+
+				if (!hasChanges) {
+					skippedCount++;
+					continue;
+				}
 			}
-		}
-	}
 
-	if (failures.length > 0) {
-		const idleTimeoutFailures = failures.filter((f) => f.idleTimedOut);
-		const regularFailures = failures.filter((f) => !f.idleTimedOut);
+			// Run the hook
+			const relativePath =
+				config.directory === projectRoot
+					? "."
+					: config.directory.replace(`${projectRoot}/`, "");
 
-		console.error(
-			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n`,
-		);
-
-		// Helper to format failure with targeted re-run command
-		const formatFailure = (failure: (typeof failures)[0]) => {
-			const rerunCmd = buildHookCommand(pluginName, hookName, {
-				cached: cache,
-				only: failure.dir === "." ? undefined : failure.dir,
+			const result = await runCommand({
+				dir: config.directory,
+				cmd: config.command,
+				verbose,
+				idleTimeout: config.idleTimeout,
+				hookName,
 			});
-			let msg = `  • ${failure.dir === "." ? "(project root)" : failure.dir}`;
-			msg += `\n    Re-run: ${rerunCmd}`;
-			if (failure.outputFile) {
-				msg += `\n    Output: ${failure.outputFile}`;
-			}
-			if (failure.debugFile) {
-				msg += `\n    Debug: ${failure.debugFile}`;
-			}
-			return msg;
-		};
 
-		if (regularFailures.length > 0) {
-			console.error("\nFailed:\n");
-			for (const failure of regularFailures) {
-				console.error(formatFailure(failure));
+			if (!result.success) {
+				failures.push({
+					dir: relativePath,
+					command: config.command,
+					idleTimedOut: result.idleTimedOut,
+					outputFile: result.outputFile,
+					debugFile: result.debugFile,
+				});
+
+				if (failFast) {
+					const reason = result.idleTimedOut
+						? " (idle timeout - no output received)"
+						: "";
+
+					const outputRef = result.outputFile
+						? `\n\nOutput saved to: ${result.outputFile}`
+						: "";
+					const debugRef = result.debugFile
+						? `\nDebug info saved to: ${result.debugFile}`
+						: "";
+
+					// Build the targeted re-run command
+					const rerunCmd = buildHookCommand(pluginName, hookName, {
+						cached: cache,
+						only: relativePath === "." ? undefined : relativePath,
+					});
+
+					console.error(
+						`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
+							`To re-run after fixing:\n  ${rerunCmd}\n`,
+					);
+					process.exit(2);
+				}
+			} else {
+				successfulConfigs.push(config);
 			}
 		}
 
-		if (idleTimeoutFailures.length > 0) {
-			console.error(`\n⏰ Idle timeout failures (no output received):\n`);
-			for (const failure of idleTimeoutFailures) {
-				console.error(formatFailure(failure));
-			}
-			console.error(
-				`\nThese commands hung without producing output. Check for blocking operations or infinite loops.`,
+		// Handle edge cases
+		if (totalFound === 0) {
+			console.log(
+				`No directories found for hook "${hookName}" in plugin "${pluginName}"`,
+			);
+			process.exit(0);
+		}
+
+		if (disabledCount === totalFound) {
+			console.log(
+				`All directories have hook "${hookName}" disabled via han-config.yml`,
+			);
+			process.exit(0);
+		}
+
+		const ranCount = successfulConfigs.length + failures.length;
+
+		if (skippedCount > 0) {
+			console.log(
+				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 			);
 		}
 
-		console.error(`\nReview the output files above and fix all issues.\n`);
-		process.exit(2);
-	}
+		if (ranCount === 0 && skippedCount > 0) {
+			console.log("No changes detected in any directories. Nothing to run.");
+			process.exit(0);
+		}
 
-	console.log(
-		`\n✅ All ${ranCount} director${ranCount === 1 ? "y" : "ies"} passed`,
-	);
-	process.exit(0);
+		// Update cache manifest for successful executions
+		if (cache && successfulConfigs.length > 0) {
+			for (const config of successfulConfigs) {
+				if (config.ifChanged && config.ifChanged.length > 0) {
+					const cacheKey = getCacheKeyForDirectory(
+						hookName,
+						config.directory,
+						projectRoot,
+					);
+					const files = findFilesWithGlob(config.directory, config.ifChanged);
+					const manifest = buildManifest(files, config.directory);
+					saveCacheManifest(pluginName, cacheKey, manifest);
+				}
+			}
+		}
+
+		if (failures.length > 0) {
+			const idleTimeoutFailures = failures.filter((f) => f.idleTimedOut);
+			const regularFailures = failures.filter((f) => !f.idleTimedOut);
+
+			console.error(
+				`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n`,
+			);
+
+			// Helper to format failure with targeted re-run command
+			const formatFailure = (failure: (typeof failures)[0]) => {
+				const rerunCmd = buildHookCommand(pluginName, hookName, {
+					cached: cache,
+					only: failure.dir === "." ? undefined : failure.dir,
+				});
+				let msg = `  • ${failure.dir === "." ? "(project root)" : failure.dir}`;
+				msg += `\n    Re-run: ${rerunCmd}`;
+				if (failure.outputFile) {
+					msg += `\n    Output: ${failure.outputFile}`;
+				}
+				if (failure.debugFile) {
+					msg += `\n    Debug: ${failure.debugFile}`;
+				}
+				return msg;
+			};
+
+			if (regularFailures.length > 0) {
+				console.error("\nFailed:\n");
+				for (const failure of regularFailures) {
+					console.error(formatFailure(failure));
+				}
+			}
+
+			if (idleTimeoutFailures.length > 0) {
+				console.error(`\n⏰ Idle timeout failures (no output received):\n`);
+				for (const failure of idleTimeoutFailures) {
+					console.error(formatFailure(failure));
+				}
+				console.error(
+					`\nThese commands hung without producing output. Check for blocking operations or infinite loops.`,
+				);
+			}
+
+			console.error(`\nReview the output files above and fix all issues.\n`);
+			process.exit(2);
+		}
+
+		console.log(
+			`\n✅ All ${ranCount} director${ranCount === 1 ? "y" : "ies"} passed`,
+		);
+		process.exit(0);
+	});
 }
