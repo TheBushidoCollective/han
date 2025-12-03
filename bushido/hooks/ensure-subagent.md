@@ -34,6 +34,11 @@ Examples:
 | Understand architecture | `Explore` | Can trace through multiple files |
 | Design implementation | `Plan` | Creates step-by-step plans with trade-offs |
 | Review code changes | `general-purpose` | Needs full context for analysis |
+| Generate Playwright tests | `hashi-playwright-mcp:test-generator` | Specialized for Playwright test generation |
+| Debug UI issues | `hashi-playwright-mcp:ui-debugger` | Specialized for browser debugging |
+| Questions about Claude Code | `claude-code-guide` | Has access to official documentation |
+
+**Finding Custom Agents:** Check the Task tool's `subagent_type` options for specialized agents like `do-*` (discipline plugins), `hashi-*` (MCP integrations), or project-specific agents. Custom agents have domain expertise and specialized tools.
 
 If you cannot perform the action, explain why and offer alternatives.
 
