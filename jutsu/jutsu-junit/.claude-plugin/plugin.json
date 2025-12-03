@@ -1,6 +1,6 @@
 {
   "name": "jutsu-junit",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
   "author": {
     "name": "The Bushido Collective",
