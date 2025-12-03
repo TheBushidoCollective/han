@@ -20,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - update hooks.json to new hook command format ([fa1974dd](../../commit/fa1974dd))
 
-
 ## [1.2.5] - 2025-12-03
 
 ### Fixed

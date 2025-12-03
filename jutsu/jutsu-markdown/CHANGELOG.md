@@ -28,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update hooks.json to new hook command format ([fa1974dd](../../commit/fa1974dd))
 - rename jutsu-markdownlint to jutsu-markdown ([3c291222](../../commit/3c291222))
 
-
 ## [2.2.5] - 2025-12-03
 
 ### Added
