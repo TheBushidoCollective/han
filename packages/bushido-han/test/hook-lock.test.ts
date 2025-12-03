@@ -1,5 +1,4 @@
-import { deepStrictEqual, strictEqual } from "node:assert";
-import { execSync, spawn } from "node:child_process";
+import { strictEqual } from "node:assert";
 import {
 	existsSync,
 	mkdirSync,
@@ -24,7 +23,10 @@ import {
 let testsPassed = 0;
 let testsFailed = 0;
 
-async function test(name: string, fn: () => void | Promise<void>): Promise<void> {
+async function test(
+	name: string,
+	fn: () => void | Promise<void>,
+): Promise<void> {
 	try {
 		await fn();
 		console.log(`✓ ${name}`);
@@ -90,7 +92,11 @@ async function runTests(): Promise<void> {
 		process.env.CLAUDE_PROJECT_DIR = "/test/project";
 		const manager = createLockManager();
 		strictEqual(manager.sessionId.length, 16, "Session ID should be 16 chars");
-		strictEqual(/^[a-f0-9]+$/.test(manager.sessionId), true, "Session ID should be hex");
+		strictEqual(
+			/^[a-f0-9]+$/.test(manager.sessionId),
+			true,
+			"Session ID should be hex",
+		);
 		delete process.env.CLAUDE_PROJECT_DIR;
 	});
 
@@ -137,7 +143,11 @@ async function runTests(): Promise<void> {
 		strictEqual(slotData.pluginName, "test-plugin");
 
 		releaseSlot(manager, slotIndex);
-		strictEqual(existsSync(slotPath), false, "Slot file should be removed after release");
+		strictEqual(
+			existsSync(slotPath),
+			false,
+			"Slot file should be removed after release",
+		);
 
 		delete process.env.HAN_SESSION_ID;
 		delete process.env.HAN_HOOK_PARALLELISM;
@@ -158,7 +168,9 @@ async function runTests(): Promise<void> {
 		strictEqual(slot0 !== slot1, true, "Should be different slots");
 
 		// Both slots should be taken
-		const slotFiles = readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"));
+		const slotFiles = readdirSync(manager.lockDir).filter((f) =>
+			f.endsWith(".lock"),
+		);
 		strictEqual(slotFiles.length, 2);
 
 		releaseSlot(manager, slot0);
@@ -184,7 +196,11 @@ async function runTests(): Promise<void> {
 
 		// Try to release - should NOT delete because PID doesn't match
 		releaseSlot(manager, slotIndex);
-		strictEqual(existsSync(slotPath), true, "Should not release slot owned by different PID");
+		strictEqual(
+			existsSync(slotPath),
+			true,
+			"Should not release slot owned by different PID",
+		);
 
 		// Clean up
 		rmSync(slotPath, { force: true });
@@ -210,11 +226,18 @@ async function runTests(): Promise<void> {
 			timestamp: Date.now(),
 			hookName: "stale-hook",
 		};
-		writeFileSync(join(manager.lockDir, "slot-0.lock"), JSON.stringify(staleLock));
+		writeFileSync(
+			join(manager.lockDir, "slot-0.lock"),
+			JSON.stringify(staleLock),
+		);
 
 		// Should be able to acquire despite the stale lock
 		const slotIndex = await acquireSlot(manager, "new-hook");
-		strictEqual(slotIndex, 0, "Should acquire slot 0 after cleaning stale lock");
+		strictEqual(
+			slotIndex,
+			0,
+			"Should acquire slot 0 after cleaning stale lock",
+		);
 
 		releaseSlot(manager, slotIndex);
 
@@ -236,7 +259,10 @@ async function runTests(): Promise<void> {
 			timestamp: Date.now() - 200, // 200ms ago
 			hookName: "old-hook",
 		};
-		writeFileSync(join(manager.lockDir, "slot-0.lock"), JSON.stringify(oldLock));
+		writeFileSync(
+			join(manager.lockDir, "slot-0.lock"),
+			JSON.stringify(oldLock),
+		);
 
 		// Should be able to acquire because the lock is stale (timeout)
 		const slotIndex = await acquireSlot(manager, "new-hook");
@@ -263,19 +289,29 @@ async function runTests(): Promise<void> {
 
 		const result = await withSlot("test-hook", "test-plugin", async () => {
 			// Check that slot is held
-			const slotFiles = readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"));
+			const slotFiles = readdirSync(manager.lockDir).filter((f) =>
+				f.endsWith(".lock"),
+			);
 			slotAcquired = slotFiles.length === 1;
 			return "test-result";
 		});
 
 		strictEqual(result, "test-result");
-		strictEqual(slotAcquired, true, "Slot should be acquired during function execution");
+		strictEqual(
+			slotAcquired,
+			true,
+			"Slot should be acquired during function execution",
+		);
 
 		// After withSlot, slot should be released
 		const remainingSlots = existsSync(manager.lockDir)
 			? readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"))
 			: [];
-		strictEqual(remainingSlots.length, 0, "Slot should be released after function");
+		strictEqual(
+			remainingSlots.length,
+			0,
+			"Slot should be released after function",
+		);
 
 		delete process.env.HAN_SESSION_ID;
 		delete process.env.HAN_HOOK_PARALLELISM;
@@ -302,7 +338,11 @@ async function runTests(): Promise<void> {
 		const remainingSlots = existsSync(manager.lockDir)
 			? readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"))
 			: [];
-		strictEqual(remainingSlots.length, 0, "Slot should be released after error");
+		strictEqual(
+			remainingSlots.length,
+			0,
+			"Slot should be released after error",
+		);
 
 		delete process.env.HAN_SESSION_ID;
 		delete process.env.HAN_HOOK_PARALLELISM;
@@ -337,7 +377,9 @@ async function runTests(): Promise<void> {
 		strictEqual(result, "no-lock-result");
 		// Lock directory might not exist at all when locking is disabled
 		if (existsSync(manager.lockDir)) {
-			const slotFiles = readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"));
+			const slotFiles = readdirSync(manager.lockDir).filter((f) =>
+				f.endsWith(".lock"),
+			);
 			strictEqual(slotFiles.length, 0, "No slot files when locking disabled");
 		}
 
@@ -355,9 +397,9 @@ async function runTests(): Promise<void> {
 		cleanupSession("test-cleanup");
 		const manager = createLockManager();
 
-		// Acquire multiple slots
-		const slot0 = await acquireSlot(manager, "hook1");
-		const slot1 = await acquireSlot(manager, "hook2");
+		// Acquire multiple slots (intentionally not releasing - cleanupOwnedSlots will handle)
+		await acquireSlot(manager, "hook1");
+		await acquireSlot(manager, "hook2");
 
 		// Create a slot owned by different PID
 		const otherSlot = {
@@ -365,13 +407,18 @@ async function runTests(): Promise<void> {
 			timestamp: Date.now(),
 			hookName: "other-hook",
 		};
-		writeFileSync(join(manager.lockDir, "slot-2.lock"), JSON.stringify(otherSlot));
+		writeFileSync(
+			join(manager.lockDir, "slot-2.lock"),
+			JSON.stringify(otherSlot),
+		);
 
 		// Cleanup
 		cleanupOwnedSlots(manager);
 
 		// Only our slots should be removed
-		const remaining = readdirSync(manager.lockDir).filter((f) => f.endsWith(".lock"));
+		const remaining = readdirSync(manager.lockDir).filter((f) =>
+			f.endsWith(".lock"),
+		);
 		strictEqual(remaining.length, 1, "Only foreign slot should remain");
 		strictEqual(remaining[0], "slot-2.lock");
 

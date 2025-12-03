@@ -194,7 +194,9 @@ function tryAcquireSlot(
 	for (let i = 0; i < manager.parallelism; i++) {
 		const slotPath = join(manager.lockDir, `slot-${i}.lock`);
 		const existingSlot = readSlotFile(slotPath);
-		debugLog(`tryAcquireSlot: slot-${i} existingSlot=${existingSlot ? JSON.stringify(existingSlot) : "null"}`);
+		debugLog(
+			`tryAcquireSlot: slot-${i} existingSlot=${existingSlot ? JSON.stringify(existingSlot) : "null"}`,
+		);
 
 		if (existingSlot) {
 			// Check if stale
@@ -208,7 +210,9 @@ function tryAcquireSlot(
 				}
 			} else {
 				// Slot is held by active process
-				debugLog(`tryAcquireSlot: slot-${i} is held by pid ${existingSlot.pid}`);
+				debugLog(
+					`tryAcquireSlot: slot-${i} is held by pid ${existingSlot.pid}`,
+				);
 				continue;
 			}
 		}
