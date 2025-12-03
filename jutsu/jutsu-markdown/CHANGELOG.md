@@ -9,11 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-
 - add markdown-specific skills ([6d3b67a](../../commit/6d3b67a))
 
 ### Fixed
-
 
 - remove double blank lines from CHANGELOG files ([58eb333](../../commit/58eb333))
 - fix markdown formatting in CHANGELOG files ([21ca9a7](../../commit/21ca9a7))
@@ -24,10 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-
 - update hooks.json to new hook command format ([fa1974d](../../commit/fa1974d))
 - rename jutsu-markdownlint to jutsu-markdown ([3c29122](../../commit/3c29122))
-
 
 ## [2.2.2] - 2025-12-03
 
