@@ -1,6 +1,6 @@
 {
   "name": "jutsu-sentry",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Best practices and patterns for Sentry error monitoring and observability.",
   "author": {
     "name": "The Bushido Collective",
