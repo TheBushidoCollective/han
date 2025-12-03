@@ -8,8 +8,20 @@ Use Task tool for:
 - ✅ Extensive codebase search/exploration
 - ✅ Complex work needing focused attention
 - ✅ Multiple independent perspectives
+- ✅ **Running tests, builds, or commands when explicitly requested by user**
 
 ❌ Don't use for simple operations - use Read/Grep/Glob instead.
+
+## Delegation When User Requests Action
+
+**CRITICAL:** When the user explicitly asks you to perform an action (run tests, build, lint, etc.), you MUST delegate to the appropriate tool or agent. Never respond with just an explanation of how to do it - actually do it.
+
+Examples:
+- "run tests" → Use Bash to run tests OR delegate to test-runner agent
+- "build the project" → Use Bash to run build command
+- "check for lint errors" → Use appropriate linting tool/command
+
+If you cannot perform the action, explain why and offer alternatives.
 
 ## Core Principles
 
