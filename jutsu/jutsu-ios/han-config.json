@@ -10,7 +10,12 @@
         "**/*.xib",
         "**/*.storyboard",
         "**/project.pbxproj",
-        "**/Package.swift"
+        "**/Package.swift",
+        "**/Podfile",
+        "**/Podfile.lock",
+        "**/*.plist",
+        "**/*.xcconfig",
+        "**/*.entitlements"
       ]
     }
   }
