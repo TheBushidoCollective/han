@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.5] - 2025-12-03
+
+### Added
+
+- inject dispatch hooks on plugin install ([1d3119b9](../../commit/1d3119b9))
+
+### Fixed
+
+- remove double blank lines from CHANGELOGs ([6e6f236a](../../commit/6e6f236a))
+- remove double blank lines from CHANGELOGs ([dbe3a96f](../../commit/dbe3a96f))
+- remove double blank lines from CHANGELOGs ([97cb0320](../../commit/97cb0320))
+- remove double blank lines from CHANGELOGs ([480d6c7d](../../commit/480d6c7d))
+- remove double blank lines from CHANGELOGs ([35141f73](../../commit/35141f73))
+
 ## [1.36.4] - 2025-12-03
 
 ### Added
