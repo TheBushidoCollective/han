@@ -101,6 +101,36 @@ pub fn find_files_with_glob(root_dir: String, patterns: Vec<String>) -> Vec<Stri
     results
 }
 
+/// macOS bundle directory extensions that should not be descended into or returned as targets
+const BUNDLE_EXTENSIONS: &[&str] = &[
+    ".xcodeproj",
+    ".xcworkspace",
+    ".xcassets",
+    ".app",
+    ".framework",
+    ".bundle",
+    ".playground",
+    ".xctest",
+];
+
+/// Check if a path component is a bundle directory
+fn is_bundle_dir(name: &str) -> bool {
+    BUNDLE_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
+}
+
+/// Check if any path component is inside a bundle directory
+fn is_inside_bundle(path: &Path) -> bool {
+    for component in path.components() {
+        if let std::path::Component::Normal(name) = component {
+            let name_str = name.to_string_lossy();
+            if is_bundle_dir(&name_str) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Find directories containing marker files or directories (e.g., mix.exs, Cargo.toml, *.xcodeproj)
 /// Returns absolute directory paths
 #[napi]
@@ -132,6 +162,9 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
     let mut seen_dirs = std::collections::HashSet::new();
     let mut results = Vec::new();
 
+    // Clone root for use in filter closure
+    let filter_root = root.clone();
+
     // Walk directory respecting gitignore
     // Note: hidden(true) skips hidden files/dirs to match globby default behavior
     let walker = WalkBuilder::new(&root)
@@ -139,8 +172,32 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
         .git_ignore(true)
         .git_global(true)
         .git_exclude(true)
-        .filter_entry(|entry| {
-            entry.file_name() != ".git"
+        .filter_entry(move |entry| {
+            let name = entry.file_name().to_string_lossy();
+            // Skip .git
+            if name == ".git" {
+                return false;
+            }
+            // Skip descending into bundle directories (but we'll still match them at entry level)
+            // Note: filter_entry returning false skips both the entry AND its subtree
+            // We handle bundle matching specially below
+            if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                // Check if we're INSIDE a bundle already (relative path contains a bundle)
+                if let Ok(rel) = entry.path().strip_prefix(&filter_root) {
+                    // If any parent component is a bundle, skip this entry entirely
+                    let rel_str = rel.to_string_lossy();
+                    for component in rel_str.split('/') {
+                        // Skip empty components and the current entry itself
+                        if component.is_empty() || component == name {
+                            continue;
+                        }
+                        if is_bundle_dir(component) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            true
         })
         .build();
 
@@ -166,7 +223,22 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
                     if let Some(parent) = target_dir {
                         // Canonicalize the directory path
                         if let Ok(abs_dir) = fs::canonicalize(parent) {
+                            // Ensure the target directory is not inside a bundle
+                            if let Ok(rel_target) = abs_dir.strip_prefix(&root) {
+                                if is_inside_bundle(rel_target) {
+                                    continue;
+                                }
+                            }
+
                             if let Some(dir_str) = abs_dir.to_str() {
+                                // Also ensure the directory itself is not a bundle
+                                let dir_name = abs_dir.file_name()
+                                    .map(|n| n.to_string_lossy().to_string())
+                                    .unwrap_or_default();
+                                if is_bundle_dir(&dir_name) {
+                                    continue;
+                                }
+
                                 if seen_dirs.insert(dir_str.to_string()) {
                                     results.push(dir_str.to_string());
                                 }
