@@ -33,12 +33,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '<important>Before starting any work or responding to the user read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md' if you haven't already</important>'",
+            "command": "echo '<must-read-first reason=\"subagent delegation rules\">Before starting any work or responding to the user read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md' if you haven't already</must-read-first>'",
             "timeout": 30000
           },
           {
             "type": "command",
-            "command": "echo '<important>Before starting any work or responding to the user read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md</important>'",
+            "command": "echo '<must-read-first reason=\"skill selection and transparency\">Before starting any work or responding to the user read and follow the skill selection guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md' if you haven't already</must-read-first>'",
             "timeout": 30000
           }
         ]
