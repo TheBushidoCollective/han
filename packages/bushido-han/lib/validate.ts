@@ -3,11 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
-	buildManifest,
 	checkForChanges,
 	findDirectoriesWithMarkers,
-	findFilesWithGlob,
-	saveCacheManifest,
+	trackFiles,
 } from "./hook-cache.js";
 import {
 	getHookConfigs,
@@ -779,6 +777,7 @@ export async function runConfiguredHook(
 				cacheKey,
 				config.directory,
 				config.ifChanged,
+				pluginRoot,
 			);
 
 			if (!hasChanges) {
@@ -905,9 +904,13 @@ export async function runConfiguredHook(
 					config.directory,
 					projectRoot,
 				);
-				const files = findFilesWithGlob(config.directory, config.ifChanged);
-				const manifest = buildManifest(files, config.directory);
-				saveCacheManifest(pluginName, cacheKey, manifest);
+				trackFiles(
+					pluginName,
+					cacheKey,
+					config.directory,
+					config.ifChanged,
+					pluginRoot,
+				);
 			}
 		}
 	}
