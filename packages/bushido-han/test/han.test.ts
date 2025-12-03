@@ -714,7 +714,7 @@ test("fails in current directory when command fails and no --dirs-with", () => {
 // Hook config tests (han-config.json)
 // ============================================
 
-test("new format requires CLAUDE_PLUGIN_ROOT", () => {
+test("new format shows error when plugin not found and CLAUDE_PLUGIN_ROOT not set", () => {
 	const testDir = setup();
 	try {
 		try {
@@ -730,9 +730,9 @@ test("new format requires CLAUDE_PLUGIN_ROOT", () => {
 			strictEqual(execError.status, 1);
 			const stderr = execError.stderr?.toString() || "";
 			strictEqual(
-				stderr.includes("CLAUDE_PLUGIN_ROOT"),
+				stderr.includes("Could not find plugin"),
 				true,
-				"Expected error about CLAUDE_PLUGIN_ROOT",
+				"Expected error about plugin not found",
 			);
 		}
 	} finally {
