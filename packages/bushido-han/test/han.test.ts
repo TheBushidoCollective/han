@@ -112,7 +112,7 @@ test("shows hook command help", () => {
 // Hook run tests
 // ============================================
 
-test("shows error when hook run has no hook name or command", () => {
+test("shows error when hook run has no plugin name or hook name", () => {
 	try {
 		execSync(`${binCommand} hook run`, { encoding: "utf8", stdio: "pipe" });
 		throw new Error("Should have failed");
@@ -121,7 +121,7 @@ test("shows error when hook run has no hook name or command", () => {
 		strictEqual(execError.status, 1);
 		const stderr = execError.stderr?.toString() || "";
 		strictEqual(
-			stderr.includes("Hook name is required") ||
+			stderr.includes("Plugin name and hook name are required") ||
 				stderr.includes("-- separator") ||
 				stderr.includes("error"),
 			true,
@@ -718,7 +718,7 @@ test("new format requires CLAUDE_PLUGIN_ROOT", () => {
 	const testDir = setup();
 	try {
 		try {
-			execSync(`${binCommand} hook run test`, {
+			execSync(`${binCommand} hook run test-plugin test`, {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: "pipe",
@@ -766,7 +766,7 @@ test("new format loads han-config.json and runs command", () => {
 		execSync("git init", { cwd: projectDir, stdio: "pipe" });
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const output = execSync(`${binCommand} hook run test`, {
+		const output = execSync(`${binCommand} hook run test-plugin test`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
@@ -805,7 +805,7 @@ test("new format runs in current directory when dirsWith is empty", () => {
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 
-		const output = execSync(`${binCommand} hook run lint`, {
+		const output = execSync(`${binCommand} hook run test-plugin lint`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
@@ -841,7 +841,7 @@ test("new format reports when hook not found in config", () => {
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 
-		const output = execSync(`${binCommand} hook run nonexistent`, {
+		const output = execSync(`${binCommand} hook run test-plugin nonexistent`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
@@ -890,7 +890,7 @@ test("new format with --fail-fast stops on first failure", () => {
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
 		try {
-			execSync(`${binCommand} hook run test --fail-fast`, {
+			execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
 				cwd: projectDir,
 				encoding: "utf8",
 				stdio: "pipe",
@@ -944,7 +944,7 @@ test("han-config.yml can override command", () => {
 		execSync("git init", { cwd: projectDir, stdio: "pipe" });
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const output = execSync(`${binCommand} hook run test`, {
+		const output = execSync(`${binCommand} hook run test-plugin test`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
@@ -992,7 +992,7 @@ test("han-config.yml can disable hook", () => {
 		execSync("git init", { cwd: projectDir, stdio: "pipe" });
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const output = execSync(`${binCommand} hook run test`, {
+		const output = execSync(`${binCommand} hook run test-plugin test`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
@@ -1046,7 +1046,7 @@ test("han-config.yml override only affects specific directory", () => {
 		execSync("git init", { cwd: projectDir, stdio: "pipe" });
 		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const output = execSync(`${binCommand} hook run test`, {
+		const output = execSync(`${binCommand} hook run test-plugin test`, {
 			cwd: projectDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
