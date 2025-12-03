@@ -32,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad](../../commit/d56a0ad))
 - update tests for new hook command format ([615d195](../../commit/615d195))
 
-
 ## [1.34.3] - 2025-12-03
 
 ### Added
@@ -62,7 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad](../../commit/d56a0ad))
 - update tests for new hook command format ([615d195](../../commit/615d195))
-
 
 ## [1.34.2] - 2025-12-03
 
