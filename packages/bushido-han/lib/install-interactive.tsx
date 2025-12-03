@@ -124,6 +124,14 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 		};
 	}, []);
 
+	// Clear log lines when transitioning to selecting phase
+	// This prevents the Static content from remaining in the terminal
+	useEffect(() => {
+		if (phase === "selecting") {
+			setLogLines([]);
+		}
+	}, [phase]);
+
 	// Add a completed line to the log (with automatic spacer after non-spacer lines)
 	const addLogLine = useCallback((text: string, type: LogLine["type"]) => {
 		if (!isMountedRef.current) return;
@@ -262,10 +270,12 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 				</Text>
 			</Box>
 
-			{/* Static log lines - always visible */}
-			<Static items={logLines}>
-				{(line) => <Box key={line.id}>{renderLogLine(line)}</Box>}
-			</Static>
+			{/* Static log lines - only visible during analysis phases */}
+			{(phase === "analyzing" || phase === "analyzed") && (
+				<Static items={logLines}>
+					{(line) => <Box key={line.id}>{renderLogLine(line)}</Box>}
+				</Static>
+			)}
 
 			{phase === "analyzing" && (
 				<Box marginBottom={1}>
