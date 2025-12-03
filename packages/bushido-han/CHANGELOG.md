@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.5] - 2025-12-03
+
+### Added
+
+- track plugin files and han-config.yml in cache ([dee7aeea](../../commit/dee7aeea))
+- auto-discover plugin root from settings ([0b2d5f96](../../commit/0b2d5f96))
+- show command and directory in verbose mode ([82da8d8d](../../commit/82da8d8d))
+- use session_id from Claude hook stdin payload ([27147f91](../../commit/27147f91))
+- add resource management for hook execution ([b16796f2](../../commit/b16796f2))
+
+### Fixed
+
+- reset stdin state after viewing hook output ([08900c77](../../commit/08900c77))
+- pass CLAUDE_PLUGIN_ROOT env var to hook commands ([aee6f346](../../commit/aee6f346))
+- restore Ink navigation after viewing hook output ([4593046c](../../commit/4593046c))
+- check cache before acquiring lock slot ([17e6a2c6](../../commit/17e6a2c6))
+
+### Changed
+
+- acquire/release lock per directory for better interleaving ([c235c8de](../../commit/c235c8de))
+
+### Other
+
+- add tests for plugin auto-discovery feature ([5aac67ed](../../commit/5aac67ed))
+- add comprehensive tests for hook-lock feature ([d9fd3c1e](../../commit/d9fd3c1e))
+
 ## [1.39.4] - 2025-12-03
 
 ### Added
