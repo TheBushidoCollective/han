@@ -327,7 +327,7 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 			fs.readFileSync(hooksFile, "utf-8"),
 		) as HooksData;
 
-		// Get all files in hooks folder
+		// Get all files in hooks folder (markdown files)
 		const allHookFiles: HookFile[] = [];
 		if (fs.existsSync(hooksDir)) {
 			const files = fs
@@ -340,6 +340,25 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 				allHookFiles.push({
 					name: path.basename(file, ".md"),
 					path: file,
+					content,
+				});
+			}
+		}
+
+		// Get all files in scripts folder (shell scripts)
+		const scriptsDir = path.join(pluginPath, "scripts");
+		const allScriptFiles: HookFile[] = [];
+		if (fs.existsSync(scriptsDir)) {
+			const files = fs
+				.readdirSync(scriptsDir)
+				.filter((file) => file.endsWith(".sh") || file.endsWith(".js"));
+
+			for (const file of files) {
+				const filePath = path.join(scriptsDir, file);
+				const content = fs.readFileSync(filePath, "utf-8");
+				allScriptFiles.push({
+					name: path.basename(file, path.extname(file)),
+					path: `scripts/${file}`,
 					content,
 				});
 			}
@@ -375,6 +394,23 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 										!referencedFiles.some((f) => f.path === fileName)
 									) {
 										referencedFiles.push(hookFile);
+									}
+								}
+
+								// Pattern: scripts/file.sh
+								const scriptMatch = hook.command.match(
+									/scripts\/([a-zA-Z0-9_-]+\.(sh|js))/,
+								);
+								if (scriptMatch) {
+									const scriptPath = `scripts/${scriptMatch[1]}`;
+									const scriptFile = allScriptFiles.find(
+										(f) => f.path === scriptPath,
+									);
+									if (
+										scriptFile &&
+										!referencedFiles.some((f) => f.path === scriptPath)
+									) {
+										referencedFiles.push(scriptFile);
 									}
 								}
 							}
