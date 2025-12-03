@@ -1,6 +1,6 @@
 {
   "name": "jutsu-testng",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
   "author": {
     "name": "The Bushido Collective",

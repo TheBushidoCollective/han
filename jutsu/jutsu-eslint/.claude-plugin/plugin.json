@@ -1,6 +1,6 @@
 {
   "name": "jutsu-eslint",
-  "version": "1.8.6",
+  "version": "1.8.7",
   "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
   "author": {
     "name": "The Bushido Collective",
