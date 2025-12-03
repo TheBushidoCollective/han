@@ -110,6 +110,12 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
           "
 
+      - name: Generate changelog
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          chmod +x .github/scripts/generate-changelog.sh
+          .github/scripts/generate-changelog.sh website ${{ steps.bump-version.outputs.new_version }} ${{ steps.bump-version.outputs.old_version }}
+
       - name: Commit version bump
         if: steps.check-changes.outputs.has_changes == 'true'
         run: |
@@ -122,7 +128,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add website/package.json
+          git add website/package.json website/CHANGELOG.md
 
           # Pull latest changes before committing
           git pull --rebase --autostash origin main

@@ -147,6 +147,10 @@ jobs:
             jq --arg version "$NEW_VERSION" '.version = $version' "$PLUGIN_JSON" > "$PLUGIN_JSON.tmp"
             mv "$PLUGIN_JSON.tmp" "$PLUGIN_JSON"
 
+            # Generate changelog for this plugin
+            chmod +x .github/scripts/generate-changelog.sh
+            .github/scripts/generate-changelog.sh "$plugin_dir" "$NEW_VERSION" "$CURRENT_VERSION"
+
             # Get plugin name for commit message
             PLUGIN_NAME=$(jq -r '.name' "$PLUGIN_JSON")
             BUMPED_PLUGINS="$BUMPED_PLUGINS\n- $PLUGIN_NAME: $CURRENT_VERSION -> $NEW_VERSION"
@@ -169,8 +173,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Add all plugin.json files and marketplace.json
-          git add '**/plugin.json' '.claude-plugin/marketplace.json'
+          # Add all plugin.json files, changelogs, and marketplace.json
+          git add '**/plugin.json' '**/CHANGELOG.md' '.claude-plugin/marketplace.json'
 
           # Pull latest changes before committing
           git pull --rebase --autostash origin main

@@ -117,13 +117,19 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate changelog
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          chmod +x .github/scripts/generate-changelog.sh
+          .github/scripts/generate-changelog.sh packages/bushido-han ${{ steps.bump-version.outputs.new_version }}
+
       - name: Commit version bump
         if: steps.check-tag.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin main
-          git add packages/bushido-han/package.json
+          git add packages/bushido-han/package.json packages/bushido-han/CHANGELOG.md
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main
 
