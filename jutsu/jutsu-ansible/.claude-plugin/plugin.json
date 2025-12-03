@@ -1,6 +1,6 @@
 {
   "name": "jutsu-ansible",
-  "version": "1.7.4",
+  "version": "1.8.0",
   "description": "Ansible playbook validation and configuration management best practices",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ansible", "configuration-management", "devops", "automation"]
+  "keywords": [
+    "ansible",
+    "configuration-management",
+    "devops",
+    "automation"
+  ]
 }
