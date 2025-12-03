@@ -9,14 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-
 - add gitlab-ci and sentry plugins ([4408fa5](../../commit/4408fa5))
 
 ### Fixed
 
-
 - fix markdown formatting in CHANGELOG files ([21ca9a7](../../commit/21ca9a7))
-
 
 ## [1.1.0] - 2025-12-03
 
