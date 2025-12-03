@@ -1,6 +1,6 @@
 {
   "name": "jutsu-npm",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "NPM package manager skills with dependency validation hooks.",
   "author": {
     "name": "The Bushido Collective",
