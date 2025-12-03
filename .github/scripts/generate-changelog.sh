@@ -74,19 +74,19 @@ while IFS='|' read -r hash subject author date; do
   # Format entry
   ENTRY="- $CLEAN_SUBJECT ([$hash](../../commit/$hash))"
 
-  # Categorize commit
+  # Categorize commit (use newline only between entries, not before first)
   if echo "$subject" | grep -qE '^[a-z]+(\([^)]+\))?!:' || echo "$subject" | grep -q 'BREAKING CHANGE'; then
-    BREAKING="$BREAKING\n$ENTRY"
+    [ -n "$BREAKING" ] && BREAKING="$BREAKING\n$ENTRY" || BREAKING="$ENTRY"
   elif echo "$subject" | grep -qE '^feat(\([^)]+\))?:'; then
-    FEATURES="$FEATURES\n$ENTRY"
+    [ -n "$FEATURES" ] && FEATURES="$FEATURES\n$ENTRY" || FEATURES="$ENTRY"
   elif echo "$subject" | grep -qE '^fix(\([^)]+\))?:'; then
-    FIXES="$FIXES\n$ENTRY"
+    [ -n "$FIXES" ] && FIXES="$FIXES\n$ENTRY" || FIXES="$ENTRY"
   elif echo "$subject" | grep -qE '^refactor(\([^)]+\))?:'; then
-    REFACTORS="$REFACTORS\n$ENTRY"
+    [ -n "$REFACTORS" ] && REFACTORS="$REFACTORS\n$ENTRY" || REFACTORS="$ENTRY"
   elif echo "$subject" | grep -qE '^chore(\([^)]+\))?:'; then
-    CHORES="$CHORES\n$ENTRY"
+    [ -n "$CHORES" ] && CHORES="$CHORES\n$ENTRY" || CHORES="$ENTRY"
   else
-    OTHER="$OTHER\n$ENTRY"
+    [ -n "$OTHER" ] && OTHER="$OTHER\n$ENTRY" || OTHER="$ENTRY"
   fi
 done <<< "$COMMITS"
 
