@@ -21,6 +21,19 @@ Examples:
 - "run tests" → Delegate to general-purpose agent to run tests and report results
 - "build the project" → Delegate to general-purpose agent to run build and report results
 - "check for lint errors" → Delegate to general-purpose agent to run linter and summarize issues
+- "where is X handled?" → Delegate to Explore agent for fast codebase search
+- "how does Y work?" → Delegate to Explore agent to trace through the codebase
+- "plan the implementation" → Delegate to Plan agent for architectural design
+
+### Subagent Type Selection
+
+| User Request | Subagent Type | Why |
+|--------------|---------------|-----|
+| Run tests, build, lint | `general-purpose` | Executes commands, handles output |
+| Find files, search code | `Explore` | Optimized for fast codebase navigation |
+| Understand architecture | `Explore` | Can trace through multiple files |
+| Design implementation | `Plan` | Creates step-by-step plans with trade-offs |
+| Review code changes | `general-purpose` | Needs full context for analysis |
 
 If you cannot perform the action, explain why and offer alternatives.
 
