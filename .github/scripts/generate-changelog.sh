@@ -149,6 +149,10 @@ if [ -f "$CHANGELOG_FILE" ]; then
   tail -n +7 "$CHANGELOG_FILE" >> "$TEMP_FILE" 2>/dev/null || true
 fi
 
+# Remove consecutive blank lines and ensure single trailing newline
+perl -i -0777 -pe 's/\n\n\n+/\n\n/g' "$TEMP_FILE"
+printf '%s\n' "$(cat "$TEMP_FILE")" > "$TEMP_FILE"
+
 # Move temp file to final location
 mv "$TEMP_FILE" "$CHANGELOG_FILE"
 
