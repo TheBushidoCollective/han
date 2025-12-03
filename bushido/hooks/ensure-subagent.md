@@ -14,33 +14,11 @@ Use Task tool for:
 
 ## Delegation When User Requests Action
 
-**CRITICAL:** When the user explicitly asks you to perform an action (run tests, build, lint, etc.), you MUST delegate to the appropriate tool or agent. Never respond with just an explanation of how to do it - actually do it.
+**CRITICAL:** When the user explicitly asks you to perform an action, you MUST delegate to the appropriate agent. Never respond with just an explanation of how to do it - actually do it.
 
-Examples:
+### Step 1: Check for Specialized Agents (Preferred)
 
-- "run tests" → Delegate to general-purpose agent to run tests and report results
-- "build the project" → Delegate to general-purpose agent to run build and report results
-- "check for lint errors" → Delegate to general-purpose agent to run linter and summarize issues
-- "where is X handled?" → Delegate to Explore agent for fast codebase search
-- "how does Y work?" → Delegate to Explore agent to trace through the codebase
-- "plan the implementation" → Delegate to Plan agent for architectural design
-
-### Subagent Type Selection
-
-| User Request | Subagent Type | Why |
-|--------------|---------------|-----|
-| Run tests, build, lint | `general-purpose` | Executes commands, handles output |
-| Find files, search code | `Explore` | Optimized for fast codebase navigation |
-| Understand architecture | `Explore` | Can trace through multiple files |
-| Design implementation | `Plan` | Creates step-by-step plans with trade-offs |
-| Review code changes | `general-purpose` | Needs full context for analysis |
-| Generate Playwright tests | `hashi-playwright-mcp:test-generator` | Specialized for Playwright test generation |
-| Debug UI issues | `hashi-playwright-mcp:ui-debugger` | Specialized for browser debugging |
-| Questions about Claude Code | `claude-code-guide` | Has access to official documentation |
-
-### Finding Custom Agents
-
-Before performing specialized work, check the Task tool's `subagent_type` options for agents that match the domain:
+Before delegating, check the Task tool's `subagent_type` options for agents that match the domain:
 
 - `do-*` - Discipline plugins (specialized engineering workflows)
 - `hashi-*` - Bridge plugins (MCP server integrations)
@@ -52,7 +30,26 @@ Before performing specialized work, check the Task tool's `subagent_type` option
 2. Find relevant agents: `do-frontend-development:presentation-engineer`, `do-accessibility-engineering:accessibility-engineer`
 3. Delegate to the specialized agent(s) instead of doing the work yourself
 
-Custom agents have domain expertise and specialized tools that produce higher quality output than general-purpose approaches.
+Specialized agents have domain expertise and specialized tools that produce higher quality output than general-purpose approaches.
+
+### Step 2: Fall Back to Built-in Agents
+
+If no specialized agent matches the task, use the appropriate built-in agent:
+
+| User Request | Subagent Type | Why |
+|--------------|---------------|-----|
+| Run tests, build, lint | `general-purpose` | Executes commands, handles output |
+| Find files, search code | `Explore` | Optimized for fast codebase navigation |
+| Understand architecture | `Explore` | Can trace through multiple files |
+| Design implementation | `Plan` | Creates step-by-step plans with trade-offs |
+| Review code changes | `general-purpose` | Needs full context for analysis |
+| Questions about Claude Code | `claude-code-guide` | Has access to official documentation |
+
+**Fallback examples:**
+
+- "run tests" → `general-purpose` agent to run tests and report results
+- "where is X handled?" → `Explore` agent for fast codebase search
+- "plan the implementation" → `Plan` agent for architectural design
 
 If you cannot perform the action, explain why and offer alternatives.
 
