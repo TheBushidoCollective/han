@@ -6,12 +6,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the Bushido principles in ${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md'",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\"",
             "timeout": 30000
           },
           {
             "type": "command",
-            "command": "echo 'Read and follow the time estimate rules in ${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md'",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md\"",
             "timeout": 30000
           }
         ]
@@ -33,12 +33,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md'",
+            "command": "echo '<important>Before starting any work or responding to the user read and follow the subagent usage guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-subagent.md' if you haven't already</important>'",
             "timeout": 30000
           },
           {
             "type": "command",
-            "command": "echo 'Read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md'",
+            "command": "echo '<important>Before starting any work or responding to the user read and follow the skill selection rules in ${CLAUDE_PLUGIN_ROOT}/hooks/ensure-skill-use.md</important>'",
             "timeout": 30000
           }
         ]
