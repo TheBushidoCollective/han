@@ -740,6 +740,154 @@ test("new format shows error when plugin not found and CLAUDE_PLUGIN_ROOT not se
 	}
 });
 
+test("new format auto-discovers plugin from settings when CLAUDE_PLUGIN_ROOT not set", () => {
+	const testDir = setup();
+	try {
+		// Create project directory
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+
+		// Create .claude directory with settings
+		const claudeDir = join(projectDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create a marketplace directory structure
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-test");
+		mkdirSync(pluginDir, { recursive: true });
+
+		// Create plugin with han-config.json
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo discovered-plugin-success",
+					},
+				},
+			}),
+		);
+
+		// Create settings that point to the marketplace
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: {
+							source: "directory",
+							path: marketplaceDir,
+						},
+					},
+				},
+				enabledPlugins: {
+					"jutsu-test@test-marketplace": true,
+				},
+			}),
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(`${binCommand} hook run jutsu-test test`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: undefined,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(output.includes("passed"), true, "Expected success message");
+	} finally {
+		teardown();
+	}
+});
+
+test("new format shows discovered plugin root in verbose mode", () => {
+	const testDir = setup();
+	try {
+		// Create project directory
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+
+		// Create .claude directory with settings
+		const claudeDir = join(projectDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create a marketplace directory structure
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-verbose-test");
+		mkdirSync(pluginDir, { recursive: true });
+
+		// Create plugin with han-config.json
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo verbose-test-success",
+					},
+				},
+			}),
+		);
+
+		// Create settings that point to the marketplace
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: {
+							source: "directory",
+							path: marketplaceDir,
+						},
+					},
+				},
+				enabledPlugins: {
+					"jutsu-verbose-test@test-marketplace": true,
+				},
+			}),
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		const output = execSync(
+			`${binCommand} hook run jutsu-verbose-test test --verbose`,
+			{
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_PLUGIN_ROOT: undefined,
+					CLAUDE_PROJECT_DIR: projectDir,
+				},
+			} as ExecSyncOptionsWithStringEncoding,
+		);
+
+		strictEqual(
+			output.includes("Discovered plugin root"),
+			true,
+			"Expected verbose message about discovered plugin root",
+		);
+		strictEqual(
+			output.includes("jutsu-verbose-test"),
+			true,
+			"Expected plugin path in verbose output",
+		);
+	} finally {
+		teardown();
+	}
+});
+
 test("new format loads han-config.json and runs command", () => {
 	const testDir = setup();
 	try {
