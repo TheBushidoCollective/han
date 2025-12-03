@@ -1,6 +1,6 @@
 {
   "name": "jutsu-gitlab-ci",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations.",
   "author": {
     "name": "The Bushido Collective",

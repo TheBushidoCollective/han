@@ -1,6 +1,6 @@
 {
   "name": "jutsu-rspec",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
   "author": {
     "name": "The Bushido Collective",
