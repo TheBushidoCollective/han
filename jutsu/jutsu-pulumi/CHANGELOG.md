@@ -23,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix markdown formatting in CHANGELOG files ([21ca9a75](../../commit/21ca9a75))
 - remove trailing blank lines from CHANGELOG files ([999bbf73](../../commit/999bbf73))
 
-
 ## [1.8.12] - 2025-12-03
 
 ### Fixed
