@@ -1,6 +1,6 @@
 {
   "name": "jutsu-ansible",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Ansible playbook validation and configuration management best practices",
   "author": {
     "name": "The Bushido Collective",

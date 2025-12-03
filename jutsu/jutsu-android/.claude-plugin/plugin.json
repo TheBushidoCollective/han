@@ -1,6 +1,6 @@
 {
   "name": "jutsu-android",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "Android development validation with Gradle build hooks.",
   "author": {
     "name": "The Bushido Collective",
