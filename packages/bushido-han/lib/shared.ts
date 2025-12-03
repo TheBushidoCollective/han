@@ -49,6 +49,126 @@ export function getClaudeSettingsPath(
 	return join(process.cwd(), ".claude", filename);
 }
 
+/**
+ * Get path to global user Claude settings (~/.claude/settings.json)
+ */
+export function getGlobalClaudeSettingsPath(): string {
+	const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+	return join(homeDir, ".claude", "settings.json");
+}
+
+/**
+ * Read global Claude settings from ~/.claude/settings.json
+ */
+export function readGlobalSettings(): ClaudeSettings {
+	const settingsPath = getGlobalClaudeSettingsPath();
+
+	if (existsSync(settingsPath)) {
+		try {
+			return JSON.parse(readFileSync(settingsPath, "utf8")) as ClaudeSettings;
+		} catch (_error) {
+			console.error(
+				"Error reading global settings.json, creating new one",
+			);
+			return {};
+		}
+	}
+
+	return {};
+}
+
+/**
+ * Write global Claude settings to ~/.claude/settings.json
+ */
+export function writeGlobalSettings(settings: ClaudeSettings): void {
+	const settingsPath = getGlobalClaudeSettingsPath();
+	const claudeDir = join(settingsPath, "..");
+	if (!existsSync(claudeDir)) {
+		mkdirSync(claudeDir, { recursive: true });
+	}
+	writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+}
+
+/**
+ * Hook entry structure for Claude Code hooks
+ */
+export interface HookEntry {
+	type: "command" | "prompt";
+	command?: string;
+	prompt?: string;
+	timeout?: number;
+}
+
+/**
+ * Hook group structure
+ */
+export interface HookGroup {
+	hooks: HookEntry[];
+}
+
+/**
+ * Dispatch hook command template
+ */
+const DISPATCH_HOOK_COMMAND = "npx -y @thebushidocollective/han hook dispatch";
+
+/**
+ * Ensure dispatch hooks are configured in global settings
+ * This is a workaround for Claude Code bug #12151 where plugin hook output
+ * is not passed to the agent.
+ */
+export function ensureDispatchHooks(): void {
+	const settings = readGlobalSettings();
+
+	// Initialize hooks if not present
+	if (!settings.hooks) {
+		settings.hooks = {};
+	}
+
+	const hooks = settings.hooks as Record<string, HookGroup[]>;
+	let modified = false;
+
+	// Check if dispatch hooks already exist for each hook type
+	const hookTypes = ["UserPromptSubmit", "SessionStart"];
+
+	for (const hookType of hookTypes) {
+		const dispatchCommand = `${DISPATCH_HOOK_COMMAND} ${hookType}`;
+
+		// Check if this hook type has any groups
+		if (!hooks[hookType]) {
+			hooks[hookType] = [];
+		}
+
+		// Check if dispatch hook already exists
+		const hasDispatchHook = hooks[hookType].some((group) =>
+			group.hooks?.some(
+				(hook) =>
+					hook.type === "command" &&
+					hook.command?.includes("han hook dispatch"),
+			),
+		);
+
+		if (!hasDispatchHook) {
+			// Add dispatch hook at the beginning
+			hooks[hookType].unshift({
+				hooks: [
+					{
+						type: "command",
+						command: dispatchCommand,
+						timeout: 30000,
+					},
+				],
+			});
+			modified = true;
+		}
+	}
+
+	if (modified) {
+		settings.hooks = hooks;
+		writeGlobalSettings(settings);
+		console.log("✓ Configured dispatch hooks in global settings");
+	}
+}
+
 export function ensureClaudeDirectory(): void {
 	const settingsPath = getClaudeSettingsPath();
 	const claudeDir = join(settingsPath, "..");

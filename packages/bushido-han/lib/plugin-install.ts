@@ -1,5 +1,6 @@
 import {
 	ensureClaudeDirectory,
+	ensureDispatchHooks,
 	fetchMarketplace,
 	getInstalledPlugins,
 	HAN_MARKETPLACE_REPO,
@@ -134,6 +135,11 @@ export async function installPlugins(
 	if (alreadyInstalled.length > 0) {
 		console.log(`⚠️  Already installed: ${alreadyInstalled.join(", ")}`);
 	}
+
+	// Ensure dispatch hooks are configured in global settings
+	// This is a workaround for Claude Code bug #12151
+	ensureDispatchHooks();
+
 	if (installed.length > 0) {
 		console.log("\n⚠️  Please restart Claude Code to load the new plugin(s)");
 	}
