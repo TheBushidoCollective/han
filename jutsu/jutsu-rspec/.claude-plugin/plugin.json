@@ -1,6 +1,6 @@
 {
   "name": "jutsu-rspec",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rspec", "testing", "ruby", "bdd"]
+  "keywords": [
+    "rspec",
+    "testing",
+    "ruby",
+    "bdd"
+  ]
 }
