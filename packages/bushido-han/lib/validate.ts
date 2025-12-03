@@ -394,6 +394,11 @@ export function validate(options: ValidateOptions): void {
  * Options for running a configured hook
  */
 export interface RunConfiguredHookOptions {
+	/**
+	 * The plugin name (e.g., "jutsu-elixir")
+	 * Used to validate CLAUDE_PLUGIN_ROOT and generate proper error messages
+	 */
+	pluginName: string;
 	hookName: string;
 	failFast: boolean;
 	/**
@@ -402,6 +407,11 @@ export interface RunConfiguredHookOptions {
 	 * After successful execution, update the cache manifest.
 	 */
 	cache?: boolean;
+	/**
+	 * When set, only run in this specific directory.
+	 * Used for targeted re-runs after failures.
+	 */
+	only?: string;
 	/**
 	 * When true, show full command output instead of suppressing it.
 	 * Also settable via HAN_HOOK_RUN_VERBOSE=1 environment variable.
@@ -424,13 +434,31 @@ function getCacheKeyForDirectory(
 }
 
 /**
+ * Build the han hook run command for error messages
+ */
+function buildHookCommand(
+	pluginName: string,
+	hookName: string,
+	options: { cached?: boolean; only?: string },
+): string {
+	let cmd = `npx -y @thebushidocollective/han hook run ${pluginName} ${hookName}`;
+	if (options.cached) {
+		cmd += " --cached";
+	}
+	if (options.only) {
+		cmd += ` --only=${options.only}`;
+	}
+	return cmd;
+}
+
+/**
  * Run a hook using plugin config and user overrides.
- * This is the new format: `han hook run <hookName> [--fail-fast] [--cache]`
+ * This is the new format: `han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]`
  */
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { hookName, failFast, cache, verbose } = options;
+	const { pluginName, hookName, failFast, cache, only, verbose } = options;
 
 	const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -443,7 +471,17 @@ export async function runConfiguredHook(
 		process.exit(1);
 	}
 
-	const pluginName = getPluginNameFromRoot(pluginRoot);
+	// Validate that CLAUDE_PLUGIN_ROOT matches the specified plugin name
+	const pluginRootName = getPluginNameFromRoot(pluginRoot);
+	if (pluginRootName !== pluginName) {
+		console.error(
+			`Error: Plugin name mismatch.\n` +
+				`  Expected: ${pluginName}\n` +
+				`  Got: ${pluginRootName} (from CLAUDE_PLUGIN_ROOT)\n\n` +
+				`The hook command specifies plugin "${pluginName}" but CLAUDE_PLUGIN_ROOT points to "${pluginRootName}".`,
+		);
+		process.exit(1);
+	}
 
 	const failures: Array<{
 		dir: string;
@@ -458,7 +496,26 @@ export async function runConfiguredHook(
 	let skippedCount = 0;
 
 	// Get all configs
-	const configs = getHookConfigs(pluginRoot, hookName, projectRoot);
+	let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
+
+	// If --only is specified, filter to just that directory
+	if (only) {
+		const onlyAbsolute = only.startsWith("/") ? only : join(projectRoot, only);
+		const normalizedOnly = onlyAbsolute.replace(/\/$/, ""); // Remove trailing slash
+
+		configs = configs.filter((config) => {
+			const normalizedDir = config.directory.replace(/\/$/, "");
+			return normalizedDir === normalizedOnly;
+		});
+
+		if (configs.length === 0) {
+			console.error(
+				`Error: No hook configuration found for directory "${only}".\n` +
+					`The --only flag requires a directory that matches one of the hook's target directories.`,
+			);
+			process.exit(1);
+		}
+	}
 
 	for (const config of configs) {
 		totalFound++;
@@ -513,10 +570,6 @@ export async function runConfiguredHook(
 			});
 
 			if (failFast) {
-				const cmdStr =
-					relativePath === "."
-						? config.command
-						: `cd ${relativePath} && ${config.command}`;
 				const reason = result.idleTimedOut
 					? " (idle timeout - no output received)"
 					: "";
@@ -528,9 +581,15 @@ export async function runConfiguredHook(
 					? `\nDebug info saved to: ${result.debugFile}`
 					: "";
 
+				// Build the targeted re-run command
+				const rerunCmd = buildHookCommand(pluginName, hookName, {
+					cached: cache,
+					only: relativePath === "." ? undefined : relativePath,
+				});
+
 				console.error(
-					`\n❌ The command \`${cmdStr}\` failed${reason}.${outputRef}${debugRef}\n\n` +
-						`Review the output file above and fix all issues.\n`,
+					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
+						`To re-run after fixing:\n  ${rerunCmd}\n`,
 				);
 				process.exit(2);
 			}
@@ -591,13 +650,14 @@ export async function runConfiguredHook(
 			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed.\n`,
 		);
 
-		// Helper to format failure with output file reference
+		// Helper to format failure with targeted re-run command
 		const formatFailure = (failure: (typeof failures)[0]) => {
-			const cmdStr =
-				failure.dir === "."
-					? failure.command
-					: `cd ${failure.dir} && ${failure.command}`;
-			let msg = `  • \`${cmdStr}\``;
+			const rerunCmd = buildHookCommand(pluginName, hookName, {
+				cached: cache,
+				only: failure.dir === "." ? undefined : failure.dir,
+			});
+			let msg = `  • ${failure.dir === "." ? "(project root)" : failure.dir}`;
+			msg += `\n    Re-run: ${rerunCmd}`;
 			if (failure.outputFile) {
 				msg += `\n    Output: ${failure.outputFile}`;
 			}
@@ -608,7 +668,7 @@ export async function runConfiguredHook(
 		};
 
 		if (regularFailures.length > 0) {
-			console.error("\nFailed commands:\n");
+			console.error("\nFailed:\n");
 			for (const failure of regularFailures) {
 				console.error(formatFailure(failure));
 			}

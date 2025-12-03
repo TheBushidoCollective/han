@@ -2,15 +2,15 @@ import type { Command } from "commander";
 
 export function registerHookRun(hookCommand: Command): void {
 	// Supports two formats:
-	// 1. New format: han hook run <hookName> [--fail-fast] [--stdin] [--cache]
+	// 1. New format: han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]
 	//    Uses plugin han-config.json to determine dirsWith and default command
 	// 2. Legacy format: han hook run --dirs-with <file> -- <command>
 	//    Explicit dirsWith and command specification
 	hookCommand
-		.command("run [hookNameOrArgs...]")
+		.command("run [args...]")
 		.description(
 			"Run a hook across directories.\n" +
-				"New format: han hook run <hookName> [--fail-fast] [--cache]\n" +
+				"New format: han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]\n" +
 				"Legacy format: han hook run --dirs-with <file> -- <command>",
 		)
 		.option("--fail-fast", "Stop on first failure")
@@ -23,8 +23,13 @@ export function registerHookRun(hookCommand: Command): void {
 			"(Legacy) Only include directories where this command exits 0",
 		)
 		.option(
-			"--cache",
+			"--cached",
 			"Only run if files matching ifChanged patterns have changed since last successful run",
+		)
+		.option("--cache", "(Deprecated) Alias for --cached")
+		.option(
+			"--only <directory>",
+			"Only run in the specified directory (for targeted re-runs after failures)",
 		)
 		.option(
 			"--verbose",
@@ -33,17 +38,17 @@ export function registerHookRun(hookCommand: Command): void {
 		.allowUnknownOption()
 		.action(
 			async (
-				hookNameOrArgs: string[],
+				args: string[],
 				options: {
 					failFast?: boolean;
 					dirsWith?: string;
 					testDir?: string;
+					cached?: boolean;
 					cache?: boolean;
+					only?: string;
 					verbose?: boolean;
 				},
 			) => {
-				const hookName =
-					hookNameOrArgs.length > 0 ? hookNameOrArgs[0] : undefined;
 				const separatorIndex = process.argv.indexOf("--");
 				const isLegacyFormat = separatorIndex !== -1;
 
@@ -52,6 +57,9 @@ export function registerHookRun(hookCommand: Command): void {
 					options.verbose ||
 					process.env.HAN_HOOK_RUN_VERBOSE === "1" ||
 					process.env.HAN_HOOK_RUN_VERBOSE === "true";
+
+				// Support both --cached and --cache (deprecated alias)
+				const useCache = options.cached || options.cache || false;
 
 				if (isLegacyFormat) {
 					const commandArgs = process.argv.slice(separatorIndex + 1);
@@ -84,11 +92,15 @@ export function registerHookRun(hookCommand: Command): void {
 						verbose,
 					});
 				} else {
-					if (!hookName) {
+					// New format: han hook run <plugin-name> <hook-name>
+					const pluginName = args.length > 0 ? args[0] : undefined;
+					const hookName = args.length > 1 ? args[1] : undefined;
+
+					if (!pluginName || !hookName) {
 						console.error(
-							"Error: Hook name is required.\n\n" +
+							"Error: Plugin name and hook name are required.\n\n" +
 								"Usage:\n" +
-								"  New format:    han hook run <hookName> [--fail-fast] [--cache]\n" +
+								"  New format:    han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]\n" +
 								"  Legacy format: han hook run --dirs-with <file> -- <command>",
 						);
 						process.exit(1);
@@ -96,9 +108,11 @@ export function registerHookRun(hookCommand: Command): void {
 
 					const { runConfiguredHook } = await import("../../validate.js");
 					await runConfiguredHook({
+						pluginName,
 						hookName,
 						failFast: options.failFast || false,
-						cache: options.cache || false,
+						cache: useCache,
+						only: options.only,
 						verbose,
 					});
 				}
