@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run ios-build --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-ios ios-build --fail-fast --cached",
             "timeout": 900000
           }
         ]

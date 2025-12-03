@@ -5,17 +5,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run test --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-elixir test --fail-fast --cached",
             "timeout": 900000
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run format --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-elixir format --fail-fast --cached",
             "timeout": 120000
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run compile --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-elixir compile --fail-fast --cached",
             "timeout": 300000
           }
         ]

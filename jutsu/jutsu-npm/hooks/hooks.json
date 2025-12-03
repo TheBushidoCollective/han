@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run npm-install --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-npm npm-install --fail-fast --cached",
             "timeout": 300000
           }
         ]

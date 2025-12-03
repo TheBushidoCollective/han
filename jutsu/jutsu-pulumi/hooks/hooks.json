@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run preview --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-pulumi preview --fail-fast --cached",
             "timeout": 60000
           }
         ]

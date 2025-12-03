@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run build --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-erlang build --fail-fast --cached",
             "timeout": 300000
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run test --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-erlang test --fail-fast --cached",
             "timeout": 900000
           }
         ]

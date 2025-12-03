@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run android-build --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-android android-build --fail-fast --cached",
             "timeout": 900000
           }
         ]
