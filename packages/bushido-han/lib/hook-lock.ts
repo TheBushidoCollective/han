@@ -3,6 +3,7 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	renameSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -153,25 +154,28 @@ function readSlotFile(slotPath: string): LockSlot | null {
 function writeSlotFile(slotPath: string, slot: LockSlot): boolean {
 	try {
 		// Write to temp file first, then rename for atomicity
-		const tempPath = `${slotPath}.${process.pid}.tmp`;
-		writeFileSync(tempPath, JSON.stringify(slot), { flag: "wx" });
+		// Use timestamp + pid to avoid collisions with leftover temp files
+		const tempPath = `${slotPath}.${process.pid}.${Date.now()}.tmp`;
+		writeFileSync(tempPath, JSON.stringify(slot));
 
 		// Check if slot was taken while we were writing
 		if (existsSync(slotPath)) {
+			debugLog(`writeSlotFile: slot already exists at ${slotPath}`);
 			rmSync(tempPath, { force: true });
 			return false;
 		}
 
 		// Rename temp to final (atomic on most filesystems)
-		const { renameSync } = require("node:fs");
 		try {
 			renameSync(tempPath, slotPath);
 			return true;
-		} catch {
+		} catch (e) {
+			debugLog(`writeSlotFile: rename failed: ${(e as Error).message}`);
 			rmSync(tempPath, { force: true });
 			return false;
 		}
-	} catch {
+	} catch (e) {
+		debugLog(`writeSlotFile: write failed: ${(e as Error).message}`);
 		return false;
 	}
 }
@@ -190,10 +194,12 @@ function tryAcquireSlot(
 	for (let i = 0; i < manager.parallelism; i++) {
 		const slotPath = join(manager.lockDir, `slot-${i}.lock`);
 		const existingSlot = readSlotFile(slotPath);
+		debugLog(`tryAcquireSlot: slot-${i} existingSlot=${existingSlot ? JSON.stringify(existingSlot) : "null"}`);
 
 		if (existingSlot) {
 			// Check if stale
 			if (isSlotStale(existingSlot)) {
+				debugLog(`tryAcquireSlot: slot-${i} is stale, removing`);
 				// Remove stale lock
 				try {
 					rmSync(slotPath, { force: true });
@@ -202,6 +208,7 @@ function tryAcquireSlot(
 				}
 			} else {
 				// Slot is held by active process
+				debugLog(`tryAcquireSlot: slot-${i} is held by pid ${existingSlot.pid}`);
 				continue;
 			}
 		}
@@ -217,6 +224,7 @@ function tryAcquireSlot(
 		if (writeSlotFile(slotPath, newSlot)) {
 			return i;
 		}
+		debugLog(`tryAcquireSlot: slot-${i} write failed`);
 	}
 
 	return -1; // No slots available
