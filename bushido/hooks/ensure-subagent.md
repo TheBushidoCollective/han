@@ -38,7 +38,21 @@ Examples:
 | Debug UI issues | `hashi-playwright-mcp:ui-debugger` | Specialized for browser debugging |
 | Questions about Claude Code | `claude-code-guide` | Has access to official documentation |
 
-**Finding Custom Agents:** Check the Task tool's `subagent_type` options for specialized agents like `do-*` (discipline plugins), `hashi-*` (MCP integrations), or project-specific agents. Custom agents have domain expertise and specialized tools.
+### Finding Custom Agents
+
+Before performing specialized work, check the Task tool's `subagent_type` options for agents that match the domain:
+
+- `do-*` - Discipline plugins (specialized engineering workflows)
+- `hashi-*` - Bridge plugins (MCP server integrations)
+- Project-specific agents with domain expertise
+
+**Example:** User asks "create a new React component with accessibility support"
+
+1. Check Task tool's available `subagent_type` options
+2. Find relevant agents: `do-frontend-development:presentation-engineer`, `do-accessibility-engineering:accessibility-engineer`
+3. Delegate to the specialized agent(s) instead of doing the work yourself
+
+Custom agents have domain expertise and specialized tools that produce higher quality output than general-purpose approaches.
 
 If you cannot perform the action, explain why and offer alternatives.
 
