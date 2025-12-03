@@ -9,11 +9,13 @@ get_scheme() {
     local json_output
     json_output=$(xcodebuild -list -json 2>/dev/null) || return 1
 
-    # Extract first scheme from the schemes array
-    # grep -A2 gets the "schemes" key and the first array element
-    # tail -1 skips the "schemes" line itself
-    # Then extract the quoted string
-    echo "$json_output" | grep -A2 '"schemes"' | tail -1 | grep -o '"[^"]*"' | tr -d '"'
+    # Try jq first (clean), fall back to sed (portable)
+    if command -v jq &>/dev/null; then
+        echo "$json_output" | jq -r '.project.schemes[0] // .workspace.schemes[0] // empty'
+    else
+        # Fallback: collapse newlines and extract with sed
+        echo "$json_output" | tr '\n' ' ' | sed -n 's/.*"schemes"[^[]*\[[^"]*"\([^"]*\)".*/\1/p'
+    fi
 }
 
 # Main build function
