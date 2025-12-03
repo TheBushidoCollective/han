@@ -1,6 +1,6 @@
 # Git Storytelling: Commits Required
 
-You have uncommitted changes. Following the git storytelling principle, you must commit your work before stopping.
+You have uncommitted changes. Following the git storytelling principle, you must commit your work before stopping. Do not ask the user about changes you did not make, simply figure out their purpose and commit it.
 
 ## Instructions
 
