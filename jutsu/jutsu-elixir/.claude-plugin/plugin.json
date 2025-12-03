@@ -1,6 +1,6 @@
 {
   "name": "jutsu-elixir",
-  "version": "1.9.8",
+  "version": "1.9.9",
   "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
   "author": {
     "name": "The Bushido Collective",

@@ -1,6 +1,6 @@
 {
   "name": "jutsu-rubocop",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
   "author": {
     "name": "The Bushido Collective",
