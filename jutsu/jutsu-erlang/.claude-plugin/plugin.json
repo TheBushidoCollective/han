@@ -1,6 +1,6 @@
 {
   "name": "jutsu-erlang",
-  "version": "1.8.12",
+  "version": "1.8.13",
   "description": "Advanced Erlang programming skills for concurrent and distributed systems",
   "author": {
     "name": "The Bushido Collective",

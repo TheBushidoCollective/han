@@ -1,6 +1,6 @@
 {
   "name": "jutsu-rust",
-  "version": "1.8.12",
+  "version": "1.8.13",
   "description": "Advanced Rust skills for ownership, error handling, and async programming.",
   "author": {
     "name": "The Bushido Collective",
