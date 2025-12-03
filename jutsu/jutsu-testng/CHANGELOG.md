@@ -9,12 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-
 - source CLAUDE_ENV_FILE before running hook commands ([4558340](../../commit/4558340))
 - remove SubagentStop hooks to prevent infinite loops ([870244c](../../commit/870244c))
 
 ### Changed
 
-
 - update hooks.json to new hook command format ([fa1974d](../../commit/fa1974d))
-
