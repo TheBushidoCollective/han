@@ -11,4 +11,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - inject dispatch hooks on plugin install ([1d3119b](../../commit/1d3119b))
 - add global footer to all pages ([048bc98](../../commit/048bc98))
-
