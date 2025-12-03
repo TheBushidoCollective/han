@@ -6,6 +6,9 @@
       "ifChanged": [
         "**/*.swift",
         "**/*.m",
+        "**/*.mm",
+        "**/*.c",
+        "**/*.cpp",
         "**/*.h",
         "**/*.xib",
         "**/*.storyboard",
@@ -15,7 +18,14 @@
         "**/Podfile.lock",
         "**/*.plist",
         "**/*.xcconfig",
-        "**/*.entitlements"
+        "**/*.entitlements",
+        "**/*.strings",
+        "**/*.stringsdict",
+        "**/*.metal",
+        "**/*.mlmodel",
+        "**/*.intentdefinition",
+        "**/*.xcdatamodeld",
+        "**/*.modulemap"
       ]
     }
   }
