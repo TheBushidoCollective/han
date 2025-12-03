@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.7] - 2025-12-03
+
+### Added
+
+- add markdown-specific skills ([6d3b67a8](../../commit/6d3b67a8))
+
+### Fixed
+
+- remove double blank lines from CHANGELOGs ([10c19571](../../commit/10c19571))
+- remove double blank lines from CHANGELOGs ([35141f73](../../commit/35141f73))
+- remove double blank lines from CHANGELOGs ([d3773c3e](../../commit/d3773c3e))
+- remove double blank lines from existing CHANGELOGs ([b829c36c](../../commit/b829c36c))
+- remove double blank lines from CHANGELOG files ([58eb3336](../../commit/58eb3336))
+- fix markdown formatting in CHANGELOG files ([21ca9a75](../../commit/21ca9a75))
+- remove trailing blank lines from CHANGELOG files ([999bbf73](../../commit/999bbf73))
+- remove nested code blocks causing MD031 warnings ([c1e1c823](../../commit/c1e1c823))
+- simplify command example to fix markdown lint ([e76a3dfb](../../commit/e76a3dfb))
+- resolve markdownlint warnings in skills ([49666093](../../commit/49666093))
+
+### Changed
+
+- update hooks.json to new hook command format ([fa1974dd](../../commit/fa1974dd))
+- rename jutsu-markdownlint to jutsu-markdown ([3c291222](../../commit/3c291222))
+
+
 ## [2.2.6] - 2025-12-03
 
 ### Added
