@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.37.1] - 2025-12-03
+
+### Added
+
+- use session_id from Claude hook stdin payload ([27147f91](../../commit/27147f91))
+- add resource management for hook execution ([b16796f2](../../commit/b16796f2))
+
+### Fixed
+
+- restore Ink navigation after viewing hook output ([4593046c](../../commit/4593046c))
+- check cache before acquiring lock slot ([17e6a2c6](../../commit/17e6a2c6))
+- remove double blank lines from CHANGELOGs ([6e6f236a](../../commit/6e6f236a))
+
+### Changed
+
+- acquire/release lock per directory for better interleaving ([c235c8de](../../commit/c235c8de))
+
+### Other
+
+- add comprehensive tests for hook-lock feature ([d9fd3c1e](../../commit/d9fd3c1e))
+
 ## [1.37.0] - 2025-12-03
 
 ### Added
