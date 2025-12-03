@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.16] - 2025-12-03
+
+### Fixed
+
+- improve scheme detection with jq and sed fallback ([b90d4b3e](../../commit/b90d4b3e))
+- fix scheme detection parsing in ios-build script ([a868ebfb](../../commit/a868ebfb))
+- refactor ios-build hook to shell script ([573840d4](../../commit/573840d4))
+
 ## [1.2.15] - 2025-12-03
 
 ### Fixed
