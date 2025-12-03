@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '<must-read-first reason=\"planning workflow enforcement\">Before starting any work read and follow the planning enforcement guidelines in ${CLAUDE_PLUGIN_ROOT}/hooks/enforce-planning.md if you haven\\'t already</must-read-first>'",
+            "command": "echo '<must-read-first reason=\"planning workflow enforcement\">${CLAUDE_PLUGIN_ROOT}/hooks/enforce-planning.md</must-read-first>'",
             "timeout": 30000
           }
         ]
