@@ -67,9 +67,7 @@ export function readGlobalSettings(): ClaudeSettings {
 		try {
 			return JSON.parse(readFileSync(settingsPath, "utf8")) as ClaudeSettings;
 		} catch (_error) {
-			console.error(
-				"Error reading global settings.json, creating new one",
-			);
+			console.error("Error reading global settings.json, creating new one");
 			return {};
 		}
 	}
