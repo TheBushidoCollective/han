@@ -9,14 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-
 - add npx cache self-repair and remove JS fallback ([37ae33f](../../commit/37ae33f))
 - require explicit plugin name in hook run command ([a314da5](../../commit/a314da5))
 - capture hook output to temp files and add debug mode ([e5f6a41](../../commit/e5f6a41))
 - add idle timeout for hooks and config schema validation ([c452a48](../../commit/c452a48))
 
 ### Fixed
-
 
 - fix markdown formatting in CHANGELOG files ([21ca9a7](../../commit/21ca9a7))
 - remove trailing blank lines from CHANGELOG files ([999bbf7](../../commit/999bbf7))
@@ -30,15 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-
 - remove unused liveOutput prop from HookTestUI ([90441d6](../../commit/90441d6))
 
 ### Other
 
-
 - Merge branch 'main' of github.com:TheBushidoCollective/han ([d56a0ad](../../commit/d56a0ad))
 - update tests for new hook command format ([615d195](../../commit/615d195))
-
 
 ## [1.34.1] - 2025-12-03
 
