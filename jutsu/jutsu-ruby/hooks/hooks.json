@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run syntax --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-ruby syntax --fail-fast --cached",
             "timeout": 60000
           }
         ]

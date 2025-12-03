@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run format --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-terraform format --fail-fast --cached",
             "timeout": 120000
           }
         ]

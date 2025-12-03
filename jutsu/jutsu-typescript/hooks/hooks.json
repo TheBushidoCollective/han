@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run typecheck --fail-fast --cache",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-typescript typecheck --fail-fast --cached",
             "timeout": 600000
           }
         ]
