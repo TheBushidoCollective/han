@@ -1,6 +1,6 @@
 {
   "name": "jutsu-maven",
-  "version": "1.6.9",
+  "version": "1.6.10",
   "description": "Validation and quality enforcement for Apache Maven projects with dependency management, build lifecycle, and plugin configuration skills.",
   "author": {
     "name": "The Bushido Collective",
