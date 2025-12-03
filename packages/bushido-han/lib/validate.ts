@@ -315,6 +315,12 @@ export async function validate(options: ValidateOptions): Promise<void> {
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
+		// In verbose mode, show what we're running
+		if (verbose) {
+			console.log(`\n[han] Running in .:`);
+			console.log(`  $ ${commandToRun}\n`);
+		}
+
 		// Acquire slot, run command, release slot
 		const success = await withSlot("legacy-validate", undefined, async () => {
 			return runCommandSync(rootDir, commandToRun, verbose);
@@ -347,14 +353,21 @@ export async function validate(options: ValidateOptions): Promise<void> {
 
 		processedCount++;
 
+		const relativePath =
+			dir === rootDir ? "." : dir.replace(`${rootDir}/`, "");
+
+		// In verbose mode, show what we're running
+		if (verbose) {
+			console.log(`\n[han] Running in ${relativePath}:`);
+			console.log(`  $ ${commandToRun}\n`);
+		}
+
 		// Acquire slot, run command, release slot (per directory)
 		const success = await withSlot("legacy-validate", undefined, async () => {
 			return runCommandSync(dir, commandToRun, verbose);
 		});
 
 		if (!success) {
-			const relativePath =
-				dir === rootDir ? "." : dir.replace(`${rootDir}/`, "");
 			failures.push(relativePath);
 
 			if (failFast) {
@@ -592,6 +605,12 @@ export async function runConfiguredHook(
 			config.directory === projectRoot
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
+
+		// In verbose mode, show what we're running
+		if (verbose) {
+			console.log(`\n[${pluginName}/${hookName}] Running in ${relativePath}:`);
+			console.log(`  $ ${config.command}\n`);
+		}
 
 		// Acquire slot, run command, release slot (per directory)
 		const result = await withSlot(hookName, pluginName, async () => {
