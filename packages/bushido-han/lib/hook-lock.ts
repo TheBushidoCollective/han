@@ -102,7 +102,7 @@ function getStaleLockTimeout(): number {
 
 /**
  * Get the acquire timeout in milliseconds.
- * Defaults to 5 minutes.
+ * Defaults to 60 minutes (tasks can run for a long time).
  */
 function getAcquireTimeout(): number {
 	const envValue = process.env.HAN_HOOK_ACQUIRE_TIMEOUT;
@@ -112,7 +112,7 @@ function getAcquireTimeout(): number {
 			return parsed;
 		}
 	}
-	return 5 * 60 * 1000; // 5 minutes
+	return 60 * 60 * 1000; // 60 minutes
 }
 
 /**

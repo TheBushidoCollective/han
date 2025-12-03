@@ -2,8 +2,8 @@ import { strictEqual } from "node:assert";
 import {
 	existsSync,
 	mkdirSync,
-	readFileSync,
 	readdirSync,
+	readFileSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -13,10 +13,10 @@ import { join } from "node:path";
 // Import the module under test
 import {
 	acquireSlot,
-	createLockManager,
-	releaseSlot,
 	cleanupOwnedSlots,
+	createLockManager,
 	isLockingEnabled,
+	releaseSlot,
 	withSlot,
 } from "../lib/hook-lock.js";
 

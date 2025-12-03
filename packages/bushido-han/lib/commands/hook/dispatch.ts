@@ -4,6 +4,31 @@ import { join } from "node:path";
 import type { Command } from "commander";
 
 /**
+ * Read and parse stdin JSON payload from Claude Code hooks
+ */
+function readStdinPayload(): Record<string, unknown> | null {
+	try {
+		// Read stdin synchronously (file descriptor 0)
+		const stdin = readFileSync(0, "utf-8");
+		if (stdin.trim()) {
+			return JSON.parse(stdin);
+		}
+	} catch {
+		// stdin not available or not valid JSON - this is fine
+	}
+	return null;
+}
+
+// Cache the stdin payload so it's only read once
+let cachedStdinPayload: Record<string, unknown> | null | undefined;
+function getStdinPayload(): Record<string, unknown> | null {
+	if (cachedStdinPayload === undefined) {
+		cachedStdinPayload = readStdinPayload();
+	}
+	return cachedStdinPayload;
+}
+
+/**
  * Hook definition from hooks.json
  */
 interface HookEntry {
@@ -257,6 +282,13 @@ function executeCommandHook(
 			pluginRoot,
 		);
 
+		// Extract session_id from stdin payload if available
+		const stdinPayload = getStdinPayload();
+		const sessionId =
+			typeof stdinPayload?.session_id === "string"
+				? stdinPayload.session_id
+				: undefined;
+
 		const output = execSync(resolvedCommand, {
 			encoding: "utf-8",
 			timeout,
@@ -267,6 +299,8 @@ function executeCommandHook(
 				...process.env,
 				CLAUDE_PLUGIN_ROOT: pluginRoot,
 				CLAUDE_PROJECT_DIR: process.cwd(),
+				// Pass session_id for hook locking coordination
+				...(sessionId ? { HAN_SESSION_ID: sessionId } : {}),
 			},
 		});
 
