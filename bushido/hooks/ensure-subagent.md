@@ -18,9 +18,9 @@ Use Task tool for:
 
 Examples:
 
-- "run tests" → Use Bash to run tests OR delegate to test-runner agent
-- "build the project" → Use Bash to run build command
-- "check for lint errors" → Use appropriate linting tool/command
+- "run tests" → Delegate to general-purpose agent to run tests and report results
+- "build the project" → Delegate to general-purpose agent to run build and report results
+- "check for lint errors" → Delegate to general-purpose agent to run linter and summarize issues
 
 If you cannot perform the action, explain why and offer alternatives.
 
