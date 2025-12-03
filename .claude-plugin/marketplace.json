@@ -380,7 +380,13 @@
       "description": "Markdown documentation skills and linting with markdownlint for consistent formatting.",
       "source": "./jutsu/jutsu-markdown",
       "category": "Technique",
-      "keywords": ["markdown", "markdownlint", "documentation", "linting", "formatting"]
+      "keywords": [
+        "markdown",
+        "markdownlint",
+        "documentation",
+        "linting",
+        "formatting"
+      ]
     },
     {
       "name": "jutsu-maven",
@@ -697,6 +703,33 @@
         "commit",
         "version-control",
         "workflow"
+      ]
+    },
+    {
+      "name": "jutsu-gitlab-ci",
+      "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations using glab CLI.",
+      "source": "./jutsu/jutsu-gitlab-ci",
+      "category": "Technique",
+      "keywords": [
+        "gitlab",
+        "gitlab-ci",
+        "ci-cd",
+        "pipelines",
+        "devops",
+        "validation"
+      ]
+    },
+    {
+      "name": "jutsu-sentry",
+      "description": "Best practices and patterns for Sentry error monitoring and observability.",
+      "source": "./jutsu/jutsu-sentry",
+      "category": "Technique",
+      "keywords": [
+        "sentry",
+        "error-monitoring",
+        "observability",
+        "performance",
+        "tracing"
       ]
     },
     {

@@ -1,0 +1,21 @@
+{
+  "name": "jutsu-sentry",
+  "version": "1.0.0",
+  "description": "Best practices and patterns for Sentry error monitoring and observability.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "sentry",
+    "error-monitoring",
+    "observability",
+    "performance",
+    "tracing",
+    "quality",
+    "debugging"
+  ]
+}

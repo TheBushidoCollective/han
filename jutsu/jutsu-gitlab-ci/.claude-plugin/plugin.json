@@ -1,0 +1,22 @@
+{
+  "name": "jutsu-gitlab-ci",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "gitlab",
+    "gitlab-ci",
+    "ci-cd",
+    "pipelines",
+    "validation",
+    "devops",
+    "quality",
+    "enforcement"
+  ]
+}
