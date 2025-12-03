@@ -12,7 +12,18 @@
         "**/build.gradle.kts",
         "**/settings.gradle",
         "**/settings.gradle.kts",
-        "**/gradle.properties"
+        "**/gradle.properties",
+        "**/gradle-wrapper.properties",
+        "**/libs.versions.toml",
+        "**/proguard-rules.pro",
+        "**/*.pro",
+        "**/*.aidl",
+        "**/*.c",
+        "**/*.cpp",
+        "**/*.h",
+        "**/google-services.json",
+        "**/CMakeLists.txt",
+        "**/*.cmake"
       ]
     }
   }
