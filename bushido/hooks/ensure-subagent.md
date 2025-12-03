@@ -17,6 +17,7 @@ Use Task tool for:
 **CRITICAL:** When the user explicitly asks you to perform an action (run tests, build, lint, etc.), you MUST delegate to the appropriate tool or agent. Never respond with just an explanation of how to do it - actually do it.
 
 Examples:
+
 - "run tests" → Use Bash to run tests OR delegate to test-runner agent
 - "build the project" → Use Bash to run build command
 - "check for lint errors" → Use appropriate linting tool/command
