@@ -101,36 +101,6 @@ pub fn find_files_with_glob(root_dir: String, patterns: Vec<String>) -> Vec<Stri
     results
 }
 
-/// macOS bundle directory extensions that should not be descended into or returned as targets
-const BUNDLE_EXTENSIONS: &[&str] = &[
-    ".xcodeproj",
-    ".xcworkspace",
-    ".xcassets",
-    ".app",
-    ".framework",
-    ".bundle",
-    ".playground",
-    ".xctest",
-];
-
-/// Check if a path component is a bundle directory
-fn is_bundle_dir(name: &str) -> bool {
-    BUNDLE_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
-}
-
-/// Check if any path component is inside a bundle directory
-fn is_inside_bundle(path: &Path) -> bool {
-    for component in path.components() {
-        if let std::path::Component::Normal(name) = component {
-            let name_str = name.to_string_lossy();
-            if is_bundle_dir(&name_str) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
 /// Find directories containing marker files or directories (e.g., mix.exs, Cargo.toml, *.xcodeproj)
 /// Returns absolute directory paths
 #[napi]
@@ -141,7 +111,19 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
         Err(_) => return Vec::new(),
     };
 
-    // Build glob matchers for markers
+    // Build glob matchers for markers (root-level only, for matching single names)
+    let mut root_glob_builder = globset::GlobSetBuilder::new();
+    for marker in &markers {
+        if let Ok(glob) = globset::Glob::new(marker) {
+            root_glob_builder.add(glob);
+        }
+    }
+    let root_level_globs = match root_glob_builder.build() {
+        Ok(gs) => gs,
+        Err(_) => return Vec::new(),
+    };
+
+    // Build glob matchers for full path matching
     let mut glob_builder = globset::GlobSetBuilder::new();
     for marker in &markers {
         // Add pattern for root level (e.g., "mix.exs", "*.xcodeproj")
@@ -162,8 +144,9 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
     let mut seen_dirs = std::collections::HashSet::new();
     let mut results = Vec::new();
 
-    // Clone root for use in filter closure
+    // Clone for use in filter closure
     let filter_root = root.clone();
+    let filter_globs = root_level_globs.clone();
 
     // Walk directory respecting gitignore
     // Note: hidden(true) skips hidden files/dirs to match globby default behavior
@@ -178,20 +161,20 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
             if name == ".git" {
                 return false;
             }
-            // Skip descending into bundle directories (but we'll still match them at entry level)
-            // Note: filter_entry returning false skips both the entry AND its subtree
-            // We handle bundle matching specially below
+            // For directories, check if we're inside a matched marker directory
+            // This is smarter than hardcoding - it uses the search patterns themselves
             if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
-                // Check if we're INSIDE a bundle already (relative path contains a bundle)
                 if let Ok(rel) = entry.path().strip_prefix(&filter_root) {
-                    // If any parent component is a bundle, skip this entry entirely
+                    // Check each parent component to see if it matches our marker patterns
                     let rel_str = rel.to_string_lossy();
                     for component in rel_str.split('/') {
                         // Skip empty components and the current entry itself
                         if component.is_empty() || component == name {
                             continue;
                         }
-                        if is_bundle_dir(component) {
+                        // If a parent directory matches our marker patterns, we're inside a matched dir
+                        // (e.g., inside HanDemo.xcodeproj when searching for *.xcodeproj)
+                        if filter_globs.is_match(component) {
                             return false;
                         }
                     }
@@ -223,19 +206,28 @@ pub fn find_directories_with_markers(root_dir: String, markers: Vec<String>) -> 
                     if let Some(parent) = target_dir {
                         // Canonicalize the directory path
                         if let Ok(abs_dir) = fs::canonicalize(parent) {
-                            // Ensure the target directory is not inside a bundle
+                            // Ensure target directory is not inside a matched marker
                             if let Ok(rel_target) = abs_dir.strip_prefix(&root) {
-                                if is_inside_bundle(rel_target) {
+                                let rel_target_str = rel_target.to_string_lossy();
+                                let mut inside_marker = false;
+                                for component in rel_target_str.split('/') {
+                                    if !component.is_empty() && root_level_globs.is_match(component) {
+                                        inside_marker = true;
+                                        break;
+                                    }
+                                }
+                                if inside_marker {
                                     continue;
                                 }
                             }
 
                             if let Some(dir_str) = abs_dir.to_str() {
-                                // Also ensure the directory itself is not a bundle
+                                // Also ensure the directory itself doesn't match the marker pattern
+                                // (we want the PARENT of the marker, not the marker itself)
                                 let dir_name = abs_dir.file_name()
                                     .map(|n| n.to_string_lossy().to_string())
                                     .unwrap_or_default();
-                                if is_bundle_dir(&dir_name) {
+                                if root_level_globs.is_match(&dir_name) {
                                     continue;
                                 }
 
