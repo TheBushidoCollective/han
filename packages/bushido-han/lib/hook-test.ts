@@ -17,6 +17,9 @@ function waitForKeypress(): Promise<void> {
 		process.stdin.setRawMode(true);
 		process.stdin.resume();
 		process.stdin.once("data", () => {
+			// Reset stdin state before resolving
+			process.stdin.setRawMode(false);
+			process.stdin.pause();
 			process.stdout.write("\n");
 			resolve();
 		});
@@ -683,6 +686,9 @@ async function executeHooksWithUI(
 
 			// Wait for user
 			await waitForKeypress();
+
+			// Clear screen and reset cursor before remounting Ink
+			process.stdout.write("\x1b[2J\x1b[H");
 
 			// Remount Ink with current state
 			const newRender = render(
