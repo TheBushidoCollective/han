@@ -1,6 +1,6 @@
 {
   "name": "jutsu-helm",
-  "version": "1.8.9",
+  "version": "1.8.10",
   "description": "Helm chart validation and best practices",
   "author": {
     "name": "The Bushido Collective",

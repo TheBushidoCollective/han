@@ -1,6 +1,6 @@
 {
   "name": "jutsu-checkstyle",
-  "version": "1.8.9",
+  "version": "1.8.10",
   "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
   "author": {
     "name": "The Bushido Collective",
