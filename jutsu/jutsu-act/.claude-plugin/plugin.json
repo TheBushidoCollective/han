@@ -1,6 +1,6 @@
 {
   "name": "jutsu-act",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "description": "Validation and quality enforcement for GitHub Actions workflows with act local testing.",
   "author": {
     "name": "The Bushido Collective",
