@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove double blank lines from CHANGELOG files ([58eb3336](../../commit/58eb3336))
 - fix markdown formatting in CHANGELOG files ([21ca9a75](../../commit/21ca9a75))
 
-
 ## [1.1.4] - 2025-12-03
 
 ### Added
