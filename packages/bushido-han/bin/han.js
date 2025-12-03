@@ -1,12 +1,115 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { execSync, spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Self-repair: detect stale npx cache and fix it
+async function selfRepairIfNeeded() {
+	// Skip if already in repair mode (prevent infinite loops)
+	if (process.env.HAN_SELF_REPAIR === "1") {
+		return;
+	}
+
+	// Skip for version/help commands (let user see current version)
+	const args = process.argv.slice(2);
+	if (
+		args.includes("--version") ||
+		args.includes("-V") ||
+		args.includes("--help") ||
+		args.includes("-h") ||
+		args.length === 0
+	) {
+		return;
+	}
+
+	// Only run for npx invocations (check if in _npx cache directory)
+	const scriptPath = fileURLToPath(import.meta.url);
+	if (!scriptPath.includes("_npx")) {
+		return;
+	}
+
+	try {
+		// Get current version
+		const packageJsonPath = join(__dirname, "..", "package.json");
+		const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+		const currentVersion = packageJson.version;
+
+		// Fetch latest version from npm (with short timeout)
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 3000);
+
+		const response = await fetch(
+			"https://registry.npmjs.org/@thebushidocollective/han",
+			{ signal: controller.signal },
+		);
+		clearTimeout(timeout);
+
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		const latestVersion = data["dist-tags"]?.latest;
+
+		if (!latestVersion || currentVersion === latestVersion) {
+			return;
+		}
+
+		// Compare versions (simple semver comparison)
+		const current = currentVersion.split(".").map(Number);
+		const latest = latestVersion.split(".").map(Number);
+
+		const isBehind =
+			current[0] < latest[0] ||
+			(current[0] === latest[0] && current[1] < latest[1]) ||
+			(current[0] === latest[0] &&
+				current[1] === latest[1] &&
+				current[2] < latest[2]);
+
+		if (!isBehind) {
+			return;
+		}
+
+		console.error(
+			`\x1b[33m⚠ Stale npx cache detected (v${currentVersion} < v${latestVersion}), repairing...\x1b[0m`,
+		);
+
+		// Clear npx cache
+		try {
+			execSync("npx clear-npx-cache", { stdio: "pipe" });
+		} catch {
+			// Try manual clear if clear-npx-cache not available
+			const { homedir } = await import("node:os");
+			const npxCachePath = join(homedir(), ".npm", "_npx");
+			if (existsSync(npxCachePath)) {
+				const { rmSync } = await import("node:fs");
+				rmSync(npxCachePath, { recursive: true, force: true });
+			}
+		}
+
+		// Re-exec with the exact version we fetched
+		const result = spawnSync(
+			"npx",
+			["-y", `@thebushidocollective/han@${latestVersion}`, ...args],
+			{
+				stdio: "inherit",
+				env: { ...process.env, HAN_SELF_REPAIR: "1" },
+				shell: true,
+			},
+		);
+
+		process.exit(result.status ?? 0);
+	} catch {
+		// Silently continue if self-repair fails (network issues, etc.)
+	}
+}
+
+await selfRepairIfNeeded();
 const require = createRequire(import.meta.url);
 
 // Platform package mapping
@@ -57,8 +160,26 @@ function tryRunBinary() {
 	}
 }
 
-// Try binary first, fall back to JS implementation
+// Run binary - no JS fallback in production
 if (!tryRunBinary()) {
-	// Fall back to TypeScript-compiled JS implementation
-	await import("../dist/lib/main.js");
+	const platformKey = getPlatformKey();
+	const packageName = platformPackages[platformKey];
+
+	if (!packageName) {
+		console.error(`\x1b[31mError: Unsupported platform: ${platformKey}\x1b[0m`);
+		console.error(
+			"Supported platforms: darwin-arm64, darwin-x64, linux-x64, linux-arm64, win32-x64",
+		);
+		process.exit(1);
+	}
+
+	console.error(
+		`\x1b[31mError: Platform binary not found for ${platformKey}\x1b[0m`,
+	);
+	console.error(`Expected package: ${packageName}`);
+	console.error("\nTry reinstalling:");
+	console.error("  npm cache clean --force");
+	console.error("  npx clear-npx-cache");
+	console.error("  npx -y @thebushidocollective/han@latest --version");
+	process.exit(1);
 }
