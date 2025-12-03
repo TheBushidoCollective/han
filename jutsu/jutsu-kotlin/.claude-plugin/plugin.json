@@ -1,6 +1,6 @@
 {
   "name": "jutsu-kotlin",
-  "version": "1.8.12",
+  "version": "1.8.13",
   "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
   "author": {
     "name": "The Bushido Collective",
