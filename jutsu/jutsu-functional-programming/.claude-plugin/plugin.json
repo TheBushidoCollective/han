@@ -1,6 +1,6 @@
 {
   "name": "jutsu-functional-programming",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Functional programming paradigm, patterns, and best practices across languages.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["functional-programming", "fp", "immutability", "pure-functions"]
+  "keywords": [
+    "functional-programming",
+    "fp",
+    "immutability",
+    "pure-functions"
+  ]
 }
