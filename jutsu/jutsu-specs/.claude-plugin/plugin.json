@@ -1,0 +1,19 @@
+{
+  "name": "jutsu-specs",
+  "version": "1.0.0",
+  "description": "Technical specification documentation skills and enforcement. Keeps specs/ directory in sync with implementation through hooks and commands.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "specifications",
+    "documentation",
+    "technical-docs",
+    "implementation-docs",
+    "specs"
+  ]
+}
