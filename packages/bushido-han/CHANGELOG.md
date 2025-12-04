@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.0] - 2025-12-04
+
+### Added
+
+- add colorful Ink UI for hook explain command ([abfcbc8c](../../commit/abfcbc8c))
+- add --all option to hook explain and dispatch commands ([b7b1650f](../../commit/b7b1650f))
+- add hook explain command for debugging ([4c0a2082](../../commit/4c0a2082))
+- enhance tool descriptions and add ping support ([332d8bef](../../commit/332d8bef))
+- add MCP server for running hook commands via natural language ([21c56034](../../commit/21c56034))
+
+### Fixed
+
+- remove merge conflict markers from CHANGELOG.md and package.json ([31684e89](../../commit/31684e89))
+- resolve merge conflicts in CHANGELOG.md ([2b75bcd8](../../commit/2b75bcd8))
+- address biome linter warnings in explain.ts ([f391e0c5](../../commit/f391e0c5))
+- dispatch only executes command hooks, not prompt hooks ([390c3aef](../../commit/390c3aef))
+- add retry logic for CDN propagation delays ([49bf5976](../../commit/49bf5976))
+
+### Changed
+
+- create shared settings merge helper ([ed7c7d1a](../../commit/ed7c7d1a))
+
+### Other
+
+- rename Buki→Jutsu and Sensei→Hashi across documentation ([faabb59e](../../commit/faabb59e))
+- fix markdown linting issues in blueprints docs ([7b26ea3e](../../commit/7b26ea3e))
+
 ## [1.44.2] - 2025-12-04
 
 ### Added
