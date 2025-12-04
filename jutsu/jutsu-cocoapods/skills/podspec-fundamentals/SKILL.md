@@ -317,21 +317,25 @@ end
 ### Don't
 
 ❌ Use direct resources (causes name collisions)
+
 ```ruby
 spec.resources = 'Assets/**/*'  # BAD
 ```
 
 ❌ Omit platform deployment targets
+
 ```ruby
 # Missing deployment target - will use CocoaPods default
 ```
 
 ❌ Include test files in main source
+
 ```ruby
 spec.source_files = '**/*.swift'  # Includes test files!
 ```
 
 ❌ Use absolute paths
+
 ```ruby
 spec.source_files = '/Users/username/MyLibrary/Source/**/*'  # BAD
 ```
@@ -339,22 +343,26 @@ spec.source_files = '/Users/username/MyLibrary/Source/**/*'  # BAD
 ### Do
 
 ✅ Use resource bundles
+
 ```ruby
 spec.resource_bundles = { 'MyLibrary' => ['Resources/**/*'] }
 ```
 
 ✅ Specify platform targets explicitly
+
 ```ruby
 spec.ios.deployment_target = '13.0'
 ```
 
 ✅ Exclude test files
+
 ```ruby
 spec.source_files = 'Source/**/*.swift'
 spec.exclude_files = 'Tests/**/*'
 ```
 
 ✅ Use relative paths from repo root
+
 ```ruby
 spec.source_files = 'Source/**/*.swift'
 ```

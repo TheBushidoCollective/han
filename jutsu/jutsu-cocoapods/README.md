@@ -47,9 +47,11 @@ Once installed, this jutsu automatically validates your CocoaPods code:
 ### What Gets Validated
 
 The hook runs in directories containing:
+
 - `.podspec` files
 
 And validates when these files change:
+
 - `*.podspec` (podspec files)
 - `**/*.{swift,h,m,mm}` (source files)
 - `**/*.xcprivacy` (privacy manifests)
@@ -61,6 +63,7 @@ pod lib lint --quick --fail-fast
 ```
 
 This ensures:
+
 - Podspec syntax is valid
 - Required attributes are present
 - Source file patterns are correct
@@ -93,6 +96,7 @@ pod --version
 ### Automatic Validation
 
 When you make changes to:
+
 1. Podspec files (`*.podspec`)
 2. Source code (`*.swift`, `*.h`, `*.m`, `*.mm`)
 3. Privacy manifests (`*.xcprivacy`)
@@ -123,6 +127,7 @@ ERROR | [MyLibrary] Missing required attribute `license`
 ```
 
 **Fix**: Add license to podspec:
+
 ```ruby
 spec.license = { :type => 'MIT', :file => 'LICENSE' }
 ```
@@ -134,6 +139,7 @@ ERROR | [MyLibrary] The `source_files` pattern did not match any file
 ```
 
 **Fix**: Update source_files pattern:
+
 ```ruby
 spec.source_files = 'Source/**/*.{swift,h,m}'
 ```
@@ -145,6 +151,7 @@ ERROR | [MyLibrary] The platform attribute is required
 ```
 
 **Fix**: Add platform deployment target:
+
 ```ruby
 spec.ios.deployment_target = '13.0'
 ```
@@ -156,6 +163,7 @@ WARNING | [MyLibrary] Missing privacy manifest for iOS 17+
 ```
 
 **Fix**: Add privacy manifest:
+
 ```ruby
 spec.resource_bundles = {
   'MyLibrary' => ['Resources/PrivacyInfo.xcprivacy']

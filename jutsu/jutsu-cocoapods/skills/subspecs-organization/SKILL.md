@@ -427,6 +427,7 @@ end
 ### Don't
 
 ❌ Create too many small subspecs
+
 ```ruby
 # Over-granular
 spec.subspec 'StringExtensions'
@@ -436,6 +437,7 @@ spec.subspec 'DictionaryExtensions'
 ```
 
 ❌ Circular dependencies
+
 ```ruby
 spec.subspec 'A' do |a|
   a.dependency 'MyLib/B'
@@ -447,6 +449,7 @@ end
 ```
 
 ❌ Duplicate source files
+
 ```ruby
 spec.subspec 'Core' do |core|
   core.source_files = 'Source/**/*.swift'  # Includes everything
@@ -460,6 +463,7 @@ end
 ### Do
 
 ✅ Group related functionality
+
 ```ruby
 spec.subspec 'Extensions' do |ext|
   ext.source_files = 'Source/Extensions/**/*.swift'
@@ -467,6 +471,7 @@ end
 ```
 
 ✅ Use clear dependency hierarchy
+
 ```ruby
 spec.subspec 'A' do |a|
   a.dependency 'MyLib/Core'
@@ -478,6 +483,7 @@ end
 ```
 
 ✅ Keep source files separate
+
 ```ruby
 spec.subspec 'Core' do |core|
   core.source_files = 'Source/Core/**/*.swift'

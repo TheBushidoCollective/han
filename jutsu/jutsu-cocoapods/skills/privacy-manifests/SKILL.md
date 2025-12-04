@@ -17,6 +17,7 @@ Implement iOS 17+ privacy manifests for App Store compliance and user transparen
 ## What Are Privacy Manifests?
 
 Privacy manifests (`PrivacyInfo.xcprivacy`) are XML property list files that declare:
+
 - Data collection and usage practices
 - Required Reasons API usage
 - Tracking domains
@@ -25,6 +26,7 @@ Privacy manifests (`PrivacyInfo.xcprivacy`) are XML property list files that dec
 ### Why Privacy Manifests?
 
 Starting with iOS 17 and Xcode 15, Apple requires privacy manifests for:
+
 - Apps using privacy-sensitive APIs
 - Third-party SDKs and frameworks
 - Any code accessing user data
@@ -115,6 +117,7 @@ Apple requires declarations for these privacy-sensitive APIs:
 ```
 
 **Reason Codes:**
+
 - `C617.1`: Display timestamps to user
 - `0A2A.1`: Access timestamps of files in app container
 - `3B52.1`: Access timestamps for app functionality
@@ -134,6 +137,7 @@ Apple requires declarations for these privacy-sensitive APIs:
 ```
 
 **Reason Codes:**
+
 - `CA92.1`: Access user defaults in same app group
 - `1C8F.1`: Access user defaults for app functionality
 - `C56D.1`: SDK-specific configuration preferences
@@ -153,6 +157,7 @@ Apple requires declarations for these privacy-sensitive APIs:
 ```
 
 **Reason Codes:**
+
 - `35F9.1`: Measure time elapsed for app functionality
 - `8FFB.1`: Calculate absolute timestamp
 - `3D61.1`: Measure time for performance testing
@@ -171,6 +176,7 @@ Apple requires declarations for these privacy-sensitive APIs:
 ```
 
 **Reason Codes:**
+
 - `85F4.1`: Display disk space to user
 - `E174.1`: Check disk space before file operations
 - `7D9E.1`: Health/fitness app disk space
@@ -444,6 +450,7 @@ spec.version = '1.1.0'  # Bump version
 ### Don't
 
 ❌ Omit privacy manifest for iOS 17+ apps
+
 ```ruby
 # Missing privacy manifest - App Store rejection risk
 spec.resource_bundles = {
@@ -453,11 +460,13 @@ spec.resource_bundles = {
 ```
 
 ❌ Use incorrect reason codes
+
 ```xml
 <string>WRONG.1</string>  <!-- Invalid code -->
 ```
 
 ❌ Declare tracking without domains
+
 ```xml
 <key>NSPrivacyTracking</key>
 <true/>
@@ -468,6 +477,7 @@ spec.resource_bundles = {
 ### Do
 
 ✅ Include privacy manifest for all iOS SDKs
+
 ```ruby
 spec.resource_bundles = {
   'MyLibrary' => ['Resources/PrivacyInfo.xcprivacy']
@@ -475,11 +485,13 @@ spec.resource_bundles = {
 ```
 
 ✅ Use accurate reason codes
+
 ```xml
 <string>CA92.1</string>  <!-- Valid, matches usage -->
 ```
 
 ✅ Be truthful about tracking
+
 ```xml
 <key>NSPrivacyTracking</key>
 <true/>
