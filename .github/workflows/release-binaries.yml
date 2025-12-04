@@ -216,6 +216,12 @@ jobs:
 
           echo "All platform packages verified!"
 
+      - name: Wait for CDN propagation
+        run: |
+          echo "Waiting 90 seconds for npm CDN propagation before publishing main package..."
+          sleep 90
+          echo "Done waiting"
+
       - name: Build TypeScript
         working-directory: ./packages/bushido-han
         run: npm run build
