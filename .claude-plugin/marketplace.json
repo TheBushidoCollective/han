@@ -157,6 +157,23 @@
       "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
+      "name": "jutsu-notetaker",
+      "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
+      "source": "./jutsu/jutsu-notetaker",
+      "category": "Technique",
+      "keywords": [
+        "notes",
+        "comments",
+        "todo",
+        "annotations",
+        "documentation",
+        "code-comments",
+        "ai-notes",
+        "developer-notes",
+        "skill"
+      ]
+    },
+    {
       "name": "jutsu-clippy",
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
       "source": "./jutsu/jutsu-clippy",

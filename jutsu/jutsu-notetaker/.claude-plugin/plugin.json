@@ -1,0 +1,18 @@
+{
+  "name": "jutsu-notetaker",
+  "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
+  "version": "1.0.0",
+  "author": "The Bushido Collective",
+  "license": "MIT",
+  "tags": ["documentation", "notes", "annotations", "comments", "todo", "ai-assistance"],
+  "keywords": [
+    "notes",
+    "comments",
+    "todo",
+    "annotations",
+    "documentation",
+    "code-comments",
+    "ai-notes",
+    "developer-notes"
+  ]
+}
