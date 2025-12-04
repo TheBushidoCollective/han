@@ -1,4 +1,4 @@
-# Helm Buki
+# Helm Jutsu
 
 Helm chart validation and best practices for Kubernetes package management.
 

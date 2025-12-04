@@ -1,4 +1,4 @@
-# Cucumber Buki
+# Cucumber Jutsu
 
 Comprehensive Cucumber BDD testing skills for behavior-driven development.
 

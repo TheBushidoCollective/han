@@ -1,8 +1,8 @@
-# Buki: Git Storytelling
+# Jutsu: Git Storytelling
 
 Enforce git storytelling practices by automatically committing work early and often to tell the story of your development process.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Automatic Commit Hook
 

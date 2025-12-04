@@ -200,4 +200,4 @@ npx @thebushidocollective/han plugin install do-claude-plugin-development
 
 ## License
 
-Part of the Bushido Collective Sensei plugin suite.
+Part of the Bushido Collective Hashi plugin suite.

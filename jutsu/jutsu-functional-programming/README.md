@@ -1,4 +1,4 @@
-# Functional Programming Buki
+# Functional Programming Jutsu
 
 Functional programming paradigm, patterns, and best practices.
 

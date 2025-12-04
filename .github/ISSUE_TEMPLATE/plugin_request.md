@@ -8,9 +8,9 @@ assignees: ''
 
 ## Plugin Type
 
-- [ ] **Buki** (Weapon) - Validation hooks for a tool/language
+- [ ] **Jutsu** (Technique) - Validation hooks for a tool/language
 - [ ] **Do** (Discipline) - Specialized agent for a practice
-- [ ] **Sensei** (Teacher) - MCP server for external integration
+- [ ] **Hashi** (Bridge) - MCP server for external integration
 
 ## Plugin Name
 
@@ -24,7 +24,7 @@ assignees: ''
 
 <!-- Who would use this and why? -->
 
-## For Buki Plugins
+## For Jutsu Plugins
 
 **Tool/Language**: <!-- e.g., mypy, Python type checking -->
 **Marker File(s)**: <!-- e.g., pyproject.toml, setup.py -->
@@ -37,7 +37,7 @@ assignees: ''
 **Agent Role**: <!-- e.g., DevOps Engineer -->
 **Skills Needed**: <!-- e.g., CI/CD, Infrastructure as Code -->
 
-## For Sensei Plugins
+## For Hashi Plugins
 
 **External Service**: <!-- e.g., Jira, Confluence -->
 **Integration Type**: <!-- e.g., REST API, GraphQL -->

@@ -20,8 +20,8 @@ Han organizes plugins into four categories inspired by Japanese samurai traditio
 
 - **Bushido** (武士道) - Core principles, enforcement hooks, and foundational quality skills
 - **Do** (道 - The Way) - Specialized agents for development disciplines and practices
-- **Buki** (武器 - Weapons) - Language and tool skills with validation hooks for quality
-- **Sensei** (先生 - Teachers) - MCP servers providing external knowledge and integrations
+- **Jutsu** (術 - Techniques) - Language and tool skills with validation hooks for quality
+- **Hashi** (橋 - Bridges) - MCP servers providing external knowledge and integrations
 
 ## Commands
 

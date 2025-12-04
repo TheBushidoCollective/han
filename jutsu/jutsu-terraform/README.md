@@ -1,4 +1,4 @@
-# Terraform Buki
+# Terraform Jutsu
 
 Terraform configuration validation and infrastructure-as-code best practices.
 

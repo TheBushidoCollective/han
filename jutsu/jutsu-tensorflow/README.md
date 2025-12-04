@@ -1,4 +1,4 @@
-# TensorFlow Buki
+# TensorFlow Jutsu
 
 TensorFlow machine learning and deep learning framework skills.
 

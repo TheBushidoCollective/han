@@ -76,7 +76,7 @@ Use the presentation-engineer when you need to:
 
 ### Defers to
 
-- Buki plugins for framework-specific implementation (React, Vue, Svelte, etc.)
+- Jutsu plugins for framework-specific implementation (React, Vue, Svelte, etc.)
 - do-backend for data fetching and API contracts
 - do-security for auth UI patterns and secure input handling
 

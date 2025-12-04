@@ -1,4 +1,4 @@
-# Pulumi Buki
+# Pulumi Jutsu
 
 Pulumi infrastructure-as-code validation and best practices.
 

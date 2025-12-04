@@ -1,8 +1,8 @@
-# Buki: React Native Web
+# Jutsu: React Native Web
 
 Validation and quality enforcement for React Native Web projects, ensuring code quality through TypeScript type checking and React Native Web best practices.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Skills
 

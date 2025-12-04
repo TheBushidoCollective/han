@@ -1,4 +1,4 @@
-# Docker Compose Buki
+# Docker Compose Jutsu
 
 Docker Compose configuration validation for container orchestration.
 

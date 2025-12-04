@@ -1,4 +1,4 @@
-# Kustomize Buki
+# Kustomize Jutsu
 
 Kustomize configuration validation for Kubernetes customization.
 

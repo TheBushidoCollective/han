@@ -246,7 +246,7 @@ Options:
 **Run all validation hooks**:
 
 ```bash
-# All Buki plugins automatically run on Stop
+# All Jutsu plugins automatically run on Stop
 # Verify: tests, linting, type checking, etc.
 ```
 

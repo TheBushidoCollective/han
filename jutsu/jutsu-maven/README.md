@@ -1,8 +1,8 @@
-# Buki: Maven
+# Jutsu: Maven
 
 Validation and quality enforcement for Apache Maven projects with comprehensive skills for dependency management, build lifecycle, and plugin configuration.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Validation Hooks
 

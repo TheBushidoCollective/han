@@ -1,8 +1,8 @@
-# Sensei: Jira
+# Hashi: Jira
 
 MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Connects Claude Code directly to your Jira instance for seamless ticket management and quality enforcement.
 
-## What This Sensei Provides
+## What This Hashi Provides
 
 ### MCP Server: Atlassian
 

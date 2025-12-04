@@ -1,4 +1,4 @@
-# Kubernetes Buki
+# Kubernetes Jutsu
 
 Kubernetes manifest validation and best practices for cloud-native deployments.
 
