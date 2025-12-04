@@ -203,7 +203,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 					}
 
 					return (
-						<Box key={option.name} marginLeft={1}>
+						<Box key={`option-${index}`} marginLeft={1}>
 							<Text
 								color={isSelected ? "cyan" : undefined}
 								bold={isSelected}
@@ -260,7 +260,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 						const isAlreadyAdded = selectedPlugins.has(plugin.name);
 
 						return (
-							<Box key={plugin.name} marginLeft={1} flexDirection="column">
+							<Box key={`search-${index}`} marginLeft={1} flexDirection="column">
 								<Text
 									color={isSelected ? "cyan" : undefined}
 									bold={isSelected}
