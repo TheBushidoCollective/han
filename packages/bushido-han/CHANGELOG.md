@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.41.0] - 2025-12-04
+
+### Added
+
+- add user scope for plugin installation (default) ([5a1e9002](../../commit/5a1e9002))
+- instruct agent to proceed without asking questions on failure ([4bf08ff1](../../commit/4bf08ff1))
+- add cross-process failure signaling for parallel hooks ([7d7d37dc](../../commit/7d7d37dc))
+- track plugin files and han-config.yml in cache ([dee7aeea](../../commit/dee7aeea))
+
+### Fixed
+
+- reset stdin state after viewing hook output ([08900c77](../../commit/08900c77))
+- pass CLAUDE_PLUGIN_ROOT env var to hook commands ([aee6f346](../../commit/aee6f346))
+
+### Other
+
+- add tests for failure signaling functions ([419f50ed](../../commit/419f50ed))
+
 ## [1.40.0] - 2025-12-04
 
 ### Added
