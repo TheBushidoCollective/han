@@ -1,5 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import {
+	getClaudeConfigDir,
+	getMergedPluginsAndMarketplaces,
+	type MarketplaceConfig,
+} from "../../claude-settings.js";
 import { loadPluginConfig, type PluginConfig } from "../../hook-config.js";
 import { runConfiguredHook } from "../../validate.js";
 
@@ -9,142 +14,6 @@ export interface PluginTool {
 	pluginName: string;
 	hookName: string;
 	pluginRoot: string;
-}
-
-interface MarketplaceSource {
-	source: "directory" | "git" | "github";
-	path?: string;
-	url?: string;
-	repo?: string;
-}
-
-interface MarketplaceConfig {
-	source: MarketplaceSource;
-}
-
-interface ClaudeSettings {
-	extraKnownMarketplaces?: Record<string, MarketplaceConfig>;
-	enabledPlugins?: Record<string, boolean>;
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		return "";
-	}
-	return join(homeDir, ".claude");
-}
-
-/**
- * Read settings from a file
- */
-function readSettings(path: string): ClaudeSettings | null {
-	if (!existsSync(path)) {
-		return null;
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf8"));
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Get all enabled plugins and marketplace configurations from all settings scopes
- */
-function getEnabledPluginsAndMarketplaces(): {
-	plugins: Map<string, string>;
-	marketplaces: Map<string, MarketplaceConfig>;
-} {
-	const plugins = new Map<string, string>();
-	const marketplaces = new Map<string, MarketplaceConfig>();
-
-	// Read user settings first (lowest priority)
-	const configDir = getClaudeConfigDir();
-	if (configDir) {
-		const userSettingsPath = join(configDir, "settings.json");
-		const userSettings = readSettings(userSettingsPath);
-		if (userSettings) {
-			if (userSettings.extraKnownMarketplaces) {
-				for (const [name, config] of Object.entries(
-					userSettings.extraKnownMarketplaces,
-				)) {
-					marketplaces.set(name, config);
-				}
-			}
-			if (userSettings.enabledPlugins) {
-				for (const [key, enabled] of Object.entries(
-					userSettings.enabledPlugins,
-				)) {
-					if (enabled && key.includes("@")) {
-						const [pluginName, marketplace] = key.split("@");
-						plugins.set(pluginName, marketplace);
-					}
-				}
-			}
-		}
-	}
-
-	// Read project settings (overrides user)
-	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
-	const projectSettings = readSettings(projectSettingsPath);
-	if (projectSettings) {
-		if (projectSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				projectSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (projectSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				projectSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				}
-			}
-		}
-	}
-
-	// Read local settings (highest priority, can override)
-	const localSettingsPath = join(
-		process.cwd(),
-		".claude",
-		"settings.local.json",
-	);
-	const localSettings = readSettings(localSettingsPath);
-	if (localSettings) {
-		if (localSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				localSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (localSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				localSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				} else if (!enabled && key.includes("@")) {
-					const [pluginName] = key.split("@");
-					plugins.delete(pluginName);
-				}
-			}
-		}
-	}
-
-	return { plugins, marketplaces };
 }
 
 /**
@@ -283,7 +152,7 @@ function generateToolDescription(
  */
 export function discoverPluginTools(): PluginTool[] {
 	const tools: PluginTool[] = [];
-	const { plugins, marketplaces } = getEnabledPluginsAndMarketplaces();
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 
 	for (const [pluginName, marketplace] of plugins.entries()) {
 		const marketplaceConfig = marketplaces.get(marketplace);

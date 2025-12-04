@@ -2,6 +2,11 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
+import {
+	getClaudeConfigDir,
+	getMergedPluginsAndMarketplaces,
+	type MarketplaceConfig,
+} from "../../claude-settings.js";
 
 /**
  * Read and parse stdin JSON payload from Claude Code hooks
@@ -44,116 +49,6 @@ interface HookGroup {
 
 interface PluginHooks {
 	hooks: Record<string, HookGroup[]>;
-}
-
-interface MarketplaceSource {
-	source: "directory" | "git" | "github";
-	path?: string;
-	url?: string;
-	repo?: string;
-}
-
-interface MarketplaceConfig {
-	source: MarketplaceSource;
-}
-
-interface ClaudeSettings {
-	extraKnownMarketplaces?: Record<string, MarketplaceConfig>;
-	enabledPlugins?: Record<string, boolean>;
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		return "";
-	}
-	return join(homeDir, ".claude");
-}
-
-/**
- * Read settings from a file
- */
-function readSettings(path: string): ClaudeSettings | null {
-	if (!existsSync(path)) {
-		return null;
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf8"));
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Get all enabled plugins and marketplace configurations from settings
- */
-function getEnabledPluginsAndMarketplaces(): {
-	plugins: Map<string, string>;
-	marketplaces: Map<string, MarketplaceConfig>;
-} {
-	const plugins = new Map<string, string>();
-	const marketplaces = new Map<string, MarketplaceConfig>();
-
-	// Read project settings
-	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
-	const projectSettings = readSettings(projectSettingsPath);
-	if (projectSettings) {
-		if (projectSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				projectSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (projectSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				projectSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				}
-			}
-		}
-	}
-
-	// Read local settings (can override project settings)
-	const localSettingsPath = join(
-		process.cwd(),
-		".claude",
-		"settings.local.json",
-	);
-	const localSettings = readSettings(localSettingsPath);
-	if (localSettings) {
-		if (localSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				localSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (localSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				localSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				} else if (!enabled && key.includes("@")) {
-					const [pluginName] = key.split("@");
-					plugins.delete(pluginName);
-				}
-			}
-		}
-	}
-
-	return { plugins, marketplaces };
 }
 
 /**
@@ -313,10 +208,11 @@ function executeCommandHook(
 }
 
 /**
- * Dispatch hooks of a specific type across all installed plugins
+ * Dispatch hooks of a specific type across all installed plugins.
+ * Uses merged settings from all scopes (user, project, local, enterprise).
  */
 function dispatchHooks(hookType: string): void {
-	const { plugins, marketplaces } = getEnabledPluginsAndMarketplaces();
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 
 	if (plugins.size === 0) {
 		return;
