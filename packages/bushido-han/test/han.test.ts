@@ -488,7 +488,7 @@ test("han plugin install adds plugin to settings", () => {
 
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(`${binCommand} plugin install jutsu-typescript`, {
+		execSync(`${binCommand} plugin install jutsu-typescript --scope project`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: "pipe",
@@ -538,11 +538,14 @@ test("han plugin uninstall removes plugin from settings", () => {
 			),
 		);
 
-		execSync(`${binCommand} plugin uninstall jutsu-typescript`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: "pipe",
-		});
+		execSync(
+			`${binCommand} plugin uninstall jutsu-typescript --scope project`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: "pipe",
+			},
+		);
 
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
@@ -583,11 +586,14 @@ test("han plugin install is idempotent", () => {
 			),
 		);
 
-		const output = execSync(`${binCommand} plugin install jutsu-typescript`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: "pipe",
-		});
+		const output = execSync(
+			`${binCommand} plugin install jutsu-typescript --scope project`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: "pipe",
+			},
+		);
 
 		strictEqual(
 			output.toLowerCase().includes("already installed"),
@@ -618,7 +624,7 @@ test("han plugin uninstall handles non-existent plugin gracefully", () => {
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
 		const output = execSync(
-			`${binCommand} plugin uninstall non-existent-plugin`,
+			`${binCommand} plugin uninstall non-existent-plugin --scope project`,
 			{
 				cwd: testDir,
 				encoding: "utf8",
@@ -644,11 +650,14 @@ test("han plugin install multiple plugins at once", () => {
 
 		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(`${binCommand} plugin install jutsu-typescript jutsu-react`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: "pipe",
-		});
+		execSync(
+			`${binCommand} plugin install jutsu-typescript jutsu-react --scope project`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: "pipe",
+			},
+		);
 
 		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 

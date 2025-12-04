@@ -115,8 +115,29 @@ Plugins can be installed directly through Claude Code - no global han installati
 # Or via Claude CLI
 claude plugin install bushido@han
 
-# Or use npx for CLI features
+# Or use npx for CLI features (auto-detect recommended plugins)
 npx @thebushidocollective/han plugin install --auto
 ```
+
+### Installation Scopes
+
+By default, plugins install to user settings (`~/.claude/settings.json`) which applies across all projects:
+
+```bash
+# User scope (default) - shared across all projects
+npx @thebushidocollective/han plugin install hashi-playwright-mcp
+
+# Project scope - only for current project (.claude/settings.json)
+npx @thebushidocollective/han plugin install jutsu-typescript --scope project
+
+# Local scope - gitignored project settings (.claude/settings.local.json)
+npx @thebushidocollective/han plugin install --scope local
+```
+
+**Scope recommendations:**
+
+- **user** (default): MCP servers, general-purpose plugins (hashi-*, do-*)
+- **project**: Project-specific validation hooks (jutsu-* with hooks)
+- **local**: Personal preferences not shared with team
 
 Global installation via Homebrew or install.sh is optional but provides faster execution for frequent CLI usage.
