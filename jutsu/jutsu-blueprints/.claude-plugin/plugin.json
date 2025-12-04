@@ -1,7 +1,7 @@
 {
-  "name": "jutsu-specs",
+  "name": "jutsu-blueprints",
   "version": "1.1.0",
-  "description": "Technical specification documentation skills and enforcement. Keeps specs/ directory in sync with implementation through hooks and commands.",
+  "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -10,10 +10,10 @@
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
   "keywords": [
-    "specifications",
+    "blueprints",
     "documentation",
     "technical-docs",
     "implementation-docs",
-    "specs"
+    "architecture"
   ]
 }

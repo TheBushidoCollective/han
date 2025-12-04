@@ -1,8 +1,8 @@
 ---
-description: Deeply research all systems and create or update specs/ documentation for the entire codebase
+description: Deeply research all systems and create or update blueprints/ documentation for the entire codebase
 ---
 
-# Full Specs Documentation Generator
+# Full Blueprints Documentation Generator
 
 You are tasked with comprehensively documenting all systems in this codebase.
 
@@ -18,7 +18,7 @@ You are tasked with comprehensively documenting all systems in this codebase.
 
 2. **Read existing documentation**:
    - README.md files at all levels
-   - Any existing specs/ directory
+   - Any existing blueprints/ directory
    - Inline documentation patterns
    - Test files for behavioral documentation
 
@@ -27,16 +27,16 @@ You are tasked with comprehensively documenting all systems in this codebase.
    - Note dependencies between systems
    - Identify documentation gaps
 
-### Phase 2: Audit Existing Specs
+### Phase 2: Audit Existing Blueprints
 
-If specs/ exists:
+If blueprints/ exists:
 
-1. **Read specs/README.md** for the current index
+1. **Read blueprints/README.md** for the current index
 2. **Check each documented system**:
-   - Does the spec match current implementation?
+   - Does the blueprint match current implementation?
    - Are there new features not documented?
    - Is any documented functionality removed?
-3. **Identify orphaned specs** (documentation for removed systems)
+3. **Identify orphaned blueprints** (documentation for removed systems)
 
 ### Phase 3: Prioritize Documentation
 
@@ -49,7 +49,7 @@ Order systems by importance:
 
 ### Phase 4: Generate Documentation
 
-For each system, create or update `specs/{system-name}.md`:
+For each system, create or update `blueprints/{system-name}.md`:
 
 ```markdown
 # {System Name}
@@ -78,15 +78,15 @@ For each system, create or update `specs/{system-name}.md`:
 
 ## Related Systems
 
-{Links to related specs}
+{Links to related blueprints}
 ```
 
 ### Phase 5: Create/Update Index
 
-Update `specs/README.md`:
+Update `blueprints/README.md`:
 
 ```markdown
-# Technical Specifications
+# Technical Blueprints
 
 This directory contains implementation documentation for {project name}.
 
@@ -107,16 +107,16 @@ This directory contains implementation documentation for {project name}.
 
 ## Documentation Standards
 
-See [jutsu-specs](https://github.com/thebushidocollective/han) for documentation guidelines.
+See [jutsu-blueprints](https://github.com/thebushidocollective/han) for documentation guidelines.
 ```
 
 ## De-duplication Strategy
 
 When documenting, actively prevent duplicates:
 
-1. **Check before creating** - Search specs/ for existing coverage
+1. **Check before creating** - Search blueprints/ for existing coverage
 2. **Merge related systems** - Document tightly coupled systems together
-3. **Use cross-references** - Link between specs rather than duplicating
+3. **Use cross-references** - Link between blueprints rather than duplicating
 4. **One source of truth** - Each concept documented in exactly one place
 
 ## Output
@@ -124,6 +124,6 @@ When documenting, actively prevent duplicates:
 After completing:
 
 1. List all systems discovered
-2. List specs created/updated
+2. List blueprints created/updated
 3. Note any systems that couldn't be documented (why)
 4. Identify areas needing future documentation

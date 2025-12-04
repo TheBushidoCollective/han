@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '<must-read-first reason=\"blueprints documentation requirements\">${CLAUDE_PLUGIN_ROOT}/hooks/ensure-blueprints.md</must-read-first>'",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before finalizing: If you made significant implementation changes (new features, modified architecture, changed APIs, or updated system behavior), verify that relevant blueprints/ documentation exists and is current. If blueprints/ directory exists but documentation is missing or outdated for the changes you made, note this and offer to update it."
+          }
+        ]
+      }
+    ]
+  }
+}

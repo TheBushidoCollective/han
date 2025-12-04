@@ -2,6 +2,7 @@
   "enabledPlugins": {
     "jutsu-act@han": true,
     "jutsu-biome@han": true,
+    "jutsu-blueprints@han": true,
     "jutsu-ink@han": true,
     "jutsu-markdown@han": true,
     "jutsu-nextjs@han": true,

@@ -1,8 +1,8 @@
-# Specs Documentation Requirements
+# Blueprints Documentation Requirements
 
-## When to Update specs/
+## When to Update blueprints/
 
-Update or create specs/ documentation when making changes that involve:
+Update or create blueprints/ documentation when making changes that involve:
 
 - **New features** - Document the feature's purpose, behavior, and API
 - **Architecture changes** - Update system design documentation
@@ -10,18 +10,18 @@ Update or create specs/ documentation when making changes that involve:
 - **Configuration changes** - Document new options and their effects
 - **Behavioral changes** - Update docs if system behavior differs from before
 
-## specs/ Directory Structure
+## blueprints/ Directory Structure
 
 ```
-specs/
-├── README.md           # Index of all specs with brief descriptions
+blueprints/
+├── README.md           # Index of all blueprints with brief descriptions
 ├── {system-name}.md    # One file per system/feature/component
 └── {another-system}.md
 ```
 
-## Spec File Format
+## Blueprint File Format
 
-Each spec file should include:
+Each blueprint file should include:
 
 ```markdown
 # {System Name}
@@ -52,16 +52,16 @@ Key files involved in this system:
 
 ## De-duplication Rules
 
-Before creating a new spec:
+Before creating a new blueprint:
 
-1. **Check specs/README.md** for existing documentation
-2. **Search specs/ for related terms** to avoid overlap
-3. **Extend existing specs** rather than creating new files for related functionality
+1. **Check blueprints/README.md** for existing documentation
+2. **Search blueprints/ for related terms** to avoid overlap
+3. **Extend existing blueprints** rather than creating new files for related functionality
 4. **Use consistent naming** - match the system/feature name used in code
 
 ## When NOT to Document
 
-Skip specs/ documentation for:
+Skip blueprints/ documentation for:
 
 - Bug fixes that don't change behavior
 - Refactoring without API changes
@@ -71,9 +71,9 @@ Skip specs/ documentation for:
 
 ## Ongoing Maintenance
 
-When modifying a system that has specs/ documentation:
+When modifying a system that has blueprints/ documentation:
 
-1. Read the existing spec first
-2. Update the spec alongside code changes
-3. Keep the spec accurate - remove outdated information
-4. Cross-reference related specs if behavior overlaps
+1. Read the existing blueprint first
+2. Update the blueprint alongside code changes
+3. Keep the blueprint accurate - remove outdated information
+4. Cross-reference related blueprints if behavior overlaps

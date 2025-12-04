@@ -1,10 +1,10 @@
 ---
-description: Research a specific system and create or update its specs/ documentation
+description: Research a specific system and create or update its blueprints/ documentation
 ---
 
-# Specs Documentation Generator
+# Blueprint Documentation Generator
 
-You are tasked with creating or updating technical specification documentation for a specific system.
+You are tasked with creating or updating technical blueprint documentation for a specific system.
 
 ## Process
 
@@ -29,20 +29,20 @@ Thoroughly investigate the system:
 3. **Check for existing documentation**:
    - README files in the directory
    - Inline code comments
-   - Existing specs/ files
+   - Existing blueprints/ files
    - Test files (they document expected behavior)
 
 ### 3. Check for Duplicates
 
-Before creating a new spec:
+Before creating a new blueprint:
 
-1. **Read specs/README.md** if it exists
-2. **Search specs/ directory** for related documentation
+1. **Read blueprints/README.md** if it exists
+2. **Search blueprints/ directory** for related documentation
 3. **Identify overlapping systems** that should be documented together
 
-### 4. Write the Specification
+### 4. Write the Blueprint
 
-Create or update `specs/{system-name}.md` with:
+Create or update `blueprints/{system-name}.md` with:
 
 ```markdown
 # {System Name}
@@ -118,7 +118,7 @@ Key implementation files:
 - [{Related System}](./related-system.md) - {relationship description}
 ```
 
-### 5. Update specs/README.md
+### 5. Update blueprints/README.md
 
 Add an entry to the index:
 
@@ -130,6 +130,6 @@ Add an entry to the index:
 
 After completing the research and documentation:
 
-1. Create/update the spec file
-2. Update specs/README.md index
+1. Create/update the blueprint file
+2. Update blueprints/README.md index
 3. Report what was documented and any related systems that may need documentation
