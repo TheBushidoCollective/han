@@ -68,6 +68,23 @@ Search for plugins in the Han marketplace.
 npx @thebushidocollective/han plugin search [query]
 ```
 
+### plugin update-marketplace
+
+Update the local marketplace cache from GitHub.
+
+```bash
+npx @thebushidocollective/han plugin update-marketplace
+```
+
+The marketplace cache is automatically refreshed every 24 hours when using `han plugin install` or `han plugin search`. Use this command to manually force a refresh if you want to see the latest plugins immediately.
+
+**Features:**
+
+- Caches marketplace data locally in `~/.claude/cache/han-marketplace.json`
+- Automatically refreshes after 24 hours
+- Falls back to stale cache if network is unavailable
+- Shows cache age and available categories after update
+
 ### hook run
 
 Run a hook command defined by a plugin.
