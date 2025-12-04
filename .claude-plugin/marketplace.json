@@ -632,6 +632,22 @@
       "keywords": ["sip", "voip", "telecommunications", "real-time"]
     },
     {
+      "name": "jutsu-storybook",
+      "description": "Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.",
+      "source": "./jutsu/jutsu-storybook",
+      "category": "Technique",
+      "keywords": [
+        "storybook",
+        "validation",
+        "component-driven",
+        "ui-testing",
+        "quality",
+        "enforcement",
+        "stories",
+        "documentation"
+      ]
+    },
+    {
       "name": "jutsu-swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
       "source": "./jutsu/jutsu-swift",

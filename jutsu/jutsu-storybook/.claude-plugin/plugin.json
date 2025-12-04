@@ -1,0 +1,22 @@
+{
+  "name": "jutsu-storybook",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "storybook",
+    "validation",
+    "component-driven",
+    "ui-testing",
+    "quality",
+    "enforcement",
+    "stories",
+    "documentation"
+  ]
+}
