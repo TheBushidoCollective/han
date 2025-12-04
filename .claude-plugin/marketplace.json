@@ -750,13 +750,7 @@
       "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
       "source": "./jutsu/jutsu-scratch",
       "category": "Technique",
-      "keywords": [
-        "scratch",
-        "workspace",
-        "gitignore",
-        "temporary",
-        "workflow"
-      ]
+      "keywords": ["scratch", "workspace", "gitignore", "temporary", "workflow"]
     },
     {
       "name": "bushido",
