@@ -233,6 +233,7 @@ function dispatchHooks(hookType: string): void {
 
 		for (const group of hookGroups) {
 			for (const hook of group.hooks) {
+				// Only execute command hooks - prompt hooks are handled by Claude Code directly
 				if (hook.type === "command" && hook.command) {
 					const output = executeCommandHook(
 						hook.command,
@@ -242,9 +243,6 @@ function dispatchHooks(hookType: string): void {
 					if (output) {
 						outputs.push(output);
 					}
-				} else if (hook.type === "prompt" && hook.prompt) {
-					// Prompt hooks are output directly as context
-					outputs.push(hook.prompt);
 				}
 			}
 		}
