@@ -13,10 +13,13 @@ import { join } from "node:path";
 // Import the module under test
 import {
 	acquireSlot,
+	checkFailureSignal,
 	cleanupOwnedSlots,
+	clearFailureSignal,
 	createLockManager,
 	isLockingEnabled,
 	releaseSlot,
+	signalFailure,
 	withSlot,
 } from "../lib/hook-lock.js";
 
@@ -427,6 +430,107 @@ async function runTests(): Promise<void> {
 
 		delete process.env.HAN_SESSION_ID;
 		delete process.env.HAN_HOOK_PARALLELISM;
+	});
+
+	// ============================================
+	// Failure signaling tests
+	// ============================================
+
+	await test("signalFailure creates failure sentinel file", async () => {
+		process.env.HAN_SESSION_ID = "test-signal-failure";
+		cleanupSession("test-signal-failure");
+		const manager = createLockManager();
+
+		signalFailure(manager, {
+			pluginName: "test-plugin",
+			hookName: "test-hook",
+			directory: "test-dir",
+		});
+
+		const sentinelPath = join(manager.lockDir, "failure.sentinel");
+		strictEqual(existsSync(sentinelPath), true, "Sentinel file should exist");
+
+		const content = JSON.parse(readFileSync(sentinelPath, "utf-8"));
+		strictEqual(content.pluginName, "test-plugin");
+		strictEqual(content.hookName, "test-hook");
+		strictEqual(content.directory, "test-dir");
+		strictEqual(content.pid, process.pid);
+
+		cleanupSession("test-signal-failure");
+		delete process.env.HAN_SESSION_ID;
+	});
+
+	await test("checkFailureSignal returns null when no failure", async () => {
+		process.env.HAN_SESSION_ID = "test-no-failure";
+		cleanupSession("test-no-failure");
+		const manager = createLockManager();
+
+		const result = checkFailureSignal(manager);
+		strictEqual(result, null, "Should return null when no failure signal");
+
+		cleanupSession("test-no-failure");
+		delete process.env.HAN_SESSION_ID;
+	});
+
+	await test("checkFailureSignal returns failure info when signaled", async () => {
+		process.env.HAN_SESSION_ID = "test-check-failure";
+		cleanupSession("test-check-failure");
+		const manager = createLockManager();
+
+		signalFailure(manager, {
+			pluginName: "failing-plugin",
+			hookName: "failing-hook",
+		});
+
+		const result = checkFailureSignal(manager);
+		strictEqual(result !== null, true, "Should return failure info");
+		strictEqual(result?.pluginName, "failing-plugin");
+		strictEqual(result?.hookName, "failing-hook");
+
+		cleanupSession("test-check-failure");
+		delete process.env.HAN_SESSION_ID;
+	});
+
+	await test("clearFailureSignal removes sentinel file", async () => {
+		process.env.HAN_SESSION_ID = "test-clear-failure";
+		cleanupSession("test-clear-failure");
+		const manager = createLockManager();
+
+		signalFailure(manager, { pluginName: "test" });
+		strictEqual(
+			checkFailureSignal(manager) !== null,
+			true,
+			"Signal should exist",
+		);
+
+		clearFailureSignal(manager);
+		strictEqual(checkFailureSignal(manager), null, "Signal should be cleared");
+
+		cleanupSession("test-clear-failure");
+		delete process.env.HAN_SESSION_ID;
+	});
+
+	await test("checkFailureSignal works across same session", async () => {
+		// This tests that two different manager instances with the same session ID
+		// can share the failure signal
+		process.env.HAN_SESSION_ID = "test-shared-session";
+		cleanupSession("test-shared-session");
+
+		const manager1 = createLockManager();
+		const manager2 = createLockManager();
+
+		strictEqual(manager1.sessionId, manager2.sessionId, "Same session ID");
+
+		// Signal from manager1
+		signalFailure(manager1, { pluginName: "plugin1", hookName: "hook1" });
+
+		// Check from manager2
+		const result = checkFailureSignal(manager2);
+		strictEqual(result !== null, true, "Manager2 should see the failure");
+		strictEqual(result?.pluginName, "plugin1");
+
+		cleanupSession("test-shared-session");
+		delete process.env.HAN_SESSION_ID;
 	});
 
 	// ============================================
