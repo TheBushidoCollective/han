@@ -10,17 +10,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "# Blueprints Documentation Check\n\nBefore completing, verify blueprints/ documentation is current:\n\n## Review Checklist\n\n1. **Implementation Changes**: Did you make significant changes (new features, modified architecture, changed APIs, or updated system behavior)?\n\n2. **Documentation Exists**: Does a blueprints/ directory exist in this project?\n\n3. **Documentation Current**: If blueprints/ exists and changes were made, is the relevant documentation up to date?\n\n## Decision Criteria\n\n- **Approve** if: No significant implementation changes were made, OR blueprints/ doesn't exist, OR documentation is already current\n- **Block** if: Significant changes were made AND blueprints/ exists AND documentation is missing or outdated for those changes\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
-            "timeout": 30000
-          }
-        ]
-      }
     ]
   }
 }
