@@ -1,6 +1,6 @@
 {
   "name": "hashi-han",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for running Han plugin hook commands. Dynamically exposes tools for installed plugins - test, lint, format, typecheck commands with smart caching and directory detection.",
   "author": {
     "name": "The Bushido Collective",
@@ -22,7 +22,11 @@
   "mcpServers": {
     "han": {
       "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp"],
+      "args": [
+        "-y",
+        "@thebushidocollective/han",
+        "mcp"
+      ],
       "env": {}
     }
   }
