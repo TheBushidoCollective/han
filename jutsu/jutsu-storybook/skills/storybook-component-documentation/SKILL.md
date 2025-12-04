@@ -242,6 +242,7 @@ function MyForm() {
   );
 }
 ```
+
 ```
 
 ## Common Patterns
@@ -346,6 +347,7 @@ import { Meta } from '@storybook/blocks';
 ```
 
 **After (v3):**
+
 ```tsx
 <Button variant="primary">Click me</Button>
 ```
@@ -355,11 +357,13 @@ The `type` prop has been renamed to `variant` for consistency.
 ### Input Component
 
 **Before (v2):**
+
 ```tsx
 <Input error="Invalid email" />
 ```
 
 **After (v3):**
+
 ```tsx
 <Input error={{ message: "Invalid email" }} />
 ```
@@ -377,6 +381,7 @@ Buttons now support icons:
   Save
 </Button>
 ```
+
 ```
 
 ### Design Tokens

@@ -58,37 +58,73 @@ Create `.claude-plugin/plugin.json`:
 }
 ```
 
-## Step 2: Create hooks.json
+## Step 2: Create han-config.json
 
-Create `hooks/hooks.json` with validation hooks:
+Create `han-config.json` at the plugin root with hook definitions:
 
 ```json
 {
-  "Stop": [
-    {
-      "name": "{technology}-validation",
-      "description": "Validates {technology} code before stopping",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
-      "showOutput": "on-error"
+  "hooks": {
+    "{hook-name}": {
+      "command": "{validation-command}",
+      "dirsWith": ["{marker-file}"],
+      "ifChanged": ["{glob-patterns}"]
     }
-  ],
-  "SubagentStop": [
-    {
-      "name": "{technology}-validation",
-      "description": "Validates {technology} code when agents complete",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with {marker-file} -- {validation-command}",
-      "showOutput": "on-error"
-    }
-  ]
+  }
 }
 ```
 
 ### Hook Configuration Guide
 
-- **name**: Descriptive name for the validation step
-- **description**: What the hook validates
-- **command**: The validation command to run
-- **showOutput**: When to display output ("always", "on-error", "never")
+- **hooks**: Object containing named hook definitions
+- **{hook-name}**: Descriptive name for the hook (e.g., "lint", "test", "typecheck", "build")
+- **command**: The validation command to run (e.g., "npm run lint", "cargo check")
+- **dirsWith**: Array of marker files to detect relevant directories (e.g., ["package.json"])
+- **ifChanged**: Array of glob patterns to watch for changes (optional, enables caching)
+
+## Step 3: Create hooks.json
+
+Create `hooks/hooks.json` to register the hook with Claude Code events:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
+            "timeout": 120000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
+            "timeout": 120000
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### hooks.json Configuration Guide
+
+- **hooks**: Top-level object containing event hooks
+- **Stop**: Hooks that run when conversation stops
+- **SubagentStop**: Hooks that run when subagent completes
+- **type**: Always "command" for hook execution
+- **command**: Uses `npx han hook run {plugin-name} {hook-name}` format
+- **--fail-fast**: Stop on first error for quick feedback
+- **--cached**: Enable smart caching based on ifChanged patterns
+- **timeout**: Max execution time in milliseconds (120000 = 2 minutes)
 
 ### Marker Files by Technology
 
@@ -111,7 +147,26 @@ Create `hooks/hooks.json` with validation hooks:
 - **Cargo**: `cargo check && cargo clippy`
 - **Go**: `go vet ./... && go test ./...`
 
-## Step 3: Create Skills
+### Example han-config.json
+
+```json
+{
+  "hooks": {
+    "lint": {
+      "command": "npm run lint",
+      "dirsWith": ["package.json"],
+      "ifChanged": ["**/*.{js,jsx,ts,tsx}"]
+    },
+    "test": {
+      "command": "npm test",
+      "dirsWith": ["package.json"],
+      "ifChanged": ["**/*.{js,jsx,ts,tsx}", "**/*.test.{js,jsx,ts,tsx}"]
+    }
+  }
+}
+```
+
+## Step 4: Create Skills
 
 For each major concept/feature of the technology, create a skill:
 
@@ -183,7 +238,7 @@ allowed-tools:
 5. **Integration Patterns** (1-2 skills)
    - Working with other tools, CI/CD, deployment
 
-## Step 4: Write README.md
+## Step 5: Write README.md
 
 Create a comprehensive README:
 
@@ -245,7 +300,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 MIT License - See [LICENSE](../../LICENSE) for details.
 ```
 
-## Step 5: Register in Marketplace
+## Step 6: Register in Marketplace
 
 Add your plugin to `.claude-plugin/marketplace.json`:
 
