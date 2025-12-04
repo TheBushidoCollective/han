@@ -26,12 +26,13 @@ main() {
     echo "Building scheme: $scheme"
 
     # Run xcodebuild and capture exit status
+    # Use generic simulator destination (no specific device required)
     # Close stdin (< /dev/null) to prevent any prompts from hanging
     local output
     local status
     output=$(xcodebuild \
         -scheme "$scheme" \
-        -destination 'platform=iOS Simulator,name=iPhone 16' \
+        -destination 'generic/platform=iOS Simulator' \
         build \
         CODE_SIGNING_ALLOWED=NO \
         2>&1 < /dev/null) || status=$?
