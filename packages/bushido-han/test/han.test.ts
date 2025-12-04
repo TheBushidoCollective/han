@@ -10,6 +10,7 @@ import {
 	rmSync,
 	writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkForChanges, trackFiles } from "../lib/hook-cache.js";
@@ -1063,6 +1064,80 @@ test("new format with --fail-fast stops on first failure", () => {
 			const execError = error as ExecError;
 			strictEqual(execError.status, 2, "Expected exit code 2");
 		}
+	} finally {
+		teardown();
+	}
+});
+
+test("--fail-fast clears stale failure signals from previous runs", () => {
+	const testDir = setup();
+	try {
+		// Create plugin directory
+		const pluginDir = join(testDir, "test-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["marker.txt"],
+						command: "echo success",
+					},
+				},
+			}),
+		);
+
+		// Create project with one matching directory
+		const projectDir = join(testDir, "project");
+		mkdirSync(join(projectDir, "pkg1"), { recursive: true });
+		writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		// Create a stale failure sentinel file to simulate a previous failed run
+		const sessionId = "test-stale-sentinel-cleanup";
+		const sentinelDir = join(tmpdir(), "han-hooks", sessionId);
+		mkdirSync(sentinelDir, { recursive: true });
+		const sentinelPath = join(sentinelDir, "failure.sentinel");
+		writeFileSync(
+			sentinelPath,
+			JSON.stringify({
+				pluginName: "stale-plugin",
+				hookName: "stale-hook",
+				timestamp: Date.now() - 10000, // 10 seconds ago
+			}),
+		);
+
+		// Verify the sentinel file exists
+		strictEqual(
+			existsSync(sentinelPath),
+			true,
+			"Stale sentinel file should exist before test",
+		);
+
+		// Run a hook with --fail-fast - it should succeed despite the stale sentinel
+		// because clearFailureSignal() should clean it up
+		// If the hook doesn't clear the sentinel, it will exit with code 2
+		execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: "pipe",
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: pluginDir,
+				CLAUDE_PROJECT_DIR: projectDir,
+				HAN_SESSION_ID: sessionId, // Use the same session ID
+			},
+		});
+
+		// If we reach here, the hook ran successfully (didn't exit with code 2)
+		// Verify the sentinel was cleared
+		strictEqual(
+			existsSync(sentinelPath),
+			false,
+			"Stale sentinel file should be cleared after successful run",
+		);
 	} finally {
 		teardown();
 	}
