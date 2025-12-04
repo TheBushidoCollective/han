@@ -12,7 +12,12 @@ import {
 	getPluginNameFromRoot,
 	type ResolvedHookConfig,
 } from "./hook-config.js";
-import { withSlot } from "./hook-lock.js";
+import {
+	checkFailureSignal,
+	createLockManager,
+	signalFailure,
+	withSlot,
+} from "./hook-lock.js";
 
 /**
  * Check if debug mode is enabled via HAN_DEBUG environment variable
@@ -824,11 +829,25 @@ export async function runConfiguredHook(
 	}> = [];
 	const successfulConfigs: ResolvedHookConfig[] = [];
 
+	// Create lock manager for failure signal checking
+	const lockManager = createLockManager();
+
 	for (const config of configsToRun) {
 		const relativePath =
 			config.directory === projectRoot
 				? "."
 				: config.directory.replace(`${projectRoot}/`, "");
+
+		// Check if another hook has already failed (fail-fast across processes)
+		if (failFast) {
+			const failureInfo = checkFailureSignal(lockManager);
+			if (failureInfo) {
+				console.log(
+					`\n⚡ Exiting early: another hook already failed (${failureInfo.pluginName || "unknown"}/${failureInfo.hookName || "unknown"})`,
+				);
+				process.exit(2);
+			}
+		}
 
 		// In verbose mode, show what we're running
 		if (verbose) {
@@ -858,6 +877,13 @@ export async function runConfiguredHook(
 			});
 
 			if (failFast) {
+				// Signal failure to other hooks in the same session
+				signalFailure(lockManager, {
+					pluginName,
+					hookName,
+					directory: relativePath,
+				});
+
 				const reason = result.idleTimedOut
 					? " (idle timeout - no output received)"
 					: "";
