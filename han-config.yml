@@ -1,0 +1,15 @@
+# Han Hook Configuration for the Han Marketplace Repository
+# Enforces quality standards across all plugins
+
+# Override plugin hook configurations
+plugins:
+  # Do Claude Plugin Development - Enforce claudelint validation
+  do-claude-plugin-development:
+    enabled: true
+    hooks:
+      claudelint:
+        enabled: true
+        # Remove --strict flag, use .claudelint.yaml configuration instead
+        command: "uvx claudelint ."
+        # dirTest already configured in plugin to detect marketplace repos
+        # Always run on marketplace repositories to enforce registration
