@@ -186,7 +186,7 @@ async function waitForPackageAvailability(packageName, maxRetries = 5) {
 		}
 
 		if (attempt < maxRetries) {
-			const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+			const delay = baseDelay * 2 ** (attempt - 1); // Exponential backoff
 			console.error(
 				`\x1b[33m⏳ Waiting for package availability (attempt ${attempt}/${maxRetries})...\x1b[0m`,
 			);

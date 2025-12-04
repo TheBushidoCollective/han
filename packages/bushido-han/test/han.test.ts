@@ -1437,6 +1437,173 @@ test("cache includes han-config.yml - local config change invalidates cache", ()
 });
 
 // ============================================
+// MCP Server tests
+// ============================================
+
+function sendMcpRequest(
+	request: Record<string, unknown>,
+	testDir?: string,
+): string {
+	const input = JSON.stringify(request);
+	const options: ExecSyncOptionsWithStringEncoding = {
+		encoding: "utf8",
+		input,
+		stdio: ["pipe", "pipe", "pipe"],
+		env: {
+			...process.env,
+			...(testDir ? { CLAUDE_PROJECT_DIR: testDir } : {}),
+		},
+	};
+	if (testDir) {
+		options.cwd = testDir;
+	}
+	return execSync(`${binCommand} mcp`, options);
+}
+
+test("mcp command responds to initialize", () => {
+	const response = sendMcpRequest({
+		jsonrpc: "2.0",
+		id: 1,
+		method: "initialize",
+		params: {},
+	});
+	const parsed = JSON.parse(response);
+
+	strictEqual(parsed.jsonrpc, "2.0");
+	strictEqual(parsed.id, 1);
+	strictEqual(parsed.result.protocolVersion, "2024-11-05");
+	strictEqual(parsed.result.serverInfo.name, "han");
+	strictEqual(parsed.result.capabilities.tools !== undefined, true);
+});
+
+test("mcp command responds to tools/list", () => {
+	const response = sendMcpRequest({
+		jsonrpc: "2.0",
+		id: 2,
+		method: "tools/list",
+		params: {},
+	});
+	const parsed = JSON.parse(response);
+
+	strictEqual(parsed.jsonrpc, "2.0");
+	strictEqual(parsed.id, 2);
+	strictEqual(Array.isArray(parsed.result.tools), true);
+});
+
+test("mcp discovers tools from installed plugins", () => {
+	const testDir = setup();
+	try {
+		// Create .claude directory with settings
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create marketplace with plugin
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-mcp-test");
+		mkdirSync(pluginDir, { recursive: true });
+
+		// Create plugin with han-config.json
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["package.json"],
+						command: "echo mcp-test-success",
+					},
+					lint: {
+						command: "echo mcp-lint-success",
+					},
+				},
+			}),
+		);
+
+		// Create settings that point to the marketplace
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: {
+							source: "directory",
+							path: marketplaceDir,
+						},
+					},
+				},
+				enabledPlugins: {
+					"jutsu-mcp-test@test-marketplace": true,
+				},
+			}),
+		);
+
+		const response = sendMcpRequest(
+			{
+				jsonrpc: "2.0",
+				id: 3,
+				method: "tools/list",
+				params: {},
+			},
+			testDir,
+		);
+		const parsed = JSON.parse(response);
+
+		strictEqual(parsed.jsonrpc, "2.0");
+		strictEqual(Array.isArray(parsed.result.tools), true);
+
+		// Find our plugin's tools
+		const tools = parsed.result.tools as Array<{
+			name: string;
+			description: string;
+		}>;
+		const testTool = tools.find((t) => t.name === "jutsu_mcp_test_test");
+		const lintTool = tools.find((t) => t.name === "jutsu_mcp_test_lint");
+
+		strictEqual(testTool !== undefined, true, "Expected test tool to be found");
+		strictEqual(lintTool !== undefined, true, "Expected lint tool to be found");
+		strictEqual(
+			testTool?.description.includes("test"),
+			true,
+			"Expected test tool description",
+		);
+	} finally {
+		teardown();
+	}
+});
+
+test("mcp returns error for unknown method", () => {
+	const response = sendMcpRequest({
+		jsonrpc: "2.0",
+		id: 4,
+		method: "unknown/method",
+		params: {},
+	});
+	const parsed = JSON.parse(response);
+
+	strictEqual(parsed.jsonrpc, "2.0");
+	strictEqual(parsed.id, 4);
+	strictEqual(parsed.error !== undefined, true, "Expected error response");
+	strictEqual(parsed.error.code, -32601, "Expected method not found error code");
+});
+
+test("mcp returns error for unknown tool", () => {
+	const response = sendMcpRequest({
+		jsonrpc: "2.0",
+		id: 5,
+		method: "tools/call",
+		params: {
+			name: "nonexistent_tool",
+			arguments: {},
+		},
+	});
+	const parsed = JSON.parse(response);
+
+	strictEqual(parsed.jsonrpc, "2.0");
+	strictEqual(parsed.id, 5);
+	strictEqual(parsed.error !== undefined, true, "Expected error response");
+	strictEqual(parsed.error.code, -32602, "Expected invalid params error code");
+});
+
+// ============================================
 // Summary
 // ============================================
 

@@ -832,6 +832,22 @@
       ]
     },
     {
+      "name": "hashi-han",
+      "description": "MCP server for running Han plugin hook commands. Dynamically exposes tools for installed plugins - test, lint, format, typecheck commands with smart caching and directory detection.",
+      "source": "./hashi/hashi-han",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "han",
+        "hooks",
+        "testing",
+        "linting",
+        "formatting",
+        "validation",
+        "server"
+      ]
+    },
+    {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",

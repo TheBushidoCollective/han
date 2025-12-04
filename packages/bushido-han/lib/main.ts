@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.js";
 import { registerAliasCommands } from "./commands/aliases.js";
 import { registerHookCommands } from "./commands/hook/index.js";
+import { registerMcpCommands } from "./commands/mcp/index.js";
 import { registerPluginCommands } from "./commands/plugin/index.js";
 
 // Version is injected at build time for binary builds, otherwise read from package.json
@@ -34,6 +35,7 @@ program
 // Register command groups
 registerPluginCommands(program);
 registerHookCommands(program);
+registerMcpCommands(program);
 registerAliasCommands(program);
 
 program.parse();
