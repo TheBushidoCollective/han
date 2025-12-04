@@ -62,6 +62,24 @@ export default function DocsPage() {
 							>
 								MCP Server
 							</a>
+							<a
+								href="#cli-reference"
+								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+							>
+								CLI Reference
+							</a>
+							<a
+								href="#cli-plugin"
+								className="block py-2 px-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ml-3"
+							>
+								Plugin Commands
+							</a>
+							<a
+								href="#cli-hook"
+								className="block py-2 px-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ml-3"
+							>
+								Hook Commands
+							</a>
 						</nav>
 					</aside>
 
@@ -703,6 +721,255 @@ jutsu-eslint:
 								</ul>
 							</div>
 						</section>
+
+						{/* CLI Reference */}
+						<section id="cli-reference" className="scroll-mt-8 mb-16">
+							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+								CLI Reference
+							</h2>
+							<p className="text-gray-600 dark:text-gray-300 mb-8">
+								Complete reference for all{" "}
+								<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+									han
+								</code>{" "}
+								CLI commands. Use{" "}
+								<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+									npx @thebushidocollective/han
+								</code>{" "}
+								to run any command without installation.
+							</p>
+
+							{/* Plugin Commands */}
+							<div id="cli-plugin" className="mb-12 scroll-mt-8">
+								<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+									Plugin Commands
+								</h3>
+
+								<div className="space-y-6">
+									<CommandDoc
+										command="plugin install"
+										description="Install plugins interactively or automatically"
+										usage="han plugin install [plugin-names...] [options]"
+										options={[
+											{
+												name: "--auto",
+												desc: "Analyze codebase and recommend plugins",
+											},
+											{
+												name: "--scope <user|local|project>",
+												desc: "Installation scope (default: user)",
+											},
+										]}
+										examples={[
+											{
+												desc: "Interactive mode",
+												code: "npx @thebushidocollective/han plugin install",
+											},
+											{
+												desc: "Auto-detect plugins",
+												code: "npx @thebushidocollective/han plugin install --auto",
+											},
+											{
+												desc: "Install specific plugin",
+												code: "npx @thebushidocollective/han plugin install jutsu-typescript",
+											},
+											{
+												desc: "Install to project scope",
+												code: "npx @thebushidocollective/han plugin install --auto --scope project",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="plugin uninstall"
+										description="Remove installed plugins"
+										usage="han plugin uninstall <plugin-names...> [options]"
+										options={[
+											{
+												name: "--scope <user|local|project>",
+												desc: "Scope to uninstall from",
+											},
+										]}
+										examples={[
+											{
+												desc: "Uninstall a plugin",
+												code: "npx @thebushidocollective/han plugin uninstall jutsu-eslint",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="plugin search"
+										description="Search for plugins in the Han marketplace"
+										usage="han plugin search [query]"
+										examples={[
+											{
+												desc: "Search for TypeScript plugins",
+												code: "npx @thebushidocollective/han plugin search typescript",
+											},
+											{
+												desc: "Browse all plugins",
+												code: "npx @thebushidocollective/han plugin search",
+											},
+										]}
+									/>
+								</div>
+							</div>
+
+							{/* Hook Commands */}
+							<div id="cli-hook" className="mb-12 scroll-mt-8">
+								<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+									Hook Commands
+								</h3>
+
+								<div className="space-y-6">
+									<CommandDoc
+										command="hook run"
+										description="Run a hook command defined by a plugin"
+										usage="han hook run <plugin-name> <hook-name> [options]"
+										options={[
+											{
+												name: "--fail-fast",
+												desc: "Stop on first failure (default: true)",
+											},
+											{
+												name: "--cached",
+												desc: "Skip if no relevant files changed since last successful run",
+											},
+											{
+												name: "--only=<dir>",
+												desc: "Only run in the specified directory",
+											},
+											{
+												name: "--verbose",
+												desc: "Show full command output",
+											},
+										]}
+										examples={[
+											{
+												desc: "Run TypeScript type checking",
+												code: "npx @thebushidocollective/han hook run jutsu-typescript typecheck",
+											},
+											{
+												desc: "Run with caching",
+												code: "npx @thebushidocollective/han hook run jutsu-elixir test --cached",
+											},
+											{
+												desc: "Run in specific directory",
+												code: "npx @thebushidocollective/han hook run jutsu-biome lint --only=packages/core",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="hook explain"
+										description="Show comprehensive information about configured hooks"
+										usage="han hook explain [hookType] [options]"
+										options={[
+											{
+												name: "[hookType]",
+												desc: "Filter by hook type (e.g., Stop, SessionStart)",
+											},
+											{
+												name: "--all",
+												desc: "Include hooks from Claude Code settings (not just Han plugins)",
+											},
+										]}
+										examples={[
+											{
+												desc: "Show all Han plugin hooks",
+												code: "npx @thebushidocollective/han hook explain",
+											},
+											{
+												desc: "Show only Stop hooks",
+												code: "npx @thebushidocollective/han hook explain Stop",
+											},
+											{
+												desc: "Show all hooks including settings",
+												code: "npx @thebushidocollective/han hook explain --all",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="hook dispatch"
+										description="Dispatch hooks of a specific type across all installed Han plugins"
+										usage="han hook dispatch <hookType> [options]"
+										options={[
+											{
+												name: "--all",
+												desc: "Include hooks from Claude Code settings",
+											},
+										]}
+										examples={[
+											{
+												desc: "Dispatch SessionStart hooks",
+												code: "npx @thebushidocollective/han hook dispatch SessionStart",
+											},
+											{
+												desc: "Dispatch Stop hooks including settings",
+												code: "npx @thebushidocollective/han hook dispatch Stop --all",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="hook test"
+										description="Validate hook configurations for all installed plugins"
+										usage="han hook test [options]"
+										options={[
+											{
+												name: "--execute",
+												desc: "Actually execute hooks to verify they run successfully",
+											},
+										]}
+										examples={[
+											{
+												desc: "Validate hook structure",
+												code: "npx @thebushidocollective/han hook test",
+											},
+											{
+												desc: "Validate and execute hooks",
+												code: "npx @thebushidocollective/han hook test --execute",
+											},
+										]}
+									/>
+								</div>
+							</div>
+
+							{/* Other Commands */}
+							<div className="mb-12">
+								<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+									Other Commands
+								</h3>
+
+								<div className="space-y-6">
+									<CommandDoc
+										command="mcp"
+										description="Start the Han MCP server for natural language hook execution"
+										usage="han mcp"
+										examples={[
+											{
+												desc: "Start MCP server",
+												code: "npx @thebushidocollective/han mcp",
+											},
+										]}
+									/>
+
+									<CommandDoc
+										command="uninstall"
+										description="Remove all Han plugins and marketplace configuration"
+										usage="han uninstall"
+										examples={[
+											{
+												desc: "Remove Han completely",
+												code: "npx @thebushidocollective/han uninstall",
+											},
+										]}
+									/>
+								</div>
+							</div>
+						</section>
 					</main>
 				</div>
 			</div>
@@ -762,6 +1029,76 @@ function FeatureCard({
 				{title}
 			</h3>
 			<p className="text-gray-600 dark:text-gray-300">{description}</p>
+		</div>
+	);
+}
+
+function CommandDoc({
+	command,
+	description,
+	usage,
+	options,
+	examples,
+}: {
+	command: string;
+	description: string;
+	usage: string;
+	options?: { name: string; desc: string }[];
+	examples: { desc: string; code: string }[];
+}) {
+	return (
+		<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+			<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+				{command}
+			</h4>
+			<p className="text-gray-600 dark:text-gray-300 mb-4">{description}</p>
+
+			<div className="mb-4">
+				<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+					Usage
+				</p>
+				<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
+					<code>{usage}</code>
+				</pre>
+			</div>
+
+			{options && options.length > 0 && (
+				<div className="mb-4">
+					<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+						Options
+					</p>
+					<ul className="space-y-1 text-sm">
+						{options.map((opt) => (
+							<li key={opt.name} className="flex items-start gap-2">
+								<code className="bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded shrink-0">
+									{opt.name}
+								</code>
+								<span className="text-gray-600 dark:text-gray-300">
+									{opt.desc}
+								</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+
+			<div>
+				<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+					Examples
+				</p>
+				<div className="space-y-2">
+					{examples.map((ex) => (
+						<div key={ex.code}>
+							<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+								{ex.desc}
+							</p>
+							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-2 rounded overflow-x-auto text-xs">
+								<code>{ex.code}</code>
+							</pre>
+						</div>
+					))}
+				</div>
+			</div>
 		</div>
 	);
 }
