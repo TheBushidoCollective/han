@@ -133,6 +133,23 @@
       "keywords": ["c", "systems-programming", "memory-management", "skill"]
     },
     {
+      "name": "jutsu-cocoapods",
+      "description": "Validation and quality enforcement for CocoaPods dependency management in iOS, macOS, tvOS, watchOS, and visionOS projects.",
+      "source": "./jutsu/jutsu-cocoapods",
+      "category": "Technique",
+      "keywords": [
+        "cocoapods",
+        "validation",
+        "podspec",
+        "ios",
+        "macos",
+        "swift",
+        "objective-c",
+        "quality",
+        "enforcement"
+      ]
+    },
+    {
       "name": "jutsu-checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
       "source": "./jutsu/jutsu-checkstyle",

@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "lint": {
+      "command": "pod lib lint --quick --fail-fast",
+      "dirsWith": ["*.podspec"],
+      "ifChanged": ["*.podspec", "**/*.{swift,h,m,mm}", "**/*.xcprivacy"]
+    }
+  }
+}
