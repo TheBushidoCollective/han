@@ -1,6 +1,6 @@
 {
   "name": "jutsu-expo",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Validation and quality enforcement for Expo React Native projects.",
   "author": {
     "name": "The Bushido Collective",

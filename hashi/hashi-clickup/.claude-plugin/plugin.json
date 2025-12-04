@@ -1,6 +1,6 @@
 {
   "name": "hashi-clickup",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Official ClickUp MCP server integration with OAuth authentication. Provides task management, workspace access, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
