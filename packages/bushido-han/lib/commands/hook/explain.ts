@@ -298,11 +298,12 @@ function formatHook(hook: HookEntry, indent: string): string {
 /**
  * Explain all configured hooks
  */
-function explainHooks(hookType?: string): void {
+function explainHooks(hookType?: string, showAll = false): void {
 	const settingsHooks = getSettingsHooks();
 	const pluginHooks = getPluginHooks();
 
-	const allHooks = [...settingsHooks, ...pluginHooks];
+	// By default, only show Han plugin hooks. Use --all to include settings hooks.
+	const allHooks = showAll ? [...settingsHooks, ...pluginHooks] : pluginHooks;
 
 	// Filter by hook type if specified
 	const filteredHooks = hookType
@@ -391,14 +392,20 @@ export function registerHookExplain(hookCommand: Command): void {
 	hookCommand
 		.command("explain [hookType]")
 		.description(
-			"Show comprehensive information about all configured hooks.\n" +
-				"Includes hooks from Claude Code settings and installed Han plugins.\n\n" +
+			"Show comprehensive information about configured hooks.\n" +
+				"By default, shows only Han plugin hooks.\n" +
+				"Use --all to include hooks from Claude Code settings.\n\n" +
 				"Examples:\n" +
-				"  han hook explain           # Show all hooks\n" +
-				"  han hook explain Stop      # Show only Stop hooks\n" +
-				"  han hook explain SessionStart",
+				"  han hook explain           # Show Han plugin hooks\n" +
+				"  han hook explain Stop      # Show only Stop hooks from Han plugins\n" +
+				"  han hook explain --all     # Show all hooks including settings\n" +
+				"  han hook explain Stop --all",
 		)
-		.action((hookType?: string) => {
-			explainHooks(hookType);
+		.option(
+			"-a, --all",
+			"Include hooks from Claude Code settings (not just Han plugins)",
+		)
+		.action((hookType: string | undefined, options: { all?: boolean }) => {
+			explainHooks(hookType, options.all ?? false);
 		});
 }

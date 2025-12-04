@@ -5,7 +5,9 @@ import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
+	getSettingsPaths,
 	type MarketplaceConfig,
+	readSettingsFile,
 } from "../../claude-settings.js";
 
 /**
@@ -208,17 +210,98 @@ function executeCommandHook(
 }
 
 /**
+ * Execute hooks from settings files (not from Han plugins)
+ */
+function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
+	for (const { path } of getSettingsPaths()) {
+		// Check settings.json for hooks
+		const settings = readSettingsFile(path);
+		if (settings?.hooks) {
+			const hookGroups = (settings.hooks as Record<string, unknown>)[hookType];
+			if (Array.isArray(hookGroups)) {
+				for (const group of hookGroups) {
+					if (
+						typeof group === "object" &&
+						group !== null &&
+						"hooks" in group &&
+						Array.isArray(group.hooks)
+					) {
+						for (const hook of group.hooks as HookEntry[]) {
+							if (hook.type === "command" && hook.command) {
+								const output = executeCommandHook(
+									hook.command,
+									process.cwd(),
+									hook.timeout || 30000,
+								);
+								if (output) {
+									outputs.push(output);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Also check for hooks.json in the same directory
+		const hooksJsonPath = path.replace(
+			/settings(\.local)?\.json$/,
+			"hooks.json",
+		);
+		if (hooksJsonPath !== path && existsSync(hooksJsonPath)) {
+			try {
+				const content = readFileSync(hooksJsonPath, "utf-8");
+				const hooksJson = JSON.parse(content) as Record<string, unknown>;
+
+				// hooks.json can have hooks at root level or under "hooks" key
+				const hooksObj =
+					(hooksJson.hooks as Record<string, unknown>) ?? hooksJson;
+				const hookGroups = hooksObj[hookType];
+
+				if (Array.isArray(hookGroups)) {
+					for (const group of hookGroups) {
+						if (
+							typeof group === "object" &&
+							group !== null &&
+							"hooks" in group &&
+							Array.isArray(group.hooks)
+						) {
+							for (const hook of group.hooks as HookEntry[]) {
+								if (hook.type === "command" && hook.command) {
+									const output = executeCommandHook(
+										hook.command,
+										process.cwd(),
+										hook.timeout || 30000,
+									);
+									if (output) {
+										outputs.push(output);
+									}
+								}
+							}
+						}
+					}
+				}
+			} catch {
+				// Invalid JSON, skip
+			}
+		}
+	}
+}
+
+/**
  * Dispatch hooks of a specific type across all installed plugins.
  * Uses merged settings from all scopes (user, project, local, enterprise).
  */
-function dispatchHooks(hookType: string): void {
-	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
+function dispatchHooks(hookType: string, includeSettings = false): void {
+	const outputs: string[] = [];
 
-	if (plugins.size === 0) {
-		return;
+	// Dispatch settings hooks if --all is specified
+	if (includeSettings) {
+		dispatchSettingsHooks(hookType, outputs);
 	}
 
-	const outputs: string[] = [];
+	// Dispatch Han plugin hooks
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 
 	for (const [pluginName, marketplace] of plugins.entries()) {
 		const marketplaceConfig = marketplaces.get(marketplace);
@@ -259,6 +342,7 @@ export function registerHookDispatch(hookCommand: Command): void {
 		.command("dispatch <hookType>")
 		.description(
 			"Dispatch hooks of a specific type across all installed Han plugins.\n" +
+				"By default, only runs Han plugin hooks. Use --all to include settings hooks.\n\n" +
 				"This is a workaround for Claude Code bug #12151 where plugin hook output\n" +
 				"is not passed to the agent. Add this to ~/.claude/settings.json:\n\n" +
 				'  "hooks": {\n' +
@@ -268,7 +352,11 @@ export function registerHookDispatch(hookCommand: Command): void {
 				'      "command": "npx -y @thebushidocollective/han hook dispatch SessionStart"}]}]\n' +
 				"  }",
 		)
-		.action((hookType: string) => {
-			dispatchHooks(hookType);
+		.option(
+			"-a, --all",
+			"Include hooks from Claude Code settings (not just Han plugins)",
+		)
+		.action((hookType: string, options: { all?: boolean }) => {
+			dispatchHooks(hookType, options.all ?? false);
 		});
 }
