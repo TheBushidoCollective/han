@@ -1623,6 +1623,127 @@ test("mcp returns error for unknown tool", () => {
 });
 
 // ============================================
+// Claude Settings Merge Tests
+// ============================================
+
+test("settings merge includes user, project, and local settings", () => {
+	const testDir = setup();
+	try {
+		// Create .claude directory with multiple settings files
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create marketplace with plugins
+		const marketplaceDir = join(testDir, "marketplace");
+
+		// Create plugin A (from user/project settings)
+		const pluginADir = join(marketplaceDir, "jutsu", "jutsu-plugin-a");
+		mkdirSync(pluginADir, { recursive: true });
+		writeFileSync(
+			join(pluginADir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: { command: "echo plugin-a-test" },
+				},
+			}),
+		);
+
+		// Create plugin B (to be disabled by project settings)
+		const pluginBDir = join(marketplaceDir, "jutsu", "jutsu-plugin-b");
+		mkdirSync(pluginBDir, { recursive: true });
+		writeFileSync(
+			join(pluginBDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: { command: "echo plugin-b-test" },
+				},
+			}),
+		);
+
+		// Create plugin C (from local settings only)
+		const pluginCDir = join(marketplaceDir, "jutsu", "jutsu-plugin-c");
+		mkdirSync(pluginCDir, { recursive: true });
+		writeFileSync(
+			join(pluginCDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					lint: { command: "echo plugin-c-lint" },
+				},
+			}),
+		);
+
+		// Project settings - enable A and B
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				enabledPlugins: {
+					"jutsu-plugin-a@test-marketplace": true,
+					"jutsu-plugin-b@test-marketplace": true,
+				},
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: { source: "directory", path: marketplaceDir },
+					},
+				},
+			}),
+		);
+
+		// Local settings - disable B, enable C
+		writeFileSync(
+			join(claudeDir, "settings.local.json"),
+			JSON.stringify({
+				enabledPlugins: {
+					"jutsu-plugin-b@test-marketplace": false, // Disable B
+					"jutsu-plugin-c@test-marketplace": true, // Enable C
+				},
+			}),
+		);
+
+		// Test via MCP server
+		const response = sendMcpRequest(
+			{
+				jsonrpc: "2.0",
+				id: 100,
+				method: "tools/list",
+				params: {},
+			},
+			testDir,
+		);
+
+		const parsed = JSON.parse(response);
+		strictEqual(parsed.error, undefined, "Should not have error");
+		strictEqual(Array.isArray(parsed.result.tools), true);
+
+		const toolNames = parsed.result.tools.map(
+			(t: { name: string }) => t.name,
+		);
+
+		// Plugin A should be enabled (from project settings)
+		strictEqual(
+			toolNames.includes("jutsu_plugin_a_test"),
+			true,
+			"Plugin A should be enabled",
+		);
+
+		// Plugin B should be disabled (overridden by local settings)
+		strictEqual(
+			toolNames.includes("jutsu_plugin_b_test"),
+			false,
+			"Plugin B should be disabled by local settings",
+		);
+
+		// Plugin C should be enabled (from local settings)
+		strictEqual(
+			toolNames.includes("jutsu_plugin_c_lint"),
+			true,
+			"Plugin C should be enabled from local settings",
+		);
+	} finally {
+		teardown();
+	}
+});
+
+// ============================================
 // Summary
 // ============================================
 
