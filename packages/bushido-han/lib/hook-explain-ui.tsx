@@ -49,8 +49,8 @@ const HookEntryDisplay: React.FC<{ hook: HookEntry; index: number }> = ({
 				<Box marginLeft={2} flexDirection="column">
 					<Text dimColor>Prompt:</Text>
 					<Box marginLeft={2} flexDirection="column">
-						{hook.prompt.split("\n").map((line, i) => (
-							<Text key={i} color="gray">
+						{hook.prompt.split("\n").map((line, lineIdx) => (
+							<Text key={`line-${lineIdx}-${line.slice(0, 20)}`} color="gray">
 								{line}
 							</Text>
 						))}
@@ -92,31 +92,41 @@ const HookSourceDisplay: React.FC<{ source: HookSource }> = ({ source }) => {
 				<Text color="cyan">{source.source}</Text>
 			</Box>
 
-			{source.hooks.map((hook, i) => (
-				<HookEntryDisplay key={i} hook={hook} index={i} />
+			{source.hooks.map((hook, hookIdx) => (
+				<HookEntryDisplay
+					key={`hook-${hookIdx}-${hook.type}-${(hook.command || hook.prompt || "").slice(0, 20)}`}
+					hook={hook}
+					index={hookIdx}
+				/>
 			))}
 		</Box>
 	);
 };
 
-const HookTypeSection: React.FC<{ hookType: string; sources: HookSource[] }> = ({
-	hookType,
-	sources,
-}) => {
+const HookTypeSection: React.FC<{
+	hookType: string;
+	sources: HookSource[];
+}> = ({ hookType, sources }) => {
 	return (
 		<Box flexDirection="column" marginTop={1}>
 			<Box>
 				<Text color="cyan" bold>
 					{hookType}
 				</Text>
-				<Text dimColor> ({sources.length} source{sources.length !== 1 ? "s" : ""})</Text>
+				<Text dimColor>
+					{" "}
+					({sources.length} source{sources.length !== 1 ? "s" : ""})
+				</Text>
 			</Box>
 			<Box marginLeft={2}>
 				<Text dimColor>{"─".repeat(50)}</Text>
 			</Box>
 
-			{sources.map((source, i) => (
-				<Box key={i} marginLeft={2}>
+			{sources.map((source) => (
+				<Box
+					key={`source-${source.source}-${source.pluginName || source.scope}`}
+					marginLeft={2}
+				>
 					<HookSourceDisplay source={source} />
 				</Box>
 			))}
