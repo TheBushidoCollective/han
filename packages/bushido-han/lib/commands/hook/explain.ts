@@ -5,8 +5,8 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	getSettingsPaths,
-	readSettingsFile,
 	type MarketplaceConfig,
+	readSettingsFile,
 	type SettingsScope,
 } from "../../claude-settings.js";
 
@@ -201,7 +201,10 @@ function getSettingsHooks(): HookSource[] {
 		}
 
 		// Also check for hooks.json in the same directory
-		const hooksJsonPath = path.replace(/settings(\.local)?\.json$/, "hooks.json");
+		const hooksJsonPath = path.replace(
+			/settings(\.local)?\.json$/,
+			"hooks.json",
+		);
 		if (hooksJsonPath !== path && existsSync(hooksJsonPath)) {
 			try {
 				const content = readFileSync(hooksJsonPath, "utf-8");
@@ -333,7 +336,8 @@ function explainHooks(hookType?: string): void {
 	console.log("=".repeat(60));
 
 	for (const type of sortedTypes) {
-		const hooks = byType.get(type)!;
+		const hooks = byType.get(type);
+		if (!hooks) continue;
 
 		console.log(`\n## ${type}`);
 		console.log("-".repeat(40));
@@ -354,7 +358,7 @@ function explainHooks(hookType?: string): void {
 		}
 	}
 
-	console.log("\n" + "=".repeat(60));
+	console.log(`\n${"=".repeat(60)}`);
 
 	// Summary
 	const commandHooks = filteredHooks.flatMap((h) =>
@@ -368,9 +372,7 @@ function explainHooks(hookType?: string): void {
 	console.log(`  Total hook sources: ${filteredHooks.length}`);
 	console.log(`  Command hooks: ${commandHooks.length}`);
 	console.log(`  Prompt hooks: ${promptHooks.length}`);
-	console.log(
-		`  Hook types: ${sortedTypes.join(", ") || "none"}`,
-	);
+	console.log(`  Hook types: ${sortedTypes.join(", ") || "none"}`);
 
 	// Note about dispatch
 	console.log("\nNOTE:");
