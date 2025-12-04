@@ -260,11 +260,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 						const isAlreadyAdded = selectedPlugins.has(plugin.name);
 
 						return (
-							<Box
-								key={plugin.name}
-								marginLeft={1}
-								flexDirection="column"
-							>
+							<Box key={plugin.name} marginLeft={1} flexDirection="column">
 								<Text
 									color={isSelected ? "cyan" : undefined}
 									bold={isSelected}
