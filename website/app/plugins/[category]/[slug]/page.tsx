@@ -580,27 +580,33 @@ export default async function PluginPage({
 								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
 									Hooks
 								</h2>
-								{/* Token Usage Disclaimer */}
-								<div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-									<div className="flex items-start gap-3">
-										<span className="text-amber-600 dark:text-amber-400 text-xl">
-											⚠️
-										</span>
-										<div className="text-sm text-amber-800 dark:text-amber-200">
-											<p className="font-semibold mb-1">Token Usage Notice</p>
-											<p>
-												Hooks run automatically during Claude Code sessions and
-												their output is sent to the model for processing. This
-												may increase token usage and associated costs. Consider
-												disabling hooks you don&apos;t need via{" "}
-												<code className="px-1 py-0.5 bg-amber-100 dark:bg-amber-900/50 rounded text-xs">
-													han-config.yml
-												</code>
-												.
-											</p>
+								{/* Token Usage Disclaimer - only show if plugin has configurable hooks */}
+								{hanConfig?.hooks &&
+									Object.keys(hanConfig.hooks).length > 0 && (
+										<div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+											<div className="flex items-start gap-3">
+												<span className="text-amber-600 dark:text-amber-400 text-xl">
+													⚠️
+												</span>
+												<div className="text-sm text-amber-800 dark:text-amber-200">
+													<p className="font-semibold mb-1">
+														Token Usage Notice
+													</p>
+													<p>
+														Hooks run automatically during Claude Code sessions
+														and their output is sent to the model for
+														processing. This may increase token usage and
+														associated costs. Consider disabling hooks you
+														don&apos;t need via{" "}
+														<code className="px-1 py-0.5 bg-amber-100 dark:bg-amber-900/50 rounded text-xs">
+															han-config.yml
+														</code>
+														.
+													</p>
+												</div>
+											</div>
 										</div>
-									</div>
-								</div>
+									)}
 								<div className="space-y-4">
 									{plugin.hooks.map((hookSection) => (
 										<div
