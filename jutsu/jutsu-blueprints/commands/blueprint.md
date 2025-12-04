@@ -2,7 +2,21 @@
 description: Research a specific system and create or update its blueprints/ documentation
 ---
 
-# Blueprint Documentation Generator
+## Name
+
+jutsu-blueprints:blueprint - Generate or update blueprint documentation for a specific system
+
+## Synopsis
+
+```text
+/blueprint <system-name>
+```
+
+## Description
+
+Research a specific system in the codebase and create or update its technical blueprint documentation in the `blueprints/` directory.
+
+## Implementation
 
 You are tasked with creating or updating technical blueprint documentation for a specific system.
 
