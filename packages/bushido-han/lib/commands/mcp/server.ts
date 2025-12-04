@@ -23,9 +23,18 @@ interface JsonRpcResponse {
 	};
 }
 
+interface McpToolAnnotations {
+	title?: string;
+	readOnlyHint?: boolean;
+	destructiveHint?: boolean;
+	idempotentHint?: boolean;
+	openWorldHint?: boolean;
+}
+
 interface McpTool {
 	name: string;
 	description: string;
+	annotations?: McpToolAnnotations;
 	inputSchema: {
 		type: "object";
 		properties: Record<string, unknown>;
@@ -44,31 +53,47 @@ function discoverTools(): PluginTool[] {
 }
 
 function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
-	return tools.map((tool) => ({
-		name: tool.name,
-		description: tool.description,
-		inputSchema: {
-			type: "object" as const,
-			properties: {
-				verbose: {
-					type: "boolean",
-					description:
-						"Show full command output (default: false). When false, output is captured and returned on failure.",
-				},
-				failFast: {
-					type: "boolean",
-					description:
-						"Stop on first failure when running in multiple directories (default: true for MCP calls).",
-				},
-				directory: {
-					type: "string",
-					description:
-						"Run only in this specific directory (relative to project root). If not specified, runs in all applicable directories.",
-				},
+	return tools.map((tool) => {
+		// Generate a human-readable title from the tool name
+		const title =
+			tool.hookName.charAt(0).toUpperCase() + tool.hookName.slice(1);
+		const technology = tool.pluginName.replace(/^(jutsu|do|hashi)-/, "");
+		const techDisplay =
+			technology.charAt(0).toUpperCase() + technology.slice(1);
+
+		return {
+			name: tool.name,
+			description: tool.description,
+			annotations: {
+				title: `${title} ${techDisplay}`,
+				readOnlyHint: false, // These tools may modify files (e.g., formatters)
+				destructiveHint: false, // Not destructive - can be safely re-run
+				idempotentHint: true, // Safe to run multiple times with same result
+				openWorldHint: false, // Works with local files only
 			},
-			required: [],
-		},
-	}));
+			inputSchema: {
+				type: "object" as const,
+				properties: {
+					verbose: {
+						type: "boolean",
+						description:
+							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false (output captured and returned).",
+					},
+					failFast: {
+						type: "boolean",
+						description:
+							"Stop immediately on first failure. Set to false to see all errors across all directories. Default: true.",
+					},
+					directory: {
+						type: "string",
+						description:
+							"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
+					},
+				},
+				required: [],
+			},
+		};
+	});
 }
 
 function handleInitialize(): unknown {
@@ -108,7 +133,8 @@ async function handleToolsCall(params: {
 	const args = params.arguments || {};
 	const verbose = args.verbose === true;
 	const failFast = args.failFast !== false; // Default to true for MCP
-	const directory = typeof args.directory === "string" ? args.directory : undefined;
+	const directory =
+		typeof args.directory === "string" ? args.directory : undefined;
 
 	try {
 		const result = await executePluginTool(tool, {
@@ -140,7 +166,9 @@ async function handleToolsCall(params: {
 	}
 }
 
-async function handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
+async function handleRequest(
+	request: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
 	try {
 		let result: unknown;
 
@@ -151,12 +179,19 @@ async function handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> 
 			case "initialized":
 				// Notification, no response needed
 				return { jsonrpc: "2.0", id: request.id, result: {} };
+			case "ping":
+				// Simple ping/pong for health checks
+				result = {};
+				break;
 			case "tools/list":
 				result = handleToolsList();
 				break;
 			case "tools/call":
 				result = await handleToolsCall(
-					request.params as { name: string; arguments?: Record<string, unknown> },
+					request.params as {
+						name: string;
+						arguments?: Record<string, unknown>;
+					},
 				);
 				break;
 			default:

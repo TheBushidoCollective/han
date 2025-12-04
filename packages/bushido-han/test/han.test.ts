@@ -1476,17 +1476,32 @@ test("mcp command responds to initialize", () => {
 	strictEqual(parsed.result.capabilities.tools !== undefined, true);
 });
 
-test("mcp command responds to tools/list", () => {
+test("mcp command responds to ping", () => {
 	const response = sendMcpRequest({
 		jsonrpc: "2.0",
 		id: 2,
-		method: "tools/list",
+		method: "ping",
 		params: {},
 	});
 	const parsed = JSON.parse(response);
 
 	strictEqual(parsed.jsonrpc, "2.0");
 	strictEqual(parsed.id, 2);
+	strictEqual(parsed.error, undefined);
+	deepStrictEqual(parsed.result, {});
+});
+
+test("mcp command responds to tools/list", () => {
+	const response = sendMcpRequest({
+		jsonrpc: "2.0",
+		id: 3,
+		method: "tools/list",
+		params: {},
+	});
+	const parsed = JSON.parse(response);
+
+	strictEqual(parsed.jsonrpc, "2.0");
+	strictEqual(parsed.id, 3);
 	strictEqual(Array.isArray(parsed.result.tools), true);
 });
 
@@ -1582,7 +1597,11 @@ test("mcp returns error for unknown method", () => {
 	strictEqual(parsed.jsonrpc, "2.0");
 	strictEqual(parsed.id, 4);
 	strictEqual(parsed.error !== undefined, true, "Expected error response");
-	strictEqual(parsed.error.code, -32601, "Expected method not found error code");
+	strictEqual(
+		parsed.error.code,
+		-32601,
+		"Expected method not found error code",
+	);
 });
 
 test("mcp returns error for unknown tool", () => {
