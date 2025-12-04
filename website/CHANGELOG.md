@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.2] - 2025-12-04
+
+### Other
+
+- add CLI Reference documentation for han commands ([670e8fac](../../commit/670e8fac))
+- fix markdown linting issues in blueprints docs ([7b26ea3e](../../commit/7b26ea3e))
+- add MCP server documentation ([683e87b2](../../commit/683e87b2))
+
 ## [1.12.1] - 2025-12-04
 
 ### Added
