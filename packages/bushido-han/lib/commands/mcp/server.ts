@@ -74,20 +74,25 @@ function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 			inputSchema: {
 				type: "object" as const,
 				properties: {
-					verbose: {
+					cache: {
 						type: "boolean",
 						description:
-							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false (output captured and returned).",
+							"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true. Tip: If the result says 'no changes', you can retry with cache=false to run anyway.",
+					},
+					directory: {
+						type: "string",
+						description:
+							"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
 					},
 					failFast: {
 						type: "boolean",
 						description:
 							"Stop immediately on first failure. Set to false to see all errors across all directories. Default: true.",
 					},
-					directory: {
-						type: "string",
+					verbose: {
+						type: "boolean",
 						description:
-							"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
+							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false (output captured and returned).",
 					},
 				},
 				required: [],
@@ -131,6 +136,7 @@ async function handleToolsCall(params: {
 	}
 
 	const args = params.arguments || {};
+	const cache = args.cache !== false; // Default to true for MCP
 	const verbose = args.verbose === true;
 	const failFast = args.failFast !== false; // Default to true for MCP
 	const directory =
@@ -138,16 +144,35 @@ async function handleToolsCall(params: {
 
 	try {
 		const result = await executePluginTool(tool, {
+			cache,
 			verbose,
 			failFast,
 			directory,
 		});
 
+		let outputText = result.output;
+
+		// If caching is enabled and output suggests no changes/skipped,
+		// add a helpful suggestion to retry without cache
+		if (cache && result.success) {
+			const lowerOutput = outputText.toLowerCase();
+			const hasNoChanges =
+				lowerOutput.includes("skipped") ||
+				lowerOutput.includes("no changes") ||
+				lowerOutput.includes("unchanged") ||
+				lowerOutput.includes("up to date");
+
+			if (hasNoChanges) {
+				outputText +=
+					"\n\n💡 Tip: Files appear unchanged. To force re-run, use cache=false.";
+			}
+		}
+
 		return {
 			content: [
 				{
 					type: "text",
-					text: result.output,
+					text: outputText,
 				},
 			],
 			isError: !result.success,
