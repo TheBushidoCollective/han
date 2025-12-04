@@ -1,6 +1,6 @@
 {
   "name": "jutsu-specs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Technical specification documentation skills and enforcement. Keeps specs/ directory in sync with implementation through hooks and commands.",
   "author": {
     "name": "The Bushido Collective",
