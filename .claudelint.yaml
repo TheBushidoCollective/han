@@ -1,0 +1,114 @@
+# Claudelint Configuration for Han Marketplace
+# Enforces quality standards for all plugins in the marketplace
+
+# Treat warnings as errors for strict quality enforcement
+strict: false  # Disable strict mode to allow warnings
+
+rules:
+  # Marketplace Registration
+  marketplace-registration:
+    enabled: true
+    severity: error
+    description: All plugins must be registered in marketplace.json
+
+  # Plugin Structure
+  plugin-json-required:
+    enabled: true
+    severity: error
+    description: All plugins must have .claude-plugin/plugin.json
+
+  plugin-json-valid:
+    enabled: true
+    severity: error
+    description: plugin.json must contain all required fields (name, version, description, author, license)
+
+  plugin-naming:
+    enabled: true
+    severity: warning
+    description: Plugin names should use kebab-case
+
+  plugin-readme:
+    enabled: true
+    severity: error
+    description: All plugins must have a README.md file
+
+  # Command Files (Optional - not all plugins need commands)
+  commands-directory-required:
+    enabled: false
+    description: Commands directory is optional for jutsu plugins
+
+  command-frontmatter:
+    enabled: true
+    severity: error
+    description: Command files must have valid YAML frontmatter with description
+
+  # Skills
+  skill-frontmatter:
+    enabled: true
+    severity: error
+    description: Skill files must have valid frontmatter with name, description, and allowed-tools
+
+  # Agents
+  agent-frontmatter:
+    enabled: true
+    severity: error
+    description: Agent files must have valid frontmatter with description and capabilities
+
+  # Hooks
+  hooks-json-valid:
+    enabled: true
+    severity: error
+    description: hooks.json files must be valid JSON with proper structure
+
+  # MCP Configuration
+  mcp-config-valid:
+    enabled: true
+    severity: error
+    description: MCP configuration files must be valid JSON
+
+# Exclude patterns
+exclude:
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+  - ".git/**"
+  - "**/*.test.*"
+  - "**/__tests__/**"
+
+# Custom error messages
+messages:
+  marketplace-registration: |
+    Plugin not found in marketplace.json.
+
+    Add your plugin to .claude-plugin/marketplace.json:
+    {
+      "name": "your-plugin-name",
+      "description": "Brief description",
+      "source": "./category/your-plugin-name",
+      "category": "Technique|Discipline|Bridge|Core",
+      "keywords": ["keyword1", "keyword2"]
+    }
+
+  plugin-json-required: |
+    Missing .claude-plugin/plugin.json file.
+
+    Create .claude-plugin/plugin.json with:
+    {
+      "name": "plugin-name",
+      "version": "1.0.0",
+      "description": "Plugin description",
+      "author": {
+        "name": "The Bushido Collective",
+        "url": "https://thebushido.co"
+      },
+      "license": "MIT"
+    }
+
+  plugin-readme: |
+    Missing README.md file.
+
+    All plugins must include comprehensive documentation explaining:
+    - What the plugin provides (skills/commands/agents/hooks)
+    - Installation instructions
+    - Usage examples
+    - Requirements and dependencies
