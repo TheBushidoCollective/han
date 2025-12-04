@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
+import { render } from "ink";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
@@ -9,6 +10,7 @@ import {
 	readSettingsFile,
 	type SettingsScope,
 } from "../../claude-settings.js";
+import { HookExplainUI, type HookSource } from "../../hook-explain-ui.js";
 
 /**
  * Hook entry from Claude Code settings or plugin hooks.json
@@ -26,15 +28,6 @@ interface HookGroup {
 
 interface PluginHooks {
 	hooks: Record<string, HookGroup[]>;
-}
-
-interface HookSource {
-	source: string;
-	scope?: SettingsScope;
-	pluginName?: string;
-	marketplace?: string;
-	hookType: string;
-	hooks: HookEntry[];
 }
 
 /**
@@ -264,39 +257,7 @@ function getPluginHooks(): HookSource[] {
 }
 
 /**
- * Format a hook entry for display
- */
-function formatHook(hook: HookEntry, indent: string): string {
-	const lines: string[] = [];
-
-	lines.push(`${indent}Type: ${hook.type}`);
-
-	if (hook.command) {
-		// Truncate long commands
-		const cmd =
-			hook.command.length > 80
-				? `${hook.command.substring(0, 77)}...`
-				: hook.command;
-		lines.push(`${indent}Command: ${cmd}`);
-	}
-
-	if (hook.prompt) {
-		// Show first line of prompt
-		const firstLine = hook.prompt.split("\n")[0];
-		const truncated =
-			firstLine.length > 60 ? `${firstLine.substring(0, 57)}...` : firstLine;
-		lines.push(`${indent}Prompt: ${truncated}`);
-	}
-
-	if (hook.timeout) {
-		lines.push(`${indent}Timeout: ${hook.timeout}ms`);
-	}
-
-	return lines.join("\n");
-}
-
-/**
- * Explain all configured hooks
+ * Explain all configured hooks using Ink UI
  */
 function explainHooks(hookType?: string, showAll = false): void {
 	const settingsHooks = getSettingsHooks();
@@ -306,86 +267,14 @@ function explainHooks(hookType?: string, showAll = false): void {
 	const allHooks = showAll ? [...settingsHooks, ...pluginHooks] : pluginHooks;
 
 	// Filter by hook type if specified
-	const filteredHooks = hookType
+	const filteredHooks: HookSource[] = hookType
 		? allHooks.filter(
 				(h) => h.hookType.toLowerCase() === hookType.toLowerCase(),
 			)
 		: allHooks;
 
-	if (filteredHooks.length === 0) {
-		if (hookType) {
-			console.log(`No hooks found for type: ${hookType}`);
-		} else {
-			console.log("No hooks configured.");
-		}
-		return;
-	}
-
-	// Group by hook type
-	const byType = new Map<string, HookSource[]>();
-	for (const hook of filteredHooks) {
-		const existing = byType.get(hook.hookType) || [];
-		existing.push(hook);
-		byType.set(hook.hookType, existing);
-	}
-
-	// Sort hook types
-	const sortedTypes = Array.from(byType.keys()).sort();
-
-	console.log("=".repeat(60));
-	console.log("CONFIGURED HOOKS");
-	console.log("=".repeat(60));
-
-	for (const type of sortedTypes) {
-		const hooks = byType.get(type);
-		if (!hooks) continue;
-
-		console.log(`\n## ${type}`);
-		console.log("-".repeat(40));
-
-		for (const source of hooks) {
-			if (source.pluginName) {
-				console.log(`\n  Plugin: ${source.pluginName}@${source.marketplace}`);
-				console.log(`  Path: ${source.source}`);
-			} else {
-				console.log(`\n  Settings: ${source.scope}`);
-				console.log(`  Path: ${source.source}`);
-			}
-
-			for (let i = 0; i < source.hooks.length; i++) {
-				console.log(`\n    Hook ${i + 1}:`);
-				console.log(formatHook(source.hooks[i], "      "));
-			}
-		}
-	}
-
-	console.log(`\n${"=".repeat(60)}`);
-
-	// Summary
-	const commandHooks = filteredHooks.flatMap((h) =>
-		h.hooks.filter((e) => e.type === "command"),
-	);
-	const promptHooks = filteredHooks.flatMap((h) =>
-		h.hooks.filter((e) => e.type === "prompt"),
-	);
-
-	console.log("\nSUMMARY:");
-	console.log(`  Total hook sources: ${filteredHooks.length}`);
-	console.log(`  Command hooks: ${commandHooks.length}`);
-	console.log(`  Prompt hooks: ${promptHooks.length}`);
-	console.log(`  Hook types: ${sortedTypes.join(", ") || "none"}`);
-
-	// Note about dispatch
-	console.log("\nNOTE:");
-	console.log(
-		"  - Command hooks execute shell commands and can block (return non-zero exit)",
-	);
-	console.log(
-		"  - Prompt hooks inject text into context (cannot block, handled by Claude Code)",
-	);
-	console.log(
-		"  - The 'han hook dispatch' command only runs command hooks, not prompt hooks",
-	);
+	// Render the Ink UI component
+	render(<HookExplainUI hooks={filteredHooks} showAll={showAll} />);
 }
 
 export function registerHookExplain(hookCommand: Command): void {
