@@ -186,6 +186,64 @@ export default function Home() {
 				</div>
 			</section>
 
+			{/* MCP Server - Natural Language Hook Commands */}
+			<section id="mcp-server" className="py-24">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
+						Natural Language Hook Commands
+					</h2>
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
+						Install hashi-han to run hook commands via natural language.
+						&quot;Run the elixir tests&quot; instead of remembering exact
+						commands.
+					</p>
+
+					<div className="max-w-2xl mx-auto">
+						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+								Install the MCP Server
+							</h3>
+							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+								<code>npx @thebushidocollective/han plugin install hashi-han</code>
+							</pre>
+						</div>
+
+						<div className="grid md:grid-cols-2 gap-4 mb-6">
+							<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+								<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+									Dynamic Discovery
+								</h4>
+								<p className="text-sm text-gray-600 dark:text-gray-300">
+									Tools are generated from installed plugins. Install
+									jutsu-typescript, get{" "}
+									<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+										jutsu_typescript_typecheck
+									</code>
+								</p>
+							</div>
+							<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+								<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+									Smart Caching
+								</h4>
+								<p className="text-sm text-gray-600 dark:text-gray-300">
+									All hook caching applies. Only runs when files have changed.
+									Fast feedback always.
+								</p>
+							</div>
+						</div>
+
+						<div className="text-center">
+							<Link
+								href="/docs#mcp-server"
+								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+							>
+								Learn more about the MCP Server
+							</Link>
+						</div>
+					</div>
+				</div>
+			</section>
+
 			{/* Phases of Trust */}
 			<section className="py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

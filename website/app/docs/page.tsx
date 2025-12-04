@@ -56,6 +56,12 @@ export default function DocsPage() {
 							>
 								Configuration
 							</a>
+							<a
+								href="#mcp-server"
+								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+							>
+								MCP Server
+							</a>
 						</nav>
 					</aside>
 
@@ -560,6 +566,136 @@ jutsu-eslint:
 										<span>
 											Additional glob patterns for change detection (merged with
 											plugin defaults)
+										</span>
+									</li>
+								</ul>
+							</div>
+						</section>
+
+						{/* MCP Server */}
+						<section id="mcp-server" className="scroll-mt-8 mb-16">
+							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+								MCP Server
+							</h2>
+							<p className="text-gray-600 dark:text-gray-300 mb-8">
+								Run hook commands via natural language. The Han MCP server
+								dynamically exposes tools based on your installed plugins,
+								letting you say &quot;run the elixir tests&quot; instead of
+								remembering exact commands.
+							</p>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Quick Start
+								</h3>
+								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+									<code>npx @thebushidocollective/han plugin install hashi-han</code>
+								</pre>
+								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
+									Once installed, the MCP server automatically discovers your
+									installed plugins and exposes their hooks as tools.
+								</p>
+							</div>
+
+							<div className="grid md:grid-cols-2 gap-6 mb-8">
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Dynamic Tool Discovery
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Tools are generated based on what plugins you have installed.
+										Install jutsu-elixir and get{" "}
+										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+											jutsu_elixir_test
+										</code>
+										,{" "}
+										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+											jutsu_elixir_lint
+										</code>
+										, etc.
+									</p>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Smart Caching Built-in
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										All the benefits of hook caching apply to MCP tool calls.
+										Only runs when files have changed. Fast feedback without
+										redundant validation.
+									</p>
+								</div>
+							</div>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Example Tools Generated
+								</h3>
+								<div className="space-y-3">
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											jutsu_elixir_test
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Run tests for elixir (in directories with mix.exs) - runs:{" "}
+											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+												mix test --stale
+											</code>
+										</span>
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											jutsu_typescript_typecheck
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Run type checking for typescript (in directories with
+											tsconfig.json) - runs:{" "}
+											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+												npx tsc --noEmit
+											</code>
+										</span>
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											jutsu_biome_lint
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Run linter for biome projects - runs:{" "}
+											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+												npx biome check
+											</code>
+										</span>
+									</div>
+								</div>
+							</div>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Tool Parameters
+								</h3>
+								<ul className="space-y-3 text-gray-600 dark:text-gray-300">
+									<li className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											verbose
+										</code>
+										<span>Show full command output (default: false)</span>
+									</li>
+									<li className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											failFast
+										</code>
+										<span>
+											Stop on first failure when running in multiple directories
+											(default: true)
+										</span>
+									</li>
+									<li className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											directory
+										</code>
+										<span>
+											Run only in this specific directory (relative to project
+											root)
 										</span>
 									</li>
 								</ul>
