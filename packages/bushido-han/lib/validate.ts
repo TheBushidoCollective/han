@@ -14,6 +14,7 @@ import {
 } from "./hook-config.js";
 import {
 	checkFailureSignal,
+	clearFailureSignal,
 	createLockManager,
 	signalFailure,
 	withSlot,
@@ -834,6 +835,8 @@ export async function runConfiguredHook(
 
 	// Create lock manager for failure signal checking
 	const lockManager = createLockManager();
+	// Clear any stale failure signals from previous runs
+	clearFailureSignal(lockManager);
 
 	for (const config of configsToRun) {
 		const relativePath =
