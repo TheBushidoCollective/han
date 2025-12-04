@@ -185,6 +185,57 @@ export default function Home() {
 					</div>
 				</div>
 			</section>
+
+			{/* Phases of Trust */}
+			<section className="py-24">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
+						Phases of Trust
+					</h2>
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
+						Start personal, grow to team alignment
+					</p>
+
+					<div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+						<TrustPhaseCard
+							phase={1}
+							color="blue"
+							title="User"
+							flag="--scope user"
+							isDefault
+							description="Install for yourself only. Perfect for trying out plugins across all your projects."
+							path="~/.claude/settings.json"
+						/>
+						<TrustPhaseCard
+							phase={2}
+							color="amber"
+							title="Local"
+							flag="--scope local"
+							description="Project-specific but personal. More control without affecting your team."
+							path=".claude/settings.local.json"
+							note="gitignored"
+						/>
+						<TrustPhaseCard
+							phase={3}
+							color="green"
+							title="Project"
+							flag="--scope project"
+							description="Align your team. Everyone uses the same plugins and validation hooks."
+							path=".claude/settings.json"
+							note="committed to git"
+						/>
+					</div>
+
+					<div className="mt-8 text-center">
+						<Link
+							href="/docs#installation-scopes"
+							className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+						>
+							Learn more about installation scopes →
+						</Link>
+					</div>
+				</div>
+			</section>
 		</div>
 	);
 }
@@ -257,6 +308,68 @@ function PillarCard({
 					</li>
 				))}
 			</ul>
+		</div>
+	);
+}
+
+function TrustPhaseCard({
+	phase,
+	color,
+	title,
+	flag,
+	isDefault,
+	description,
+	path,
+	note,
+}: {
+	phase: number;
+	color: "blue" | "amber" | "green";
+	title: string;
+	flag: string;
+	isDefault?: boolean;
+	description: string;
+	path: string;
+	note?: string;
+}) {
+	const colorClasses = {
+		blue: "border-blue-500 text-blue-500",
+		amber: "border-amber-500 text-amber-500",
+		green: "border-green-500 text-green-500",
+	};
+
+	return (
+		<div
+			className={`bg-white dark:bg-gray-700 p-6 rounded-lg border-l-4 ${colorClasses[color].split(" ")[0]}`}
+		>
+			<div className="flex items-center gap-3 mb-3">
+				<span
+					className={`text-2xl font-bold ${colorClasses[color].split(" ")[1]}`}
+				>
+					{phase}
+				</span>
+				<div>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+						{title}
+						{isDefault && (
+							<span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+								(default)
+							</span>
+						)}
+					</h3>
+					<code className="text-xs text-gray-500 dark:text-gray-400">
+						{flag}
+					</code>
+				</div>
+			</div>
+			<p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
+				{description}
+			</p>
+			<p className="text-xs text-gray-500 dark:text-gray-400">
+				<code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">
+					{path}
+				</code>
+				{note && <span className="ml-1">({note})</span>}
+			</p>
 		</div>
 	);
 }
