@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.3] - 2025-12-04
+
+### Added
+
+- add Cloudflare Web Analytics integration ([8db7e49b](../../commit/8db7e49b))
+
+### Changed
+
+- switch to counter.dev analytics ([e1f32cc3](../../commit/e1f32cc3))
+- switch from Cloudflare to GoatCounter analytics ([c8ba9888](../../commit/c8ba9888))
+
+### Other
+
+- add CLI Reference documentation for han commands ([670e8fac](../../commit/670e8fac))
+
 ## [1.12.2] - 2025-12-04
 
 ### Other
