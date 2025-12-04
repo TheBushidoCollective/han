@@ -536,20 +536,24 @@ export interface MarketplacePlugin {
 
 /**
  * Fetch the marketplace to get list of available plugins
+ * Uses cached data if available and fresh (< 24 hours old)
+ * @param forceRefresh - If true, bypass cache and fetch from GitHub
  */
-export async function fetchMarketplace(): Promise<MarketplacePlugin[]> {
+export async function fetchMarketplace(
+	forceRefresh = false,
+): Promise<MarketplacePlugin[]> {
+	// Import dynamically to avoid circular dependency
+	const { getMarketplacePlugins } = await import("./marketplace-cache.js");
+
 	try {
-		const response = await fetch(
-			"https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json",
-		);
-		if (!response.ok) {
-			console.warn("Warning: Could not fetch marketplace.json");
-			return [];
+		const { plugins, fromCache } = await getMarketplacePlugins(forceRefresh);
+
+		// Show cache status in verbose mode
+		if (process.env.HAN_VERBOSE && fromCache) {
+			console.log("Using cached marketplace data");
 		}
-		const marketplace = (await response.json()) as {
-			plugins: MarketplacePlugin[];
-		};
-		return marketplace.plugins;
+
+		return plugins;
 	} catch (_error) {
 		console.warn("Warning: Could not fetch marketplace.json");
 		return [];
