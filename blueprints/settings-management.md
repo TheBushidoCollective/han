@@ -74,11 +74,13 @@ function getMergedPluginsAndMarketplaces(): {
 ### Merge Strategy
 
 **Plugin Enablement:**
+
 - `"plugin@han": true` enables the plugin
 - `"plugin@han": false` explicitly disables (removes from result)
 - Later scopes override earlier ones
 
 **Marketplace Configuration:**
+
 - Configurations accumulate across scopes
 - Later scopes override same-named marketplaces
 

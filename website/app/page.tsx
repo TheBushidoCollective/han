@@ -204,7 +204,9 @@ export default function Home() {
 								Install the MCP Server
 							</h3>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>npx @thebushidocollective/han plugin install hashi-han</code>
+								<code>
+									npx @thebushidocollective/han plugin install hashi-han
+								</code>
 							</pre>
 						</div>
 

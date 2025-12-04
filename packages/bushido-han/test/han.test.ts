@@ -1714,9 +1714,7 @@ test("settings merge includes user, project, and local settings", () => {
 		strictEqual(parsed.error, undefined, "Should not have error");
 		strictEqual(Array.isArray(parsed.result.tools), true);
 
-		const toolNames = parsed.result.tools.map(
-			(t: { name: string }) => t.name,
-		);
+		const toolNames = parsed.result.tools.map((t: { name: string }) => t.name);
 
 		// Plugin A should be enabled (from project settings)
 		strictEqual(

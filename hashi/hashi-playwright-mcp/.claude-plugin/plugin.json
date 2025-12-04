@@ -9,20 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "mcp",
-    "playwright",
-    "testing",
-    "automation",
-    "server"
-  ],
+  "keywords": ["mcp", "playwright", "testing", "automation", "server"],
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ]
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }

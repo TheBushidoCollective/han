@@ -55,6 +55,7 @@ Deeply research all systems and create comprehensive documentation:
 ```
 
 This command:
+
 1. Discovers all systems in the codebase
 2. Audits existing blueprints for accuracy
 3. Creates missing documentation

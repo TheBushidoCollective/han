@@ -14,6 +14,7 @@ The Han hook system integrates with Claude Code to execute hooks at specific lif
 ### Hook Types
 
 **Claude Code Event Hooks:**
+
 - `SessionStart` - When Claude Code session begins
 - `SessionEnd` - When session ends
 - `UserPromptSubmit` - When user submits a prompt
@@ -24,6 +25,7 @@ The Han hook system integrates with Claude Code to execute hooks at specific lif
 - `PreCompact` - Before context compaction
 
 **Han Validation Hooks:**
+
 - Defined in `han-config.json`
 - Target specific directories based on marker files
 - Support caching for performance
@@ -75,6 +77,7 @@ validate.ts                Execution with caching
 ```
 
 **Hook Entry Properties:**
+
 - `type` - `"command"` (execute) or `"prompt"` (output text)
 - `command` - Shell command (supports `${CLAUDE_PLUGIN_ROOT}`)
 - `prompt` - Static text for prompt hooks
@@ -96,6 +99,7 @@ validate.ts                Execution with caching
 ```
 
 **Properties:**
+
 - `command` (required) - Shell command to execute
 - `dirsWith` (optional) - Marker files for target directories
 - `dirTest` (optional) - Command to filter directories (exit 0 = include)
@@ -121,6 +125,7 @@ plugin-name:
 Execute a plugin hook in matching directories.
 
 **Options:**
+
 - `--fail-fast` - Stop on first failure
 - `--cached` - Only run if files changed
 - `--only <dir>` - Limit to specific directory
@@ -165,12 +170,14 @@ Dispatch Claude Code hooks across all enabled plugins.
 Cache location: `~/.claude/projects/{project-slug}/han/`
 
 **Change Detection:**
+
 1. Expand glob patterns against directory
 2. Compute SHA256 hash for each file
 3. Compare against cached manifest
 4. Run hook only if changes detected
 
 **Automatic Patterns:**
+
 - Always includes `han-config.yml` and `han-config.json`
 - Plugin files tracked separately
 
@@ -183,11 +190,13 @@ Cache location: `~/.claude/projects/{project-slug}/han/`
 ### Environment Variables
 
 **Provided to hooks:**
+
 - `CLAUDE_PLUGIN_ROOT` - Plugin directory path
 - `CLAUDE_PROJECT_DIR` - Current project root
 - `HAN_SESSION_ID` - Session identifier
 
 **Configuration:**
+
 - `HAN_HOOK_PARALLELISM` - Max concurrent hooks
 - `HAN_HOOK_LOCK_TIMEOUT` - Stale lock timeout
 - `HAN_DEBUG` - Enable debug output

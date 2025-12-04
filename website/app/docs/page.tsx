@@ -589,7 +589,9 @@ jutsu-eslint:
 									Quick Start
 								</h3>
 								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-									<code>npx @thebushidocollective/han plugin install hashi-han</code>
+									<code>
+										npx @thebushidocollective/han plugin install hashi-han
+									</code>
 								</pre>
 								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
 									Once installed, the MCP server automatically discovers your
@@ -603,8 +605,8 @@ jutsu-eslint:
 										Dynamic Tool Discovery
 									</h4>
 									<p className="text-gray-600 dark:text-gray-300 text-sm">
-										Tools are generated based on what plugins you have installed.
-										Install jutsu-elixir and get{" "}
+										Tools are generated based on what plugins you have
+										installed. Install jutsu-elixir and get{" "}
 										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
 											jutsu_elixir_test
 										</code>
