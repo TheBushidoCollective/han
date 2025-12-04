@@ -3,7 +3,9 @@ import {
 	ensureDispatchHooks,
 	fetchMarketplace,
 	getInstalledPlugins,
+	getSettingsFilename,
 	HAN_MARKETPLACE_REPO,
+	type InstallScope,
 	type MarketplacePlugin,
 	readOrCreateSettings,
 	removeInvalidPlugins,
@@ -55,14 +57,14 @@ function showAvailablePlugins(marketplacePlugins: MarketplacePlugin[]): void {
  */
 export async function installPlugins(
 	pluginNames: string[],
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): Promise<void> {
 	if (pluginNames.length === 0) {
 		console.error("Error: No plugin names provided.");
 		process.exit(1);
 	}
 
-	ensureClaudeDirectory();
+	ensureClaudeDirectory(scope);
 
 	// Validate plugins exist in marketplace
 	console.log("Validating plugins against marketplace...\n");
@@ -98,8 +100,8 @@ export async function installPlugins(
 	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
 
-	const filename = scope === "local" ? "settings.local.json" : "settings.json";
-	console.log(`Installing to ./.claude/${filename}...\n`);
+	const filename = getSettingsFilename(scope);
+	console.log(`Installing to ${filename}...\n`);
 
 	// Add Han marketplace if not already added
 	if (!settings?.extraKnownMarketplaces?.han) {
@@ -150,7 +152,7 @@ export async function installPlugins(
  */
 export async function installPlugin(
 	pluginName: string,
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): Promise<void> {
 	return installPlugins([pluginName], scope);
 }

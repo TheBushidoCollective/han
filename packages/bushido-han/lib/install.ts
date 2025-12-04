@@ -5,7 +5,9 @@ import {
 	ensureClaudeDirectory,
 	fetchMarketplace,
 	getInstalledPlugins,
+	getSettingsFilename,
 	HAN_MARKETPLACE_REPO,
+	type InstallScope,
 	type MarketplacePlugin,
 	readOrCreateSettings,
 	writeSettings,
@@ -20,13 +22,15 @@ interface PluginChanges {
 /**
  * Sync plugins to Claude settings - adds selected, removes deselected, and cleans invalid
  * Note: "bushido" is always installed and cannot be removed
+ * Note: For user scope, we only add plugins and clean invalid ones (no removal of deselected)
+ *       because user settings are shared across all projects
  */
 function syncPluginsToSettings(
 	selectedPlugins: string[],
 	validPluginNames: Set<string>,
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): PluginChanges {
-	ensureClaudeDirectory();
+	ensureClaudeDirectory(scope);
 
 	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
@@ -58,16 +62,21 @@ function syncPluginsToSettings(
 		}
 	}
 
-	// Remove deselected plugins (but never bushido) and invalid plugins
+	// For user scope: only clean invalid plugins (plugins might be needed for other projects)
+	// For project/local scope: also remove deselected plugins
 	for (const plugin of currentPlugins) {
 		if (!validPluginNames.has(plugin)) {
-			// Plugin is not in marketplace - remove it
+			// Plugin is not in marketplace - remove it (invalid in any scope)
 			invalid.push(plugin);
 			if (settings.enabledPlugins) {
 				delete settings.enabledPlugins[`${plugin}@han`];
 			}
-		} else if (plugin !== "bushido" && !selectedPlugins.includes(plugin)) {
-			// Plugin was deselected
+		} else if (
+			scope !== "user" &&
+			plugin !== "bushido" &&
+			!selectedPlugins.includes(plugin)
+		) {
+			// Plugin was deselected (only for project/local scope)
 			removed.push(plugin);
 			if (settings.enabledPlugins) {
 				delete settings.enabledPlugins[`${plugin}@han`];
@@ -90,9 +99,7 @@ interface InstallResult {
 /**
  * SDK-based auto-detect install command with Ink UI
  */
-export async function install(
-	scope: "project" | "local" = "project",
-): Promise<void> {
+export async function install(scope: InstallScope = "user"): Promise<void> {
 	// Import Ink UI component dynamically to avoid issues with React
 	const { InstallInteractive } = await import("./install-interactive.js");
 
@@ -102,8 +109,8 @@ export async function install(
 		resolveCompletion = resolve;
 	});
 
-	const filename = scope === "local" ? "settings.local.json" : "settings.json";
-	console.log(`Installing to ./.claude/${filename}...\n`);
+	const filename = getSettingsFilename(scope);
+	console.log(`Installing to ${filename}...\n`);
 
 	// Show existing plugins
 	const existingPlugins = getInstalledPlugins(scope);
@@ -183,7 +190,7 @@ export async function install(
  * Interactive plugin selector (no auto-detect)
  */
 export async function installInteractive(
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): Promise<void> {
 	const { PluginSelector } = await import("./plugin-selector.js");
 
@@ -198,8 +205,8 @@ export async function installInteractive(
 		resolveCompletion = resolve;
 	});
 
-	const filename = scope === "local" ? "settings.local.json" : "settings.json";
-	console.log(`Installing to ./.claude/${filename}...\n`);
+	const filename = getSettingsFilename(scope);
+	console.log(`Installing to ${filename}...\n`);
 
 	// Fetch marketplace plugins
 	const allPlugins = await fetchMarketplace();

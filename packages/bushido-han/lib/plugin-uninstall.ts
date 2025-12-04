@@ -1,5 +1,7 @@
 import {
 	getInstalledPlugins,
+	getSettingsFilename,
+	type InstallScope,
 	readOrCreateSettings,
 	writeSettings,
 } from "./shared.js";
@@ -9,7 +11,7 @@ import {
  */
 export async function uninstallPlugins(
 	pluginNames: string[],
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): Promise<void> {
 	if (pluginNames.length === 0) {
 		console.error("Error: No plugin names provided.");
@@ -19,8 +21,8 @@ export async function uninstallPlugins(
 	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
 
-	const filename = scope === "local" ? "settings.local.json" : "settings.json";
-	console.log(`Uninstalling from ./.claude/${filename}...\n`);
+	const filename = getSettingsFilename(scope);
+	console.log(`Uninstalling from ${filename}...\n`);
 
 	const uninstalled: string[] = [];
 	const notInstalled: string[] = [];
@@ -63,7 +65,7 @@ export async function uninstallPlugins(
  */
 export async function uninstallPlugin(
 	pluginName: string,
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): Promise<void> {
 	return uninstallPlugins([pluginName], scope);
 }

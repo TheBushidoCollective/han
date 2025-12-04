@@ -42,9 +42,12 @@ export interface DetectPluginsCallbacks {
 	onError: (error: Error) => void;
 }
 
-export function getClaudeSettingsPath(
-	scope: "project" | "local" = "project",
-): string {
+export type InstallScope = "user" | "project" | "local";
+
+export function getClaudeSettingsPath(scope: InstallScope = "user"): string {
+	if (scope === "user") {
+		return getGlobalClaudeSettingsPath();
+	}
 	const filename = scope === "local" ? "settings.local.json" : "settings.json";
 	return join(process.cwd(), ".claude", filename);
 }
@@ -167,8 +170,8 @@ export function ensureDispatchHooks(): void {
 	}
 }
 
-export function ensureClaudeDirectory(): void {
-	const settingsPath = getClaudeSettingsPath();
+export function ensureClaudeDirectory(scope: InstallScope = "user"): void {
+	const settingsPath = getClaudeSettingsPath(scope);
 	const claudeDir = join(settingsPath, "..");
 	if (!existsSync(claudeDir)) {
 		mkdirSync(claudeDir, { recursive: true });
@@ -176,7 +179,7 @@ export function ensureClaudeDirectory(): void {
 }
 
 export function readOrCreateSettings(
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): ClaudeSettings {
 	const settingsPath = getClaudeSettingsPath(scope);
 
@@ -184,9 +187,8 @@ export function readOrCreateSettings(
 		try {
 			return JSON.parse(readFileSync(settingsPath, "utf8")) as ClaudeSettings;
 		} catch (_error) {
-			console.error(
-				`Error reading ${scope === "local" ? "settings.local.json" : "settings.json"}, creating new one`,
-			);
+			const filename = getSettingsFilename(scope);
+			console.error(`Error reading ${filename}, creating new one`);
 			return {};
 		}
 	}
@@ -196,18 +198,38 @@ export function readOrCreateSettings(
 
 export function writeSettings(
 	settings: ClaudeSettings,
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): void {
 	const settingsPath = getClaudeSettingsPath(scope);
 	writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
 /**
+ * Get human-readable filename for a scope
+ */
+export function getSettingsFilename(scope: InstallScope): string {
+	switch (scope) {
+		case "user":
+			return "~/.claude/settings.json";
+		case "local":
+			return ".claude/settings.local.json";
+		case "project":
+			return ".claude/settings.json";
+	}
+}
+
+/**
  * Detect which scope(s) have Han marketplace configured
  * Returns array of scopes where Han is installed
  */
-export function detectHanScopes(): Array<"project" | "local"> {
-	const scopes: Array<"project" | "local"> = [];
+export function detectHanScopes(): InstallScope[] {
+	const scopes: InstallScope[] = [];
+
+	// Check user scope
+	const userSettings = readOrCreateSettings("user");
+	if (userSettings.extraKnownMarketplaces?.han) {
+		scopes.push("user");
+	}
 
 	// Check project scope
 	const projectSettings = readOrCreateSettings("project");
@@ -227,9 +249,7 @@ export function detectHanScopes(): Array<"project" | "local"> {
 /**
  * Get currently installed Han plugins
  */
-export function getInstalledPlugins(
-	scope: "project" | "local" = "project",
-): string[] {
+export function getInstalledPlugins(scope: InstallScope = "user"): string[] {
 	const settings = readOrCreateSettings(scope);
 	const enabledPlugins = settings.enabledPlugins || {};
 
@@ -244,7 +264,7 @@ export function getInstalledPlugins(
  */
 export function removeInvalidPlugins(
 	validPluginNames: Set<string>,
-	scope: "project" | "local" = "project",
+	scope: InstallScope = "user",
 ): string[] {
 	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
