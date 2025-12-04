@@ -104,6 +104,21 @@ Version bumps happen automatically via GitHub Actions:
 - Always include `bushido` as a dependency in recommendations
 - MCP servers in hashi plugins should use HTTP transport with OAuth when available
 
+## Technical Specifications (specs/)
+
+This project uses `specs/` directories for implementation documentation. When adding or modifying features:
+
+1. **Check existing specs** - Read `specs/README.md` for documented systems
+2. **Update alongside code** - Keep specs in sync with implementation changes
+3. **Use `/specs` command** - Generate documentation for a specific system
+4. **Use `/specs-all` command** - Audit and update all documentation
+
+The `jutsu-specs` plugin enforces documentation through hooks:
+- **UserPromptSubmit**: Reminds when to document
+- **Stop**: Verifies documentation matches changes
+
+See `jutsu/jutsu-specs/` for documentation guidelines and skills.
+
 ## Plugin Installation
 
 Plugins can be installed directly through Claude Code - no global han installation required. Hooks use npx automatically.
