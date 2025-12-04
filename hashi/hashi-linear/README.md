@@ -1,8 +1,8 @@
-# Sensei: Linear
+# Hashi: Linear
 
 MCP server for Linear integration with automatic acceptance criteria validation. Connects Claude Code directly to your Linear workspace for seamless issue management and quality enforcement.
 
-## What This Sensei Provides
+## What This Hashi Provides
 
 ### MCP Server: Linear
 

@@ -2,7 +2,7 @@
 
 Absinthe GraphQL skills for Elixir projects with Claude Code.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Skills
 

@@ -1,8 +1,8 @@
-# Buki: React Native
+# Jutsu: React Native
 
 Validation and quality enforcement for React Native mobile applications.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Skills
 

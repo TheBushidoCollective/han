@@ -784,7 +784,7 @@ When evaluating or recommending API technologies, consider:
 **Note**: For implementation-specific guidance:
 
 - GraphQL with Elixir/Absinthe: See jutsu-elixir plugin
-- REST with specific frameworks: See relevant Buki plugin
+- REST with specific frameworks: See relevant Jutsu plugin
 - API gateway configuration: See infrastructure plugins
 
 Remember: Great API design is about creating a contract that is intuitive,

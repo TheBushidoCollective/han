@@ -1,8 +1,8 @@
-# Sensei: ClickUp
+# Hashi: ClickUp
 
 MCP server for ClickUp integration with automatic acceptance criteria validation. Connects Claude Code directly to your ClickUp workspace for seamless task management and quality enforcement.
 
-## What This Sensei Provides
+## What This Hashi Provides
 
 ### MCP Server: ClickUp
 

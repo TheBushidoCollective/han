@@ -27,7 +27,7 @@ Add new quality principles and practices to the core bushido plugin.
 - Provide practical examples
 - Add to `/bushido/skills/` directory
 
-### ⚔️ New Buki Plugins (Weapons)
+### ⚔️ New Jutsu Plugins (Techniques)
 
 Create validation hooks for languages, frameworks, or tools.
 
@@ -102,7 +102,7 @@ do-{discipline}/
 └── README.md
 ```
 
-### 👴 New Sensei Plugins (Teachers)
+### 🌉 New Hashi Plugins (Bridges)
 
 Add MCP servers that provide external knowledge and integrations.
 
@@ -166,7 +166,7 @@ Then follow the comprehensive instructions provided by the command.
 
 You can also use natural language prompts to create plugins. Here are example prompts for each type of contribution:
 
-### Creating a Buki Plugin
+### Creating a Jutsu Plugin
 
 **Example Prompt:**
 
@@ -356,7 +356,7 @@ npm test
 
 ## Plugin Naming Conventions
 
-### Buki (Weapons)
+### Jutsu (Techniques)
 
 - `jutsu-{tool-name}` - e.g., `jutsu-jest`, `jutsu-typescript`
 - Use lowercase, hyphenated names
@@ -368,7 +368,7 @@ npm test
 - Focus on the practice, not the tools
 - Use general terms that transcend specific technologies
 
-### Sensei (Teachers)
+### Hashi (Bridges)
 
 - `hashi-{service}` - e.g., `hashi-context7`, `hashi-github`
 - Name after the knowledge source or service

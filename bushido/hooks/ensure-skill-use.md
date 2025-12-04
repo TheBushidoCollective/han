@@ -30,7 +30,7 @@ Mental checklist for skill selection:
 - **Testing & Quality** - TDD, code review, verification?
 - **Process & Recovery** - Debugging strategies, baseline restoration?
 - **Code Improvement** - Refactoring, incremental improvements?
-- **Technology-Specific** - Framework/language patterns (Buki skills)?
+- **Technology-Specific** - Framework/language patterns (Jutsu skills)?
 
 ## Communication
 

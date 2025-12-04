@@ -1,4 +1,4 @@
-# SIP Buki
+# SIP Jutsu
 
 Session Initiation Protocol (SIP) skills for VoIP and real-time communications.
 

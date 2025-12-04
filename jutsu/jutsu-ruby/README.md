@@ -1,8 +1,8 @@
-# Buki: Ruby
+# Jutsu: Ruby
 
 Advanced Ruby programming skills covering object-oriented programming, metaprogramming, blocks, closures, gems, and the standard library.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Validation Hooks
 

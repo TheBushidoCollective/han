@@ -9,9 +9,9 @@ Han (藩 - domain/clan) is a marketplace of Claude Code plugins built on the fou
 The marketplace is organized around Japanese martial arts philosophy:
 
 - **Bushido** (武士道) - The core principles and quality standards
-- **Buki** (武器) - Weapons: Language and tool skills with validation hooks
+- **Jutsu** (術) - Techniques: Language and tool skills with validation hooks
 - **Dō** (道) - The Way: Specialized agents for development disciplines
-- **Sensei** (先生) - Teachers: MCP servers providing external knowledge
+- **Hashi** (橋) - Bridges: MCP servers providing external integrations
 
 ## The Seven Virtues
 
@@ -100,7 +100,7 @@ The foundational plugin containing the seven virtues, enforcement hooks, and cor
 
 **Always install this first** - it provides the philosophical foundation and universal quality principles (SOLID, TDD, Boy Scout Rule, etc.).
 
-### ⚔️ Buki (Weapons)
+### ⚔️ Jutsu (Techniques)
 
 Language and tool plugins that provide validation hooks for your development workflow.
 
@@ -127,7 +127,7 @@ Specialized agents focused on development disciplines and practices.
 
 **Browse all dō plugins:** Check the `/do` directory in this repository.
 
-### 👴 Sensei (Teachers)
+### 🌉 Hashi (Bridges)
 
 MCP servers that provide external knowledge and integrations.
 
@@ -186,18 +186,18 @@ Our **Dō** (disciplines) focus on the **art and practice** of development:
 - Backend is about data modeling, architecture, and robust services
 - Infrastructure is about reliability, automation, and operational excellence
 
-We **separate** tools (Buki) from disciplines (Dō). Your **weapon** (language/framework) is chosen based on needs, but your **way** (discipline) remains constant.
+We **separate** tools (Jutsu) from disciplines (Dō). Your **technique** (language/framework) is chosen based on needs, but your **way** (discipline) remains constant.
 
-### The Weapons Serve the Way
+### The Techniques Serve the Way
 
-- Languages are **tools** (Buki skills), not identities
+- Languages are **tools** (Jutsu skills), not identities
 - Frameworks are **means**, not ends
 - The **discipline** (Dō agents) defines who you are
-- The **weapon** (Buki skills) is what you wield
+- The **technique** (Jutsu skills) is what you wield
 
 ### Quality Through Validation
 
-Buki plugins include validation hooks that enforce quality standards:
+Jutsu plugins include validation hooks that enforce quality standards:
 
 - Run tests before stopping work
 - Ensure code passes linting
@@ -208,7 +208,7 @@ These hooks prevent you from continuing with broken code, embodying the Bushido 
 
 ### Smart Hook Caching
 
-Buki plugins use intelligent caching to avoid redundant validation runs:
+Jutsu plugins use intelligent caching to avoid redundant validation runs:
 
 - **Session Start**: Hooks prime their cache by hashing relevant files
 - **Stop/SubagentStop**: Hooks only run if files have changed since the last successful run
@@ -244,23 +244,23 @@ Follow the fundamentals:
 
 1. **bushido** - Learn the seven virtues
 2. **One Dō** - Choose your primary discipline
-3. **One Buki** - Master one weapon first
+3. **One Jutsu** - Master one technique first
 
 ### Intermediate Path (Ha - 破)
 
 Break from tradition and explore:
 
 1. **Multiple Dō** - Practice several disciplines
-2. **Multiple Buki** - Expand your arsenal
-3. **Sensei** - Seek wisdom from teachers
+2. **Multiple Jutsu** - Expand your arsenal
+3. **Hashi** - Connect with external knowledge
 
 ### Advanced Path (Ri - 離)
 
 Transcend and innovate:
 
 1. **All Dō** - Master multiple ways
-2. **Create New Buki** - Contribute new weapons
-3. **Become Sensei** - Share wisdom with others
+2. **Create New Jutsu** - Contribute new techniques
+3. **Build Hashi** - Create bridges to share knowledge
 
 ## Contributing
 

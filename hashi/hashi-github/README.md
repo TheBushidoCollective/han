@@ -1,10 +1,10 @@
-# Sensei: GitHub
+# Hashi: GitHub
 
 Connect Claude Code to the GitHub API for comprehensive repository management, issue tracking, pull request workflows, GitHub Actions, and code search.
 
 **Zero Configuration**: If you have GitHub CLI (`gh`) installed and authenticated, this plugin works instantly - no OAuth setup, no tokens to manage!
 
-## What This Sensei Provides
+## What This Hashi Provides
 
 ### MCP Server: github
 

@@ -1,4 +1,4 @@
-# BDD Buki
+# BDD Jutsu
 
 Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns.
 

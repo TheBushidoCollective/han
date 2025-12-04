@@ -1,8 +1,8 @@
-# Buki: Bun
+# Jutsu: Bun
 
 Validation and quality enforcement for Bun.js projects.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Validation Hooks
 

@@ -284,7 +284,7 @@ Structure project knowledge as:
 ### Technical Architecture
 
 - System boundaries
-- Technology stack (link to Buki plugins)
+- Technology stack (link to Jutsu plugins)
 - Patterns and conventions (link to Dō plugins)
 - Integration points
 

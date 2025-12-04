@@ -1,8 +1,8 @@
-# Sensei: GitLab
+# Hashi: GitLab
 
 Official GitLab MCP server integration for comprehensive project management, issue tracking, merge request operations, and code search capabilities.
 
-## What This Sensei Provides
+## What This Hashi Provides
 
 ### MCP Server: gitlab
 

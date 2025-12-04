@@ -1,8 +1,8 @@
-# Buki: Expo
+# Jutsu: Expo
 
 Validation and quality enforcement for Expo React Native projects.
 
-## What This Buki Provides
+## What This Jutsu Provides
 
 ### Skills
 

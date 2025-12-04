@@ -1,4 +1,4 @@
-# OOP Buki
+# OOP Jutsu
 
 Object-Oriented Programming principles, design patterns, and best practices.
 

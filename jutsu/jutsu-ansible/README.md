@@ -1,4 +1,4 @@
-# Ansible Buki
+# Ansible Jutsu
 
 Ansible playbook validation and configuration management best practices.
 
