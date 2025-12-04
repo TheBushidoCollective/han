@@ -14,7 +14,17 @@ jutsu-blueprints:blueprint - Generate or update blueprint documentation for a sp
 
 ## Description
 
-Research a specific system in the codebase and create or update its technical blueprint documentation in the `blueprints/` directory.
+Research a specific system in the codebase and create or update its technical blueprint documentation in the `blueprints/` directory at the **repository root**.
+
+## Important: Blueprint Location
+
+**CRITICAL:** Blueprints MUST be created at the repository root, never in subdirectories or packages.
+
+- ✅ `{repo-root}/blueprints/{system-name}.md`
+- ❌ `{repo-root}/packages/foo/blueprints/{system-name}.md`
+- ❌ `{repo-root}/src/blueprints/{system-name}.md`
+
+Blueprints are repository-wide system design documents. A single system may span multiple packages or directories, but there should be ONE blueprint at the repo root describing the entire system.
 
 ## Implementation
 
@@ -57,7 +67,7 @@ Before creating a new blueprint:
 
 ### 4. Write the Blueprint
 
-Create or update `blueprints/{system-name}.md` with:
+Create or update `{repo-root}/blueprints/{system-name}.md` with:
 
 ```markdown
 # {System Name}
@@ -133,7 +143,7 @@ Key implementation files:
 - [{Related System}](./related-system.md) - {relationship description}
 ```
 
-### 5. Update blueprints/README.md
+### 5. Update {repo-root}/blueprints/README.md
 
 Add an entry to the index:
 

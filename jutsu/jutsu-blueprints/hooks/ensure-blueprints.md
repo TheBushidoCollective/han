@@ -1,5 +1,25 @@
 # Blueprints Documentation Requirements
 
+## What are Blueprints?
+
+Blueprints are **repository-wide system design documents** that describe the architecture, behavior, and implementation of major systems in a codebase. They provide a high-level understanding of how systems work, their components, and how they interact.
+
+## Location: ALWAYS at Repository Root
+
+**CRITICAL:** The `blueprints/` directory must ALWAYS be at the repository root, never in subdirectories or packages.
+
+```
+my-repo/
+├── blueprints/           # ✅ CORRECT - at repo root
+│   ├── README.md
+│   └── {system-name}.md
+├── packages/
+│   └── some-package/     # ❌ NEVER put blueprints/ here
+└── src/
+```
+
+Blueprints describe systems that may span multiple packages or directories. A single system (like "authentication" or "hook-dispatch") may have implementation files across different parts of the codebase, but there should be ONE blueprint document at the repo root that describes the entire system.
+
 ## When to Update blueprints/
 
 Update or create blueprints/ documentation when making changes that involve:
@@ -13,7 +33,7 @@ Update or create blueprints/ documentation when making changes that involve:
 ## blueprints/ Directory Structure
 
 ```
-blueprints/
+{repo-root}/blueprints/
 ├── README.md           # Index of all blueprints with brief descriptions
 ├── {system-name}.md    # One file per system/feature/component
 └── {another-system}.md

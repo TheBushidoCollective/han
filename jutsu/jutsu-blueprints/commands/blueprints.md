@@ -14,7 +14,17 @@ jutsu-blueprints:blueprints - Generate comprehensive blueprint documentation for
 
 ## Description
 
-Comprehensively document all systems in the codebase by creating or updating the `blueprints/` directory with technical documentation for each major system.
+Comprehensively document all systems in the codebase by creating or updating the `blueprints/` directory at the **repository root** with technical documentation for each major system.
+
+## Important: Blueprint Location
+
+**CRITICAL:** Blueprints MUST be created at the repository root, never in subdirectories or packages.
+
+- ✅ `{repo-root}/blueprints/`
+- ❌ `{repo-root}/packages/foo/blueprints/`
+- ❌ `{repo-root}/src/blueprints/`
+
+Blueprints are repository-wide system design documents. Systems may span multiple packages or directories, but all blueprints belong in a single `blueprints/` directory at the repo root.
 
 ## Implementation
 
@@ -63,7 +73,7 @@ Order systems by importance:
 
 ### Phase 4: Generate Documentation
 
-For each system, create or update `blueprints/{system-name}.md`:
+For each system, create or update `{repo-root}/blueprints/{system-name}.md`:
 
 ```markdown
 # {System Name}
@@ -97,7 +107,7 @@ For each system, create or update `blueprints/{system-name}.md`:
 
 ### Phase 5: Create/Update Index
 
-Update `blueprints/README.md`:
+Update `{repo-root}/blueprints/README.md`:
 
 ```markdown
 # Technical Blueprints
