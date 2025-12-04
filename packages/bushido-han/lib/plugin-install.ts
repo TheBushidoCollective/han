@@ -64,6 +64,10 @@ export async function installPlugins(
 		process.exit(1);
 	}
 
+	// Always include bushido plugin as a dependency
+	const pluginsToInstall = new Set(pluginNames);
+	pluginsToInstall.add("bushido");
+
 	ensureClaudeDirectory(scope);
 
 	// Validate plugins exist in marketplace
@@ -80,7 +84,9 @@ export async function installPlugins(
 	const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
 
 	// Check all plugins are valid
-	const invalidPlugins = pluginNames.filter((p) => !validPluginNames.has(p));
+	const invalidPlugins = Array.from(pluginsToInstall).filter(
+		(p) => !validPluginNames.has(p),
+	);
 	if (invalidPlugins.length > 0) {
 		console.error(
 			`Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(", ")}\n`,
@@ -115,7 +121,7 @@ export async function installPlugins(
 	const installed: string[] = [];
 	const alreadyInstalled: string[] = [];
 
-	for (const pluginName of pluginNames) {
+	for (const pluginName of pluginsToInstall) {
 		if (currentPlugins.includes(pluginName)) {
 			alreadyInstalled.push(pluginName);
 		} else {
