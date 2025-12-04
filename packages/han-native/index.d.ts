@@ -7,41 +7,60 @@
  * Compute SHA256 hash of a file's contents
  * Returns empty string if file cannot be read
  */
-export declare function computeFileHash(filePath: string): string
+export declare function computeFileHash(filePath: string): string;
 /**
  * Compute SHA256 hashes for multiple files in parallel
  * Returns a map of file path to hash
  */
-export declare function computeFileHashesParallel(filePaths: Array<string>): Record<string, string>
+export declare function computeFileHashesParallel(
+  filePaths: Array<string>
+): Record<string, string>;
 /**
  * Find files matching glob patterns in a directory, respecting gitignore
  * Returns absolute file paths
  */
-export declare function findFilesWithGlob(rootDir: string, patterns: Array<string>): Array<string>
+export declare function findFilesWithGlob(
+  rootDir: string,
+  patterns: Array<string>
+): Array<string>;
 /**
  * Find directories containing marker files or directories (e.g., mix.exs, Cargo.toml, *.xcodeproj)
  * Returns absolute directory paths
  */
-export declare function findDirectoriesWithMarkers(rootDir: string, markers: Array<string>): Array<string>
+export declare function findDirectoriesWithMarkers(
+  rootDir: string,
+  markers: Array<string>
+): Array<string>;
 /**
  * Build a manifest of file hashes for given files
  * Returns a map of relative path to hash
  */
-export declare function buildManifest(files: Array<string>, rootDir: string): Record<string, string>
+export declare function buildManifest(
+  files: Array<string>,
+  rootDir: string
+): Record<string, string>;
 /**
  * Check if any files have changed compared to a cached manifest
  * Returns true if changes detected, false if no changes
  * Uses streaming with early exit on first change
  */
-export declare function hasChanges(rootDir: string, patterns: Array<string>, cachedManifest: Record<string, string>): boolean
+export declare function hasChanges(
+  rootDir: string,
+  patterns: Array<string>,
+  cachedManifest: Record<string, string>
+): boolean;
 /**
  * Combined function: find files, build manifest, and optionally check for changes
  * Returns (has_changes: bool, manifest: HashMap) for efficiency
  */
 export interface CheckResult {
-  hasChanges: boolean
-  manifest: Record<string, string>
-  files: Array<string>
+  hasChanges: boolean;
+  manifest: Record<string, string>;
+  files: Array<string>;
 }
 /** Efficiently check for changes and build manifest in one pass */
-export declare function checkAndBuildManifest(rootDir: string, patterns: Array<string>, cachedManifest?: Record<string, string> | undefined | null): CheckResult
+export declare function checkAndBuildManifest(
+  rootDir: string,
+  patterns: Array<string>,
+  cachedManifest?: Record<string, string> | undefined | null
+): CheckResult;
