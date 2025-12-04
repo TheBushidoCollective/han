@@ -39,6 +39,12 @@ export default function DocsPage() {
 								Installing Plugins
 							</a>
 							<a
+								href="#installation-scopes"
+								className="block py-2 px-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ml-3"
+							>
+								Installation Scopes
+							</a>
+							<a
 								href="#hook-caching"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
@@ -295,6 +301,126 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 									description="Install specific plugins by name"
 									code="npx @thebushidocollective/han plugin install jutsu-typescript"
 								/>
+							</div>
+						</section>
+
+						{/* Installation Scopes */}
+						<section id="installation-scopes" className="scroll-mt-8 mb-16">
+							<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+								Installation Scopes
+							</h3>
+							<p className="text-gray-600 dark:text-gray-300 mb-6">
+								Han supports three installation scopes, representing phases of
+								trust as you adopt plugins:
+							</p>
+
+							<div className="space-y-6 mb-8">
+								{/* Phase 1: User */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg border-l-4 border-blue-500">
+									<div className="flex items-start gap-4">
+										<div className="text-2xl font-bold text-blue-500 shrink-0">
+											1
+										</div>
+										<div className="flex-1">
+											<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+												User Scope{" "}
+												<span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+													(default)
+												</span>
+											</h4>
+											<p className="text-gray-600 dark:text-gray-300 mb-3">
+												Install for yourself only. Perfect for trying out
+												plugins or using tools across all your projects.
+											</p>
+											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
+												<code>
+													npx @thebushidocollective/han plugin install
+													hashi-playwright-mcp
+												</code>
+											</pre>
+											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+												Installs to{" "}
+												<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+													~/.claude/settings.json
+												</code>
+											</p>
+										</div>
+									</div>
+								</div>
+
+								{/* Phase 2: Local */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg border-l-4 border-amber-500">
+									<div className="flex items-start gap-4">
+										<div className="text-2xl font-bold text-amber-500 shrink-0">
+											2
+										</div>
+										<div className="flex-1">
+											<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+												Local Scope
+											</h4>
+											<p className="text-gray-600 dark:text-gray-300 mb-3">
+												Project-specific but personal. Use when you want more
+												control over a specific project without affecting your
+												team.
+											</p>
+											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
+												<code>
+													npx @thebushidocollective/han plugin install
+													jutsu-typescript --scope local
+												</code>
+											</pre>
+											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+												Installs to{" "}
+												<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+													.claude/settings.local.json
+												</code>{" "}
+												(gitignored)
+											</p>
+										</div>
+									</div>
+								</div>
+
+								{/* Phase 3: Project */}
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg border-l-4 border-green-500">
+									<div className="flex items-start gap-4">
+										<div className="text-2xl font-bold text-green-500 shrink-0">
+											3
+										</div>
+										<div className="flex-1">
+											<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+												Project Scope
+											</h4>
+											<p className="text-gray-600 dark:text-gray-300 mb-3">
+												Align your team. Committed to git so everyone on the
+												project uses the same plugins and validation hooks.
+											</p>
+											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
+												<code>
+													npx @thebushidocollective/han plugin install --auto
+													--scope project
+												</code>
+											</pre>
+											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+												Installs to{" "}
+												<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+													.claude/settings.json
+												</code>{" "}
+												(committed to git)
+											</p>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div className="bg-gray-900 dark:bg-gray-950 text-white p-6 rounded-lg">
+								<p className="text-lg font-medium mb-2">
+									Start personal, grow to team alignment
+								</p>
+								<p className="text-gray-400 text-sm">
+									Try plugins in user scope first. When you find ones that work,
+									move to local for project-specific customization. When
+									you&apos;re confident, align your team with project scope.
+								</p>
 							</div>
 						</section>
 
