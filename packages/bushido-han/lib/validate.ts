@@ -344,7 +344,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
-					`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
+					`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
+					`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 			);
 			process.exit(2);
 		}
@@ -392,7 +393,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
 						: `cd ${relativePath} && ${commandToRun}`;
 				console.error(
 					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
-						`Spawn a subagent to run the command, review the output, and fix all issues.\n`,
+						`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
+						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -415,7 +417,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
 			console.error(`  • \`${cmdStr}\``);
 		}
 		console.error(
-			`\nEach subagent should run the command, review the output, and fix all issues.\n`,
+			`\nEach subagent should run the command, review the output, and fix all issues.\n` +
+				`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 		);
 		process.exit(2);
 	}
@@ -903,7 +906,8 @@ export async function runConfiguredHook(
 
 				console.error(
 					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
-						`To re-run after fixing:\n  ${rerunCmd}\n`,
+						`To re-run after fixing:\n  ${rerunCmd}\n\n` +
+						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -983,7 +987,10 @@ export async function runConfiguredHook(
 			);
 		}
 
-		console.error(`\nReview the output files above and fix all issues.\n`);
+		console.error(
+			`\nReview the output files above and fix all issues.\n` +
+				`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+		);
 		process.exit(2);
 	}
 
