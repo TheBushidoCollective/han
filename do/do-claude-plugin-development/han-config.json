@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "claudelint": {
+      "command": "uvx claudelint . --strict",
+      "dirTest": "test -f .claude-plugin/marketplace.json"
+    },
+    "markdownlint": {
+      "command": "npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json .",
+      "dirTest": "test -f .claude-plugin/marketplace.json",
+      "ifChanged": ["**/*.md"]
+    }
+  }
+}

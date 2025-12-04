@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uvx claudelint ${CLAUDE_PROJECT_DIR} --strict || (echo 'Please fix the claude lint errors before continuing:\\n'; exit 2)",
+            "command": "npx -y @thebushidocollective/han hook run do-claude-plugin-development claudelint --fail-fast",
             "timeout": 120000
           },
           {
             "type": "command",
-            "command": "npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json ${CLAUDE_PROJECT_DIR} || (echo 'Please fix markdown lint errors before continuing:\\n'; exit 2)",
+            "command": "npx -y @thebushidocollective/han hook run do-claude-plugin-development markdownlint --fail-fast --cached",
             "timeout": 120000
           }
         ]
