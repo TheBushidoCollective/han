@@ -37,6 +37,7 @@ stdout (JSON-RPC responses)
 Returns server capabilities.
 
 **Response:**
+
 ```json
 {
   "protocolVersion": "2024-11-05",
@@ -60,6 +61,7 @@ Health check endpoint.
 Returns available tools discovered from installed plugins.
 
 **Response:**
+
 ```json
 {
   "tools": [
@@ -91,6 +93,7 @@ Returns available tools discovered from installed plugins.
 Execute a tool.
 
 **Request:**
+
 ```json
 {
   "name": "jutsu_typescript_lint",
@@ -103,6 +106,7 @@ Execute a tool.
 ```
 
 **Response:**
+
 ```json
 {
   "content": [{ "type": "text", "text": "✅ All files passed" }],
@@ -113,6 +117,7 @@ Execute a tool.
 ### Tool Schema
 
 **Input Properties:**
+
 - `verbose` (boolean) - Show full output in real-time
 - `failFast` (boolean) - Stop on first failure (default: true)
 - `directory` (string) - Limit to specific directory path
@@ -141,6 +146,7 @@ Execute a tool.
 3. Cache discovered tools for session
 
 **Tool Naming:**
+
 - Format: `{pluginName}_{hookName}`
 - Dashes replaced with underscores
 - Example: `jutsu-typescript` + `lint` → `jutsu_typescript_lint`

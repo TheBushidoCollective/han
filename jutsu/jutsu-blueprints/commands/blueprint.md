@@ -11,6 +11,7 @@ You are tasked with creating or updating technical blueprint documentation for a
 ### 1. Identify the Target System
 
 The user will specify which system to document. This could be:
+
 - A feature name (e.g., "authentication", "caching")
 - A directory path (e.g., "lib/commands/mcp")
 - A component name (e.g., "MCP server", "hook dispatcher")

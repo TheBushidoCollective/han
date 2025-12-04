@@ -42,6 +42,7 @@ han (root program)
 Install plugins from the marketplace.
 
 **Options:**
+
 - `--auto` - Auto-detect plugins based on codebase
 - `--scope <scope>` - Installation scope (user, project, local)
 
@@ -50,6 +51,7 @@ Install plugins from the marketplace.
 Remove installed plugins.
 
 **Options:**
+
 - `--scope <scope>` - Which scope to modify
 
 #### `han hook run <plugin> <hook> [options]`
@@ -57,6 +59,7 @@ Remove installed plugins.
 Execute a plugin hook.
 
 **Options:**
+
 - `--fail-fast` - Stop on first failure
 - `--cached` - Only run if files changed
 - `--only <dir>` - Limit to specific directory

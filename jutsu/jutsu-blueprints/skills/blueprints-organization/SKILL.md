@@ -19,11 +19,13 @@ blueprints/
 ### Flat vs Nested
 
 **Prefer flat structure** for most projects:
+
 - Easier to navigate
 - Simpler cross-references
 - Less organizational overhead
 
 **Use subdirectories** only for very large projects:
+
 ```
 blueprints/
 ├── README.md
@@ -101,6 +103,7 @@ When adding new blueprints:
 ### The Duplication Problem
 
 Duplicate documentation:
+
 - Gets out of sync
 - Confuses readers
 - Wastes maintenance effort
@@ -108,6 +111,7 @@ Duplicate documentation:
 ### Prevention Strategies
 
 1. **Search before creating**
+
    ```bash
    # Check if topic is already documented
    grep -r "topic name" blueprints/
@@ -122,6 +126,7 @@ Duplicate documentation:
    - Split only when truly independent
 
 4. **Cross-reference liberally**
+
    ```markdown
    For authentication details, see [User Authentication](./user-authentication.md).
    ```
@@ -129,11 +134,13 @@ Duplicate documentation:
 ### When to Split vs Merge
 
 **Keep together** when:
+
 - Systems are tightly coupled
 - Understanding one requires understanding the other
 - They share significant context
 
 **Split apart** when:
+
 - Systems can be understood independently
 - Different audiences need different docs
 - File would exceed ~500 lines

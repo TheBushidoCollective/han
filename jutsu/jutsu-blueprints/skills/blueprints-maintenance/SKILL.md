@@ -9,6 +9,7 @@ allowed-tools: [Read, Write, Edit, Grep, Glob]
 ## The Sync Problem
 
 Documentation drifts from implementation when:
+
 - Code changes without doc updates
 - New features added without documentation
 - Deprecated features remain documented
@@ -80,6 +81,7 @@ When restructuring without behavior changes:
 ### Recognizing Debt
 
 Signs blueprints need attention:
+
 - File paths that don't exist
 - Functions that aren't in the codebase
 - Behavior that doesn't match reality
@@ -88,6 +90,7 @@ Signs blueprints need attention:
 ### Paying Down Debt
 
 Prioritize by impact:
+
 1. **Critical**: Public APIs with wrong docs
 2. **High**: Core systems undocumented
 3. **Medium**: Internal systems outdated
@@ -128,6 +131,7 @@ When reviewing blueprints:
 ### Tooling Support
 
 The jutsu-blueprints hooks automatically:
+
 - Remind you to check docs (UserPromptSubmit)
 - Verify docs match changes (Stop hook)
 

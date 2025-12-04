@@ -54,10 +54,12 @@ Han supports multiple installation paths: auto-detection using AI, explicit plug
 Install plugins from the marketplace.
 
 **Options:**
+
 - `--auto` - Auto-detect plugins based on codebase analysis
 - `--scope <scope>` - Installation scope (user, project, local)
 
 **Examples:**
+
 ```bash
 # Install specific plugins
 han plugin install jutsu-typescript do-backend-development
@@ -132,6 +134,7 @@ AI-powered plugin detection.
 ```
 
 **Scope Behavior:**
+
 - **user** - Shared across all projects, keeps invalid plugins
 - **project** - Team-shared, removes deselected plugins
 - **local** - Personal, removes deselected plugins
@@ -139,6 +142,7 @@ AI-powered plugin detection.
 ### Marketplace Integration
 
 **Marketplace Source:**
+
 ```json
 {
   "extraKnownMarketplaces": {
@@ -153,6 +157,7 @@ AI-powered plugin detection.
 ```
 
 **Plugin Discovery:**
+
 - Fetches `marketplace.json` from GitHub
 - Lists all available plugins with metadata
 - Supports directory and git sources

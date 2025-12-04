@@ -13,6 +13,7 @@ Technical blueprints document **how systems work internally**. They differ from 
 ## When to Write Blueprints
 
 Write blueprints for:
+
 - Complex systems with multiple components
 - Public APIs and their contracts
 - Architecture decisions and their rationale
@@ -20,6 +21,7 @@ Write blueprints for:
 - Integration points between systems
 
 Skip blueprints for:
+
 - Self-documenting code (simple utilities)
 - Test files (tests ARE the documentation)
 - External dependencies (link to their docs)
@@ -94,6 +96,7 @@ Step-by-step description of typical execution flow.
 ### Error Handling
 
 How the system responds to:
+
 - Invalid input
 - Missing dependencies
 - External failures
@@ -101,6 +104,7 @@ How the system responds to:
 ### Edge Cases
 
 Document non-obvious behaviors:
+
 - Empty input handling
 - Concurrent access
 - Resource limits
@@ -108,6 +112,7 @@ Document non-obvious behaviors:
 ## Files
 
 Key files and their roles:
+
 - `src/main.ts:1-50` - Entry point, initialization
 - `src/processor.ts` - Core processing logic
 - `src/types.ts` - Type definitions
@@ -115,6 +120,7 @@ Key files and their roles:
 ## Related Systems
 
 - [Related System](./related-system.md) - How they interact
+
 ```
 
 ## Writing Style
