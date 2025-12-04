@@ -347,22 +347,26 @@ end
 ### Don't
 
 ❌ Skip tests during validation
+
 ```bash
 pod lib lint --skip-tests  # Defeats purpose of test specs
 ```
 
 ❌ Mix test and production code
+
 ```ruby
 spec.source_files = 'Source/**/*.swift', 'Tests/**/*.swift'  # BAD
 ```
 
 ❌ Include test dependencies in main spec
+
 ```ruby
 # In main spec
 spec.dependency 'Quick'  # Should be in test_spec only
 ```
 
 ❌ Use requires_app_host unnecessarily
+
 ```ruby
 spec.test_spec 'Tests' do |test_spec|
   # Pure unit tests don't need app host
@@ -373,11 +377,13 @@ end
 ### Do
 
 ✅ Run tests during every validation
+
 ```bash
 pod lib lint  # Includes tests by default
 ```
 
 ✅ Separate test and production code
+
 ```ruby
 spec.source_files = 'Source/**/*.swift'
 
@@ -387,6 +393,7 @@ end
 ```
 
 ✅ Keep test dependencies in test spec
+
 ```ruby
 spec.test_spec 'Tests' do |test_spec|
   test_spec.dependency 'Quick'  # Only for tests
@@ -394,6 +401,7 @@ end
 ```
 
 ✅ Use app host only when needed
+
 ```ruby
 spec.test_spec 'Tests' do |test_spec|
   # Only if tests need UIKit, storyboards, etc.

@@ -318,6 +318,7 @@ ERROR | [MyLibrary] The repo has no tag for version 1.0.0
 ```
 
 **Solution:**
+
 ```bash
 # Create and push tag
 git tag 1.0.0
@@ -331,6 +332,7 @@ ERROR | [MyLibrary] xcodebuild: Returned an unsuccessful exit code
 ```
 
 **Solution:**
+
 ```bash
 # Run detailed validation
 pod lib lint --verbose
@@ -346,6 +348,7 @@ ERROR | [MyLibrary] Missing required attribute `license`
 ```
 
 **Solution:**
+
 ```ruby
 # Add to podspec
 spec.license = { :type => 'MIT', :file => 'LICENSE' }
@@ -438,22 +441,26 @@ MyLibrary is available under the MIT license.
 ### Don't
 
 ❌ Publish without testing
+
 ```bash
 pod trunk push --skip-tests  # Risky
 ```
 
 ❌ Use `--allow-warnings` for initial release
+
 ```bash
 pod trunk push --allow-warnings  # Fix warnings instead
 ```
 
 ❌ Forget to tag git
+
 ```bash
 # Missing git tag - publish will fail
 pod trunk push
 ```
 
 ❌ Skip version bump
+
 ```ruby
 # Still version 1.0.0 after changes - confusing
 spec.version = '1.0.0'
@@ -462,6 +469,7 @@ spec.version = '1.0.0'
 ### Do
 
 ✅ Test thoroughly before publishing
+
 ```bash
 pod lib lint
 pod spec lint
@@ -469,18 +477,21 @@ pod spec lint
 ```
 
 ✅ Fix all warnings
+
 ```bash
 pod lib lint
 # Address warnings
 ```
 
 ✅ Always tag git
+
 ```bash
 git tag 1.0.0
 git push --tags
 ```
 
 ✅ Bump version for every release
+
 ```ruby
 spec.version = '1.0.1'  # Incremented
 ```
