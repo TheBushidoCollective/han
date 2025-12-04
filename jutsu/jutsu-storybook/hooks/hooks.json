@@ -1,18 +1,26 @@
 {
-  "Stop": [
-    {
-      "name": "storybook-build-validation",
-      "description": "Validates that Storybook builds successfully before stopping",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with .storybook -- npm run build-storybook",
-      "showOutput": "on-error"
-    }
-  ],
-  "SubagentStop": [
-    {
-      "name": "storybook-build-validation",
-      "description": "Validates that Storybook builds successfully when agents complete",
-      "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with .storybook -- npm run build-storybook",
-      "showOutput": "on-error"
-    }
-  ]
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-storybook build --fail-fast --cached",
+            "timeout": 120000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-storybook build --fail-fast --cached",
+            "timeout": 120000
+          }
+        ]
+      }
+    ]
+  }
 }
