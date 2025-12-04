@@ -99,6 +99,19 @@
       ]
     },
     {
+      "name": "jutsu-blueprints",
+      "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
+      "source": "./jutsu/jutsu-blueprints",
+      "category": "Technique",
+      "keywords": [
+        "blueprints",
+        "documentation",
+        "technical-docs",
+        "implementation-docs",
+        "architecture"
+      ]
+    },
+    {
       "name": "jutsu-bun",
       "description": "Validation and quality enforcement for Bun.js projects with runtime, testing, bundler, package manager, and SQLite skills.",
       "source": "./jutsu/jutsu-bun",
