@@ -83,7 +83,7 @@ Add the Han marketplace to your Claude Code settings (`.claude/settings.json`):
     }
   },
   "enabledPlugins": {
-    "bushido": true
+    "bushido@han": true
   }
 }
 ```
