@@ -50,6 +50,8 @@ jobs:
       - name: Build with Next.js
         run: npm run build
         working-directory: ./website
+        env:
+          NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS: ${{ secrets.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
 
       - name: Add .nojekyll file
         run: touch out/.nojekyll
