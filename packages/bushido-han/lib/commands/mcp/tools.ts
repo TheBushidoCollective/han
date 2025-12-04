@@ -230,7 +230,7 @@ function getPluginDir(
 }
 
 /**
- * Generate a human-readable description for a hook tool
+ * Generate a human-readable description for a hook tool with natural language examples
  */
 function generateToolDescription(
 	pluginName: string,
@@ -238,39 +238,44 @@ function generateToolDescription(
 	pluginConfig: PluginConfig,
 ): string {
 	const hookDef = pluginConfig.hooks[hookName];
-	if (!hookDef) {
-		return `Run ${hookName} for ${pluginName}`;
-	}
+	const technology = pluginName.replace(/^(jutsu|do|hashi)-/, "");
+	const techDisplay = technology.charAt(0).toUpperCase() + technology.slice(1);
 
-	// Build a description based on the hook definition
-	const parts: string[] = [];
-
-	// Describe what the hook does based on its name
-	const actionMap: Record<string, string> = {
-		test: "Run tests",
-		lint: "Run linter",
-		format: "Check formatting",
-		typecheck: "Run type checking",
-		compile: "Compile code",
-		build: "Build project",
+	// Rich descriptions with natural language trigger examples
+	const descriptions: Record<
+		string,
+		(tech: string, display: string) => string
+	> = {
+		test: (tech, display) =>
+			`Run ${display} tests. Triggers: "run the tests", "run ${tech} tests", "check if tests pass", "execute test suite"`,
+		lint: (tech, display) =>
+			`Lint ${display} code for issues and style violations. Triggers: "lint the code", "check for ${tech} issues", "run the linter", "check code quality"`,
+		typecheck: (_tech, display) =>
+			`Type-check ${display} code for type errors. Triggers: "check types", "run type checking", "verify types", "typescript check"`,
+		format: (_tech, display) =>
+			`Check and fix ${display} code formatting. Triggers: "format the code", "check formatting", "fix formatting", "run formatter"`,
+		build: (_tech, display) =>
+			`Build the ${display} project. Triggers: "build the project", "compile the code", "run the build"`,
+		compile: (tech, display) =>
+			`Compile ${display} code. Triggers: "compile the code", "run compilation", "build ${tech}"`,
 	};
 
-	const action = actionMap[hookName] || `Run ${hookName}`;
-	parts.push(action);
+	const descFn = descriptions[hookName];
+	let desc = descFn
+		? descFn(technology, techDisplay)
+		: `Run ${hookName} for ${techDisplay}. Triggers: "run ${hookName}", "${hookName} the ${technology} code"`;
 
-	// Add context about the plugin
-	const technology = pluginName.replace(/^(jutsu|do|hashi)-/, "");
-	parts.push(`for ${technology}`);
-
-	// Add info about where it runs
-	if (hookDef.dirsWith && hookDef.dirsWith.length > 0) {
-		parts.push(`(in directories with ${hookDef.dirsWith.join(" or ")})`);
+	// Add context about where it runs
+	if (hookDef?.dirsWith && hookDef.dirsWith.length > 0) {
+		desc += `. Runs in directories containing: ${hookDef.dirsWith.join(", ")}`;
 	}
 
-	// Add the actual command for reference
-	parts.push(`- runs: ${hookDef.command}`);
+	// Add the actual command for transparency
+	if (hookDef?.command) {
+		desc += `. Command: ${hookDef.command}`;
+	}
 
-	return parts.join(" ");
+	return desc;
 }
 
 /**
@@ -300,7 +305,11 @@ export function discoverPluginTools(): PluginTool[] {
 
 			tools.push({
 				name: toolName,
-				description: generateToolDescription(pluginName, hookName, pluginConfig),
+				description: generateToolDescription(
+					pluginName,
+					hookName,
+					pluginConfig,
+				),
 				pluginName,
 				hookName,
 				pluginRoot,
@@ -376,7 +385,10 @@ export async function executePluginTool(
 		} catch (e) {
 			const error = e as Error;
 			if (error.message?.startsWith("__EXIT_")) {
-				exitCode = Number.parseInt(error.message.replace("__EXIT_", "").replace("__", ""), 10);
+				exitCode = Number.parseInt(
+					error.message.replace("__EXIT_", "").replace("__", ""),
+					10,
+				);
 			} else {
 				throw e;
 			}
@@ -387,7 +399,9 @@ export async function executePluginTool(
 		success = exitCode === 0;
 	} catch (error) {
 		success = false;
-		outputLines.push(`Error: ${error instanceof Error ? error.message : String(error)}`);
+		outputLines.push(
+			`Error: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	} finally {
 		console.log = originalLog;
 		console.error = originalError;
