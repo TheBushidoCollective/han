@@ -138,7 +138,7 @@ async function handleToolsCall(params: {
 	const args = params.arguments || {};
 	const cache = args.cache !== false; // Default to true for MCP
 	const verbose = args.verbose === true;
-	const failFast = args.failFast !== false; // Default to true for MCP
+	const failFast = args.failFast === true; // Default to false - MCP tools are independent
 	const directory =
 		typeof args.directory === "string" ? args.directory : undefined;
 
