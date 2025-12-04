@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.1] - 2025-12-04
+
+### Added
+
+- add marketplace caching with 24-hour auto-refresh ([9248e898](../../commit/9248e898))
+- auto-install bushido plugin with any plugin installation ([5e4749dc](../../commit/5e4749dc))
+- add cache option to MCP tool execution ([79c3c366](../../commit/79c3c366))
+
+### Fixed
+
+- fix biome lint errors in marketplace-cache tests ([0095af3b](../../commit/0095af3b))
+- MCP tools should not default to fail-fast mode ([1bdaec54](../../commit/1bdaec54))
+- clear stale failure signals on hook run start ([063c447b](../../commit/063c447b))
+- use plugin names instead of array indices as React keys ([feae87c6](../../commit/feae87c6))
+- remove invalid han-config.yml causing hook failures ([eb51a761](../../commit/eb51a761))
+- use index-based keys for plugin selector lists ([e8952fab](../../commit/e8952fab))
+- respect CLAUDE_CONFIG_DIR in shared.ts ([34da18e0](../../commit/34da18e0))
+
+### Other
+
+- add test for MCP tool isolation from failure signals ([7331b431](../../commit/7331b431))
+- add test for stale failure signal cleanup ([eaf2b3b9](../../commit/eaf2b3b9))
+
 ## [1.48.0] - 2025-12-04
 
 ### Added
