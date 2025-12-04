@@ -1,6 +1,6 @@
 {
   "name": "hashi-playwright-mcp",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,11 +9,20 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["mcp", "playwright", "testing", "automation", "server"],
+  "keywords": [
+    "mcp",
+    "playwright",
+    "testing",
+    "automation",
+    "server"
+  ],
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }
