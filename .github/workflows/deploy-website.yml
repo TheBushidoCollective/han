@@ -51,7 +51,7 @@ jobs:
         run: npm run build
         working-directory: ./website
         env:
-          NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS: ${{ secrets.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
+          NEXT_PUBLIC_GOATCOUNTER_CODE: ${{ secrets.GOATCOUNTER_CODE }}
 
       - name: Add .nojekyll file
         run: touch out/.nojekyll
