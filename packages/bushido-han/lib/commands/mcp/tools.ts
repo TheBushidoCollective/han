@@ -193,6 +193,7 @@ export interface ExecuteToolOptions {
 	verbose?: boolean;
 	failFast?: boolean;
 	directory?: string;
+	cache?: boolean;
 }
 
 export interface ExecuteToolResult {
@@ -207,7 +208,7 @@ export async function executePluginTool(
 	tool: PluginTool,
 	options: ExecuteToolOptions,
 ): Promise<ExecuteToolResult> {
-	const { verbose = false, failFast = true, directory } = options;
+	const { verbose = false, failFast = true, directory, cache = true } = options;
 
 	// Capture console output
 	const outputLines: string[] = [];
@@ -247,9 +248,9 @@ export async function executePluginTool(
 				pluginName: tool.pluginName,
 				hookName: tool.hookName,
 				failFast,
-				cache: true, // Always use caching for MCP
+				cache,
 				only: directory,
-				verbose, // Pass through verbose mode
+				verbose,
 			});
 		} catch (e) {
 			const error = e as Error;
