@@ -1,6 +1,6 @@
 {
   "name": "jutsu-blueprints",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
   "author": {
     "name": "The Bushido Collective",
