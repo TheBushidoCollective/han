@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.41.2] - 2025-12-04
+
+### Added
+
+- add MCP server for running hook commands via natural language ([21c56034](../../commit/21c56034))
+- add user scope for plugin installation (default) ([5a1e9002](../../commit/5a1e9002))
+- instruct agent to proceed without asking questions on failure ([4bf08ff1](../../commit/4bf08ff1))
+- add cross-process failure signaling for parallel hooks ([7d7d37dc](../../commit/7d7d37dc))
+- track plugin files and han-config.yml in cache ([dee7aeea](../../commit/dee7aeea))
+
+### Fixed
+
+- add retry logic for CDN propagation delays ([49bf5976](../../commit/49bf5976))
+- reset stdin state after viewing hook output ([08900c77](../../commit/08900c77))
+
+### Other
+
+- add tests for failure signaling functions ([419f50ed](../../commit/419f50ed))
+
 ## [1.41.1] - 2025-12-04
 
 ### Added
