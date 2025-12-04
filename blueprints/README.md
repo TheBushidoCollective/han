@@ -1,10 +1,10 @@
-# Technical Specifications
+# Technical Blueprints
 
 Implementation documentation for the Han Plugin Marketplace.
 
 ## Overview
 
-Han is a curated marketplace of Claude Code plugins built on Bushido principles. This directory contains technical specifications for all major systems.
+Han is a curated marketplace of Claude Code plugins built on Bushido principles. This directory contains technical blueprints for all major systems.
 
 ## Systems
 
@@ -25,4 +25,4 @@ Han is a curated marketplace of Claude Code plugins built on Bushido principles.
 
 ## Documentation Standards
 
-See [jutsu-specs](../jutsu/jutsu-specs/) for documentation guidelines.
+See [jutsu-blueprints](../jutsu/jutsu-blueprints/) for documentation guidelines.

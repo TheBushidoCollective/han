@@ -1,10 +1,10 @@
 ---
-name: specs-maintenance
-description: Use when updating existing specs/ documentation to keep it in sync with implementation changes. Covers verification, updates, and deprecation.
+name: blueprints-maintenance
+description: Use when updating existing blueprints/ documentation to keep it in sync with implementation changes. Covers verification, updates, and deprecation.
 allowed-tools: [Read, Write, Edit, Grep, Glob]
 ---
 
-# Maintaining Technical Specifications
+# Maintaining Technical Blueprints
 
 ## The Sync Problem
 
@@ -18,7 +18,7 @@ Documentation drifts from implementation when:
 
 ### Before Making Changes
 
-1. **Read existing spec** for the system you're modifying
+1. **Read existing blueprint** for the system you're modifying
 2. **Note what documentation exists**:
    - Overview accurate?
    - API documentation complete?
@@ -27,7 +27,7 @@ Documentation drifts from implementation when:
 
 ### After Making Changes
 
-1. **Re-read the spec** with fresh eyes
+1. **Re-read the blueprint** with fresh eyes
 2. **Verify each section**:
    - Does Overview still describe the purpose?
    - Are all public APIs documented?
@@ -55,7 +55,7 @@ When changing behavior:
 1. Update behavior descriptions
 2. Revise API documentation if signatures changed
 3. Update examples if usage changed
-4. Check related specs for impact
+4. Check related blueprints for impact
 
 ### Removing Features
 
@@ -79,7 +79,7 @@ When restructuring without behavior changes:
 
 ### Recognizing Debt
 
-Signs specs need attention:
+Signs blueprints need attention:
 - File paths that don't exist
 - Functions that aren't in the codebase
 - Behavior that doesn't match reality
@@ -95,7 +95,7 @@ Prioritize by impact:
 
 ## Verification Checklist
 
-When reviewing specs:
+When reviewing blueprints:
 
 ```markdown
 ## Verification Checklist
@@ -108,26 +108,26 @@ When reviewing specs:
 - [ ] File paths exist
 - [ ] No removed features documented
 - [ ] Related systems links work
-- [ ] No duplicate content with other specs
+- [ ] No duplicate content with other blueprints
 ```
 
-## Keeping Specs Fresh
+## Keeping Blueprints Fresh
 
 ### During Development
 
 - Treat docs as part of the feature
-- Update spec in same commit as code
-- Review spec changes in code review
+- Update blueprint in same commit as code
+- Review blueprint changes in code review
 
 ### Regular Maintenance
 
-- Periodically audit specs vs code
-- Use `/specs-all` command to regenerate
-- Remove orphaned spec files
+- Periodically audit blueprints vs code
+- Use `/blueprints` command to regenerate
+- Remove orphaned blueprint files
 
 ### Tooling Support
 
-The jutsu-specs hooks automatically:
+The jutsu-blueprints hooks automatically:
 - Remind you to check docs (UserPromptSubmit)
 - Verify docs match changes (Stop hook)
 
@@ -135,7 +135,7 @@ The jutsu-specs hooks automatically:
 
 ### Don't
 
-- Leave TODO comments in specs indefinitely
+- Leave TODO comments in blueprints indefinitely
 - Copy implementation details that will change
 - Document external libraries (link instead)
 - Keep deprecated feature docs "for reference"

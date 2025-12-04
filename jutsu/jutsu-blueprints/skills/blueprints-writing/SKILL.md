@@ -1,30 +1,30 @@
 ---
-name: specs-writing
-description: Use when creating or updating technical specification documentation in specs/ directories. Covers structure, content, and writing style for implementation docs.
+name: blueprints-writing
+description: Use when creating or updating technical blueprint documentation in blueprints/ directories. Covers structure, content, and writing style for implementation docs.
 allowed-tools: [Read, Write, Edit, Grep, Glob]
 ---
 
-# Writing Technical Specifications
+# Writing Technical Blueprints
 
 ## Purpose
 
-Technical specifications (specs) document **how systems work internally**. They differ from user documentation (how to use) and README files (project overview).
+Technical blueprints document **how systems work internally**. They differ from user documentation (how to use) and README files (project overview).
 
-## When to Write Specs
+## When to Write Blueprints
 
-Write specs for:
+Write blueprints for:
 - Complex systems with multiple components
 - Public APIs and their contracts
 - Architecture decisions and their rationale
 - Behavior that isn't obvious from code
 - Integration points between systems
 
-Skip specs for:
+Skip blueprints for:
 - Self-documenting code (simple utilities)
 - Test files (tests ARE the documentation)
 - External dependencies (link to their docs)
 
-## Spec File Structure
+## Blueprint File Structure
 
 ```markdown
 # System Name
@@ -140,7 +140,7 @@ const result = processItems(['a', 'b', 'c'], { parallel: true });
 
 ### Keep Current
 
-- Update specs alongside code changes
+- Update blueprints alongside code changes
 - Remove documentation for deleted features
 - Mark deprecated features clearly
 

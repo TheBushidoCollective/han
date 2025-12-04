@@ -1,15 +1,15 @@
 ---
-name: specs-organization
-description: Use when organizing specs/ directory structure, naming files, avoiding duplicate documentation, and maintaining the specs index.
+name: blueprints-organization
+description: Use when organizing blueprints/ directory structure, naming files, avoiding duplicate documentation, and maintaining the blueprints index.
 allowed-tools: [Read, Write, Edit, Grep, Glob]
 ---
 
-# Organizing Technical Specifications
+# Organizing Technical Blueprints
 
 ## Directory Structure
 
 ```
-specs/
+blueprints/
 ├── README.md              # Index and overview
 ├── {system-name}.md       # One file per system
 ├── {feature-name}.md      # One file per feature
@@ -25,7 +25,7 @@ specs/
 
 **Use subdirectories** only for very large projects:
 ```
-specs/
+blueprints/
 ├── README.md
 ├── core/
 │   ├── README.md
@@ -57,18 +57,18 @@ specs/
 - `misc.md` - Catch-all is a smell
 - `new-feature.md` - Not descriptive
 
-## The specs/README.md Index
+## The blueprints/README.md Index
 
-Every specs/ directory needs an index:
+Every blueprints/ directory needs an index:
 
 ```markdown
-# Technical Specifications
+# Technical Blueprints
 
 Implementation documentation for {Project Name}.
 
 ## Overview
 
-Brief description of what this project does and how specs are organized.
+Brief description of what this project does and how blueprints are organized.
 
 ## Systems
 
@@ -90,7 +90,7 @@ Core systems and their documentation:
 
 ## Contributing
 
-When adding new specs:
+When adding new blueprints:
 1. Check for existing related documentation
 2. Use consistent naming and structure
 3. Update this index
@@ -110,7 +110,7 @@ Duplicate documentation:
 1. **Search before creating**
    ```bash
    # Check if topic is already documented
-   grep -r "topic name" specs/
+   grep -r "topic name" blueprints/
    ```
 
 2. **One source of truth**
@@ -156,7 +156,7 @@ This system uses shared authentication. See [Authentication](./authentication.md
 
 ### Option 2: Shared Section
 
-Create a shared spec that both reference:
+Create a shared blueprint that both reference:
 
 ```markdown
 # System A
@@ -185,7 +185,7 @@ How System A specifically uses authentication...
 
 When systems are removed:
 
-1. **Delete the spec file** - Don't keep "for history"
+1. **Delete the blueprint file** - Don't keep "for history"
 2. **Update the index** - Remove from README.md
 3. **Fix broken links** - Update any references
 4. **Git history** - Use version control for history
@@ -194,7 +194,7 @@ When systems are removed:
 
 Periodically check:
 
-- [ ] All spec files in index?
+- [ ] All blueprint files in index?
 - [ ] All index entries have files?
 - [ ] No obvious duplicates?
 - [ ] Names match code terminology?
@@ -203,12 +203,12 @@ Periodically check:
 
 ## Tools
 
-### Find Orphaned Specs
+### Find Orphaned Blueprints
 
 ```bash
 # Files not in README.md
-for f in specs/*.md; do
-  grep -q "$(basename $f)" specs/README.md || echo "Orphan: $f"
+for f in blueprints/*.md; do
+  grep -q "$(basename $f)" blueprints/README.md || echo "Orphan: $f"
 done
 ```
 
@@ -216,8 +216,8 @@ done
 
 ```bash
 # Similar file names
-ls specs/*.md | xargs -n1 basename | sort | uniq -d
+ls blueprints/*.md | xargs -n1 basename | sort | uniq -d
 
 # Similar content
-grep -l "specific term" specs/*.md
+grep -l "specific term" blueprints/*.md
 ```
