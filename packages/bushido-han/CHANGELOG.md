@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+<<<<<<< Updated upstream
 ## [1.43.0] - 2025-12-04
+=======
+## [1.42.4] - 2025-12-04
+>>>>>>> Stashed changes
 
 ### Added
 
@@ -16,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+<<<<<<< Updated upstream
+=======
+- address biome linter warnings in explain.ts ([f391e0c5](../../commit/f391e0c5))
+>>>>>>> Stashed changes
 - dispatch only executes command hooks, not prompt hooks ([390c3aef](../../commit/390c3aef))
 - add retry logic for CDN propagation delays ([49bf5976](../../commit/49bf5976))
 
