@@ -54,8 +54,12 @@ export function getClaudeSettingsPath(scope: InstallScope = "user"): string {
 
 /**
  * Get path to global user Claude settings (~/.claude/settings.json)
+ * Respects CLAUDE_CONFIG_DIR environment variable if set.
  */
 export function getGlobalClaudeSettingsPath(): string {
+	if (process.env.CLAUDE_CONFIG_DIR) {
+		return join(process.env.CLAUDE_CONFIG_DIR, "settings.json");
+	}
 	const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 	return join(homeDir, ".claude", "settings.json");
 }
@@ -209,8 +213,10 @@ export function writeSettings(
  */
 export function getSettingsFilename(scope: InstallScope): string {
 	switch (scope) {
-		case "user":
-			return "~/.claude/settings.json";
+		case "user": {
+			const configDir = process.env.CLAUDE_CONFIG_DIR || "~/.claude";
+			return `${configDir}/settings.json`;
+		}
 		case "local":
 			return ".claude/settings.local.json";
 		case "project":
