@@ -2,7 +2,21 @@
 description: Deeply research all systems and create or update blueprints/ documentation for the entire codebase
 ---
 
-# Full Blueprints Documentation Generator
+## Name
+
+jutsu-blueprints:blueprints - Generate comprehensive blueprint documentation for the entire codebase
+
+## Synopsis
+
+```text
+/blueprints
+```
+
+## Description
+
+Comprehensively document all systems in the codebase by creating or updating the `blueprints/` directory with technical documentation for each major system.
+
+## Implementation
 
 You are tasked with comprehensively documenting all systems in this codebase.
 
