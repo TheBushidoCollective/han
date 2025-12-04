@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '<must-read-first reason=\"scratch workspace requirements\">${CLAUDE_PLUGIN_ROOT}/hooks/ensure-scratch.md</must-read-first>'",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}
