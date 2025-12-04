@@ -1518,6 +1518,7 @@ test("cache includes han-config.yml - local config change invalidates cache", ()
 function sendMcpRequest(
 	request: Record<string, unknown>,
 	testDir?: string,
+	envVars?: Record<string, string>,
 ): string {
 	const input = JSON.stringify(request);
 	const options: ExecSyncOptionsWithStringEncoding = {
@@ -1527,6 +1528,7 @@ function sendMcpRequest(
 		env: {
 			...process.env,
 			...(testDir ? { CLAUDE_PROJECT_DIR: testDir } : {}),
+			...(envVars || {}),
 		},
 	};
 	if (testDir) {
@@ -1695,6 +1697,121 @@ test("mcp returns error for unknown tool", () => {
 	strictEqual(parsed.id, 5);
 	strictEqual(parsed.error !== undefined, true, "Expected error response");
 	strictEqual(parsed.error.code, -32602, "Expected invalid params error code");
+});
+
+test("mcp tools ignore failure signals by default", () => {
+	const testDir = setup();
+	try {
+		// Create marketplace with plugin
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-mcp-test");
+		mkdirSync(pluginDir, { recursive: true });
+
+		// Create plugin with a test hook
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					test: {
+						dirsWith: ["marker.txt"],
+						command: "echo mcp-test-success",
+					},
+				},
+			}),
+		);
+
+		// Create .claude directory with settings IN testDir (same location as other MCP tests)
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: {
+							source: "directory",
+							path: marketplaceDir,
+						},
+					},
+				},
+				enabledPlugins: {
+					"jutsu-mcp-test@test-marketplace": true,
+				},
+			}),
+		);
+
+		// Create marker file directly in testDir/pkg1
+		mkdirSync(join(testDir, "pkg1"), { recursive: true });
+		writeFileSync(join(testDir, "pkg1", "marker.txt"), "");
+
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+		// Create a stale failure sentinel to simulate a previous hook failure
+		const sessionId = "test-mcp-ignore-failure";
+		const sentinelDir = join(tmpdir(), "han-hooks", sessionId);
+		mkdirSync(sentinelDir, { recursive: true });
+		const sentinelPath = join(sentinelDir, "failure.sentinel");
+		writeFileSync(
+			sentinelPath,
+			JSON.stringify({
+				pluginName: "some-plugin",
+				hookName: "some-hook",
+				timestamp: Date.now() - 5000,
+			}),
+		);
+
+		// Verify sentinel exists
+		strictEqual(
+			existsSync(sentinelPath),
+			true,
+			"Failure sentinel should exist",
+		);
+
+		// Call the MCP tool - it should succeed despite the failure sentinel
+		const response = sendMcpRequest(
+			{
+				jsonrpc: "2.0",
+				id: 6,
+				method: "tools/call",
+				params: {
+					name: "jutsu_mcp_test_test",
+					arguments: {},
+				},
+			},
+			testDir,
+			{
+				HAN_SESSION_ID: sessionId,
+			},
+		);
+
+		const parsed = JSON.parse(response);
+
+		// Verify successful execution
+		strictEqual(parsed.jsonrpc, "2.0");
+		strictEqual(parsed.id, 6);
+		strictEqual(
+			parsed.error,
+			undefined,
+			"MCP tool should not error due to failure signal",
+		);
+		strictEqual(
+			parsed.result.isError,
+			false,
+			`MCP tool should execute successfully. Output: ${parsed.result?.content?.[0]?.text || "N/A"}`,
+		);
+		strictEqual(
+			parsed.result.content[0].text.includes("passed") ||
+				parsed.result.content[0].text.includes("✅"),
+			true,
+			`MCP tool output should indicate success. Got: ${parsed.result.content[0].text}`,
+		);
+
+		// Cleanup sentinel
+		rmSync(sentinelPath, { force: true });
+	} finally {
+		teardown();
+	}
 });
 
 // ============================================
