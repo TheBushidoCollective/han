@@ -120,9 +120,7 @@ export async function getMarketplacePlugins(
 		// If fetch fails, try to use stale cache as fallback
 		const cache = readCache();
 		if (cache) {
-			console.warn(
-				"Warning: Using stale marketplace cache due to fetch error",
-			);
+			console.warn("Warning: Using stale marketplace cache due to fetch error");
 			return { plugins: cache.plugins, fromCache: true };
 		}
 

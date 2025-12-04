@@ -18,7 +18,9 @@ export function registerPluginUpdateMarketplace(program: Command): void {
 
 				const plugins = await updateMarketplaceCache();
 
-				console.log(`✓ Updated marketplace cache with ${plugins.length} plugins`);
+				console.log(
+					`✓ Updated marketplace cache with ${plugins.length} plugins`,
+				);
 
 				// Show age of previous cache if it existed
 				if (hasCachedMarketplace()) {
@@ -35,7 +37,9 @@ export function registerPluginUpdateMarketplace(program: Command): void {
 				const categories = new Set(
 					plugins.map((p) => p.category).filter((c): c is string => !!c),
 				);
-				console.log(`\nAvailable categories: ${Array.from(categories).join(", ")}`);
+				console.log(
+					`\nAvailable categories: ${Array.from(categories).join(", ")}`,
+				);
 				console.log(
 					`\nRun \`han plugin install --auto\` to get AI-recommended plugins`,
 				);

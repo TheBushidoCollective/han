@@ -1,5 +1,11 @@
 import { strictEqual } from "node:assert";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,8 +14,8 @@ import {
 	getCacheAge,
 	getMarketplacePlugins,
 	hasCachedMarketplace,
-	updateMarketplaceCache,
 	type MarketplaceCache,
+	updateMarketplaceCache,
 } from "../lib/marketplace-cache.js";
 
 let testsPassed = 0;
@@ -58,14 +64,18 @@ async function runTests(): Promise<void> {
 	let mockFetchSuccess = true;
 	const mockPlugins = [
 		{ name: "bushido", description: "Core plugin", category: "Foundation" },
-		{ name: "jutsu-typescript", description: "TypeScript skills", category: "Technique" },
+		{
+			name: "jutsu-typescript",
+			description: "TypeScript skills",
+			category: "Technique",
+		},
 	];
 
 	// Save original fetch
 	const originalFetch = globalThis.fetch;
 
 	// Mock fetch
-	globalThis.fetch = async (input: string | URL | Request) => {
+	globalThis.fetch = async (_input: string | URL | Request) => {
 		if (!mockFetchSuccess) {
 			throw new Error("Network error");
 		}
@@ -93,7 +103,9 @@ async function runTests(): Promise<void> {
 	await test("getCacheAge returns age in hours", () => {
 		const age = getCacheAge();
 		strictEqual(age !== null, true);
-		strictEqual(age! < 0.1, true); // Should be very recent (< 6 minutes)
+		if (age !== null) {
+			strictEqual(age < 0.1, true); // Should be very recent (< 6 minutes)
+		}
 	});
 
 	await test("getMarketplacePlugins uses cache on second call", async () => {
@@ -135,7 +147,7 @@ async function runTests(): Promise<void> {
 		const cache = JSON.parse(cacheData) as MarketplaceCache;
 
 		// Modify timestamp to be 25 hours old
-		const twentyFiveHoursAgo = Date.now() - (25 * 60 * 60 * 1000);
+		const twentyFiveHoursAgo = Date.now() - 25 * 60 * 60 * 1000;
 		cache.timestamp = twentyFiveHoursAgo;
 
 		// Write back
@@ -144,8 +156,10 @@ async function runTests(): Promise<void> {
 		// getCacheAge should now report ~25 hours
 		const age = getCacheAge();
 		strictEqual(age !== null, true);
-		strictEqual(age! > 24, true);
-		strictEqual(age! < 26, true);
+		if (age !== null) {
+			strictEqual(age > 24, true);
+			strictEqual(age < 26, true);
+		}
 	});
 
 	await test("getMarketplacePlugins fetches fresh data when cache is stale", async () => {
