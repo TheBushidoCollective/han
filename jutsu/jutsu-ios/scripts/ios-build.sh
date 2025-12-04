@@ -26,6 +26,7 @@ main() {
     echo "Building scheme: $scheme"
 
     # Run xcodebuild and capture exit status
+    # Close stdin (< /dev/null) to prevent any prompts from hanging
     local output
     local status
     output=$(xcodebuild \
@@ -33,7 +34,7 @@ main() {
         -destination 'platform=iOS Simulator,name=iPhone 16' \
         build \
         CODE_SIGNING_ALLOWED=NO \
-        2>&1) || status=$?
+        2>&1 < /dev/null) || status=$?
 
     # Show last 20 lines of output
     echo "$output" | tail -20
