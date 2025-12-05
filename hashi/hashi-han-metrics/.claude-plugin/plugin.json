@@ -9,19 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "mcp",
-    "metrics",
-    "tracking",
-    "analytics",
-    "server"
-  ],
+  "keywords": ["mcp", "metrics", "tracking", "analytics", "server"],
   "mcpServers": {
     "han-metrics": {
       "command": "node",
-      "args": [
-        "{PLUGIN_DIR}/server/index.js"
-      ],
+      "args": ["{PLUGIN_DIR}/server/index.js"],
       "env": {}
     }
   }
