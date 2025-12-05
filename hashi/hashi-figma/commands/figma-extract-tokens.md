@@ -5,6 +5,10 @@ description: Extract design tokens and variables from a Figma file to create or 
 
 # Extract Design Tokens from Figma
 
+## Name
+
+hashi-figma:figma-extract-tokens - Extract design tokens and variables from Figma files
+
 ## Synopsis
 
 Extract design tokens (colors, spacing, typography, etc.) from Figma files and generate token files in various formats (CSS Custom Properties, TypeScript, JSON, Style Dictionary, Tailwind config).
