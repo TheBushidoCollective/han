@@ -144,6 +144,255 @@ test("HAN_DISABLE_HOOKS=1 causes hook dispatch to exit 0 silently", () => {
 });
 
 // ============================================
+// Hook verify tests
+// ============================================
+
+test("han hook verify exits 0 when all hooks are cached", () => {
+	const testDir = setup();
+	const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
+	try {
+		// Create project directory
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+		writeFileSync(join(projectDir, "app.ts"), "// TypeScript code");
+
+		// Create .claude directory with settings
+		const claudeDir = join(projectDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create marketplace
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "verify-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					lint: {
+						command: "echo verify-test",
+						ifChanged: ["**/*.ts"],
+					},
+				},
+			}),
+		);
+
+		// Create hooks.json for Claude Code integration
+		const hooksDir = join(pluginDir, "hooks");
+		mkdirSync(hooksDir, { recursive: true });
+		writeFileSync(
+			join(hooksDir, "hooks.json"),
+			JSON.stringify({
+				hooks: {
+					Stop: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command:
+										"npx -y @thebushidocollective/han hook run verify-plugin lint --cached",
+								},
+							],
+						},
+					],
+				},
+			}),
+		);
+
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: { source: "directory", path: marketplaceDir },
+					},
+				},
+				enabledPlugins: {
+					"verify-plugin@test-marketplace": true,
+				},
+			}),
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		// Set CLAUDE_PROJECT_DIR
+		process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+		// Run the hook WITHOUT --cached first to establish baseline
+		execSync(`${binCommand} hook run verify-plugin lint`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: "pipe",
+			env: {
+				...process.env,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		});
+
+		// Now run with --cached to create the cache entry
+		execSync(`${binCommand} hook run verify-plugin lint --cached`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: "pipe",
+			env: {
+				...process.env,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		});
+
+		// Verify that hook verify exits 0 (all hooks cached)
+		const output = execSync(`${binCommand} hook verify Stop`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		} as ExecSyncOptionsWithStringEncoding);
+
+		strictEqual(
+			output.includes("cached") || output.includes("✅"),
+			true,
+			"Expected success message for cached hooks",
+		);
+	} finally {
+		if (originalProjectDir === undefined) {
+			delete process.env.CLAUDE_PROJECT_DIR;
+		} else {
+			process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
+		}
+		teardown();
+	}
+});
+
+test("han hook verify exits non-zero when hooks are stale", () => {
+	const testDir = setup();
+	const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
+	try {
+		// Create project directory
+		const projectDir = join(testDir, "project");
+		mkdirSync(projectDir, { recursive: true });
+		writeFileSync(join(projectDir, "package.json"), "{}");
+		writeFileSync(join(projectDir, "app.ts"), "// TypeScript code");
+
+		// Create .claude directory with settings
+		const claudeDir = join(projectDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		// Create marketplace
+		const marketplaceDir = join(testDir, "marketplace");
+		const pluginDir = join(marketplaceDir, "jutsu", "stale-plugin");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "han-config.json"),
+			JSON.stringify({
+				hooks: {
+					check: {
+						dirsWith: ["package.json"],
+						command: "echo verify-test",
+						ifChanged: ["**/*.ts"],
+					},
+				},
+			}),
+		);
+
+		// Create hooks.json for Claude Code integration
+		const hooksDir = join(pluginDir, "hooks");
+		mkdirSync(hooksDir, { recursive: true });
+		writeFileSync(
+			join(hooksDir, "hooks.json"),
+			JSON.stringify({
+				hooks: {
+					Stop: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command:
+										"npx -y @thebushidocollective/han hook run stale-plugin check --cached",
+								},
+							],
+						},
+					],
+				},
+			}),
+		);
+
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					"test-marketplace": {
+						source: { source: "directory", path: marketplaceDir },
+					},
+				},
+				enabledPlugins: {
+					"stale-plugin@test-marketplace": true,
+				},
+			}),
+		);
+
+		execSync("git init", { cwd: projectDir, stdio: "pipe" });
+		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+		// Set CLAUDE_PROJECT_DIR
+		process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+		// Run the hook to cache it
+		execSync(`${binCommand} hook run stale-plugin check --cached`, {
+			cwd: projectDir,
+			encoding: "utf8",
+			stdio: "pipe",
+			env: {
+				...process.env,
+				CLAUDE_PROJECT_DIR: projectDir,
+			},
+		});
+
+		// Modify tracked file to invalidate cache
+		writeFileSync(join(projectDir, "app.ts"), "// Modified TypeScript code");
+
+		// Verify that hook verify exits non-zero (hooks are stale)
+		try {
+			execSync(`${binCommand} hook verify Stop`, {
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: "pipe",
+				env: {
+					...process.env,
+					CLAUDE_PROJECT_DIR: projectDir,
+				},
+			});
+			throw new Error("Should have failed with stale hooks");
+		} catch (error) {
+			const execError = error as ExecError;
+			strictEqual(
+				execError.status !== undefined && execError.status > 0,
+				true,
+				"Expected non-zero exit code for stale hooks",
+			);
+			const stderr = execError.stderr?.toString() || "";
+			strictEqual(
+				stderr.includes("stale") ||
+					stderr.includes("changed") ||
+					stderr.includes("run"),
+				true,
+				"Expected message about stale hooks",
+			);
+		}
+	} finally {
+		if (originalProjectDir === undefined) {
+			delete process.env.CLAUDE_PROJECT_DIR;
+		} else {
+			process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
+		}
+		teardown();
+	}
+});
+
+// ============================================
 // Hook run tests
 // ============================================
 
