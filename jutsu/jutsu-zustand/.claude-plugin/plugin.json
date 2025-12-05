@@ -1,0 +1,20 @@
+{
+  "name": "jutsu-zustand",
+  "version": "1.0.0",
+  "description": "Comprehensive Zustand state management skills for React applications with store patterns, middleware, and TypeScript integration.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "zustand",
+    "state-management",
+    "react",
+    "typescript",
+    "store",
+    "hooks"
+  ]
+}
