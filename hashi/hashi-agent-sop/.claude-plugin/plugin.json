@@ -1,6 +1,6 @@
 {
   "name": "hashi-agent-sop",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and SOP authoring skills.",
   "author": {
     "name": "The Bushido Collective",
