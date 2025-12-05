@@ -366,10 +366,15 @@ test("han hook test validates hooks in installed plugins", () => {
 		);
 
 		// Should pass with no plugins installed
+		// Set CLAUDE_CONFIG_DIR to isolate from user settings
 		const output = execSync(`${binCommand} hook test`, {
 			cwd: testDir,
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_CONFIG_DIR: testDir,
+			},
 		});
 
 		strictEqual(
