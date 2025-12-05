@@ -1,6 +1,6 @@
 {
   "name": "hashi-han-metrics",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for agent task tracking and performance metrics. Enables self-reporting agents with objective validation.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,11 +9,19 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["mcp", "metrics", "tracking", "analytics", "server"],
+  "keywords": [
+    "mcp",
+    "metrics",
+    "tracking",
+    "analytics",
+    "server"
+  ],
   "mcpServers": {
     "han-metrics": {
       "command": "node",
-      "args": ["{PLUGIN_DIR}/server/index.js"],
+      "args": [
+        "{PLUGIN_DIR}/server/index.js"
+      ],
       "env": {}
     }
   }
