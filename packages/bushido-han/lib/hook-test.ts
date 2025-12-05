@@ -523,6 +523,13 @@ async function executeHooksWithUI(
 			}),
 		);
 
+		// Handle Ctrl+C gracefully
+		const handleSigInt = () => {
+			unmount();
+			process.exit(130); // Standard exit code for SIGINT
+		};
+		process.on("SIGINT", handleSigInt);
+
 		// Execute hooks sequentially by type
 		(async () => {
 			try {
@@ -568,11 +575,13 @@ async function executeHooksWithUI(
 
 				// Wait a bit for final render, then unmount
 				setTimeout(() => {
+					process.off("SIGINT", handleSigInt);
 					unmount();
 					process.exit(hadFailures ? 1 : 0);
 				}, 100);
 			} catch (error) {
 				// If something goes wrong, make sure we clean up and show the error
+				process.off("SIGINT", handleSigInt);
 				unmount();
 				console.error("\n\nHook test crashed:", error);
 				process.exit(1);
