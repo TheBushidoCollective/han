@@ -4,6 +4,22 @@ description: Update an existing SOP to reflect changes in tools, processes, or b
 
 # Update Existing SOP
 
+## Name
+
+jutsu-sop:update-sop - Update an existing Standard Operating Procedure
+
+## Synopsis
+
+```
+/update-sop
+```
+
+## Description
+
+This command guides users through updating existing Standard Operating Procedures (SOPs) to reflect changes in tools, processes, or best practices. It handles version bumping, changelog management, migration guides, and ensures consistency across related SOPs.
+
+## Implementation
+
 You are helping the user update an existing Standard Operating Procedure (SOP) to keep it current and accurate.
 
 ## Your Task
@@ -46,7 +62,7 @@ Guide the user through updating an SOP by:
 - {previous changes}
 ```
 
-5. **Make the updates**:
+1. **Make the updates**:
    - Update affected sections
    - Add new steps if needed
    - Update parameters
@@ -55,7 +71,7 @@ Guide the user through updating an SOP by:
    - Update examples to current syntax
    - Verify RFC 2119 keywords are still appropriate
 
-6. **Ensure consistency**:
+1. **Ensure consistency**:
    - Related SOPs may need updates too
    - Update "Related SOPs" section if needed
    - Check if examples still work
@@ -216,6 +232,7 @@ For breaking changes (major version), include migration guide:
    - Team wikis or documentation
 
 4. **Commit changes**:
+
    ```bash
    git add {sop-file}.sop.md
    git commit -m "feat(sop): update {sop-name} to v{version} - {summary}"
@@ -226,6 +243,7 @@ For breaking changes (major version), include migration guide:
 User: "Update the deployment SOP to use the new CI/CD pipeline"
 
 Response:
+
 1. Read current deployment SOP
 2. Ask about new pipeline details
 3. Determine this is a major version (breaking change)

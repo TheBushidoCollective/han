@@ -38,6 +38,7 @@ Use SOPs when you need consistent, repeatable execution of multi-step processes.
 ### Writing Clear Instructions
 
 **DO:**
+
 - Use active voice and imperative mood
 - Start steps with action verbs (analyze, generate, validate)
 - Be specific about expected outcomes
@@ -46,6 +47,7 @@ Use SOPs when you need consistent, repeatable execution of multi-step processes.
 - Use bullet points for unordered items
 
 **DON'T:**
+
 - Use passive voice ("should be done" → "do this")
 - Include vague instructions ("improve the code")
 - Mix procedural and reference content
@@ -61,11 +63,13 @@ Use SOPs when you need consistent, repeatable execution of multi-step processes.
 ```
 
 **Good Titles:**
+
 - "Generate Codebase Documentation"
 - "Implement Feature Using TDD"
 - "Review Pull Request for Security"
 
 **Poor Titles:**
+
 - "Documentation" (too vague)
 - "How to Maybe Improve Code Quality" (uncertain)
 - "The Complete Guide to Everything" (too broad)

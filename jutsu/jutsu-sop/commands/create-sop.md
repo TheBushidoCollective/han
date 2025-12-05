@@ -4,6 +4,22 @@ description: Create a new Standard Operating Procedure (SOP) file with proper st
 
 # Create New SOP
 
+## Name
+
+jutsu-sop:create-sop - Create a new Standard Operating Procedure file
+
+## Synopsis
+
+```
+/create-sop
+```
+
+## Description
+
+This command guides users through creating well-structured Standard Operating Procedures (SOPs) for AI agents. It provides step-by-step assistance in determining SOP purpose, structuring content, applying RFC 2119 keywords, and saving files with proper naming conventions.
+
+## Implementation
+
 You are helping the user create a new Standard Operating Procedure (SOP) file.
 
 ## Your Task
@@ -89,19 +105,19 @@ Guide the user through creating a well-structured SOP file by:
 - **{complementary-sop}**: What to do next
 ```
 
-4. **Use RFC 2119 keywords** appropriately:
+1. **Use RFC 2119 keywords** appropriately:
    - **MUST**: Absolute requirements (security, data integrity, prerequisites)
    - **SHOULD**: Strong recommendations (best practices, optimizations)
    - **MAY**: Optional actions (enhancements, preferences)
    - **MUST NOT**: Absolute prohibitions (security violations, data risks)
    - **SHOULD NOT**: Strong discouragement (anti-patterns)
 
-5. **File naming**:
+1. **File naming**:
    - Use kebab-case
    - Use `.sop.md` extension
    - Examples: `deploy-production.sop.md`, `code-review-security.sop.md`
 
-6. **Save location**:
+1. **Save location**:
    - Ask where to save (or use `~/sops/` as default)
    - Suggest organizing by category: `~/sops/deployment/`, `~/sops/development/`
 
@@ -127,6 +143,7 @@ Guide the user through creating a well-structured SOP file by:
 User: "Help me create an SOP for deploying to production"
 
 Response:
+
 1. Ask clarifying questions about deployment process
 2. Identify required tools (kubectl, docker, etc.)
 3. Map out deployment steps
