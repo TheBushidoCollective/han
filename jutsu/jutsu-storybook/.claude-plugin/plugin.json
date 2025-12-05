@@ -1,6 +1,6 @@
 {
   "name": "jutsu-storybook",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.",
   "author": {
     "name": "The Bushido Collective",
