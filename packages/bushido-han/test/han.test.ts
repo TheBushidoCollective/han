@@ -188,7 +188,8 @@ test("han hook verify exits 0 when all hooks are cached", () => {
 							hooks: [
 								{
 									type: "command",
-									command: "npx -y @thebushidocollective/han hook run no-cache-plugin build",
+									command:
+										"npx -y @thebushidocollective/han hook run no-cache-plugin build",
 								},
 							],
 						},
@@ -226,7 +227,9 @@ test("han hook verify exits 0 when all hooks are cached", () => {
 		} as ExecSyncOptionsWithStringEncoding);
 
 		strictEqual(
-			output.includes("hooks are cached") || output.includes("✅") || output.includes("0"),
+			output.includes("hooks are cached") ||
+				output.includes("✅") ||
+				output.includes("0"),
 			true,
 			"Expected success message indicating hooks are up to date",
 		);

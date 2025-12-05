@@ -2,8 +2,17 @@
   "hooks": {
     "build": {
       "command": "npx tailwindcss -i ./src/input.css -o ./dist/output.css --minify",
-      "dirsWith": ["tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs", "tailwind.config.mjs"],
-      "ifChanged": ["**/*.{html,js,jsx,ts,tsx,vue,svelte}", "tailwind.config.*", "**/*.css"]
+      "dirsWith": [
+        "tailwind.config.js",
+        "tailwind.config.ts",
+        "tailwind.config.cjs",
+        "tailwind.config.mjs"
+      ],
+      "ifChanged": [
+        "**/*.{html,js,jsx,ts,tsx,vue,svelte}",
+        "tailwind.config.*",
+        "**/*.css"
+      ]
     }
   }
 }

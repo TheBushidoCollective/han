@@ -43,6 +43,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-push-check.sh\"",
+            "timeout": 120000
+          }
+        ]
+      }
     ]
   }
 }
