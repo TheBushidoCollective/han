@@ -978,6 +978,56 @@
       ]
     },
     {
+      "name": "hashi-figma",
+      "description": "MCP server for Figma integration providing design-to-code generation, design token extraction, component sync, and frame analysis via Figma Desktop MCP server.",
+      "source": "./hashi/hashi-figma",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "figma",
+        "design",
+        "design-tokens",
+        "components",
+        "code-generation",
+        "ui",
+        "server"
+      ]
+    },
+    {
+      "name": "hashi-sentry",
+      "description": "MCP server for Sentry integration providing error tracking, performance monitoring, release health, incident response, and Seer AI root cause analysis via remote HTTP OAuth server.",
+      "source": "./hashi/hashi-sentry",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "sentry",
+        "error-tracking",
+        "observability",
+        "performance",
+        "monitoring",
+        "incidents",
+        "seer-ai",
+        "server"
+      ]
+    },
+    {
+      "name": "hashi-han-metrics",
+      "description": "MCP server for agent performance tracking with self-reporting, objective validation, and calibration metrics. Provides local SQLite storage with SessionStart/Stop hooks for continuous improvement.",
+      "source": "./hashi/hashi-han-metrics",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "metrics",
+        "performance",
+        "tracking",
+        "calibration",
+        "self-reporting",
+        "validation",
+        "analytics",
+        "server"
+      ]
+    },
+    {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",

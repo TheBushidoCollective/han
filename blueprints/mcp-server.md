@@ -188,7 +188,110 @@ console.log = (...args) => {
 - `lib/commands/mcp/tools.ts` - Tool discovery and execution
 - `lib/validate.ts` - Hook execution
 
+## External MCP Integrations
+
+In addition to Han's own MCP server (`hashi-han`), Han provides several hashi plugins that integrate with external MCP servers:
+
+### hashi-figma
+
+**Purpose:** Design-to-code workflow integration
+
+**Transport:** HTTP (local Figma Desktop app at `http://127.0.0.1:3845/mcp`)
+
+**Capabilities:**
+
+- Frame-to-code generation (React, Vue, HTML/CSS)
+- Design token extraction
+- Component library sync
+- Implementation guidance from designs
+
+**Slash Commands:**
+
+- `/figma:generate-component` - Convert Figma frames to production code
+- `/figma:extract-tokens` - Extract design tokens (colors, typography, spacing)
+- `/figma:sync-design-system` - Sync component library
+- `/figma:analyze-frame` - Get implementation guidance
+
+**Authentication:** Zero-config (Figma Desktop handles authentication)
+
+### hashi-sentry
+
+**Purpose:** Production observability and error tracking
+
+**Transport:** Remote HTTP OAuth (`https://mcp.sentry.dev/mcp`)
+
+**Capabilities:**
+
+- Error investigation and triage
+- Performance analysis
+- Release health monitoring
+- Incident response with Seer AI integration
+- Custom event queries
+
+**Slash Commands:**
+
+- `/investigate-errors` - Triage and analyze production errors
+- `/analyze-performance` - Debug performance regressions
+- `/check-releases` - Monitor release health metrics
+- `/incident-response` - Coordinated incident handling
+- `/query-events` - Custom event queries
+
+**Authentication:** OAuth flow via Sentry
+
+### hashi-han-metrics
+
+**Purpose:** Agent performance tracking and calibration
+
+**Transport:** STDIO (local subprocess)
+
+**Capabilities:**
+
+- Self-reporting task tracking
+- Objective validation via hooks
+- Calibration metrics
+- Success rate analysis
+- Confidence assessment
+
+**MCP Tools:**
+
+- `start_task` - Begin tracking a task
+- `update_task` - Log progress
+- `complete_task` - Mark complete with confidence
+- `fail_task` - Record failure with details
+- `query_metrics` - Query performance analytics
+
+**Hooks:**
+
+- SessionStart: Inject tracking instructions
+- Stop: Validate self-assessments against hook results
+
+**Storage:** Local SQLite at `~/.claude/metrics/metrics.db`
+
+## MCP Server Categories
+
+Han supports two categories of MCP servers:
+
+### 1. Hook Execution (hashi-han)
+
+Exposes Han plugin hooks as MCP tools for natural language execution. Dynamically discovers tools based on installed plugins.
+
+**Use Case:** "Run the TypeScript tests" → calls `jutsu_typescript_test` tool
+
+### 2. External Integrations (hashi-*)
+
+Bridges Claude Code with external services and tools via their official MCP servers.
+
+**Use Cases:**
+
+- Design → Code (hashi-figma)
+- Production Monitoring (hashi-sentry)
+- Performance Tracking (hashi-han-metrics)
+- GitHub Operations (hashi-github)
+- Project Management (hashi-linear, hashi-jira, hashi-clickup)
+
 ## Related Systems
 
 - [Hook System](./hook-system.md) - Hook definitions and execution
 - [Settings Management](./settings-management.md) - Plugin discovery
+- [Metrics System](./metrics-system.md) - Performance tracking via hashi-han-metrics
+- [SDLC Coverage](./sdlc-coverage.md) - MCP integrations across SDLC phases
