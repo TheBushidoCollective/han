@@ -1,6 +1,6 @@
 {
   "name": "jutsu-sop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Skills for writing and maintaining Standard Operating Procedures (SOPs) for AI agents with RFC 2119 compliance and markdown-based workflows.",
   "author": {
     "name": "The Bushido Collective",
