@@ -384,21 +384,21 @@ RFC 2119 defines these keywords for requirement levels:
 
 ## Keyword Selection Guide
 
-### Use MUST when:
+### Use MUST when
 
 - ✅ Skipping the step causes errors or data corruption
 - ✅ Security or privacy is at stake
 - ✅ Step is prerequisite for subsequent steps
 - ✅ Violating requirement breaks system invariants
 
-### Use SHOULD when:
+### Use SHOULD when
 
 - ✅ Following guideline improves quality or maintainability
 - ✅ Best practice but alternatives exist
 - ✅ Strongly recommended but context may vary
 - ✅ Performance or readability benefit
 
-### Use MAY when:
+### Use MAY when
 
 - ✅ Truly optional enhancement
 - ✅ User preference or style choice

@@ -187,13 +187,17 @@ sops/
 ## Steps
 
 1. Run tests with Mocha
+
    ```bash
    npm run test
    ```
-2. Check coverage with Istanbul
+
+1. Check coverage with Istanbul
+
    ```bash
    npm run coverage
    ```
+
 ```
 
 **After (updated for Vitest):**
@@ -208,10 +212,13 @@ sops/
 ## Steps
 
 1. Run tests with Vitest
+
    ```bash
    npm run test
    ```
-2. Check coverage (built into Vitest)
+
+1. Check coverage (built into Vitest)
+
    ```bash
    npm run test:coverage
    ```
@@ -219,9 +226,11 @@ sops/
 ## Migration Notes
 
 If migrating from v1.x (Mocha):
+
 - Vitest uses same syntax for most assertions
 - Coverage is built-in (no separate Istanbul step)
 - Tests run significantly faster
+
 ```
 
 ### Example 2: Adding Environment Variable Support
@@ -287,6 +296,7 @@ Add to Claude Code settings:
 3. Default paths (built-in SOPs only)
 
 Custom SOPs override built-in SOPs with matching names.
+
 ```
 
 ### Example 3: Post-Incident SOP Update
@@ -345,14 +355,18 @@ Custom SOPs override built-in SOPs with matching names.
 **Cause**: Pool size insufficient for load, connection leaks, or slow queries
 
 **Resolution**:
+
 1. Immediate: Scale up connection pool size
+
    ```bash
    kubectl patch configmap db-config --patch '{"data":{"pool_size":"100"}}'
    kubectl rollout restart deployment app
    ```
-2. Monitor connection usage for 5 minutes
-3. If issue persists, execute rollback
-4. Post-incident: Review slow query logs and optimize
+
+1. Monitor connection usage for 5 minutes
+1. If issue persists, execute rollback
+1. Post-incident: Review slow query logs and optimize
+
 ```
 
 ## Common Patterns
@@ -480,26 +494,28 @@ To migrate from this SOP to {new SOP}:
 When infrastructure, tools, or processes change:
 
 1. Identify affected SOPs
+
    ```bash
    # Search for SOPs mentioning changed component
    grep -r "docker" sops/*.sop.md
    ```
 
-2. Update each affected SOP
+1. Update each affected SOP
    - Update version number
    - Add changelog entry
    - Modify affected steps
    - Update examples
 
-3. Test updated SOPs
+1. Test updated SOPs
    - Run through new workflow
    - Verify all steps work
    - Check success criteria still valid
 
-4. Review dependencies
+1. Review dependencies
    - Check related SOPs need updates
    - Update SOP index
    - Notify team of changes
+
 ```
 
 ## Related Skills
