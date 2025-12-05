@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.49.1] - 2025-12-05
+
+### Added
+
+- add pre-push hook verification feature ([65bcac74](../../commit/65bcac74))
+- add hook verify command for validation testing ([e9f4ffe8](../../commit/e9f4ffe8))
+- add HAN_DISABLE_HOOKS environment variable for global hook disable ([ae87177e](../../commit/ae87177e))
+- add real-time streaming to hook test output viewer ([c00fbda8](../../commit/c00fbda8))
+- add marketplace caching with 24-hour auto-refresh ([9248e898](../../commit/9248e898))
+
+### Fixed
+
+- disable distributed fail-fast for MCP tools ([79d93e94](../../commit/79d93e94))
+- use merged settings for hook run command ([0f535f33](../../commit/0f535f33))
+- handle Ctrl+C gracefully in hook test --execute ([c6834331](../../commit/c6834331))
+- remove unused imports from hook-test.ts ([d585d855](../../commit/d585d855))
+- make hook test command merge user, project, and local settings ([417de80d](../../commit/417de80d))
+- fix biome lint errors in marketplace-cache tests ([0095af3b](../../commit/0095af3b))
+- MCP tools should not default to fail-fast mode ([1bdaec54](../../commit/1bdaec54))
+- clear stale failure signals on hook run start ([063c447b](../../commit/063c447b))
+- use plugin names instead of array indices as React keys ([feae87c6](../../commit/feae87c6))
+- remove invalid han-config.yml causing hook failures ([eb51a761](../../commit/eb51a761))
+
+### Changed
+
+- stream hook output within Ink UI instead of unmounting ([47b71d96](../../commit/47b71d96))
+
+### Other
+
+- simplify hook verify cache test ([c24adb83](../../commit/c24adb83))
+- add tests for hook verify command ([7bce40dc](../../commit/7bce40dc))
+- apply biome formatting to hook test files ([a03e95fd](../../commit/a03e95fd))
+- add test for MCP tool isolation from failure signals ([7331b431](../../commit/7331b431))
+- add test for stale failure signal cleanup ([eaf2b3b9](../../commit/eaf2b3b9))
+
 ## [1.49.0] - 2025-12-05
 
 ### Added
