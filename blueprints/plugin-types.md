@@ -11,7 +11,7 @@ Han organizes plugins into four categories, each serving a distinct purpose:
 | Bushido | Foundation | Commands, Skills, Hooks | 1 |
 | Jutsu | Techniques | Skills, Hooks | 80+ |
 | Do | Disciplines | Agents | 33 |
-| Hashi | Bridges | MCP Servers, Commands | 8 |
+| Hashi | Bridges | MCP Servers, Commands | 10 |
 
 ## Bushido - Foundation
 
@@ -164,11 +164,13 @@ hashi-{service}/
 
 ### Examples
 
-| Plugin | Service | Tools |
-|--------|---------|-------|
-| hashi-github | GitHub API | 100+ (issues, PRs, code search) |
-| hashi-playwright-mcp | Browser automation | Navigate, click, screenshot |
-| hashi-context7 | Documentation | Library docs lookup |
+| Plugin | Service | Tools | SDLC Phase |
+|--------|---------|-------|------------|
+| hashi-github | GitHub API | 100+ (issues, PRs, code search) | Review, Deploy |
+| hashi-playwright-mcp | Browser automation | Navigate, click, screenshot | Test |
+| hashi-context7 | Documentation | Library docs lookup | Build |
+| hashi-figma | Figma design | Frames, components, tokens | Design |
+| hashi-sentry | Error tracking | Issues, performance, releases | Deploy & Maintain |
 
 ### MCP Configuration
 
@@ -208,7 +210,7 @@ han/
 ├── bushido/           # 1 plugin
 ├── jutsu/             # 80+ plugins
 ├── do/                # 33 plugins
-└── hashi/             # 8 plugins
+└── hashi/             # 10 plugins
 ```
 
 ## Related Systems

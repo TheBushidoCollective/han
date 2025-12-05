@@ -261,7 +261,13 @@
       "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
       "source": "./jutsu/jutsu-effect",
       "category": "Technique",
-      "keywords": ["effect", "typescript", "functional-programming", "type-safety", "dependency-injection"]
+      "keywords": [
+        "effect",
+        "typescript",
+        "functional-programming",
+        "type-safety",
+        "dependency-injection"
+      ]
     },
     {
       "name": "jutsu-elixir",
