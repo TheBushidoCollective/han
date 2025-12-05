@@ -84,11 +84,6 @@ function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 						description:
 							"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
 					},
-					failFast: {
-						type: "boolean",
-						description:
-							"Stop immediately on first failure. Set to false to see all errors across all directories. Default: true.",
-					},
 					verbose: {
 						type: "boolean",
 						description:
@@ -138,7 +133,7 @@ async function handleToolsCall(params: {
 	const args = params.arguments || {};
 	const cache = args.cache !== false; // Default to true for MCP
 	const verbose = args.verbose === true;
-	const failFast = args.failFast === true; // Default to false - MCP tools are independent
+	const failFast = false; // Always false - MCP tools run independently without cross-tool fail-fast
 	const directory =
 		typeof args.directory === "string" ? args.directory : undefined;
 
