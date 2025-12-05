@@ -1,6 +1,6 @@
 # Hashi: Agent SOP
 
-MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions.
+MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring capabilities.
 
 ## What This Hashi Provides
 
@@ -15,6 +15,22 @@ This hashi connects Claude Code to the Agent SOP system and provides:
 - **Parameterized Inputs**: Reuse SOPs across different contexts
 - **Multi-step Workflows**: Complex development patterns like TDD, code analysis, and feature implementation
 - **Custom SOP Loading**: Add your own SOPs for team-specific workflows
+
+### SOP Authoring Skills
+
+Comprehensive skills for writing and maintaining high-quality SOPs:
+
+- **sop-authoring**: Write clear, actionable SOPs with effective instruction design
+- **sop-structure**: Organize SOPs with proper sections and markdown formatting
+- **sop-rfc2119**: Use RFC 2119 keywords (MUST, SHOULD, MAY) for precise requirements
+- **sop-maintenance**: Keep SOPs current through versioning and updates
+
+### SOP Commands
+
+Slash commands for guided SOP creation and maintenance:
+
+- **/create-sop**: Step-by-step guidance for creating new SOP files
+- **/update-sop**: Instructions for updating existing SOPs with versioning
 
 ### Available Tools
 
@@ -205,6 +221,104 @@ Claude: [uses eval tool to run evaluation workflow and provide structured feedba
 - Implementation validation
 - Performance evaluation
 
+## Creating and Authoring SOPs
+
+### Using the /create-sop Command
+
+For guided SOP creation, use the `/create-sop` command:
+
+```
+/create-sop
+```
+
+Claude will guide you through:
+
+1. Determining the SOP purpose and type
+2. Structuring sections properly
+3. Adding RFC 2119 keywords appropriately
+4. Creating success criteria and error handling
+5. Saving to the correct location
+
+### Using the /update-sop Command
+
+When SOPs need changes, use the `/update-sop` command:
+
+```
+/update-sop
+```
+
+Claude will help you:
+
+1. Read and analyze the current SOP
+2. Determine appropriate version bump
+3. Update changelog with changes
+4. Modify affected sections
+5. Ensure consistency across related SOPs
+
+### Using SOP Authoring Skills
+
+The SOP authoring skills are automatically available when this plugin is installed:
+
+**Example: Writing a deployment SOP**
+
+```
+User: Help me write an SOP for deploying to production
+
+Claude: [Uses sop-authoring and sop-structure skills to create a well-structured
+         SOP with proper RFC 2119 keywords, clear steps, and comprehensive error
+         handling]
+```
+
+**Example: Reviewing SOP quality**
+
+```
+User: Review this SOP for clarity and RFC 2119 compliance
+
+Claude: [Uses sop-rfc2119 skill to check keyword usage and sop-structure to
+         verify section organization]
+```
+
+### SOP File Naming Convention
+
+SOPs must use the `.sop.md` extension:
+
+```
+✅ deployment-production.sop.md
+✅ code-review-security.sop.md
+✅ database-migration.sop.md
+
+❌ deployment.md (missing .sop)
+❌ checklist.txt (wrong extension)
+```
+
+### RFC 2119 Keywords
+
+This plugin teaches proper use of RFC 2119 requirement keywords:
+
+| Keyword | Meaning | When to Use |
+|---------|---------|-------------|
+| **MUST** | Absolute requirement | Security, data integrity, prerequisites |
+| **MUST NOT** | Absolute prohibition | Security violations, data corruption |
+| **SHOULD** | Strong recommendation | Best practices, optimizations |
+| **SHOULD NOT** | Strong discouragement | Anti-patterns to avoid |
+| **MAY** | Optional | Enhancements, preferences |
+
+**Example:**
+
+```markdown
+## Steps
+
+1. Pre-deployment checks
+   - You MUST verify all tests pass
+   - You MUST backup production database
+   - You SHOULD review recent changes
+   - You MAY notify team in Slack
+
+2. Execute deployment
+   - You MUST NOT skip health checks
+   - You SHOULD deploy during low-traffic window
+```
+
 ## Creating Custom SOPs
 
 You can create your own SOPs for team-specific workflows:
@@ -318,6 +432,7 @@ pip install --upgrade strands-agents-sops
 - **bushido**: Core quality principles and enforcement
 - **jutsu-tdd**: Test-Driven Development principles
 - **jutsu-blueprints**: Technical blueprint documentation
+- **jutsu-markdown**: Markdown documentation and linting
 - **do-backend-development**: Backend engineering agents
 - **do-frontend-development**: Frontend engineering agents
 

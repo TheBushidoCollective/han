@@ -6,7 +6,7 @@ description: Create a new Standard Operating Procedure (SOP) file with proper st
 
 ## Name
 
-jutsu-sop:create-sop - Create a new Standard Operating Procedure file
+hashi-agent-sop:create-sop - Create a new Standard Operating Procedure file
 
 ## Synopsis
 
