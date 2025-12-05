@@ -1,10 +1,21 @@
 ---
+name: figma-analyze-frame
 description: Analyze a Figma frame's structure, properties, and implementation considerations
 ---
 
 # Analyze Figma Frame
 
-You are tasked with analyzing a Figma frame to understand its structure, properties, and provide implementation guidance.
+## Synopsis
+
+Analyze a Figma frame's hierarchy, styling, layout, interactivity, and provide comprehensive implementation recommendations including HTML structure, CSS approach, component breakdown, accessibility considerations, and responsive strategy.
+
+## Description
+
+You are tasked with analyzing a Figma frame to understand its structure, properties, and provide implementation guidance. This command provides detailed technical analysis to help engineers understand how to implement a design.
+
+## Implementation
+
+Uses Figma Desktop MCP server to access frame properties, layers, styling, and layout information. Analyzes component instances, auto-layout configurations, constraints, and design tokens to generate actionable implementation guidance.
 
 ## Your Task
 

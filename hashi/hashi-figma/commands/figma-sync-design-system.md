@@ -1,10 +1,21 @@
 ---
+name: figma-sync-design-system
 description: Sync design system components between Figma and code using Code Connect mappings
 ---
 
 # Sync Design System Components
 
-You are tasked with synchronizing a design system between Figma and the codebase using the Figma MCP server and Code Connect.
+## Synopsis
+
+Synchronize design system components between Figma and codebase using Code Connect mappings. Identifies gaps, generates missing components, updates existing ones, and creates bidirectional links between design and code.
+
+## Description
+
+You are tasked with synchronizing a design system between Figma and the codebase using the Figma MCP server and Code Connect. This command analyzes both Figma components and code components to identify discrepancies and facilitate keeping design and code in sync.
+
+## Implementation
+
+Inventories all Figma components via MCP server and scans codebase for component library. Compares component sets to identify missing, outdated, or unmapped components. Generates Code Connect configuration files to establish bidirectional mapping between Figma designs and code implementations.
 
 ## Your Task
 

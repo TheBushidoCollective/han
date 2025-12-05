@@ -1,10 +1,21 @@
 ---
+name: figma-generate-component
 description: Generate production-ready code from a Figma component or frame using the Figma MCP server
 ---
 
 # Generate Component from Figma
 
-You are tasked with generating production-ready code from a Figma design using the Figma MCP server.
+## Synopsis
+
+Convert Figma frames and components into production code (React, Vue, HTML/CSS) using the Figma Desktop MCP server with support for Code Connect mappings and design tokens.
+
+## Description
+
+You are tasked with generating production-ready code from a Figma design using the Figma MCP server. This command bridges the design-to-code workflow by analyzing Figma frames and converting them into semantic, accessible, framework-specific components.
+
+## Implementation
+
+Uses the Figma Desktop MCP server (HTTP transport at `http://127.0.0.1:3845/mcp`) to access selected frames or node IDs from Figma URLs. Leverages Code Connect mappings when available to prefer design system components over generating code from scratch.
 
 ## Input Methods
 

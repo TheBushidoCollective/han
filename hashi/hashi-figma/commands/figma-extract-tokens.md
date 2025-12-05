@@ -1,10 +1,21 @@
 ---
+name: figma-extract-tokens
 description: Extract design tokens and variables from a Figma file to create or update a design system
 ---
 
 # Extract Design Tokens from Figma
 
-You are tasked with extracting design tokens and variables from a Figma file using the Figma MCP server.
+## Synopsis
+
+Extract design tokens (colors, spacing, typography, etc.) from Figma files and generate token files in various formats (CSS Custom Properties, TypeScript, JSON, Style Dictionary, Tailwind config).
+
+## Description
+
+You are tasked with extracting design tokens and variables from a Figma file using the Figma MCP server. This command analyzes Figma variables and variable collections to generate structured token files for your design system.
+
+## Implementation
+
+Connects to the Figma Desktop MCP server to access Figma variables API. Extracts all variable types (colors, numbers, strings, booleans) and organizes them into primitive and semantic token hierarchies. Supports multiple output formats and theming variations.
 
 ## Your Task
 
