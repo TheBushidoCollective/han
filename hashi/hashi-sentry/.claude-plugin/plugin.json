@@ -1,0 +1,28 @@
+{
+  "name": "hashi-sentry",
+  "version": "1.0.0",
+  "description": "MCP server configuration for Sentry integration providing error tracking, performance monitoring, and incident response capabilities.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "sentry",
+    "monitoring",
+    "errors",
+    "observability",
+    "performance",
+    "incidents",
+    "server"
+  ],
+  "mcpServers": {
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    }
+  }
+}
