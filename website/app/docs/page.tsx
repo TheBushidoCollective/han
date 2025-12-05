@@ -63,6 +63,12 @@ export default function DocsPage() {
 								MCP Server
 							</a>
 							<a
+								href="#metrics"
+								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+							>
+								Agent Metrics
+							</a>
+							<a
 								href="#cli-reference"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
@@ -716,6 +722,199 @@ jutsu-eslint:
 										<span>
 											Run only in this specific directory (relative to project
 											root)
+										</span>
+									</li>
+								</ul>
+							</div>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mt-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									External MCP Integrations
+								</h3>
+								<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+									Han also provides hashi plugins that connect to external MCP
+									servers, bridging Claude Code with external services and
+									tools.
+								</p>
+								<div className="space-y-4">
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-start gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+												hashi-figma
+											</code>
+											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+												Design Phase
+											</span>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Figma integration for design-to-code generation, design
+											token extraction, component sync, and frame analysis.
+											Connects to Figma Desktop MCP server via HTTP.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-start gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+												hashi-sentry
+											</code>
+											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+												Deploy & Maintain Phase
+											</span>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Sentry integration for error tracking, performance
+											monitoring, release health, and incident response with
+											Seer AI root cause analysis. Remote HTTP OAuth server.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-start gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+												hashi-han-metrics
+											</code>
+											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+												Quality Measurement
+											</span>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Agent performance tracking with self-reporting, objective
+											validation, and calibration metrics. Local SQLite storage
+											with SessionStart/Stop hooks for continuous improvement.
+										</p>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						{/* Agent Metrics */}
+						<section id="metrics" className="scroll-mt-8 mb-16">
+							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+								Agent Metrics
+							</h2>
+							<p className="text-gray-600 dark:text-gray-300 mb-8">
+								Track agent performance with self-reporting and objective
+								validation. The metrics system creates a feedback loop for
+								continuous improvement in success rates and calibration
+								accuracy.
+							</p>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Quick Start
+								</h3>
+								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+									<code>
+										npx @thebushidocollective/han plugin install
+										hashi-han-metrics
+									</code>
+								</pre>
+								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
+									Once installed, agents automatically track their work using
+									MCP tools and hooks validate outcomes against objective
+									signals.
+								</p>
+							</div>
+
+							<div className="grid md:grid-cols-2 gap-6 mb-8">
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Self-Reporting Agents
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Agents use MCP tools to track tasks: start_task,
+										update_task, complete_task with confidence levels (0-1).
+										This builds self-awareness of performance patterns.
+									</p>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Objective Validation
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Stop hooks cross-validate self-assessments with quality
+										checks (tests, lints, types). Calculates calibration
+										accuracy to identify overconfidence or underconfidence.
+									</p>
+								</div>
+							</div>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Key Metrics
+								</h3>
+								<div className="space-y-3">
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Success Rate
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Overall and per-type success rates (implementation, fix,
+											refactor, research)
+										</span>
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Calibration Score
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											How well agent confidence matches actual outcomes (perfect
+											= 0.0)
+										</span>
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Duration
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Average task duration by type and complexity
+										</span>
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Confidence Buckets
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Breakdown of confidence levels vs actual success to spot
+											patterns
+										</span>
+									</div>
+								</div>
+							</div>
+
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									Privacy & Storage
+								</h3>
+								<ul className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
+									<li className="flex items-start gap-2">
+										<span className="text-green-500 dark:text-green-400 mt-0.5">
+											✓
+										</span>
+										<span>
+											100% local - all data in SQLite at ~/.claude/metrics/
+										</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="text-green-500 dark:text-green-400 mt-0.5">
+											✓
+										</span>
+										<span>No network calls or external services</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="text-green-500 dark:text-green-400 mt-0.5">
+											✓
+										</span>
+										<span>
+											User-owned data - query, backup, or delete anytime
+										</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="text-green-500 dark:text-green-400 mt-0.5">
+											✓
+										</span>
+										<span>
+											Minimal data - task descriptions, outcomes, no
+											conversations
 										</span>
 									</li>
 								</ul>
