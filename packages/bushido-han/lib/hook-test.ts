@@ -6,9 +6,7 @@ import React from "react";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
-	type ClaudeSettings,
 	type MarketplaceConfig,
-	readSettingsFile,
 } from "./claude-settings.js";
 import { HookTestUI } from "./hook-test-ui.js";
 
@@ -35,7 +33,6 @@ function waitForKeypress(): Promise<void> {
 		});
 	});
 }
-
 
 /** Default timeout for hooks (30 seconds per Claude docs) */
 const DEFAULT_HOOK_TIMEOUT = 30000;
@@ -86,7 +83,6 @@ export function makeLiveOutputKey(
 ): string {
 	return `${hookType}:${plugin}:${command}`;
 }
-
 
 // Valid hook event types according to Claude Code spec
 const VALID_HOOK_TYPES = [
@@ -218,7 +214,6 @@ async function executeHookCommand(
 		});
 	});
 }
-
 
 /**
  * Find plugin in a marketplace root directory
