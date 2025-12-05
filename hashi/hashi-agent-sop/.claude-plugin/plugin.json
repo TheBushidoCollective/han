@@ -25,7 +25,10 @@
       "command": "strands-agents-sops",
       "args": [
         "mcp"
-      ]
+      ],
+      "env": {
+        "AGENT_SOP_PATHS": "${AGENT_SOP_PATHS}"
+      }
     }
   }
 }
