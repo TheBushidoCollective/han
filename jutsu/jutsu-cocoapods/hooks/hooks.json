@@ -10,17 +10,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-cocoapods lint --fail-fast --cached",
-            "timeout": 180000
-          }
-        ]
-      }
     ]
   }
 }

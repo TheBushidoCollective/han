@@ -10,17 +10,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-tailwind build --fail-fast --cached",
-            "timeout": 120000
-          }
-        ]
-      }
     ]
   }
 }
