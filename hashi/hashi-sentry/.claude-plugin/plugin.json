@@ -1,6 +1,6 @@
 {
   "name": "hashi-sentry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server configuration for Sentry integration providing error tracking, performance monitoring, and incident response capabilities.",
   "author": {
     "name": "The Bushido Collective",
