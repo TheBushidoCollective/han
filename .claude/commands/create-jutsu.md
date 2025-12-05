@@ -99,17 +99,6 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
-            "timeout": 120000
-          }
-        ]
-      }
     ]
   }
 }
@@ -119,7 +108,6 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
 
 - **hooks**: Top-level object containing event hooks
 - **Stop**: Hooks that run when conversation stops
-- **SubagentStop**: Hooks that run when subagent completes
 - **type**: Always "command" for hook execution
 - **command**: Uses `npx han hook run {plugin-name} {hook-name}` format
 - **--fail-fast**: Stop on first error for quick feedback
