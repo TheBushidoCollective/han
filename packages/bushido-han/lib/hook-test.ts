@@ -3,6 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render } from "ink";
 import React from "react";
+import {
+	getClaudeConfigDir,
+	getMergedPluginsAndMarketplaces,
+	type ClaudeSettings,
+	type MarketplaceConfig,
+	readSettingsFile,
+} from "./claude-settings.js";
 import { HookTestUI } from "./hook-test-ui.js";
 
 /**
@@ -29,19 +36,6 @@ function waitForKeypress(): Promise<void> {
 	});
 }
 
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		throw new Error("Could not determine home directory");
-	}
-	return join(homeDir, ".claude");
-}
 
 /** Default timeout for hooks (30 seconds per Claude docs) */
 const DEFAULT_HOOK_TIMEOUT = 30000;
@@ -93,21 +87,6 @@ export function makeLiveOutputKey(
 	return `${hookType}:${plugin}:${command}`;
 }
 
-interface MarketplaceSource {
-	source: "directory" | "git" | "github";
-	path?: string;
-	url?: string;
-	repo?: string;
-}
-
-interface MarketplaceConfig {
-	source: MarketplaceSource;
-}
-
-interface ClaudeSettings {
-	extraKnownMarketplaces?: Record<string, MarketplaceConfig>;
-	enabledPlugins?: Record<string, boolean>;
-}
 
 // Valid hook event types according to Claude Code spec
 const VALID_HOOK_TYPES = [
@@ -240,91 +219,6 @@ async function executeHookCommand(
 	});
 }
 
-/**
- * Read settings from a file
- */
-function readSettings(path: string): ClaudeSettings | null {
-	if (!existsSync(path)) {
-		return null;
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf8"));
-	} catch (_error) {
-		return null;
-	}
-}
-
-/**
- * Get all enabled plugins and marketplace configurations from settings
- */
-function getEnabledPluginsAndMarketplaces(): {
-	plugins: Map<string, string>;
-	marketplaces: Map<string, MarketplaceConfig>;
-} {
-	// Map of plugin name -> marketplace name
-	const plugins = new Map<string, string>();
-	// Map of marketplace name -> marketplace config
-	const marketplaces = new Map<string, MarketplaceConfig>();
-
-	// Read project settings
-	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
-	const projectSettings = readSettings(projectSettingsPath);
-	if (projectSettings) {
-		// Collect marketplace configs
-		if (projectSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				projectSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		// Collect enabled plugins
-		if (projectSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				projectSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				}
-			}
-		}
-	}
-
-	// Read local settings (can override project settings)
-	const localSettingsPath = join(
-		process.cwd(),
-		".claude",
-		"settings.local.json",
-	);
-	const localSettings = readSettings(localSettingsPath);
-	if (localSettings) {
-		// Collect marketplace configs (override project)
-		if (localSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				localSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		// Collect enabled plugins (override project)
-		if (localSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				localSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				} else if (!enabled && key.includes("@")) {
-					const [pluginName] = key.split("@");
-					plugins.delete(pluginName);
-				}
-			}
-		}
-	}
-
-	return { plugins, marketplaces };
-}
 
 /**
  * Find plugin in a marketplace root directory
@@ -538,7 +432,7 @@ export async function testHooks(options?: {
 	}
 
 	const { plugins: enabledPlugins, marketplaces } =
-		getEnabledPluginsAndMarketplaces();
+		getMergedPluginsAndMarketplaces();
 
 	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
@@ -860,7 +754,7 @@ async function testHooksValidationOnly(): Promise<void> {
 	console.log("🔍 Validating hooks for installed plugins...\n");
 
 	const { plugins: enabledPlugins, marketplaces } =
-		getEnabledPluginsAndMarketplaces();
+		getMergedPluginsAndMarketplaces();
 
 	if (enabledPlugins.size === 0) {
 		console.log("No plugins installed");
