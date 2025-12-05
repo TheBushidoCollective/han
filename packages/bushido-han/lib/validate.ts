@@ -1,7 +1,11 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+	getClaudeConfigDir,
+	getMergedPluginsAndMarketplaces,
+} from "./claude-settings.js";
 import {
 	checkForChanges,
 	findDirectoriesWithMarkers,
@@ -434,116 +438,6 @@ export async function validate(options: ValidateOptions): Promise<void> {
 // Plugin Discovery (for running outside hook context)
 // ============================================
 
-interface MarketplaceSource {
-	source: "directory" | "git" | "github";
-	path?: string;
-	url?: string;
-	repo?: string;
-}
-
-interface MarketplaceConfig {
-	source: MarketplaceSource;
-}
-
-interface ClaudeSettings {
-	extraKnownMarketplaces?: Record<string, MarketplaceConfig>;
-	enabledPlugins?: Record<string, boolean>;
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		return "";
-	}
-	return join(homeDir, ".claude");
-}
-
-/**
- * Read settings from a file
- */
-function readSettings(path: string): ClaudeSettings | null {
-	if (!existsSync(path)) {
-		return null;
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf8"));
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Get enabled plugins and marketplace configurations from settings
- */
-function getEnabledPluginsAndMarketplaces(): {
-	plugins: Map<string, string>;
-	marketplaces: Map<string, MarketplaceConfig>;
-} {
-	const plugins = new Map<string, string>();
-	const marketplaces = new Map<string, MarketplaceConfig>();
-
-	// Read project settings
-	const projectSettingsPath = join(process.cwd(), ".claude", "settings.json");
-	const projectSettings = readSettings(projectSettingsPath);
-	if (projectSettings) {
-		if (projectSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				projectSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (projectSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				projectSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				}
-			}
-		}
-	}
-
-	// Read local settings (can override project settings)
-	const localSettingsPath = join(
-		process.cwd(),
-		".claude",
-		"settings.local.json",
-	);
-	const localSettings = readSettings(localSettingsPath);
-	if (localSettings) {
-		if (localSettings.extraKnownMarketplaces) {
-			for (const [name, config] of Object.entries(
-				localSettings.extraKnownMarketplaces,
-			)) {
-				marketplaces.set(name, config);
-			}
-		}
-		if (localSettings.enabledPlugins) {
-			for (const [key, enabled] of Object.entries(
-				localSettings.enabledPlugins,
-			)) {
-				if (enabled && key.includes("@")) {
-					const [pluginName, marketplace] = key.split("@");
-					plugins.set(pluginName, marketplace);
-				} else if (!enabled && key.includes("@")) {
-					const [pluginName] = key.split("@");
-					plugins.delete(pluginName);
-				}
-			}
-		}
-	}
-
-	return { plugins, marketplaces };
-}
-
 /**
  * Find plugin in a marketplace root directory
  */
@@ -582,7 +476,7 @@ function resolvePathToAbsolute(path: string): string {
  * Returns the plugin root path or null if not found.
  */
 function discoverPluginRoot(pluginName: string): string | null {
-	const { plugins, marketplaces } = getEnabledPluginsAndMarketplaces();
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 
 	// Check if this plugin is enabled
 	const marketplace = plugins.get(pluginName);
