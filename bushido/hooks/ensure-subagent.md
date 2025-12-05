@@ -1,34 +1,99 @@
-# Ensure Proper Subagent Usage
+# ⚠️ MANDATORY: Subagent Delegation Protocol ⚠️
+
+**VIOLATION OF THIS PROTOCOL WASTES USER CONTEXT WINDOW AND IS UNACCEPTABLE**
+
+## 🚨 CRITICAL RULE: User Action Requests MUST Be Delegated
+
+**When the user explicitly asks you to perform an action, you MUST IMMEDIATELY delegate to a subagent.**
+
+### ❌ What Went Wrong (Example)
+
+```
+User: "Create a plugin for X"
+❌ WRONG: You create the plugin yourself using Write/Edit tools
+✅ CORRECT: You delegate to do-claude-plugin-development:plugin-developer agent
+```
+
+**Why this matters:**
+
+- You waste context window doing work agents can do autonomously
+- Agents have specialized tools and domain expertise
+- Your context should be preserved for coordination and user interaction
+- Multiple agents can work in parallel, you cannot
+
+## BEFORE Starting ANY User-Requested Task
+
+**MANDATORY PRE-CHECK (DO THIS FIRST):**
+
+1. **Examine the COMPLETE list of available `subagent_type` options in the Task tool**
+   - Look at ALL options, not just ones you think are relevant
+   - This includes: built-in agents, `do-*` plugins, `hashi-*` plugins, AND any project-specific agents
+   - Check the FULL descriptions for each agent type
+
+2. **Match the user's request to available agents:**
+   - Does ANY specialized agent match this domain?
+   - If yes → STOP and delegate immediately
+   - If no → Use appropriate built-in agent (general-purpose, Explore, Plan)
+
+3. **Only proceed yourself if:**
+   - Task is trivial (single Read/Grep operation)
+   - No agent matches AND task is communication/explanation only
+   - You're coordinating between multiple agents
 
 ## When to Use Subagents
 
 Use Task tool for:
 
+- ✅ **ANY user request to "create", "build", "implement", "fix", "update" something**
 - ✅ Parallel operations (exploration, review, analysis)
 - ✅ Extensive codebase search/exploration
 - ✅ Complex work needing focused attention
 - ✅ Multiple independent perspectives
-- ✅ **Running commands that may have exhaustive output (tests, builds, linters)**
+- ✅ Running commands that may have exhaustive output (tests, builds, linters)
+- ✅ **ALL tasks that involve writing or modifying multiple files**
 
-❌ Don't use for simple operations - use Read/Grep/Glob instead.
+❌ Don't use for:
 
-## Delegation When User Requests Action
+- Single Read/Grep/Glob operations
+- Simple explanations
+- Trivial single-file edits
 
-**CRITICAL:** When the user explicitly asks you to perform an action, you MUST delegate to the appropriate agent. Never respond with just an explanation of how to do it - actually do it.
+### Step 1: Check ALL Available Subagent Types (MANDATORY)
 
-### Step 1: Check for Specialized Agents (Preferred)
+**YOU MUST examine the COMPLETE list of `subagent_type` options available in the Task tool.**
 
-Before delegating, check the Task tool's `subagent_type` options for agents that match the domain:
+The Task tool provides access to:
 
-- `do-*` - Discipline plugins (specialized engineering workflows)
-- `hashi-*` - Bridge plugins (MCP server integrations)
-- Project-specific agents with domain expertise
+- **Built-in agents**: general-purpose, Explore, Plan, claude-code-guide, statusline-setup
+- **Discipline plugins (do-*)**: Specialized engineering workflows
+  - do-claude-plugin-development, do-frontend-development, do-backend-development, etc.
+- **Bridge plugins (hashi-*)**: MCP server integrations
+- **Jutsu plugins**: Technology-specific agents (if project has them)
+- **Project-specific agents**: Custom agents defined in the codebase
+- **ALL other registered agent types**: Check the full Task tool description
 
-**Example:** User asks "create a new React component with accessibility support"
+**How to check ALL agents:**
 
-1. Check Task tool's available `subagent_type` options
-2. Find relevant agents: `do-frontend-development:presentation-engineer`, `do-accessibility-engineering:accessibility-engineer`
-3. Delegate to the specialized agent(s) instead of doing the work yourself
+1. Read the Task tool's complete parameter description for `subagent_type`
+2. Look at EVERY available agent type listed, not just the first few
+3. Read each agent's full description
+4. Match against user's request
+
+**Example:** User asks "create a plugin for agent-sop"
+
+MANDATORY CHECK:
+
+- ✅ Scan ALL subagent_type options
+- ✅ Find: `do-claude-plugin-development:plugin-developer` - "Use this agent to create Claude Code plugins"
+- ✅ This EXACTLY matches the request
+- ✅ Delegate immediately to this agent
+
+**Why check ALL agents:**
+
+- You might miss specialized agents if you only skim
+- Project-specific agents may exist that you don't know about
+- New agents may be added that you haven't seen before
+- Agent descriptions tell you EXACTLY when to use them
 
 Specialized agents have domain expertise and specialized tools that produce higher quality output than general-purpose approaches.
 
@@ -121,18 +186,34 @@ Don't pause for:
 
 ## Quick Rules
 
-**Do:**
+**MANDATORY DO:**
 
+- **CHECK ALL available subagent_type options FIRST** before doing ANY work
 - Launch parallel agents in single message
-- Trust subagent expertise
+- Trust subagent expertise completely
 - Provide complete context in prompts
-- Use appropriate subagent_type (Explore/Plan/General/Specialized)
+- Use specialized agents over general-purpose when available
 - Filter all findings to ≥80% confidence
 
-**Don't:**
+**NEVER DO:**
 
-- Use subagents for simple operations
-- Launch agents sequentially when parallel possible
-- Spawn agents for work you're already doing
-- Report low-confidence findings
-- Second-guess domain experts without reason
+- ❌ **Start work before checking for matching agents**
+- ❌ **Assume no agent exists without checking the full list**
+- ❌ Do complex multi-file work yourself instead of delegating
+- ❌ Use subagents for trivial single-read operations
+- ❌ Launch agents sequentially when parallel possible
+- ❌ Spawn agents for work you're already doing
+- ❌ Report low-confidence findings
+- ❌ Second-guess domain experts without reason
+
+## Self-Check Before Taking Action
+
+Ask yourself:
+
+1. ✅ Have I checked the COMPLETE list of subagent_type options?
+2. ✅ Have I read the full description of each matching agent?
+3. ✅ Is there a specialized agent that fits this task?
+4. ✅ Am I about to do complex work that an agent should do?
+5. ✅ Will this work create/modify multiple files?
+
+**If any answer is NO or UNSURE → STOP and check agents first**
