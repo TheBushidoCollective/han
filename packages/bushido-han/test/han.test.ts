@@ -110,6 +110,39 @@ test("shows hook command help", () => {
 	strictEqual(output.includes("test"), true);
 });
 
+test("HAN_DISABLE_HOOKS=1 causes hook run to exit 0 silently", () => {
+	const testDir = setup();
+	try {
+		// Create test structure
+		mkdirSync(join(testDir, "pkg1"));
+		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+
+		const output = execSync(
+			`${binCommand} hook run --dirs-with package.json -- echo should-not-run`,
+			{
+				cwd: testDir,
+				encoding: "utf8",
+				env: { ...process.env, HAN_DISABLE_HOOKS: "1" },
+			} as ExecSyncOptionsWithStringEncoding,
+		);
+
+		// Should exit 0 with no output
+		strictEqual(output.trim(), "", "Expected no output when hooks disabled");
+	} finally {
+		teardown();
+	}
+});
+
+test("HAN_DISABLE_HOOKS=1 causes hook dispatch to exit 0 silently", () => {
+	const output = execSync(`${binCommand} hook dispatch Stop`, {
+		encoding: "utf8",
+		env: { ...process.env, HAN_DISABLE_HOOKS: "1" },
+	});
+
+	// Should exit 0 with no output
+	strictEqual(output.trim(), "", "Expected no output when hooks disabled");
+});
+
 // ============================================
 // Hook run tests
 // ============================================

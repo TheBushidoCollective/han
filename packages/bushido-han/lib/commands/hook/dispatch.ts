@@ -293,6 +293,14 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
  * Uses merged settings from all scopes (user, project, local, enterprise).
  */
 function dispatchHooks(hookType: string, includeSettings = false): void {
+	// Allow global disable of all hooks via environment variable
+	if (
+		process.env.HAN_DISABLE_HOOKS === "true" ||
+		process.env.HAN_DISABLE_HOOKS === "1"
+	) {
+		process.exit(0);
+	}
+
 	const outputs: string[] = [];
 
 	// Dispatch settings hooks if --all is specified

@@ -197,6 +197,7 @@ Cache location: `~/.claude/projects/{project-slug}/han/`
 
 **Configuration:**
 
+- `HAN_DISABLE_HOOKS` - When set to "true" or "1", all hook commands exit 0 silently without executing
 - `HAN_HOOK_PARALLELISM` - Max concurrent hooks
 - `HAN_HOOK_LOCK_TIMEOUT` - Stale lock timeout
 - `HAN_DEBUG` - Enable debug output
