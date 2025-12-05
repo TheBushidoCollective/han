@@ -764,6 +764,20 @@
       "keywords": ["vue", "composition-api", "reactivity", "skill"]
     },
     {
+      "name": "jutsu-zustand",
+      "description": "Comprehensive Zustand state management skills for React applications with store patterns, middleware, and TypeScript integration.",
+      "source": "./jutsu/jutsu-zustand",
+      "category": "Technique",
+      "keywords": [
+        "zustand",
+        "state-management",
+        "react",
+        "typescript",
+        "store",
+        "hooks"
+      ]
+    },
+    {
       "name": "jutsu-yarn",
       "description": "Yarn package manager skills with dependency validation hooks.",
       "source": "./jutsu/jutsu-yarn",
