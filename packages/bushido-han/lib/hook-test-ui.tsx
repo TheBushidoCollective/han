@@ -553,10 +553,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 						<Text bold color="cyan">
 							🔍 Hook Output
 						</Text>
-						<Text dimColor>
-							{" "}
-							(↑↓/PgUp/PgDn scroll, Esc/q return to list)
-						</Text>
+						<Text dimColor> (↑↓/PgUp/PgDn scroll, Esc/q return to list)</Text>
 					</Box>
 					<Box marginTop={1}>
 						<Text dimColor>{"─".repeat(60)}</Text>
