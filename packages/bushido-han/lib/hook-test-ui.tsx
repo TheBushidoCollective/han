@@ -2,6 +2,7 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { LiveOutputState } from "./hook-test.js";
 
 interface HookResult {
 	plugin: string;
@@ -27,6 +28,7 @@ interface HookTestUIProps {
 	currentType: string | null;
 	isComplete: boolean;
 	verbose: boolean;
+	liveOutput?: LiveOutputState;
 }
 
 interface FlatItem {
@@ -44,6 +46,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	currentType,
 	isComplete,
 	verbose,
+	liveOutput,
 }) => {
 	const { write } = useStdout();
 	const { stdout } = useStdout();
@@ -537,7 +540,15 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 				r.plugin === viewingOutput.plugin &&
 				r.command === viewingOutput.command,
 		);
-		const outputLines = result?.output || [];
+
+		// Check if command is still running by looking at liveOutput
+		const liveKey = `${viewingOutput.hookType}:${viewingOutput.plugin}:${viewingOutput.command}`;
+		const liveLines = liveOutput?.outputs.get(liveKey);
+		const isRunning = liveLines !== undefined && !result;
+
+		// Use live output for running commands, completed output otherwise
+		const outputLines =
+			isRunning && liveLines ? liveLines : result?.output || [];
 		const visibleLines = outputLines.slice(
 			scrollOffset,
 			scrollOffset + viewportHeight,
@@ -572,7 +583,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					</Box>
 					<Box>
 						<Text dimColor>Status: </Text>
-						{result?.success ? (
+						{isRunning ? (
+							<Text color="yellow">⏳ Running</Text>
+						) : result?.success ? (
 							<Text color="green">✓ Passed</Text>
 						) : (
 							<Text color="red">✗ Failed</Text>
