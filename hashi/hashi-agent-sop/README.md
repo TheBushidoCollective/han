@@ -75,7 +75,39 @@ claude plugin install hashi-agent-sop@han
 
 ### Configuration
 
-The default configuration works out of the box. To add custom SOPs, you can modify the plugin configuration:
+The default configuration works out of the box. To add custom SOPs, you have three options:
+
+#### Method 1: Environment Variable (Recommended)
+
+Set the `AGENT_SOP_PATHS` environment variable with colon-separated directory paths:
+
+```bash
+# In ~/.zshrc or ~/.bashrc
+export AGENT_SOP_PATHS="~/my-sops:~/team-sops"
+
+# Or inline for single use
+AGENT_SOP_PATHS="~/my-sops" claude
+```
+
+Then ensure the MCP server picks up the environment variable in your Claude Code settings:
+
+```json
+{
+  "mcpServers": {
+    "agent-sops": {
+      "command": "strands-agents-sops",
+      "args": ["mcp"],
+      "env": {
+        "AGENT_SOP_PATHS": "${AGENT_SOP_PATHS}"
+      }
+    }
+  }
+}
+```
+
+#### Method 2: Configuration File
+
+Directly configure custom paths in your Claude Code settings:
 
 1. Locate your Claude Code settings:
    - User settings: `~/.claude/settings.json`
@@ -88,7 +120,25 @@ The default configuration works out of the box. To add custom SOPs, you can modi
   "mcpServers": {
     "agent-sops": {
       "command": "strands-agents-sops",
-      "args": ["mcp", "--sop-paths", "~/my-sops:/path/to/team-sops"]
+      "args": ["mcp"],
+      "env": {
+        "AGENT_SOP_PATHS": "~/my-sops:~/team-sops"
+      }
+    }
+  }
+}
+```
+
+#### Method 3: Command Line Arguments
+
+Pass paths directly via command line arguments:
+
+```json
+{
+  "mcpServers": {
+    "agent-sops": {
+      "command": "strands-agents-sops",
+      "args": ["mcp", "--sop-paths", "~/my-sops:~/team-sops"]
     }
   }
 }
@@ -101,6 +151,12 @@ The default configuration works out of the box. To add custom SOPs, you can modi
 - Files must have `.sop.md` extension
 - External SOPs override built-in ones with matching names
 - Gracefully skips invalid paths or malformed files
+
+**Precedence:**
+
+1. Command line `--sop-paths` (highest priority)
+2. `AGENT_SOP_PATHS` environment variable
+3. Default paths (built-in SOPs only)
 
 ### Manual Installation
 
