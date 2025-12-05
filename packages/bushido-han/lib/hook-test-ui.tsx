@@ -27,8 +27,6 @@ interface HookTestUIProps {
 	currentType: string | null;
 	isComplete: boolean;
 	verbose: boolean;
-	/** Called when user wants to view command output - parent handles display */
-	onViewOutput?: (hookType: string, plugin: string, command: string) => void;
 }
 
 interface FlatItem {
@@ -46,14 +44,20 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 	currentType,
 	isComplete,
 	verbose,
-	onViewOutput,
 }) => {
 	const { write } = useStdout();
+	const { stdout } = useStdout();
 	const writtenHookTypes = useRef<Set<string>>(new Set());
 	const lastAutoSelectedType = useRef<string | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [expandedType, setExpandedType] = useState<string | null>(null);
 	const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null); // "hookType:plugin" format
+	const [viewingOutput, setViewingOutput] = useState<{
+		hookType: string;
+		plugin: string;
+		command: string;
+	} | null>(null);
+	const [scrollOffset, setScrollOffset] = useState(0);
 
 	// Build flat list of navigable items based on expansion state
 	const getFlatItems = useCallback((): FlatItem[] => {
@@ -149,8 +153,38 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 		[hookResults, hookStructure, currentType],
 	);
 
+	// Get terminal height for scrolling
+	const terminalHeight = stdout?.rows || 30;
+	const viewportHeight = terminalHeight - 8; // Reserve space for header/footer
+
 	// Handle keyboard input
 	useInput((input, key) => {
+		// Output viewing mode
+		if (viewingOutput) {
+			const results = hookResults.get(viewingOutput.hookType) || [];
+			const result = results.find(
+				(r) =>
+					r.plugin === viewingOutput.plugin &&
+					r.command === viewingOutput.command,
+			);
+			const outputLines = result?.output || [];
+			const maxScroll = Math.max(0, outputLines.length - viewportHeight);
+
+			if (key.upArrow) {
+				setScrollOffset((prev) => Math.max(0, prev - 1));
+			} else if (key.downArrow) {
+				setScrollOffset((prev) => Math.min(maxScroll, prev + 1));
+			} else if (key.pageUp) {
+				setScrollOffset((prev) => Math.max(0, prev - viewportHeight));
+			} else if (key.pageDown) {
+				setScrollOffset((prev) => Math.min(maxScroll, prev + viewportHeight));
+			} else if (key.escape || input === "q") {
+				setViewingOutput(null);
+				setScrollOffset(0);
+			}
+			return;
+		}
+
 		// List mode navigation
 		if (key.upArrow) {
 			setSelectedIndex((prev) => Math.max(0, prev - 1));
@@ -178,8 +212,13 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 					setExpandedPlugin(pluginKey);
 				}
 			} else if (item.type === "command" && item.plugin && item.command) {
-				// View command output - delegate to parent for better performance
-				onViewOutput?.(item.hookType, item.plugin, item.command);
+				// View command output within Ink UI
+				setViewingOutput({
+					hookType: item.hookType,
+					plugin: item.plugin,
+					command: item.command,
+				});
+				setScrollOffset(0);
 			}
 		} else if (key.escape) {
 			// Collapse in order: plugin first, then hook type
@@ -489,6 +528,102 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
 			</Box>
 		);
 	};
+
+	// Output viewing mode
+	if (viewingOutput) {
+		const results = hookResults.get(viewingOutput.hookType) || [];
+		const result = results.find(
+			(r) =>
+				r.plugin === viewingOutput.plugin &&
+				r.command === viewingOutput.command,
+		);
+		const outputLines = result?.output || [];
+		const visibleLines = outputLines.slice(
+			scrollOffset,
+			scrollOffset + viewportHeight,
+		);
+		const canScrollUp = scrollOffset > 0;
+		const canScrollDown = scrollOffset + viewportHeight < outputLines.length;
+
+		return (
+			<Box flexDirection="column">
+				{/* Header */}
+				<Box marginBottom={1} flexDirection="column">
+					<Box>
+						<Text bold color="cyan">
+							🔍 Hook Output
+						</Text>
+						<Text dimColor>
+							{" "}
+							(↑↓/PgUp/PgDn scroll, Esc/q return to list)
+						</Text>
+					</Box>
+					<Box marginTop={1}>
+						<Text dimColor>{"─".repeat(60)}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Hook Type: </Text>
+						<Text>{viewingOutput.hookType}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Plugin: </Text>
+						<Text>{viewingOutput.plugin}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Command: </Text>
+						<Text>{viewingOutput.command}</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Status: </Text>
+						{result?.success ? (
+							<Text color="green">✓ Passed</Text>
+						) : (
+							<Text color="red">✗ Failed</Text>
+						)}
+						{result?.timedOut && <Text color="red"> (timeout)</Text>}
+					</Box>
+					<Box marginTop={1}>
+						<Text dimColor>{"─".repeat(60)}</Text>
+					</Box>
+				</Box>
+
+				{/* Output content */}
+				<Box flexDirection="column">
+					{canScrollUp && (
+						<Box>
+							<Text dimColor>▲ ({scrollOffset} lines above)</Text>
+						</Box>
+					)}
+					{visibleLines.length > 0 ? (
+						visibleLines.map((line, i) => (
+							<Text key={`output-${scrollOffset + i}`}>{line}</Text>
+						))
+					) : (
+						<Text dimColor>(no output)</Text>
+					)}
+					{canScrollDown && (
+						<Box>
+							<Text dimColor>
+								▼ ({outputLines.length - scrollOffset - viewportHeight} lines
+								below)
+							</Text>
+						</Box>
+					)}
+				</Box>
+
+				{/* Footer */}
+				{outputLines.length > viewportHeight && (
+					<Box marginTop={1}>
+						<Text dimColor>
+							Viewing lines {scrollOffset + 1}-
+							{Math.min(scrollOffset + viewportHeight, outputLines.length)} of{" "}
+							{outputLines.length}
+						</Text>
+					</Box>
+				)}
+			</Box>
+		);
+	}
 
 	return (
 		<Box flexDirection="column">

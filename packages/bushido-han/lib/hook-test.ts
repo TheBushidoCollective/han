@@ -10,29 +10,6 @@ import {
 } from "./claude-settings.js";
 import { HookTestUI } from "./hook-test-ui.js";
 
-/**
- * Wait for user to press any key
- * Uses raw mode to capture keypress without readline interference
- * IMPORTANT: Resets stdin to a clean state before resolving so Ink
- * can properly re-establish its input handling when remounted.
- */
-function waitForKeypress(): Promise<void> {
-	return new Promise((resolve) => {
-		process.stdout.write("\nPress any key to return to list...");
-
-		// Ensure stdin is in raw mode for keypress capture
-		process.stdin.setRawMode(true);
-		process.stdin.resume();
-		process.stdin.once("data", () => {
-			// Reset stdin to clean state before resolving
-			// This allows Ink to properly re-establish its input handling
-			process.stdin.setRawMode(false);
-			process.stdin.pause();
-			process.stdout.write("\n");
-			resolve();
-		});
-	});
-}
 
 /** Default timeout for hooks (30 seconds per Claude docs) */
 const DEFAULT_HOOK_TIMEOUT = 30000;
@@ -502,13 +479,6 @@ async function executeHooksWithUI(
 		let lastRerenderTime = 0;
 		const RERENDER_THROTTLE_MS = 50; // Max 20 rerenders per second
 
-		// Handler for viewing output - defined first, used by doRerender
-		let handleViewOutput: (
-			hookType: string,
-			plugin: string,
-			command: string,
-		) => Promise<void>;
-
 		// Helper to trigger rerender (throttled for live output, immediate for state changes)
 		const doRerender = (immediate = false) => {
 			const now = Date.now();
@@ -525,7 +495,6 @@ async function executeHooksWithUI(
 						currentType,
 						isComplete,
 						verbose,
-						onViewOutput: handleViewOutput,
 					}),
 				);
 			} else if (!rerenderPending) {
@@ -542,64 +511,7 @@ async function executeHooksWithUI(
 		// Set up live output callback (throttled)
 		liveOutput.onUpdate = () => doRerender(false);
 
-		// Handler for viewing output - unmounts Ink, prints to stdout, waits, remounts
-		handleViewOutput = async (
-			hookType: string,
-			plugin: string,
-			command: string,
-		) => {
-			// Get the output for this command
-			const results = hookResults.get(hookType) || [];
-			const result = results.find(
-				(r) => r.plugin === plugin && r.command === command,
-			);
-			const output = result?.output || [];
-
-			// Unmount Ink to release terminal
-			unmount();
-
-			// Print output directly to stdout
-			console.log(`\n${"─".repeat(60)}`);
-			console.log(`Hook Type: ${hookType}`);
-			console.log(`Plugin: ${plugin}`);
-			console.log(`Command: ${command}`);
-			console.log(
-				`Status: ${result?.success ? "✓ Passed" : "✗ Failed"}${result?.timedOut ? " (timeout)" : ""}`,
-			);
-			console.log("─".repeat(60));
-
-			if (output.length > 0) {
-				for (const line of output) {
-					console.log(line);
-				}
-			} else {
-				console.log("(no output)");
-			}
-
-			// Wait for user
-			await waitForKeypress();
-
-			// Clear screen and reset cursor before remounting Ink
-			process.stdout.write("\x1b[2J\x1b[H");
-
-			// Remount Ink with current state
-			const newRender = render(
-				React.createElement(HookTestUI, {
-					hookTypes: hookTypesFound,
-					hookStructure,
-					hookResults,
-					currentType,
-					isComplete,
-					verbose,
-					onViewOutput: handleViewOutput,
-				}),
-			);
-			// Update rerender/unmount references
-			rerender = newRender.rerender;
-			unmount = newRender.unmount;
-		};
-
-		let { rerender, unmount } = render(
+		const { rerender, unmount } = render(
 			React.createElement(HookTestUI, {
 				hookTypes: hookTypesFound,
 				hookStructure,
@@ -607,7 +519,6 @@ async function executeHooksWithUI(
 				currentType,
 				isComplete,
 				verbose,
-				onViewOutput: handleViewOutput,
 			}),
 		);
 
