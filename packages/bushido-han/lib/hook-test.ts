@@ -10,7 +10,6 @@ import {
 } from "./claude-settings.js";
 import { HookTestUI } from "./hook-test-ui.js";
 
-
 /** Default timeout for hooks (30 seconds per Claude docs) */
 const DEFAULT_HOOK_TIMEOUT = 30000;
 
