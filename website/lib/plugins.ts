@@ -327,18 +327,23 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 			fs.readFileSync(hooksFile, "utf-8"),
 		) as HooksData;
 
-		// Get all files in hooks folder (markdown files)
+		// Get all files in hooks folder (markdown, shell scripts, and js files)
 		const allHookFiles: HookFile[] = [];
 		if (fs.existsSync(hooksDir)) {
 			const files = fs
 				.readdirSync(hooksDir)
-				.filter((file) => file.endsWith(".md"));
+				.filter(
+					(file) =>
+						file.endsWith(".md") ||
+						file.endsWith(".sh") ||
+						file.endsWith(".js"),
+				);
 
 			for (const file of files) {
 				const filePath = path.join(hooksDir, file);
 				const content = fs.readFileSync(filePath, "utf-8");
 				allHookFiles.push({
-					name: path.basename(file, ".md"),
+					name: path.basename(file, path.extname(file)),
 					path: file,
 					content,
 				});
@@ -380,9 +385,9 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 								});
 
 								// Extract file references from commands
-								// Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md"
+								// Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md" or file.sh or file.js
 								const fileMatch = hook.command.match(
-									/hooks\/([a-zA-Z0-9_-]+\.md)/,
+									/hooks\/([a-zA-Z0-9_-]+\.(md|sh|js))/,
 								);
 								if (fileMatch) {
 									const fileName = fileMatch[1];
