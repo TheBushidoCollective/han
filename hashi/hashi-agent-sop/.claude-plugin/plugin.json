@@ -24,11 +24,10 @@
     "agent-sops": {
       "command": "strands-agents-sops",
       "args": [
-        "mcp"
-      ],
-      "env": {
-        "AGENT_SOP_PATHS": "${AGENT_SOP_PATHS}"
-      }
+        "mcp",
+        "--sop-paths",
+        "${AGENT_SOP_PATHS-$PLUGIN_ROOT_DIR/sops}"
+      ]
     }
   }
 }

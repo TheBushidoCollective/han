@@ -75,7 +75,7 @@ claude plugin install hashi-agent-sop@han
 
 ### Configuration
 
-The default configuration works out of the box. To add custom SOPs, you have three options:
+The plugin works out of the box with built-in SOPs. To add custom SOPs:
 
 #### Method 1: Environment Variable (Recommended)
 
@@ -84,40 +84,13 @@ Set the `AGENT_SOP_PATHS` environment variable with colon-separated directory pa
 ```bash
 # In ~/.zshrc or ~/.bashrc
 export AGENT_SOP_PATHS="~/my-sops:~/team-sops"
-
-# Or inline for single use
-AGENT_SOP_PATHS="~/my-sops" claude
 ```
 
-**That's it!** The plugin automatically picks up the `AGENT_SOP_PATHS` environment variable. No additional configuration needed.
+The plugin is pre-configured to use this variable automatically. If not set, it defaults to the plugin's built-in SOPs.
 
-#### Method 2: Configuration File (Override)
+#### Method 2: Override Configuration
 
-To hardcode paths or override the environment variable in your Claude Code settings:
-
-1. Locate your Claude Code settings:
-   - User settings: `~/.claude/settings.json`
-   - Project settings: `.claude/settings.json`
-
-2. Update the `agent-sops` server configuration:
-
-```json
-{
-  "mcpServers": {
-    "agent-sops": {
-      "env": {
-        "AGENT_SOP_PATHS": "~/my-sops:~/team-sops"
-      }
-    }
-  }
-}
-```
-
-Note: This overrides the default plugin configuration.
-
-#### Method 3: Command Line Arguments (Override)
-
-Pass paths directly via command line arguments to override the environment variable:
+To override the default behavior, update your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
@@ -129,21 +102,12 @@ Pass paths directly via command line arguments to override the environment varia
 }
 ```
 
-Note: Command line arguments take precedence over environment variables.
-
 **Custom SOP Configuration:**
 
 - Supports colon-separated directory paths
-- Use `~` for home directory and relative paths
+- Use `~` for home directory expansion
 - Files must have `.sop.md` extension
-- External SOPs override built-in ones with matching names
-- Gracefully skips invalid paths or malformed files
-
-**Precedence:**
-
-1. Command line `--sop-paths` (highest priority)
-2. `AGENT_SOP_PATHS` environment variable
-3. Default paths (built-in SOPs only)
+- Custom SOPs override built-in ones with matching names
 
 ### Manual Installation
 
