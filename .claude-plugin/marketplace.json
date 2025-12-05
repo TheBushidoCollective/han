@@ -257,6 +257,13 @@
       "keywords": ["elixir", "database", "orm", "ecto"]
     },
     {
+      "name": "jutsu-effect",
+      "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
+      "source": "./jutsu/jutsu-effect",
+      "category": "Technique",
+      "keywords": ["effect", "typescript", "functional-programming", "type-safety", "dependency-injection"]
+    },
+    {
       "name": "jutsu-elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./jutsu/jutsu-elixir",

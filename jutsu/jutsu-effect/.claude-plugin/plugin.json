@@ -1,0 +1,13 @@
+{
+  "name": "jutsu-effect",
+  "version": "1.0.0",
+  "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": ["effect", "typescript", "functional-programming", "type-safety", "dependency-injection"]
+}
