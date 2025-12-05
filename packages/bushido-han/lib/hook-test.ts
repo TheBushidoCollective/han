@@ -494,6 +494,7 @@ async function executeHooksWithUI(
 						currentType,
 						isComplete,
 						verbose,
+						liveOutput,
 					}),
 				);
 			} else if (!rerenderPending) {
@@ -518,6 +519,7 @@ async function executeHooksWithUI(
 				currentType,
 				isComplete,
 				verbose,
+				liveOutput,
 			}),
 		);
 
