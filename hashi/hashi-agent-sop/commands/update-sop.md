@@ -6,7 +6,7 @@ description: Update an existing SOP to reflect changes in tools, processes, or b
 
 ## Name
 
-jutsu-sop:update-sop - Update an existing Standard Operating Procedure
+hashi-agent-sop:update-sop - Update an existing Standard Operating Procedure
 
 ## Synopsis
 

@@ -13,6 +13,7 @@ Automatically generates `CHANGELOG.md` files based on conventional commit messag
 ```
 
 **Arguments:**
+
 - `path`: Path to the directory (e.g., `packages/bushido-han`, `jutsu/jutsu-react`, `website`)
 - `new_version`: The new version being released (e.g., `1.2.3`)
 - `old_version`: (Optional) The previous version (e.g., `1.2.2`) - will auto-detect if not provided

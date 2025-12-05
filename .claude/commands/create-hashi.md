@@ -25,6 +25,7 @@ hashi/hashi-{service-name}/
 ```
 
 **IMPORTANT**:
+
 - Only `plugin.json` goes inside `.claude-plugin/`
 - `hooks.json` goes in the `hooks/` directory
 - `han-config.json` stays at the plugin root (NOT in hooks/)

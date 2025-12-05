@@ -832,20 +832,6 @@
       "keywords": ["scratch", "workspace", "gitignore", "temporary", "workflow"]
     },
     {
-      "name": "jutsu-sop",
-      "description": "Skills for writing and maintaining Standard Operating Procedures (SOPs) for AI agents with RFC 2119 compliance and markdown-based workflows.",
-      "source": "./jutsu/jutsu-sop",
-      "category": "Technique",
-      "keywords": [
-        "sop",
-        "standard-operating-procedures",
-        "workflows",
-        "rfc2119",
-        "documentation",
-        "agent-workflows"
-      ]
-    },
-    {
       "name": "bushido",
       "description": "The seven virtues, enforcement hooks, and foundational quality skills.",
       "source": "./bushido",
@@ -962,7 +948,7 @@
     },
     {
       "name": "hashi-agent-sop",
-      "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions and reusable templates.",
+      "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring skills.",
       "source": "./hashi/hashi-agent-sop",
       "category": "Bridge",
       "keywords": [
@@ -971,6 +957,9 @@
         "workflows",
         "sop",
         "standard-operating-procedures",
+        "rfc2119",
+        "documentation",
+        "agent-workflows",
         "templates",
         "server"
       ]
