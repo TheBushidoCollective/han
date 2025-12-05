@@ -689,6 +689,21 @@
       "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"]
     },
     {
+      "name": "jutsu-tailwind",
+      "description": "Validation and quality enforcement for Tailwind CSS projects with comprehensive utility-first CSS patterns and best practices.",
+      "source": "./jutsu/jutsu-tailwind",
+      "category": "Technique",
+      "keywords": [
+        "tailwind",
+        "tailwindcss",
+        "css",
+        "utility-first",
+        "styling",
+        "validation",
+        "quality"
+      ]
+    },
+    {
       "name": "jutsu-tensorflow",
       "description": "TensorFlow machine learning and deep learning framework skills",
       "source": "./jutsu/jutsu-tensorflow",
