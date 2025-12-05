@@ -89,38 +89,22 @@ export AGENT_SOP_PATHS="~/my-sops:~/team-sops"
 AGENT_SOP_PATHS="~/my-sops" claude
 ```
 
-Then ensure the MCP server picks up the environment variable in your Claude Code settings:
+**That's it!** The plugin automatically picks up the `AGENT_SOP_PATHS` environment variable. No additional configuration needed.
 
-```json
-{
-  "mcpServers": {
-    "agent-sops": {
-      "command": "strands-agents-sops",
-      "args": ["mcp"],
-      "env": {
-        "AGENT_SOP_PATHS": "${AGENT_SOP_PATHS}"
-      }
-    }
-  }
-}
-```
+#### Method 2: Configuration File (Override)
 
-#### Method 2: Configuration File
-
-Directly configure custom paths in your Claude Code settings:
+To hardcode paths or override the environment variable in your Claude Code settings:
 
 1. Locate your Claude Code settings:
    - User settings: `~/.claude/settings.json`
    - Project settings: `.claude/settings.json`
 
-2. Update the `agent-sops` server configuration to include custom SOP paths:
+2. Update the `agent-sops` server configuration:
 
 ```json
 {
   "mcpServers": {
     "agent-sops": {
-      "command": "strands-agents-sops",
-      "args": ["mcp"],
       "env": {
         "AGENT_SOP_PATHS": "~/my-sops:~/team-sops"
       }
@@ -129,20 +113,23 @@ Directly configure custom paths in your Claude Code settings:
 }
 ```
 
-#### Method 3: Command Line Arguments
+Note: This overrides the default plugin configuration.
 
-Pass paths directly via command line arguments:
+#### Method 3: Command Line Arguments (Override)
+
+Pass paths directly via command line arguments to override the environment variable:
 
 ```json
 {
   "mcpServers": {
     "agent-sops": {
-      "command": "strands-agents-sops",
       "args": ["mcp", "--sop-paths", "~/my-sops:~/team-sops"]
     }
   }
 }
 ```
+
+Note: Command line arguments take precedence over environment variables.
 
 **Custom SOP Configuration:**
 
