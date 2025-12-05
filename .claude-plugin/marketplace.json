@@ -947,6 +947,21 @@
       ]
     },
     {
+      "name": "hashi-agent-sop",
+      "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions and reusable templates.",
+      "source": "./hashi/hashi-agent-sop",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "agent-sop",
+        "workflows",
+        "sop",
+        "standard-operating-procedures",
+        "templates",
+        "server"
+      ]
+    },
+    {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",
