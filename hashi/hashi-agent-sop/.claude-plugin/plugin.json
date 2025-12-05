@@ -1,0 +1,26 @@
+{
+  "name": "hashi-agent-sop",
+  "version": "1.0.0",
+  "description": "MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "agent-sop",
+    "workflows",
+    "sop",
+    "standard-operating-procedures",
+    "server"
+  ],
+  "mcpServers": {
+    "agent-sops": {
+      "command": "strands-agents-sops",
+      "args": ["mcp"]
+    }
+  }
+}
