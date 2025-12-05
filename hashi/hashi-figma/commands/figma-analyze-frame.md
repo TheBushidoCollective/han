@@ -5,6 +5,10 @@ description: Analyze a Figma frame's structure, properties, and implementation c
 
 # Analyze Figma Frame
 
+## Name
+
+hashi-figma:figma-analyze-frame - Analyze Figma frame structure and implementation guidance
+
 ## Synopsis
 
 Analyze a Figma frame's hierarchy, styling, layout, interactivity, and provide comprehensive implementation recommendations including HTML structure, CSS approach, component breakdown, accessibility considerations, and responsive strategy.

@@ -5,6 +5,10 @@ description: Generate production-ready code from a Figma component or frame usin
 
 # Generate Component from Figma
 
+## Name
+
+hashi-figma:figma-generate-component - Generate production-ready code from Figma designs
+
 ## Synopsis
 
 Convert Figma frames and components into production code (React, Vue, HTML/CSS) using the Figma Desktop MCP server with support for Code Connect mappings and design tokens.

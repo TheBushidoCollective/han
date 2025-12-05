@@ -5,6 +5,10 @@ description: Sync design system components between Figma and code using Code Con
 
 # Sync Design System Components
 
+## Name
+
+hashi-figma:figma-sync-design-system - Sync design system components between Figma and code
+
 ## Synopsis
 
 Synchronize design system components between Figma and codebase using Code Connect mappings. Identifies gaps, generates missing components, updates existing ones, and creates bidirectional links between design and code.
