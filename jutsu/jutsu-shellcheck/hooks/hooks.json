@@ -9,16 +9,6 @@
           }
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-shellcheck shellcheck --fail-fast --cached"
-          }
-        ]
-      }
     ]
   }
 }
