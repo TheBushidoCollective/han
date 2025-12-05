@@ -3,6 +3,7 @@ import { registerHookDispatch } from "./dispatch.js";
 import { registerHookExplain } from "./explain.js";
 import { registerHookRun } from "./run.js";
 import { registerHookTest } from "./test.js";
+import { registerHookVerify } from "./verify.js";
 
 /**
  * Register all hook-related commands under `han hook`
@@ -14,4 +15,5 @@ export function registerHookCommands(program: Command): void {
 	registerHookExplain(hookCommand);
 	registerHookRun(hookCommand);
 	registerHookTest(hookCommand);
+	registerHookVerify(hookCommand);
 }
