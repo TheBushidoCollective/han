@@ -49,6 +49,14 @@ export function registerHookRun(hookCommand: Command): void {
 					verbose?: boolean;
 				},
 			) => {
+				// Allow global disable of all hooks via environment variable
+				if (
+					process.env.HAN_DISABLE_HOOKS === "true" ||
+					process.env.HAN_DISABLE_HOOKS === "1"
+				) {
+					process.exit(0);
+				}
+
 				const separatorIndex = process.argv.indexOf("--");
 				const isLegacyFormat = separatorIndex !== -1;
 
