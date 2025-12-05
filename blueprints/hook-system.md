@@ -135,6 +135,20 @@ Execute a plugin hook in matching directories.
 
 Dispatch Claude Code hooks across all enabled plugins.
 
+#### `han hook verify <hookType>`
+
+Verify that all hooks of a specific type have been run and are cached.
+
+**Behavior**:
+- Exits 0 if all hooks with `ifChanged` patterns are cached
+- Exits non-zero if any hooks are stale or need to be run
+- Hooks without `ifChanged` patterns are always considered valid
+
+**Example**:
+```bash
+han hook verify Stop
+```
+
 ## Behavior
 
 ### Hook Dispatch Flow
@@ -206,10 +220,31 @@ Cache location: `~/.claude/projects/{project-slug}/han/`
 
 - `lib/commands/hook/dispatch.ts` - Claude Code hook dispatch
 - `lib/commands/hook/run.ts` - Hook execution command
+- `lib/commands/hook/verify.ts` - Hook cache verification
 - `lib/validate.ts` - Core execution logic
 - `lib/hook-config.ts` - Configuration loading
 - `lib/hook-cache.ts` - Cache management
 - `lib/hook-lock.ts` - Parallelism control
+- `bushido/hooks/pre-push-check.sh` - Pre-push verification script
+
+## Pre-Push Verification
+
+The bushido plugin includes a PreToolUse hook that automatically verifies Stop hooks before git push:
+
+**Flow**:
+1. User runs `git push`
+2. PreToolUse hook detects the command
+3. Runs `han hook verify Stop` to check if hooks are cached
+4. If hooks are stale:
+   - Automatically runs `han hook dispatch Stop`
+   - Waits for hooks to complete
+   - Proceeds with push if successful
+   - Blocks push if hooks fail
+5. If hooks are cached, proceeds immediately
+
+**Script**: `bushido/hooks/pre-push-check.sh`
+
+This ensures code quality checks (tests, linting, etc.) always run before pushing to remote.
 
 ## Related Systems
 
