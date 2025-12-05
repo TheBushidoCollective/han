@@ -140,11 +140,13 @@ Dispatch Claude Code hooks across all enabled plugins.
 Verify that all hooks of a specific type have been run and are cached.
 
 **Behavior**:
+
 - Exits 0 if all hooks with `ifChanged` patterns are cached
 - Exits non-zero if any hooks are stale or need to be run
 - Hooks without `ifChanged` patterns are always considered valid
 
 **Example**:
+
 ```bash
 han hook verify Stop
 ```
@@ -232,6 +234,7 @@ Cache location: `~/.claude/projects/{project-slug}/han/`
 The bushido plugin includes a PreToolUse hook that automatically verifies Stop hooks before git push:
 
 **Flow**:
+
 1. User runs `git push`
 2. PreToolUse hook detects the command
 3. Runs `han hook verify Stop` to check if hooks are cached
