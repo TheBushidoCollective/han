@@ -4,6 +4,7 @@ import type {
 	CompleteTaskParams,
 	FailTaskParams,
 	QueryMetricsParams,
+	RecordFrustrationParams,
 	StartTaskParams,
 	UpdateTaskParams,
 } from "../../metrics/types.js";
@@ -242,6 +243,56 @@ const METRICS_TOOLS: McpTool[] = [
 			},
 		},
 	},
+	{
+		name: "record_frustration",
+		description:
+			"Record a user frustration event detected through interaction analysis. Use when user messages indicate frustration, confusion, or dissatisfaction.",
+		annotations: {
+			title: "Record Frustration",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				task_id: {
+					type: "string",
+					description:
+						"Optional task ID if frustration is related to a specific task",
+				},
+				frustration_level: {
+					type: "string",
+					enum: ["low", "moderate", "high"],
+					description: "Assessed level of user frustration",
+				},
+				frustration_score: {
+					type: "number",
+					description: "Numeric frustration score (0-10)",
+				},
+				user_message: {
+					type: "string",
+					description: "The user message that triggered frustration detection",
+				},
+				detected_signals: {
+					type: "array",
+					items: { type: "string" },
+					description: "List of signals that indicated frustration",
+				},
+				context: {
+					type: "string",
+					description: "Optional context about what may have caused frustration",
+				},
+			},
+			required: [
+				"frustration_level",
+				"frustration_score",
+				"user_message",
+				"detected_signals",
+			],
+		},
+	},
 ];
 
 function handleInitialize(): unknown {
@@ -326,6 +377,19 @@ async function handleToolsCall(params: {
 			case "query_metrics": {
 				const taskParams = args as unknown as QueryMetricsParams;
 				const result = getStorage().queryMetrics(taskParams);
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(result, null, 2),
+						},
+					],
+				};
+			}
+
+			case "record_frustration": {
+				const frustrationParams = args as unknown as RecordFrustrationParams;
+				const result = getStorage().recordFrustration(frustrationParams);
 				return {
 					content: [
 						{

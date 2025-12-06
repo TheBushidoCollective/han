@@ -5,8 +5,10 @@ import { getClaudeConfigDir } from "../claude-settings.js";
 import type {
 	CompleteTaskParams,
 	FailTaskParams,
+	FrustrationEvent,
 	MetricsQuery,
 	MetricsResult,
+	RecordFrustrationParams,
 	StartTaskParams,
 	Task,
 	UpdateTaskParams,
@@ -84,9 +86,22 @@ export class MetricsStorage {
         notes TEXT
       );
 
+      CREATE TABLE IF NOT EXISTS frustration_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT REFERENCES tasks(id),
+        timestamp DATETIME NOT NULL,
+        frustration_level TEXT NOT NULL,
+        frustration_score INTEGER NOT NULL,
+        user_message TEXT NOT NULL,
+        detected_signals TEXT NOT NULL,
+        context TEXT
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed_at);
       CREATE INDEX IF NOT EXISTS idx_tasks_outcome ON tasks(outcome);
       CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);
+      CREATE INDEX IF NOT EXISTS idx_frustration_timestamp ON frustration_events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_frustration_task ON frustration_events(task_id);
     `);
 	}
 
@@ -243,6 +258,33 @@ export class MetricsStorage {
 	}
 
 	/**
+	 * Record a frustration event
+	 */
+	recordFrustration(params: RecordFrustrationParams): { success: boolean } {
+		const timestamp = new Date().toISOString();
+
+		const stmt = this.db.prepare(`
+      INSERT INTO frustration_events (
+        task_id, timestamp, frustration_level, frustration_score,
+        user_message, detected_signals, context
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+		stmt.run(
+			params.task_id || null,
+			timestamp,
+			params.frustration_level,
+			params.frustration_score,
+			params.user_message,
+			JSON.stringify(params.detected_signals),
+			params.context || null,
+		);
+
+		return { success: true };
+	}
+
+	/**
 	 * Query metrics based on filters
 	 */
 	queryMetrics(params: MetricsQuery): MetricsResult {
@@ -333,6 +375,23 @@ export class MetricsStorage {
 		// This is a simplified metric - higher is better
 		const calibration_score = this.calculateCalibrationScore(tasks);
 
+		// Get frustration events for the same period
+		// Use the same period filter but adapt the column name for frustration_events table
+		const frustrationWhereClause = whereClause.replace(
+			/started_at/g,
+			"timestamp",
+		);
+		const frustrationEvents = this.db
+			.prepare(
+				`SELECT * FROM frustration_events ${frustrationWhereClause} ORDER BY timestamp DESC`,
+			)
+			.all(...whereParams) as FrustrationEvent[];
+
+		// Calculate frustration metrics
+		const total_frustrations = frustrationEvents.length;
+		const frustration_rate =
+			total_tasks > 0 ? total_frustrations / total_tasks : 0;
+
 		return {
 			total_tasks,
 			completed_tasks,
@@ -343,6 +402,9 @@ export class MetricsStorage {
 			by_outcome,
 			calibration_score,
 			tasks,
+			frustration_events: frustrationEvents,
+			total_frustrations,
+			frustration_rate,
 		};
 	}
 

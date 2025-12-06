@@ -91,6 +91,14 @@ function renderSummaryStats(result: MetricsResult): void {
 			"Average Duration:",
 			`${colors.bold}${formatDuration(result.average_duration_seconds)}${colors.reset}`,
 		],
+		[
+			"Frustration Events:",
+			`${colors.bold}${result.total_frustrations > 0 ? colors.yellow : colors.green}${result.total_frustrations}${colors.reset}`,
+		],
+		[
+			"Frustration Rate:",
+			`${colors.bold}${result.frustration_rate > 0.3 ? colors.red : result.frustration_rate > 0.1 ? colors.yellow : colors.green}${formatPercent(result.frustration_rate)}${colors.reset}`,
+		],
 	];
 
 	for (const [label, value] of stats) {
@@ -199,6 +207,99 @@ function renderRecentTasksTable(result: MetricsResult): void {
 		console.log(`  ${cells.join("")}`);
 	}
 	console.log();
+}
+
+/**
+ * Render frustration insights section
+ */
+function renderFrustrationInsights(result: MetricsResult): void {
+	if (result.total_frustrations === 0) {
+		return;
+	}
+
+	console.log(
+		`${colors.bold}${colors.cyan}😤 User Frustration Analysis${colors.reset}`,
+	);
+	console.log();
+
+	console.log(
+		`  ${colors.dim}Total frustration events detected: ${colors.reset}${colors.bold}${result.total_frustrations > 5 ? colors.red : result.total_frustrations > 2 ? colors.yellow : colors.green}${result.total_frustrations}${colors.reset}`,
+	);
+	console.log(
+		`  ${colors.dim}Frustration rate: ${colors.reset}${colors.bold}${result.frustration_rate > 0.3 ? colors.red : result.frustration_rate > 0.1 ? colors.yellow : colors.green}${formatPercent(result.frustration_rate)}${colors.reset} ${colors.dim}(frustrations per task)${colors.reset}`,
+	);
+	console.log();
+
+	// Group by frustration level
+	const byLevel: Record<string, number> = {};
+	result.frustration_events.forEach((event) => {
+		byLevel[event.frustration_level] =
+			(byLevel[event.frustration_level] || 0) + 1;
+	});
+
+	if (Object.keys(byLevel).length > 0) {
+		console.log(`${colors.bold}Frustration by Level:${colors.reset}`);
+		for (const [level, count] of Object.entries(byLevel)) {
+			const levelColor =
+				level === "high"
+					? colors.red
+					: level === "moderate"
+						? colors.yellow
+						: colors.green;
+			console.log(
+				`  ${levelColor}${level.padEnd(10)}${colors.reset} ${colors.dim}${count} event${count !== 1 ? "s" : ""}${colors.reset}`,
+			);
+		}
+		console.log();
+	}
+
+	// Show recent frustration events
+	const recentFrustrations = result.frustration_events.slice(0, 5);
+	if (recentFrustrations.length > 0) {
+		console.log(
+			`${colors.bold}Recent Frustration Events (last ${recentFrustrations.length}):${colors.reset}`,
+		);
+		for (const event of recentFrustrations) {
+			const levelColor =
+				event.frustration_level === "high"
+					? colors.red
+					: event.frustration_level === "moderate"
+						? colors.yellow
+						: colors.green;
+			const message =
+				event.user_message.length > 60
+					? `${event.user_message.substring(0, 60)}...`
+					: event.user_message;
+
+			console.log(
+				`  ${levelColor}[${event.frustration_level}]${colors.reset} ${colors.dim}${message}${colors.reset}`,
+			);
+
+			// Show detected signals
+			const signals = JSON.parse(event.detected_signals);
+			if (signals.length > 0) {
+				console.log(
+					`    ${colors.dim}Signals: ${signals.slice(0, 3).join(", ")}${signals.length > 3 ? ` +${signals.length - 3} more` : ""}${colors.reset}`,
+				);
+			}
+		}
+		console.log();
+	}
+
+	// Recommendations
+	if (result.frustration_rate > 0.2) {
+		console.log(`${colors.bold}${colors.yellow}⚠️  Recommendations:${colors.reset}`);
+		console.log(
+			`  ${colors.dim}• High frustration rate detected - review recent interactions${colors.reset}`,
+		);
+		console.log(
+			`  ${colors.dim}• Consider improving error messages and guidance${colors.reset}`,
+		);
+		console.log(
+			`  ${colors.dim}• Look for patterns in frustration triggers${colors.reset}`,
+		);
+		console.log();
+	}
 }
 
 /**
@@ -351,6 +452,11 @@ export function renderPlainText(
 
 	// Recent Tasks Table
 	renderRecentTasksTable(result);
+
+	// Frustration Insights
+	if (result.total_frustrations > 0) {
+		renderFrustrationInsights(result);
+	}
 
 	// Calibration Insights (optional)
 	if (showCalibration) {
