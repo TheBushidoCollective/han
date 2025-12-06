@@ -161,7 +161,15 @@
       "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
       "source": "./jutsu/jutsu-claude-agent-sdk",
       "category": "Technique",
-      "keywords": ["claude", "agent-sdk", "validation", "typescript", "quality", "enforcement", "ai-agents"]
+      "keywords": [
+        "claude",
+        "agent-sdk",
+        "validation",
+        "typescript",
+        "quality",
+        "enforcement",
+        "ai-agents"
+      ]
     },
     {
       "name": "jutsu-notetaker",
