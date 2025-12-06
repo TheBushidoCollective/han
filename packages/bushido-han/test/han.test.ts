@@ -20,24 +20,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Determine which binary to test
-// If HAN_TEST_BINARY env var is set, use the compiled binary
-// Otherwise, use the Bun runtime
-const USE_BINARY = process.env.HAN_TEST_BINARY === "true";
-const binPath = USE_BINARY
-	? join(__dirname, "..", "..", "dist", "han")
-	: join(__dirname, "..", "dist", "lib", "main.js");
-const binCommand = USE_BINARY ? binPath : `bun ${binPath}`;
+// Since we're binary-only distribution, default to testing the binary
+// Set HAN_TEST_SOURCE=true to test source with bun (for development)
+const USE_SOURCE = process.env.HAN_TEST_SOURCE === "true";
+const binPath = USE_SOURCE
+	? join(__dirname, "..", "lib", "main.ts")
+	: join(__dirname, "..", "dist", "han");
+const binCommand = USE_SOURCE ? `bun ${binPath}` : binPath;
 
-console.log(`\nTesting: ${USE_BINARY ? "Binary (bun)" : "JavaScript (bun)"}`);
+console.log(`\nTesting: ${USE_SOURCE ? "Source (bun)" : "Binary (bun)"}`);
 console.log(`Path: ${binPath}\n`);
 
-// Verify binary exists
-if (!existsSync(binPath)) {
-	console.error(`Binary not found at ${binPath}`);
-	if (USE_BINARY) {
-		console.error("Run 'npm run build:binary' first to create the binary");
+// Build binary if it doesn't exist
+if (!USE_SOURCE && !existsSync(binPath)) {
+	console.log("Binary not found, building...");
+	execSync("npm run build:binary", {
+		cwd: join(__dirname, ".."),
+		stdio: "inherit",
+	});
+	if (!existsSync(binPath)) {
+		console.error("Failed to build binary");
+		process.exit(1);
 	}
-	process.exit(1);
 }
 
 function setup(): string {
