@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+/**
+ * Han CLI - Binary-Only Distribution
+ *
+ * This package is distributed as platform-specific Bun binaries.
+ * The npm package contains only the bin/han.js wrapper which loads
+ * the appropriate binary for the current platform.
+ *
+ * Metrics feature uses bun:sqlite (built-in) for binary compatibility.
+ */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
