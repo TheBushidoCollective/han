@@ -337,6 +337,7 @@ In the interactive rebase editor, you can:
 **Pattern 1: Squash fixup commits**
 
 Before:
+
 ```
 feat: add user authentication
 wip: add tests
@@ -346,12 +347,14 @@ test: add more edge cases
 ```
 
 After rebasing:
+
 ```
 feat: add user authentication
 test: add authentication tests
 ```
 
 Commands in rebase editor:
+
 ```
 pick abc123 feat: add user authentication
 pick def456 wip: add tests
@@ -363,6 +366,7 @@ squash mno345 test: add more edge cases
 **Pattern 2: Split WIP into logical commits**
 
 Before:
+
 ```
 wip: stuff
 wip: more stuff
@@ -370,6 +374,7 @@ wip: final changes
 ```
 
 After rebasing:
+
 ```
 feat: implement user authentication
 test: add authentication tests
@@ -377,6 +382,7 @@ docs: document auth API
 ```
 
 Commands in rebase editor:
+
 ```
 edit abc123 wip: stuff
 edit def456 wip: more stuff
@@ -384,6 +390,7 @@ edit ghi789 wip: final changes
 ```
 
 Then for each commit:
+
 ```bash
 git reset HEAD^           # Unstage the commit
 git add -p                # Selectively stage changes
@@ -397,6 +404,7 @@ git rebase --continue
 **Pattern 3: Improve commit messages**
 
 Before:
+
 ```
 stuff
 more changes
@@ -404,6 +412,7 @@ final
 ```
 
 After rebasing:
+
 ```
 feat: add JWT authentication
 test: add authentication tests
@@ -411,6 +420,7 @@ docs: update API documentation
 ```
 
 Commands in rebase editor:
+
 ```
 reword abc123 stuff
 reword def456 more changes
