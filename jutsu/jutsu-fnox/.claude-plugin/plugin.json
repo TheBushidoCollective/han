@@ -1,0 +1,22 @@
+{
+  "name": "jutsu-fnox",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "fnox",
+    "secrets",
+    "validation",
+    "security",
+    "configuration",
+    "encryption",
+    "quality",
+    "enforcement"
+  ]
+}
