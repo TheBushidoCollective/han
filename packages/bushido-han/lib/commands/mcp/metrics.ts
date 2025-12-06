@@ -45,19 +45,16 @@ interface McpTool {
 	};
 }
 
-// Initialize storage once
-const storage = new MetricsStorage();
+// Lazy-load storage to avoid loading better-sqlite3 native bindings
+// at module import time (which breaks basic CLI commands in CI)
+let storage: MetricsStorage | null = null;
 
-// Handle cleanup on exit
-process.on("SIGINT", () => {
-	storage.close();
-	process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-	storage.close();
-	process.exit(0);
-});
+function getStorage(): MetricsStorage {
+	if (!storage) {
+		storage = new MetricsStorage();
+	}
+	return storage;
+}
 
 /**
  * Define all metrics tools
@@ -276,7 +273,7 @@ async function handleToolsCall(params: {
 		switch (params.name) {
 			case "start_task": {
 				const taskParams = args as unknown as StartTaskParams;
-				const result = storage.startTask(taskParams);
+				const result = getStorage().startTask(taskParams);
 				return {
 					content: [
 						{
@@ -289,7 +286,7 @@ async function handleToolsCall(params: {
 
 			case "update_task": {
 				const taskParams = args as unknown as UpdateTaskParams;
-				const result = storage.updateTask(taskParams);
+				const result = getStorage().updateTask(taskParams);
 				return {
 					content: [
 						{
@@ -302,7 +299,7 @@ async function handleToolsCall(params: {
 
 			case "complete_task": {
 				const taskParams = args as unknown as CompleteTaskParams;
-				const result = storage.completeTask(taskParams);
+				const result = getStorage().completeTask(taskParams);
 				return {
 					content: [
 						{
@@ -315,7 +312,7 @@ async function handleToolsCall(params: {
 
 			case "fail_task": {
 				const taskParams = args as unknown as FailTaskParams;
-				const result = storage.failTask(taskParams);
+				const result = getStorage().failTask(taskParams);
 				return {
 					content: [
 						{
@@ -328,7 +325,7 @@ async function handleToolsCall(params: {
 
 			case "query_metrics": {
 				const taskParams = args as unknown as QueryMetricsParams;
-				const result = storage.queryMetrics(taskParams);
+				const result = getStorage().queryMetrics(taskParams);
 				return {
 					content: [
 						{
@@ -422,6 +419,21 @@ function sendResponse(response: JsonRpcResponse): void {
  * Start the metrics MCP server
  */
 export async function startMetricsMcpServer(): Promise<void> {
+	// Setup cleanup handlers for graceful shutdown
+	process.on("SIGINT", () => {
+		if (storage) {
+			storage.close();
+		}
+		process.exit(0);
+	});
+
+	process.on("SIGTERM", () => {
+		if (storage) {
+			storage.close();
+		}
+		process.exit(0);
+	});
+
 	const rl = createInterface({
 		input: process.stdin,
 		terminal: false,
