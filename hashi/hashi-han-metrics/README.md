@@ -11,7 +11,7 @@ The han-metrics plugin provides a Model Context Protocol (MCP) server that allow
 - **Performance analysis**: Understand success rates, common failure modes, and improvement areas
 - **Objective validation**: Cross-reference self-reported outcomes with hook validation results
 
-All data is stored locally in a SQLite database at `~/.claude/metrics/metrics.db` - no external services, complete privacy.
+All data is stored locally in a SQLite database at `~/.claude/metrics/metrics.db` (or `$CLAUDE_CONFIG_DIR/metrics/metrics.db` if using a custom config directory) - no external services, complete privacy.
 
 ## How It Works
 
@@ -243,28 +243,45 @@ npx @thebushidocollective/han plugin install hashi-han-metrics
 
 ### Manual Installation
 
-1. Clone this repository or download the plugin
-2. Add to `.claude/settings.json`:
+Add to your `.claude/settings.json`:
 
 ```json
 {
-  "plugins": [
-    "path/to/hashi-han-metrics"
-  ]
+  "enabledPlugins": {
+    "hashi-han-metrics@han": true
+  },
+  "extraKnownMarketplaces": {
+    "han": {
+      "source": "directory",
+      "path": "/path/to/han"
+    }
+  }
 }
 ```
 
-1. Install server dependencies:
+The metrics server is integrated into the `@thebushidocollective/han` CLI package and will be automatically invoked via `npx` when the plugin is enabled.
 
-```bash
-cd hashi-han-metrics/server
-npm install
-npm run build
+### MCP Server Configuration
+
+The plugin automatically configures the following MCP server:
+
+```json
+{
+  "mcpServers": {
+    "han-metrics": {
+      "command": "npx",
+      "args": ["--yes", "@thebushidocollective/han", "mcp", "metrics"],
+      "env": {}
+    }
+  }
+}
 ```
+
+This configuration is applied automatically when you install the plugin via Claude Code. The server runs via the `han mcp metrics` command, which is part of the main Han CLI package.
 
 ## Database Schema
 
-The metrics database is stored at `~/.claude/metrics/metrics.db` with the following schema:
+The metrics database is stored at `~/.claude/metrics/metrics.db` (respects `$CLAUDE_CONFIG_DIR` environment variable) with the following schema:
 
 ### tasks table
 
@@ -335,21 +352,24 @@ These hooks create a complete feedback loop where agents report their work, and 
 
 ## Querying the Database
 
-You can query the database directly with SQLite:
+You can query the database directly with SQLite (respects `$CLAUDE_CONFIG_DIR` environment variable):
 
 ```bash
+# Set database path (use custom config dir if set)
+DB_PATH="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/metrics/metrics.db"
+
 # View recent tasks
-sqlite3 ~/.claude/metrics/metrics.db "SELECT * FROM tasks ORDER BY started_at DESC LIMIT 10"
+sqlite3 "$DB_PATH" "SELECT * FROM tasks ORDER BY started_at DESC LIMIT 10"
 
 # Calculate success rate
-sqlite3 ~/.claude/metrics/metrics.db "SELECT
+sqlite3 "$DB_PATH" "SELECT
   COUNT(*) as total,
   SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) as successes,
   ROUND(100.0 * SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) / COUNT(*), 2) as success_rate
 FROM tasks WHERE outcome IS NOT NULL"
 
 # Find tasks where confidence didn't match outcome
-sqlite3 ~/.claude/metrics/metrics.db "SELECT * FROM tasks
+sqlite3 "$DB_PATH" "SELECT * FROM tasks
 WHERE confidence > 0.8 AND outcome = 'failure'
 OR confidence < 0.5 AND outcome = 'success'"
 ```
