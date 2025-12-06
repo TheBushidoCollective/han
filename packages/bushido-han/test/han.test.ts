@@ -20,9 +20,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Determine which binary to test
-// Since we're binary-only distribution, default to testing the binary
-// Set HAN_TEST_SOURCE=true to test source with bun (for development)
-const USE_SOURCE = process.env.HAN_TEST_SOURCE === "true";
+// In CI (GitHub Actions), test source since binary build requires native modules
+// Locally, test binary if it exists, otherwise test source
+const IS_CI = process.env.CI === "true";
+const USE_SOURCE =
+	process.env.HAN_TEST_SOURCE === "true" ||
+	IS_CI ||
+	!existsSync(join(__dirname, "..", "dist", "han"));
 const binPath = USE_SOURCE
 	? join(__dirname, "..", "lib", "main.ts")
 	: join(__dirname, "..", "dist", "han");
@@ -30,19 +34,6 @@ const binCommand = USE_SOURCE ? `bun ${binPath}` : binPath;
 
 console.log(`\nTesting: ${USE_SOURCE ? "Source (bun)" : "Binary (bun)"}`);
 console.log(`Path: ${binPath}\n`);
-
-// Build binary if it doesn't exist
-if (!USE_SOURCE && !existsSync(binPath)) {
-	console.log("Binary not found, building...");
-	execSync("npm run build:binary", {
-		cwd: join(__dirname, ".."),
-		stdio: "inherit",
-	});
-	if (!existsSync(binPath)) {
-		console.error("Failed to build binary");
-		process.exit(1);
-	}
-}
 
 function setup(): string {
 	const testDir = join(__dirname, "fixtures");
