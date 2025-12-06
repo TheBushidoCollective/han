@@ -1,6 +1,6 @@
+import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { Database } from "bun:sqlite";
 import { getClaudeConfigDir } from "../claude-settings.js";
 import type {
 	CompleteTaskParams,
