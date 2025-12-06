@@ -282,7 +282,8 @@ const METRICS_TOOLS: McpTool[] = [
 				},
 				context: {
 					type: "string",
-					description: "Optional context about what may have caused frustration",
+					description:
+						"Optional context about what may have caused frustration",
 				},
 			},
 			required: [

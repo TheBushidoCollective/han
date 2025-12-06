@@ -18,7 +18,10 @@ function isCompiledBinary(): boolean {
 		if (typeof (globalThis as any).Bun !== "undefined") {
 			const scriptPath = fileURLToPath(import.meta.url);
 			// Bun can run .ts files directly, only consider it a binary if path is /$bunfs/
-			if (scriptPath.includes("/$bunfs/") || scriptPath.includes("/snapshot/")) {
+			if (
+				scriptPath.includes("/$bunfs/") ||
+				scriptPath.includes("/snapshot/")
+			) {
 				return true;
 			}
 		}
@@ -50,15 +53,17 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 		console.error(
 			"\x1b[33m⚠ Metrics are not available in binary builds\x1b[0m\n",
 		);
-		console.error("The metrics feature requires better-sqlite3, which uses native");
 		console.error(
-			"modules that cannot be bundled into standalone binaries.\n",
+			"The metrics feature requires better-sqlite3, which uses native",
 		);
+		console.error("modules that cannot be bundled into standalone binaries.\n");
 		console.error("\x1b[1mTo view metrics, use one of these methods:\x1b[0m\n");
 		console.error(
 			"  1. Via npm:   \x1b[36mnpx @thebushidocollective/han metrics\x1b[0m",
 		);
-		console.error("  2. Via Node:  \x1b[36mnode dist/lib/main.js metrics\x1b[0m");
+		console.error(
+			"  2. Via Node:  \x1b[36mnode dist/lib/main.js metrics\x1b[0m",
+		);
 		console.error(
 			"  3. Install:   \x1b[36mnpm install -g @thebushidocollective/han && han metrics\x1b[0m\n",
 		);
@@ -87,7 +92,7 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 					showCalibration: !!options.showCalibration,
 				}),
 			);
-		} catch (inkError) {
+		} catch (_inkError) {
 			// Fallback to plain text if Ink fails to load
 			const { renderPlainText } = await import("./display-plain.js");
 			renderPlainText(result, !!options.showCalibration);

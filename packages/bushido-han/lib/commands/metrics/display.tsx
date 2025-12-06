@@ -412,7 +412,9 @@ function FrustrationInsights({ result }: { result: MetricsResult }) {
 
 				{recentFrustrations.length > 0 && (
 					<Box marginTop={1} flexDirection="column">
-						<Text bold>Recent Frustration Events (last {recentFrustrations.length}):</Text>
+						<Text bold>
+							Recent Frustration Events (last {recentFrustrations.length}):
+						</Text>
 						{recentFrustrations.map((event) => {
 							const signals = JSON.parse(event.detected_signals);
 							const message =
@@ -440,7 +442,9 @@ function FrustrationInsights({ result }: { result: MetricsResult }) {
 										<Box marginLeft={2}>
 											<Text dimColor>
 												Signals: {signals.slice(0, 3).join(", ")}
-												{signals.length > 3 ? ` +${signals.length - 3} more` : ""}
+												{signals.length > 3
+													? ` +${signals.length - 3} more`
+													: ""}
 											</Text>
 										</Box>
 									)}
