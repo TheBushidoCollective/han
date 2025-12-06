@@ -12,8 +12,8 @@
   "keywords": ["mcp", "metrics", "tracking", "analytics", "server"],
   "mcpServers": {
     "han-metrics": {
-      "command": "node",
-      "args": ["{PLUGIN_DIR}/server/index.js"],
+      "command": "npx",
+      "args": ["--yes", "@thebushidocollective/han", "mcp", "metrics"],
       "env": {}
     }
   }
