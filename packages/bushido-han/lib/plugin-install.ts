@@ -83,16 +83,63 @@ export async function installPlugins(
 
 	const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
 
-	// Check all plugins are valid
+	// Check all plugins are valid, or search for similar ones
 	const invalidPlugins = Array.from(pluginsToInstall).filter(
 		(p) => !validPluginNames.has(p),
 	);
+
 	if (invalidPlugins.length > 0) {
-		console.error(
-			`Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(", ")}\n`,
-		);
-		showAvailablePlugins(marketplacePlugins);
-		process.exit(1);
+		// If there's only one invalid plugin, try to search for it
+		if (invalidPlugins.length === 1 && pluginNames.length === 1) {
+			const query = invalidPlugins[0];
+			const searchResults = await searchForPlugin(query, marketplacePlugins);
+
+			if (searchResults.length === 0) {
+				console.error(`Error: No plugins found matching "${query}"\n`);
+				showAvailablePlugins(marketplacePlugins);
+				process.exit(1);
+			}
+
+			// If exact match found after normalization, use it
+			const exactMatch = searchResults.find(
+				(p) => p.name.toLowerCase() === query.toLowerCase(),
+			);
+			if (exactMatch && searchResults.length === 1) {
+				console.log(`✓ Found exact match: ${exactMatch.name}\n`);
+				pluginsToInstall.delete(query);
+				pluginsToInstall.add(exactMatch.name);
+			} else {
+				// Show interactive selector
+				console.log(
+					`Plugin "${query}" not found. Searching for similar plugins...\n`,
+				);
+				const { showPluginSelector } = await import(
+					"./plugin-selector-wrapper.js"
+				);
+				const selectedPlugins = await showPluginSelector(
+					searchResults,
+					[],
+					marketplacePlugins,
+				);
+
+				if (selectedPlugins.length === 0) {
+					console.log("Installation cancelled.");
+					process.exit(0);
+				}
+
+				// Replace the invalid plugin with selected ones
+				pluginsToInstall.delete(query);
+				for (const plugin of selectedPlugins) {
+					pluginsToInstall.add(plugin);
+				}
+			}
+		} else {
+			console.error(
+				`Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(", ")}\n`,
+			);
+			showAvailablePlugins(marketplacePlugins);
+			process.exit(1);
+		}
 	}
 
 	// Remove any invalid plugins that are no longer in the marketplace
@@ -161,4 +208,23 @@ export async function installPlugin(
 	scope: InstallScope = "user",
 ): Promise<void> {
 	return installPlugins([pluginName], scope);
+}
+
+/**
+ * Search for plugins matching a query
+ */
+function searchForPlugin(
+	query: string,
+	allPlugins: MarketplacePlugin[],
+): MarketplacePlugin[] {
+	const lowerQuery = query.toLowerCase();
+	return allPlugins.filter((plugin) => {
+		const nameMatch = plugin.name.toLowerCase().includes(lowerQuery);
+		const descMatch = plugin.description?.toLowerCase().includes(lowerQuery);
+		const keywordMatch = plugin.keywords?.some((k) =>
+			k.toLowerCase().includes(lowerQuery),
+		);
+		const categoryMatch = plugin.category?.toLowerCase().includes(lowerQuery);
+		return nameMatch || descMatch || keywordMatch || categoryMatch;
+	});
 }

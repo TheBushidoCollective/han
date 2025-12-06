@@ -308,7 +308,7 @@ function getBasePrompt(): string {
 /**
  * Find the Claude CLI executable in PATH
  */
-function findClaudeExecutable(): string {
+export function findClaudeExecutable(): string {
 	try {
 		const claudePath = execSync("which claude", {
 			encoding: "utf-8",

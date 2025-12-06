@@ -34,6 +34,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<MarketplacePlugin[]>([]);
 	const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
+	const [isTyping, setIsTyping] = useState(true); // Track if user is typing or navigating
 
 	// Memoize options list to prevent recreation on every render
 	// Note: "bushido" is always installed and never shown in the selector
@@ -133,6 +134,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 						setSearchQuery("");
 						setSearchResults([]);
 						setSearchSelectedIndex(0);
+						setIsTyping(true); // Start in typing mode
 					} else if (option.name === "✅ Done - Install selected plugins") {
 						onComplete(Array.from(selectedPlugins));
 					} else if (option.name === "❌ Cancel") {
@@ -158,28 +160,51 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		{ isActive: mode === "search" },
 	);
 
-	// Handle search result navigation (only when results exist)
+	// Handle search result navigation (active when in navigation mode with results)
 	useInput(
-		(_input, key) => {
+		(input, key) => {
 			if (key.upArrow) {
 				setSearchSelectedIndex(Math.max(0, searchSelectedIndex - 1));
+				setIsTyping(false); // Switch to navigation mode
 			} else if (key.downArrow) {
 				// +1 for "Back" option
 				setSearchSelectedIndex(
 					Math.min(searchResults.length, searchSelectedIndex + 1),
 				);
+				setIsTyping(false); // Switch to navigation mode
 			} else if (key.return) {
 				if (searchSelectedIndex < searchResults.length) {
 					// Add selected plugin
 					const plugin = searchResults[searchSelectedIndex];
 					setSelectedPlugins((prev) => new Set([...prev, plugin.name]));
 				}
-				// Go back to selection mode
+				// Go back to selection mode (works for both selecting plugin and "Back" option)
 				setMode("selection");
 				setSelectedIndex(0);
+				setIsTyping(true);
+			} else if (key.escape) {
+				// Escape can either go back to typing or exit search
+				if (!isTyping) {
+					// If navigating, go back to typing mode
+					setIsTyping(true);
+				} else {
+					// If typing, exit search mode
+					setMode("selection");
+					setSearchResults([]);
+					setSearchQuery("");
+				}
+			} else if (
+				input &&
+				!key.upArrow &&
+				!key.downArrow &&
+				!key.return &&
+				!key.escape
+			) {
+				// Any other key input switches back to typing mode
+				setIsTyping(true);
 			}
 		},
-		{ isActive: mode === "search" && searchResults.length > 0 },
+		{ isActive: mode === "search" && searchResults.length > 0 && !isTyping },
 	);
 
 	if (mode === "selection") {
@@ -232,7 +257,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		<Box flexDirection="column" paddingY={1}>
 			<Box marginBottom={1}>
 				<Text bold color="cyan">
-					Search for plugins (ESC to go back):
+					Search for plugins:
 				</Text>
 			</Box>
 
@@ -245,18 +270,39 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 						// Perform live search
 						performSearch(value);
 						setSearchSelectedIndex(0);
+						setIsTyping(true); // Typing in the input
+					}}
+					focus={isTyping}
+					onSubmit={() => {
+						// Enter key pressed while typing in input
+						if (searchResults.length > 0) {
+							// Switch to navigation mode to select results
+							setIsTyping(false);
+							setSearchSelectedIndex(0);
+						} else {
+							// No results, go back to selection
+							setMode("selection");
+							setSearchResults([]);
+							setSearchQuery("");
+						}
 					}}
 				/>
 			</Box>
 
-			{searchResults.length > 0 && (
-				<Box flexDirection="column" marginTop={1}>
-					<Box marginBottom={1}>
-						<Text dimColor>↑↓ navigate, Enter to add, ESC to go back</Text>
-					</Box>
+			<Box marginBottom={1}>
+				<Text dimColor>
+					{searchResults.length > 0
+						? isTyping
+							? "Press Enter to navigate results, or continue typing to refine"
+							: "↑↓ navigate, Enter to add, ESC to continue typing"
+						: "Type to search, or press Enter to go back"}
+				</Text>
+			</Box>
 
+			{searchResults.length > 0 && (
+				<Box flexDirection="column">
 					{searchResults.map((plugin, index) => {
-						const isSelected = index === searchSelectedIndex;
+						const isSelected = !isTyping && index === searchSelectedIndex;
 						const isAlreadyAdded = selectedPlugins.has(plugin.name);
 
 						return (
@@ -281,15 +327,19 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 					<Box marginLeft={1} marginTop={1}>
 						<Text
 							color={
-								searchSelectedIndex === searchResults.length
+								!isTyping && searchSelectedIndex === searchResults.length
 									? "cyan"
 									: undefined
 							}
-							bold={searchSelectedIndex === searchResults.length}
-							inverse={searchSelectedIndex === searchResults.length}
+							bold={!isTyping && searchSelectedIndex === searchResults.length}
+							inverse={
+								!isTyping && searchSelectedIndex === searchResults.length
+							}
 						>
-							{searchSelectedIndex === searchResults.length ? "> " : "  "}← Back
-							to selection
+							{!isTyping && searchSelectedIndex === searchResults.length
+								? "> "
+								: "  "}
+							← Back to selection
 						</Text>
 					</Box>
 				</Box>

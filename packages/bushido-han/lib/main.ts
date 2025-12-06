@@ -49,4 +49,60 @@ registerMcpCommands(program);
 registerMetricsCommand(program);
 registerAliasCommands(program);
 
+// Register top-level explain command
+program
+	.command("explain")
+	.description("Show comprehensive overview of Han configuration")
+	.action(async () => {
+		try {
+			const { explainHan } = await import("./explain.js");
+			await explainHan();
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error showing Han configuration:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
+// Register top-level summary command
+program
+	.command("summary")
+	.description("AI-powered summary of how Han is improving this repository")
+	.action(async () => {
+		try {
+			const { generateSummary } = await import("./summary.js");
+			await generateSummary();
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error generating summary:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
+// Register top-level gaps command
+program
+	.command("gaps")
+	.description(
+		"AI-powered analysis of repository gaps and Han plugin recommendations",
+	)
+	.action(async () => {
+		try {
+			const { analyzeGaps } = await import("./gaps.js");
+			await analyzeGaps();
+			process.exit(0);
+		} catch (error: unknown) {
+			console.error(
+				"Error analyzing gaps:",
+				error instanceof Error ? error.message : error,
+			);
+			process.exit(1);
+		}
+	});
+
 program.parse();
