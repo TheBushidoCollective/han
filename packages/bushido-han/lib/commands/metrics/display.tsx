@@ -125,6 +125,31 @@ function SummaryStats({ result }: { result: MetricsResult }) {
 					</Box>
 					<Text bold>{formatDuration(result.average_duration_seconds)}</Text>
 				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Frustration Events:</Text>
+					</Box>
+					<Text bold color={result.total_frustrations > 0 ? "yellow" : "green"}>
+						{result.total_frustrations}
+					</Text>
+				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Frustration Rate:</Text>
+					</Box>
+					<Text
+						bold
+						color={
+							result.frustration_rate > 0.3
+								? "red"
+								: result.frustration_rate > 0.1
+									? "yellow"
+									: "green"
+						}
+					>
+						{formatPercent(result.frustration_rate)}
+					</Text>
+				</Box>
 			</Box>
 		</Box>
 	);
@@ -298,6 +323,153 @@ function RecentTasksTable({ result }: { result: MetricsResult }) {
 						</Box>
 					</Box>
 				))}
+			</Box>
+		</Box>
+	);
+}
+
+/**
+ * Frustration insights section
+ */
+function FrustrationInsights({ result }: { result: MetricsResult }) {
+	if (result.total_frustrations === 0) {
+		return null;
+	}
+
+	// Group by frustration level
+	const byLevel: Record<string, number> = {};
+	result.frustration_events.forEach((event) => {
+		byLevel[event.frustration_level] =
+			(byLevel[event.frustration_level] || 0) + 1;
+	});
+
+	const recentFrustrations = result.frustration_events.slice(0, 5);
+
+	return (
+		<Box flexDirection="column" marginBottom={1}>
+			<Text bold color="cyan">
+				😤 User Frustration Analysis
+			</Text>
+
+			<Box marginTop={1} flexDirection="column">
+				<Box>
+					<Text dimColor>Total frustration events detected: </Text>
+					<Text
+						bold
+						color={
+							result.total_frustrations > 5
+								? "red"
+								: result.total_frustrations > 2
+									? "yellow"
+									: "green"
+						}
+					>
+						{result.total_frustrations}
+					</Text>
+				</Box>
+				<Box>
+					<Text dimColor>Frustration rate: </Text>
+					<Text
+						bold
+						color={
+							result.frustration_rate > 0.3
+								? "red"
+								: result.frustration_rate > 0.1
+									? "yellow"
+									: "green"
+						}
+					>
+						{formatPercent(result.frustration_rate)}
+					</Text>
+					<Text dimColor> (frustrations per task)</Text>
+				</Box>
+
+				{Object.keys(byLevel).length > 0 && (
+					<Box marginTop={1} flexDirection="column">
+						<Text bold>Frustration by Level:</Text>
+						{Object.entries(byLevel).map(([level, count]) => (
+							<Box key={level} marginLeft={2}>
+								<Box width={10}>
+									<Text
+										color={
+											level === "high"
+												? "red"
+												: level === "moderate"
+													? "yellow"
+													: "green"
+										}
+									>
+										{level}
+									</Text>
+								</Box>
+								<Text dimColor>
+									{count} event{count !== 1 ? "s" : ""}
+								</Text>
+							</Box>
+						))}
+					</Box>
+				)}
+
+				{recentFrustrations.length > 0 && (
+					<Box marginTop={1} flexDirection="column">
+						<Text bold>Recent Frustration Events (last {recentFrustrations.length}):</Text>
+						{recentFrustrations.map((event) => {
+							const signals = JSON.parse(event.detected_signals);
+							const message =
+								event.user_message.length > 60
+									? `${event.user_message.substring(0, 60)}...`
+									: event.user_message;
+
+							return (
+								<Box key={event.id} marginLeft={2} flexDirection="column">
+									<Box>
+										<Text
+											color={
+												event.frustration_level === "high"
+													? "red"
+													: event.frustration_level === "moderate"
+														? "yellow"
+														: "green"
+											}
+										>
+											[{event.frustration_level}]
+										</Text>
+										<Text dimColor> {message}</Text>
+									</Box>
+									{signals.length > 0 && (
+										<Box marginLeft={2}>
+											<Text dimColor>
+												Signals: {signals.slice(0, 3).join(", ")}
+												{signals.length > 3 ? ` +${signals.length - 3} more` : ""}
+											</Text>
+										</Box>
+									)}
+								</Box>
+							);
+						})}
+					</Box>
+				)}
+
+				{result.frustration_rate > 0.2 && (
+					<Box marginTop={1} flexDirection="column">
+						<Text bold color="yellow">
+							⚠️ Recommendations:
+						</Text>
+						<Box marginLeft={2}>
+							<Text dimColor>
+								• High frustration rate detected - review recent interactions
+							</Text>
+						</Box>
+						<Box marginLeft={2}>
+							<Text dimColor>
+								• Consider improving error messages and guidance
+							</Text>
+						</Box>
+						<Box marginLeft={2}>
+							<Text dimColor>• Look for patterns in frustration triggers</Text>
+						</Box>
+					</Box>
+				)}
 			</Box>
 		</Box>
 	);
@@ -488,6 +660,11 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 
 			{/* Recent Tasks Table */}
 			{hasData && <RecentTasksTable result={result} />}
+
+			{/* Frustration Insights */}
+			{hasData && result.total_frustrations > 0 && (
+				<FrustrationInsights result={result} />
+			)}
 
 			{/* Calibration Insights (optional) */}
 			{hasData && showCalibration && <CalibrationInsights result={result} />}

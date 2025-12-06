@@ -5,6 +5,7 @@ export type TaskType = "implementation" | "fix" | "refactor" | "research";
 export type TaskComplexity = "simple" | "moderate" | "complex";
 export type TaskStatus = "active" | "completed" | "failed";
 export type TaskOutcome = "success" | "partial" | "failure";
+export type FrustrationLevel = "low" | "moderate" | "high";
 
 /**
  * Represents a tracked task
@@ -41,6 +42,20 @@ export interface TaskUpdate {
 }
 
 /**
+ * Represents a frustration event
+ */
+export interface FrustrationEvent {
+	id: number;
+	task_id?: string;
+	timestamp: string;
+	frustration_level: FrustrationLevel;
+	frustration_score: number;
+	user_message: string;
+	detected_signals: string;
+	context?: string;
+}
+
+/**
  * Metrics query parameters
  */
 export interface MetricsQuery {
@@ -62,6 +77,9 @@ export interface MetricsResult {
 	by_outcome: Record<string, number>;
 	calibration_score: number;
 	tasks: Task[];
+	frustration_events: FrustrationEvent[];
+	total_frustrations: number;
+	frustration_rate: number;
 }
 
 /**
@@ -100,4 +118,13 @@ export interface QueryMetricsParams {
 	period?: "day" | "week" | "month";
 	task_type?: TaskType;
 	outcome?: TaskOutcome;
+}
+
+export interface RecordFrustrationParams {
+	task_id?: string;
+	frustration_level: FrustrationLevel;
+	frustration_score: number;
+	user_message: string;
+	detected_signals: string[];
+	context?: string;
 }
