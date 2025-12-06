@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-claude-agent-sdk typecheck --fail-fast --cached",
+            "timeout": 120000
+          },
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run jutsu-claude-agent-sdk validate-structure --fail-fast --cached",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}

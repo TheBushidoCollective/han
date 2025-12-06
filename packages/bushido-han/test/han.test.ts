@@ -1175,6 +1175,167 @@ describe("Hook config (han-config.json)", () => {
 	});
 });
 
+// ============================================
+// Plugin list command tests
+// ============================================
+
+describe("Plugin list command", () => {
+	let testDir: string;
+
+	beforeEach(() => {
+		testDir = setup();
+	});
+
+	afterEach(() => {
+		teardown();
+	});
+
+	test("shows help", () => {
+		const output = execSync(`${binCommand} plugin list --help`, {
+			encoding: "utf8",
+		});
+		expect(output).toContain("List installed plugins");
+	});
+
+	test("lists installed plugins", () => {
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					han: {
+						source: {
+							source: "github",
+							repo: "thebushidocollective/han",
+						},
+					},
+				},
+				enabledPlugins: {
+					"bushido@han": true,
+					"jutsu-typescript@han": true,
+				},
+			}),
+		);
+
+		const output = execSync(`${binCommand} plugin list`, {
+			cwd: testDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_CONFIG_DIR: testDir,
+			},
+		});
+
+		expect(output).toContain("bushido");
+		expect(output).toContain("jutsu-typescript");
+	});
+
+	test("shows no plugins when none installed", () => {
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		writeFileSync(join(claudeDir, "settings.json"), JSON.stringify({}));
+
+		const output = execSync(`${binCommand} plugin list`, {
+			cwd: testDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_CONFIG_DIR: testDir,
+			},
+		});
+
+		expect(output).toContain("No plugins installed");
+	});
+});
+
+// ============================================
+// Explain command tests
+// ============================================
+
+describe("Explain command", () => {
+	let testDir: string;
+
+	beforeEach(() => {
+		testDir = setup();
+	});
+
+	afterEach(() => {
+		teardown();
+	});
+
+	test("shows help", () => {
+		const output = execSync(`${binCommand} explain --help`, {
+			encoding: "utf8",
+		});
+		expect(output).toContain("Han configuration");
+	});
+
+	test("shows configuration when plugins installed", () => {
+		const claudeDir = join(testDir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+
+		writeFileSync(
+			join(claudeDir, "settings.json"),
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					han: {
+						source: {
+							source: "github",
+							repo: "thebushidocollective/han",
+						},
+					},
+				},
+				enabledPlugins: {
+					"bushido@han": true,
+				},
+			}),
+		);
+
+		const output = execSync(`${binCommand} explain`, {
+			cwd: testDir,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+			env: {
+				...process.env,
+				CLAUDE_CONFIG_DIR: testDir,
+			},
+		});
+
+		expect(output.toLowerCase()).toContain("han configuration");
+	});
+});
+
+// ============================================
+// Summary command tests
+// ============================================
+
+describe("Summary command", () => {
+	test("shows help", () => {
+		const output = execSync(`${binCommand} summary --help`, {
+			encoding: "utf8",
+		});
+		expect(output).toContain("summary");
+	});
+});
+
+// ============================================
+// Gaps command tests
+// ============================================
+
+describe("Gaps command", () => {
+	test("shows help", () => {
+		const output = execSync(`${binCommand} gaps --help`, {
+			encoding: "utf8",
+		});
+		expect(output).toContain("gaps");
+	});
+});
+
 // TODO: Complete migration of remaining tests (14 tests):
 // - User override tests (han-config.yml) - ~6 tests
 // - Cache invalidation tests - ~2 tests

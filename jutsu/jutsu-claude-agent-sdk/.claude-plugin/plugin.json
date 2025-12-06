@@ -1,0 +1,21 @@
+{
+  "name": "jutsu-claude-agent-sdk",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "agent-sdk",
+    "validation",
+    "typescript",
+    "quality",
+    "enforcement",
+    "ai-agents"
+  ]
+}

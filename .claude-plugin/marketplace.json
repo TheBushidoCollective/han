@@ -157,6 +157,13 @@
       "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
+      "name": "jutsu-claude-agent-sdk",
+      "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
+      "source": "./jutsu/jutsu-claude-agent-sdk",
+      "category": "Technique",
+      "keywords": ["claude", "agent-sdk", "validation", "typescript", "quality", "enforcement", "ai-agents"]
+    },
+    {
       "name": "jutsu-notetaker",
       "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
       "source": "./jutsu/jutsu-notetaker",

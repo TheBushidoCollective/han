@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { registerPluginInstall } from "./install.js";
+import { registerPluginList } from "./list.js";
 import { registerPluginSearch } from "./search.js";
 import { registerPluginUninstall } from "./uninstall.js";
 import { registerPluginUpdateMarketplace } from "./update.js";
@@ -13,6 +14,7 @@ export function registerPluginCommands(program: Command): void {
 		.description("Manage Han plugins");
 
 	registerPluginInstall(pluginCommand);
+	registerPluginList(pluginCommand);
 	registerPluginUninstall(pluginCommand);
 	registerPluginSearch(pluginCommand);
 	registerPluginUpdateMarketplace(pluginCommand);
