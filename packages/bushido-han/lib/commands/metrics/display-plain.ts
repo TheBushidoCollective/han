@@ -288,7 +288,9 @@ function renderFrustrationInsights(result: MetricsResult): void {
 
 	// Recommendations
 	if (result.frustration_rate > 0.2) {
-		console.log(`${colors.bold}${colors.yellow}⚠️  Recommendations:${colors.reset}`);
+		console.log(
+			`${colors.bold}${colors.yellow}⚠️  Recommendations:${colors.reset}`,
+		);
 		console.log(
 			`  ${colors.dim}• High frustration rate detected - review recent interactions${colors.reset}`,
 		);
