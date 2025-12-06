@@ -222,10 +222,6 @@ jobs:
           sleep 90
           echo "Done waiting"
 
-      - name: Build TypeScript
-        working-directory: ./packages/bushido-han
-        run: npm run build
-
       - name: Publish main package to npm
         working-directory: ./packages/bushido-han
         env:
