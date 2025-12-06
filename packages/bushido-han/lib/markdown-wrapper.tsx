@@ -9,7 +9,6 @@ interface MarkdownWrapperProps {
 
 // Configure marked globally with terminal renderer
 marked.setOptions({
-	// @ts-expect-error - marked-terminal types are not perfectly aligned
 	renderer: new TerminalRenderer(),
 });
 
