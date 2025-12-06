@@ -22,14 +22,14 @@ const __dirname = dirname(__filename);
 
 // Determine which binary to test
 // If HAN_TEST_BINARY env var is set, use the compiled binary
-// Otherwise, use the Node.js version
+// Otherwise, use the Bun runtime
 const USE_BINARY = process.env.HAN_TEST_BINARY === "true";
 const binPath = USE_BINARY
 	? join(__dirname, "..", "..", "dist", "han")
 	: join(__dirname, "..", "lib", "main.js");
-const binCommand = USE_BINARY ? binPath : `node ${binPath}`;
+const binCommand = USE_BINARY ? binPath : `bun ${binPath}`;
 
-console.log(`\nTesting: ${USE_BINARY ? "Binary (bun)" : "JavaScript (node)"}`);
+console.log(`\nTesting: ${USE_BINARY ? "Binary (bun)" : "JavaScript (bun)"}`);
 console.log(`Path: ${binPath}\n`);
 
 // Verify binary exists
