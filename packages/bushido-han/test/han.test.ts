@@ -13,7 +13,6 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkForChanges, trackFiles } from "../lib/hook-cache.js";
 import { parsePluginRecommendations } from "../lib/shared.js";
 
 // Get __dirname equivalent in ES modules
@@ -566,8 +565,7 @@ describe("Hook test command", () => {
 
 describe("parsePluginRecommendations", () => {
 	test("returns unique plugins (no duplicates)", () => {
-		const content =
-			'["bushido", "jutsu-typescript", "bushido", "jutsu-react"]';
+		const content = '["bushido", "jutsu-typescript", "bushido", "jutsu-react"]';
 		const result = parsePluginRecommendations(content);
 
 		const uniqueResult = [...new Set(result)];
@@ -1182,4 +1180,9 @@ describe("Hook config (han-config.json)", () => {
 	});
 });
 
-// Remaining tests in next continuation...
+// TODO: Complete migration of remaining tests (14 tests):
+// - User override tests (han-config.yml) - ~6 tests
+// - Cache invalidation tests - ~2 tests
+// - MCP Server tests - ~6 tests
+// - Claude Settings Merge Tests - ~1 test
+// Pattern: Follow same structure using describe(), test(), expect(), beforeEach(), afterEach()
