@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import type React from "react";
-import type { MetricsResult, Task } from "../../metrics/types.js";
+import type { MetricsResult } from "../../metrics/types.js";
 
 interface MetricsDisplayProps {
 	result: MetricsResult;

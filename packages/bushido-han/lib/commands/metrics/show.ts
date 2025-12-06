@@ -1,7 +1,6 @@
-import { existsSync } from "node:fs";
 import { render } from "ink";
 import React from "react";
-import { getMetricsDbPath, MetricsStorage } from "../../metrics/storage.js";
+import { MetricsStorage } from "../../metrics/storage.js";
 import type { MetricsQuery } from "../../metrics/types.js";
 import { MetricsDisplay } from "./display.js";
 
