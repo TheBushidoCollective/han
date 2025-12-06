@@ -289,7 +289,9 @@ export class MetricsStorage {
 
 		// Calculate metrics
 		const total_tasks = tasks.length;
-		const completed_tasks = tasks.filter((t) => t.status === "completed").length;
+		const completed_tasks = tasks.filter(
+			(t) => t.status === "completed",
+		).length;
 		const success_rate =
 			completed_tasks > 0
 				? tasks.filter((t) => t.outcome === "success").length / completed_tasks
