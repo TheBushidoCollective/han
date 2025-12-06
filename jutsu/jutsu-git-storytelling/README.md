@@ -94,6 +94,27 @@ git commit --amend -m "feat: add user authentication system"
 - You have unrelated changes mixed together
 - You have debugging code still in place
 
+### Cleaning Up Before Pushing
+
+**Commit often, but clean up before sharing:**
+
+- ✅ Use `git rebase -i` to clean up local commits before pushing
+- ✅ Squash "oops" and "fix typo" commits into their parent commits
+- ✅ Reword unclear commit messages
+- ✅ Reorder commits to tell a better story
+- ❌ Never rebase commits that have already been pushed to shared branches
+
+```bash
+# Check what you haven't pushed yet
+git log origin/main..HEAD --oneline
+
+# Clean up local commits interactively
+git rebase -i origin/main
+
+# Push your clean history
+git push origin feature/my-branch
+```
+
 ### Example Story
 
 Good git storytelling looks like:

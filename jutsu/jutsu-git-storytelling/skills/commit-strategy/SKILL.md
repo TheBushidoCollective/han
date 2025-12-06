@@ -227,8 +227,21 @@ git commit -m "wip3"
 ❌ **The Time Machine**
 
 ```bash
-# Making 50 commits then squashing them all
-# Keep the story, just clean up truly meaningless commits
+# Making 50 commits then squashing them ALL into one
+# This destroys the development story entirely
+```
+
+✅ **Better Approach**: Clean up meaningless commits locally before pushing, but preserve the logical story:
+
+```bash
+# Keep logical commits that tell the story
+git rebase -i origin/main
+
+# Result: Clean story with meaningful commits
+# feat: implement user authentication
+# test: add authentication tests
+# fix: handle edge cases
+# docs: document authentication API
 ```
 
 ## Workflow Integration
@@ -265,6 +278,211 @@ Frequent commits trigger CI more often:
 - Smaller changesets are easier to debug
 - Faster feedback loop
 
+## Cleaning Up Local Commits
+
+### The Golden Rule: Local vs Pushed
+
+**✅ Safe to rebase: Local commits (not yet pushed)**
+
+- You can freely rewrite, reorder, squash, or edit local commits
+- Interactive rebase is your friend for cleaning up messy history
+- No one else has based work on these commits yet
+
+**❌ Dangerous to rebase: Pushed commits (already on remote)**
+
+- Rewriting pushed commits creates conflicts for collaborators
+- Only rebase pushed commits if you're the only person on the branch
+- Requires force push which can lose others' work
+- Exception: Personal feature branches where you're the only contributor
+
+### When to Clean Up Local Commits
+
+Before pushing your work, consider cleaning up if you have:
+
+- **WIP commits**: Multiple "work in progress" or "wip" commits
+- **Fix commits**: "oops fix typo" or "forgot to add file" commits
+- **Debug commits**: Commits that added then removed debugging code
+- **Logical grouping**: Related changes split across multiple commits
+- **Commit message errors**: Typos or unclear messages in commit history
+
+### Interactive Rebase for Cleanup
+
+Use `git rebase -i` to clean up your local commit history before pushing:
+
+```bash
+# Check what commits you haven't pushed yet
+git log origin/main..HEAD --oneline
+
+# Interactive rebase for last 5 commits
+git rebase -i HEAD~5
+
+# Or rebase everything since branching from main
+git rebase -i origin/main
+```
+
+#### Rebase Commands
+
+In the interactive rebase editor, you can:
+
+- `pick` - Keep commit as-is
+- `reword` - Keep commit but edit message
+- `edit` - Pause to amend the commit
+- `squash` - Merge into previous commit, keep both messages
+- `fixup` - Merge into previous commit, discard this message
+- `drop` - Remove commit entirely
+- `reorder` - Move lines to reorder commits
+
+#### Common Cleanup Patterns
+
+**Pattern 1: Squash fixup commits**
+
+Before:
+```
+feat: add user authentication
+wip: add tests
+fix: oops forgot import
+fix: typo in test
+test: add more edge cases
+```
+
+After rebasing:
+```
+feat: add user authentication
+test: add authentication tests
+```
+
+Commands in rebase editor:
+```
+pick abc123 feat: add user authentication
+pick def456 wip: add tests
+fixup ghi789 fix: oops forgot import
+fixup jkl012 fix: typo in test
+squash mno345 test: add more edge cases
+```
+
+**Pattern 2: Split WIP into logical commits**
+
+Before:
+```
+wip: stuff
+wip: more stuff
+wip: final changes
+```
+
+After rebasing:
+```
+feat: implement user authentication
+test: add authentication tests
+docs: document auth API
+```
+
+Commands in rebase editor:
+```
+edit abc123 wip: stuff
+edit def456 wip: more stuff
+edit ghi789 wip: final changes
+```
+
+Then for each commit:
+```bash
+git reset HEAD^           # Unstage the commit
+git add -p                # Selectively stage changes
+git commit -m "feat: implement user authentication"
+git add -p                # Stage more changes
+git commit -m "test: add authentication tests"
+# ... etc
+git rebase --continue
+```
+
+**Pattern 3: Improve commit messages**
+
+Before:
+```
+stuff
+more changes
+final
+```
+
+After rebasing:
+```
+feat: add JWT authentication
+test: add authentication tests
+docs: update API documentation
+```
+
+Commands in rebase editor:
+```
+reword abc123 stuff
+reword def456 more changes
+reword ghi789 final
+```
+
+### Example Workflow: Commit Often, Clean Up Before Push
+
+```bash
+# During development - commit frequently
+git commit -m "wip: start auth implementation"
+git commit -m "wip: add JWT generation"
+git commit -m "oops: fix import"
+git commit -m "wip: add tests"
+git commit -m "fix: test typo"
+git commit -m "wip: add validation"
+
+# Before pushing - check what you have
+git log origin/main..HEAD --oneline
+# Shows 6 messy WIP commits
+
+# Clean up with interactive rebase
+git rebase -i origin/main
+
+# In editor, consolidate into logical commits:
+# - Squash the "oops" and "fix" commits
+# - Combine related WIP commits
+# - Reword commit messages to be descriptive
+
+# Result: Clean, logical history
+git log origin/main..HEAD --oneline
+#
+# feat: implement JWT authentication
+# test: add authentication tests
+# feat: add request validation
+
+# Now push your clean history
+git push origin feature/user-auth
+```
+
+### When NOT to Rebase
+
+Don't rebase if:
+
+- ❌ Commits are already pushed to a shared branch (main, develop)
+- ❌ Other people have branched from your commits
+- ❌ You're pair programming and both pushing to same branch
+- ❌ Commits are part of a merged pull request
+- ❌ You're unsure about the impact (when in doubt, don't rebase)
+
+### Recovering from Rebase Mistakes
+
+If a rebase goes wrong:
+
+```bash
+# Abort ongoing rebase
+git rebase --abort
+
+# Or recover using reflog (rebase already completed)
+git reflog                    # Find the commit before rebase
+git reset --hard HEAD@{5}     # Go back to that state
+```
+
+### Best Practices
+
+1. **Commit frequently during development** - Don't worry about perfect commits
+2. **Review before pushing** - Use `git log` to see what you're about to push
+3. **Clean up before pushing** - Use interactive rebase to create logical story
+4. **Never rebase pushed commits** - Unless you're absolutely sure you're the only one
+5. **Use descriptive commit messages** - Even after cleanup, messages should be clear
+6. **Test after rebasing** - Make sure tests still pass after rewriting history
+
 ## Related Skills
 
 - **git-history-navigation**: Understanding git log, bisect, and blame
@@ -278,6 +496,8 @@ Frequent commits trigger CI more often:
 3. **Write commit messages for future you** - Explain the "why" not just the "what"
 4. **Keep the story coherent** - Each commit should make sense on its own
 5. **Use the hook** - Let the jutsu-git-storytelling hook remind you to commit
+6. **Clean up before pushing** - Use `git rebase -i` to polish local commits before sharing
+7. **Never rebase pushed commits** - Respect shared history, only rebase local work
 
 ## Checking Your Commit Story
 
