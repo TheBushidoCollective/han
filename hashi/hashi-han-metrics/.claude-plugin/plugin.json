@@ -1,6 +1,6 @@
 {
   "name": "hashi-han-metrics",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server for agent task tracking and performance metrics. Enables self-reporting agents with objective validation.",
   "author": {
     "name": "The Bushido Collective",
