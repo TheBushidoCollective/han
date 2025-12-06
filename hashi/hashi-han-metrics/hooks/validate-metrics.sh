@@ -4,7 +4,9 @@
 
 set -e
 
-METRICS_DB="${HOME}/.claude/metrics/metrics.db"
+# Respect CLAUDE_CONFIG_DIR environment variable
+CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}"
+METRICS_DB="${CLAUDE_CONFIG_DIR}/metrics/metrics.db"
 
 # Skip if metrics tracking not installed
 if [ ! -f "$METRICS_DB" ]; then
