@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import { getClaudeConfigDir } from "../claude-settings.js";
 import type {
 	CompleteTaskParams,
@@ -38,7 +38,7 @@ export function getMetricsDbPath(): string {
  * Initialize the metrics database
  */
 export class MetricsStorage {
-	private db: Database.Database;
+	private db: Database;
 
 	constructor() {
 		const metricsDir = getMetricsDir();
@@ -50,7 +50,7 @@ export class MetricsStorage {
 
 		// Open database
 		this.db = new Database(getMetricsDbPath());
-		this.db.pragma("journal_mode = WAL");
+		this.db.exec("PRAGMA journal_mode = WAL");
 
 		// Create schema
 		this.initializeSchema();
