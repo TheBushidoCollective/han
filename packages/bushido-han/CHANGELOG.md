@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.0] - 2025-12-06
+
+### Added
+
+- add user frustration detection and tracking ([7e09f6d5](../../commit/7e09f6d5))
+- add han metrics command with terminal visualization ([d915d332](../../commit/d915d332))
+
+### Fixed
+
+- show helpful error for binary builds instead of crashing ([33bcfc77](../../commit/33bcfc77))
+- add plain text fallback for metrics in compiled binaries ([c08faacd](../../commit/c08faacd))
+- lazy-load MetricsStorage to prevent native module loading at import ([9022e06d](../../commit/9022e06d))
+- remove unused imports from metrics command ([aeef736b](../../commit/aeef736b))
+
+### Changed
+
+- integrate metrics server into main CLI ([2bd8af6c](../../commit/2bd8af6c))
+
+### Other
+
+- format display-plain.ts with Biome ([d4f60d2a](../../commit/d4f60d2a))
+- update README for CLI integration ([34407550](../../commit/34407550))
+
 ## [1.49.5] - 2025-12-06
 
 ### Added
