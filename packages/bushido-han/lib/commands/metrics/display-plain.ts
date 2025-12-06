@@ -157,7 +157,10 @@ function renderRecentTasksTable(result: MetricsResult): void {
 	const headers = ["Type", "Outcome", "Confidence", "Duration", "Hooks"];
 	const widths = [18, 12, 14, 12, 12];
 	const headerRow = headers
-		.map((h, i) => `${colors.bold}${colors.dim}${h.padEnd(widths[i])}${colors.reset}`)
+		.map(
+			(h, i) =>
+				`${colors.bold}${colors.dim}${h.padEnd(widths[i])}${colors.reset}`,
+		)
 		.join("");
 	console.log(`  ${headerRow}`);
 	console.log(`  ${colors.dim}${"─".repeat(68)}${colors.reset}`);
@@ -212,7 +215,9 @@ function renderCalibrationInsights(result: MetricsResult): void {
 	);
 
 	if (tasksWithCalibration.length === 0) {
-		console.log(`  ${colors.dim}No tasks with confidence data yet${colors.reset}`);
+		console.log(
+			`  ${colors.dim}No tasks with confidence data yet${colors.reset}`,
+		);
 		console.log();
 		return;
 	}
@@ -252,7 +257,9 @@ function renderCalibrationInsights(result: MetricsResult): void {
 			);
 		}
 		if (overconfident.length > 5) {
-			console.log(`  ${colors.dim}... and ${overconfident.length - 5} more${colors.reset}`);
+			console.log(
+				`  ${colors.dim}... and ${overconfident.length - 5} more${colors.reset}`,
+			);
 		}
 		console.log();
 	}
@@ -274,7 +281,9 @@ function renderCalibrationInsights(result: MetricsResult): void {
 			);
 		}
 		if (underconfident.length > 5) {
-			console.log(`  ${colors.dim}... and ${underconfident.length - 5} more${colors.reset}`);
+			console.log(
+				`  ${colors.dim}... and ${underconfident.length - 5} more${colors.reset}`,
+			);
 		}
 		console.log();
 	}
@@ -318,7 +327,9 @@ export function renderPlainText(
 		console.log(
 			`  ${colors.dim}Agent task metrics will appear here once you start using the${colors.reset}`,
 		);
-		console.log(`  ${colors.dim}hashi-han-metrics plugin to track your work.${colors.reset}`);
+		console.log(
+			`  ${colors.dim}hashi-han-metrics plugin to track your work.${colors.reset}`,
+		);
 		console.log();
 		console.log(
 			`  ${colors.dim}Install it with: ${colors.reset}${colors.bold}han plugin install hashi-han-metrics${colors.reset}`,
