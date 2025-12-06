@@ -2,9 +2,7 @@
   "hooks": {
     "build": {
       "command": "bun build --target=bun --no-bundle",
-      "dirsWith": [
-        "bun.lock"
-      ],
+      "dirsWith": ["bun.lock"],
       "ifChanged": [
         "**/*.ts",
         "**/*.tsx",
@@ -16,9 +14,7 @@
     },
     "test": {
       "command": "bun test",
-      "dirsWith": [
-        "bun.lock"
-      ],
+      "dirsWith": ["bun.lock"],
       "ifChanged": [
         "**/*.ts",
         "**/*.tsx",
