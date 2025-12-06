@@ -1,6 +1,6 @@
 {
   "name": "jutsu-claude-agent-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
   "author": {
     "name": "The Bushido Collective",
