@@ -12,10 +12,12 @@ const message = process.env.USER_MESSAGE || '';
 // Define frustration indicators
 const indicators = {
   // Negative outcome words
-  negative: /\b(broken|doesn't work|doesn't|didn't|failed|error|wrong|useless|bad|worse|terrible|awful|horrible|not working)\b/gi,
+  negative:
+    /\b(broken|doesn't work|doesn't|didn't|failed|error|wrong|useless|bad|worse|terrible|awful|horrible|not working)\b/gi,
 
   // Emotional frustration words
-  emotional: /\b(frustrat(ed|ing)|annoying|confus(ed|ing)|hate|stupid|dumb|ridiculous|waste|pointless)\b/gi,
+  emotional:
+    /\b(frustrat(ed|ing)|annoying|confus(ed|ing)|hate|stupid|dumb|ridiculous|waste|pointless)\b/gi,
 
   // All caps (indicates shouting/frustration)
   caps: /[A-Z]{5,}/,
@@ -24,7 +26,10 @@ const indicators = {
   exclamation: /[!?]{2,}/,
 
   // Very terse messages (potential anger)
-  terse: message.trim().length < 15 && message.trim().length > 0 && !message.includes(' '),
+  terse:
+    message.trim().length < 15 &&
+    message.trim().length > 0 &&
+    !message.includes(' '),
 
   // Repeated words (indicates emphasis/frustration)
   repeated: /\b(\w+)\s+\1\b/gi,
@@ -58,7 +63,9 @@ const score =
 const FRUSTRATION_THRESHOLD = 2;
 
 if (score >= FRUSTRATION_THRESHOLD) {
-  console.log(`\n⚠️  Frustration detected (score: ${score}/${Object.values(matches).reduce((a, b) => a + (typeof b === 'number' ? b : b ? 1 : 0), 0)} indicators)`);
+  console.log(
+    `\n⚠️  Frustration detected (score: ${score}/${Object.values(matches).reduce((a, b) => a + (typeof b === 'number' ? b : b ? 1 : 0), 0)} indicators)`
+  );
   console.log('\nDetected signals:');
 
   if (matches.negative > 0) {
@@ -83,8 +90,12 @@ if (score >= FRUSTRATION_THRESHOLD) {
     console.log(`  • ${matches.negativeCommands} negative command(s)`);
   }
 
-  console.log('\nThis interaction will be tracked in metrics for quality improvement.');
-  console.log('The agent will work to better understand and address your needs.\n');
+  console.log(
+    '\nThis interaction will be tracked in metrics for quality improvement.'
+  );
+  console.log(
+    'The agent will work to better understand and address your needs.\n'
+  );
 }
 
 // Exit successfully (don't block the interaction)
