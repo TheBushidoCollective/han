@@ -172,6 +172,21 @@
       ]
     },
     {
+      "name": "jutsu-mise",
+      "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
+      "source": "./jutsu/jutsu-mise",
+      "category": "Technique",
+      "keywords": [
+        "mise",
+        "validation",
+        "task-runner",
+        "version-manager",
+        "quality",
+        "enforcement",
+        "dev-tools"
+      ]
+    },
+    {
       "name": "jutsu-notetaker",
       "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
       "source": "./jutsu/jutsu-notetaker",
