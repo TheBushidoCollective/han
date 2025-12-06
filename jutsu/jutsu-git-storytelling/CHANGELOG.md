@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Comprehensive guidance on local rebasing and commit cleanup
+- New "Cleaning Up Local Commits" section in commit-strategy skill
+- Clear distinction between safe (local) and dangerous (pushed) rebasing
+- Interactive rebase patterns and examples for cleaning up WIP commits
+- Best practices for "commit often, clean up before pushing" workflow
+- Safety guidelines and recovery instructions for rebasing
+
+### Changed
+
+- Updated README with rebasing guidance and examples
+- Clarified "Time Machine" anti-pattern to allow local cleanup
+- Added rebasing tips to "Tips for Success" section
+
 ## [1.3.11] - 2025-12-04
 
 ### Changed
