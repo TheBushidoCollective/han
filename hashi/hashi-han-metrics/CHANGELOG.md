@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-12-06
+
+### Added
+
+- add user frustration detection and tracking ([7e09f6d5](../../commit/7e09f6d5))
+- add hashi-figma, hashi-sentry, hashi-han-metrics plugins and complete SDLC coverage ([d9ad1f65](../../commit/d9ad1f65))
+
+### Fixed
+
+- replace better-sqlite3 with bun:sqlite for binary compatibility ([9d1b2125](../../commit/9d1b2125))
+- add required sections to command documentation ([a1771965](../../commit/a1771965))
+
+### Changed
+
+- integrate metrics server into main CLI ([2bd8af6c](../../commit/2bd8af6c))
+
+### Other
+
+- format plugin.json arrays ([3ee85700](../../commit/3ee85700))
+- update README for CLI integration ([34407550](../../commit/34407550))
+
 ## [1.1.0] - 2025-12-06
 
 ### Added
