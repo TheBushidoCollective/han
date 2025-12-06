@@ -172,6 +172,22 @@
       ]
     },
     {
+      "name": "jutsu-fnox",
+      "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
+      "source": "./jutsu/jutsu-fnox",
+      "category": "Technique",
+      "keywords": [
+        "fnox",
+        "secrets",
+        "validation",
+        "security",
+        "encryption",
+        "configuration",
+        "quality",
+        "enforcement"
+      ]
+    },
+    {
       "name": "jutsu-mise",
       "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
       "source": "./jutsu/jutsu-mise",
