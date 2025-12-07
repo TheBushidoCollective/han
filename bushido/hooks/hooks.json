@@ -6,8 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\"",
-            "timeout": 30000
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\""
           }
         ]
       }
