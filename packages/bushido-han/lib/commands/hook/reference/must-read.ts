@@ -15,12 +15,13 @@ export function createReferenceCommand(): Command {
 		)
 		.action((file: string, options: { mustReadFirst?: string }) => {
 			if (options.mustReadFirst) {
-				const output = `<must-read-first reason="${options.mustReadFirst}">\${CLAUDE_PLUGIN_ROOT}/${file}</must-read-first>`;
+				// Output ${CLAUDE_PLUGIN_ROOT} without escaping so dispatch.ts can expand it
+				const output = `<must-read-first reason="${options.mustReadFirst}">` + "${CLAUDE_PLUGIN_ROOT}" + `/${file}</must-read-first>`;
 				console.log(output);
 				// TODO: Track metrics for must-read-first references
 			} else {
 				// Future: support other reference types
-				console.log(`\${CLAUDE_PLUGIN_ROOT}/${file}`);
+				console.log("${CLAUDE_PLUGIN_ROOT}" + `/${file}`);
 			}
 		});
 
