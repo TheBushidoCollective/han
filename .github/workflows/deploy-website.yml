@@ -44,9 +44,6 @@ jobs:
         run: npm ci
         working-directory: ./website
 
-      - name: Copy marketplace.json
-        run: cp .claude-plugin/marketplace.json website/public/marketplace.json
-
       - name: Build with Next.js
         run: npm run build
         working-directory: ./website

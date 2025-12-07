@@ -252,25 +252,6 @@
     ]
   },
   {
-    "id": "jutsu-blueprints",
-    "name": "jutsu-blueprints",
-    "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
-    "category": "jutsu",
-    "tags": [
-      "blueprints",
-      "documentation",
-      "technical-docs",
-      "implementation-docs",
-      "architecture"
-    ],
-    "path": "/plugins/jutsu/jutsu-blueprints",
-    "components": [
-      "skill",
-      "command",
-      "hook"
-    ]
-  },
-  {
     "id": "jutsu-bun",
     "name": "jutsu-bun",
     "description": "Validation and quality enforcement for Bun.js projects.",
@@ -463,25 +444,9 @@
     ]
   },
   {
-    "id": "hashi-context7",
-    "name": "hashi-context7",
-    "description": "MCP server configuration for Context7 integration providing persistent context and knowledge management.",
-    "category": "hashi",
-    "tags": [
-      "mcp",
-      "context",
-      "knowledge",
-      "server"
-    ],
-    "path": "/plugins/hashi/hashi-context7",
-    "components": [
-      "agent"
-    ]
-  },
-  {
     "id": "core",
     "name": "core",
-    "description": "Essential infrastructure for the Han plugin marketplace. Includes delegation protocols, skill transparency, quality enforcement, MCP servers (hooks, metrics, context7), and universal programming principles.",
+    "description": "Essential infrastructure for the Han plugin marketplace. Includes delegation protocols, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 integration, and universal programming principles.",
     "category": "core",
     "tags": [
       "infrastructure",
@@ -1074,6 +1039,23 @@
     "components": [
       "hook"
     ]
+  },
+  {
+    "id": "hashi-blueprints",
+    "name": "hashi-blueprints",
+    "description": "MCP server for managing technical blueprint documentation. Use search_blueprints before creating, read_blueprint before modifying, write_blueprint after implementation changes. Includes skills and hooks for quality enforcement.",
+    "category": "jutsu",
+    "tags": [
+      "mcp",
+      "blueprints",
+      "documentation",
+      "technical-docs",
+      "implementation-docs",
+      "architecture",
+      "server"
+    ],
+    "path": "/plugins/jutsu/hashi-blueprints",
+    "components": []
   },
   {
     "id": "jutsu-helm",
