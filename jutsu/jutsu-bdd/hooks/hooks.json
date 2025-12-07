@@ -5,8 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '<must-read-first reason=\"BDD workflow enforcement\">${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md</must-read-first>'",
-            "timeout": 30
+            "command": "npx -y @thebushidocollective/han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\""
           }
         ]
       }

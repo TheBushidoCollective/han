@@ -5,8 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '<must-read-first reason=\"planning workflow enforcement\">${CLAUDE_PLUGIN_ROOT}/hooks/enforce-planning.md</must-read-first>'",
-            "timeout": 30
+            "command": "npx -y @thebushidocollective/han hook reference hooks/enforce-planning.md --must-read-first \"planning workflow enforcement\""
           }
         ]
       }
