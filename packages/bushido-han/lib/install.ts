@@ -21,7 +21,7 @@ interface PluginChanges {
 
 /**
  * Sync plugins to Claude settings - adds selected, removes deselected, and cleans invalid
- * Note: "bushido" is always installed and cannot be removed
+ * Note: "core" is always installed and cannot be removed
  * Note: For user scope, we only add plugins and clean invalid ones (no removal of deselected)
  *       because user settings are shared across all projects
  */
@@ -38,8 +38,8 @@ function syncPluginsToSettings(
 	const removed: string[] = [];
 	const invalid: string[] = [];
 
-	// Always include bushido
-	const pluginsToInstall = [...new Set(["bushido", ...selectedPlugins])];
+	// Always include core
+	const pluginsToInstall = [...new Set(["core", ...selectedPlugins])];
 
 	// Add Han marketplace to extraMarketplaces
 	if (!settings?.extraKnownMarketplaces?.han) {
@@ -73,7 +73,7 @@ function syncPluginsToSettings(
 			}
 		} else if (
 			scope !== "user" &&
-			plugin !== "bushido" &&
+			plugin !== "core" &&
 			!selectedPlugins.includes(plugin)
 		) {
 			// Plugin was deselected (only for project/local scope)
@@ -119,6 +119,7 @@ export async function install(scope: InstallScope = "user"): Promise<void> {
 			p.startsWith("jutsu-") ||
 			p.startsWith("do-") ||
 			p.startsWith("hashi-") ||
+			p === "core" ||
 			p === "bushido",
 	);
 	if (hanPlugins.length > 0) {

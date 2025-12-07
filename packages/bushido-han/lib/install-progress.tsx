@@ -209,7 +209,7 @@ export const InstallProgress: React.FC<InstallProgressProps> = ({
 					)}
 					<Box marginTop={1}>
 						<Text color="yellow">
-							⚠️ Falling back to installing core bushido plugin...
+							⚠️ Falling back to installing core plugin...
 						</Text>
 					</Box>
 				</Box>

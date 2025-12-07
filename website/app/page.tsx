@@ -107,11 +107,11 @@ export default function Home() {
 					</p>
 					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
 						<CategoryCard
-							href="/plugins/bushido"
-							icon={getCategoryIcon("bushido")}
-							title="Bushido"
-							subtitle="武士道"
-							description="Core principles, enforcement hooks, and foundational quality skills"
+							href="/plugins/core"
+							icon={getCategoryIcon("core")}
+							title="Core"
+							subtitle="⚙️"
+							description="Essential infrastructure, skills, commands, and MCP servers"
 						/>
 						<CategoryCard
 							href="/plugins/do"
@@ -163,7 +163,7 @@ export default function Home() {
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
 								<code>
-									npx @thebushidocollective/han plugin install bushido
+									npx @thebushidocollective/han plugin install core
 								</code>
 							</pre>
 						</div>

@@ -907,11 +907,18 @@
       "keywords": ["scratch", "workspace", "gitignore", "temporary", "workflow"]
     },
     {
+      "name": "core",
+      "description": "Essential infrastructure for the Han plugin marketplace including skills, commands, MCP servers, and quality enforcement hooks.",
+      "source": "./core",
+      "category": "Core",
+      "keywords": ["infrastructure", "marketplace", "mcp", "hooks", "quality", "principles", "delegation", "metrics"]
+    },
+    {
       "name": "bushido",
-      "description": "The seven virtues, enforcement hooks, and foundational quality skills.",
+      "description": "The philosophy of the Samurai applied to software development. The seven virtues guide agent behavior. Requires core for infrastructure.",
       "source": "./bushido",
       "category": "Core",
-      "keywords": ["philosophy", "quality", "testing", "principles"]
+      "keywords": ["philosophy", "bushido", "virtues", "honor", "quality"]
     },
     {
       "name": "hashi-clickup",

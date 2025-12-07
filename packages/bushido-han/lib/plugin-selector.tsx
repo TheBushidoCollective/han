@@ -37,7 +37,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 	const [isTyping, setIsTyping] = useState(true); // Track if user is typing or navigating
 
 	// Memoize options list to prevent recreation on every render
-	// Note: "bushido" is always installed and never shown in the selector
+	// Note: "core" is always installed and never shown in the selector
 	const options = useMemo(() => {
 		const opts: Array<{
 			name: string;
@@ -46,11 +46,11 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 			isInstalled?: boolean;
 		}> = [];
 
-		// Build set of plugins to show: installed OR recommended OR selected (excluding bushido)
+		// Build set of plugins to show: installed OR recommended OR selected (excluding core)
 		const pluginsToShow = new Set([
-			...installedPlugins.filter((p) => p !== "bushido"),
-			...detectedPlugins.filter((p) => p !== "bushido"),
-			...Array.from(selectedPlugins).filter((p) => p !== "bushido"),
+			...installedPlugins.filter((p) => p !== "core"),
+			...detectedPlugins.filter((p) => p !== "core"),
+			...Array.from(selectedPlugins).filter((p) => p !== "core"),
 		]);
 
 		// Sort and add to options
@@ -72,7 +72,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		return opts;
 	}, [detectedPlugins, installedPlugins, selectedPlugins]);
 
-	// Memoize search function (excludes bushido from results)
+	// Memoize search function (excludes core from results)
 	const performSearch = useCallback(
 		(query: string) => {
 			if (!query.trim()) {
@@ -82,8 +82,8 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 
 			const lowerQuery = query.toLowerCase();
 			const results = allPlugins.filter((plugin) => {
-				// Never show bushido in search - it's always installed
-				if (plugin.name === "bushido") return false;
+				// Never show core in search - it's always installed
+				if (plugin.name === "core") return false;
 
 				const nameMatch = plugin.name.toLowerCase().includes(lowerQuery);
 				const descMatch = plugin.description

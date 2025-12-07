@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-12-07
+
+### BREAKING CHANGES
+
+- Refactored bushido to philosophy-only plugin
+- All infrastructure, skills, commands, and MCP servers moved to new `han-core` plugin
+- Plugin now contains ONLY the 7 Bushido virtues (agent-bushido.md hook)
+- Added dependency on `han-core ^1.0.0`
+
+### Removed
+
+- All skills (moved to han-core): baseline-restorer, boy-scout-rule, code-reviewer, debugging, documentation, explainer, orthogonality-principle, performance-optimization, professional-honesty, proof-of-work, refactoring, simplicity-principles, solid-principles, structural-design-principles, technical-planning, architecture-design
+- All commands (moved to han-core): architect, code-review, debug, develop, document, explain, fix, optimize, plan, refactor, review, test
+- All hooks except agent-bushido.md (moved to han-core): ensure-subagent.md, ensure-skill-use.md, pre-push-check.sh, no-time-estimates.md
+- MCP server configurations (moved to han-core)
+
+### Migration Guide
+
+To update from bushido 1.x:
+
+```bash
+# Install han-core (gets all the infrastructure back)
+npx @thebushidocollective/han plugin install han-core
+
+# Update bushido (now philosophy-only)
+npx @thebushidocollective/han plugin install bushido
+
+# Or install both together
+npx @thebushidocollective/han plugin install han-core bushido
+```
+
 ## [1.2.1] - 2025-12-05
 
 ### Added

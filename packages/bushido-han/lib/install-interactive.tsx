@@ -339,7 +339,7 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 					</Box>
 					<Box marginTop={1}>
 						<Text color="yellow">
-							⚠️ Falling back to installing core bushido plugin...
+							⚠️ Falling back to installing core plugin...
 						</Text>
 					</Box>
 				</Box>

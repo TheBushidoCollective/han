@@ -74,16 +74,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 						</Link>
 					</div>
 
-					{/* Bushido */}
+					{/* Core */}
 					<div>
 						<Link
-							href="/plugins/bushido"
-							className={`${getLinkClass("/plugins/bushido")} mb-2`}
+							href="/plugins/core"
+							className={`${getLinkClass("/plugins/core")} mb-2`}
 						>
-							{getCategoryIcon("bushido")} Bushido
+							{getCategoryIcon("core")} Core
 						</Link>
 						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
-							Core philosophy and quality principles
+							Essential infrastructure and optional philosophy
 						</p>
 					</div>
 

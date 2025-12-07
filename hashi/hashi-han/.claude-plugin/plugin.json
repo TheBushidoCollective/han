@@ -1,7 +1,9 @@
 {
   "name": "hashi-han",
-  "version": "1.1.0",
-  "description": "MCP server for running Han plugin hook commands. Dynamically exposes tools for installed plugins - test, lint, format, typecheck commands with smart caching and directory detection.",
+  "version": "1.2.0",
+  "description": "DEPRECATED: Merged into han-core. MCP server for running Han plugin hook commands.",
+  "deprecated": true,
+  "deprecationMessage": "This plugin has been merged into han-core. Please install han-core instead: npx @thebushidocollective/han plugin install han-core",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"

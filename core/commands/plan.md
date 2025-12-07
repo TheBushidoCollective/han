@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:plan - Create tactical implementation plan for a feature or task
+han-core:plan - Create tactical implementation plan for a feature or task
 
 ## Synopsis
 

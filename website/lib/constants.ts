@@ -3,10 +3,10 @@
  * server and client components
  */
 export function getCategoryIcon(
-	category: "bushido" | "jutsu" | "do" | "hashi",
+	category: "core" | "jutsu" | "do" | "hashi",
 ): string {
 	switch (category) {
-		case "bushido":
+		case "core":
 			return "⛩️";
 		case "jutsu":
 			return "🎯";

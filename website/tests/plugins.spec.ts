@@ -9,27 +9,27 @@ test.describe("Plugins Page", () => {
 	test("should display category links", async ({ page }) => {
 		await page.goto("/plugins");
 		await expect(
-			page.getByRole("link", { name: /bushido/i }).first(),
+			page.getByRole("link", { name: /core/i }).first(),
 		).toBeVisible();
 		await expect(
 			page.getByRole("link", { name: /jutsu/i }).first(),
 		).toBeVisible();
 	});
 
-	test("should navigate to bushido category", async ({ page }) => {
+	test("should navigate to core category", async ({ page }) => {
 		await page.goto("/plugins");
 		await page
-			.getByRole("link", { name: /bushido/i })
+			.getByRole("link", { name: /core/i })
 			.first()
 			.click();
-		await expect(page).toHaveURL(/\/plugins\/bushido/);
+		await expect(page).toHaveURL(/\/plugins\/core/);
 	});
 });
 
 test.describe("Category Page", () => {
-	test("should load bushido category page", async ({ page }) => {
-		await page.goto("/plugins/bushido");
-		await expect(page.locator("h1")).toContainText("Bushido");
+	test("should load core category page", async ({ page }) => {
+		await page.goto("/plugins/core");
+		await expect(page.locator("h1")).toContainText("Core");
 	});
 
 	test("should display plugins in category", async ({ page }) => {
@@ -42,19 +42,19 @@ test.describe("Category Page", () => {
 
 test.describe("Plugin Detail Page", () => {
 	test("should load a plugin detail page", async ({ page }) => {
-		await page.goto("/plugins/bushido/core");
+		await page.goto("/plugins/core/core");
 		await expect(page.locator("h1").first()).toBeVisible();
 	});
 
 	test("should display installation section", async ({ page }) => {
-		await page.goto("/plugins/bushido/core");
+		await page.goto("/plugins/core/core");
 		await expect(
 			page.getByRole("heading", { name: "Installation" }),
 		).toBeVisible();
 	});
 
 	test("should show skills section if available", async ({ page }) => {
-		await page.goto("/plugins/bushido/core");
+		await page.goto("/plugins/core/core");
 		const skills = page.getByRole("heading", { name: "Skills" });
 		if ((await skills.count()) > 0) {
 			await expect(skills.first()).toBeVisible();
@@ -62,7 +62,7 @@ test.describe("Plugin Detail Page", () => {
 	});
 
 	test("should navigate to skill detail page", async ({ page }) => {
-		await page.goto("/plugins/bushido/core");
+		await page.goto("/plugins/core/core");
 		const skillLinks = page.locator('a[href*="/skills/"]');
 		const count = await skillLinks.count();
 

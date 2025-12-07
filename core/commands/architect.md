@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:architect - Design system architecture and high-level technical strategy
+han-core:architect - Design system architecture and high-level technical strategy
 
 ## Synopsis
 

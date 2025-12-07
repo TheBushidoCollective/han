@@ -47,12 +47,12 @@ export default function PluginsPage() {
 
 						<div className="grid md:grid-cols-2 gap-8 mb-16">
 							<CategoryLink
-								href="/plugins/bushido"
-								icon={getCategoryIcon("bushido")}
-								title="Bushido"
-								subtitle="武士道 - Core Principles"
-								description="Foundational philosophy and enforcement mechanisms for honorable software development."
-								pluginCount={1}
+								href="/plugins/core"
+								icon={getCategoryIcon("core")}
+								title="Core"
+								subtitle="⚙️ - Essential Infrastructure"
+								description="Essential infrastructure, skills, commands, and MCP servers for the Han marketplace."
+								pluginCount={2}
 							/>
 							<CategoryLink
 								href="/plugins/do"
