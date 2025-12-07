@@ -19,6 +19,7 @@ interface PluginDetails {
 	hasSkills: boolean;
 	hasHooks: boolean;
 	hasMcp: boolean;
+	hasAgents: boolean;
 }
 
 /**
@@ -66,17 +67,20 @@ function analyzePlugin(
 			hasSkills: false,
 			hasHooks: false,
 			hasMcp: false,
+			hasAgents: false,
 		};
 	}
 
 	const commandsDir = join(pluginDir, "commands");
 	const skillsDir = join(pluginDir, "skills");
+	const agentsDir = join(pluginDir, "agents");
 	const claudePluginDir = join(pluginDir, ".claude-plugin");
 	const hooksFile = join(claudePluginDir, "hooks.json");
 
 	const hasCommands =
 		existsSync(commandsDir) && readdirSync(commandsDir).length > 0;
 	const hasSkills = existsSync(skillsDir) && readdirSync(skillsDir).length > 0;
+	const hasAgents = existsSync(agentsDir) && readdirSync(agentsDir).length > 0;
 	const hasHooks = existsSync(hooksFile);
 
 	// Check for MCP server configuration
@@ -95,7 +99,7 @@ function analyzePlugin(
 		}
 	}
 
-	return { hasCommands, hasSkills, hasHooks, hasMcp };
+	return { hasCommands, hasSkills, hasHooks, hasMcp, hasAgents };
 }
 
 /**
@@ -105,6 +109,7 @@ function getCapabilitiesString(plugin: PluginDetails): string {
 	const indicators: string[] = [];
 	if (plugin.hasCommands) indicators.push("📜");
 	if (plugin.hasSkills) indicators.push("⚔️");
+	if (plugin.hasAgents) indicators.push("🤖");
 	if (plugin.hasHooks) indicators.push("🪝");
 	if (plugin.hasMcp) indicators.push("🔌");
 	return indicators.join(" ") || "-";
@@ -152,6 +157,7 @@ export async function explainHan(): Promise<void> {
 				scope: scopeLabels[scope],
 				hasCommands: capabilities.hasCommands || false,
 				hasSkills: capabilities.hasSkills || false,
+				hasAgents: capabilities.hasAgents || false,
 				hasHooks: capabilities.hasHooks || false,
 				hasMcp: capabilities.hasMcp || false,
 			});
@@ -197,12 +203,14 @@ export async function explainHan(): Promise<void> {
 	console.log("\n📊 Features Legend:");
 	console.log("  📜 Commands   - Slash commands available");
 	console.log("  ⚔️  Skills     - Specialized skills/prompts");
+	console.log("  🤖 Agents     - Specialized AI agents");
 	console.log("  🪝 Hooks      - Lifecycle hooks configured");
 	console.log("  🔌 MCP        - MCP servers enabled");
 
 	// Summary
 	const totalCommands = allPlugins.filter((p) => p.hasCommands).length;
 	const totalSkills = allPlugins.filter((p) => p.hasSkills).length;
+	const totalAgents = allPlugins.filter((p) => p.hasAgents).length;
 	const totalHooks = allPlugins.filter((p) => p.hasHooks).length;
 	const totalMcp = allPlugins.filter((p) => p.hasMcp).length;
 
@@ -210,6 +218,7 @@ export async function explainHan(): Promise<void> {
 	console.log(`  Total Plugins: ${allPlugins.length}`);
 	console.log(`  With Commands: ${totalCommands}`);
 	console.log(`  With Skills: ${totalSkills}`);
+	console.log(`  With Agents: ${totalAgents}`);
 	console.log(`  With Hooks: ${totalHooks}`);
 	console.log(`  With MCP Servers: ${totalMcp}`);
 
