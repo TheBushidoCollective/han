@@ -1,6 +1,6 @@
 {
   "name": "hashi-han-metrics",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "DEPRECATED: Merged into han-core. MCP server for agent task tracking and performance metrics.",
   "deprecated": true,
   "deprecationMessage": "This plugin has been merged into han-core. Please install han-core instead: npx @thebushidocollective/han plugin install han-core",
@@ -11,11 +11,22 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["mcp", "metrics", "tracking", "analytics", "server"],
+  "keywords": [
+    "mcp",
+    "metrics",
+    "tracking",
+    "analytics",
+    "server"
+  ],
   "mcpServers": {
     "han-metrics": {
       "command": "npx",
-      "args": ["--yes", "@thebushidocollective/han", "mcp", "metrics"],
+      "args": [
+        "--yes",
+        "@thebushidocollective/han",
+        "mcp",
+        "metrics"
+      ],
       "env": {}
     }
   }
