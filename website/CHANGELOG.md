@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.6] - 2025-12-07
+
+### Changed
+
+- consolidate MCP servers and remove hashi-context7 ([3d7fa9de](../../commit/3d7fa9de))
+- rename han-core to core and update website ([190f876b](../../commit/190f876b))
+
 ## [1.12.5] - 2025-12-05
 
 ### Fixed
