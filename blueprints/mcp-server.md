@@ -251,6 +251,7 @@ The `core` plugin provides two essential MCP servers that are automatically conf
 **Capabilities:**
 
 **Hook Commands:**
+
 - Dynamically exposes tools for installed plugins
 - Test commands (e.g., `mcp__plugin_hashi-han_han__jutsu_bun_test`)
 - Lint commands (e.g., `mcp__plugin_hashi-han_han__jutsu_biome_lint`)
@@ -258,6 +259,7 @@ The `core` plugin provides two essential MCP servers that are automatically conf
 - Smart caching and directory detection
 
 **Metrics Tracking:**
+
 - Task lifecycle tracking (start, update, complete, fail)
 - Self-assessment and confidence calibration
 - Objective validation against hook results
@@ -272,6 +274,7 @@ The `core` plugin provides two essential MCP servers that are automatically conf
 **Transport:** STDIO (local subprocess via npx)
 
 **Capabilities:**
+
 - Resolve library IDs from package names
 - Fetch current documentation for any major library
 - Code examples and API references
