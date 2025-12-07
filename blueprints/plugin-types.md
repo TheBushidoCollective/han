@@ -168,9 +168,10 @@ hashi-{service}/
 |--------|---------|-------|------------|
 | hashi-github | GitHub API | 100+ (issues, PRs, code search) | Review, Deploy |
 | hashi-playwright-mcp | Browser automation | Navigate, click, screenshot | Test |
-| hashi-context7 | Documentation | Library docs lookup | Build |
 | hashi-figma | Figma design | Frames, components, tokens | Design |
 | hashi-sentry | Error tracking | Issues, performance, releases | Deploy & Maintain |
+| hashi-linear | Project tracking | Issues, projects, workflows | Plan |
+| hashi-jira | Jira integration | Tickets, sprints, boards | Plan |
 
 ### MCP Configuration
 

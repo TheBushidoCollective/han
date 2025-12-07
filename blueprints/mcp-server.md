@@ -238,56 +238,73 @@ In addition to Han's own MCP server (`hashi-han`), Han provides several hashi pl
 
 **Authentication:** OAuth flow via Sentry
 
-### hashi-han-metrics
+## Core MCP Servers
 
-**Purpose:** Agent performance tracking and calibration
+The `core` plugin provides two essential MCP servers that are automatically configured when installing Han:
+
+### 1. Han (`han`)
+
+**Purpose:** Unified hooks execution and metrics tracking
 
 **Transport:** STDIO (local subprocess)
 
 **Capabilities:**
 
-- Self-reporting task tracking
-- Objective validation via hooks
-- Calibration metrics
-- Success rate analysis
-- Confidence assessment
+**Hook Commands:**
+- Dynamically exposes tools for installed plugins
+- Test commands (e.g., `mcp__plugin_hashi-han_han__jutsu_bun_test`)
+- Lint commands (e.g., `mcp__plugin_hashi-han_han__jutsu_biome_lint`)
+- Format, typecheck, and validation commands
+- Smart caching and directory detection
 
-**MCP Tools:**
+**Metrics Tracking:**
+- Task lifecycle tracking (start, update, complete, fail)
+- Self-assessment and confidence calibration
+- Objective validation against hook results
+- Local storage in `~/.claude/metrics/metrics.db`
 
-- `start_task` - Begin tracking a task
-- `update_task` - Log progress
-- `complete_task` - Mark complete with confidence
-- `fail_task` - Record failure with details
-- `query_metrics` - Query performance analytics
+**Use Case:** "Run the TypeScript tests" → calls appropriate test hook tool
 
-**Hooks:**
+### 2. Context7 (`context7`)
 
-- SessionStart: Inject tracking instructions
-- Stop: Validate self-assessments against hook results
+**Purpose:** Library documentation and framework examples
 
-**Storage:** Local SQLite at `~/.claude/metrics/metrics.db`
+**Transport:** STDIO (local subprocess via npx)
+
+**Capabilities:**
+- Resolve library IDs from package names
+- Fetch current documentation for any major library
+- Code examples and API references
+- Supports all major frameworks and libraries
+
+**Use Case:** "Show me Next.js App Router docs" → fetches latest Next.js documentation
 
 ## MCP Server Categories
 
-Han supports two categories of MCP servers:
+Han supports three categories of MCP servers:
 
-### 1. Hook Execution (hashi-han)
+### 1. Core MCP Servers (core plugin)
 
-Exposes Han plugin hooks as MCP tools for natural language execution. Dynamically discovers tools based on installed plugins.
+Built-in MCP servers that provide essential infrastructure. These are automatically configured when installing the core plugin:
 
-**Use Case:** "Run the TypeScript tests" → calls `jutsu_typescript_test` tool
+- **han**: Hook execution + metrics tracking
+- **context7**: Library documentation lookup
 
-### 2. External Integrations (hashi-*)
+**Use Case:** Foundation services needed by all Han installations
 
-Bridges Claude Code with external services and tools via their official MCP servers.
+### 2. External Integrations (hashi-* plugins)
 
-**Use Cases:**
+Bridge plugins that connect Claude Code with external services via their official MCP servers.
 
-- Design → Code (hashi-figma)
-- Production Monitoring (hashi-sentry)
-- Performance Tracking (hashi-han-metrics)
-- GitHub Operations (hashi-github)
-- Project Management (hashi-linear, hashi-jira, hashi-clickup)
+**Examples:**
+
+- **hashi-github**: GitHub repository operations, issues, PRs, code search
+- **hashi-figma**: Design-to-code workflow, design token extraction
+- **hashi-sentry**: Error tracking, performance monitoring, incident response
+- **hashi-playwright-mcp**: Browser automation and testing
+- **hashi-linear, hashi-jira, hashi-clickup**: Project management integrations
+
+**Use Case:** External service integration for specific workflows
 
 ## Related Systems
 

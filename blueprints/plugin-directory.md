@@ -38,13 +38,14 @@ han/
 
 ## Plugin Structure Patterns
 
-### Core Plugin (Bushido)
+### Core Plugin
 
 ```
-bushido/
+core/
 ├── .claude-plugin/
 │   ├── plugin.json
-│   └── hooks.json
+│   ├── hooks.json
+│   └── .mcp.json          # MCP server configuration
 ├── skills/
 │   ├── professional-honesty/SKILL.md
 │   ├── solid-principles/SKILL.md
@@ -58,10 +59,11 @@ bushido/
 
 **Characteristics**:
 
-- Skills for quality principles
+- Skills for quality principles and universal practices
 - Workflow commands (/develop, /review, /refactor)
-- Hooks for enforcement
-- No validation hooks (foundational)
+- Hooks for enforcement and quality gates
+- MCP servers (han + context7) for infrastructure
+- Foundation for all other plugins
 
 ### Technique Plugin (Jutsu)
 
@@ -168,9 +170,10 @@ hashi/hashi-{service}/
 
 **Category-Specific**:
 
-- Bushido/Jutsu: `skills/` directory
+- Core: `.claude-plugin/.mcp.json` (MCP servers)
+- Jutsu: `skills/` directory
 - Do: `agents/` directory
-- Hashi: `.claude-plugin/.mcp.json`
+- Hashi: `.claude-plugin/.mcp.json` (MCP servers)
 
 ### Optional Files
 
