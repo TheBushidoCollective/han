@@ -47,6 +47,38 @@ function findReferencedFiles(
 	return files.filter((file) => hookConfig.command?.includes(file.path));
 }
 
+// Extract file references from a command string
+function extractCommandFileReferences(
+	command: string,
+	files?: HookFile[],
+): HookFile[] {
+	if (!files || files.length === 0) return [];
+
+	const referencedFiles: HookFile[] = [];
+
+	// Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md"
+	const hookFileMatches = command.matchAll(/hooks\/([a-zA-Z0-9_-]+\.(md|sh|js))/g);
+	for (const match of hookFileMatches) {
+		const fileName = match[1];
+		const file = files.find((f) => f.path === fileName);
+		if (file && !referencedFiles.some((f) => f.path === fileName)) {
+			referencedFiles.push(file);
+		}
+	}
+
+	// Pattern: scripts/file.sh
+	const scriptMatches = command.matchAll(/scripts\/([a-zA-Z0-9_-]+\.(sh|js))/g);
+	for (const match of scriptMatches) {
+		const scriptPath = `scripts/${match[1]}`;
+		const file = files.find((f) => f.path === scriptPath);
+		if (file && !referencedFiles.some((f) => f.path === scriptPath)) {
+			referencedFiles.push(file);
+		}
+	}
+
+	return referencedFiles;
+}
+
 // Extract first heading from prompt for display
 function extractPromptTitle(prompt: string): string {
 	const match = prompt.match(/^#\s+(.+)$/m);
@@ -71,6 +103,7 @@ export default function HookCommandWithDetails({
 	const hookName = extractHanHookName(command, pluginName);
 	const hookConfig = hookName && hanHooks ? hanHooks[hookName] : null;
 	const referencedFiles = findReferencedFiles(hookConfig, files);
+	const commandReferencedFiles = extractCommandFileReferences(command, files);
 
 	return (
 		<div className="relative">
@@ -203,6 +236,84 @@ export default function HookCommandWithDetails({
 						</div>
 					</div>
 				</button>
+			) : commandReferencedFiles.length > 0 ? (
+				<div>
+					<button
+						type="button"
+						onClick={() => setExpanded(!expanded)}
+						className="w-full text-left"
+					>
+						<div className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-t overflow-x-auto text-sm scrollbar-custom flex items-center justify-between">
+							<code className="flex-1">{command}</code>
+							<div className="flex items-center gap-2 ml-4">
+								{timeout && (
+									<span className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
+										⏱️ {timeout >= 60 ? `${timeout / 60}m` : `${timeout}s`}
+									</span>
+								)}
+								<span className="px-2 py-1 text-xs bg-gray-600 text-gray-100 rounded flex items-center gap-1">
+									<span>{commandReferencedFiles.length} {commandReferencedFiles.length === 1 ? 'file' : 'files'}</span>
+									<svg
+										aria-hidden="true"
+										className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`}
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M19 9l-7 7-7-7"
+										/>
+									</svg>
+								</span>
+							</div>
+						</div>
+					</button>
+					{expanded && (
+						<div className="bg-gray-800 dark:bg-gray-900 border-t border-gray-700 rounded-b p-4 space-y-4">
+							{/* Referenced Files */}
+							{commandReferencedFiles.map((file) => (
+								<div key={file.path}>
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											setScriptExpanded(!scriptExpanded);
+										}}
+										className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-gray-100 transition"
+									>
+										<span>📄</span>
+										<span>Referenced File</span>
+										<code className="text-xs text-gray-400 font-normal">
+											{file.path}
+										</code>
+										<svg
+											aria-hidden="true"
+											className={`w-3 h-3 transition-transform ${scriptExpanded ? "rotate-180" : ""}`}
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M19 9l-7 7-7-7"
+											/>
+										</svg>
+									</button>
+									{scriptExpanded && (
+										<pre className="mt-2 bg-gray-950 text-gray-100 p-3 rounded overflow-x-auto text-xs scrollbar-custom max-h-96">
+											<code>{file.content}</code>
+										</pre>
+									)}
+								</div>
+							))}
+						</div>
+					)}
+				</div>
 			) : (
 				<div className="relative">
 					<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom">
