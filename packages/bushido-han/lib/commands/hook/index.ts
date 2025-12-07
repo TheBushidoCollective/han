@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { registerHookDispatch } from "./dispatch.js";
 import { registerHookExplain } from "./explain.js";
+import { createReferenceCommand } from "./reference/index.js";
 import { registerHookRun } from "./run.js";
 import { registerHookTest } from "./test.js";
 import { registerHookVerify } from "./verify.js";
@@ -16,4 +17,5 @@ export function registerHookCommands(program: Command): void {
 	registerHookRun(hookCommand);
 	registerHookTest(hookCommand);
 	registerHookVerify(hookCommand);
+	hookCommand.addCommand(createReferenceCommand());
 }

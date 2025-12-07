@@ -41,15 +41,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han prompt must-read hooks/ensure-subagent.md --reason \"subagent delegation rules\""
+            "command": "npx -y @thebushidocollective/han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\""
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han prompt must-read hooks/ensure-skill-use.md --reason \"skill selection and transparency\""
+            "command": "npx -y @thebushidocollective/han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han prompt must-read hooks/professional-honesty.md --reason \"epistemic rigor and professional honesty\""
+            "command": "npx -y @thebushidocollective/han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
           }
         ]
       }
