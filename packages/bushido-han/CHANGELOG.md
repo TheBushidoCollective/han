@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.3] - 2025-12-07
+
+### Added
+
+- add new CLI commands and jutsu-claude-agent-sdk plugin ([977acadc](../../commit/977acadc))
+
+### Fixed
+
+- convert all hook timeouts from milliseconds to seconds ([c3d303d2](../../commit/c3d303d2))
+- test source code in CI instead of building binary ([00f09311](../../commit/00f09311))
+- update tests to default to binary-only distribution ([f9a99152](../../commit/f9a99152))
+- resolve linting and typecheck issues ([72af6050](../../commit/72af6050))
+
+### Changed
+
+- consolidate jutsu-blueprints into hashi-blueprints ([f4636959](../../commit/f4636959))
+- rename han-core to core and update website ([190f876b](../../commit/190f876b))
+- remove TypeScript build step from binary-only distribution ([30fccf9b](../../commit/30fccf9b))
+
+### Other
+
+- add binary distribution architecture comment to main.ts ([89655dc5](../../commit/89655dc5))
+- migrate test suite to bun test (partial - 42/56 tests) ([07ce2c16](../../commit/07ce2c16))
+
 ## [1.51.2] - 2025-12-07
 
 ### Added
