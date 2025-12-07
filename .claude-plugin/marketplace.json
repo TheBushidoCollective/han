@@ -102,7 +102,7 @@
       "name": "hashi-blueprints",
       "description": "MCP server for managing technical blueprint documentation. Provides tools to search, read, and write blueprints programmatically, plus skills and hooks for quality enforcement.",
       "source": "./hashi/hashi-blueprints",
-      "category": "Technique",
+      "category": "Bridge",
       "keywords": [
         "blueprints",
         "documentation",
