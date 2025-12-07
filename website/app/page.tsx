@@ -162,9 +162,7 @@ export default function Home() {
 								Or install a specific plugin:
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>
-									npx @thebushidocollective/han plugin install core
-								</code>
+								<code>npx @thebushidocollective/han plugin install core</code>
 							</pre>
 						</div>
 						<div className="mt-6 text-center">

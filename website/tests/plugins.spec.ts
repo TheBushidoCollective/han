@@ -18,10 +18,7 @@ test.describe("Plugins Page", () => {
 
 	test("should navigate to core category", async ({ page }) => {
 		await page.goto("/plugins");
-		await page
-			.getByRole("link", { name: /core/i })
-			.first()
-			.click();
+		await page.getByRole("link", { name: /core/i }).first().click();
 		await expect(page).toHaveURL(/\/plugins\/core/);
 	});
 });
