@@ -5,8 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '# Blueprint System Available\n\nThis project uses technical blueprints for system documentation.\n\n**MCP Tools:**\n- search_blueprints - Find existing blueprints (use BEFORE creating)\n- read_blueprint - Read current documentation (use BEFORE modifying)\n- write_blueprint - Update documentation (use AFTER implementation)\n\n**When to use:** New features, API changes, architectural modifications, behavior changes.\n\nSee UserPromptSubmit hook for detailed requirements.'",
-            "timeout": 30000
+            "command": "echo '# Blueprint System Available\n\nThis project uses technical blueprints for system documentation.\n\n**MCP Tools:**\n- search_blueprints - Find existing blueprints (use BEFORE creating)\n- read_blueprint - Read current documentation (use BEFORE modifying)\n- write_blueprint - Update documentation (use AFTER implementation)\n\n**When to use:** New features, API changes, architectural modifications, behavior changes.\n\nSee UserPromptSubmit hook for detailed requirements.'"
           }
         ]
       }
@@ -16,8 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '<must-read-first reason=\"blueprints documentation requirements\">${CLAUDE_PLUGIN_ROOT}/hooks/ensure-blueprints.md</must-read-first>'",
-            "timeout": 30000
+            "command": "echo '<must-read-first reason=\"blueprints documentation requirements\">${CLAUDE_PLUGIN_ROOT}/hooks/ensure-blueprints.md</must-read-first>'"
           }
         ]
       }
@@ -27,8 +25,8 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "# Blueprints Documentation Check\n\nBefore completing, verify blueprints/ documentation is current:\n\n## Review Checklist\n\n1. **Implementation Changes**: Did you make significant changes (new features, modified architecture, changed APIs, or updated system behavior)?\n\n2. **Documentation Exists**: Does a blueprints/ directory exist in this project?\n\n3. **Documentation Current**: If blueprints/ exists and changes were made, is the relevant documentation up to date?\n\n## Decision Criteria\n\n- **Approve** if: No significant implementation changes were made, OR blueprints/ doesn't exist, OR documentation is already current\n- **Block** if: Significant changes were made AND blueprints/ exists AND documentation is missing or outdated for those changes\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
-            "timeout": 30000
+            "prompt": "# Blueprints Documentation Check\n\nYou are verifying that blueprints/ documentation is current after implementation changes.\n\n## Context\n\n$ARGUMENTS\n\n## Review Checklist\n\n1. **Implementation Changes**: Did you make significant changes (new features, modified architecture, changed APIs, or updated system behavior)?\n\n2. **Documentation Exists**: Does a blueprints/ directory exist in this project?\n\n3. **Documentation Current**: If blueprints/ exists and changes were made, is the relevant documentation up to date?\n\n## Decision Criteria\n\n**Approve** if: No significant implementation changes, OR no blueprints/ directory, OR documentation is current\n**Block** if: Significant changes made AND blueprints/ exists AND documentation is outdated\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\"}",
+            "timeout": 30
           }
         ]
       }
