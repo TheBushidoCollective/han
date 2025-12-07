@@ -294,6 +294,62 @@ const METRICS_TOOLS: McpTool[] = [
 			],
 		},
 	},
+	{
+		name: "query_hook_metrics",
+		description:
+			"Query hook execution statistics and failure patterns. Use this to understand which hooks fail frequently and need attention.",
+		annotations: {
+			title: "Query Hook Metrics",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				period: {
+					type: "string",
+					enum: ["day", "week", "month"],
+					description: "Time period to analyze (default: week)",
+				},
+				hook_name: {
+					type: "string",
+					description: "Optional filter by specific hook name",
+				},
+				min_failure_rate: {
+					type: "number",
+					description: "Optional minimum failure rate (0-100) to include",
+				},
+			},
+		},
+	},
+	{
+		name: "query_session_metrics",
+		description:
+			"Query session-level statistics and trends. Use this to understand performance across multiple work sessions.",
+		annotations: {
+			title: "Query Session Metrics",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				period: {
+					type: "string",
+					enum: ["day", "week", "month"],
+					description: "Time period to analyze (default: week)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum number of sessions to return (default: 10)",
+				},
+			},
+		},
+	},
 ];
 
 function handleInitialize(): unknown {
@@ -391,6 +447,59 @@ async function handleToolsCall(params: {
 			case "record_frustration": {
 				const frustrationParams = args as unknown as RecordFrustrationParams;
 				const result = getStorage().recordFrustration(frustrationParams);
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(result, null, 2),
+						},
+					],
+				};
+			}
+
+			case "query_hook_metrics": {
+				const period =
+					(args.period as "day" | "week" | "month" | undefined) || "week";
+				const hook_name = args.hook_name as string | undefined;
+				const min_failure_rate = args.min_failure_rate as number | undefined;
+
+				let hooks = getStorage().getHookFailureStats(period);
+
+				// Filter by hook name if provided
+				if (hook_name) {
+					hooks = hooks.filter((h) => h.name === hook_name);
+				}
+
+				// Filter by minimum failure rate if provided
+				if (min_failure_rate !== undefined) {
+					hooks = hooks.filter((h) => h.failureRate >= min_failure_rate);
+				}
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									hooks,
+									period,
+									total_hooks: hooks.length,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "query_session_metrics": {
+				const period =
+					(args.period as "day" | "week" | "month" | undefined) || "week";
+				const limit = (args.limit as number | undefined) || 10;
+
+				const result = getStorage().querySessionMetrics(period, limit);
+
 				return {
 					content: [
 						{

@@ -166,12 +166,17 @@ function loadPluginHooks(
 
 /**
  * Execute a command hook and return its output
+ * Also reports execution to metrics if available
  */
 function executeCommandHook(
 	command: string,
 	pluginRoot: string,
 	timeout: number,
+	hookType: string,
+	hookName: string,
 ): string | null {
+	const startTime = Date.now();
+
 	try {
 		// Replace ${CLAUDE_PLUGIN_ROOT} with the actual local plugin path
 		const resolvedCommand = command.replace(
@@ -201,12 +206,97 @@ function executeCommandHook(
 			},
 		});
 
+		const duration = Date.now() - startTime;
+
+		// Report successful hook execution
+		reportHookExecution({
+			hookType,
+			hookName,
+			hookSource: extractPluginName(pluginRoot),
+			durationMs: duration,
+			exitCode: 0,
+			passed: true,
+			output: output.trim(),
+			sessionId,
+		});
+
 		return output.trim();
-	} catch {
+	} catch (error: unknown) {
+		const duration = Date.now() - startTime;
+		const exitCode = (error as { status?: number })?.status || 1;
+		const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+
+		// Report failed hook execution
+		reportHookExecution({
+			hookType,
+			hookName,
+			hookSource: extractPluginName(pluginRoot),
+			durationMs: duration,
+			exitCode,
+			passed: false,
+			error: stderr,
+			sessionId: getStdinPayload()?.session_id as string | undefined,
+		});
+
 		// Command failed - silently skip errors for dispatch
 		// (we don't want to block the agent on hook failures)
 		return null;
 	}
+}
+
+/**
+ * Report hook execution to metrics (non-blocking)
+ */
+function reportHookExecution(data: {
+	hookType: string;
+	hookName: string;
+	hookSource: string;
+	durationMs: number;
+	exitCode: number;
+	passed: boolean;
+	output?: string;
+	error?: string;
+	sessionId?: string;
+}): void {
+	try {
+		execSync("npx @thebushidocollective/han metrics hook-exec", {
+			input: JSON.stringify(data),
+			stdio: "pipe",
+			timeout: 5000, // 5 second timeout for reporting
+		});
+	} catch {
+		// Silently fail - don't block hooks on metrics failures
+	}
+}
+
+/**
+ * Extract plugin name from plugin root path
+ */
+function extractPluginName(pluginRoot: string): string {
+	// Examples:
+	// /path/to/plugins/marketplaces/han/jutsu/jutsu-typescript -> jutsu-typescript
+	// /path/to/plugins/marketplaces/han/core -> core
+	const parts = pluginRoot.split("/");
+	return parts[parts.length - 1];
+}
+
+/**
+ * Derive a readable hook name from command string
+ */
+function deriveHookName(command: string, pluginName: string): string {
+	// Try to extract meaningful name from command
+	// Examples:
+	// "cat hooks/metrics-tracking.md" -> "metrics-tracking"
+	// "npx han hook reference hooks/professional-honesty.md" -> "professional-honesty"
+	// "${CLAUDE_PLUGIN_ROOT}/hooks/pre-push-check.sh" -> "pre-push-check"
+
+	const hookFileMatch = command.match(/hooks\/([a-z0-9-]+)\.(md|sh)/);
+	if (hookFileMatch) {
+		return hookFileMatch[1];
+	}
+
+	// Fall back to plugin name
+	return pluginName;
 }
 
 /**
@@ -232,6 +322,8 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
 									hook.command,
 									process.cwd(),
 									hook.timeout || 30000,
+									hookType,
+									"settings-hook",
 								);
 								if (output) {
 									outputs.push(output);
@@ -272,6 +364,8 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
 										hook.command,
 										process.cwd(),
 										hook.timeout || 30000,
+										hookType,
+										"settings-hook",
 									);
 									if (output) {
 										outputs.push(output);
@@ -326,10 +420,15 @@ function dispatchHooks(hookType: string, includeSettings = false): void {
 			for (const hook of group.hooks) {
 				// Only execute command hooks - prompt hooks are handled by Claude Code directly
 				if (hook.type === "command" && hook.command) {
+					// Derive hook name from command or use plugin name
+					const hookName = deriveHookName(hook.command, pluginName);
+
 					const output = executeCommandHook(
 						hook.command,
 						pluginRoot,
 						hook.timeout || 30000,
+						hookType,
+						hookName,
 					);
 					if (output) {
 						outputs.push(output);
