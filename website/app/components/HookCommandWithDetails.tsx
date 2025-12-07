@@ -57,7 +57,9 @@ function extractCommandFileReferences(
 	const referencedFiles: HookFile[] = [];
 
 	// Pattern: cat "${CLAUDE_PLUGIN_ROOT}/hooks/file.md"
-	const hookFileMatches = command.matchAll(/hooks\/([a-zA-Z0-9_-]+\.(md|sh|js))/g);
+	const hookFileMatches = command.matchAll(
+		/hooks\/([a-zA-Z0-9_-]+\.(md|sh|js))/g,
+	);
 	for (const match of hookFileMatches) {
 		const fileName = match[1];
 		const file = files.find((f) => f.path === fileName);
@@ -252,7 +254,10 @@ export default function HookCommandWithDetails({
 									</span>
 								)}
 								<span className="px-2 py-1 text-xs bg-gray-600 text-gray-100 rounded flex items-center gap-1">
-									<span>{commandReferencedFiles.length} {commandReferencedFiles.length === 1 ? 'file' : 'files'}</span>
+									<span>
+										{commandReferencedFiles.length}{" "}
+										{commandReferencedFiles.length === 1 ? "file" : "files"}
+									</span>
 									<svg
 										aria-hidden="true"
 										className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`}
