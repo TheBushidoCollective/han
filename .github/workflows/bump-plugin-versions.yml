@@ -9,6 +9,7 @@ on:
       - "do/**"
       - "hashi/**"
       - "bushido/**"
+      - "core/**"
       - "!**/.claude-plugin/plugin.json"
 
 permissions:
@@ -84,13 +85,15 @@ jobs:
             done
           done
 
-          # Check bushido separately (it's not in a subdirectory)
-          if echo "$CHANGED_FILES" | grep -q "^bushido/"; then
-            PLUGIN_CHANGES=$(echo "$CHANGED_FILES" | grep "^bushido/" | grep -v ".claude-plugin/plugin.json" || true)
-            if [ -n "$PLUGIN_CHANGES" ]; then
-              CHANGED_PLUGINS="$CHANGED_PLUGINS bushido"
+          # Check bushido and core separately (they're not in subdirectories)
+          for plugin_name in bushido core; do
+            if echo "$CHANGED_FILES" | grep -q "^$plugin_name/"; then
+              PLUGIN_CHANGES=$(echo "$CHANGED_FILES" | grep "^$plugin_name/" | grep -v ".claude-plugin/plugin.json" || true)
+              if [ -n "$PLUGIN_CHANGES" ]; then
+                CHANGED_PLUGINS="$CHANGED_PLUGINS $plugin_name"
+              fi
             fi
-          fi
+          done
 
           # Trim leading whitespace and output
           CHANGED_PLUGINS=$(echo "$CHANGED_PLUGINS" | xargs)
