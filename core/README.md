@@ -250,7 +250,7 @@ When using skills:
 
 ### Customizing MCP Servers
 
-The `.mcp.json` file defines both MCP servers. You can customize their behavior by modifying environment variables:
+The `mcpServers` field in `.claude-plugin/plugin.json` defines both MCP servers. You can customize their behavior by modifying environment variables:
 
 ```json
 {
@@ -258,7 +258,9 @@ The `.mcp.json` file defines both MCP servers. You can customize their behavior 
     "han": {
       "command": "npx",
       "args": ["-y", "@thebushidocollective/han", "mcp"],
-      "env": {}
+      "env": {
+        "CUSTOM_VAR": "value"
+      }
     },
     "context7": {
       "command": "npx",
