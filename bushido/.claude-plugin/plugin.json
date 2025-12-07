@@ -9,13 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "philosophy",
-    "bushido",
-    "virtues",
-    "culture",
-    "principles"
-  ],
+  "keywords": ["philosophy", "bushido", "virtues", "culture", "principles"],
   "dependencies": {
     "core": "^1.0.0"
   }
