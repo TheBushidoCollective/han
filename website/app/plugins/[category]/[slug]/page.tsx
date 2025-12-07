@@ -41,21 +41,53 @@ const categoryLabels = {
 } as const;
 
 const hookDescriptions: Record<string, string> = {
-	PreToolUse:
-		"Runs after Claude creates tool parameters and before processing the tool call.",
-	PermissionRequest: "Runs when the user is shown a permission dialog.",
-	PostToolUse: "Runs immediately after a tool completes successfully.",
-	Notification: "Runs when Claude Code sends notifications.",
-	UserPromptSubmit:
-		"Runs when the user submits a prompt, before Claude processes it.",
-	Stop: "Runs when the main Claude Code agent has finished responding.",
-	SubagentStop:
-		"Runs when a Claude Code subagent (Task tool call) has finished responding.",
-	PreCompact: "Runs before Claude Code is about to run a compact operation.",
 	SessionStart:
-		"Runs when Claude Code starts a new session or resumes an existing session.",
-	SessionEnd: "Runs when a Claude Code session ends.",
+		"Runs when Claude Code starts a new session or resumes an existing session. Can inject project context, set up environment, or provide important reminders at the start of work.",
+	UserPromptSubmit:
+		"Runs when the user submits a prompt, before Claude processes it. Can inject required context, enforce workflows, or validate user intent before processing begins.",
+	PreToolUse:
+		"Runs after Claude creates tool parameters and before processing the tool call. Can inject context, validate parameters, or block unsafe operations before they execute.",
+	PermissionRequest:
+		"Runs when the user is shown a permission dialog. Can add context to help users make informed decisions about granting permissions.",
+	PostToolUse:
+		"Runs immediately after a tool completes successfully. Can validate outputs, log results, or trigger follow-up actions based on tool execution.",
+	Stop: "Runs when the main Claude Code agent has finished responding. Can verify task completion, check quality gates, or ensure documentation requirements are met before the session ends.",
+	SubagentStop:
+		"Runs when a Claude Code subagent (Task tool call) has finished responding. Can validate subagent outputs, enforce quality standards, or trigger additional workflows after delegated tasks complete.",
+	PreCompact:
+		"Runs before Claude Code is about to run a compact operation. Can preserve important context, mark critical information for retention, or adjust what gets compacted.",
+	Notification:
+		"Runs when Claude Code sends notifications. Can enhance, filter, or redirect notifications to external systems.",
+	SessionEnd:
+		"Runs when a Claude Code session ends. Can perform cleanup, generate summaries, or ensure all tasks are properly closed before the session terminates.",
 };
+
+const hookEmojis: Record<string, string> = {
+	SessionStart: "▶️",
+	UserPromptSubmit: "💬",
+	PreToolUse: "🔧",
+	PermissionRequest: "🔐",
+	PostToolUse: "🔧",
+	Stop: "🛑",
+	SubagentStop: "🛑",
+	PreCompact: "🗜️",
+	Notification: "🔔",
+	SessionEnd: "🏁",
+};
+
+// Hook lifecycle order for sorting
+const hookLifecycleOrder = [
+	"SessionStart",
+	"UserPromptSubmit",
+	"PreToolUse",
+	"PermissionRequest",
+	"PostToolUse",
+	"Stop",
+	"SubagentStop",
+	"PreCompact",
+	"Notification",
+	"SessionEnd",
+];
 
 // Check if a command has inline file references (matches patterns that trigger inline display)
 function hasInlineFileReferences(command: string): boolean {
@@ -610,63 +642,79 @@ export default async function PluginPage({
 										</div>
 									)}
 								<div className="space-y-4">
-									{plugin.hooks.map((hookSection) => (
-										<div
-											key={hookSection.section}
-											className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-										>
-											<div className="flex items-center space-x-3 mb-3">
-												<div className="text-2xl">🪝</div>
-												<div className="flex-1">
-													<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-														{hookSection.section}
-													</h3>
-													{hookDescriptions[hookSection.section] && (
-														<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-															{hookDescriptions[hookSection.section]}
-														</p>
-													)}
-												</div>
-											</div>
-											<div className="space-y-3 mb-4">
-												{hookSection.commands.map((entry, idx) => (
-													<HookCommandWithDetails
-														key={`${entry.command}-${idx}`}
-														command={entry.command}
-														prompt={entry.prompt}
-														timeout={entry.timeout}
-														hanHooks={hanConfig?.hooks}
-														pluginName={plugin.metadata.name}
-														files={[...hookSection.files, ...scriptFiles]}
-													/>
-												))}
-											</div>
-											{hookSection.files.length > 0 &&
-												!hookSection.commands.some((entry) =>
-													hasInlineFileReferences(entry.command),
-												) && (
-													<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-														<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-															Referenced Files:
-														</h4>
-														<div className="grid gap-2">
-															{hookSection.files.map((file) => (
-																<Link
-																	key={file.name}
-																	href={`/plugins/${category}/${slug}/hooks/${file.name}`}
-																	className="flex items-center space-x-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-950 transition border border-gray-200 dark:border-gray-700"
-																>
-																	<span className="text-lg">📄</span>
-																	<span className="text-sm font-mono text-gray-700 dark:text-gray-300">
-																		{file.path}
-																	</span>
-																</Link>
-															))}
-														</div>
+									{plugin.hooks
+										.sort((a, b) => {
+											const indexA = hookLifecycleOrder.indexOf(a.section);
+											const indexB = hookLifecycleOrder.indexOf(b.section);
+											// If both hooks are in the lifecycle order, sort by that order
+											if (indexA !== -1 && indexB !== -1) {
+												return indexA - indexB;
+											}
+											// If only one is in the order, prioritize it
+											if (indexA !== -1) return -1;
+											if (indexB !== -1) return 1;
+											// Otherwise maintain original order (alphabetical fallback)
+											return a.section.localeCompare(b.section);
+										})
+										.map((hookSection) => (
+											<div
+												key={hookSection.section}
+												className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+											>
+												<div className="flex items-center space-x-3 mb-3">
+													<div className="text-2xl">
+														{hookEmojis[hookSection.section] || "🪝"}
 													</div>
-												)}
-										</div>
-									))}
+													<div className="flex-1">
+														<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+															{hookSection.section}
+														</h3>
+														{hookDescriptions[hookSection.section] && (
+															<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																{hookDescriptions[hookSection.section]}
+															</p>
+														)}
+													</div>
+												</div>
+												<div className="space-y-3 mb-4">
+													{hookSection.commands.map((entry, idx) => (
+														<HookCommandWithDetails
+															key={`${entry.command}-${idx}`}
+															command={entry.command}
+															prompt={entry.prompt}
+															timeout={entry.timeout}
+															hanHooks={hanConfig?.hooks}
+															pluginName={plugin.metadata.name}
+															files={[...hookSection.files, ...scriptFiles]}
+														/>
+													))}
+												</div>
+												{hookSection.files.length > 0 &&
+													!hookSection.commands.some((entry) =>
+														hasInlineFileReferences(entry.command),
+													) && (
+														<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+															<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+																Referenced Files:
+															</h4>
+															<div className="grid gap-2">
+																{hookSection.files.map((file) => (
+																	<Link
+																		key={file.name}
+																		href={`/plugins/${category}/${slug}/hooks/${file.name}`}
+																		className="flex items-center space-x-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-950 transition border border-gray-200 dark:border-gray-700"
+																	>
+																		<span className="text-lg">📄</span>
+																		<span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+																			{file.path}
+																		</span>
+																	</Link>
+																))}
+															</div>
+														</div>
+													)}
+											</div>
+										))}
 								</div>
 							</section>
 						)}
