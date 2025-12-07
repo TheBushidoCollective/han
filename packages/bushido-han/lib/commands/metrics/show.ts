@@ -20,6 +20,11 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 
 	try {
 		const result = storage.queryMetrics(query);
+		const hookStats = storage.getHookFailureStats(options.period || "week");
+		const sessionMetrics = storage.querySessionMetrics(
+			options.period || "week",
+			10,
+		);
 
 		// Try Ink UI, fall back to plain text if it fails
 		try {
@@ -30,13 +35,20 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 			render(
 				React.createElement(MetricsDisplay, {
 					result,
+					hookStats,
+					sessionMetrics,
 					showCalibration: !!options.showCalibration,
 				}),
 			);
 		} catch (_inkError) {
 			// Fallback to plain text if Ink fails to load
 			const { renderPlainText } = await import("./display-plain.js");
-			renderPlainText(result, !!options.showCalibration);
+			renderPlainText(
+				result,
+				hookStats,
+				sessionMetrics,
+				!!options.showCalibration,
+			);
 		}
 	} finally {
 		storage.close();

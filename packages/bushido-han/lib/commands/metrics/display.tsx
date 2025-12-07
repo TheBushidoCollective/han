@@ -2,8 +2,36 @@ import { Box, Text } from "ink";
 import type React from "react";
 import type { MetricsResult } from "../../metrics/types.js";
 
+interface HookFailureStat {
+	name: string;
+	source: string;
+	total: number;
+	failures: number;
+	failureRate: number;
+}
+
+interface SessionMetrics {
+	sessions: Array<{
+		session_id: string;
+		started_at: string;
+		ended_at: string | null;
+		duration_minutes: number | null;
+		task_count: number;
+		success_count: number;
+		hooks_passed_count: number;
+		hooks_failed_count: number;
+		average_calibration: number | null;
+	}>;
+	trends: {
+		success_rate_trend: "improving" | "declining" | "stable";
+		calibration_trend: "improving" | "declining" | "stable";
+	};
+}
+
 interface MetricsDisplayProps {
 	result: MetricsResult;
+	hookStats: HookFailureStat[];
+	sessionMetrics: SessionMetrics;
 	showCalibration: boolean;
 }
 

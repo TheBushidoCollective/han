@@ -400,10 +400,215 @@ function renderCalibrationInsights(result: MetricsResult): void {
 }
 
 /**
+ * Render hook failure statistics
+ */
+function renderHookFailureStats(
+	hookStats: Array<{
+		name: string;
+		source: string;
+		total: number;
+		failures: number;
+		failureRate: number;
+	}>,
+): void {
+	if (hookStats.length === 0) {
+		return;
+	}
+
+	console.log(
+		`${colors.bold}${colors.cyan}🔧 Hook Failure Analysis${colors.reset}`,
+	);
+	console.log();
+
+	console.log(
+		`  ${colors.dim}Hooks with >20% failure rate (${hookStats.length} detected):${colors.reset}`,
+	);
+	console.log();
+
+	// Header
+	const headers = ["Hook Name", "Source", "Failures", "Rate"];
+	const widths = [30, 20, 12, 10];
+	const headerRow = headers
+		.map(
+			(h, i) =>
+				`${colors.bold}${colors.dim}${h.padEnd(widths[i])}${colors.reset}`,
+		)
+		.join("");
+	console.log(`  ${headerRow}`);
+	console.log(`  ${colors.dim}${"─".repeat(72)}${colors.reset}`);
+
+	// Rows
+	for (const hook of hookStats) {
+		const rateColor =
+			hook.failureRate > 50
+				? colors.red
+				: hook.failureRate > 30
+					? colors.yellow
+					: colors.green;
+
+		const cells = [
+			hook.name.padEnd(widths[0]),
+			hook.source.padEnd(widths[1]),
+			`${hook.failures}/${hook.total}`.padEnd(widths[2]),
+			`${rateColor}${hook.failureRate}%${colors.reset}`.padEnd(widths[3] + 10), // +10 for ANSI codes
+		];
+
+		console.log(`  ${cells.join("")}`);
+	}
+	console.log();
+
+	// Recommendations
+	const criticalHooks = hookStats.filter((h) => h.failureRate > 50);
+	if (criticalHooks.length > 0) {
+		console.log(
+			`${colors.bold}${colors.red}⚠️  Critical: ${criticalHooks.length} hook${criticalHooks.length !== 1 ? "s" : ""} failing >50% of the time${colors.reset}`,
+		);
+		for (const hook of criticalHooks) {
+			console.log(
+				`  ${colors.dim}• ${hook.name}: Review and fix before continuing work${colors.reset}`,
+			);
+		}
+		console.log();
+	}
+}
+
+/**
+ * Render session metrics and trends
+ */
+function renderSessionMetrics(sessionMetrics: {
+	sessions: Array<{
+		session_id: string;
+		started_at: string;
+		ended_at: string | null;
+		duration_minutes: number | null;
+		task_count: number;
+		success_count: number;
+		hooks_passed_count: number;
+		hooks_failed_count: number;
+		average_calibration: number | null;
+	}>;
+	trends: {
+		calibration_trend: "improving" | "declining" | "stable";
+		success_rate_trend: "improving" | "declining" | "stable";
+	};
+}): void {
+	if (sessionMetrics.sessions.length === 0) {
+		return;
+	}
+
+	console.log(
+		`${colors.bold}${colors.cyan}📊 Session Performance & Trends${colors.reset}`,
+	);
+	console.log();
+
+	// Trends
+	const calibTrendIcon =
+		sessionMetrics.trends.calibration_trend === "improving"
+			? `${colors.green}↗${colors.reset}`
+			: sessionMetrics.trends.calibration_trend === "declining"
+				? `${colors.red}↘${colors.reset}`
+				: `${colors.yellow}→${colors.reset}`;
+
+	const successTrendIcon =
+		sessionMetrics.trends.success_rate_trend === "improving"
+			? `${colors.green}↗${colors.reset}`
+			: sessionMetrics.trends.success_rate_trend === "declining"
+				? `${colors.red}↘${colors.reset}`
+				: `${colors.yellow}→${colors.reset}`;
+
+	console.log(
+		`  ${colors.dim}Calibration Trend:${colors.reset} ${calibTrendIcon} ${sessionMetrics.trends.calibration_trend}`,
+	);
+	console.log(
+		`  ${colors.dim}Success Rate Trend:${colors.reset} ${successTrendIcon} ${sessionMetrics.trends.success_rate_trend}`,
+	);
+	console.log();
+
+	// Recent sessions table
+	console.log(
+		`${colors.bold}Recent Sessions (last ${sessionMetrics.sessions.length}):${colors.reset}`,
+	);
+	console.log();
+
+	// Header
+	const headers = ["Duration", "Tasks", "Success", "Hooks", "Calibration"];
+	const widths = [12, 10, 12, 12, 14];
+	const headerRow = headers
+		.map(
+			(h, i) =>
+				`${colors.bold}${colors.dim}${h.padEnd(widths[i])}${colors.reset}`,
+		)
+		.join("");
+	console.log(`  ${headerRow}`);
+	console.log(`  ${colors.dim}${"─".repeat(60)}${colors.reset}`);
+
+	// Rows
+	for (const session of sessionMetrics.sessions.slice(0, 5)) {
+		const successRate =
+			session.task_count > 0
+				? Math.round((session.success_count / session.task_count) * 100)
+				: 0;
+
+		const successColor =
+			successRate > 70
+				? colors.green
+				: successRate > 40
+					? colors.yellow
+					: colors.red;
+
+		const hookStatus =
+			session.hooks_failed_count === 0
+				? `${colors.green}✓${colors.reset}`
+				: `${colors.red}${session.hooks_failed_count} failed${colors.reset}`;
+
+		const cells = [
+			(session.duration_minutes
+				? `${session.duration_minutes}m`
+				: "active"
+			).padEnd(widths[0]),
+			session.task_count.toString().padEnd(widths[1]),
+			`${successColor}${successRate}%${colors.reset}`.padEnd(widths[2] + 10),
+			hookStatus.padEnd(widths[3] + 10),
+			(session.average_calibration
+				? formatPercent(session.average_calibration)
+				: "—"
+			).padEnd(widths[4]),
+		];
+
+		console.log(`  ${cells.join("")}`);
+	}
+	console.log();
+}
+
+/**
  * Render plain text metrics display (for compiled binaries where Ink doesn't work)
  */
 export function renderPlainText(
 	result: MetricsResult,
+	hookStats: Array<{
+		name: string;
+		source: string;
+		total: number;
+		failures: number;
+		failureRate: number;
+	}>,
+	sessionMetrics: {
+		sessions: Array<{
+			session_id: string;
+			started_at: string;
+			ended_at: string | null;
+			duration_minutes: number | null;
+			task_count: number;
+			success_count: number;
+			hooks_passed_count: number;
+			hooks_failed_count: number;
+			average_calibration: number | null;
+		}>;
+		trends: {
+			calibration_trend: "improving" | "declining" | "stable";
+			success_rate_trend: "improving" | "declining" | "stable";
+		};
+	},
 	showCalibration: boolean,
 ): void {
 	const hasData = result.total_tasks > 0;
@@ -443,6 +648,12 @@ export function renderPlainText(
 
 	// Summary Stats
 	renderSummaryStats(result);
+
+	// Session Performance & Trends
+	renderSessionMetrics(sessionMetrics);
+
+	// Hook Failure Analysis
+	renderHookFailureStats(hookStats);
 
 	// Charts
 	if (Object.keys(result.by_type).length > 0) {

@@ -12,6 +12,7 @@ export type FrustrationLevel = "low" | "moderate" | "high";
  */
 export interface Task {
 	id: string;
+	session_id?: string;
 	description: string;
 	type: TaskType;
 	complexity?: TaskComplexity;
