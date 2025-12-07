@@ -7,7 +7,7 @@ import Sidebar from "../../components/Sidebar";
 
 export async function generateStaticParams() {
 	return [
-		{ category: "bushido" },
+		{ category: "core" },
 		{ category: "jutsu" },
 		{ category: "do" },
 		{ category: "hashi" },
@@ -15,11 +15,11 @@ export async function generateStaticParams() {
 }
 
 const categoryData = {
-	bushido: {
-		title: "Bushido",
-		subtitle: "武士道 - The Way of the Warrior",
+	core: {
+		title: "Core",
+		subtitle: "⚙️ - Essential Infrastructure",
 		description:
-			"Core principles and best practices for software development. These skills embody the fundamental disciplines that guide exceptional engineering.",
+			"Essential infrastructure for the Han marketplace including skills, commands, MCP servers, and quality enforcement hooks. Both han-core (infrastructure) and bushido (philosophy) are available.",
 	},
 	jutsu: {
 		title: "Jutsu",
@@ -68,7 +68,7 @@ export default async function CategoryPage({
 }) {
 	const { category } = await params;
 
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
@@ -161,9 +161,7 @@ export default async function CategoryPage({
 								{plugins.map((plugin) => (
 									<Link
 										key={plugin.name}
-										href={`/plugins/${category}/${
-											category === "bushido" ? "core" : plugin.name
-										}`}
+										href={`/plugins/${category}/${plugin.name}`}
 										className="bg-white dark:bg-gray-800 p-5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-gray-400 transition block group"
 									>
 										<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-gray-700 dark:group-hover:text-gray-200">

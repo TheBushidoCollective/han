@@ -17,7 +17,7 @@ import RelatedPlugins from "../../../components/RelatedPlugins";
 import Sidebar from "../../../components/Sidebar";
 
 export async function generateStaticParams() {
-	const categories = ["bushido", "jutsu", "do", "hashi"] as const;
+	const categories = ["core", "jutsu", "do", "hashi"] as const;
 	const params: { category: string; slug: string }[] = [];
 
 	for (const category of categories) {
@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 		for (const plugin of plugins) {
 			params.push({
 				category,
-				slug: category === "bushido" ? "core" : plugin.name,
+				slug: plugin.name,
 			});
 		}
 	}
@@ -34,7 +34,7 @@ export async function generateStaticParams() {
 }
 
 const categoryLabels = {
-	bushido: "Bushido",
+	core: "Core",
 	jutsu: "Jutsu",
 	do: "Dō",
 	hashi: "Hashi",
@@ -64,17 +64,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { category, slug } = await params;
 
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		return {
 			title: "Plugin Not Found - Han",
 		};
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {
@@ -97,15 +95,13 @@ export default async function PluginPage({
 	const { category, slug } = await params;
 
 	// Validate category
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {
@@ -130,8 +126,8 @@ export default async function PluginPage({
 	const pluginDir = path.join(
 		process.cwd(),
 		"..",
-		plugin.metadata.category === "bushido"
-			? "bushido"
+		plugin.metadata.category === "core"
+			? plugin.source.replace("./", "")
 			: `${plugin.metadata.category}/${plugin.metadata.name}`,
 	);
 	const pluginJsonPath = path.join(pluginDir, ".claude-plugin/plugin.json");

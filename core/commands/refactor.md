@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:refactor - Restructure code to improve quality without changing behavior
+han-core:refactor - Restructure code to improve quality without changing behavior
 
 ## Synopsis
 

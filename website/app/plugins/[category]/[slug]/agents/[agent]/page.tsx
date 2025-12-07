@@ -8,7 +8,7 @@ import Header from "../../../../../components/Header";
 import Sidebar from "../../../../../components/Sidebar";
 
 export async function generateStaticParams() {
-	const categories = ["bushido", "jutsu", "do", "hashi"] as const;
+	const categories = ["core", "jutsu", "do", "hashi"] as const;
 	const params: { category: string; slug: string; agent: string }[] = [];
 
 	for (const category of categories) {
@@ -19,7 +19,7 @@ export async function generateStaticParams() {
 				for (const agent of details.agents) {
 					params.push({
 						category,
-						slug: category === "bushido" ? "core" : plugin.name,
+						slug: plugin.name,
 						agent: agent.name,
 					});
 				}
@@ -31,7 +31,7 @@ export async function generateStaticParams() {
 }
 
 const categoryLabels = {
-	bushido: "Bushido",
+	core: "Core",
 	jutsu: "Jutsu",
 	do: "Dō",
 	hashi: "Hashi",
@@ -44,17 +44,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { category, slug, agent: agentName } = await params;
 
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		return {
 			title: "Agent Not Found - Han",
 		};
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {
@@ -84,15 +82,13 @@ export default async function AgentPage({
 }) {
 	const { category, slug, agent: agentName } = await params;
 
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {

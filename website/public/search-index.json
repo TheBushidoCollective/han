@@ -52,6 +52,28 @@
     ]
   },
   {
+    "id": "hashi-agent-sop",
+    "name": "hashi-agent-sop",
+    "description": "MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and SOP authoring skills.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "agent-sop",
+      "workflows",
+      "sop",
+      "standard-operating-procedures",
+      "rfc2119",
+      "documentation",
+      "agent-workflows",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-agent-sop",
+    "components": [
+      "skill",
+      "command"
+    ]
+  },
+  {
     "id": "jutsu-ameba",
     "name": "jutsu-ameba",
     "description": "Ameba skills for Crystal code analysis",
@@ -230,6 +252,25 @@
     ]
   },
   {
+    "id": "jutsu-blueprints",
+    "name": "jutsu-blueprints",
+    "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
+    "category": "jutsu",
+    "tags": [
+      "blueprints",
+      "documentation",
+      "technical-docs",
+      "implementation-docs",
+      "architecture"
+    ],
+    "path": "/plugins/jutsu/jutsu-blueprints",
+    "components": [
+      "skill",
+      "command",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-bun",
     "name": "jutsu-bun",
     "description": "Validation and quality enforcement for Bun.js projects.",
@@ -251,17 +292,16 @@
   {
     "id": "bushido",
     "name": "bushido",
-    "description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
-    "category": "bushido",
+    "description": "The philosophy of the Samurai applied to software development. Injects the seven virtues (義 Righteousness, 勇 Courage, 仁 Compassion, 礼 Respect, 誠 Honesty, 名誉 Honor, 忠義 Loyalty) to guide agent behavior. Requires core for infrastructure.",
+    "category": "core",
     "tags": [
       "philosophy",
-      "quality",
-      "testing",
-      "principles",
+      "bushido",
       "virtues",
-      "enforcement"
+      "culture",
+      "principles"
     ],
-    "path": "/plugins/bushido/bushido",
+    "path": "/plugins/core/bushido",
     "components": []
   },
   {
@@ -290,6 +330,26 @@
       "java"
     ],
     "path": "/plugins/jutsu/jutsu-checkstyle",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-claude-agent-sdk",
+    "name": "jutsu-claude-agent-sdk",
+    "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
+    "category": "jutsu",
+    "tags": [
+      "claude",
+      "agent-sdk",
+      "validation",
+      "typescript",
+      "quality",
+      "enforcement",
+      "ai-agents"
+    ],
+    "path": "/plugins/jutsu/jutsu-claude-agent-sdk",
     "components": [
       "skill",
       "hook"
@@ -349,6 +409,28 @@
     ]
   },
   {
+    "id": "jutsu-cocoapods",
+    "name": "jutsu-cocoapods",
+    "description": "Validation and quality enforcement for CocoaPods dependency management in iOS, macOS, tvOS, watchOS, and visionOS projects.",
+    "category": "jutsu",
+    "tags": [
+      "cocoapods",
+      "validation",
+      "podspec",
+      "ios",
+      "macos",
+      "swift",
+      "objective-c",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/jutsu/jutsu-cocoapods",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "do-compiler-development",
     "name": "do-compiler-development",
     "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
@@ -395,6 +477,24 @@
     "components": [
       "agent"
     ]
+  },
+  {
+    "id": "core",
+    "name": "core",
+    "description": "Essential infrastructure for the Han plugin marketplace. Includes delegation protocols, skill transparency, quality enforcement, MCP servers (hooks, metrics, context7), and universal programming principles.",
+    "category": "core",
+    "tags": [
+      "infrastructure",
+      "marketplace",
+      "mcp",
+      "hooks",
+      "quality",
+      "principles",
+      "delegation",
+      "metrics"
+    ],
+    "path": "/plugins/core/core",
+    "components": []
   },
   {
     "id": "jutsu-cpp",
@@ -576,6 +676,24 @@
     ]
   },
   {
+    "id": "jutsu-effect",
+    "name": "jutsu-effect",
+    "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
+    "category": "jutsu",
+    "tags": [
+      "effect",
+      "typescript",
+      "functional-programming",
+      "type-safety",
+      "dependency-injection"
+    ],
+    "path": "/plugins/jutsu/jutsu-effect",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-elixir",
     "name": "jutsu-elixir",
     "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
@@ -689,6 +807,45 @@
     "path": "/plugins/jutsu/jutsu-fastapi",
     "components": [
       "skill"
+    ]
+  },
+  {
+    "id": "hashi-figma",
+    "name": "hashi-figma",
+    "description": "MCP server configuration for Figma integration providing design-to-code workflows, component access, and design system integration via the official Figma desktop server.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "figma",
+      "design",
+      "design-to-code",
+      "design-system",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-figma",
+    "components": [
+      "command"
+    ]
+  },
+  {
+    "id": "jutsu-fnox",
+    "name": "jutsu-fnox",
+    "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
+    "category": "jutsu",
+    "tags": [
+      "fnox",
+      "secrets",
+      "validation",
+      "security",
+      "configuration",
+      "encryption",
+      "quality",
+      "enforcement"
+    ],
+    "path": "/plugins/jutsu/jutsu-fnox",
+    "components": [
+      "skill",
+      "hook"
     ]
   },
   {
@@ -881,6 +1038,41 @@
     "path": "/plugins/jutsu/jutsu-graphql",
     "components": [
       "skill"
+    ]
+  },
+  {
+    "id": "hashi-han",
+    "name": "hashi-han",
+    "description": "DEPRECATED: Merged into han-core. MCP server for running Han plugin hook commands.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "han",
+      "hooks",
+      "testing",
+      "linting",
+      "formatting",
+      "validation",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-han",
+    "components": []
+  },
+  {
+    "id": "hashi-han-metrics",
+    "name": "hashi-han-metrics",
+    "description": "DEPRECATED: Merged into han-core. MCP server for agent task tracking and performance metrics.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "metrics",
+      "tracking",
+      "analytics",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-han-metrics",
+    "components": [
+      "hook"
     ]
   },
   {
@@ -1179,6 +1371,26 @@
     ]
   },
   {
+    "id": "jutsu-mise",
+    "name": "jutsu-mise",
+    "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
+    "category": "jutsu",
+    "tags": [
+      "mise",
+      "validation",
+      "task-runner",
+      "version-manager",
+      "quality",
+      "enforcement",
+      "dev-tools"
+    ],
+    "path": "/plugins/jutsu/jutsu-mise",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "do-mobile-development",
     "name": "do-mobile-development",
     "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
@@ -1287,6 +1499,26 @@
     "components": [
       "skill",
       "hook"
+    ]
+  },
+  {
+    "id": "jutsu-notetaker",
+    "name": "jutsu-notetaker",
+    "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
+    "category": "jutsu",
+    "tags": [
+      "notes",
+      "comments",
+      "todo",
+      "annotations",
+      "documentation",
+      "code-comments",
+      "ai-notes",
+      "developer-notes"
+    ],
+    "path": "/plugins/jutsu/jutsu-notetaker",
+    "components": [
+      "skill"
     ]
   },
   {
@@ -1726,6 +1958,27 @@
     ]
   },
   {
+    "id": "jutsu-runbooks",
+    "name": "jutsu-runbooks",
+    "description": "Structured operational documentation and runbook patterns for human operators. Helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance.",
+    "category": "jutsu",
+    "tags": [
+      "runbooks",
+      "operations",
+      "documentation",
+      "troubleshooting",
+      "incident-response",
+      "maintenance",
+      "on-call",
+      "operational-procedures"
+    ],
+    "path": "/plugins/jutsu/jutsu-runbooks",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-rust",
     "name": "jutsu-rust",
     "description": "Advanced Rust skills for ownership, error handling, and async programming.",
@@ -1753,6 +2006,24 @@
       "type-system"
     ],
     "path": "/plugins/jutsu/jutsu-scala",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-scratch",
+    "name": "jutsu-scratch",
+    "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
+    "category": "jutsu",
+    "tags": [
+      "scratch",
+      "workspace",
+      "gitignore",
+      "temporary",
+      "workflow"
+    ],
+    "path": "/plugins/jutsu/jutsu-scratch",
     "components": [
       "skill",
       "hook"
@@ -1792,6 +2063,26 @@
     "components": [
       "skill",
       "hook"
+    ]
+  },
+  {
+    "id": "hashi-sentry",
+    "name": "hashi-sentry",
+    "description": "MCP server configuration for Sentry integration providing error tracking, performance monitoring, and incident response capabilities.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "sentry",
+      "monitoring",
+      "errors",
+      "observability",
+      "performance",
+      "incidents",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-sentry",
+    "components": [
+      "command"
     ]
   },
   {
@@ -1849,6 +2140,27 @@
     ]
   },
   {
+    "id": "jutsu-storybook",
+    "name": "jutsu-storybook",
+    "description": "Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.",
+    "category": "jutsu",
+    "tags": [
+      "storybook",
+      "validation",
+      "component-driven",
+      "ui-testing",
+      "quality",
+      "enforcement",
+      "stories",
+      "documentation"
+    ],
+    "path": "/plugins/jutsu/jutsu-storybook",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-swift",
     "name": "jutsu-swift",
     "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
@@ -1860,6 +2172,26 @@
       "concurrency"
     ],
     "path": "/plugins/jutsu/jutsu-swift",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-tailwind",
+    "name": "jutsu-tailwind",
+    "description": "Validation and quality enforcement for Tailwind CSS projects with comprehensive utility-first CSS patterns and best practices.",
+    "category": "jutsu",
+    "tags": [
+      "tailwind",
+      "tailwindcss",
+      "css",
+      "utility-first",
+      "styling",
+      "validation",
+      "quality"
+    ],
+    "path": "/plugins/jutsu/jutsu-tailwind",
     "components": [
       "skill",
       "hook"
@@ -2031,6 +2363,25 @@
     ],
     "path": "/plugins/jutsu/jutsu-yarn",
     "components": [
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-zustand",
+    "name": "jutsu-zustand",
+    "description": "Comprehensive Zustand state management skills for React applications with store patterns, middleware, and TypeScript integration.",
+    "category": "jutsu",
+    "tags": [
+      "zustand",
+      "state-management",
+      "react",
+      "typescript",
+      "store",
+      "hooks"
+    ],
+    "path": "/plugins/jutsu/jutsu-zustand",
+    "components": [
+      "skill",
       "hook"
     ]
   }

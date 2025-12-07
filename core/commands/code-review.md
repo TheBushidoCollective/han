@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:code-review - Code review a pull request
+han-core:code-review - Code review a pull request
 
 ## Synopsis
 

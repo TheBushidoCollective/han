@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:optimize - Optimize code for performance, readability, or efficiency
+han-core:optimize - Optimize code for performance, readability, or efficiency
 
 ## Synopsis
 

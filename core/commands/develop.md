@@ -6,7 +6,7 @@ description: Comprehensive 7-phase workflow for developing new features with qua
 
 ## Name
 
-bushido:develop - Comprehensive 7-phase workflow for developing new features with quality enforcement
+han-core:develop - Comprehensive 7-phase workflow for developing new features with quality enforcement
 
 ## Synopsis
 
@@ -20,7 +20,7 @@ Comprehensive 7-phase workflow for developing new features with quality enforcem
 
 ## Implementation
 
-A comprehensive, structured 7-phase workflow for developing new features with quality enforcement and Bushido principles.
+A comprehensive, structured 7-phase workflow for developing new features with quality enforcement and quality principles.
 
 ## Overview
 
@@ -161,7 +161,7 @@ This command guides you through a systematic feature development process:
 
 **Objective**: Implement the designed solution with quality practices.
 
-**Apply TDD cycle** (use `bushido:test-driven-development` skill):
+**Apply TDD cycle** (use `han-core:test-driven-development` skill):
 
 ```
 For each component:
@@ -175,7 +175,7 @@ For each component:
 
 - ✅ Start with tests, not implementation
 - ✅ Follow existing codebase patterns (from Phase 2)
-- ✅ Apply SOLID principles (`bushido:solid-principles` skill)
+- ✅ Apply SOLID principles (`han-core:solid-principles` skill)
 - ✅ Keep it simple (KISS, YAGNI)
 - ✅ Apply Boy Scout Rule - leave code better than found
 - ❌ Don't over-engineer
@@ -200,7 +200,7 @@ For each component:
 
 **Launch review agents in PARALLEL** (single message with multiple Task calls):
 
-1. **Code Reviewer** (bushido:code-reviewer skill):
+1. **Code Reviewer** (han-core:code-reviewer skill):
    - General quality assessment
    - Confidence scoring ≥80%
    - False positive filtering
@@ -294,20 +294,6 @@ Then describe the feature you want to build.
 
 ---
 
-## Integration with Bushido Virtues
-
-This workflow embodies the seven Bushido virtues:
-
-- **誠 Integrity**: TDD ensures code does what it claims
-- **礼 Respect**: Boy Scout Rule honors existing codebase
-- **勇 Courage**: Confidence scoring enables honest feedback
-- **同情 Compassion**: Clear reviews help developers improve
-- **忠誠 Loyalty**: Quality enforcement maintains standards
-- **自制 Discipline**: Structured phases prevent rushing
-- **正義 Justice**: Fair reviews based on objective criteria
-
----
-
 ## Best Practices
 
 ### DO
@@ -381,5 +367,5 @@ Testing: Run GET /api/users?page=1&limit=10
 
 - `/review` - Run multi-agent review only
 - `/commit` - Smart commit workflow
-- `bushido:test-driven-development` - TDD skill
-- `bushido:code-reviewer` - Review skill
+- `han-core:test-driven-development` - TDD skill
+- `han-core:code-reviewer` - Review skill

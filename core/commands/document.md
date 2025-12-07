@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:document - Generate or update documentation for code, APIs, or systems
+han-core:document - Generate or update documentation for code, APIs, or systems
 
 ## Synopsis
 

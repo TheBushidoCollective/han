@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:explain - Explain code, concepts, or technical decisions in clear, understandable terms
+han-core:explain - Explain code, concepts, or technical decisions in clear, understandable terms
 
 ## Synopsis
 

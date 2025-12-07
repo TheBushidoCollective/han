@@ -11,7 +11,7 @@ export interface PluginMetadata {
 	description: string;
 	icon: string;
 	kanji?: string;
-	category: "bushido" | "jutsu" | "do" | "hashi";
+	category: "core" | "jutsu" | "do" | "hashi";
 }
 
 export interface AgentMetadata {
@@ -93,8 +93,8 @@ export interface PluginDetails {
 
 function getCategoryFromMarketplace(
 	marketplaceCategory: string,
-): "bushido" | "jutsu" | "do" | "hashi" {
-	if (marketplaceCategory === "Core") return "bushido";
+): "core" | "jutsu" | "do" | "hashi" {
+	if (marketplaceCategory === "Core") return "core";
 	if (marketplaceCategory === "Technique") return "jutsu";
 	if (marketplaceCategory === "Discipline") return "do";
 	if (marketplaceCategory === "Bridge") return "hashi";
@@ -128,7 +128,7 @@ function stripPrefix(name: string, category: string): string {
 function getPluginMetadata(
 	pluginPath: string,
 	pluginName: string,
-	category: "bushido" | "jutsu" | "do" | "hashi",
+	category: "core" | "jutsu" | "do" | "hashi",
 ): PluginMetadata {
 	try {
 		const pluginJsonPath = path.join(
@@ -208,7 +208,7 @@ export function getAllPluginsAcrossCategories(): Array<
 
 // Get all plugins in a category from marketplace.json
 export function getAllPlugins(
-	category: "bushido" | "jutsu" | "do" | "hashi",
+	category: "core" | "jutsu" | "do" | "hashi",
 ): PluginMetadata[] {
 	try {
 		const marketplacePath = path.join(
@@ -547,7 +547,7 @@ function getPluginReadme(pluginPath: string): string | null {
 
 // Get full plugin details with agents and skills
 export function getPluginContent(
-	category: "bushido" | "jutsu" | "do" | "hashi",
+	category: "core" | "jutsu" | "do" | "hashi",
 	slug: string,
 ): PluginDetails | null {
 	try {

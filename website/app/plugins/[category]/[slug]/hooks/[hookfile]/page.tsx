@@ -23,13 +23,13 @@ export async function generateStaticParams() {
 		if (fs.existsSync(hooksDir)) {
 			const files = fs
 				.readdirSync(hooksDir)
-				.filter((file) => file.endsWith(".md"));
+				.filter((file) => !file.startsWith(".") && file !== "hooks.json");
 
 			for (const file of files) {
 				params.push({
 					category: plugin.category,
-					slug: plugin.category === "bushido" ? "core" : plugin.name,
-					hookfile: path.basename(file, ".md"),
+					slug: plugin.name,
+					hookfile: path.parse(file).name,
 				});
 			}
 		}
@@ -39,7 +39,7 @@ export async function generateStaticParams() {
 }
 
 const categoryLabels = {
-	bushido: "Bushido",
+	core: "Core",
 	jutsu: "Jutsu",
 	do: "Dō",
 	hashi: "Hashi",
@@ -52,17 +52,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { category, slug, hookfile } = await params;
 
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		return {
 			title: "Hook File Not Found - Han",
 		};
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {
@@ -85,15 +83,13 @@ export default async function HookFilePage({
 	const { category, slug, hookfile } = await params;
 
 	// Validate category
-	if (!["bushido", "jutsu", "do", "hashi"].includes(category)) {
+	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
 		notFound();
 	}
 
-	const pluginSlug =
-		category === "bushido" && slug === "core" ? "bushido" : slug;
 	const plugin = getPluginContent(
-		category as "bushido" | "jutsu" | "do" | "hashi",
-		pluginSlug,
+		category as "core" | "jutsu" | "do" | "hashi",
+		slug,
 	);
 
 	if (!plugin) {
@@ -132,16 +128,27 @@ export default async function HookFilePage({
 			"..",
 			plugin.source.replace("./", ""),
 		);
-		const filePath = path.join(pluginPath, "hooks", `${hookfile}.md`);
+		const hooksDir = path.join(pluginPath, "hooks");
 
-		if (fs.existsSync(filePath)) {
-			const content = fs.readFileSync(filePath, "utf-8");
-			hookFile = {
-				name: hookfile,
-				path: `${hookfile}.md`,
-				content,
-			};
-		} else {
+		// Find the actual file with any extension
+		if (fs.existsSync(hooksDir)) {
+			const files = fs.readdirSync(hooksDir);
+			const matchingFile = files.find(
+				(file) => path.parse(file).name === hookfile && !file.startsWith(".") && file !== "hooks.json"
+			);
+
+			if (matchingFile) {
+				const filePath = path.join(hooksDir, matchingFile);
+				const content = fs.readFileSync(filePath, "utf-8");
+				hookFile = {
+					name: hookfile,
+					path: matchingFile,
+					content,
+				};
+			}
+		}
+
+		if (!hookFile) {
 			notFound();
 		}
 	}
@@ -195,7 +202,7 @@ export default async function HookFilePage({
 								<div className="text-6xl">📄</div>
 								<div>
 									<h1 className="text-5xl font-bold text-gray-900 dark:text-white">
-										{hookFile.name}
+										{hookFile.path}
 									</h1>
 									<p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
 										Hook File
@@ -205,9 +212,17 @@ export default async function HookFilePage({
 						</div>
 
 						{/* Content */}
-						<article className="prose prose-lg dark:prose-invert max-w-none">
-							<ReactMarkdown>{hookFile.content}</ReactMarkdown>
-						</article>
+						{hookFile.path.endsWith(".md") ? (
+							<article className="prose prose-lg dark:prose-invert max-w-none">
+								<ReactMarkdown>{hookFile.content}</ReactMarkdown>
+							</article>
+						) : (
+							<div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-6 overflow-x-auto">
+								<pre className="text-sm text-gray-100">
+									<code>{hookFile.content}</code>
+								</pre>
+							</div>
+						)}
 
 						{/* Back Link */}
 						<div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">

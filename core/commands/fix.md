@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:fix - Debug and fix bugs, errors, or unexpected behavior
+han-core:fix - Debug and fix bugs, errors, or unexpected behavior
 
 ## Synopsis
 

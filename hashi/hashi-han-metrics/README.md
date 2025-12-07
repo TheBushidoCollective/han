@@ -1,4 +1,18 @@
-# hashi-han-metrics
+# hashi-han-metrics (DEPRECATED)
+
+## ⚠️ DEPRECATED - Use han-core Instead
+
+**This plugin has been deprecated and merged into `han-core`.**
+
+All functionality from this plugin is now available in `han-core`. Please migrate:
+
+```bash
+# Uninstall this plugin
+npx @thebushidocollective/han plugin uninstall hashi-han-metrics
+
+# Install han-core instead
+npx @thebushidocollective/han plugin install han-core
+```
 
 MCP server for agent task tracking and performance metrics. Enables self-reporting agents with objective validation.
 

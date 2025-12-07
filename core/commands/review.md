@@ -6,7 +6,7 @@ description: Multi-agent code review with confidence-based filtering
 
 ## Name
 
-bushido:review - Multi-agent code review with confidence-based filtering
+han-core:review - Multi-agent code review with confidence-based filtering
 
 ## Synopsis
 
@@ -63,7 +63,7 @@ Launches multiple independent agents **in parallel** (single message, multiple T
 
 #### Core Reviewer (Always Runs)
 
-- **Agent**: `bushido:code-reviewer` skill
+- **Agent**: `han-core:code-reviewer` skill
 - **Focus**: General quality, correctness, maintainability, testing
 - **Filters**: Confidence ≥80%, false positive filtering
 - **Output**: Categorized issues (Critical ≥90%, Important ≥80%)
@@ -215,7 +215,7 @@ All findings include confidence scores to reduce noise:
 
 ## Agent Details
 
-### Core Reviewer (bushido:code-reviewer)
+### Core Reviewer (han-core:code-reviewer)
 
 **Dimensions**:
 
@@ -377,7 +377,7 @@ Uses pre-defined team from `.claude/review-teams.json`:
 ```json
 {
   "security-critical": [
-    "bushido:code-reviewer",
+    "han-core:code-reviewer",
     "do-security-engineering:security-engineer",
     "do-security-engineering:security-engineer", // redundant
     "do-infrastructure:devops-engineer"
@@ -478,5 +478,5 @@ Review agents check these files for project standards:
 
 - `/feature-dev` - Full feature development workflow (includes review)
 - `/commit` - Smart commit after review passes
-- `bushido:code-reviewer` - Core review skill documentation
+- `han-core:code-reviewer` - Core review skill documentation
 - `do-security-engineering` - Security agent details

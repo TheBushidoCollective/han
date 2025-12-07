@@ -1,7 +1,7 @@
 {
   "name": "bushido",
-  "version": "1.2.1",
-  "description": "The foundational philosophy and enforcement mechanisms for honorable software development. Contains hooks that enforce the seven virtues, core quality skills, and MCP integrations for maintaining integrity.",
+  "version": "2.0.0",
+  "description": "The philosophy of the Samurai applied to software development. Injects the seven virtues (義 Righteousness, 勇 Courage, 仁 Compassion, 礼 Respect, 誠 Honesty, 名誉 Honor, 忠義 Loyalty) to guide agent behavior. Requires core for infrastructure.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -9,12 +9,8 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "philosophy",
-    "quality",
-    "testing",
-    "principles",
-    "virtues",
-    "enforcement"
-  ]
+  "keywords": ["philosophy", "bushido", "virtues", "culture", "principles"],
+  "dependencies": {
+    "core": "^1.0.0"
+  }
 }

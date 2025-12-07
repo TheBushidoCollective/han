@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:debug - Investigate and diagnose issues without necessarily fixing them
+han-core:debug - Investigate and diagnose issues without necessarily fixing them
 
 ## Synopsis
 

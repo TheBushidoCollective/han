@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 ## Name
 
-bushido:test - Write tests for code using test-driven development principles
+han-core:test - Write tests for code using test-driven development principles
 
 ## Synopsis
 
