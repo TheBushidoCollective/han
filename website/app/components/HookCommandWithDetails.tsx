@@ -74,19 +74,17 @@ export default function HookCommandWithDetails({
 						onClick={() => setPromptExpanded(!promptExpanded)}
 						className="w-full text-left"
 					>
-						<div className="bg-purple-900 dark:bg-purple-950 text-purple-100 p-4 rounded-t overflow-x-auto text-sm scrollbar-custom flex items-center justify-between border border-purple-700">
-							<div className="flex items-center gap-3">
-								<span className="text-lg">🧠</span>
-								<span className="font-semibold">Prompt-based Hook</span>
-							</div>
+						<div className="bg-purple-900 dark:bg-purple-950 text-purple-100 p-4 rounded-t overflow-x-auto text-sm scrollbar-custom flex items-center justify-between">
+							<code className="flex-1">Prompt-based Hook (LLM Evaluation)</code>
 							<div className="flex items-center gap-2 ml-4">
 								{timeout && (
-									<span className="px-2 py-1 text-xs bg-purple-700 text-purple-100 rounded">
+									<span className="px-2 py-1 text-xs bg-purple-700 text-purple-200 rounded">
 										⏱️ {timeout >= 60 ? `${timeout / 60}m` : `${timeout}s`}
 									</span>
 								)}
 								<span className="px-2 py-1 text-xs bg-purple-600 text-purple-100 rounded flex items-center gap-1">
-									<span>View Prompt</span>
+									<span>🧠</span>
+									<span>Prompt Hook</span>
 									<svg
 										aria-hidden="true"
 										className={`w-3 h-3 transition-transform ${promptExpanded ? "rotate-180" : ""}`}
@@ -106,11 +104,55 @@ export default function HookCommandWithDetails({
 						</div>
 					</button>
 					{promptExpanded && (
-						<div className="bg-purple-900/30 dark:bg-purple-950/30 border-x border-b border-purple-700 rounded-b p-4">
-							<div className="prose prose-invert max-w-none">
-								<pre className="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom whitespace-pre-wrap">
-									{prompt}
+						<div className="bg-gray-800 dark:bg-gray-900 border-t border-gray-700 rounded-b p-4 space-y-4">
+							{/* Prompt Content */}
+							<div>
+								<h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+									<span>🧠</span>
+									<span>Evaluation Prompt</span>
+								</h4>
+								<pre className="bg-gray-950 text-gray-100 p-3 rounded overflow-x-auto text-sm scrollbar-custom whitespace-pre-wrap max-h-96">
+									<code>{prompt}</code>
 								</pre>
+							</div>
+
+							{/* How it works */}
+							<div className="border-t border-gray-700 pt-4">
+								<h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+									<span>ℹ️</span>
+									<span>How Prompt-based Hooks Work</span>
+								</h4>
+								<div className="text-sm text-gray-400 space-y-2">
+									<p>
+										This hook uses an LLM to evaluate Claude's work against the
+										criteria defined in the prompt above.
+									</p>
+									<p>The LLM will:</p>
+									<ul className="list-disc list-inside space-y-1 ml-2">
+										<li>Analyze the conversation context and Claude's response</li>
+										<li>
+											Check compliance with the principles in the evaluation
+											prompt
+										</li>
+										<li>
+											Return{" "}
+											<code className="bg-gray-700 px-1 rounded">
+												decision: "approve"
+											</code>{" "}
+											or{" "}
+											<code className="bg-gray-700 px-1 rounded">
+												decision: "block"
+											</code>
+										</li>
+										<li>
+											Provide a{" "}
+											<code className="bg-gray-700 px-1 rounded">
+												systemMessage
+											</code>{" "}
+											with feedback
+										</li>
+									</ul>
+								</div>
 							</div>
 						</div>
 					)}
