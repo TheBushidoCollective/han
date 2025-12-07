@@ -31,7 +31,8 @@ export interface SkillMetadata {
 
 export interface HookCommand {
 	type: string;
-	command: string;
+	command?: string;
+	prompt?: string;
 	timeout?: number;
 }
 
@@ -66,7 +67,9 @@ export interface MCPServerMetadata {
 }
 
 interface Hook {
+	type?: string;
 	command?: string;
+	prompt?: string;
 	timeout?: number;
 }
 
@@ -378,7 +381,8 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 				for (const hookArray of hookArrays) {
 					if (hookArray.hooks) {
 						for (const hook of hookArray.hooks) {
-							if (hook.command) {
+							// Handle both command and prompt type hooks
+							if (hook.type === "command" && hook.command) {
 								commands.push({
 									command: hook.command,
 									timeout: hook.timeout,
@@ -416,6 +420,30 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 										!referencedFiles.some((f) => f.path === scriptPath)
 									) {
 										referencedFiles.push(scriptFile);
+									}
+								}
+							} else if (hook.type === "prompt" && hook.prompt) {
+								// For prompt-based hooks, show a placeholder command
+								commands.push({
+									command: `[Prompt-based hook - see details below]`,
+									timeout: hook.timeout,
+								});
+
+								// Extract file references from prompt content
+								// Pattern: <must-read-first ...>file.md</must-read-first>
+								const mustReadMatches = hook.prompt.matchAll(
+									/hooks\/([a-zA-Z0-9_-]+\.md)/g,
+								);
+								for (const match of mustReadMatches) {
+									const fileName = match[1];
+									const hookFile = allHookFiles.find(
+										(f) => f.path === fileName,
+									);
+									if (
+										hookFile &&
+										!referencedFiles.some((f) => f.path === fileName)
+									) {
+										referencedFiles.push(hookFile);
 									}
 								}
 							}

@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-bun build --fail-fast --cached",
-            "timeout": 300000
+            "timeout": 300
           }
         ]
       }
