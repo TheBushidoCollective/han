@@ -33,8 +33,32 @@ function getPluginDirectory(): string {
 /**
  * Analyze a plugin's capabilities
  */
-function analyzePlugin(pluginName: string): Partial<PluginDetails> {
-	const pluginDir = join(getPluginDirectory(), pluginName);
+function analyzePlugin(
+	pluginName: string,
+	category?: string,
+): Partial<PluginDetails> {
+	const marketplaceDir = getPluginDirectory();
+
+	// Determine plugin path based on category
+	let pluginDir: string;
+	if (category === "Core") {
+		// Core plugins are in core/ or at root (bushido, core)
+		const coreDir = join(marketplaceDir, "core", pluginName);
+		const rootDir = join(marketplaceDir, pluginName);
+		pluginDir = existsSync(coreDir) ? coreDir : rootDir;
+	} else if (category === "Technique") {
+		// Technique plugins are in jutsu/
+		pluginDir = join(marketplaceDir, "jutsu", pluginName);
+	} else if (category === "Discipline") {
+		// Discipline plugins are in do/
+		pluginDir = join(marketplaceDir, "do", pluginName);
+	} else if (category === "Bridge") {
+		// Bridge plugins are in hashi/
+		pluginDir = join(marketplaceDir, "hashi", pluginName);
+	} else {
+		// Fallback: try direct path
+		pluginDir = join(marketplaceDir, pluginName);
+	}
 
 	if (!existsSync(pluginDir)) {
 		return {
@@ -119,7 +143,7 @@ export async function explainHan(): Promise<void> {
 		const plugins = getInstalledPlugins(scope);
 		for (const pluginName of plugins) {
 			const marketplaceInfo = pluginInfoMap.get(pluginName);
-			const capabilities = analyzePlugin(pluginName);
+			const capabilities = analyzePlugin(pluginName, marketplaceInfo?.category);
 
 			allPlugins.push({
 				name: pluginName,
