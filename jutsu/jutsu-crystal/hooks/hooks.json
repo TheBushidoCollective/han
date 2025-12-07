@@ -6,12 +6,12 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-crystal format --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-crystal test --fail-fast --cached",
-            "timeout": 900000
+            "timeout": 900
           }
         ]
       }

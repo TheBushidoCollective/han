@@ -6,12 +6,12 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-erlang build --fail-fast --cached",
-            "timeout": 300000
+            "timeout": 300
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-erlang test --fail-fast --cached",
-            "timeout": 900000
+            "timeout": 900
           }
         ]
       }

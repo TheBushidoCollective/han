@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-vitest test --fail-fast --cached",
-            "timeout": 900000
+            "timeout": 900
           }
         ]
       }
