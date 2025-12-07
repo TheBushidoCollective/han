@@ -18,7 +18,6 @@ import { registerHookCommands } from "./commands/hook/index.js";
 import { registerMcpCommands } from "./commands/mcp/index.js";
 import { registerMetricsCommand } from "./commands/metrics/index.js";
 import { registerPluginCommands } from "./commands/plugin/index.js";
-import { createPromptCommand } from "./commands/prompt/index.js";
 
 // Version is injected at build time for binary builds, otherwise read from package.json
 const version = (() => {
@@ -49,7 +48,6 @@ registerHookCommands(program);
 registerMcpCommands(program);
 registerMetricsCommand(program);
 registerAliasCommands(program);
-program.addCommand(createPromptCommand());
 
 // Register top-level explain command
 program
