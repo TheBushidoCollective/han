@@ -1,6 +1,6 @@
 {
   "name": "jutsu-checkstyle",
-  "version": "1.8.13",
+  "version": "1.8.14",
   "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["checkstyle", "linting", "java"]
+  "keywords": [
+    "checkstyle",
+    "linting",
+    "java"
+  ]
 }
