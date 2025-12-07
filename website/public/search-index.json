@@ -252,6 +252,27 @@
     ]
   },
   {
+    "id": "hashi-blueprints",
+    "name": "hashi-blueprints",
+    "description": "MCP server for managing technical blueprint documentation. Use search_blueprints before creating, read_blueprint before modifying, write_blueprint after implementation changes. Includes skills and hooks for quality enforcement.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "blueprints",
+      "documentation",
+      "technical-docs",
+      "implementation-docs",
+      "architecture",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-blueprints",
+    "components": [
+      "skill",
+      "command",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-bun",
     "name": "jutsu-bun",
     "description": "Validation and quality enforcement for Bun.js projects.",
@@ -1008,7 +1029,7 @@
   {
     "id": "hashi-han",
     "name": "hashi-han",
-    "description": "DEPRECATED: Merged into han-core. MCP server for running Han plugin hook commands.",
+    "description": "DEPRECATED: Merged into core. MCP server for running Han plugin hook commands.",
     "category": "hashi",
     "tags": [
       "mcp",
@@ -1026,7 +1047,7 @@
   {
     "id": "hashi-han-metrics",
     "name": "hashi-han-metrics",
-    "description": "DEPRECATED: Merged into han-core. MCP server for agent task tracking and performance metrics.",
+    "description": "DEPRECATED: Merged into core. MCP server for agent task tracking and performance metrics.",
     "category": "hashi",
     "tags": [
       "mcp",
@@ -1039,23 +1060,6 @@
     "components": [
       "hook"
     ]
-  },
-  {
-    "id": "hashi-blueprints",
-    "name": "hashi-blueprints",
-    "description": "MCP server for managing technical blueprint documentation. Use search_blueprints before creating, read_blueprint before modifying, write_blueprint after implementation changes. Includes skills and hooks for quality enforcement.",
-    "category": "jutsu",
-    "tags": [
-      "mcp",
-      "blueprints",
-      "documentation",
-      "technical-docs",
-      "implementation-docs",
-      "architecture",
-      "server"
-    ],
-    "path": "/plugins/jutsu/hashi-blueprints",
-    "components": []
   },
   {
     "id": "jutsu-helm",
