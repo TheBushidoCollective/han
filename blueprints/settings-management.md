@@ -1,3 +1,8 @@
+---
+name: settings-management
+summary: Multi-scope settings with precedence rules
+---
+
 # Settings Management
 
 Multi-scope settings handling with precedence rules.

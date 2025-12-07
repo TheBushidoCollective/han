@@ -1,3 +1,8 @@
+---
+name: marketplace
+summary: Central plugin registry and distribution
+---
+
 # Marketplace System
 
 Central registry of all plugins with metadata, validation, and multi-channel distribution.

@@ -1,7 +1,7 @@
 ---
 name: blueprints-writing
-description: Use when creating or updating technical blueprint documentation in blueprints/ directories. Covers structure, content, and writing style for implementation docs.
-allowed-tools: [Read, Write, Edit, Grep, Glob]
+description: Use when creating or updating technical blueprint documentation for new features, API changes, or architectural modifications. Always use search_blueprints first to avoid duplication, then write_blueprint with proper structure.
+allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
 ---
 
 # Writing Technical Blueprints
@@ -26,7 +26,30 @@ Skip blueprints for:
 - Test files (tests ARE the documentation)
 - External dependencies (link to their docs)
 
+## Creating Blueprints
+
+**IMPORTANT:** Always use the `write_blueprint` MCP tool to create or update blueprints. This automatically adds the required frontmatter.
+
+```typescript
+// Before writing, search for existing blueprints
+const existing = await search_blueprints({ keyword: "auth" });
+
+// Read existing blueprint if updating
+const current = await read_blueprint({ name: "authentication" });
+
+// Write or update the blueprint
+await write_blueprint({
+  name: "system-name",
+  summary: "Brief one-line description",
+  content: "# System Name\n\n## Overview\n..."
+});
+```
+
+The MCP tool handles frontmatter automatically - you just provide the content.
+
 ## Blueprint File Structure
+
+When writing blueprint content (passed to `write_blueprint`), use this structure:
 
 ```markdown
 # System Name

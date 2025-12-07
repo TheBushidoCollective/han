@@ -1,3 +1,8 @@
+---
+name: plugin-installation
+summary: Installation flow and marketplace integration
+---
+
 # Plugin Installation
 
 Installation flow and marketplace integration.

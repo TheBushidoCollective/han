@@ -1,4 +1,13 @@
 import { createInterface } from "node:readline";
+import { MetricsStorage } from "../../metrics/storage.js";
+import type {
+	CompleteTaskParams,
+	FailTaskParams,
+	QueryMetricsParams,
+	RecordFrustrationParams,
+	StartTaskParams,
+	UpdateTaskParams,
+} from "../../metrics/types.js";
 import {
 	discoverPluginTools,
 	executePluginTool,
@@ -50,6 +59,17 @@ function discoverTools(): PluginTool[] {
 		cachedTools = discoverPluginTools();
 	}
 	return cachedTools;
+}
+
+// Lazy-load metrics storage to avoid loading better-sqlite3 native bindings
+// at module import time (which breaks basic CLI commands in CI)
+let storage: MetricsStorage | null = null;
+
+function getStorage(): MetricsStorage {
+	if (!storage) {
+		storage = new MetricsStorage();
+	}
+	return storage;
 }
 
 function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
@@ -109,10 +129,248 @@ function handleInitialize(): unknown {
 	};
 }
 
+// Metrics tools definition
+const METRICS_TOOLS: McpTool[] = [
+	{
+		name: "start_task",
+		description:
+			"Start tracking a new task. Returns a task_id for future updates. Use this when beginning work on a feature, fix, or refactoring.",
+		annotations: {
+			title: "Start Task",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				description: {
+					type: "string",
+					description: "Clear description of the task being performed",
+				},
+				type: {
+					type: "string",
+					enum: ["implementation", "fix", "refactor", "research"],
+					description: "Type of task being performed",
+				},
+				estimated_complexity: {
+					type: "string",
+					enum: ["simple", "moderate", "complex"],
+					description: "Optional estimated complexity of the task",
+				},
+			},
+			required: ["description", "type"],
+		},
+	},
+	{
+		name: "update_task",
+		description:
+			"Update a task with progress notes or status changes. Use this to log incremental progress.",
+		annotations: {
+			title: "Update Task",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				task_id: {
+					type: "string",
+					description: "The task ID returned from start_task",
+				},
+				status: {
+					type: "string",
+					description: "Optional status update",
+				},
+				notes: {
+					type: "string",
+					description: "Progress notes or observations",
+				},
+			},
+			required: ["task_id"],
+		},
+	},
+	{
+		name: "complete_task",
+		description:
+			"Mark a task as completed with outcome assessment. Use this when finishing a task successfully or partially.",
+		annotations: {
+			title: "Complete Task",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				task_id: {
+					type: "string",
+					description: "The task ID returned from start_task",
+				},
+				outcome: {
+					type: "string",
+					enum: ["success", "partial", "failure"],
+					description: "Outcome of the task",
+				},
+				confidence: {
+					type: "number",
+					minimum: 0,
+					maximum: 1,
+					description:
+						"Confidence level (0-1) in the success of this task. Used for calibration.",
+				},
+				files_modified: {
+					type: "array",
+					items: { type: "string" },
+					description: "Optional list of files modified during this task",
+				},
+				tests_added: {
+					type: "number",
+					description: "Optional count of tests added",
+				},
+				notes: {
+					type: "string",
+					description: "Optional completion notes",
+				},
+			},
+			required: ["task_id", "outcome", "confidence"],
+		},
+	},
+	{
+		name: "fail_task",
+		description:
+			"Mark a task as failed with detailed reason and attempted solutions. Use when unable to complete a task.",
+		annotations: {
+			title: "Fail Task",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				task_id: {
+					type: "string",
+					description: "The task ID returned from start_task",
+				},
+				reason: {
+					type: "string",
+					description: "Reason for failure",
+				},
+				confidence: {
+					type: "number",
+					minimum: 0,
+					maximum: 1,
+					description: "Optional confidence in the failure assessment",
+				},
+				attempted_solutions: {
+					type: "array",
+					items: { type: "string" },
+					description: "Optional list of solutions that were attempted",
+				},
+				notes: {
+					type: "string",
+					description: "Optional additional notes",
+				},
+			},
+			required: ["task_id", "reason"],
+		},
+	},
+	{
+		name: "query_metrics",
+		description:
+			"Query task metrics and performance data. Use this to generate reports or analyze agent performance over time.",
+		annotations: {
+			title: "Query Metrics",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				period: {
+					type: "string",
+					enum: ["day", "week", "month"],
+					description: "Optional time period to filter by",
+				},
+				task_type: {
+					type: "string",
+					enum: ["implementation", "fix", "refactor", "research"],
+					description: "Optional filter by task type",
+				},
+				outcome: {
+					type: "string",
+					enum: ["success", "partial", "failure"],
+					description: "Optional filter by outcome",
+				},
+			},
+		},
+	},
+	{
+		name: "record_frustration",
+		description:
+			"Record a user frustration event detected through interaction analysis. Use when user messages indicate frustration, confusion, or dissatisfaction.",
+		annotations: {
+			title: "Record Frustration",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				task_id: {
+					type: "string",
+					description:
+						"Optional task ID if frustration is related to a specific task",
+				},
+				frustration_level: {
+					type: "string",
+					enum: ["low", "moderate", "high"],
+					description: "Assessed level of user frustration",
+				},
+				frustration_score: {
+					type: "number",
+					description: "Numeric frustration score (0-10)",
+				},
+				user_message: {
+					type: "string",
+					description: "The user message that triggered frustration detection",
+				},
+				detected_signals: {
+					type: "array",
+					items: { type: "string" },
+					description: "List of signals that indicated frustration",
+				},
+				context: {
+					type: "string",
+					description:
+						"Optional context about what may have caused frustration",
+				},
+			},
+			required: [
+				"frustration_level",
+				"frustration_score",
+				"user_message",
+				"detected_signals",
+			],
+		},
+	},
+];
+
 function handleToolsList(): unknown {
-	const tools = discoverTools();
+	const hookTools = formatToolsForMcp(discoverTools());
+	const allTools = [...hookTools, ...METRICS_TOOLS];
 	return {
-		tools: formatToolsForMcp(tools),
+		tools: allTools,
 	};
 }
 
@@ -120,6 +378,114 @@ async function handleToolsCall(params: {
 	name: string;
 	arguments?: Record<string, unknown>;
 }): Promise<unknown> {
+	const args = params.arguments || {};
+
+	// Check if this is a metrics tool
+	const isMetricsTool = METRICS_TOOLS.some((t) => t.name === params.name);
+
+	if (isMetricsTool) {
+		// Handle metrics tools
+		try {
+			switch (params.name) {
+				case "start_task": {
+					const taskParams = args as unknown as StartTaskParams;
+					const result = getStorage().startTask(taskParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				case "update_task": {
+					const taskParams = args as unknown as UpdateTaskParams;
+					const result = getStorage().updateTask(taskParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				case "complete_task": {
+					const taskParams = args as unknown as CompleteTaskParams;
+					const result = getStorage().completeTask(taskParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				case "fail_task": {
+					const taskParams = args as unknown as FailTaskParams;
+					const result = getStorage().failTask(taskParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				case "query_metrics": {
+					const taskParams = args as unknown as QueryMetricsParams;
+					const result = getStorage().queryMetrics(taskParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				case "record_frustration": {
+					const frustrationParams = args as unknown as RecordFrustrationParams;
+					const result = getStorage().recordFrustration(frustrationParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(result, null, 2),
+							},
+						],
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown metrics tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Handle hook tools
 	const tools = discoverTools();
 	const tool = tools.find((t) => t.name === params.name);
 
@@ -130,7 +496,6 @@ async function handleToolsCall(params: {
 		};
 	}
 
-	const args = params.arguments || {};
 	const cache = args.cache !== false; // Default to true for MCP
 	const verbose = args.verbose === true;
 	const failFast = false; // Always false - MCP tools run independently without cross-tool fail-fast
@@ -246,6 +611,21 @@ function sendResponse(response: JsonRpcResponse): void {
 }
 
 export async function startMcpServer(): Promise<void> {
+	// Setup cleanup handlers for graceful shutdown of metrics storage
+	process.on("SIGINT", () => {
+		if (storage) {
+			storage.close();
+		}
+		process.exit(0);
+	});
+
+	process.on("SIGTERM", () => {
+		if (storage) {
+			storage.close();
+		}
+		process.exit(0);
+	});
+
 	const rl = createInterface({
 		input: process.stdin,
 		terminal: false,

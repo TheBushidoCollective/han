@@ -1,3 +1,8 @@
+---
+name: cli-interface
+summary: Interactive CLI with AI-powered plugin discovery
+---
+
 # Han CLI Interface
 
 ## Overview

@@ -1,3 +1,8 @@
+---
+name: validation
+summary: Configuration validation and schema enforcement
+---
+
 # Validation System
 
 Configuration validation, schema enforcement, and quality checks for plugins and user configurations.

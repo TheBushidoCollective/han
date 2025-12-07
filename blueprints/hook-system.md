@@ -1,3 +1,8 @@
+---
+name: hook-system
+summary: Complete hook lifecycle from definition to execution
+---
+
 # Hook System
 
 Complete hook lifecycle from definition to execution.

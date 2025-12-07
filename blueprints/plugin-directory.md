@@ -1,3 +1,8 @@
+---
+name: plugin-directory
+summary: Filesystem organization and naming conventions
+---
+
 # Plugin Directory Organization
 
 Filesystem structure and conventions for organizing 120+ plugins across four categories.

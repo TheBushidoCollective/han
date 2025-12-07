@@ -438,7 +438,7 @@ pip install --upgrade strands-agents-sops
 
 - **bushido**: Core quality principles and enforcement
 - **jutsu-tdd**: Test-Driven Development principles
-- **jutsu-blueprints**: Technical blueprint documentation
+- **hashi-blueprints**: Technical blueprint documentation
 - **jutsu-markdown**: Markdown documentation and linting
 - **do-backend-development**: Backend engineering agents
 - **do-frontend-development**: Frontend engineering agents

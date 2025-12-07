@@ -1,3 +1,8 @@
+---
+name: build-deployment
+summary: CI/CD automation for releases and deployments
+---
+
 # Build & Deployment System
 
 CI/CD automation for building, testing, releasing, and deploying Han marketplace components.

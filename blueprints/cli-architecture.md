@@ -1,3 +1,8 @@
+---
+name: cli-architecture
+summary: Entry point, command structure, and CLI framework
+---
+
 # CLI Architecture
 
 Entry point and command structure for the Han CLI.

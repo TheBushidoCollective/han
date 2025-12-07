@@ -1,3 +1,8 @@
+---
+name: metrics-system
+summary: Self-reporting agent performance tracking with validation
+---
+
 # Metrics System
 
 Self-reporting agent performance tracking with objective validation.

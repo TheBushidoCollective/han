@@ -1,7 +1,7 @@
 ---
 name: blueprints-maintenance
-description: Use when updating existing blueprints/ documentation to keep it in sync with implementation changes. Covers verification, updates, and deprecation.
-allowed-tools: [Read, Write, Edit, Grep, Glob]
+description: Use after modifying existing systems to update blueprint documentation. Read blueprints with read_blueprint before changes, update with write_blueprint after. Prevents documentation drift.
+allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
 ---
 
 # Maintaining Technical Blueprints
@@ -19,7 +19,16 @@ Documentation drifts from implementation when:
 
 ### Before Making Changes
 
-1. **Read existing blueprint** for the system you're modifying
+1. **Read existing blueprint** using MCP tools:
+
+   ```typescript
+   // Find the blueprint
+   const results = await search_blueprints({ keyword: "auth" });
+
+   // Read it to understand current documentation
+   const blueprint = await read_blueprint({ name: "authentication" });
+   ```
+
 2. **Note what documentation exists**:
    - Overview accurate?
    - API documentation complete?
@@ -28,13 +37,28 @@ Documentation drifts from implementation when:
 
 ### After Making Changes
 
-1. **Re-read the blueprint** with fresh eyes
+1. **Re-read the blueprint** to verify accuracy:
+
+   ```typescript
+   const current = await read_blueprint({ name: "authentication" });
+   ```
+
 2. **Verify each section**:
    - Does Overview still describe the purpose?
    - Are all public APIs documented?
    - Is behavior description accurate?
    - Are file paths still correct?
-3. **Update or add sections** as needed
+
+3. **Update using MCP tool**:
+
+   ```typescript
+   await write_blueprint({
+     name: "authentication",
+     summary: "Updated summary if needed",
+     content: updatedContent
+   });
+   ```
+
 4. **Remove stale content** - outdated docs mislead
 
 ## Types of Updates
@@ -130,7 +154,7 @@ When reviewing blueprints:
 
 ### Tooling Support
 
-The jutsu-blueprints hooks automatically:
+The hashi-blueprints hooks automatically:
 
 - Remind you to check docs (UserPromptSubmit)
 - Verify docs match changes (Stop hook)

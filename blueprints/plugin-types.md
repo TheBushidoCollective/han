@@ -1,3 +1,8 @@
+---
+name: plugin-types
+summary: Bushido, Jutsu, Do, and Hashi plugin categories
+---
+
 # Plugin Types
 
 Bushido, Jutsu, Do, and Hashi plugin categories.
