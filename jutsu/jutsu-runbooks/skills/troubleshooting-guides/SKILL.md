@@ -42,16 +42,21 @@ What the user/system is experiencing:
 ```bash
 kubectl get pods -n production | grep api-server
 ```
+
 **Expected:** STATUS = Running
 
 ### 2. Are recent deploys the cause?
+
 ```bash
 kubectl rollout history deployment/api-server
 ```
+
 **Check:** Did we deploy in the last 30 minutes?
 
 ### 3. Is this affecting all users?
+
 Check error rate in Datadog:
+
 - If < 5%: Isolated issue, may be client-specific
 - If > 50%: Widespread issue, likely infrastructure
 
@@ -68,6 +73,7 @@ Check error rate in Datadog:
 ### Hypothesis 1: Database Connection Issues
 
 **Test:**
+
 ```bash
 # Check database connections
 kubectl exec -it api-server-abc -- psql -h $DB_HOST -c "SELECT count(*) FROM pg_stat_activity"
@@ -79,6 +85,7 @@ kubectl exec -it api-server-abc -- psql -h $DB_HOST -c "SELECT count(*) FROM pg_
 ### Hypothesis 2: High Traffic Spike
 
 **Test:**
+
 ```bash
 # Check request rate
 curl -H "Authorization: Bearer $DD_API_KEY" \
@@ -91,6 +98,7 @@ curl -H "Authorization: Bearer $DD_API_KEY" \
 ### Hypothesis 3: External Service Degradation
 
 **Test:**
+
 ```bash
 # Check third-party API
 curl -w "@curl-format.txt" https://api.stripe.com/v1/charges
@@ -104,6 +112,7 @@ curl -w "@curl-format.txt" https://api.stripe.com/v1/charges
 ### Solution A: Immediate (< 5 minutes)
 
 Restart affected pods:
+
 ```bash
 kubectl rollout restart deployment/api-server -n production
 ```
@@ -113,6 +122,7 @@ kubectl rollout restart deployment/api-server -n production
 ### Solution B: Short-term (< 30 minutes)
 
 Scale up resources:
+
 ```bash
 kubectl scale deployment/api-server --replicas=10 -n production
 ```
@@ -122,6 +132,7 @@ kubectl scale deployment/api-server --replicas=10 -n production
 ### Solution C: Long-term (< 2 hours)
 
 Fix root cause:
+
 1. Identify slow database query
 2. Add database index
 3. Deploy code optimization
@@ -138,9 +149,11 @@ Fix root cause:
 ## Prevention
 
 How to prevent this issue in the future:
+
 - Add monitoring alert for connection pool saturation
 - Implement auto-scaling based on request rate
 - Set up load testing to find capacity limits
+
 ```
 
 ## Decision Tree Format
@@ -151,6 +164,7 @@ How to prevent this issue in the future:
 ## Start Here
 
 ```
+
                     Check response time
                            |
             ┌──────────────┴──────────────┐
@@ -158,6 +172,7 @@ How to prevent this issue in the future:
         < 500ms                       > 500ms
             │                             │
        NOT THIS RUNBOOK            Continue below
+
 ```
 
 ## Step 1: Locate the Slowness
@@ -168,6 +183,7 @@ curl -w "@timing.txt" https://api.example.com/users
 ```
 
 **Decision:**
+
 - Time to first byte > 2s → Database slow (go to Step 2)
 - Time to first byte < 100ms → Network slow (go to Step 3)
 - Timeout → Service down (go to Step 4)
@@ -180,6 +196,7 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
 ```
 
 **Decision:**
+
 - Query running > 5s → Slow query (Solution A)
 - Many idle in transaction → Connection leak (Solution B)
 - High connection count → Pool exhausted (Solution C)
@@ -205,6 +222,7 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
 ## Step 3: Network Diagnosis
 
 ... (continue with network troubleshooting)
+
 ```
 
 ## Layered Troubleshooting
@@ -221,12 +239,13 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
    curl https://api.example.com/health
    ```
 
-2. **Application logs:**
+1. **Application logs:**
+
    ```bash
    kubectl logs deployment/api-server --tail=100 | grep ERROR
    ```
 
-3. **Application metrics:**
+2. **Application metrics:**
    - Request rate
    - Error rate
    - Response time percentiles
@@ -234,19 +253,23 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
 ### Common Application Issues
 
 **Memory Leak**
+
 - **Symptom:** Memory usage climbing over time
 - **Test:** Check memory metrics in Datadog
 - **Fix:** Restart pods, investigate with heap dump
 
 **Thread Starvation**
+
 - **Symptom:** Slow responses, high CPU
 - **Test:** Thread dump analysis
 - **Fix:** Increase thread pool size
 
 **Code Bug**
+
 - **Symptom:** Specific endpoints fail
 - **Test:** Review recent deploys
 - **Fix:** Rollback or hotfix
+
 ```
 
 ### Layer 2: Infrastructure
@@ -261,12 +284,14 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
    kubectl top nodes
    ```
 
-2. **Pod resources:**
+1. **Pod resources:**
+
    ```bash
    kubectl top pods -n production
    ```
 
-3. **Network connectivity:**
+2. **Network connectivity:**
+
    ```bash
    kubectl run -it --rm debug --image=nicolaka/netshoot --restart=Never -- ping database.internal
    ```
@@ -274,19 +299,23 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
 ### Common Infrastructure Issues
 
 **Node Under Pressure**
+
 - **Symptom:** Pods evicted, slow scheduling
 - **Test:** `kubectl describe node` for pressure conditions
 - **Fix:** Scale node pool or add nodes
 
 **Network Partition**
+
 - **Symptom:** Intermittent timeouts
 - **Test:** MTR between pods and destination
 - **Fix:** Check security groups, routing tables
 
 **Disk I/O Saturation**
+
 - **Symptom:** Slow database, high latency
 - **Test:** Check IOPS metrics in CloudWatch
 - **Fix:** Increase provisioned IOPS
+
 ```
 
 ### Layer 3: External Dependencies
@@ -301,11 +330,12 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
    curl -w "@timing.txt" https://api.stripe.com/health
    ```
 
-2. **Status pages:**
+1. **Status pages:**
    - Check status.stripe.com
    - Check status.aws.amazon.com
 
-3. **DNS resolution:**
+2. **DNS resolution:**
+
    ```bash
    nslookup api.stripe.com
    dig api.stripe.com
@@ -314,19 +344,23 @@ psql -c "SELECT query, state, query_start FROM pg_stat_activity WHERE state != '
 ### Common External Issues
 
 **API Rate Limiting**
+
 - **Symptom:** 429 responses from external service
 - **Test:** Check rate limit headers
 - **Fix:** Implement backoff, cache responses
 
 **Service Degradation**
+
 - **Symptom:** Slow external API responses
 - **Test:** Check their status page
 - **Fix:** Implement circuit breaker, use fallback
 
 **DNS Failure**
+
 - **Symptom:** Cannot resolve hostname
 - **Test:** DNS queries
 - **Fix:** Check DNS config, try alternative resolver
+
 ```
 
 ## Systematic Debugging
@@ -376,6 +410,7 @@ aws ec2 describe-security-groups --group-ids sg-abc123 | jq '.SecurityGroups[0].
 ## 4. Fix
 
 Update security group:
+
 ```bash
 aws ec2 authorize-security-group-ingress \
   --group-id sg-abc123 \
@@ -387,11 +422,13 @@ aws ec2 authorize-security-group-ingress \
 ## 5. Verify
 
 Test connection from pod:
+
 ```bash
 kubectl exec -it api-server-abc -- psql -h prod-db.rds.amazonaws.com -c "SELECT 1"
 ```
 
 **Result:** Success ✓
+
 ```
 
 ## Time-Boxed Investigation

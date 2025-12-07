@@ -17,6 +17,7 @@ Creating clear, actionable runbooks for operational tasks, maintenance, and trou
 ## What is a Runbook?
 
 A runbook is step-by-step documentation for operational tasks:
+
 - **Troubleshooting** - Diagnosing and fixing issues
 - **Incident Response** - Handling production incidents
 - **Maintenance** - Routine operational tasks
@@ -110,6 +111,7 @@ kubectl logs -n production deployment/api-server --tail=100
 ```
 
 **Look for:**
+
 - Error messages containing "connection refused"
 - Stack traces
 - Repeated warnings
@@ -129,11 +131,13 @@ aws cloudwatch get-metric-statistics \
 ### Option A: Restart Services (Quick Fix)
 
 1. **Drain pod gracefully:**
+
    ```bash
    kubectl drain pod/api-server-abc123 --ignore-daemonsets
    ```
 
 2. **Verify new pod is healthy:**
+
    ```bash
    kubectl get pods -n production | grep api-server
    ```
@@ -144,6 +148,7 @@ aws cloudwatch get-metric-statistics \
 ### Option B: Scale Resources (Long-term Fix)
 
 1. **Increase database connection pool:**
+
    ```bash
    # Edit configmap
    kubectl edit configmap app-config -n production
@@ -153,11 +158,13 @@ aws cloudwatch get-metric-statistics \
    ```
 
 2. **Restart deployment:**
+
    ```bash
    kubectl rollout restart deployment/api-server -n production
    ```
 
 3. **Monitor rollout:**
+
    ```bash
    kubectl rollout status deployment/api-server -n production
    ```
@@ -206,6 +213,7 @@ kubectl rollout status deployment/api-server -n production
 |------|--------|---------|
 | 2025-01-15 | Alice | Added validation steps |
 | 2025-01-10 | Bob | Initial version |
+
 ```
 
 ## Runbook Organization
@@ -213,6 +221,7 @@ kubectl rollout status deployment/api-server -n production
 ### Directory Structure
 
 ```
+
 runbooks/
 ├── README.md                    # Index of all runbooks
 ├── templates/
@@ -237,6 +246,7 @@ runbooks/
     ├── first-responder.md
     ├── escalation-guide.md
     └── common-alerts.md
+
 ```
 
 ## Best Practices
@@ -252,16 +262,20 @@ runbooks/
    kubectl get pods -n production -l app=api-server
    ```
 
-2. Delete the pod (it will auto-restart):
+1. Delete the pod (it will auto-restart):
+
    ```bash
    kubectl delete pod <pod-name> -n production
    ```
 
-3. Verify new pod is running:
+2. Verify new pod is running:
+
    ```bash
    kubectl get pods -n production -l app=api-server
    ```
+
    Expected: STATUS = Running
+
 ```
 
 ```markdown
@@ -286,7 +300,8 @@ runbooks/
    **If succeeds:** Service is up. Check application logs (Step 3).
    **If fails:** Service is down. Check pod status (Step 2).
 
-2. Check pod status:
+1. Check pod status:
+
    ```bash
    kubectl get pods -n production
    ```
@@ -294,6 +309,7 @@ runbooks/
    **If CrashLooping:** Check logs for errors (Step 4).
    **If Pending:** Check node resources (Step 5).
    **If Running:** Service should be up. Check DNS (Step 6).
+
 ```
 
 ### Provide Expected Outputs
@@ -306,6 +322,7 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
 ```
 
 **Expected output:**
+
 ```
  ?column?
 ----------
@@ -314,9 +331,11 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
 ```
 
 **If you see "connection refused":**
+
 - Check security groups allow traffic
 - Verify database is running
 - Check credentials in secrets manager
+
 ```
 
 ### Use Checklists
@@ -357,9 +376,9 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
 
 ## Investigation (While Waiting)
 
-4. Check RDS console for instance status
-5. Review CloudWatch logs for errors
-6. Check recent changes in deploy history
+1. Check RDS console for instance status
+2. Review CloudWatch logs for errors
+3. Check recent changes in deploy history
 
 ## Communication Template
 
@@ -368,6 +387,7 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
 > **[HH:MM]** Database still down. Database team investigating.
 > Impact: All API requests failing.
 > ETA: Unknown.
+
 ```
 
 ### Routine Maintenance
@@ -400,10 +420,10 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
      --db-snapshot-identifier maintenance-$(date +%Y%m%d)
    ```
 
-2. **Apply updates:**
+1. **Apply updates:**
    Follow RDS console update wizard
 
-3. **Monitor reboot:**
+2. **Monitor reboot:**
    Watch CloudWatch metrics for 15 minutes
 
 ## Post-Maintenance
@@ -411,6 +431,7 @@ psql -h prod-db.example.com -U app -c "SELECT 1"
 - [ ] Verify all services healthy
 - [ ] Post completion in #engineering
 - [ ] Update maintenance log
+
 ```
 
 ### Knowledge Transfer
@@ -429,7 +450,9 @@ After completing this runbook, you will:
 
 Our deployment flow:
 ```
+
 GitHub → CI (GitHub Actions) → ArgoCD → Kubernetes
+
 ```
 
 **Exercise:** Review a recent deploy in ArgoCD
@@ -469,16 +492,18 @@ GitHub → CI (GitHub Actions) → ArgoCD → Kubernetes
 ### Don't Leave Out Context
 
 ```markdown
-# Bad: No context
-## Fix the API
+## Bad: No context
+
+### Fix the API
 
 Run this command:
 ```bash
 kubectl delete pod api-server-abc
 ```
 
-# Good: Explain why
-## Restart API Server
+## Good: Explain why
+
+### Restart API Server
 
 **When to use:** API returning 500 errors, logs show memory leak.
 
@@ -489,6 +514,7 @@ kubectl delete pod api-server-abc
 ```
 
 **What to expect:** ~30 seconds downtime while new pod starts.
+
 ```
 
 ### Don't Skip Validation Steps
@@ -510,23 +536,30 @@ kubectl delete pod api-server-abc
    kubectl apply -f deployment.yaml
    ```
 
-3. **Verify rollout:**
+1. **Verify rollout:**
+
    ```bash
    kubectl rollout status deployment/api-server
    ```
+
    Wait for "successfully rolled out"
 
-4. **Check pod health:**
+2. **Check pod health:**
+
    ```bash
    kubectl get pods -l app=api-server
    ```
+
    All pods should show STATUS: Running
 
-5. **Verify endpoints:**
+3. **Verify endpoints:**
+
    ```bash
    curl https://api.example.com/health
    ```
+
    Should return 200 OK
+
 ```
 
 ### Don't Assume Knowledge
@@ -545,11 +578,14 @@ Check the ingress and make sure the service mesh is working.
    kubectl get ingress -n production
    ```
 
-2. **Verify service mesh** (Istio, manages pod-to-pod communication):
+1. **Verify service mesh** (Istio, manages pod-to-pod communication):
+
    ```bash
    kubectl get pods -n istio-system
    ```
+
    All Istio control plane pods should be Running.
+
 ```
 
 ## Related Skills
