@@ -43,9 +43,8 @@ han/
 ```
 core/
 ├── .claude-plugin/
-│   ├── plugin.json
-│   ├── hooks.json
-│   └── .mcp.json          # MCP server configuration
+│   ├── plugin.json        # Includes mcpServers config
+│   └── hooks.json
 ├── skills/
 │   ├── professional-honesty/SKILL.md
 │   ├── solid-principles/SKILL.md
@@ -139,8 +138,7 @@ do/do-{practice}/
 ```
 hashi/hashi-{service}/
 ├── .claude-plugin/
-│   ├── plugin.json
-│   └── .mcp.json              # MCP server configuration
+│   └── plugin.json            # Includes mcpServers config
 ├── commands/ (optional)
 │   └── {command}.md
 └── README.md
@@ -170,10 +168,10 @@ hashi/hashi-{service}/
 
 **Category-Specific**:
 
-- Core: `.claude-plugin/.mcp.json` (MCP servers)
+- Core: `mcpServers` in `plugin.json` (MCP server config)
 - Jutsu: `skills/` directory
 - Do: `agents/` directory
-- Hashi: `.claude-plugin/.mcp.json` (MCP servers)
+- Hashi: `mcpServers` in `plugin.json` (MCP server config)
 
 ### Optional Files
 
