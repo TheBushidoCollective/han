@@ -44,6 +44,7 @@ export interface HookFile {
 
 export interface HookEntry {
 	command: string;
+	prompt?: string;
 	timeout?: number;
 }
 
@@ -423,14 +424,15 @@ function getPluginHooks(pluginPath: string): HookSection[] {
 									}
 								}
 							} else if (hook.type === "prompt" && hook.prompt) {
-								// For prompt-based hooks, show a placeholder command
+								// For prompt-based hooks, include the full prompt
 								commands.push({
-									command: `[Prompt-based hook - see details below]`,
+									command: `[Prompt-based Hook]`,
+									prompt: hook.prompt,
 									timeout: hook.timeout,
 								});
 
 								// Extract file references from prompt content
-								// Pattern: <must-read-first ...>file.md</must-read-first>
+								// Pattern: hooks/file.md in the prompt text
 								const mustReadMatches = hook.prompt.matchAll(
 									/hooks\/([a-zA-Z0-9_-]+\.md)/g,
 								);

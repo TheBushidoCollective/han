@@ -623,10 +623,11 @@ export default async function PluginPage({
 												</div>
 											</div>
 											<div className="space-y-3 mb-4">
-												{hookSection.commands.map((entry) => (
+												{hookSection.commands.map((entry, idx) => (
 													<HookCommandWithDetails
-														key={entry.command}
+														key={`${entry.command}-${idx}`}
 														command={entry.command}
+														prompt={entry.prompt}
 														timeout={entry.timeout}
 														hanHooks={hanConfig?.hooks}
 														pluginName={plugin.metadata.name}
