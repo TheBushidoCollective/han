@@ -47,6 +47,12 @@ function findReferencedFiles(
 	return files.filter((file) => hookConfig.command?.includes(file.path));
 }
 
+// Extract first heading from prompt for display
+function extractPromptTitle(prompt: string): string {
+	const match = prompt.match(/^#\s+(.+)$/m);
+	return match ? match[1] : "Prompt-based Hook";
+}
+
 export default function HookCommandWithDetails({
 	command,
 	prompt,
@@ -61,6 +67,7 @@ export default function HookCommandWithDetails({
 	const [promptExpanded, setPromptExpanded] = useState(false);
 
 	const isPromptHook = !!prompt;
+	const promptTitle = prompt ? extractPromptTitle(prompt) : "";
 	const hookName = extractHanHookName(command, pluginName);
 	const hookConfig = hookName && hanHooks ? hanHooks[hookName] : null;
 	const referencedFiles = findReferencedFiles(hookConfig, files);
@@ -75,7 +82,10 @@ export default function HookCommandWithDetails({
 						className="w-full text-left"
 					>
 						<div className="bg-purple-900 dark:bg-purple-950 text-purple-100 p-4 rounded-t overflow-x-auto text-sm scrollbar-custom flex items-center justify-between">
-							<code className="flex-1">Prompt-based Hook (LLM Evaluation)</code>
+							<div className="flex-1 flex items-center gap-3">
+								<span className="text-lg">🧠</span>
+								<code className="flex-1">{promptTitle}</code>
+							</div>
 							<div className="flex items-center gap-2 ml-4">
 								{timeout && (
 									<span className="px-2 py-1 text-xs bg-purple-700 text-purple-200 rounded">
@@ -83,7 +93,6 @@ export default function HookCommandWithDetails({
 									</span>
 								)}
 								<span className="px-2 py-1 text-xs bg-purple-600 text-purple-100 rounded flex items-center gap-1">
-									<span>🧠</span>
 									<span>Prompt Hook</span>
 									<svg
 										aria-hidden="true"
@@ -129,7 +138,9 @@ export default function HookCommandWithDetails({
 									</p>
 									<p>The LLM will:</p>
 									<ul className="list-disc list-inside space-y-1 ml-2">
-										<li>Analyze the conversation context and Claude's response</li>
+										<li>
+											Analyze the conversation context and Claude's response
+										</li>
 										<li>
 											Check compliance with the principles in the evaluation
 											prompt
