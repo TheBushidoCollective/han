@@ -14,20 +14,16 @@ export function createReferenceCommand(): Command {
 			"Mark file as required reading with given reason",
 		)
 		.action((file: string, options: { mustReadFirst?: string }) => {
+			// Get the plugin root from environment variable set by hook dispatcher
+			const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || "";
+
 			if (options.mustReadFirst) {
-				// Output ${CLAUDE_PLUGIN_ROOT} without escaping so dispatch.ts can expand it
-				const output =
-					`<must-read-first reason="${options.mustReadFirst}">` +
-					// biome-ignore lint/suspicious/noTemplateCurlyInString: Need literal ${CLAUDE_PLUGIN_ROOT} for dispatch expansion
-					"${CLAUDE_PLUGIN_ROOT}" +
-					`/${file}</must-read-first>`;
+				const output = `<must-read-first reason="${options.mustReadFirst}">${pluginRoot}/${file}</must-read-first>`;
 				console.log(output);
 				// TODO: Track metrics for must-read-first references
 			} else {
 				// Future: support other reference types
-				// biome-ignore lint/style/useTemplate: Need literal ${CLAUDE_PLUGIN_ROOT} for dispatch expansion
-				// biome-ignore lint/suspicious/noTemplateCurlyInString: Need literal ${CLAUDE_PLUGIN_ROOT} for dispatch expansion
-				console.log("${CLAUDE_PLUGIN_ROOT}" + `/${file}`);
+				console.log(`${pluginRoot}/${file}`);
 			}
 		});
 
