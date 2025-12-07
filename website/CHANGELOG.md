@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2025-12-07
+
+### Added
+
+- add session metrics tracking to SessionStart hook ([abe7af4a](../../commit/abe7af4a))
+- add 'han prompt must-read' command for semantic hook injection ([8d749a3e](../../commit/8d749a3e))
+- colocate referenced files in command hooks ([47ae60a8](../../commit/47ae60a8))
+- extract and display prompt hook titles from headings ([6ef536d8](../../commit/6ef536d8))
+- enhance prompt hook display with accordion format ([5a1e09d6](../../commit/5a1e09d6))
+- display prompt content inline for prompt-based hooks ([deab6b05](../../commit/deab6b05))
+- update blog posts with correct dates and new intro post ([04cb8fc2](../../commit/04cb8fc2))
+- add blog section with real-world Han examples ([0c2766b1](../../commit/0c2766b1))
+
+### Fixed
+
+- remove duplicate file display for command hooks with inline references ([272e9ca0](../../commit/272e9ca0))
+- handle prompt-based hooks in website parser ([823588a8](../../commit/823588a8))
+- fix markdownlint errors in blog posts ([a695998b](../../commit/a695998b))
+- remove redundant marketplace.json copy step ([9efa3dd8](../../commit/9efa3dd8))
+
 ## [1.19.1] - 2025-12-07
 
 ### Added
