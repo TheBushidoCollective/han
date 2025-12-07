@@ -4,7 +4,7 @@ description: Deeply research all systems and create or update blueprints/ docume
 
 ## Name
 
-jutsu-blueprints:blueprints - Generate comprehensive blueprint documentation for the entire codebase
+hashi-blueprints:blueprints - Generate comprehensive blueprint documentation for the entire codebase
 
 ## Synopsis
 
@@ -131,7 +131,7 @@ This directory contains implementation documentation for {project name}.
 
 ## Documentation Standards
 
-See [jutsu-blueprints](https://github.com/thebushidocollective/han) for documentation guidelines.
+See [hashi-blueprints](https://github.com/thebushidocollective/han) for documentation guidelines.
 ```
 
 ## De-duplication Strategy

@@ -1,3 +1,8 @@
+---
+name: website
+summary: Static marketplace site with search and documentation
+---
+
 # Website System
 
 Static marketplace site with search, plugin discovery, and documentation rendering.

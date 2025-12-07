@@ -1,8 +1,9 @@
 {
   "enabledPlugins": {
+    "core@han": true,
+    "bushido@han": true,
     "jutsu-act@han": true,
     "jutsu-biome@han": true,
-    "jutsu-blueprints@han": true,
     "jutsu-bun@han": true,
     "jutsu-ink@han": true,
     "jutsu-markdown@han": true,
@@ -10,15 +11,15 @@
     "jutsu-playwright@han": true,
     "jutsu-react@han": true,
     "jutsu-typescript@han": true,
-    "bushido@han": true,
+    "hashi-blueprints@han": true,
+    "hashi-github@han": true,
+    "hashi-han@han": true,
+    "hashi-playwright-mcp@han": true,
     "do-claude-plugin-development@han": true,
     "do-frontend-development@han": true,
     "do-technical-documentation@han": true,
     "do-prompt-engineering@han": true,
-    "do-accessibility-engineering@han": true,
-    "hashi-context7@han": true,
-    "hashi-github@han": true,
-    "hashi-playwright-mcp@han": true
+    "do-accessibility-engineering@han": true
   },
   "hooks": {
     "UserPromptSubmit": [

@@ -99,9 +99,9 @@
       ]
     },
     {
-      "name": "jutsu-blueprints",
-      "description": "Technical blueprint documentation skills and enforcement. Keeps blueprints/ directory in sync with implementation through hooks and commands.",
-      "source": "./jutsu/jutsu-blueprints",
+      "name": "hashi-blueprints",
+      "description": "MCP server for managing technical blueprint documentation. Provides tools to search, read, and write blueprints programmatically, plus skills and hooks for quality enforcement.",
+      "source": "./hashi/hashi-blueprints",
       "category": "Technique",
       "keywords": [
         "blueprints",

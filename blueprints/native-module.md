@@ -1,3 +1,8 @@
+---
+name: native-module
+summary: High-performance Rust bindings for hook operations
+---
+
 # Native Module System
 
 High-performance Rust bindings for hook operations via NAPI-rs.

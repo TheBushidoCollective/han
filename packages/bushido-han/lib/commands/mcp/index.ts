@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { startMetricsMcpServer } from "./metrics.js";
+import { startBlueprintsMcpServer } from "./blueprints.js";
 import { startMcpServer } from "./server.js";
 
 export function registerMcpCommands(program: Command): void {
@@ -7,24 +7,24 @@ export function registerMcpCommands(program: Command): void {
 		.command("mcp")
 		.description(
 			"Start the Han MCP server.\n" +
-				"Exposes tools for running hook commands from installed plugins.\n\n" +
-				"This command is typically invoked by Claude Code when the hashi-han plugin is installed.\n" +
+				"Exposes tools for running hook commands from installed plugins and metrics tracking.\n\n" +
+				"This command is typically invoked by Claude Code when the core plugin is installed.\n" +
 				"It uses stdio for JSON-RPC communication.",
 		)
 		.action(async () => {
 			await startMcpServer();
 		});
 
-	// Add metrics subcommand
+	// Add blueprints subcommand
 	mcpCommand
-		.command("metrics")
+		.command("blueprints")
 		.description(
-			"Start the Han Metrics MCP server.\n" +
-				"Enables agent task tracking with self-reporting and objective validation.\n\n" +
-				"This command is typically invoked by Claude Code when the hashi-han-metrics plugin is installed.\n" +
+			"Start the Han Blueprints MCP server.\n" +
+				"Provides tools to search, read, and write technical blueprint documentation.\n\n" +
+				"This command is typically invoked by Claude Code when the hashi-blueprints plugin is installed.\n" +
 				"It uses stdio for JSON-RPC communication.",
 		)
 		.action(async () => {
-			await startMetricsMcpServer();
+			await startBlueprintsMcpServer();
 		});
 }

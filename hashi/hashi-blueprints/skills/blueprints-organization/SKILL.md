@@ -1,7 +1,7 @@
 ---
 name: blueprints-organization
-description: Use when organizing blueprints/ directory structure, naming files, avoiding duplicate documentation, and maintaining the blueprints index.
-allowed-tools: [Read, Write, Edit, Grep, Glob]
+description: Use when managing blueprints directory structure and avoiding duplication. Always search_blueprints before creating to prevent duplicate documentation. Handles naming conventions and cross-references.
+allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
 ---
 
 # Organizing Technical Blueprints
@@ -110,11 +110,15 @@ Duplicate documentation:
 
 ### Prevention Strategies
 
-1. **Search before creating**
+1. **Search before creating** using MCP tools
 
-   ```bash
-   # Check if topic is already documented
-   grep -r "topic name" blueprints/
+   ```typescript
+   // Search for existing blueprints
+   const results = await search_blueprints({ keyword: "auth" });
+   // Returns: [{ name: "authentication", summary: "..." }]
+
+   // Read existing blueprint to check coverage
+   const blueprint = await read_blueprint({ name: "authentication" });
    ```
 
 2. **One source of truth**

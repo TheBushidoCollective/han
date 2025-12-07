@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '# Blueprint System Available\n\nThis project uses technical blueprints for system documentation.\n\n**MCP Tools:**\n- search_blueprints - Find existing blueprints (use BEFORE creating)\n- read_blueprint - Read current documentation (use BEFORE modifying)\n- write_blueprint - Update documentation (use AFTER implementation)\n\n**When to use:** New features, API changes, architectural modifications, behavior changes.\n\nSee UserPromptSubmit hook for detailed requirements.'",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [

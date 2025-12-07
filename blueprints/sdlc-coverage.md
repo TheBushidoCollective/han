@@ -1,3 +1,8 @@
+---
+name: sdlc-coverage
+summary: AI-native engineering workflow alignment with OpenAI's framework
+---
+
 # SDLC Coverage
 
 AI-native engineering workflows aligned with OpenAI's Codex SDLC framework.
@@ -17,7 +22,7 @@ This blueprint documents how Han's plugin ecosystem maps to the [OpenAI Codex SD
 | **3. Build** | Draft features with models, APIs, tests, docs | Review domain logic and patterns | jutsu-*, do-*, bushido |
 | **4. Test** | Generate test suites, identify edge cases | Ensure coverage strategy | jutsu-tdd, hashi-playwright-mcp |
 | **5. Review** | Execute initial code review, identify patterns | Architectural alignment | bushido, do-* agents |
-| **6. Document** | Generate docs, update system diagrams | Shape standards and structure | jutsu-blueprints |
+| **6. Document** | Generate docs, update system diagrams | Shape standards and structure | hashi-blueprints |
 | **7. Deploy & Maintain** | Parse logs, correlate errors, propose fixes | Validate diagnostics, approve changes | **hashi-sentry** |
 
 ## Phase-by-Phase Breakdown
@@ -231,7 +236,7 @@ jutsu-pytest: Validate Python tests
 
 **Han Plugins:**
 
-- `jutsu-blueprints` - Technical blueprint system
+- `hashi-blueprints` - Technical blueprint system
   - Maintains `blueprints/` directory
   - Updates docs alongside code changes
   - Ensures accuracy through hooks
@@ -247,7 +252,7 @@ jutsu-pytest: Validate Python tests
 # Agent generates comprehensive documentation
 
 # Hook enforcement
-jutsu-blueprints: Ensure docs updated with code
+hashi-blueprints: Ensure docs updated with code
 ```
 
 **Engineer Ownership:**
@@ -324,7 +329,7 @@ Across all phases, Han follows a consistent responsibility model:
 | Build | ✅ Full | jutsu-*, do-*, bushido | None |
 | Test | ✅ Full | jutsu-tdd, hashi-playwright-mcp | None |
 | Review | ✅ Full | bushido, do-* | None |
-| Document | ✅ Full | jutsu-blueprints | None |
+| Document | ✅ Full | hashi-blueprints | None |
 | Deploy & Maintain | ✅ Full | **hashi-sentry** | None (newly added) |
 
 **Status**: 7/7 phases covered (100%)

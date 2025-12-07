@@ -75,4 +75,4 @@ Han is a curated marketplace of Claude Code plugins built on Bushido principles.
 
 ## Documentation Standards
 
-See [jutsu-blueprints](../jutsu/jutsu-blueprints/) for documentation guidelines and best practices for maintaining technical blueprints.
+See [hashi-blueprints](../hashi/hashi-blueprints/) for documentation guidelines and best practices for maintaining technical blueprints.

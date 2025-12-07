@@ -1,3 +1,8 @@
+---
+name: mcp-server
+summary: Model Context Protocol server exposing plugin tools
+---
+
 # MCP Server
 
 Model Context Protocol server exposing plugin hooks as tools.
