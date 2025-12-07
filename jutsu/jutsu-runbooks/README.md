@@ -48,12 +48,14 @@ This plugin is ideal for:
 ## Runbook vs SOP
 
 **Runbooks** (this plugin) are for **human operators**:
+
 - Step-by-step procedures for troubleshooting
 - Incident response protocols
 - On-call guides with decision trees
 - Maintenance checklists
 
 **SOPs** (jutsu-sop) are for **AI agents**:
+
 - Workflow definitions for agent execution
 - Automated task sequences
 - Agent behavior specifications

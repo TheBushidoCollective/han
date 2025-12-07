@@ -19,6 +19,7 @@ Creating effective incident response procedures for handling production incident
 ### Incident Severity Levels
 
 **SEV-1 (Critical)**
+
 - Complete service outage
 - Data loss or security breach
 - Major customer impact (>50% of users)
@@ -26,6 +27,7 @@ Creating effective incident response procedures for handling production incident
 - **Escalation:** Page on-call + manager
 
 **SEV-2 (High)**
+
 - Partial service degradation
 - Affecting significant users (10-50%)
 - Performance issues (>50% slower)
@@ -33,6 +35,7 @@ Creating effective incident response procedures for handling production incident
 - **Escalation:** Page on-call
 
 **SEV-3 (Medium)**
+
 - Minor degradation
 - Affecting few users (<10%)
 - Non-critical features broken
@@ -40,6 +43,7 @@ Creating effective incident response procedures for handling production incident
 - **Escalation:** On-call handles during business hours
 
 **SEV-4 (Low)**
+
 - Cosmetic issues
 - Internal tools affected
 - No customer impact
@@ -73,6 +77,7 @@ kubectl get pods -n production
 ```
 
 **Determine severity:**
+
 - All requests failing → SEV-1
 - Partial failures → SEV-2
 - Performance degraded → SEV-3
@@ -80,21 +85,25 @@ kubectl get pods -n production
 ### 2. Notify Stakeholders
 
 **SEV-1:**
+
 - Create Slack incident channel: `/incident create SEV-1 API Outage`
 - Page engineering manager
 - Notify customer success team
 
 **SEV-2:**
+
 - Post in #incidents channel
 - Tag on-call team
 
 **SEV-3:**
+
 - Post in #engineering channel
 - No pages needed
 
 ### 3. Start Incident Timeline
 
 Create incident doc (copy template):
+
 ```
 Incident: API Outage
 Started: 2025-01-15 14:30 UTC
@@ -114,6 +123,7 @@ Timeline:
 ### Quick Mitigation Options
 
 **Option A: Rollback Recent Deploy**
+
 ```bash
 # Check recent deploys
 kubectl rollout history deployment/api-server
@@ -125,6 +135,7 @@ kubectl rollout undo deployment/api-server
 **When to use:** Deploy coincides with incident start.
 
 **Option B: Scale Up**
+
 ```bash
 # Increase replicas
 kubectl scale deployment/api-server --replicas=20
@@ -133,6 +144,7 @@ kubectl scale deployment/api-server --replicas=20
 **When to use:** High traffic, resource exhaustion.
 
 **Option C: Restart Services**
+
 ```bash
 # Restart pods
 kubectl rollout restart deployment/api-server
@@ -141,6 +153,7 @@ kubectl rollout restart deployment/api-server
 **When to use:** Memory leak, connection pool issues.
 
 **Option D: Enable Circuit Breaker**
+
 ```bash
 # Disable failing external service calls
 kubectl set env deployment/api-server FEATURE_EXTERNAL_API=false
@@ -254,6 +267,7 @@ Deploy introduced N+1 query pattern in user endpoint.
 ### Declare Incident Resolved
 
 **Criteria (ALL must be met):**
+
 - [ ] Error rate < 1% for 30 minutes
 - [ ] Response time p95 < 200ms
 - [ ] No customer complaints in 15 minutes
@@ -385,6 +399,7 @@ connections).
 - [Datadog Metrics](link)
 - [Database Logs](link)
 - [Deploy PR #1234](link)
+
 ```
 
 ## On-Call Playbook
@@ -422,6 +437,7 @@ connections).
 ### Escalation Decision Tree
 
 ```
+
                 Get paged
                     |
           Can I handle this alone?
@@ -441,6 +457,7 @@ connections).
                  \    Close
                   \    |
                  Escalate
+
 ```
 
 ### Handoff Procedure
@@ -453,23 +470,28 @@ connections).
 
 **Handoff template:**
 ```
+
 Hey @next-oncall! Handing off on-call. Here's the status:
 
 **Active Issues:** None
 
 **Watch Items:**
+
 - Database CPU elevated but stable (85%)
 - Deploy planned for tomorrow 10 AM
 
 **Recent Incidents:**
+
 - SEV-2 yesterday: Database slow queries (resolved)
   Post-mortem: [link]
 
 **System Status:**
+
 - All services green
 - No upcoming maintenance
 
 Let me know if you have questions!
+
 ```
 
 ## After Your Shift
