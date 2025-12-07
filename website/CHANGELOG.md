@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2025-12-07
+
+### Added
+
+- update blog posts with correct dates and new intro post ([04cb8fc2](../../commit/04cb8fc2))
+- add blog section with real-world Han examples ([0c2766b1](../../commit/0c2766b1))
+
+### Fixed
+
+- fix markdownlint errors in blog posts ([a695998b](../../commit/a695998b))
+- remove redundant marketplace.json copy step ([9efa3dd8](../../commit/9efa3dd8))
+
+### Changed
+
+- consolidate MCP servers and remove hashi-context7 ([3d7fa9de](../../commit/3d7fa9de))
+- rename han-core to core and update website ([190f876b](../../commit/190f876b))
+
 ## [1.13.1] - 2025-12-07
 
 ### Added
