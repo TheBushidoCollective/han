@@ -57,6 +57,12 @@ const hookDescriptions: Record<string, string> = {
 	SessionEnd: "Runs when a Claude Code session ends.",
 };
 
+// Check if a command has inline file references (matches patterns that trigger inline display)
+function hasInlineFileReferences(command: string): boolean {
+	// Matches patterns like: hooks/file.md or scripts/file.sh
+	return /(?:hooks|scripts)\/[a-zA-Z0-9_-]+\.(md|sh|js)/.test(command);
+}
+
 export async function generateMetadata({
 	params,
 }: {
@@ -635,27 +641,30 @@ export default async function PluginPage({
 													/>
 												))}
 											</div>
-											{hookSection.files.length > 0 && (
-												<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-													<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-														Referenced Files:
-													</h4>
-													<div className="grid gap-2">
-														{hookSection.files.map((file) => (
-															<Link
-																key={file.name}
-																href={`/plugins/${category}/${slug}/hooks/${file.name}`}
-																className="flex items-center space-x-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-950 transition border border-gray-200 dark:border-gray-700"
-															>
-																<span className="text-lg">📄</span>
-																<span className="text-sm font-mono text-gray-700 dark:text-gray-300">
-																	{file.path}
-																</span>
-															</Link>
-														))}
+											{hookSection.files.length > 0 &&
+												!hookSection.commands.some((entry) =>
+													hasInlineFileReferences(entry.command),
+												) && (
+													<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+														<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+															Referenced Files:
+														</h4>
+														<div className="grid gap-2">
+															{hookSection.files.map((file) => (
+																<Link
+																	key={file.name}
+																	href={`/plugins/${category}/${slug}/hooks/${file.name}`}
+																	className="flex items-center space-x-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-950 transition border border-gray-200 dark:border-gray-700"
+																>
+																	<span className="text-lg">📄</span>
+																	<span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+																		{file.path}
+																	</span>
+																</Link>
+															))}
+														</div>
 													</div>
-												</div>
-											)}
+												)}
 										</div>
 									))}
 								</div>

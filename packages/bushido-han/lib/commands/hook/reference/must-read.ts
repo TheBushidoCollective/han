@@ -5,7 +5,10 @@ export function createReferenceCommand(): Command {
 
 	command
 		.description("Output a file reference tag for Claude Code hook injection")
-		.argument("<file>", "Path to the file to reference (relative to plugin root)")
+		.argument(
+			"<file>",
+			"Path to the file to reference (relative to plugin root)",
+		)
 		.option(
 			"--must-read-first <reason>",
 			"Mark file as required reading with given reason",
