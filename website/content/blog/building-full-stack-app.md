@@ -7,13 +7,12 @@ tags: ["nextjs", "react", "typescript", "full-stack", "tutorial"]
 category: "Tutorial"
 ---
 
-# Building a Full-Stack App with Han: A Real-World Journey
-
 Let's build a real application—a task management SaaS—and see how Han plugins transform the development experience from "hoping it works" to "knowing it works."
 
 ## The Stack
 
 We're building with:
+
 - **Next.js 14** (App Router)
 - **TypeScript** (strict mode)
 - **Tailwind CSS** (styling)
@@ -53,6 +52,7 @@ Let's start with user authentication. Instead of just asking "add authentication
 The `develop` command runs a comprehensive 7-phase workflow:
 
 ### Phase 1: Planning
+
 Claude uses its Next.js and TypeScript skills to create a detailed plan:
 
 ```markdown
@@ -78,6 +78,7 @@ Claude uses its Next.js and TypeScript skills to create a detailed plan:
 ```
 
 ### Phase 2-4: Implementation
+
 Claude implements each part, guided by the Next.js and TypeScript skills:
 
 - Type-safe API routes
@@ -159,6 +160,7 @@ export function TaskBoard({ tasks }: TaskBoardProps) {
 ```
 
 The Tailwind plugin ensures:
+
 - Consistent design tokens
 - Responsive breakpoints
 - Dark mode support
@@ -217,6 +219,7 @@ After 2 hours of development (yes, really), we have:
 ## The Han Difference
 
 Without Han, you'd be:
+
 - Manually running type checks
 - Hoping you remembered all the edge cases
 - Writing tests after the fact (maybe)
@@ -224,6 +227,7 @@ Without Han, you'd be:
 - Debugging accessibility issues in production
 
 With Han:
+
 - Type errors caught immediately
 - Edge cases handled by specialized agents
 - Tests written alongside features
@@ -251,6 +255,7 @@ Then just ask Claude to build features. Han handles the quality.
 ## Next Steps
 
 In our next post, we'll add:
+
 - Real-time collaboration (WebSockets)
 - File uploads (with validation)
 - Email notifications

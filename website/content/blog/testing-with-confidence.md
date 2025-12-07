@@ -7,8 +7,6 @@ tags: ["testing", "quality", "hooks", "validation"]
 category: "Best Practices"
 ---
 
-# Testing with Confidence: How Han's Validation Hooks Ensure Quality
-
 One of the most powerful features of Han plugins is their validation hook system. Unlike traditional linters or test runners that you have to remember to run, Han's hooks execute automatically at key points in your development workflow, ensuring quality without friction.
 
 ## The Problem with Manual Testing
@@ -82,6 +80,7 @@ The real power comes from combining multiple plugins. With Han's plugin system, 
 ```
 
 Now every change gets:
+
 - Type checking (TypeScript)
 - Linting and formatting (Biome)
 - Test execution (Bun)

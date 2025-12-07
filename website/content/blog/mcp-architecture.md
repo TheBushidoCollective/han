@@ -7,8 +7,6 @@ tags: ["mcp", "architecture", "integration", "github"]
 category: "Technical Deep Dive"
 ---
 
-# Understanding Han's MCP Architecture: Bridges to the World
-
 Model Context Protocol (MCP) is the secret sauce that makes Han plugins so powerful. Let's explore how Han uses MCP to turn Claude Code into a universal development environment.
 
 ## What is MCP?
@@ -55,13 +53,14 @@ This adds an MCP server to your Claude Code configuration:
 
 Now Claude can natively:
 
-1. **Search code across repos**
+**Search code across repos**
 
-```
+```text
 Find all usages of the deprecated API endpoint
 ```
 
 Claude uses `search_code` tool:
+
 ```typescript
 const results = await mcp.tools.search_code({
   query: 'useDeprecatedAPI language:typescript',
@@ -69,13 +68,14 @@ const results = await mcp.tools.search_code({
 })
 ```
 
-2. **Create and update issues**
+**Create and update issues**
 
-```
+```text
 Create an issue for the memory leak in the event handler
 ```
 
 Claude uses `create_issue` tool with all the context:
+
 ```typescript
 await mcp.tools.create_issue({
   owner: 'myorg',
@@ -95,13 +95,14 @@ Add cleanup in useEffect return...`,
 })
 ```
 
-3. **Review pull requests**
+**Review pull requests**
 
-```
+```text
 Review PR #123 and provide feedback
 ```
 
 Claude fetches the PR, analyzes the diff, checks for issues:
+
 ```typescript
 const pr = await mcp.tools.get_pull_request({
   owner: 'myorg',
@@ -287,6 +288,7 @@ Current MCP bridges in Han marketplace:
 ## What's Next?
 
 We're working on:
+
 - **hashi-aws**: AWS resource management
 - **hashi-vercel**: Deployment and preview URLs
 - **hashi-stripe**: Payment and billing integration
@@ -308,6 +310,7 @@ claude
 ```
 
 Then try:
+
 - "Create an issue for the bug we just found"
 - "List all open PRs that need review"
 - "Search for usages of the deprecated function"
