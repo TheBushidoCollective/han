@@ -1,8 +1,8 @@
 ---
 title: "Testing with Confidence: How Han's Validation Hooks Ensure Quality"
 description: "Learn how Han's validation hooks provide automatic quality enforcement, ensuring your code meets standards before it ships."
-date: "2025-01-15"
-author: "The Bushido Collective"
+date: "2024-12-03"
+author: "Jason Waldrip"
 tags: ["testing", "quality", "hooks", "validation"]
 category: "Best Practices"
 ---

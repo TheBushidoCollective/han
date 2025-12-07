@@ -1,8 +1,8 @@
 ---
 title: "Understanding Han's MCP Architecture: Bridges to the World"
 description: "Deep dive into how Han uses the Model Context Protocol to connect Claude Code to external services like GitHub, Jira, and custom tools."
-date: "2025-01-05"
-author: "The Bushido Collective"
+date: "2024-12-01"
+author: "Jason Waldrip"
 tags: ["mcp", "architecture", "integration", "github"]
 category: "Technical Deep Dive"
 ---
