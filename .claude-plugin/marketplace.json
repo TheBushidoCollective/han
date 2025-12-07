@@ -911,7 +911,16 @@
       "description": "Essential infrastructure for the Han plugin marketplace including skills, commands, MCP servers, and quality enforcement hooks.",
       "source": "./core",
       "category": "Core",
-      "keywords": ["infrastructure", "marketplace", "mcp", "hooks", "quality", "principles", "delegation", "metrics"]
+      "keywords": [
+        "infrastructure",
+        "marketplace",
+        "mcp",
+        "hooks",
+        "quality",
+        "principles",
+        "delegation",
+        "metrics"
+      ]
     },
     {
       "name": "bushido",
@@ -934,13 +943,6 @@
         "validation",
         "productivity"
       ]
-    },
-    {
-      "name": "hashi-context7",
-      "description": "MCP server for library documentation and framework examples.",
-      "source": "./hashi/hashi-context7",
-      "category": "Bridge",
-      "keywords": ["mcp", "documentation", "context"]
     },
     {
       "name": "hashi-playwright-mcp",

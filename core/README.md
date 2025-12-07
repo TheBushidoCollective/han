@@ -250,7 +250,7 @@ When using skills:
 
 ### Customizing MCP Servers
 
-The `.mcp.json` file defines all three MCP servers. You can customize their behavior by modifying environment variables:
+The `.mcp.json` file defines both MCP servers. You can customize their behavior by modifying environment variables:
 
 ```json
 {
@@ -258,9 +258,11 @@ The `.mcp.json` file defines all three MCP servers. You can customize their beha
     "han": {
       "command": "npx",
       "args": ["-y", "@thebushidocollective/han", "mcp"],
-      "env": {
-        "CUSTOM_VAR": "value"
-      }
+      "env": {}
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }

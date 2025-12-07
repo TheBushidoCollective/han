@@ -134,7 +134,10 @@ export default async function HookFilePage({
 		if (fs.existsSync(hooksDir)) {
 			const files = fs.readdirSync(hooksDir);
 			const matchingFile = files.find(
-				(file) => path.parse(file).name === hookfile && !file.startsWith(".") && file !== "hooks.json"
+				(file) =>
+					path.parse(file).name === hookfile &&
+					!file.startsWith(".") &&
+					file !== "hooks.json",
 			);
 
 			if (matchingFile) {
