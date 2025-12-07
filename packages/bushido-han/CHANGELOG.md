@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.0] - 2025-12-07
+
+### Added
+
+- add agent detection to han explain ([245601e8](../../commit/245601e8))
+- add 'han prompt must-read' command for semantic hook injection ([8d749a3e](../../commit/8d749a3e))
+
+### Fixed
+
+- correct plugin path detection in han explain ([c5b90b40](../../commit/c5b90b40))
+- remove duplicate file display for command hooks with inline references ([272e9ca0](../../commit/272e9ca0))
+- convert all hook timeouts from milliseconds to seconds ([c3d303d2](../../commit/c3d303d2))
+
+### Changed
+
+- move file reference command to han hook reference ([ffd08928](../../commit/ffd08928))
+- consolidate jutsu-blueprints into hashi-blueprints ([f4636959](../../commit/f4636959))
+- rename han-core to core and update website ([190f876b](../../commit/190f876b))
+
 ## [1.52.3] - 2025-12-07
 
 ### Added
