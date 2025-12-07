@@ -6,7 +6,7 @@ import Header from "./components/Header";
 export const metadata: Metadata = {
 	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",
 	description:
-		"A curated marketplace of Claude Code plugins built on the foundation of the seven Bushido virtues. Master your craft through disciplined practice, quality craftsmanship, and continuous improvement.",
+		"A curated marketplace of Claude Code plugins with quality enforcement, validation hooks, and specialized agents. Master your craft through disciplined practice, quality craftsmanship, and continuous improvement.",
 };
 
 export default function Home() {
@@ -20,9 +20,10 @@ export default function Home() {
 					Sophisticated Claude Code Plugins with Superior Accuracy
 				</h1>
 				<p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-					A curated marketplace of Claude Code plugins built on the foundation
-					of the seven Bushido virtues. Master your craft through disciplined
-					practice, quality craftsmanship, and continuous improvement.
+					A curated marketplace of Claude Code plugins with quality enforcement,
+					validation hooks, and specialized agents. Master your craft through
+					disciplined practice, quality craftsmanship, and continuous
+					improvement.
 				</p>
 				<div className="flex flex-col sm:flex-row gap-4 justify-center">
 					<a
