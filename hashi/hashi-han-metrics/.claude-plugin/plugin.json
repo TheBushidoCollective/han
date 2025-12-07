@@ -1,9 +1,9 @@
 {
   "name": "hashi-han-metrics",
   "version": "1.2.1",
-  "description": "DEPRECATED: Merged into han-core. MCP server for agent task tracking and performance metrics.",
+  "description": "DEPRECATED: Merged into core. MCP server for agent task tracking and performance metrics.",
   "deprecated": true,
-  "deprecationMessage": "This plugin has been merged into han-core. Please install han-core instead: npx @thebushidocollective/han plugin install han-core",
+  "deprecationMessage": "This plugin has been merged into core. Please install core instead: npx @thebushidocollective/han plugin install core",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"

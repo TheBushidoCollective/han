@@ -1,17 +1,17 @@
 # hashi-han (DEPRECATED)
 
-## ⚠️ DEPRECATED - Use han-core Instead
+## ⚠️ DEPRECATED - Use core Instead
 
-**This plugin has been deprecated and merged into `han-core`.**
+**This plugin has been deprecated and merged into `core`.**
 
-All functionality from this plugin is now available in `han-core`. Please migrate:
+All functionality from this plugin is now available in `core`. Please migrate:
 
 ```bash
 # Uninstall this plugin
 npx @thebushidocollective/han plugin uninstall hashi-han
 
-# Install han-core instead
-npx @thebushidocollective/han plugin install han-core
+# Install core instead
+npx @thebushidocollective/han plugin install core
 ```
 
 MCP server for running Han plugin hook commands via natural language.
