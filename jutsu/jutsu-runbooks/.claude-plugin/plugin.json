@@ -1,0 +1,22 @@
+{
+  "name": "jutsu-runbooks",
+  "version": "1.0.0",
+  "description": "Structured operational documentation and runbook patterns for human operators. Helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "MIT",
+  "keywords": [
+    "runbooks",
+    "operations",
+    "documentation",
+    "troubleshooting",
+    "incident-response",
+    "maintenance",
+    "on-call",
+    "operational-procedures"
+  ]
+}
