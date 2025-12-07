@@ -6,17 +6,17 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-elixir test --fail-fast --cached",
-            "timeout": 900000
+            "timeout": 900
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-elixir format --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-elixir compile --fail-fast --cached",
-            "timeout": 300000
+            "timeout": 300
           }
         ]
       }

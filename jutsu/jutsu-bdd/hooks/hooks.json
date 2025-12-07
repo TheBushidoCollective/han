@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "echo '<must-read-first reason=\"BDD workflow enforcement\">${CLAUDE_PLUGIN_ROOT}/hooks/enforce-bdd.md</must-read-first>'",
-            "timeout": 30000
+            "timeout": 30
           }
         ]
       }

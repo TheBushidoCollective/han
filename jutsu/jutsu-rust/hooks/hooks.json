@@ -6,17 +6,17 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-rust format --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-rust lint --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           },
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-rust test --fail-fast --cached",
-            "timeout": 900000
+            "timeout": 900
           }
         ]
       }

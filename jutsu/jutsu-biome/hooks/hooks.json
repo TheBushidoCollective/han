@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "npx -y @thebushidocollective/han hook run jutsu-biome lint --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           }
         ]
       }
