@@ -258,6 +258,12 @@ export default function Header() {
 							Plugins
 						</Link>
 						<Link
+							href="/blog"
+							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+						>
+							Blog
+						</Link>
+						<Link
 							href="/docs"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>
