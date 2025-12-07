@@ -690,6 +690,22 @@
       "keywords": ["rubocop", "linting", "ruby", "skill"]
     },
     {
+      "name": "jutsu-runbooks",
+      "description": "Structured operational documentation and runbook patterns for human operators. Helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance.",
+      "source": "./jutsu/jutsu-runbooks",
+      "category": "Technique",
+      "keywords": [
+        "runbooks",
+        "operations",
+        "documentation",
+        "troubleshooting",
+        "incident-response",
+        "maintenance",
+        "on-call",
+        "operational-procedures"
+      ]
+    },
+    {
       "name": "jutsu-rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
       "source": "./jutsu/jutsu-rust",
