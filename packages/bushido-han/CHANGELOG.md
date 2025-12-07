@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.2] - 2025-12-07
+
+### Added
+
+- add new CLI commands and jutsu-claude-agent-sdk plugin ([977acadc](../../commit/977acadc))
+- add user frustration detection and tracking ([b02e0866](../../commit/b02e0866))
+- add user frustration detection and tracking ([7e09f6d5](../../commit/7e09f6d5))
+
+### Fixed
+
+- test source code in CI instead of building binary ([00f09311](../../commit/00f09311))
+- update tests to default to binary-only distribution ([f9a99152](../../commit/f9a99152))
+- resolve linting and typecheck issues ([72af6050](../../commit/72af6050))
+- replace better-sqlite3 with bun:sqlite for binary compatibility ([9d1b2125](../../commit/9d1b2125))
+- show helpful error for binary builds instead of crashing ([33bcfc77](../../commit/33bcfc77))
+- add plain text fallback for metrics in compiled binaries ([c08faacd](../../commit/c08faacd))
+
+### Changed
+
+- consolidate jutsu-blueprints into hashi-blueprints ([f4636959](../../commit/f4636959))
+- rename han-core to core and update website ([190f876b](../../commit/190f876b))
+- remove TypeScript build step from binary-only distribution ([30fccf9b](../../commit/30fccf9b))
+
+### Other
+
+- add binary distribution architecture comment to main.ts ([89655dc5](../../commit/89655dc5))
+- migrate test suite to bun test (partial - 42/56 tests) ([07ce2c16](../../commit/07ce2c16))
+- switch test suite from Node.js to Bun for bun:sqlite compatibility ([9f6ee999](../../commit/9f6ee999))
+- apply biome formatting to plugin.json and import ordering ([963a99f6](../../commit/963a99f6))
+- document npx wrapper + platform binary distribution ([dbfaa7ba](../../commit/dbfaa7ba))
+- document npx wrapper + platform binary distribution ([6e478daa](../../commit/6e478daa))
+- format display-plain.ts with Biome ([d4f60d2a](../../commit/d4f60d2a))
+
 ## [1.51.1] - 2025-12-07
 
 ### Added
