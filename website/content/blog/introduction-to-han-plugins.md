@@ -21,20 +21,36 @@ A Han plugin is a packaged bundle that can include any combination of:
 
 Most importantly, these components work together as a cohesive system, not just isolated features.
 
-## The Three Plugin Families
+## The Plugin Families
 
 Han plugins follow Japanese martial arts naming conventions, organizing by purpose:
 
-### Bushido (武士道) - The Foundation
+### Core - The Foundation
 
-The `bushido` plugin is the core philosophy—quality principles that guide all development:
+The `core` plugin (also known as `han-core`) is the essential infrastructure that powers the Han marketplace:
 
-- Code review standards based on universal software principles
-- SOLID, DRY, and composition-over-inheritance enforcement
-- Boy Scout Rule: leave code better than you found it
-- Professional honesty over excessive agreeableness
+- Quality enforcement through validation hooks
+- Metrics tracking and calibration
+- Context7 integration for up-to-date library documentation
+- Universal programming principles (SOLID, DRY, composition over inheritance)
+- All core skills, commands, and slash commands
+- MCP servers for hooks and metrics
 
-Think of Bushido as your AI pair programmer's ethical framework.
+Think of Core as the technical foundation that makes everything work.
+
+### Bushido (武士道) - Optional Philosophy
+
+The `bushido` plugin adds a philosophical layer based on the seven Samurai virtues. If you choose to install it, these principles guide how Claude approaches development work:
+
+- 義 Righteousness: Transparency in reasoning
+- 勇 Courage: Challenge and recommend improvements
+- 仁 Compassion: Assume positive intent
+- 礼 Respect: Honor existing work
+- 誠 Honesty: Truthfulness over comfort
+- 名誉 Honor: Quality ownership
+- 忠義 Loyalty: Long-term thinking
+
+This is purely cultural—you get all the technical capabilities from `core` regardless. Install `bushido` only if this philosophical approach resonates with you.
 
 ### Jutsu (術) - Technical Skills
 
@@ -75,16 +91,18 @@ Here's where Han becomes more than the sum of its parts. Let me show you a real 
 
 **What happens**:
 
-1. **Bushido** guides the overall approach with quality principles
+1. **Core** provides the infrastructure and quality enforcement
 2. **jutsu-nextjs** provides deep Next.js knowledge for implementation
 3. **jutsu-typescript** ensures type safety throughout
 4. **do-frontend-development** agent handles the UI components
-5. **Validation hooks** automatically run:
+5. **Validation hooks** automatically run (via core):
    - TypeScript compilation check
    - Next.js build verification
    - Test suite execution
-6. **Bushido code review** analyzes the result
+6. **Core code review** analyzes the result
 7. **hashi-github** can create a PR with the changes
+
+(If you've installed the optional `bushido` plugin, its seven virtues also guide the overall approach.)
 
 All of this happens automatically. You make one request, and the entire system ensures quality from planning through delivery.
 
@@ -110,11 +128,19 @@ With Han plugins:
 
 The beauty of Han's plugin system is that you can start simple and layer on complexity:
 
-**Day 1**: Install core quality
+**Day 1**: Install the core infrastructure
+
+```bash
+npx @thebushidocollective/han plugin install core
+```
+
+**Optional**: If the Bushido philosophy resonates with you, add it:
 
 ```bash
 npx @thebushidocollective/han plugin install bushido
 ```
+
+(Not required—`core` provides all the technical capabilities.)
 
 **Day 2**: Add your stack's jutsu plugins
 
@@ -142,7 +168,7 @@ Each addition enhances the system without adding complexity to your workflow.
 I built the Han marketplace website using Han plugins. Here's what that looked like:
 
 - Asked Claude to "create a plugin marketplace website"
-- **Bushido** ensured clean architecture
+- **Core** provided the infrastructure and quality enforcement
 - **jutsu-nextjs** provided App Router expertise
 - **jutsu-typescript** caught type errors immediately
 - **jutsu-biome** kept code formatted
@@ -166,13 +192,15 @@ That's what makes Han more than just skills or agents—it's a complete developm
 
 ## Try It
 
-Start with one plugin and experience the difference:
+Start with the core infrastructure:
 
 ```bash
-npx @thebushidocollective/han plugin install bushido
+npx @thebushidocollective/han plugin install core
 ```
 
 Then ask Claude to help with something. You'll notice the difference immediately—not just in what Claude can do, but in the confidence you have in the results.
+
+(If you'd like to add the Bushido philosophy, you can install it anytime with `npx @thebushidocollective/han plugin install bushido`)
 
 ---
 
