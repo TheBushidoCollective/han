@@ -17,6 +17,7 @@ interface HookFile {
 
 interface HookCommandWithDetailsProps {
 	command: string;
+	prompt?: string;
 	timeout?: number;
 	hanHooks?: Record<string, HanHookConfig>;
 	pluginName: string;
@@ -48,6 +49,7 @@ function findReferencedFiles(
 
 export default function HookCommandWithDetails({
 	command,
+	prompt,
 	timeout,
 	hanHooks,
 	pluginName,
@@ -56,14 +58,64 @@ export default function HookCommandWithDetails({
 	const [expanded, setExpanded] = useState(false);
 	const [configExpanded, setConfigExpanded] = useState(false);
 	const [scriptExpanded, setScriptExpanded] = useState(false);
+	const [promptExpanded, setPromptExpanded] = useState(false);
 
+	const isPromptHook = !!prompt;
 	const hookName = extractHanHookName(command, pluginName);
 	const hookConfig = hookName && hanHooks ? hanHooks[hookName] : null;
 	const referencedFiles = findReferencedFiles(hookConfig, files);
 
 	return (
 		<div className="relative">
-			{hookConfig ? (
+			{isPromptHook ? (
+				<div>
+					<button
+						type="button"
+						onClick={() => setPromptExpanded(!promptExpanded)}
+						className="w-full text-left"
+					>
+						<div className="bg-purple-900 dark:bg-purple-950 text-purple-100 p-4 rounded-t overflow-x-auto text-sm scrollbar-custom flex items-center justify-between border border-purple-700">
+							<div className="flex items-center gap-3">
+								<span className="text-lg">🧠</span>
+								<span className="font-semibold">Prompt-based Hook</span>
+							</div>
+							<div className="flex items-center gap-2 ml-4">
+								{timeout && (
+									<span className="px-2 py-1 text-xs bg-purple-700 text-purple-100 rounded">
+										⏱️ {timeout >= 60 ? `${timeout / 60}m` : `${timeout}s`}
+									</span>
+								)}
+								<span className="px-2 py-1 text-xs bg-purple-600 text-purple-100 rounded flex items-center gap-1">
+									<span>View Prompt</span>
+									<svg
+										aria-hidden="true"
+										className={`w-3 h-3 transition-transform ${promptExpanded ? "rotate-180" : ""}`}
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M19 9l-7 7-7-7"
+										/>
+									</svg>
+								</span>
+							</div>
+						</div>
+					</button>
+					{promptExpanded && (
+						<div className="bg-purple-900/30 dark:bg-purple-950/30 border-x border-b border-purple-700 rounded-b p-4">
+							<div className="prose prose-invert max-w-none">
+								<pre className="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom whitespace-pre-wrap">
+									{prompt}
+								</pre>
+							</div>
+						</div>
+					)}
+				</div>
+			) : hookConfig ? (
 				<button
 					type="button"
 					onClick={() => setExpanded(!expanded)}
@@ -74,10 +126,7 @@ export default function HookCommandWithDetails({
 						<div className="flex items-center gap-2 ml-4">
 							{timeout && (
 								<span className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
-									⏱️{" "}
-									{timeout >= 60000
-										? `${timeout / 60000}m`
-										: `${timeout / 1000}s`}
+									⏱️ {timeout >= 60 ? `${timeout / 60}m` : `${timeout}s`}
 								</span>
 							)}
 							<span className="px-2 py-1 text-xs bg-blue-600 text-blue-100 rounded flex items-center gap-1">
@@ -108,8 +157,7 @@ export default function HookCommandWithDetails({
 					</pre>
 					{timeout && (
 						<span className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
-							⏱️{" "}
-							{timeout >= 60000 ? `${timeout / 60000}m` : `${timeout / 1000}s`}
+							⏱️ {timeout >= 60 ? `${timeout / 60}m` : `${timeout}s`}
 						</span>
 					)}
 				</div>
