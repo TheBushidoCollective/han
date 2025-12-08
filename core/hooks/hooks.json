@@ -62,12 +62,7 @@
           {
             "type": "command",
             "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
-          }
-        ]
-      },
-      {
-        "description": "Detect user frustration signals for metrics tracking",
-        "hooks": [
+          },
           {
             "type": "command",
             "command": "han metrics detect-frustration"

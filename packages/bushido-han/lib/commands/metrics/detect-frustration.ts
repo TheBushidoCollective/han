@@ -132,11 +132,38 @@ export function detectFrustration(message: string): void {
 }
 
 /**
- * Detect frustration from USER_MESSAGE environment variable
+ * Hook event schema from stdin
  */
-export function detectFrustrationFromEnv(): void {
-	const message = process.env.USER_MESSAGE || "";
-	if (message) {
-		detectFrustration(message);
+interface HookEvent {
+	session_id: string;
+	transcript_path: string;
+	cwd: string;
+	permission_mode: string;
+	hook_event_name: string;
+	prompt: string;
+}
+
+/**
+ * Detect frustration from stdin hook event
+ */
+export async function detectFrustrationFromStdin(): Promise<void> {
+	// Read JSON from stdin
+	const chunks: Buffer[] = [];
+	for await (const chunk of process.stdin) {
+		chunks.push(chunk);
+	}
+
+	const input = Buffer.concat(chunks).toString("utf-8");
+	if (!input.trim()) {
+		return;
+	}
+
+	try {
+		const event: HookEvent = JSON.parse(input);
+		if (event.prompt) {
+			detectFrustration(event.prompt);
+		}
+	} catch (error) {
+		// Silently ignore parse errors - not all hooks will have valid JSON
 	}
 }

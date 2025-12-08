@@ -1,8 +1,10 @@
 {
   "hooks": {
     "shellcheck": {
-      "command": "shellcheck -x *.sh **/*.sh 2>/dev/null || true",
-      "ifChanged": ["*.sh", "**/*.sh"]
+      "command": "git ls-files | grep '.*.sh$' | xargs shellcheck",
+      "ifChanged": [
+        "**/*.sh"
+      ]
     }
   }
 }
