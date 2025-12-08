@@ -185,7 +185,7 @@ export function registerMetricsCommand(program: Command): void {
 				const { detectFrustrationFromEnv } = await import(
 					"./detect-frustration.js"
 				);
-				await detectFrustrationFromEnv();
+				detectFrustrationFromEnv();
 				process.exit(0);
 			} catch (error: unknown) {
 				console.error(
