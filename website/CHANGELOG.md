@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - 2025-12-08
+
+### Added
+
+- render prompt accordion content as markdown ([c65f405a](../../commit/c65f405a))
+- add redirect from han.guru/claude.git to GitHub repository ([23361aae](../../commit/23361aae))
+
+### Fixed
+
+- add -y flag to remaining npx typescript commands ([03543a73](../../commit/03543a73))
+- add -y flag to all npx commands to prevent interactive prompts ([c8385bf3](../../commit/c8385bf3))
+
 ## [1.21.2] - 2025-12-08
 
 ### Added
