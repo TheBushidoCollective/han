@@ -171,7 +171,7 @@ plugins:
       lint:
         enabled: false
       typecheck:
-        command: "npx tsc --noEmit --strict"
+        command: "npx -y --package typescript tsc --strict"
         idleTimeout: 10000
 ```
 

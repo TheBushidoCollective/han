@@ -239,7 +239,7 @@ function getCalibrationGuidance(
  */
 function getHookSpecificGuidance(hookName: string): string | null {
 	const guidance: Record<string, string> = {
-		"typescript-typecheck": `**TypeScript Tip:** Run \`npx tsc --noEmit\` during development, not just at completion. Common issues: missing imports, generic constraints, circular dependencies.`,
+		"typescript-typecheck": `**TypeScript Tip:** Run \`npx -y --package typescript tsc\` during development, not just at completion. Common issues: missing imports, generic constraints, circular dependencies.`,
 
 		"biome-lint": `**Biome Tip:** Run \`npx biome check --write .\` before marking complete. Biome is strict - fix all warnings, don't ignore them.`,
 

@@ -259,7 +259,7 @@ Provide guidance for common failures:
 **Cause**: Incorrect type annotations or missing type definitions
 
 **Resolution**:
-1. Run type checker: `npx tsc --noEmit`
+1. Run type checker: `npx -y --package typescript tsc`
 2. Review error messages for specific type issues
 3. Add necessary type annotations
 4. Install missing @types packages if needed

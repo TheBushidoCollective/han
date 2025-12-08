@@ -186,7 +186,7 @@ function getCalibrationGuidance(
 function getHookGuidance(hookName: string): string {
 	const guidance: Record<string, string> = {
 		"typescript-typecheck":
-			"**Tip:** Run `npx tsc --noEmit` during development, not just at completion.",
+			"**Tip:** Run `npx -y --package typescript tsc` during development, not just at completion.",
 		"biome-lint":
 			"**Tip:** Run `npx biome check --write .` before marking complete.",
 		"bun-test":

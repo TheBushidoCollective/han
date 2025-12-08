@@ -409,7 +409,7 @@ await test("provides hook-specific guidance for known hooks", () => {
 		"Should include TypeScript-specific guidance",
 	);
 	ok(
-		context.includes("npx tsc --noEmit"),
+		context.includes("npx -y --package typescript tsc"),
 		"Should include specific command guidance",
 	);
 

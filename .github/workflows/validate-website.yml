@@ -45,7 +45,7 @@ jobs:
         working-directory: ./website
 
       - name: TypeScript type check
-        run: npx tsc --noEmit
+        run: npx -y --package typescript tsc
         working-directory: ./website
 
       - name: Setup markdownlint

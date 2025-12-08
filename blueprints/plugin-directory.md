@@ -287,7 +287,7 @@ description: Brief description of the agent role
       "idleTimeout": 5000
     },
     "typecheck": {
-      "command": "npx tsc --noEmit",
+      "command": "npx -y --package typescript tsc",
       "dirsWith": ["tsconfig.json"],
       "ifChanged": ["**/*.{ts,tsx}"]
     }
