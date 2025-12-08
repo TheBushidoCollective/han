@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook reference hooks/enforce-planning.md --must-read-first \"planning workflow enforcement\""planning workflow enforcement\""
+            "command": "han hook reference hooks/enforce-planning.md --must-read-first \"planning workflow enforcement\""
           }
         ]
       }
