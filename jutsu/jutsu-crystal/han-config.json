@@ -1,12 +1,12 @@
 {
   "hooks": {
     "format": {
-      "command": "crystal tool format --check",
+      "command": "shards install && crystal tool format --check",
       "dirsWith": ["shard.yml"],
       "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", "shard.lock"]
     },
     "test": {
-      "command": "crystal spec",
+      "command": "shards install && crystal spec",
       "dirsWith": ["shard.yml"],
       "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", "shard.lock"]
     }
