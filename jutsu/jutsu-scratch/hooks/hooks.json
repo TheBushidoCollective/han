@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook reference hooks/ensure-scratch.md --must-read-first \"scratch workspace requirements\" || han hook reference hooks/ensure-scratch.md --must-read-first \"scratch workspace requirements\""
+            "command": "han hook reference hooks/ensure-scratch.md --must-read-first \"scratch workspace requirements\""scratch workspace requirements\""
           }
         ]
       }

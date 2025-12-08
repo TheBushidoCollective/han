@@ -5,17 +5,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-elixir test --fail-fast --cached || han hook run jutsu-elixir test --fail-fast --cached",
+            "command": "han hook run jutsu-elixir test --fail-fast --cached",
             "timeout": 900
           },
           {
             "type": "command",
-            "command": "han hook run jutsu-elixir format --fail-fast --cached || han hook run jutsu-elixir format --fail-fast --cached",
+            "command": "han hook run jutsu-elixir format --fail-fast --cached",
             "timeout": 120
           },
           {
             "type": "command",
-            "command": "han hook run jutsu-elixir compile --fail-fast --cached || han hook run jutsu-elixir compile --fail-fast --cached",
+            "command": "han hook run jutsu-elixir compile --fail-fast --cached",
             "timeout": 300
           }
         ]

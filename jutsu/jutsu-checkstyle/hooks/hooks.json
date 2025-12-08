@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-checkstyle lint --fail-fast --cached || han hook run jutsu-checkstyle lint --fail-fast --cached",
+            "command": "han hook run jutsu-checkstyle lint --fail-fast --cached",
             "timeout": 120
           }
         ]
