@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\" || han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\""
+            "command": "han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\""BDD workflow enforcement\""
           }
         ]
       }

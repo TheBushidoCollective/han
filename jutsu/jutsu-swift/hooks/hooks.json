@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-swift test --fail-fast --cached || han hook run jutsu-swift test --fail-fast --cached",
+            "command": "han hook run jutsu-swift test --fail-fast --cached",
             "timeout": 900
           }
         ]
