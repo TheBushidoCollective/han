@@ -174,6 +174,28 @@ export function registerMetricsCommand(program: Command): void {
 			}
 		});
 
+	// Frustration detection
+	metricsCommand
+		.command("detect-frustration")
+		.description(
+			"Detect user frustration from USER_MESSAGE environment variable",
+		)
+		.action(async () => {
+			try {
+				const { detectFrustrationFromEnv } = await import(
+					"./detect-frustration.js"
+				);
+				await detectFrustrationFromEnv();
+				process.exit(0);
+			} catch (error: unknown) {
+				console.error(
+					"Error detecting frustration:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
 	// Default action: show metrics
 	metricsCommand.action(async () => {
 		try {
