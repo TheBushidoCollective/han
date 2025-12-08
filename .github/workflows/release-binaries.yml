@@ -130,23 +130,26 @@ jobs:
           mkdir -p dist/binaries
 
           # Build for each platform - native module is embedded via direct require in hook-cache.ts
-          # For darwin-arm64 (uses han-native.darwin-arm64.node)
+          # Copy the platform-specific native module to the generic name before each build
+
+          # darwin-arm64
+          cp native/han-native.darwin-arm64.node native/han-native.node
           bun scripts/build-bundle.js bun-darwin-arm64
 
-          # For darwin-x64 (need to swap the native module)
-          cp native/han-native.darwin-x64.node native/han-native.darwin-arm64.node
+          # darwin-x64
+          cp native/han-native.darwin-x64.node native/han-native.node
           bun scripts/build-bundle.js bun-darwin-x64
 
-          # For linux-x64
-          cp native/han-native.linux-x64-gnu.node native/han-native.darwin-arm64.node
+          # linux-x64
+          cp native/han-native.linux-x64-gnu.node native/han-native.node
           bun scripts/build-bundle.js bun-linux-x64
 
-          # For linux-arm64
-          cp native/han-native.linux-arm64-gnu.node native/han-native.darwin-arm64.node
+          # linux-arm64
+          cp native/han-native.linux-arm64-gnu.node native/han-native.node
           bun scripts/build-bundle.js bun-linux-arm64
 
-          # For windows-x64
-          cp native/han-native.win32-x64-msvc.node native/han-native.darwin-arm64.node
+          # windows-x64
+          cp native/han-native.win32-x64-msvc.node native/han-native.node
           bun scripts/build-bundle.js bun-windows-x64
 
       - name: Create checksums

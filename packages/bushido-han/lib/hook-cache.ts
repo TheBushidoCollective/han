@@ -62,9 +62,9 @@ function loadNativeModule(): NativeModule {
 
 	// For Bun compiled binaries: embedded native module
 	// This MUST be a bare require with a static string literal for Bun to detect and embed
+	// The build process will embed the correct .node file for each platform
 	try {
-		cachedNativeModule =
-			require("../native/han-native.darwin-arm64.node") as NativeModule;
+		cachedNativeModule = require("../native/han-native.node") as NativeModule;
 		return cachedNativeModule;
 	} catch (e) {
 		errors.push(`embedded: ${e instanceof Error ? e.message : String(e)}`);
