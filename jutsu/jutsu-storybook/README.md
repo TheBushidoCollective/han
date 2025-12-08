@@ -25,7 +25,7 @@ This jutsu provides comprehensive Storybook expertise across five key areas:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-storybook
+han plugin install jutsu-storybook
 ```
 
 Or install manually:

@@ -13,5 +13,5 @@ TensorFlow machine learning and deep learning framework skills.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-tensorflow
+han plugin install jutsu-tensorflow
 ```

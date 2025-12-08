@@ -1,6 +1,10 @@
 # han-core
 
-Essential infrastructure for the Han plugin marketplace. This plugin provides the foundational capabilities that power the Han ecosystem, including delegation protocols, skill transparency, quality enforcement, MCP servers, and universal programming principles.
+**Required infrastructure plugin for the Han marketplace.**
+
+This plugin provides the foundational capabilities that power the Han ecosystem, including automatic binary installation, delegation protocols, skill transparency, quality enforcement, MCP servers, and universal programming principles.
+
+> **Important:** The `core` plugin is required for all Han installations. It's automatically included when using `han plugin install --auto`.
 
 ## What is han-core?
 
@@ -13,6 +17,25 @@ Essential infrastructure for the Han plugin marketplace. This plugin provides th
 - **Universal Principles**: Programming best practices and patterns
 
 This plugin was created by separating infrastructure from philosophy - it contains the operational tools and systems, while the `bushido` plugin focuses purely on the philosophical principles.
+
+## Automatic Installation
+
+The core plugin includes a SessionStart hook that automatically downloads and installs the latest han binary to `~/.claude/bin/han`. This ensures:
+
+- Hooks work immediately without manual setup
+- Binary is always up-to-date
+- Fastest execution (no npx overhead)
+- Works within Claude Code's PATH
+
+Users can also install manually via:
+
+```bash
+# Quick install
+curl -fsSL https://han.guru/install.sh | bash
+
+# Or via Homebrew
+brew install thebushidocollective/tap/han
+```
 
 ## What's Included
 
@@ -123,7 +146,7 @@ Install the plugin using Claude Code:
 claude plugin install han-core@han
 
 # Or via the han CLI
-npx @thebushidocollective/han plugin install han-core
+han plugin install han-core
 ```
 
 ## Difference from bushido Plugin

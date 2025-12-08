@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run do-claude-plugin-development claudelint --fail-fast",
+            "command": "han hook run do-claude-plugin-development claudelint --fail-fast || npx -y @thebushidocollective/han hook run do-claude-plugin-development claudelint --fail-fast",
             "timeout": 120
           },
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run do-claude-plugin-development markdownlint --fail-fast --cached",
+            "command": "han hook run do-claude-plugin-development markdownlint --fail-fast --cached || npx -y @thebushidocollective/han hook run do-claude-plugin-development markdownlint --fail-fast --cached",
             "timeout": 120
           }
         ]

@@ -17,5 +17,5 @@ Advanced Credo skills for code analysis and style checking in Elixir.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-credo
+han plugin install jutsu-credo
 ```

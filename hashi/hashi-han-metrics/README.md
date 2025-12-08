@@ -8,10 +8,10 @@ All functionality from this plugin is now available in `core`. Please migrate:
 
 ```bash
 # Uninstall this plugin
-npx @thebushidocollective/han plugin uninstall hashi-han-metrics
+han plugin uninstall hashi-han-metrics
 
 # Install core instead
-npx @thebushidocollective/han plugin install core
+han plugin install core
 ```
 
 MCP server for agent task tracking and performance metrics. Enables self-reporting agents with objective validation.
@@ -252,7 +252,7 @@ const failedFixes = await query_metrics({
 claude plugin install hashi-han-metrics@han
 
 # Or via npx han CLI
-npx @thebushidocollective/han plugin install hashi-han-metrics
+han plugin install hashi-han-metrics
 ```
 
 ### Manual Installation

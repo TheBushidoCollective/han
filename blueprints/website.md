@@ -238,7 +238,7 @@ Component shows 4 installation methods:
 1. **npx** (no installation)
 
    ```bash
-   npx @thebushidocollective/han plugin install jutsu-typescript
+   han plugin install jutsu-typescript
    ```
 
 2. **Claude Code** (built-in)

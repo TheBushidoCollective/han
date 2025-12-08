@@ -106,17 +106,25 @@ Version bumps happen automatically via GitHub Actions:
 
 ## Plugin Installation
 
-Plugins can be installed directly through Claude Code - no global han installation required. Hooks use npx automatically.
+Plugins automatically install the han binary to `~/.claude/bin/han` on first session start (via the core plugin's SessionStart hook). This ensures hooks work immediately without any manual setup.
+
+For users who want to use the CLI outside of Claude Code sessions:
 
 ```bash
-# Install from within Claude Code
+# Recommended: Install via curl
+curl -fsSL https://han.guru/install.sh | bash
+
+# Or via Homebrew
+brew install thebushidocollective/tap/han
+
+# Then install plugins
+han plugin install --auto
+```
+
+Within Claude Code, plugins can also be installed via:
+
+```bash
 /plugin install bushido@han
-
-# Or via Claude CLI
-claude plugin install bushido@han
-
-# Or use npx for CLI features (auto-detect recommended plugins)
-npx @thebushidocollective/han plugin install --auto
 ```
 
 ### Installation Scopes
@@ -125,13 +133,13 @@ By default, plugins install to user settings (`~/.claude/settings.json`) which a
 
 ```bash
 # User scope (default) - shared across all projects
-npx @thebushidocollective/han plugin install hashi-playwright-mcp
+han plugin install hashi-playwright-mcp
 
 # Project scope - only for current project (.claude/settings.json)
-npx @thebushidocollective/han plugin install jutsu-typescript --scope project
+han plugin install jutsu-typescript --scope project
 
 # Local scope - gitignored project settings (.claude/settings.local.json)
-npx @thebushidocollective/han plugin install --scope local
+han plugin install --scope local
 ```
 
 **Scope recommendations:**

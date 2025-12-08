@@ -13,5 +13,5 @@ Object-Oriented Programming principles, design patterns, and best practices.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-oop
+han plugin install jutsu-oop
 ```

@@ -23,7 +23,7 @@ the MCP protocol.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-playwright-mcp
+han plugin install hashi-playwright-mcp
 ```
 
 ## License

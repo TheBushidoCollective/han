@@ -27,7 +27,7 @@ This jutsu provides comprehensive skills for working with Tailwind CSS:
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-tailwind
+han plugin install jutsu-tailwind
 ```
 
 ### Via Claude Code

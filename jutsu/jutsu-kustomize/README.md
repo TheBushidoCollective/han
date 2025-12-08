@@ -32,5 +32,5 @@ Validates Kustomize configurations in directories containing `kustomization.yaml
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-kustomize
+han plugin install jutsu-kustomize
 ```

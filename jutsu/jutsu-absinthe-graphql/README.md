@@ -15,7 +15,7 @@ This jutsu provides the following skills for building GraphQL APIs with Absinthe
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-absinthe-graphql
+han plugin install jutsu-absinthe-graphql
 ```
 
 ## Usage

@@ -58,7 +58,7 @@ Once installed, Claude Code gains access to these tool categories:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-sentry
+han plugin install hashi-sentry
 ```
 
 ## Authentication

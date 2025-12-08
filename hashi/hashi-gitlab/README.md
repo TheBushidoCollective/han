@@ -37,7 +37,7 @@ Once installed, Claude Code gains access to these tools:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-gitlab
+han plugin install hashi-gitlab
 ```
 
 ## Usage

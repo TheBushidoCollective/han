@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-dialyzer typecheck --fail-fast --cached",
+            "command": "han hook run jutsu-dialyzer typecheck --fail-fast --cached || npx -y @thebushidocollective/han hook run jutsu-dialyzer typecheck --fail-fast --cached",
             "timeout": 600
           }
         ]

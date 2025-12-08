@@ -37,5 +37,5 @@ Validates Terraform configurations in directories containing `.tf` files using `
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-terraform
+han plugin install jutsu-terraform
 ```

@@ -41,7 +41,7 @@ This ensures all packages in your monorepo pass Biome validation before work is 
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-biome
+han plugin install jutsu-biome
 ```
 
 ## License

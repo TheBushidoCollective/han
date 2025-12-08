@@ -51,7 +51,7 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-linear
+han plugin install hashi-linear
 ```
 
 ## Usage

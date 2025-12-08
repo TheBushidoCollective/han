@@ -24,7 +24,7 @@ This jutsu provides the following skills:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-ruby
+han plugin install jutsu-ruby
 ```
 
 ## Usage

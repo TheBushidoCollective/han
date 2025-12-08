@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\""
+            "command": "han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\" || npx -y @thebushidocollective/han hook reference hooks/enforce-bdd.md --must-read-first \"BDD workflow enforcement\""
           }
         ]
       }

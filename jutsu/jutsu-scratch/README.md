@@ -19,7 +19,7 @@ This jutsu provides guidance for working with temporary, draft, or experimental 
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-scratch
+han plugin install jutsu-scratch
 ```
 
 Or manually add to your Claude Code settings:

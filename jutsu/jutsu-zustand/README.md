@@ -18,7 +18,7 @@ This jutsu provides comprehensive skills for working with Zustand:
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-zustand
+han plugin install jutsu-zustand
 ```
 
 ### Via Claude Code

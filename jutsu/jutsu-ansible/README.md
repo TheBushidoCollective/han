@@ -32,5 +32,5 @@ Validates Ansible playbooks in directories containing `.yml` or `.yaml` files us
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-ansible
+han plugin install jutsu-ansible
 ```

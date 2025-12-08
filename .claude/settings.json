@@ -1,4 +1,38 @@
 {
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook dispatch UserPromptSubmit",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook dispatch SessionStart",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/lint-plugins.sh"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "core@han": true,
     "bushido@han": true,
@@ -19,30 +53,6 @@
     "do-technical-documentation@han": true,
     "do-prompt-engineering@han": true,
     "do-accessibility-engineering@han": true
-  },
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook dispatch UserPromptSubmit",
-            "timeout": 30000
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx -y @thebushidocollective/han hook dispatch SessionStart",
-            "timeout": 30000
-          }
-        ]
-      }
-    ]
   },
   "extraKnownMarketplaces": {
     "han": {

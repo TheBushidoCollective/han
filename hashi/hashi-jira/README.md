@@ -48,7 +48,7 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-jira
+han plugin install hashi-jira
 ```
 
 ## Usage

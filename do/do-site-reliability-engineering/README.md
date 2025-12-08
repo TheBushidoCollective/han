@@ -41,5 +41,5 @@ Use the SRE agent when:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-site-reliability-engineering
+han plugin install do-site-reliability-engineering
 ```

@@ -25,7 +25,7 @@ Once enabled, Claude will automatically apply these skills when working with rel
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-eslint
+han plugin install jutsu-eslint
 ```
 
 ## License

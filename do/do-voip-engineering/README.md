@@ -9,5 +9,5 @@ Provides expertise in SIP, RTP, codec selection, QoS, network design, and troubl
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-voip-engineering
+han plugin install do-voip-engineering
 ```

@@ -69,16 +69,16 @@ When this plugin is enabled, agents are guided by:
 
 ```bash
 # Install han-core first
-npx @thebushidocollective/han plugin install han-core
+han plugin install han-core
 
 # Then install bushido
-npx @thebushidocollective/han plugin install bushido
+han plugin install bushido
 ```
 
 Or install both together:
 
 ```bash
-npx @thebushidocollective/han plugin install han-core bushido
+han plugin install han-core bushido
 ```
 
 ### What You Get

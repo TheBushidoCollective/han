@@ -39,21 +39,21 @@ Workflow orchestration including /develop, /review, /plan, /architect, and more.
 **From bushido 1.x:**
 
 ```bash
-npx @thebushidocollective/han plugin install han-core
+han plugin install han-core
 ```
 
 **From hashi-han:**
 
 ```bash
-npx @thebushidocollective/han plugin uninstall hashi-han
-npx @thebushidocollective/han plugin install han-core
+han plugin uninstall hashi-han
+han plugin install han-core
 ```
 
 **From hashi-han-metrics:**
 
 ```bash
-npx @thebushidocollective/han plugin uninstall hashi-han-metrics
-npx @thebushidocollective/han plugin install han-core
+han plugin uninstall hashi-han-metrics
+han plugin install han-core
 ```
 
 ### Philosophy Separation
@@ -61,5 +61,5 @@ npx @thebushidocollective/han plugin install han-core
 The Bushido philosophy (7 virtues) remains in the separate `bushido` plugin. Install both for the full experience:
 
 ```bash
-npx @thebushidocollective/han plugin install han-core bushido
+han plugin install han-core bushido
 ```

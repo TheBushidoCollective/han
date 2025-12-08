@@ -27,7 +27,7 @@ When AI assistants make changes to code, they should leave breadcrumbs for futur
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-notetaker
+han plugin install jutsu-notetaker
 ```
 
 Or install manually:

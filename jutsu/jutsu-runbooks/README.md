@@ -12,7 +12,7 @@ Structured operational documentation and runbook patterns for human operators. T
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-runbooks
+han plugin install jutsu-runbooks
 ```
 
 Or install via Claude Code:

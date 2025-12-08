@@ -6,22 +6,35 @@ A curated marketplace of Claude Code plugins built on the foundation of the seve
 
 ## Installation
 
-Use npx to run han (no installation required):
+### Quick Install (Recommended)
+
+Install the han binary for fastest execution and automatic hook support:
 
 ```bash
-npx @thebushidocollective/han plugin install
+curl -fsSL https://han.guru/install.sh | bash
 ```
 
-This always uses the latest version automatically.
+This installs to `~/.claude/bin/han`, which is automatically added to PATH by Claude Code.
+
+### Alternative: Homebrew
+
+```bash
+brew install thebushidocollective/tap/han
+```
+
+**Note:** The `core` plugin automatically installs the han binary when you start a Claude Code session, so manual installation is optional.
 
 ## Plugin Categories
 
-Han organizes plugins into four categories inspired by Japanese samurai traditions:
+Han organizes plugins into five categories inspired by Japanese samurai traditions:
 
-- **Bushido** (武士道) - Core principles, enforcement hooks, and foundational quality skills
+- **Core** (⚙️) - **Required infrastructure** - Auto-installs han binary, provides hook system, MCP servers, and universal principles
+- **Bushido** (武士道) - Core principles, enforcement hooks, and foundational quality skills (strongly recommended)
 - **Do** (道 - The Way) - Specialized agents for development disciplines and practices
 - **Jutsu** (術 - Techniques) - Language and tool skills with validation hooks for quality
 - **Hashi** (橋 - Bridges) - MCP servers providing external knowledge and integrations
+
+> **Important:** The `core` plugin is always required and automatically included with `--auto` installation.
 
 ## Commands
 
@@ -31,13 +44,13 @@ Install plugins interactively or automatically.
 
 ```bash
 # Interactive mode - browse and select plugins
-npx @thebushidocollective/han plugin install
+han plugin install
 
 # Auto-detect mode - AI analyzes codebase and recommends plugins
-npx @thebushidocollective/han plugin install --auto
+han plugin install --auto
 
 # Install specific plugin by name
-npx @thebushidocollective/han plugin install <plugin-name>
+han plugin install <plugin-name>
 ```
 
 **Options:**
@@ -57,7 +70,7 @@ npx @thebushidocollective/han plugin install <plugin-name>
 Remove a specific plugin.
 
 ```bash
-npx @thebushidocollective/han plugin uninstall <plugin-name> [--scope <project|local>]
+han plugin uninstall <plugin-name> [--scope <project|local>]
 ```
 
 ### plugin search
@@ -65,7 +78,7 @@ npx @thebushidocollective/han plugin uninstall <plugin-name> [--scope <project|l
 Search for plugins in the Han marketplace.
 
 ```bash
-npx @thebushidocollective/han plugin search [query]
+han plugin search [query]
 ```
 
 ### plugin update-marketplace
@@ -73,7 +86,7 @@ npx @thebushidocollective/han plugin search [query]
 Update the local marketplace cache from GitHub.
 
 ```bash
-npx @thebushidocollective/han plugin update-marketplace
+han plugin update-marketplace
 ```
 
 The marketplace cache is automatically refreshed every 24 hours when using `han plugin install` or `han plugin search`. Use this command to manually force a refresh if you want to see the latest plugins immediately.
@@ -91,10 +104,10 @@ Run a hook command defined by a plugin.
 
 ```bash
 # New format (recommended) - uses plugin's han-config.json
-npx @thebushidocollective/han hook run <plugin-name> <hook-name> [options]
+han hook run <plugin-name> <hook-name> [options]
 
 # Legacy format - run arbitrary commands in matching directories
-npx @thebushidocollective/han hook run --dirs-with <pattern> -- <command>
+han hook run --dirs-with <pattern> -- <command>
 ```
 
 **Options:**
@@ -108,16 +121,16 @@ npx @thebushidocollective/han hook run --dirs-with <pattern> -- <command>
 
 ```bash
 # Run TypeScript type checking using plugin config
-npx @thebushidocollective/han hook run jutsu-typescript typecheck
+han hook run jutsu-typescript typecheck
 
 # Run with caching (skip if no changes)
-npx @thebushidocollective/han hook run jutsu-elixir test --cached
+han hook run jutsu-elixir test --cached
 
 # Run in a specific directory only
-npx @thebushidocollective/han hook run jutsu-biome lint --only=packages/core
+han hook run jutsu-biome lint --only=packages/core
 
 # Legacy: Run npm test in all directories with package.json
-npx @thebushidocollective/han hook run --dirs-with package.json -- npm test
+han hook run --dirs-with package.json -- npm test
 ```
 
 ### hook explain
@@ -125,7 +138,7 @@ npx @thebushidocollective/han hook run --dirs-with package.json -- npm test
 Show comprehensive information about configured hooks.
 
 ```bash
-npx @thebushidocollective/han hook explain [hookType] [--all]
+han hook explain [hookType] [--all]
 ```
 
 **Options:**
@@ -137,13 +150,13 @@ npx @thebushidocollective/han hook explain [hookType] [--all]
 
 ```bash
 # Show all Han plugin hooks
-npx @thebushidocollective/han hook explain
+han hook explain
 
 # Show only Stop hooks
-npx @thebushidocollective/han hook explain Stop
+han hook explain Stop
 
 # Show all hooks including settings
-npx @thebushidocollective/han hook explain --all
+han hook explain --all
 ```
 
 ### hook dispatch
@@ -151,7 +164,7 @@ npx @thebushidocollective/han hook explain --all
 Dispatch hooks of a specific type across all installed Han plugins.
 
 ```bash
-npx @thebushidocollective/han hook dispatch <hookType> [--all]
+han hook dispatch <hookType> [--all]
 ```
 
 This is useful for triggering hooks manually or for workarounds when plugin hook output needs to be passed to the agent.
@@ -160,10 +173,10 @@ This is useful for triggering hooks manually or for workarounds when plugin hook
 
 ```bash
 # Dispatch SessionStart hooks
-npx @thebushidocollective/han hook dispatch SessionStart
+han hook dispatch SessionStart
 
 # Dispatch Stop hooks including settings hooks
-npx @thebushidocollective/han hook dispatch Stop --all
+han hook dispatch Stop --all
 ```
 
 ### hook test
@@ -172,10 +185,10 @@ Validate hook configurations for all installed plugins.
 
 ```bash
 # Validate hook structure and syntax only
-npx @thebushidocollective/han hook test
+han hook test
 
 # Validate AND execute hooks to verify they run successfully
-npx @thebushidocollective/han hook test --execute
+han hook test --execute
 ```
 
 ### mcp
@@ -183,7 +196,7 @@ npx @thebushidocollective/han hook test --execute
 Start the Han MCP server for natural language hook execution.
 
 ```bash
-npx @thebushidocollective/han mcp
+han mcp
 ```
 
 The MCP server dynamically exposes tools based on your installed plugins. Once installed via `hashi-han`, you can run hooks using natural language like "run the elixir tests" instead of remembering exact commands.
@@ -201,7 +214,7 @@ See the [hashi-han plugin](/hashi/hashi-han) for installation and configuration.
 Remove all Han plugins and marketplace configuration.
 
 ```bash
-npx @thebushidocollective/han uninstall
+han uninstall
 ```
 
 ## Philosophy

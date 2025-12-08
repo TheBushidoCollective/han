@@ -11,7 +11,7 @@ iOS development validation with Xcode build hooks for Claude Code.
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-ios
+han plugin install jutsu-ios
 ```
 
 ## Hooks

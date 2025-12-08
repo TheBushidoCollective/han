@@ -11,7 +11,7 @@ Android development validation with Gradle build hooks for Claude Code.
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-android
+han plugin install jutsu-android
 ```
 
 ## Hooks

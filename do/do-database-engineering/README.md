@@ -28,7 +28,7 @@ to their domain.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-database-engineering
+han plugin install do-database-engineering
 ```
 
 ## License

@@ -182,7 +182,7 @@ for (const line of lines) {
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-blueprints@han
+han plugin install hashi-blueprints@han
 ```
 
 This adds the MCP server to Claude Code settings:

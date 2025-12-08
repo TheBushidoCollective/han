@@ -195,7 +195,7 @@ When improving this plugin:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-claude-plugin-development
+han plugin install do-claude-plugin-development
 ```
 
 ## License

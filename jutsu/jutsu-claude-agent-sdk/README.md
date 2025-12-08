@@ -25,7 +25,7 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-claude-agent-sdk
+han plugin install jutsu-claude-agent-sdk
 ```
 
 Or install manually:

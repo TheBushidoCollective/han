@@ -43,7 +43,7 @@ work is marked complete.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-rspec
+han plugin install jutsu-rspec
 ```
 
 ## License
