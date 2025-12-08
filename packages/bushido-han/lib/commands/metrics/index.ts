@@ -177,15 +177,13 @@ export function registerMetricsCommand(program: Command): void {
 	// Frustration detection
 	metricsCommand
 		.command("detect-frustration")
-		.description(
-			"Detect user frustration from USER_MESSAGE environment variable",
-		)
+		.description("Detect user frustration from stdin hook event JSON")
 		.action(async () => {
 			try {
-				const { detectFrustrationFromEnv } = await import(
+				const { detectFrustrationFromStdin } = await import(
 					"./detect-frustration.js"
 				);
-				detectFrustrationFromEnv();
+				await detectFrustrationFromStdin();
 				process.exit(0);
 			} catch (error: unknown) {
 				console.error(
