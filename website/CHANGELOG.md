@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.1] - 2025-12-08
+
+### Added
+
+- auto-install han binary and use direct han commands ([f0bca8c3](../../commit/f0bca8c3))
+- add session metrics tracking to SessionStart hook ([abe7af4a](../../commit/abe7af4a))
+- add 'han prompt must-read' command for semantic hook injection ([8d749a3e](../../commit/8d749a3e))
+- colocate referenced files in command hooks ([47ae60a8](../../commit/47ae60a8))
+- extract and display prompt hook titles from headings ([6ef536d8](../../commit/6ef536d8))
+- enhance prompt hook display with accordion format ([5a1e09d6](../../commit/5a1e09d6))
+- display prompt content inline for prompt-based hooks ([deab6b05](../../commit/deab6b05))
+
+### Fixed
+
+- install user han binary to ~/.local/bin instead of ~/.claude/bin ([bc100e1a](../../commit/bc100e1a))
+- remove duplicate file display for command hooks with inline references ([272e9ca0](../../commit/272e9ca0))
+- handle prompt-based hooks in website parser ([823588a8](../../commit/823588a8))
+
+### Changed
+
+- reposition Bushido as optional philosophy ([327aa42e](../../commit/327aa42e))
+
 ## [1.21.0] - 2025-12-08
 
 ### Added
