@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-12-08
+
+### Added
+
+- auto-install han binary and use direct han commands ([f0bca8c3](../../commit/f0bca8c3))
+- add session metrics tracking to SessionStart hook ([abe7af4a](../../commit/abe7af4a))
+- add 'han prompt must-read' command for semantic hook injection ([8d749a3e](../../commit/8d749a3e))
+- add epistemic rigor enforcement and spinning wheels detection ([9ebce22b](../../commit/9ebce22b))
+
+### Fixed
+
+- add trailing newline to core/hooks/hooks.json ([8daeca51](../../commit/8daeca51))
+- remove duplicate file display for command hooks with inline references ([272e9ca0](../../commit/272e9ca0))
+
+### Changed
+
+- move file reference command to han hook reference ([ffd08928](../../commit/ffd08928))
+
 ## [1.0.1] - 2025-12-08
 
 ### Added
