@@ -181,7 +181,7 @@ describe("Hook verify", () => {
 								{
 									type: "command",
 									command:
-										"npx -y @thebushidocollective/han hook run no-cache-plugin build",
+										"han hook run no-cache-plugin build",
 								},
 							],
 						},
@@ -218,8 +218,8 @@ describe("Hook verify", () => {
 
 		expect(
 			output.includes("hooks are cached") ||
-				output.includes("✅") ||
-				output.includes("0"),
+			output.includes("✅") ||
+			output.includes("0"),
 		).toBe(true);
 	});
 
@@ -260,7 +260,7 @@ describe("Hook verify", () => {
 								{
 									type: "command",
 									command:
-										"npx -y @thebushidocollective/han hook run stale-plugin check --cached",
+										"han hook run stale-plugin check --cached",
 								},
 							],
 						},

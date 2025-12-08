@@ -25,7 +25,7 @@ interface HookCommandWithDetailsProps {
 }
 
 // Extract han hook name from a command like:
-// npx -y @thebushidocollective/han hook run jutsu-ios ios-build --fail-fast --cached
+// han hook run jutsu-ios ios-build --fail-fast --cached
 function extractHanHookName(
 	command: string,
 	pluginName: string,

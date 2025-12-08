@@ -140,7 +140,7 @@ function loadPluginHooks(
 
 /**
  * Parse a hook command to extract plugin name and hook name
- * Example: "npx -y @thebushidocollective/han hook run jutsu-typescript test --fail-fast --cached"
+ * Example: "han hook run jutsu-typescript test --fail-fast --cached"
  * Returns: { pluginName: "jutsu-typescript", hookName: "test" }
  */
 function parseHookCommand(
@@ -265,7 +265,7 @@ function verifyHooks(hookType: string): number {
 		console.error(`  ${plugin}:${hook} - ${reason}`);
 	}
 	console.error(
-		`\nRun: npx -y @thebushidocollective/han hook dispatch ${hookType}`,
+		`\nRun: han hook dispatch ${hookType}`,
 	);
 	return 1;
 }
@@ -275,8 +275,8 @@ export function registerHookVerify(hookCommand: Command): void {
 		.command("verify <hookType>")
 		.description(
 			"Verify that all hooks of a specific type have been run and are cached.\n" +
-				"Exits 0 if all hooks are cached, non-zero if any hooks need to be run.\n\n" +
-				"Example: han hook verify Stop",
+			"Exits 0 if all hooks are cached, non-zero if any hooks need to be run.\n\n" +
+			"Example: han hook verify Stop",
 		)
 		.action((hookType: string) => {
 			const exitCode = verifyHooks(hookType);

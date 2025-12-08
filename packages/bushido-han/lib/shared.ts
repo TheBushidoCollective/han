@@ -114,7 +114,7 @@ export interface HookGroup {
 /**
  * Dispatch hook command template
  */
-const DISPATCH_HOOK_COMMAND = "npx -y @thebushidocollective/han hook dispatch";
+const DISPATCH_HOOK_COMMAND = "han hook dispatch";
 
 /**
  * Ensure dispatch hooks are configured in global settings

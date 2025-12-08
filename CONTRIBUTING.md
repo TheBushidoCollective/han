@@ -60,7 +60,7 @@ jutsu-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -70,7 +70,7 @@ jutsu-{name}/
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
           }
         ]
       }
@@ -281,7 +281,7 @@ When you request plugin generation, Claude will:
 
 After Claude generates files, review:
 
-1. **Hook Commands**: Ensure they use `npx -y @thebushidocollective/han hook run --fail-fast --dirs-with`
+1. **Hook Commands**: Ensure they use `han hook run --fail-fast --dirs-with`
 2. **Marker Files**: Verify marker files match project types
 3. **Skills**: Check that skills are comprehensive and accurate
 4. **Examples**: Ensure code examples are correct and follow best practices
@@ -404,7 +404,7 @@ All jutsu plugins should use the `han hook run` command:
 ```json
 {
   "type": "command",
-  "command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
+  "command": "han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
 }
 ```
 
@@ -425,13 +425,13 @@ Don't add redundant error messages after the hook command - it handles errors au
 **Good:**
 
 ```json
-"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test"
+"command": "han hook run --fail-fast --dirs-with package.json -- npm test"
 ```
 
 **Bad:**
 
 ```json
-"command": "npx -y @thebushidocollective/han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
+"command": "han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
 ```
 
 ## Review Process
