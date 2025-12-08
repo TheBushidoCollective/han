@@ -191,8 +191,8 @@ This adds the MCP server to Claude Code settings:
 {
   "mcpServers": {
     "blueprints": {
-      "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
+      "command": "han",
+      "args": ["mcp", "blueprints"]
     }
   }
 }
