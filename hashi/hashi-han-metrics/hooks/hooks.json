@@ -10,6 +10,15 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "description": "Detect user frustration signals for metrics tracking",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/detect-frustration.js"
+          }
+        ]
       }
     ],
     "Stop": [
