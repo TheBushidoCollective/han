@@ -10,26 +10,26 @@ COMMAND=$(echo "$PAYLOAD" | grep -o '"command":"[^"]*"' | sed 's/"command":"//;s
 
 # Check if this is a git push command
 if echo "$COMMAND" | grep -q "git.*push"; then
-    # Run verification to check if Stop hooks are cached
-    if npx -y @thebushidocollective/han hook verify Stop > /dev/null 2>&1; then
-        # All hooks are cached, allow push to proceed
-        exit 0
-    else
-        # Hooks are stale or haven't been run - auto-run them
-        echo "⚠️  Stop hooks need to be run before pushing. Running them now..."
+	# Run verification to check if Stop hooks are cached
+	if han hook verify Stop >/dev/null 2>&1; then
+		# All hooks are cached, allow push to proceed
+		exit 0
+	else
+		# Hooks are stale or haven't been run - auto-run them
+		echo "⚠️  Stop hooks need to be run before pushing. Running them now..."
 
-        # Run Stop hooks via dispatch
-        if npx -y @thebushidocollective/han hook dispatch Stop; then
-            echo "✅ Stop hooks completed successfully. Proceeding with push..."
-            exit 0
-        else
-            echo "❌ Stop hooks failed. Please fix the issues before pushing."
-            echo ""
-            echo "To retry manually:"
-            echo "  npx -y @thebushidocollective/han hook dispatch Stop"
-            exit 1
-        fi
-    fi
+		# Run Stop hooks via dispatch
+		if han hook dispatch Stop; then
+			echo "✅ Stop hooks completed successfully. Proceeding with push..."
+			exit 0
+		else
+			echo "❌ Stop hooks failed. Please fix the issues before pushing."
+			echo ""
+			echo "To retry manually:"
+			echo "  han hook dispatch Stop"
+			exit 1
+		fi
+	fi
 fi
 
 # Not a git push command, allow normal execution

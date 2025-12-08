@@ -52,7 +52,8 @@
     "do-frontend-development@han": true,
     "do-technical-documentation@han": true,
     "do-prompt-engineering@han": true,
-    "do-accessibility-engineering@han": true
+    "do-accessibility-engineering@han": true,
+    "jutsu-shellcheck@han": true
   },
   "extraKnownMarketplaces": {
     "han": {
