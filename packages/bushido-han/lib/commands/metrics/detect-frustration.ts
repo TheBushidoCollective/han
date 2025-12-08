@@ -1,6 +1,6 @@
 import Sentiment from "sentiment";
-import { MetricsStorage } from "../../metrics/storage.js";
-import type { FrustrationLevel } from "../../metrics/types.js";
+
+type FrustrationLevel = "low" | "moderate" | "high";
 
 const sentiment = new Sentiment();
 
@@ -15,9 +15,9 @@ const additionalIndicators = {
 };
 
 /**
- * Detect frustration in user message and record it
+ * Detect frustration in user message and output results
  */
-export async function detectFrustration(message: string): Promise<void> {
+export function detectFrustration(message: string): void {
 	if (!message.trim()) {
 		return;
 	}
@@ -100,22 +100,8 @@ export async function detectFrustration(message: string): Promise<void> {
 			signals.push(`${additionalMatches.negativeCommands} negative command(s)`);
 		}
 
-		// Record frustration in metrics database
-		const storage = new MetricsStorage();
-		await storage.recordFrustration({
-			frustration_level: frustrationLevel,
-			frustration_score: totalScore,
-			user_message: message,
-			detected_signals: signals,
-			context: JSON.stringify({
-				sentiment: result.score,
-				comparative: result.comparative,
-				positive: result.positive,
-				negative: result.negative,
-			}),
-		});
-
 		// Output to console for hook display
+		// Note: Actual metrics storage is handled by the hashi-han-metrics MCP server
 		console.log(
 			`\n⚠️  Frustration detected (level: ${frustrationLevel}, score: ${totalScore.toFixed(1)})`,
 		);
@@ -148,9 +134,9 @@ export async function detectFrustration(message: string): Promise<void> {
 /**
  * Detect frustration from USER_MESSAGE environment variable
  */
-export async function detectFrustrationFromEnv(): Promise<void> {
+export function detectFrustrationFromEnv(): void {
 	const message = process.env.USER_MESSAGE || "";
 	if (message) {
-		await detectFrustration(message);
+		detectFrustration(message);
 	}
 }
