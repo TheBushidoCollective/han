@@ -58,6 +58,7 @@
 		"@types/marked-terminal": "6.1.1",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",
+		"@types/sentiment": "^5.0.4",
 		"commander": "14.0.2",
 		"dotenv": "^17.2.3",
 		"esbuild": "^0.27.0",
@@ -70,5 +71,8 @@
 		"react-devtools-core": "^6.1.5",
 		"typescript": "5.9.3",
 		"yaml": "^2.8.1"
+	},
+	"dependencies": {
+		"sentiment": "^5.0.2"
 	}
 }
