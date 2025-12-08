@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.56.5] - 2025-12-08
+
+### Added
+
+- add han-config.json to configure custom build command ([88424dd2](../../commit/88424dd2))
+- add CLI command for frustration detection ([ec3ec78f](../../commit/ec3ec78f))
+- add sentiment package for user frustration detection ([768f8d39](../../commit/768f8d39))
+- add description field support to han-config.json ([f7c0c3f8](../../commit/f7c0c3f8))
+
+### Fixed
+
+- improve SQLite concurrency and lock handling for metrics ([99561b65](../../commit/99561b65))
+- make search useInput hook only active when not typing ([0359940b](../../commit/0359940b))
+- remove unused variable and add ts-expect-error for TerminalRenderer ([680cfbea](../../commit/680cfbea))
+- wait for marketplace load before enabling search in --auto mode ([e2ae8342](../../commit/e2ae8342))
+- remove bun.lock from han-native to prevent jutsu-bun hook ([372d7fd1](../../commit/372d7fd1))
+- correct native module embedding for cross-platform builds ([9769a3f7](../../commit/9769a3f7))
+- make native module loading lazy to prevent eager load failures ([889d476a](../../commit/889d476a))
+- resolve interface freeze in search mode with --auto flag ([be6f8737](../../commit/be6f8737))
+- remove unused error variable in catch block ([eac573e9](../../commit/eac573e9))
+- read user prompt from stdin hook event JSON ([359f6b43](../../commit/359f6b43))
+- remove async database calls from CLI detect-frustration ([e828663f](../../commit/e828663f))
+- use han-config.yml instead of han-config.json for package overrides ([e5bfc843](../../commit/e5bfc843))
+- add -y flag to remaining npx typescript commands ([03543a73](../../commit/03543a73))
+
+### Changed
+
+- remove hashi-han-metrics plugin ([88aa8245](../../commit/88aa8245))
+
+### Other
+
+- format code with biome and rebuild native module ([50e3fbd1](../../commit/50e3fbd1))
+
 ## [1.56.4] - 2025-12-08
 
 ### Added
