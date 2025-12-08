@@ -90,18 +90,27 @@ if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
 
   DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}"
 
-  # Download binary
+  # Download to temporary file first to avoid executing partially downloaded binary
+  TEMP_BIN="${HAN_BIN}.tmp.$$"
+
+  # Ensure temp file is cleaned up on exit
+  trap "rm -f '$TEMP_BIN'" EXIT
+
+  # Download binary to temp location
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$HAN_BIN"
+    curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_BIN"
   elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$HAN_BIN" "$DOWNLOAD_URL"
+    wget -qO "$TEMP_BIN" "$DOWNLOAD_URL"
   else
     echo "Neither curl nor wget found. Cannot download han binary." >&2
     exit 0
   fi
 
   # Make it executable
-  chmod +x "$HAN_BIN"
+  chmod +x "$TEMP_BIN"
+
+  # Atomically move into place (atomic on same filesystem)
+  mv "$TEMP_BIN" "$HAN_BIN"
 
   echo "Han binary v$LATEST_VERSION installed successfully to $HAN_BIN" >&2
 else
