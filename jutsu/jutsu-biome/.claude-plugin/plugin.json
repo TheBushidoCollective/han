@@ -1,6 +1,6 @@
 {
   "name": "jutsu-biome",
-  "version": "1.9.14",
+  "version": "1.9.15",
   "description": "Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["biome", "linting", "formatting", "javascript", "typescript"]
+  "keywords": [
+    "biome",
+    "linting",
+    "formatting",
+    "javascript",
+    "typescript"
+  ]
 }

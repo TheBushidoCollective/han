@@ -1,6 +1,6 @@
 {
   "name": "jutsu-testng",
-  "version": "1.6.14",
+  "version": "1.6.15",
   "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["testng", "testing", "java", "data-providers", "parallel"]
+  "keywords": [
+    "testng",
+    "testing",
+    "java",
+    "data-providers",
+    "parallel"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "jutsu-helm",
-  "version": "1.8.15",
+  "version": "1.8.16",
   "description": "Helm chart validation and best practices",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
+  "keywords": [
+    "helm",
+    "kubernetes",
+    "k8s",
+    "charts",
+    "devops"
+  ]
 }
