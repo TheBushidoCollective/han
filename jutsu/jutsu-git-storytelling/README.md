@@ -1,25 +1,24 @@
 # Jutsu: Git Storytelling
 
-Enforce git storytelling practices by automatically committing work early and often to tell the story of your development process.
+Provides guidance on git storytelling practices - committing work to tell the story of your development process.
 
 ## What This Jutsu Provides
 
-### Automatic Commit Hook
+### Git Storytelling Guidance
 
-This jutsu provides a **Stop hook** that automatically commits your work when you finish a Claude Code session, encouraging you to:
+This jutsu provides a **Stop hook** that reminds Claude about git storytelling best practices at the end of each session:
 
-- Commit early and commit often
-- Create a detailed history of your development process
-- Tell the story of how your solution evolved
-- Make debugging and code review easier
+- Consider committing meaningful work to preserve progress
+- Use commits to tell the story of how code evolved
+- Break complex work into logical commit steps
+- Follow conventional commit message patterns
 
-The hook intelligently:
+The guidance is **suggestive, not enforcing**:
 
-- ✅ Detects if a commit was already made during the session (via `CLAUDE_HOOK_STOP_HOOK_ACTIVE`)
-- ✅ Skips if not in a git repository
-- ✅ Skips if there are no changes to commit
-- ✅ Creates a descriptive commit message automatically
-- ✅ Handles errors gracefully
+- ✅ Provides context on when commits make sense
+- ✅ Encourages thoughtful commit practices
+- ✅ Allows flexibility for exploration and experimentation
+- ✅ Respects your workflow and preferences
 
 ### Skills
 
@@ -37,42 +36,32 @@ han plugin install jutsu-git-storytelling
 
 ## Usage
 
-Once installed, this jutsu automatically commits your work:
+Once installed, this jutsu provides guidance at session end:
 
-- **When you finish a conversation** with Claude Code (Stop hook)
-- **Intelligently skips** if:
-  - A commit was already made (detected via `CLAUDE_HOOK_STOP_HOOK_ACTIVE=true`)
-  - Not in a git repository
-  - No changes are present
+- **At Stop**: Claude receives git storytelling best practices
+- **Judgment-based**: Claude decides if commits are appropriate
+- **Non-blocking**: Never prevents you from ending a session
 
 ### How It Works
 
-The Stop hook runs this logic:
+The Stop hook injects guidance that helps Claude:
 
-1. **Check if commit already made**: If `CLAUDE_HOOK_STOP_HOOK_ACTIVE` is `true`, skip
-2. **Check if git repo**: If not a git repository, skip gracefully
-3. **Check for changes**: If no changes to commit, skip
-4. **Commit changes**: Stage all changes and create a commit with descriptive message
+1. **Assess the work**: Did meaningful progress happen?
+2. **Consider context**: Is this a good stopping point?
+3. **Use judgment**: Would commits help tell the story?
+4. **Respect preferences**: Follow your workflow and choices
 
-### Commit Message Format
+Claude might commit when:
 
-Automatic commits use this format:
+- A logical unit of work is complete
+- Multiple related changes form a coherent story
+- Progress should be preserved
 
-```
-work: commit current progress
+Claude won't commit when:
 
-Committed early and often to tell the story of development.
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-You can always amend the commit message afterward:
-
-```bash
-git commit --amend -m "feat: add user authentication system"
-```
+- Work is exploratory or incomplete
+- You're mid-investigation
+- It doesn't make sense for the workflow
 
 ## Git Storytelling Best Practices
 

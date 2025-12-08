@@ -4,9 +4,9 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "han hook run jutsu-git-storytelling check-commits --fail-fast",
-            "timeout": 120
+            "type": "prompt",
+            "prompt": "# Git Storytelling Assessment\n\nYou are evaluating whether Claude should commit the work from this session.\n\n## Context\n\n$ARGUMENTS\n\n## Git Storytelling Philosophy\n\nGood commit history tells the story of HOW code evolved, not just WHAT changed. Each commit should be a logical step that makes sense to a reviewer reading the history.\n\n## Assessment Criteria\n\n**Block if commits are clearly needed (high confidence):**\n- Completed feature, fix, or refactor that's ready to preserve\n- Multiple related changes that tell a coherent story\n- Significant progress that should be checkpointed\n- Work is stable and tests pass (if applicable)\n- Clear logical stopping point reached\n\n**Approve if commits not needed (or uncertain):**\n- Work is exploratory or experimental\n- Changes are incomplete or broken\n- Mid-investigation or debugging\n- User explicitly said they'll continue immediately\n- Not clear if work is at a good commit point\n\n## Decision Guidelines\n\n**Use HIGH confidence threshold:** Only block if you're 85%+ confident commits should be made. When in doubt, approve.\n\n## Response Format\n\nReturn JSON:\n\n**If commits clearly needed (block):**\n```json\n{\"decision\": \"block\", \"reason\": \"Completed work needs preservation: [summary]\", \"systemMessage\": \"📝 Commit recommended: [brief description of what to commit]\"}\n```\n\n**If commits not needed (approve):**\n```json\n{\"decision\": \"approve\", \"reason\": \"Work in progress/exploratory\", \"systemMessage\": \"✓ No commits needed\"}\n```\n\n## Commit Guidance\n\nWhen blocking, instruct Claude to:\n- **Group logically**: Related changes in same commit\n- **Tell the story**: Break complex work into multiple commits showing progression\n- **Use conventional commits**: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`\n- **Be descriptive**: Explain WHY, not just WHAT changed\n\nExample multi-commit strategy:\n1. `feat: add user authentication endpoint`\n2. `test: add authentication tests`\n3. `docs: document authentication API`",
+            "timeout": 300
           }
         ]
       }
