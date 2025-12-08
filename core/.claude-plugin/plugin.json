@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Essential infrastructure for the Han plugin marketplace. Includes delegation protocols, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 integration, and universal programming principles.",
   "author": {
     "name": "The Bushido Collective",
@@ -22,12 +22,19 @@
   "mcpServers": {
     "han": {
       "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp"],
+      "args": [
+        "-y",
+        "@thebushidocollective/han",
+        "mcp"
+      ],
       "env": {}
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     }
   }
 }
