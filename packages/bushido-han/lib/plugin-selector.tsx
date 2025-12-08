@@ -148,24 +148,22 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		{ isActive: mode === "selection" },
 	);
 
-	// Handle search mode input (both typing and navigation)
-	// Only active when NOT typing (i.e., when navigating results)
-	// Escape is handled separately to always work
+	// Handle search mode navigation (when NOT typing)
+	// This hook is only active when user is navigating results, not typing in the input
 	useInput(
 		(input, key) => {
 			if (key.escape) {
-				// Always handle escape in search mode
-				if (isTyping || searchResults.length === 0) {
-					// If typing or no results, exit search mode
+				if (searchResults.length === 0) {
+					// No results, exit search mode
 					setMode("selection");
 					setSearchResults([]);
 					setSearchQuery("");
 				} else {
-					// If navigating results, go back to typing mode
+					// Has results, go back to typing mode
 					setIsTyping(true);
 				}
-			} else if (!isTyping && searchResults.length > 0) {
-				// Only handle navigation keys when not typing and have results
+			} else if (searchResults.length > 0) {
+				// Handle navigation keys when we have results
 				if (key.upArrow) {
 					setSearchSelectedIndex(Math.max(0, searchSelectedIndex - 1));
 				} else if (key.downArrow) {
@@ -195,7 +193,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 				}
 			}
 		},
-		{ isActive: mode === "search" },
+		{ isActive: mode === "search" && !isTyping },
 	);
 
 	if (mode === "selection") {
