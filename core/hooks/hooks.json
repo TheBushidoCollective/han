@@ -10,11 +10,11 @@
           },
           {
             "type": "command",
-            "command": "han metrics session-start || npx -y @thebushidocollective/han metrics session-start"
+            "command": "han metrics session-start || han metrics session-start"
           },
           {
             "type": "command",
-            "command": "han metrics session-context || npx -y @thebushidocollective/han metrics session-context"
+            "command": "han metrics session-context || han metrics session-context"
           },
           {
             "type": "command",
@@ -53,15 +53,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\" || (npx -y @thebushidocollective/han --version &>2 && false)"
+            "command": "han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\" || (han --version &>2 && false)"
           },
           {
             "type": "command",
-            "command": "han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\" || npx -y @thebushidocollective/han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
+            "command": "han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\" || han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
           },
           {
             "type": "command",
-            "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\" || npx -y @thebushidocollective/han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
+            "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\" || han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
           }
         ]
       }
