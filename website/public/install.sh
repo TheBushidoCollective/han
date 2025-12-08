@@ -10,12 +10,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Ensure CLAUDE_CONFIG_DIR is set
-if [ -z "$CLAUDE_CONFIG_DIR" ]; then
-  CLAUDE_CONFIG_DIR="${HOME}/.claude"
-fi
-
-BIN_DIR="${CLAUDE_CONFIG_DIR}/bin"
+# Install to user's local bin directory
+BIN_DIR="${HOME}/.local/bin"
 HAN_BIN="${BIN_DIR}/han"
 
 echo -e "${GREEN}Installing han binary to $HAN_BIN...${NC}"
@@ -111,13 +107,17 @@ echo ""
 echo "  1. Ensure $BIN_DIR is in your PATH"
 echo "     Add this to your shell rc file (.bashrc, .zshrc, etc.):"
 echo ""
-echo -e "     ${YELLOW}export PATH=\"\$HOME/.claude/bin:\$PATH\"${NC}"
+echo -e "     ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
 echo ""
-echo "  2. Install plugins for your project:"
+echo "  2. Reload your shell or run:"
+echo ""
+echo -e "     ${YELLOW}source ~/.bashrc${NC}  # or ~/.zshrc"
+echo ""
+echo "  3. Install plugins for your project:"
 echo ""
 echo -e "     ${YELLOW}han plugin install --auto${NC}"
 echo ""
-echo "  3. Or browse and install specific plugins:"
+echo "  4. Or browse and install specific plugins:"
 echo ""
 echo -e "     ${YELLOW}han plugin install${NC}"
 echo ""
