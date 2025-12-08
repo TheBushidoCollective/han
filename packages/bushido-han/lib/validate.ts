@@ -349,8 +349,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
-				`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
-				`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+					`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
+					`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 			);
 			process.exit(2);
 		}
@@ -398,8 +398,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
 						: `cd ${relativePath} && ${commandToRun}`;
 				console.error(
 					`\n❌ The command \`${cmdStr}\` failed.\n\n` +
-					`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
-					`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+						`Spawn a subagent to run the command, review the output, and fix all issues.\n` +
+						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -414,7 +414,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
 	if (failures.length > 0) {
 		console.error(
 			`\n❌ ${failures.length} director${failures.length === 1 ? "y" : "ies"} failed validation.\n\n` +
-			`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
+				`Spawn ${failures.length === 1 ? "a subagent" : "subagents in parallel"} to fix the following:\n`,
 		);
 		for (const dir of failures) {
 			const cmdStr =
@@ -423,7 +423,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		}
 		console.error(
 			`\nEach subagent should run the command, review the output, and fix all issues.\n` +
-			`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+				`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 		);
 		process.exit(2);
 	}
@@ -611,8 +611,8 @@ export async function runConfiguredHook(
 		} else {
 			console.error(
 				`Error: Could not find plugin "${pluginName}".\n\n` +
-				"The plugin must be enabled in your .claude/settings.json or .claude/settings.local.json.\n" +
-				"If running outside of a Claude Code hook context, ensure the plugin is installed.",
+					"The plugin must be enabled in your .claude/settings.json or .claude/settings.local.json.\n" +
+					"If running outside of a Claude Code hook context, ensure the plugin is installed.",
 			);
 			process.exit(1);
 		}
@@ -622,9 +622,9 @@ export async function runConfiguredHook(
 		if (pluginRootName !== pluginName) {
 			console.error(
 				`Error: Plugin name mismatch.\n` +
-				`  Expected: ${pluginName}\n` +
-				`  Got: ${pluginRootName} (from CLAUDE_PLUGIN_ROOT)\n\n` +
-				`The hook command specifies plugin "${pluginName}" but CLAUDE_PLUGIN_ROOT points to "${pluginRootName}".`,
+					`  Expected: ${pluginName}\n` +
+					`  Got: ${pluginRootName} (from CLAUDE_PLUGIN_ROOT)\n\n` +
+					`The hook command specifies plugin "${pluginName}" but CLAUDE_PLUGIN_ROOT points to "${pluginRootName}".`,
 			);
 			process.exit(1);
 		}
@@ -646,7 +646,7 @@ export async function runConfiguredHook(
 		if (configs.length === 0) {
 			console.error(
 				`Error: No hook configuration found for directory "${only}".\n` +
-				`The --only flag requires a directory that matches one of the hook's target directories.`,
+					`The --only flag requires a directory that matches one of the hook's target directories.`,
 			);
 			process.exit(1);
 		}
@@ -803,8 +803,8 @@ export async function runConfiguredHook(
 
 				console.error(
 					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
-					`To re-run after fixing:\n  ${rerunCmd}\n\n` +
-					`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+						`To re-run after fixing:\n  ${rerunCmd}\n\n` +
+						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 				);
 				process.exit(2);
 			}
@@ -886,7 +886,7 @@ export async function runConfiguredHook(
 
 		console.error(
 			`\nReview the output files above and fix all issues.\n` +
-			`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+				`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 		);
 		process.exit(2);
 	}

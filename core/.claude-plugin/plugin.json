@@ -22,19 +22,12 @@
   "mcpServers": {
     "han": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@thebushidocollective/han",
-        "mcp"
-      ],
+      "args": ["-y", "@thebushidocollective/han", "mcp"],
       "env": {}
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ]
+      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }

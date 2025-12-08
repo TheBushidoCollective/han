@@ -180,8 +180,7 @@ describe("Hook verify", () => {
 							hooks: [
 								{
 									type: "command",
-									command:
-										"han hook run no-cache-plugin build",
+									command: "han hook run no-cache-plugin build",
 								},
 							],
 						},
@@ -218,8 +217,8 @@ describe("Hook verify", () => {
 
 		expect(
 			output.includes("hooks are cached") ||
-			output.includes("✅") ||
-			output.includes("0"),
+				output.includes("✅") ||
+				output.includes("0"),
 		).toBe(true);
 	});
 
@@ -259,8 +258,7 @@ describe("Hook verify", () => {
 							hooks: [
 								{
 									type: "command",
-									command:
-										"han hook run stale-plugin check --cached",
+									command: "han hook run stale-plugin check --cached",
 								},
 							],
 						},
