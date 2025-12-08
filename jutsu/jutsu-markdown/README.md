@@ -92,7 +92,7 @@ Or override the command:
 ```yaml
 jutsu-markdown:
   lint:
-    command: "npx markdownlint-cli --fix . --disable MD013"  # Ignore line length
+    command: "npx -y markdownlint-cli --fix . --disable MD013"  # Ignore line length
 ```
 
 ## Contributing

@@ -118,7 +118,7 @@ Each jutsu plugin has a `han-config.json` that defines its hooks:
 {
   "hooks": {
     "lint": {
-      "command": "npx eslint --fix .",
+      "command": "npx -y eslint --fix .",
       "dirsWith": ["eslint.config.js", ".eslintrc.js"],
       "ifChanged": ["**/*.{js,jsx,ts,tsx}"]
     }
