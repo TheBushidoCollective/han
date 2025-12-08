@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface HanHookConfig {
 	command?: string;
@@ -155,9 +157,11 @@ export default function HookCommandWithDetails({
 									<span>🧠</span>
 									<span>Evaluation Prompt</span>
 								</h4>
-								<pre className="bg-gray-950 text-gray-100 p-3 rounded overflow-x-auto text-sm scrollbar-custom whitespace-pre-wrap max-h-96">
-									<code>{prompt}</code>
-								</pre>
+								<div className="bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom max-h-96 prose dark:prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:mb-2 prose-headings:mt-4 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700 prose-code:text-purple-300 prose-strong:text-purple-200 prose-headings:text-gray-200">
+									<ReactMarkdown remarkPlugins={[remarkGfm]}>
+										{prompt}
+									</ReactMarkdown>
+								</div>
 							</div>
 
 							{/* How it works */}
