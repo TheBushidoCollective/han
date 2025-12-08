@@ -47,13 +47,13 @@ To update from bushido 1.x:
 
 ```bash
 # Install han-core (gets all the infrastructure back)
-npx @thebushidocollective/han plugin install han-core
+han plugin install han-core
 
 # Update bushido (now philosophy-only)
-npx @thebushidocollective/han plugin install bushido
+han plugin install bushido
 
 # Or install both together
-npx @thebushidocollective/han plugin install han-core bushido
+han plugin install han-core bushido
 ```
 
 ## [1.2.1] - 2025-12-05

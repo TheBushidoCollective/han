@@ -62,7 +62,7 @@ Docker configuration for act:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-act
+han plugin install jutsu-act
 ```
 
 ## Requirements

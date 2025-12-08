@@ -73,7 +73,7 @@ end
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-tdd
+han plugin install jutsu-tdd
 ```
 
 ## License

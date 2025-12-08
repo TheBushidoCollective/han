@@ -26,7 +26,7 @@ Install this plugin in your Claude Code configuration to automatically validate 
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-typescript
+han plugin install jutsu-typescript
 ```
 
 ## License

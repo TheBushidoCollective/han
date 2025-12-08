@@ -27,7 +27,7 @@ to their domain.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-infrastructure
+han plugin install do-infrastructure
 ```
 
 ## License

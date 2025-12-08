@@ -69,7 +69,7 @@ Once installed, Claude Code gains access to these tool categories:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-github
+han plugin install hashi-github
 ```
 
 ## Usage

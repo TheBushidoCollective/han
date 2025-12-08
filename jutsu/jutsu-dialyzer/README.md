@@ -17,7 +17,7 @@ Advanced Dialyzer skills for static analysis of Erlang and Elixir code.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-dialyzer
+han plugin install jutsu-dialyzer
 ```
 
 ## Usage

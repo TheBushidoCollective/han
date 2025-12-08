@@ -34,7 +34,7 @@ Create validation hooks for languages, frameworks, or tools.
 **Requirements:**
 
 - Include validation hooks for Stop and SubagentStop events
-- Use `npx @thebushidocollective/han hook run` command for validating various commands.
+- Use `han hook run` command for validating various commands.
 - Provide clear error messages
 - Include README.md with usage examples
 
@@ -187,7 +187,7 @@ Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-se
 **What Claude Will Generate:**
 
 - `jutsu-{name}/.claude-plugin/marketplace.json` - Plugin metadata
-- `jutsu-{name}/hooks/hooks.json` - Validation hooks with proper `npx @thebushidocollective/han hook run` usage
+- `jutsu-{name}/hooks/hooks.json` - Validation hooks with proper `han hook run` usage
 - `jutsu-{name}/README.md` - Installation and usage documentation
 - `jutsu-{name}/skills/{skill-name}/SKILL.md` - Comprehensive skill documentation
 
@@ -269,7 +269,7 @@ When you request plugin generation, Claude will:
 - ✅ Use proper directory structure
 - ✅ Follow naming conventions (jutsu-*, do-*, hashi-*)
 - ✅ Include marketplace.json with metadata
-- ✅ Create hooks.json with `npx @thebushidocollective/han hook run` patterns
+- ✅ Create hooks.json with `han hook run` patterns
 - ✅ Generate comprehensive README.md files
 - ✅ Write detailed SKILL.md files with examples
 - ✅ Follow code style and formatting guidelines
@@ -397,9 +397,9 @@ npm test
 
 ## Validation Hook Guidelines
 
-### Use npx @thebushidocollective/han hook run
+### Use han hook run
 
-All jutsu plugins should use the `npx @thebushidocollective/han hook run` command:
+All jutsu plugins should use the `han hook run` command:
 
 ```json
 {

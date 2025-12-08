@@ -35,5 +35,5 @@ Validates Helm charts in directories containing `Chart.yaml` using `helm lint` a
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-helm
+han plugin install jutsu-helm
 ```

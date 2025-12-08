@@ -32,7 +32,7 @@ This jutsu provides the following skill:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-git-storytelling
+han plugin install jutsu-git-storytelling
 ```
 
 ## Usage

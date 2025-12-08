@@ -129,7 +129,7 @@ This jutsu's patterns are used in production tools like:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-ink
+han plugin install jutsu-ink
 ```
 
 ## License

@@ -32,5 +32,5 @@ Validates Pulumi projects in directories containing `Pulumi.yaml` using `pulumi 
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-pulumi
+han plugin install jutsu-pulumi
 ```

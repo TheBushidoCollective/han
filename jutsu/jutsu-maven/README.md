@@ -22,7 +22,7 @@ This jutsu provides the following skills:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-maven
+han plugin install jutsu-maven
 ```
 
 ## Usage

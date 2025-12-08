@@ -8,10 +8,10 @@ All functionality from this plugin is now available in `core`. Please migrate:
 
 ```bash
 # Uninstall this plugin
-npx @thebushidocollective/han plugin uninstall hashi-han
+han plugin uninstall hashi-han
 
 # Install core instead
-npx @thebushidocollective/han plugin install core
+han plugin install core
 ```
 
 MCP server for running Han plugin hook commands via natural language.
@@ -25,7 +25,7 @@ Instead of remembering exact commands, you can say "run the TypeScript type chec
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-han
+han plugin install hashi-han
 ```
 
 ## Features
@@ -62,4 +62,4 @@ All tools accept these optional parameters:
 ## Requirements
 
 - Claude Code with plugin support
-- Han plugins installed via `npx @thebushidocollective/han plugin install`
+- Han plugins installed via `han plugin install`

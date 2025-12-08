@@ -146,7 +146,7 @@ Write a weekly newsletter for our developer community highlighting new features 
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-content-creator
+han plugin install do-content-creator
 ```
 
 ## How to Use

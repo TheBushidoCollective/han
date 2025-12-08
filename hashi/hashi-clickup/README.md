@@ -54,7 +54,7 @@ Once installed, Claude Code gains access to these ClickUp MCP tools:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-clickup
+han plugin install hashi-clickup
 ```
 
 ## Usage

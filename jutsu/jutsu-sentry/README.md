@@ -23,7 +23,7 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-sentry
+han plugin install jutsu-sentry
 ```
 
 ## Usage

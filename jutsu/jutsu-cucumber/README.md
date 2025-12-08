@@ -13,5 +13,5 @@ Comprehensive Cucumber BDD testing skills for behavior-driven development.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-cucumber
+han plugin install jutsu-cucumber
 ```

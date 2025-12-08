@@ -32,5 +32,5 @@ Validates Docker Compose files (docker-compose.*.yaml, compose.*.yaml) using `do
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-docker-compose
+han plugin install jutsu-docker-compose
 ```

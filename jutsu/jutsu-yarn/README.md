@@ -11,7 +11,7 @@ Yarn package manager skills with dependency validation hooks for Claude Code.
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-yarn
+han plugin install jutsu-yarn
 ```
 
 ## Hooks

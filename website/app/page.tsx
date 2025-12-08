@@ -111,8 +111,8 @@ export default function Home() {
 							href="/plugins/core"
 							icon={getCategoryIcon("core")}
 							title="Core"
-							subtitle="⚙️"
-							description="Essential infrastructure, skills, commands, and MCP servers"
+							subtitle="⚙️ (Required)"
+							description="Essential infrastructure - auto-installs han binary, provides hook system and MCP servers"
 						/>
 						<CategoryCard
 							href="/plugins/do"
@@ -146,24 +146,25 @@ export default function Home() {
 						Getting Started
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-						No installation required - use npx to get started instantly
+						Install with a single command - validation hooks work out of the box
 					</p>
 					<div className="max-w-2xl mx-auto">
 						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-								Install with npx
+								Quick Install
 							</h3>
 							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								Auto-detect and install plugins for your project:
+								Install the han binary:
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4">
-								<code>npx @thebushidocollective/han plugin install --auto</code>
+								<code>curl -fsSL https://han.guru/install.sh | bash</code>
 							</pre>
 							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								Or install a specific plugin:
+								Then auto-detect and install plugins for your project (always
+								includes required core plugin):
 							</p>
 							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>npx @thebushidocollective/han plugin install core</code>
+								<code>han plugin install --auto</code>
 							</pre>
 						</div>
 						<div className="mt-6 text-center">

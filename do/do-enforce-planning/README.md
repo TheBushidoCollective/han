@@ -25,7 +25,7 @@ to their domain.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-enforce-planning
+han plugin install do-enforce-planning
 ```
 
 ## License

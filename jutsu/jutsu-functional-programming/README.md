@@ -13,5 +13,5 @@ Functional programming paradigm, patterns, and best practices.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-functional-programming
+han plugin install jutsu-functional-programming
 ```

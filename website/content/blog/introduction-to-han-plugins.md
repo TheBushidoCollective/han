@@ -131,13 +131,13 @@ The beauty of Han's plugin system is that you can start simple and layer on comp
 **Day 1**: Install the core infrastructure
 
 ```bash
-npx @thebushidocollective/han plugin install core
+han plugin install core
 ```
 
 **Optional**: If the Bushido philosophy resonates with you, add it:
 
 ```bash
-npx @thebushidocollective/han plugin install bushido
+han plugin install bushido
 ```
 
 (Not required—`core` provides all the technical capabilities.)
@@ -145,20 +145,20 @@ npx @thebushidocollective/han plugin install bushido
 **Day 2**: Add your stack's jutsu plugins
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-typescript
-npx @thebushidocollective/han plugin install jutsu-react
+han plugin install jutsu-typescript
+han plugin install jutsu-react
 ```
 
 **Day 3**: Add specialized agents as needed
 
 ```bash
-npx @thebushidocollective/han plugin install do-frontend-development
+han plugin install do-frontend-development
 ```
 
 **Day 4**: Connect external tools
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-github
+han plugin install hashi-github
 ```
 
 Each addition enhances the system without adding complexity to your workflow.
@@ -195,12 +195,12 @@ That's what makes Han more than just skills or agents—it's a complete developm
 Start with the core infrastructure:
 
 ```bash
-npx @thebushidocollective/han plugin install core
+han plugin install core
 ```
 
 Then ask Claude to help with something. You'll notice the difference immediately—not just in what Claude can do, but in the confidence you have in the results.
 
-(If you'd like to add the Bushido philosophy, you can install it anytime with `npx @thebushidocollective/han plugin install bushido`)
+(If you'd like to add the Bushido philosophy, you can install it anytime with `han plugin install bushido`)
 
 ---
 

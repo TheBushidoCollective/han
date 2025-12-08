@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook reference hooks/ensure-blueprints.md --must-read-first \"blueprints documentation requirements\""
+            "command": "han hook reference hooks/ensure-blueprints.md --must-read-first \"blueprints documentation requirements\" || npx -y @thebushidocollective/han hook reference hooks/ensure-blueprints.md --must-read-first \"blueprints documentation requirements\""
           }
         ]
       }

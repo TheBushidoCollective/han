@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-ameba lint --fail-fast --cached",
+            "command": "han hook run jutsu-ameba lint --fail-fast --cached || npx -y @thebushidocollective/han hook run jutsu-ameba lint --fail-fast --cached",
             "timeout": 120
           }
         ]

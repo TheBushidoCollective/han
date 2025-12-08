@@ -142,7 +142,7 @@ Manual quality checks are a thing of the past. With Han's validation hooks, qual
 Try it yourself:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-typescript
+han plugin install jutsu-typescript
 ```
 
 Your future self will thank you.

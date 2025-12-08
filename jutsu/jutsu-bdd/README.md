@@ -14,5 +14,5 @@ Comprehensive Behavior-Driven Development principles, practices, and collaborati
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-bdd
+han plugin install jutsu-bdd
 ```

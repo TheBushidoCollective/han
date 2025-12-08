@@ -31,7 +31,7 @@ Each contains a single compiled Bun binary for that platform.
 When a user runs:
 
 ```bash
-npx @thebushidocollective/han metrics
+han metrics
 ```
 
 npm/npx:

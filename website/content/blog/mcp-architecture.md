@@ -30,7 +30,7 @@ Let's see how the GitHub MCP server works in practice.
 ### Installation
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-github
+han plugin install hashi-github
 ```
 
 This adds an MCP server to your Claude Code configuration:
@@ -303,7 +303,7 @@ Start with GitHub integration:
 export GITHUB_TOKEN=ghp_your_token_here
 
 # Install the plugin
-npx @thebushidocollective/han plugin install hashi-github
+han plugin install hashi-github
 
 # Ask Claude to help with GitHub tasks
 claude

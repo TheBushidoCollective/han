@@ -59,7 +59,7 @@ Once installed and enabled, Claude Code gains access to tools for:
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-figma
+han plugin install hashi-figma
 ```
 
 ## Setup

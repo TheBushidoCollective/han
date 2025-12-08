@@ -210,7 +210,7 @@ Once installed, Claude Code gains access to these tools:
 ### Via Han Marketplace
 
 \`\`\`bash
-npx @thebushidocollective/han plugin install {plugin-name}
+han plugin install {plugin-name}
 \`\`\`
 
 Or install manually:

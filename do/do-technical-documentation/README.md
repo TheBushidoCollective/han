@@ -26,7 +26,7 @@ to their domain.
 Install with npx (no installation required):
 
 ```bash
-npx @thebushidocollective/han plugin install do-technical-documentation
+han plugin install do-technical-documentation
 ```
 
 ## License

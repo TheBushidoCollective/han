@@ -14,7 +14,7 @@ This plugin provides comprehensive blueprint management through:
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-blueprints@han
+han plugin install hashi-blueprints@han
 ```
 
 This installs both the MCP server and the skills/commands/hooks.

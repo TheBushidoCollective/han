@@ -11,7 +11,7 @@ NPM package manager skills with dependency validation hooks for Claude Code.
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-npm
+han plugin install jutsu-npm
 ```
 
 ## Hooks

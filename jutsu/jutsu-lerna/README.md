@@ -11,7 +11,7 @@ Lerna monorepo management skills with bootstrap validation hooks for Claude Code
 ## Installation
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-lerna
+han plugin install jutsu-lerna
 ```
 
 ## Hooks

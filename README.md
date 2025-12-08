@@ -27,21 +27,21 @@ The Bushido Code guides every plugin in this marketplace:
 
 ## Getting Started
 
-### Automatic Installation (Recommended)
+### Quick Install (Recommended)
 
-Use the `han` CLI tool to automatically detect and install appropriate plugins:
-
-> **Important:** Han must be installed globally for hooks to work. Hooks run validation commands (tests, linting, etc.) when you stop working, and they require `han` to be available in your PATH. Using `npx` will install plugins but hooks will not function.
+Install the `han` binary with a single command:
 
 ```bash
-# Install globally (REQUIRED for hooks)
-npm install -g @thebushidocollective/han
-
-# Then install plugins
-han plugin install --auto
+curl -fsSL https://han.guru/install.sh | bash
 ```
 
-For other installation methods (Homebrew, curl, manual download), visit [han.guru](https://han.guru).
+This installs han to `~/.claude/bin/han`, which Claude Code automatically adds to PATH when running hooks.
+
+Then install plugins for your project:
+
+```bash
+han plugin install --auto
+```
 
 The installer will:
 
@@ -50,27 +50,30 @@ The installer will:
 - Detect git hosting platform (GitHub/GitLab)
 - Recommend appropriate plugins
 - Configure `.claude/settings.json` automatically
+- **Always install `core`** - Required for binary installation and hook infrastructure
 
-### Via Claude Code `/plugin` Command
+### Alternative Installation Methods
 
-Use Claude Code's built-in plugin command to add the marketplace:
+#### Homebrew (macOS/Linux)
+
+```bash
+brew install thebushidocollective/tap/han
+```
+
+#### Via Claude Code (plugins only - requires separate han installation)
+
+Add the marketplace, then install plugins:
 
 ```
 /plugin marketplace add thebushidocollective/han
-```
-
-Then install individual plugins:
-
-```
 /plugin install bushido@han
-/plugin install jutsu-typescript@han
 ```
 
-> **Note:** For hooks to work, you must also install `han` globally and ensure it's in your PATH. See [Automatic Installation](#automatic-installation-recommended) above.
+> **Note:** Plugin hooks require `han` to be installed. Use `curl -fsSL https://han.guru/install.sh | bash` to install han first.
 
-### Manual Installation
+#### Manual Configuration
 
-Add the Han marketplace to your Claude Code settings (`.claude/settings.json`):
+Add the Han marketplace to `.claude/settings.json`:
 
 ```json
 {
@@ -88,17 +91,28 @@ Add the Han marketplace to your Claude Code settings (`.claude/settings.json`):
 }
 ```
 
-Then browse available plugins using Claude Code's plugin interface.
-
-> **Note:** For hooks to work, you must also install `han` globally and ensure it's in your PATH. See [Automatic Installation](#automatic-installation-recommended) above.
+> **Note:** Plugin hooks require `han` to be installed. Use `curl -fsSL https://han.guru/install.sh | bash` to install han first.
 
 ## Plugin Categories
 
-### 🎯 Bushido (Core)
+### ⚙️ Core (Required)
 
-The foundational plugin containing the seven virtues, enforcement hooks, and core quality skills.
+**Essential infrastructure plugin - always required.**
 
-**Always install this first** - it provides the philosophical foundation and universal quality principles (SOLID, TDD, Boy Scout Rule, etc.).
+The `core` plugin provides:
+
+- **Binary auto-installation** - SessionStart hook that downloads han to `~/.claude/bin/han`
+- **Hook infrastructure** - Delegation protocols, skill transparency, quality enforcement
+- **MCP servers** - Hook execution, metrics tracking, documentation access
+- **Universal principles** - Programming best practices that transcend languages
+
+**This plugin is automatically included with `--auto` installation.**
+
+### 🎯 Bushido (Recommended)
+
+The foundational philosophy plugin containing the seven virtues and core quality skills.
+
+**Strongly recommended** - provides philosophical foundation and universal quality principles (SOLID, TDD, Boy Scout Rule, etc.).
 
 ### ⚔️ Jutsu (Techniques)
 
@@ -140,8 +154,6 @@ MCP servers that provide external knowledge and integrations.
 **Browse all hashi plugins:** Check the `/hashi` directory in this repository.
 
 ## Using the Han CLI
-
-> **Reminder:** Han must be installed globally for hooks to work. See [han.guru](https://han.guru) for installation instructions.
 
 ### Install Plugins
 

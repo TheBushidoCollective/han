@@ -32,7 +32,7 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-markdown
+han plugin install jutsu-markdown
 ```
 
 Or install manually:

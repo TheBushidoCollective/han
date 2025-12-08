@@ -26,7 +26,7 @@ This jutsu provides the following skills for CocoaPods development:
 Install via the Han marketplace:
 
 ```bash
-npx @thebushidocollective/han plugin install jutsu-cocoapods
+han plugin install jutsu-cocoapods
 ```
 
 Or install manually:

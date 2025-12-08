@@ -63,7 +63,7 @@ pip install strands-agents-sops
 ### Via Han Marketplace
 
 ```bash
-npx @thebushidocollective/han plugin install hashi-agent-sop
+han plugin install hashi-agent-sop
 ```
 
 Or install manually:
