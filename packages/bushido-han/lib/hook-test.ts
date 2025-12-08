@@ -103,12 +103,20 @@ async function executeHookCommand(
 	}
 
 	return new Promise((resolve) => {
+		// Add ~/.claude/bin to PATH for han binary access
+		const configDir = getClaudeConfigDir();
+		const claudeBinDir = join(configDir, "bin");
+		const pathSeparator = process.platform === "win32" ? ";" : ":";
+		const enhancedPath = `${claudeBinDir}${pathSeparator}${process.env.PATH || ""}`;
+
 		const child = spawn(hook.command, {
 			shell: true,
 			env: {
 				...process.env,
+				CLAUDE_CONFIG_DIR: configDir,
 				CLAUDE_PLUGIN_ROOT: hook.pluginDir,
 				CLAUDE_PROJECT_DIR: process.cwd(),
+				PATH: enhancedPath,
 				// Enable verbose output for hook run commands during testing
 				HAN_HOOK_RUN_VERBOSE: "1",
 			},
