@@ -1,7 +1,7 @@
 {
   "name": "jutsu-git-storytelling",
-  "version": "1.4.1",
-  "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
+  "version": "2.0.0",
+  "description": "Git storytelling guidance - helps commit work thoughtfully to tell the story of your development process.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -15,6 +15,6 @@
     "commit",
     "version-control",
     "quality",
-    "enforcement"
+    "guidance"
   ]
 }
