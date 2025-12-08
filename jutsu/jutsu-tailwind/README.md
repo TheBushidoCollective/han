@@ -76,7 +76,7 @@ You can customize the validation behavior by modifying `han-config.json`:
 {
   "hooks": {
     "build": {
-      "command": "npx tailwindcss -i ./src/input.css -o ./dist/output.css --minify",
+      "command": "npx -y tailwindcss -i ./src/input.css -o ./dist/output.css --minify",
       "dirsWith": ["tailwind.config.js", "tailwind.config.ts"],
       "ifChanged": ["**/*.{html,js,jsx,ts,tsx,vue,svelte}", "**/*.css"]
     }

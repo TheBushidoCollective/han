@@ -1,7 +1,7 @@
 {
   "hooks": {
     "format": {
-      "command": "npx prettier --check .",
+      "command": "npx -y prettier --check .",
       "dirsWith": ["package.json"],
       "dirTest": "grep -qE '\"prettier\":' package.json",
       "ifChanged": [

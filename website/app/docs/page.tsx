@@ -502,7 +502,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 									<code>{`{
   "hooks": {
     "lint": {
-      "command": "npx biome check --write",
+      "command": "npx -y biome check --write",
       "dirsWith": ["biome.json"],
       "ifChanged": ["**/*.{js,jsx,ts,tsx,json}"]
     }
@@ -677,7 +677,7 @@ jutsu-eslint:
 											Run type checking for typescript (in directories with
 											tsconfig.json) - runs:{" "}
 											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
-												npx tsc --noEmit
+												npx -y --package typescript tsc
 											</code>
 										</span>
 									</div>

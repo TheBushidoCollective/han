@@ -94,7 +94,7 @@ validate.ts                Execution with caching
 {
   "hooks": {
     "lint": {
-      "command": "npx biome check --write",
+      "command": "npx -y biome check --write",
       "dirsWith": ["biome.json"],
       "ifChanged": ["**/*.{js,ts}"],
       "idleTimeout": 5000

@@ -236,7 +236,7 @@ This means if you haven't modified any TypeScript files, the TypeScript compiler
    {
      "hooks": {
        "lint": {
-         "command": "npx biome check --write",
+         "command": "npx -y biome check --write",
          "dirsWith": ["biome.json"],
          "ifChanged": ["**/*.{js,jsx,ts,tsx,json}"]
        }

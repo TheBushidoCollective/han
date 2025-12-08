@@ -1,7 +1,7 @@
 {
   "hooks": {
     "test": {
-      "command": "npx cypress run",
+      "command": "npx -y cypress run",
       "dirsWith": ["package.json"],
       "dirTest": "grep -qE '\"cypress\":' package.json",
       "ifChanged": ["**/*.{js,jsx,ts,tsx}", "cypress/**/*", "cypress.config.*"]
