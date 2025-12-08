@@ -90,8 +90,6 @@ function loadNativeModule(): NativeModule {
 	);
 }
 
-const nativeModule = loadNativeModule();
-
 /**
  * Cache manifest structure stored per plugin/hook combination
  * Path: ~/.claude/projects/{project-slug}/han/{plugin_name}_{hook_name}.json
@@ -154,6 +152,7 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
+	const nativeModule = loadNativeModule();
 	return nativeModule.computeFileHash(filePath);
 }
 
@@ -204,6 +203,7 @@ export function findFilesWithGlob(
 	rootDir: string,
 	patterns: string[],
 ): string[] {
+	const nativeModule = loadNativeModule();
 	return nativeModule.findFilesWithGlob(rootDir, patterns);
 }
 
@@ -211,6 +211,7 @@ export function findFilesWithGlob(
  * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
+	const nativeModule = loadNativeModule();
 	return nativeModule.buildManifest(files, rootDir);
 }
 
@@ -226,6 +227,7 @@ function hasChanges(
 	if (!cachedManifest) {
 		return true;
 	}
+	const nativeModule = loadNativeModule();
 	return nativeModule.hasChanges(rootDir, patterns, cachedManifest);
 }
 
@@ -311,5 +313,6 @@ export function findDirectoriesWithMarkers(
 	rootDir: string,
 	markerPatterns: string[],
 ): string[] {
+	const nativeModule = loadNativeModule();
 	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
