@@ -61,7 +61,7 @@ validate.ts                Execution with caching
         "hooks": [
           {
             "type": "command",
-            "command": "npx han hook run plugin-name hook-name",
+            "command": "han hook run plugin-name hook-name",
             "timeout": 120000
           }
         ]
