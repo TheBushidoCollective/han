@@ -1,6 +1,6 @@
 {
   "name": "jutsu-scratch",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["scratch", "workspace", "gitignore", "temporary", "workflow"]
+  "keywords": [
+    "scratch",
+    "workspace",
+    "gitignore",
+    "temporary",
+    "workflow"
+  ]
 }
