@@ -162,7 +162,6 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 	useEffect(() => {
 		let marketplaceLoaded = false;
 		let detectionComplete = false;
-		let detectedPluginsList: string[] = [];
 
 		// Fetch marketplace plugins
 		fetchMarketplace()
@@ -231,7 +230,6 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 				}
 
 				setDetectedPlugins(plugins);
-				detectedPluginsList = plugins;
 				detectionComplete = true;
 
 				// Only move to selection if marketplace is also loaded
