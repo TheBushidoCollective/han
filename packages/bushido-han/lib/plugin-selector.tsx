@@ -148,63 +148,54 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
 		{ isActive: mode === "selection" },
 	);
 
-	// Handle escape in search mode (always active in search)
-	useInput(
-		(_input, key) => {
-			if (key.escape) {
-				setMode("selection");
-				setSearchResults([]);
-				setSearchQuery("");
-			}
-		},
-		{ isActive: mode === "search" },
-	);
-
-	// Handle search result navigation (active when in navigation mode with results)
+	// Handle search mode input (both typing and navigation)
+	// Only active when NOT typing (i.e., when navigating results)
+	// Escape is handled separately to always work
 	useInput(
 		(input, key) => {
-			if (key.upArrow) {
-				setSearchSelectedIndex(Math.max(0, searchSelectedIndex - 1));
-				setIsTyping(false); // Switch to navigation mode
-			} else if (key.downArrow) {
-				// +1 for "Back" option
-				setSearchSelectedIndex(
-					Math.min(searchResults.length, searchSelectedIndex + 1),
-				);
-				setIsTyping(false); // Switch to navigation mode
-			} else if (key.return) {
-				if (searchSelectedIndex < searchResults.length) {
-					// Add selected plugin
-					const plugin = searchResults[searchSelectedIndex];
-					setSelectedPlugins((prev) => new Set([...prev, plugin.name]));
-				}
-				// Go back to selection mode (works for both selecting plugin and "Back" option)
-				setMode("selection");
-				setSelectedIndex(0);
-				setIsTyping(true);
-			} else if (key.escape) {
-				// Escape can either go back to typing or exit search
-				if (!isTyping) {
-					// If navigating, go back to typing mode
-					setIsTyping(true);
-				} else {
-					// If typing, exit search mode
+			if (key.escape) {
+				// Always handle escape in search mode
+				if (isTyping || searchResults.length === 0) {
+					// If typing or no results, exit search mode
 					setMode("selection");
 					setSearchResults([]);
 					setSearchQuery("");
+				} else {
+					// If navigating results, go back to typing mode
+					setIsTyping(true);
 				}
-			} else if (
-				input &&
-				!key.upArrow &&
-				!key.downArrow &&
-				!key.return &&
-				!key.escape
-			) {
-				// Any other key input switches back to typing mode
-				setIsTyping(true);
+			} else if (!isTyping && searchResults.length > 0) {
+				// Only handle navigation keys when not typing and have results
+				if (key.upArrow) {
+					setSearchSelectedIndex(Math.max(0, searchSelectedIndex - 1));
+				} else if (key.downArrow) {
+					// +1 for "Back" option
+					setSearchSelectedIndex(
+						Math.min(searchResults.length, searchSelectedIndex + 1),
+					);
+				} else if (key.return) {
+					if (searchSelectedIndex < searchResults.length) {
+						// Add selected plugin
+						const plugin = searchResults[searchSelectedIndex];
+						setSelectedPlugins((prev) => new Set([...prev, plugin.name]));
+					}
+					// Go back to selection mode (works for both selecting plugin and "Back" option)
+					setMode("selection");
+					setSelectedIndex(0);
+					setIsTyping(true);
+				} else if (
+					input &&
+					!key.upArrow &&
+					!key.downArrow &&
+					!key.return &&
+					!key.escape
+				) {
+					// Any other key input switches back to typing mode
+					setIsTyping(true);
+				}
 			}
 		},
-		{ isActive: mode === "search" && searchResults.length > 0 && !isTyping },
+		{ isActive: mode === "search" },
 	);
 
 	if (mode === "selection") {
