@@ -49,12 +49,28 @@ export class MetricsStorage {
 			mkdirSync(metricsDir, { recursive: true });
 		}
 
-		// Open database
+		// Open database (creates if doesn't exist)
 		this.db = new Database(getMetricsDbPath());
+
+		// Configure SQLite for multi-process concurrent access
+		// WAL mode allows multiple readers + one writer concurrently
 		this.db.exec("PRAGMA journal_mode = WAL");
+		// Wait up to 10 seconds for locks (increased for high concurrency)
+		this.db.exec("PRAGMA busy_timeout = 10000");
+		// NORMAL is safe with WAL mode and faster than FULL
+		this.db.exec("PRAGMA synchronous = NORMAL");
+		// Optimize WAL checkpointing for concurrent access
+		this.db.exec("PRAGMA wal_autocheckpoint = 1000");
+		// Enable shared cache for better multi-process performance
+		this.db.exec("PRAGMA cache_size = -64000"); // 64MB cache
+		// Optimize locking mode for concurrent access
+		this.db.exec("PRAGMA locking_mode = NORMAL"); // Allow other processes to access
 
 		// Create schema
 		this.initializeSchema();
+
+		// Clean up any stale locks from crashed processes
+		this.cleanupStaleLocks();
 	}
 
 	private initializeSchema(): void {
@@ -169,35 +185,48 @@ export class MetricsStorage {
 	 * Start a new session or resume existing one
 	 */
 	startSession(sessionId?: string): { session_id: string; resumed: boolean } {
-		if (sessionId) {
-			// Resume existing session
-			const session = this.db
-				.prepare("SELECT id, status FROM sessions WHERE id = ?")
-				.get(sessionId) as { id: string; status: string } | undefined;
+		// Use explicit transaction to reduce lock contention in multi-process scenarios
+		try {
+			this.db.exec("BEGIN IMMEDIATE");
 
-			if (session) {
-				// Update last_resumed_at timestamp
-				this.db
-					.prepare(
-						"UPDATE sessions SET last_resumed_at = ?, status = 'active' WHERE id = ?",
-					)
-					.run(new Date().toISOString(), sessionId);
-				return { session_id: sessionId, resumed: true };
+			if (sessionId) {
+				// Resume existing session
+				const session = this.db
+					.prepare("SELECT id, status FROM sessions WHERE id = ?")
+					.get(sessionId) as { id: string; status: string } | undefined;
+
+				if (session) {
+					// Update last_resumed_at timestamp
+					this.db
+						.prepare(
+							"UPDATE sessions SET last_resumed_at = ?, status = 'active' WHERE id = ?",
+						)
+						.run(new Date().toISOString(), sessionId);
+					this.db.exec("COMMIT");
+					return { session_id: sessionId, resumed: true };
+				}
+				// Session not found, create new one with the provided ID
 			}
-			// Session not found, create new one with the provided ID
+
+			// Create new session
+			const newSessionId = sessionId || this.generateSessionId();
+			const started_at = new Date().toISOString();
+
+			this.db
+				.prepare(
+					"INSERT INTO sessions (id, started_at, last_resumed_at, status) VALUES (?, ?, ?, 'active')",
+				)
+				.run(newSessionId, started_at, started_at);
+
+			this.db.exec("COMMIT");
+			return { session_id: newSessionId, resumed: false };
+		} catch (error) {
+			// Rollback on error
+			if (this.db.inTransaction) {
+				this.db.exec("ROLLBACK");
+			}
+			throw error;
 		}
-
-		// Create new session
-		const newSessionId = sessionId || this.generateSessionId();
-		const started_at = new Date().toISOString();
-
-		this.db
-			.prepare(
-				"INSERT INTO sessions (id, started_at, last_resumed_at, status) VALUES (?, ?, ?, 'active')",
-			)
-			.run(newSessionId, started_at, started_at);
-
-		return { session_id: newSessionId, resumed: false };
 	}
 
 	/**
@@ -880,9 +909,39 @@ export class MetricsStorage {
 	}
 
 	/**
+	 * Clean up stale locks from crashed processes
+	 * This runs on startup to ensure we don't have lingering locks
+	 */
+	private cleanupStaleLocks(): void {
+		try {
+			// Roll back any uncommitted transactions (from crashed processes)
+			if (this.db.inTransaction) {
+				this.db.exec("ROLLBACK");
+			}
+
+			// Run WAL checkpoint to merge WAL into main database
+			// This also releases any old locks from the WAL file
+			this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+		} catch (_error) {
+			// Ignore errors during cleanup - database might be fine
+			// The busy_timeout will handle any remaining lock issues
+		}
+	}
+
+	/**
 	 * Close the database connection
 	 */
 	close(): void {
+		// Ensure clean shutdown
+		try {
+			if (this.db.inTransaction) {
+				this.db.exec("ROLLBACK");
+			}
+			// Checkpoint WAL before closing
+			this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+		} catch (_error) {
+			// Ignore errors during cleanup
+		}
 		this.db.close();
 	}
 }

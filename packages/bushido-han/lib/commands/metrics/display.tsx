@@ -702,10 +702,14 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 			{hasData && showCalibration && <CalibrationInsights result={result} />}
 
 			{/* Footer */}
-			{hasData && (
+			{hasData && !showCalibration && (
 				<Box marginTop={1}>
 					<Text dimColor>
-						Tip: Use --calibration to see detailed calibration analysis
+						Tip: Use{" "}
+						<Text bold dimColor>
+							han metrics show --calibration
+						</Text>{" "}
+						to see detailed calibration analysis
 					</Text>
 				</Box>
 			)}
