@@ -128,7 +128,7 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
 
 ### Common Validation Commands
 
-- **TypeScript**: `npx tsc --noEmit`
+- **TypeScript**: `npx -y --package typescript tsc`
 - **ESLint**: `npx eslint . --max-warnings 0`
 - **Biome**: `npx @biomejs/biome check .`
 - **Pytest**: `pytest`

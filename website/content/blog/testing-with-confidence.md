@@ -32,7 +32,7 @@ Let's look at how the `jutsu-typescript` plugin uses hooks to enforce type safet
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npx tsc --noEmit"
+        "command": "npx -y --package typescript tsc"
       }]
     }]
   }

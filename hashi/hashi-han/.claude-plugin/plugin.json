@@ -24,9 +24,7 @@
   "mcpServers": {
     "han": {
       "command": "han",
-      "args": [
-        "mcp"
-      ],
+      "args": ["mcp"],
       "env": {}
     }
   }
