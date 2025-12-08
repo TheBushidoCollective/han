@@ -10,9 +10,6 @@ import {
 } from "./claude-settings.js";
 import { HookTestUI } from "./hook-test-ui.js";
 
-/** Default timeout for hooks (30 seconds per Claude docs) */
-const DEFAULT_HOOK_TIMEOUT = 30000;
-
 interface HookCommand {
 	plugin: string;
 	command: string;
@@ -127,11 +124,13 @@ async function executeHookCommand(
 		let timeoutHandle: NodeJS.Timeout | null = null;
 
 		// Set up timeout (use default if not specified)
-		const timeout = hook.timeout ?? DEFAULT_HOOK_TIMEOUT;
+		// hook.timeout is in seconds (per Claude Code spec), convert to ms for setTimeout
+		const timeoutSeconds = hook.timeout ?? 30;
+		const timeoutMs = timeoutSeconds * 1000;
 		timeoutHandle = setTimeout(() => {
 			timedOut = true;
 			child.kill();
-		}, timeout);
+		}, timeoutMs);
 
 		child.stdout?.on("data", (data) => {
 			const text = data.toString();
