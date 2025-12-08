@@ -1,6 +1,6 @@
 {
   "name": "jutsu-pylint",
-  "version": "1.8.15",
+  "version": "1.8.16",
   "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
   "author": {
     "name": "The Bushido Collective",
