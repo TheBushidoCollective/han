@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.56.1] - 2025-12-08
+
+### Added
+
+- add description field support to han-config.json ([f7c0c3f8](../../commit/f7c0c3f8))
+- auto-install han binary and use direct han commands ([f0bca8c3](../../commit/f0bca8c3))
+- move storage to ~/.claude/han/metrics ([0f72ad9b](../../commit/0f72ad9b))
+
+### Fixed
+
+- add -y flag to remaining npx typescript commands ([03543a73](../../commit/03543a73))
+- convert hook timeout from seconds to milliseconds ([985ecde3](../../commit/985ecde3))
+- add Claude bin directory to PATH in hook test execution ([c0bd7909](../../commit/c0bd7909))
+- expand CLAUDE_PLUGIN_ROOT environment variable in han hook reference ([9a381c85](../../commit/9a381c85))
+- add biome-ignore for intentional string concatenation ([daff77bd](../../commit/daff77bd))
+- properly output CLAUDE_PLUGIN_ROOT for expansion in hooks ([cc97a3eb](../../commit/cc97a3eb))
+
+### Other
+
+- fix han command ([fab172e8](../../commit/fab172e8))
+
 ## [1.56.0] - 2025-12-08
 
 ### Added
