@@ -160,11 +160,20 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 	}, [addLogLine]);
 
 	useEffect(() => {
+		let marketplaceLoaded = false;
+		let detectionComplete = false;
+		let detectedPluginsList: string[] = [];
+
 		// Fetch marketplace plugins
 		fetchMarketplace()
 			.then((plugins) => {
 				if (isMountedRef.current) {
 					setAllPlugins(plugins);
+					marketplaceLoaded = true;
+					// If detection is also complete, move to selection
+					if (detectionComplete) {
+						moveToSelection();
+					}
 				}
 			})
 			.catch((err) => {
@@ -174,6 +183,16 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 					onInstallError(err);
 				}
 			});
+
+		const moveToSelection = () => {
+			setPhase("analyzed");
+			// Move to selection after a brief pause
+			setTimeout(() => {
+				if (isMountedRef.current) {
+					setPhase("selecting");
+				}
+			}, 1000);
+		};
 
 		// Start plugin detection
 		const callbacks: DetectPluginsCallbacks = {
@@ -212,14 +231,13 @@ export const InstallInteractive: React.FC<InstallInteractiveProps> = ({
 				}
 
 				setDetectedPlugins(plugins);
-				setPhase("analyzed");
+				detectedPluginsList = plugins;
+				detectionComplete = true;
 
-				// Move to selection after a brief pause
-				setTimeout(() => {
-					if (isMountedRef.current) {
-						setPhase("selecting");
-					}
-				}, 1000);
+				// Only move to selection if marketplace is also loaded
+				if (marketplaceLoaded) {
+					moveToSelection();
+				}
 			},
 			onError: (err: Error) => {
 				if (!isMountedRef.current) return;
