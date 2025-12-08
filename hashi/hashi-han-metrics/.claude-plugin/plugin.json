@@ -11,11 +11,20 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["mcp", "metrics", "tracking", "analytics", "server"],
+  "keywords": [
+    "mcp",
+    "metrics",
+    "tracking",
+    "analytics",
+    "server"
+  ],
   "mcpServers": {
     "han-metrics": {
-      "command": "npx",
-      "args": ["--yes", "@thebushidocollective/han", "mcp", "metrics"],
+      "command": "han",
+      "args": [
+        "mcp",
+        "metrics"
+      ],
       "env": {}
     }
   }

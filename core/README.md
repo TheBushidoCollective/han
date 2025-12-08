@@ -279,8 +279,8 @@ The `mcpServers` field in `.claude-plugin/plugin.json` defines both MCP servers.
 {
   "mcpServers": {
     "han": {
-      "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp"],
+      "command": "han",
+      "args": ["mcp"],
       "env": {
         "CUSTOM_VAR": "value"
       }
