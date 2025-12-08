@@ -1,6 +1,6 @@
 {
   "name": "jutsu-fnox",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
   "author": {
     "name": "The Bushido Collective",

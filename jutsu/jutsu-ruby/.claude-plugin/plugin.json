@@ -1,6 +1,6 @@
 {
   "name": "jutsu-ruby",
-  "version": "1.8.15",
+  "version": "1.8.16",
   "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop"]
+  "keywords": [
+    "ruby",
+    "metaprogramming",
+    "blocks",
+    "gems",
+    "oop"
+  ]
 }

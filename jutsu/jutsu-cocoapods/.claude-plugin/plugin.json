@@ -1,6 +1,6 @@
 {
   "name": "jutsu-cocoapods",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Validation and quality enforcement for CocoaPods dependency management in iOS, macOS, tvOS, watchOS, and visionOS projects.",
   "author": {
     "name": "The Bushido Collective",
