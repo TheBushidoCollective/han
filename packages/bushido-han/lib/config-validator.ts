@@ -86,6 +86,14 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			});
 		}
 
+		// Optional: description (string)
+		if ("description" in hook && typeof hook.description !== "string") {
+			errors.push({
+				path: `${hookPath}.description`,
+				message: "'description' must be a string",
+			});
+		}
+
 		// Optional: ifChanged (array of strings)
 		if ("ifChanged" in hook) {
 			if (!Array.isArray(hook.ifChanged)) {
@@ -121,6 +129,7 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			"command",
 			"dirsWith",
 			"dirTest",
+			"description",
 			"ifChanged",
 			"idleTimeout",
 		];
