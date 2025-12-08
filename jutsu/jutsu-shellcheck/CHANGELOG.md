@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.17] - 2025-12-08
+
+### Fixed
+
+- read user prompt from stdin hook event JSON ([359f6b43](../../commit/359f6b43))
+- remove npx fallback from all hooks - rely on binary only ([b088a4a9](../../commit/b088a4a9))
+- add Claude bin directory to PATH in hook test execution ([c0bd7909](../../commit/c0bd7909))
+
+### Other
+
+- format JSON files ([6b574250](../../commit/6b574250))
+- fix han command ([fab172e8](../../commit/fab172e8))
+
 ## [1.2.16] - 2025-12-08
 
 ### Added
