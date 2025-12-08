@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.55.3] - 2025-12-08
+
+### Added
+
+- auto-install han binary and use direct han commands ([f0bca8c3](../../commit/f0bca8c3))
+- move storage to ~/.claude/han/metrics ([0f72ad9b](../../commit/0f72ad9b))
+- add agent detection to han explain ([245601e8](../../commit/245601e8))
+- add 'han prompt must-read' command for semantic hook injection ([8d749a3e](../../commit/8d749a3e))
+
+### Fixed
+
+- convert hook timeout from seconds to milliseconds ([985ecde3](../../commit/985ecde3))
+- add Claude bin directory to PATH in hook test execution ([c0bd7909](../../commit/c0bd7909))
+- expand CLAUDE_PLUGIN_ROOT environment variable in han hook reference ([9a381c85](../../commit/9a381c85))
+- add biome-ignore for intentional string concatenation ([daff77bd](../../commit/daff77bd))
+- properly output CLAUDE_PLUGIN_ROOT for expansion in hooks ([cc97a3eb](../../commit/cc97a3eb))
+- correct plugin path detection in han explain ([c5b90b40](../../commit/c5b90b40))
+- remove duplicate file display for command hooks with inline references ([272e9ca0](../../commit/272e9ca0))
+
+### Changed
+
+- move file reference command to han hook reference ([ffd08928](../../commit/ffd08928))
+
+### Other
+
+- fix han command ([fab172e8](../../commit/fab172e8))
+
 ## [1.55.2] - 2025-12-08
 
 ### Added
