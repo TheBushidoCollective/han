@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.16] - 2025-12-08
+
+### Added
+
+- auto-install han binary and use direct han commands ([f0bca8c3](../../commit/f0bca8c3))
+
+### Fixed
+
+- remove npx fallback from all hooks - rely on binary only ([b088a4a9](../../commit/b088a4a9))
+- add Claude bin directory to PATH in hook test execution ([c0bd7909](../../commit/c0bd7909))
+
+### Other
+
+- fix han command ([fab172e8](../../commit/fab172e8))
+
 ## [2.2.15] - 2025-12-08
 
 ### Added

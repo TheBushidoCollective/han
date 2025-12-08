@@ -1,6 +1,6 @@
 {
   "name": "jutsu-ios",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "iOS development validation with Xcode build hooks.",
   "author": {
     "name": "The Bushido Collective",

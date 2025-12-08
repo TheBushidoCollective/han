@@ -1,6 +1,6 @@
 {
   "name": "jutsu-cypress",
-  "version": "1.8.15",
+  "version": "1.8.16",
   "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
   "author": {
     "name": "The Bushido Collective",
