@@ -1,0 +1,3 @@
+jutsu-bun:
+  build:
+    command: bun scripts/build-bundle.js
