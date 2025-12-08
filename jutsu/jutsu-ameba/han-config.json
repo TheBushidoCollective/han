@@ -1,7 +1,7 @@
 {
   "hooks": {
     "lint": {
-      "command": "crystal tool format --check && ameba",
+      "command": "shards install && ameba",
       "dirsWith": ["shard.yml"],
       "dirTest": "grep -qE 'ameba' shard.yml",
       "ifChanged": ["**/*.cr", "**/*.ecr", "shard.yml", ".ameba.yml"]
