@@ -1,6 +1,6 @@
 {
 	"name": "@thebushidocollective/han",
-	"version": "1.55.3",
+	"version": "1.56.0",
 	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
