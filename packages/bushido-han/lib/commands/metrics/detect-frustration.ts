@@ -163,7 +163,7 @@ export async function detectFrustrationFromStdin(): Promise<void> {
 		if (event.prompt) {
 			detectFrustration(event.prompt);
 		}
-	} catch (error) {
+	} catch {
 		// Silently ignore parse errors - not all hooks will have valid JSON
 	}
 }
