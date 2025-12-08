@@ -17,6 +17,11 @@ export interface PluginHookDefinition {
 	dirTest?: string;
 	command: string;
 	/**
+	 * Human-readable description of what this hook does.
+	 * Used for documentation and website display.
+	 */
+	description?: string;
+	/**
 	 * Glob patterns relative to each target directory.
 	 * When --cache is enabled, the hook will only run if files matching
 	 * these patterns have changed since the last successful execution.
