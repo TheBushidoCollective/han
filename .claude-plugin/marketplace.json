@@ -1082,23 +1082,6 @@
       ]
     },
     {
-      "name": "hashi-han-metrics",
-      "description": "MCP server for agent performance tracking with self-reporting, objective validation, and calibration metrics. Provides local SQLite storage with SessionStart/Stop hooks for continuous improvement.",
-      "source": "./hashi/hashi-han-metrics",
-      "category": "Bridge",
-      "keywords": [
-        "mcp",
-        "metrics",
-        "performance",
-        "tracking",
-        "calibration",
-        "self-reporting",
-        "validation",
-        "analytics",
-        "server"
-      ]
-    },
-    {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
       "source": "./do/do-accessibility-engineering",
