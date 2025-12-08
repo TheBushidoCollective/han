@@ -679,7 +679,7 @@ export function renderPlainText(
 	// Footer
 	if (!showCalibration) {
 		console.log(
-			`${colors.dim}Tip: Use --calibration to see detailed calibration analysis${colors.reset}`,
+			`${colors.dim}Tip: Use ${colors.bold}han metrics show --calibration${colors.reset}${colors.dim} to see detailed calibration analysis${colors.reset}`,
 		);
 		console.log();
 	}
