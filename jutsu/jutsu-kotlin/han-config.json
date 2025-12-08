@@ -1,8 +1,10 @@
 {
   "hooks": {
     "test": {
-      "command": "./gradlew test || npx -y @thebushidocollective/han hook run --fail-fast --dirs-with pom.xml -- mvn test",
-      "dirsWith": ["build.gradle.kts"],
+      "command": "./gradlew test || han hook run --fail-fast --dirs-with pom.xml -- mvn test",
+      "dirsWith": [
+        "build.gradle.kts"
+      ],
       "ifChanged": [
         "**/*.kt",
         "**/*.kts",

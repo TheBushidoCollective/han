@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-git-storytelling check-commits --fail-fast || npx -y @thebushidocollective/han hook run jutsu-git-storytelling check-commits --fail-fast",
+            "command": "han hook run jutsu-git-storytelling check-commits --fail-fast || han hook run jutsu-git-storytelling check-commits --fail-fast",
             "timeout": 120
           }
         ]

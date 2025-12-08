@@ -95,7 +95,7 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
+            "command": "han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
             "timeout": 120000
           }
         ]

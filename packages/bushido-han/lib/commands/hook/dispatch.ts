@@ -449,15 +449,15 @@ export function registerHookDispatch(hookCommand: Command): void {
 		.command("dispatch <hookType>")
 		.description(
 			"Dispatch hooks of a specific type across all installed Han plugins.\n" +
-				"By default, only runs Han plugin hooks. Use --all to include settings hooks.\n\n" +
-				"This is a workaround for Claude Code bug #12151 where plugin hook output\n" +
-				"is not passed to the agent. Add this to ~/.claude/settings.json:\n\n" +
-				'  "hooks": {\n' +
-				'    "UserPromptSubmit": [{"hooks": [{"type": "command",\n' +
-				'      "command": "npx -y @thebushidocollective/han hook dispatch UserPromptSubmit"}]}],\n' +
-				'    "SessionStart": [{"hooks": [{"type": "command",\n' +
-				'      "command": "npx -y @thebushidocollective/han hook dispatch SessionStart"}]}]\n' +
-				"  }",
+			"By default, only runs Han plugin hooks. Use --all to include settings hooks.\n\n" +
+			"This is a workaround for Claude Code bug #12151 where plugin hook output\n" +
+			"is not passed to the agent. Add this to ~/.claude/settings.json:\n\n" +
+			'  "hooks": {\n' +
+			'    "UserPromptSubmit": [{"hooks": [{"type": "command",\n' +
+			'      "command": "han hook dispatch UserPromptSubmit"}]}],\n' +
+			'    "SessionStart": [{"hooks": [{"type": "command",\n' +
+			'      "command": "han hook dispatch SessionStart"}]}]\n' +
+			"  }",
 		)
 		.option(
 			"-a, --all",

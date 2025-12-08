@@ -256,6 +256,6 @@ if (!tryRunBinary()) {
 	console.error("\nTry reinstalling:");
 	console.error("  npm cache clean --force");
 	console.error("  npx clear-npx-cache");
-	console.error("  npx -y @thebushidocollective/han@latest --version");
+	console.error("  han@latest --version");
 	process.exit(1);
 }
