@@ -9,10 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "yarn",
-    "package-manager",
-    "dependencies",
-    "node"
-  ]
+  "keywords": ["yarn", "package-manager", "dependencies", "node"]
 }
