@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2025-12-09
+
+### Added
+
+- integrate sentiment detection into core plugin ([ef388e52](../../commit/ef388e52))
+
+### Fixed
+
+- read user prompt from stdin hook event JSON ([359f6b43](../../commit/359f6b43))
+- add -y flag to remaining npx typescript commands ([03543a73](../../commit/03543a73))
+- atomic binary update in SessionStart hook ([44a38628](../../commit/44a38628))
+
+### Changed
+
+- rename bushido-han package to han with expanded test coverage ([a320585d](../../commit/a320585d))
+
+### Other
+
+- format code with biome and rebuild native module ([50e3fbd1](../../commit/50e3fbd1))
+- format JSON files ([6b574250](../../commit/6b574250))
+
 ## [1.0.7] - 2025-12-08
 
 ### Added

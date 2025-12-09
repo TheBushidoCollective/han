@@ -1,6 +1,6 @@
 {
   "name": "jutsu-shfmt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Validation and quality enforcement for shell scripts using shfmt.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,12 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["shell", "bash", "shfmt", "formatter", "validation", "quality"]
+  "keywords": [
+    "shell",
+    "bash",
+    "shfmt",
+    "formatter",
+    "validation",
+    "quality"
+  ]
 }
