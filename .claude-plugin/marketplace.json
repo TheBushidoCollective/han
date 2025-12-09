@@ -734,6 +734,13 @@
       ]
     },
     {
+      "name": "jutsu-shfmt",
+      "description": "Validation and quality enforcement for shell scripts using shfmt formatter with configuration, formatting patterns, and best practices.",
+      "source": "./jutsu/jutsu-shfmt",
+      "category": "Technique",
+      "keywords": ["bash", "shell", "shfmt", "formatter", "validation", "posix"]
+    },
+    {
       "name": "jutsu-sip",
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
       "source": "./jutsu/jutsu-sip",

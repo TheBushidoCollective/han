@@ -292,7 +292,7 @@ han/
 ├── do/                   # Discipline plugins (specialized agents)
 ├── hashi/               # Teacher plugins (MCP servers)
 └── packages/
-    └── bushido-han/      # CLI tool for installation & validation
+    └── han/              # CLI tool for installation & validation
 ```
 
 ## License

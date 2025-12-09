@@ -109,23 +109,23 @@ jobs:
         working-directory: ./packages/han-native
         run: npm run build
 
-      - name: Install bushido-han dependencies
-        working-directory: ./packages/bushido-han
+      - name: Install han dependencies
+        working-directory: ./packages/han
         run: npm ci
 
-      - name: Copy native modules to bushido-han for embedding
+      - name: Copy native modules to han for embedding
         run: |
-          # Copy native modules to bushido-han/native/ for Bun to embed during compilation
+          # Copy native modules to han/native/ for Bun to embed during compilation
           # Each platform build will use the appropriate native module
-          mkdir -p packages/bushido-han/native
-          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/bushido-han/native/
-          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/bushido-han/native/
-          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/bushido-han/native/
-          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/bushido-han/native/
-          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/bushido-han/native/
+          mkdir -p packages/han/native
+          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/han/native/
+          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/han/native/
+          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/han/native/
+          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/han/native/
+          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/han/native/
 
       - name: Cross-compile binaries with embedded native modules
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         run: |
           mkdir -p dist/binaries
 
@@ -153,18 +153,18 @@ jobs:
           bun scripts/build-bundle.js bun-windows-x64
 
       - name: Create checksums
-        working-directory: ./packages/bushido-han/dist/binaries
+        working-directory: ./packages/han/dist/binaries
         run: |
           for file in *; do
             sha256sum "$file" > "$file.sha256"
           done
 
       - name: Build platform packages for npm
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         run: node scripts/build-platform-packages.js
 
       - name: Publish platform packages to npm
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -178,11 +178,11 @@ jobs:
           done
 
       - name: Sync optionalDependencies versions
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         run: node scripts/sync-platform-versions.js
 
       - name: Verify platform packages are available on npm
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         run: |
           VERSION=$(node -p "require('./package.json').version")
           PACKAGES=(
@@ -226,7 +226,7 @@ jobs:
           echo "Done waiting"
 
       - name: Publish main package to npm
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public || echo "Failed to publish main package (may already exist)"
@@ -236,7 +236,7 @@ jobs:
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
-            packages/bushido-han/dist/binaries/*
+            packages/han/dist/binaries/*
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(inputs.tag || github.ref, '-') }}

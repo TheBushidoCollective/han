@@ -19,7 +19,7 @@ Blueprints are stored as markdown files in `blueprints/` at the repository root,
 
 ### Components
 
-- **MCP Server** (`packages/bushido-han/lib/commands/mcp/blueprints.ts`) - JSON-RPC server exposing blueprint tools
+- **MCP Server** (`packages/han/lib/commands/mcp/blueprints.ts`) - JSON-RPC server exposing blueprint tools
 - **Blueprint Files** (`blueprints/*.md`) - Markdown files with frontmatter metadata
 - **Frontmatter Parser** - Extracts `name` and `summary` from YAML frontmatter
 - **File System Operations** - Search, read, and write blueprint files
@@ -168,8 +168,8 @@ for (const line of lines) {
 
 - `hashi/hashi-blueprints/.claude-plugin/plugin.json` - Plugin metadata and MCP server config
 - `hashi/hashi-blueprints/README.md` - Plugin documentation
-- `packages/bushido-han/lib/commands/mcp/blueprints.ts` - MCP server implementation
-- `packages/bushido-han/lib/commands/mcp/index.ts` - Command registration
+- `packages/han/lib/commands/mcp/blueprints.ts` - MCP server implementation
+- `packages/han/lib/commands/mcp/index.ts` - Command registration
 - `hashi/hashi-blueprints/hooks/ensure-blueprints.md` - Blueprint documentation requirements
 - `blueprints/*.md` - Blueprint files with frontmatter
 

@@ -14,7 +14,7 @@ Automatically generates `CHANGELOG.md` files based on conventional commit messag
 
 **Arguments:**
 
-- `path`: Path to the directory (e.g., `packages/bushido-han`, `jutsu/jutsu-react`, `website`)
+- `path`: Path to the directory (e.g., `packages/han`, `jutsu/jutsu-react`, `website`)
 - `new_version`: The new version being released (e.g., `1.2.3`)
 - `old_version`: (Optional) The previous version (e.g., `1.2.2`) - will auto-detect if not provided
 
@@ -22,7 +22,7 @@ Automatically generates `CHANGELOG.md` files based on conventional commit messag
 
 ```bash
 # Generate changelog for the CLI
-./generate-changelog.sh packages/bushido-han 1.32.2
+./generate-changelog.sh packages/han 1.32.2
 
 # Generate changelog for a plugin
 ./generate-changelog.sh jutsu/jutsu-react 2.1.0 2.0.5
@@ -48,7 +48,7 @@ Automatically generates `CHANGELOG.md` files based on conventional commit messag
 
 The script is automatically invoked by these workflows:
 
-- **auto-tag-release.yml** - Generates changelog for the CLI (`packages/bushido-han/`)
+- **auto-tag-release.yml** - Generates changelog for the CLI (`packages/han/`)
 - **bump-plugin-versions.yml** - Generates changelogs for each changed plugin
 - **bump-website-version.yml** - Generates changelog for the website
 

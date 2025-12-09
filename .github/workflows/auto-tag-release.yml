@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'packages/bushido-han/**'
+      - 'packages/han/**'
 
 permissions:
   contents: write
@@ -67,7 +67,7 @@ jobs:
 
       - name: Bump version
         id: bump-version
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "Current version: $CURRENT_VERSION"
@@ -101,11 +101,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
 
       - name: Run tests
         run: npm test
-        working-directory: ./packages/bushido-han
+        working-directory: ./packages/han
 
       - name: Check if tag already exists
         id: check-tag
@@ -122,7 +122,7 @@ jobs:
         if: steps.check-tag.outputs.exists == 'false'
         run: |
           chmod +x .github/scripts/generate-changelog.sh
-          .github/scripts/generate-changelog.sh packages/bushido-han ${{ steps.bump-version.outputs.new_version }}
+          .github/scripts/generate-changelog.sh packages/han ${{ steps.bump-version.outputs.new_version }}
 
       - name: Commit version bump
         if: steps.check-tag.outputs.exists == 'false'
@@ -130,7 +130,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin main
-          git add packages/bushido-han/package.json packages/bushido-han/CHANGELOG.md
+          git add packages/han/package.json packages/han/CHANGELOG.md
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main
 

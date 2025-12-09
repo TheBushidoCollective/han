@@ -327,7 +327,7 @@ For jutsu plugins:
 For han CLI:
 
 ```bash
-cd packages/bushido-han
+cd packages/han
 npm run typecheck
 npm run lint
 npm test

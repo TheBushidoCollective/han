@@ -53,7 +53,9 @@
     "do-technical-documentation@han": true,
     "do-prompt-engineering@han": true,
     "do-accessibility-engineering@han": true,
-    "jutsu-shellcheck@han": true
+    "jutsu-shellcheck@han": true,
+    "jutsu-git-storytelling@han": true,
+    "do-content-creator@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

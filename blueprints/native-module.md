@@ -177,7 +177,7 @@ strategy:
 
 ### Usage
 
-- `packages/bushido-han/lib/hook-cache.ts` - Primary consumer (caching system)
+- `packages/han/lib/hook-cache.ts` - Primary consumer (caching system)
 
 ## Related Systems
 

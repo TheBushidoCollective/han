@@ -4,7 +4,7 @@ import Header from "../components/Header";
 export const metadata: Metadata = {
 	title: "Documentation - Han",
 	description:
-		"Complete documentation for Han - installation methods, hook caching, and configuration.",
+		"Complete documentation for Han - automatic quality gates for Claude Code with linting, formatting, type-checking, and testing.",
 };
 
 export default function DocsPage() {
@@ -21,16 +21,22 @@ export default function DocsPage() {
 								Documentation
 							</p>
 							<a
-								href="#philosophy"
+								href="#what-is-han"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
-								The Three Pillars
+								What is Han?
+							</a>
+							<a
+								href="#plugin-categories"
+								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+							>
+								Plugin Categories
 							</a>
 							<a
 								href="#installation"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
-								Installation Methods
+								Installation
 							</a>
 							<a
 								href="#installing-plugins"
@@ -48,7 +54,7 @@ export default function DocsPage() {
 								href="#hook-caching"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
-								Smart Hook Caching
+								Smart Caching
 							</a>
 							<a
 								href="#configuration"
@@ -60,13 +66,13 @@ export default function DocsPage() {
 								href="#mcp-server"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
-								MCP Server
+								MCP Integrations
 							</a>
 							<a
 								href="#metrics"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
-								Agent Metrics
+								Metrics
 							</a>
 							<a
 								href="#cli-reference"
@@ -102,172 +108,169 @@ export default function DocsPage() {
 							</p>
 						</div>
 
-						{/* Philosophy - The Three Pillars */}
-						<section id="philosophy" className="scroll-mt-8 mb-16">
+						{/* What is Han? */}
+						<section id="what-is-han" className="scroll-mt-8 mb-16">
 							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-								The Three Pillars
+								What is Han?
 							</h2>
-							<p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
-								Han plugins are not just prompts or skills. They are complete
-								mastery systems. Every plugin is built on three foundational
-								pillars that work together to ensure not just capability, but
-								excellence.
+							<p className="text-gray-600 dark:text-gray-300 mb-6 text-lg">
+								Han is a plugin system for Claude Code that adds automatic
+								quality gates. When you write code with Claude, Han validates it
+								with real tools: linters, formatters, type checkers, and test
+								runners.
 							</p>
 
-							<div className="space-y-8 mb-12">
-								{/* Knowledge Pillar */}
-								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
-									<div className="flex items-start gap-6">
-										<div className="text-center shrink-0">
-											<span className="text-5xl font-bold text-gray-900 dark:text-white">
-												知
-											</span>
-											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
-												Chi
-											</p>
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-8">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+									How It Works
+								</h3>
+								<div className="grid md:grid-cols-4 gap-4">
+									<div className="text-center">
+										<div className="text-2xl font-bold text-blue-500 mb-2">
+											1
 										</div>
-										<div>
-											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-												Knowledge
-											</h3>
-											<p className="text-gray-600 dark:text-gray-300 mb-4">
-												Deep expertise distilled into skills and patterns. Not
-												just answers, but understanding: the wisdom to know why,
-												not just how. Each skill contains hundreds of lines of
-												carefully crafted guidance, best practices, and
-												real-world examples.
-											</p>
-											<div className="grid md:grid-cols-2 gap-4">
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Skills
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Framework-specific expertise loaded on-demand.
-														TypeScript patterns, React hooks, testing
-														strategies. Deep knowledge when you need it.
-													</p>
-												</div>
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Anti-Patterns
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Learn what to avoid, not just what to do. Common
-														pitfalls, security vulnerabilities, and performance
-														traps identified before they become problems.
-													</p>
-												</div>
-											</div>
-										</div>
+										<p className="text-sm text-gray-600 dark:text-gray-300">
+											Install plugins that match your stack
+										</p>
 									</div>
-								</div>
-
-								{/* Action Pillar */}
-								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
-									<div className="flex items-start gap-6">
-										<div className="text-center shrink-0">
-											<span className="text-5xl font-bold text-gray-900 dark:text-white">
-												行
-											</span>
-											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
-												Kō
-											</p>
+									<div className="text-center">
+										<div className="text-2xl font-bold text-blue-500 mb-2">
+											2
 										</div>
-										<div>
-											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-												Action
-											</h3>
-											<p className="text-gray-600 dark:text-gray-300 mb-4">
-												Specialized agents and commands that execute with
-												precision. From code review to refactoring, automated
-												workflows that embody expertise. Knowledge becomes
-												action through purpose-built automation.
-											</p>
-											<div className="grid md:grid-cols-2 gap-4">
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Agents
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Specialized subagents for complex tasks. Frontend
-														development, accessibility engineering,
-														documentation. Each with deep domain expertise.
-													</p>
-												</div>
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Commands
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Slash commands for common workflows. Code review,
-														debugging, refactoring. Complex multi-step processes
-														simplified to a single invocation.
-													</p>
-												</div>
-											</div>
-										</div>
+										<p className="text-sm text-gray-600 dark:text-gray-300">
+											Write code with Claude as usual
+										</p>
 									</div>
-								</div>
-
-								{/* Discipline Pillar */}
-								<div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg">
-									<div className="flex items-start gap-6">
-										<div className="text-center shrink-0">
-											<span className="text-5xl font-bold text-gray-900 dark:text-white">
-												律
-											</span>
-											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
-												Ritsu
-											</p>
+									<div className="text-center">
+										<div className="text-2xl font-bold text-blue-500 mb-2">
+											3
 										</div>
-										<div>
-											<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-												Discipline
-											</h3>
-											<p className="text-gray-600 dark:text-gray-300 mb-4">
-												Validation hooks that enforce quality automatically.
-												Every change verified, every standard upheld. Excellence
-												through enforcement. This is what separates Han plugins
-												from simple prompt collections.
-											</p>
-											<div className="grid md:grid-cols-2 gap-4">
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Validation Hooks
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Automatic quality gates that run on every change.
-														Linting, formatting, type checking. Enforced
-														consistently without manual intervention.
-													</p>
-												</div>
-												<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-													<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-														Smart Caching
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-300">
-														Intelligent change detection ensures hooks only run
-														when needed. Fast feedback without redundant
-														validation. Discipline without delay.
-													</p>
-												</div>
-											</div>
+										<p className="text-sm text-gray-600 dark:text-gray-300">
+											Hooks run validation automatically on Stop
+										</p>
+									</div>
+									<div className="text-center">
+										<div className="text-2xl font-bold text-blue-500 mb-2">
+											4
 										</div>
+										<p className="text-sm text-gray-600 dark:text-gray-300">
+											Issues get fixed before you ship
+										</p>
 									</div>
 								</div>
 							</div>
 
-							<div className="bg-gray-900 dark:bg-gray-950 text-white p-8 rounded-lg">
-								<p className="text-2xl font-medium mb-4">
-									AI capability + Real verification = Shipping with confidence
+							<div className="grid md:grid-cols-2 gap-6 mb-8">
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Automatic Validation
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Hooks run when Claude finishes a task. ESLint, Prettier,
+										TypeScript, Biome, and more catch issues before you commit.
+										If something fails, Claude sees the error and fixes it.
+									</p>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Smart Caching
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Hooks only run when relevant files change. No redundant
+										validation. Fast feedback without waiting for checks that
+										already passed.
+									</p>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										100% Local and Private
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										All data stays on your machine. Metrics, caches, and
+										configurations are stored locally. Nothing is sent to
+										external servers.
+									</p>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+										Zero Config
+									</h4>
+									<p className="text-gray-600 dark:text-gray-300 text-sm">
+										Run{" "}
+										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+											han plugin install --auto
+										</code>{" "}
+										and Han detects your stack. Plugins come pre-configured with
+										sensible defaults.
+									</p>
+								</div>
+							</div>
+
+							<div className="bg-gray-900 dark:bg-gray-950 text-white p-6 rounded-lg">
+								<p className="text-lg font-medium mb-2">
+									AI generates. Real tools verify. You ship with confidence.
 								</p>
-								<p className="text-gray-400">
-									When you install a Han plugin, you&apos;re not just getting
-									prompts. You&apos;re getting a complete system that teaches,
-									executes, and validates. The AI generates, real tools verify,
-									and you ship with confidence. No hallucinations slip through.
+								<p className="text-gray-400 text-sm">
+									Han plugins are not just prompts. They include validation
+									hooks that run your actual linters, formatters, and test
+									runners. No hallucinations slip through.
 								</p>
+							</div>
+						</section>
+
+						{/* Plugin Categories */}
+						<section id="plugin-categories" className="scroll-mt-8 mb-16">
+							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+								Plugin Categories
+							</h2>
+							<p className="text-gray-600 dark:text-gray-300 mb-8">
+								Han has four types of plugins, each serving a different purpose.
+							</p>
+
+							<div className="space-y-6">
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+									<h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+										Core
+									</h3>
+									<p className="text-gray-600 dark:text-gray-300 mb-3">
+										Foundation plugin with software engineering principles,
+										quality commands, and the metrics system. Installed
+										automatically with every setup.
+									</p>
+								</div>
+
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+									<h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+										Dō (Discipline)
+									</h3>
+									<p className="text-gray-600 dark:text-gray-300 mb-3">
+										Specialized agents for complex domains. Accessibility
+										engineering, frontend development, technical writing. These
+										add expert knowledge and workflows for specific disciplines.
+									</p>
+								</div>
+
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+									<h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+										Jutsu (Technique)
+									</h3>
+									<p className="text-gray-600 dark:text-gray-300 mb-3">
+										Technology-specific plugins with validation hooks.
+										TypeScript, Biome, ESLint, Playwright, Elixir, and more.
+										These run your actual tools to enforce quality standards.
+									</p>
+								</div>
+
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+									<h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+										Hashi (Bridge)
+									</h3>
+									<p className="text-gray-600 dark:text-gray-300 mb-3">
+										MCP server integrations for external services. GitHub,
+										Figma, Sentry, Playwright browser automation. Connect Claude
+										to tools outside your codebase.
+									</p>
+								</div>
 							</div>
 						</section>
 
@@ -277,15 +280,25 @@ export default function DocsPage() {
 								Installation Methods
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
-								No installation required - use npx to install plugins instantly.
-								Hooks run automatically via npx.
+								Install the han binary locally for fast hook execution.
 							</p>
 
 							<div className="space-y-6">
 								<InstallMethod
-									title="npx (Recommended)"
-									description="Use han without installing - npx fetches the latest version"
-									code="npx @thebushidocollective/han plugin install --auto"
+									title="curl (Recommended)"
+									description="Install the han binary to ~/.local/bin"
+									code={`curl -fsSL https://han.guru/install.sh | bash
+
+# Then install plugins
+han plugin install --auto`}
+								/>
+								<InstallMethod
+									title="Homebrew"
+									description="Install via Homebrew on macOS/Linux"
+									code={`brew install thebushidocollective/tap/han
+
+# Then install plugins
+han plugin install --auto`}
 								/>
 								<InstallMethod
 									title="Claude Code"
@@ -321,15 +334,15 @@ claude plugin install bushido@han`}
 									title="Automatic Detection"
 									description="Let han analyze your codebase and recommend plugins"
 									code={`# Analyze codebase and recommend plugins
-npx @thebushidocollective/han plugin install --auto
+han plugin install --auto
 
 # Install to project settings (shared via git)
-npx @thebushidocollective/han plugin install --auto --scope project`}
+han plugin install --auto --scope project`}
 								/>
 								<InstallMethod
 									title="Manual Plugin Install"
 									description="Install specific plugins by name"
-									code="npx @thebushidocollective/han plugin install jutsu-typescript"
+									code="han plugin install jutsu-typescript"
 								/>
 							</div>
 						</section>
@@ -363,10 +376,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 												plugins or using tools across all your projects.
 											</p>
 											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
-												<code>
-													npx @thebushidocollective/han plugin install
-													hashi-playwright-mcp
-												</code>
+												<code>han plugin install hashi-playwright-mcp</code>
 											</pre>
 											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
 												Installs to{" "}
@@ -395,8 +405,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 											</p>
 											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
 												<code>
-													npx @thebushidocollective/han plugin install
-													jutsu-typescript --scope local
+													han plugin install jutsu-typescript --scope local
 												</code>
 											</pre>
 											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
@@ -425,10 +434,7 @@ npx @thebushidocollective/han plugin install --auto --scope project`}
 												project uses the same plugins and validation hooks.
 											</p>
 											<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto text-sm">
-												<code>
-													npx @thebushidocollective/han plugin install --auto
-													--scope project
-												</code>
+												<code>han plugin install --auto --scope project</code>
 											</pre>
 											<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
 												Installs to{" "}
@@ -599,325 +605,262 @@ jutsu-eslint:
 						{/* MCP Server */}
 						<section id="mcp-server" className="scroll-mt-8 mb-16">
 							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-								MCP Server
+								MCP Integrations
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
-								Run hook commands via natural language. The Han MCP server
-								dynamically exposes tools based on your installed plugins,
-								letting you say &quot;run the elixir tests&quot; instead of
-								remembering exact commands.
+								Han uses MCP (Model Context Protocol) servers to give Claude
+								access to external tools and services. There are two types of
+								MCP integrations.
 							</p>
 
-							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Quick Start
+							{/* Han MCP Server */}
+							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-8">
+								<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+									Han MCP Server (hashi-han)
 								</h3>
-								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-									<code>
-										npx @thebushidocollective/han plugin install hashi-han
-									</code>
+								<p className="text-gray-600 dark:text-gray-300 mb-4">
+									Exposes all your installed plugin hooks as MCP tools. Claude
+									can run linters, tests, and formatters using natural language
+									instead of remembering exact commands.
+								</p>
+
+								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4">
+									<code>han plugin install hashi-han</code>
 								</pre>
-								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
-									Once installed, the MCP server automatically discovers your
-									installed plugins and exposes their hooks as tools.
+
+								<div className="grid md:grid-cols-2 gap-4 mb-4">
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+											Dynamic Tools
+										</h4>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Tools are generated from your installed plugins.
+											jutsu-typescript adds{" "}
+											<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+												jutsu_typescript_typecheck
+											</code>
+											, jutsu-biome adds{" "}
+											<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+												jutsu_biome_lint
+											</code>
+											, etc.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+											Natural Language
+										</h4>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Say &quot;run the tests&quot; or &quot;check types&quot;
+											and Claude calls the right tool. No need to remember exact
+											hook names or commands.
+										</p>
+									</div>
+								</div>
+
+								<p className="text-sm text-gray-500 dark:text-gray-400">
+									Tools include smart caching by default. They only run when
+									relevant files have changed.
 								</p>
 							</div>
 
-							<div className="grid md:grid-cols-2 gap-6 mb-8">
-								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-										Dynamic Tool Discovery
-									</h4>
-									<p className="text-gray-600 dark:text-gray-300 text-sm">
-										Tools are generated based on what plugins you have
-										installed. Install jutsu-elixir and get{" "}
-										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-											jutsu_elixir_test
-										</code>
-										,{" "}
-										<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-											jutsu_elixir_lint
-										</code>
-										, etc.
-									</p>
-								</div>
-								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-										Smart Caching Built-in
-									</h4>
-									<p className="text-gray-600 dark:text-gray-300 text-sm">
-										All the benefits of hook caching apply to MCP tool calls.
-										Only runs when files have changed. Fast feedback without
-										redundant validation.
-									</p>
-								</div>
-							</div>
-
-							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Example Tools Generated
-								</h3>
-								<div className="space-y-3">
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											jutsu_elixir_test
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Run tests for elixir (in directories with mix.exs) - runs:{" "}
-											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
-												mix test --stale
-											</code>
-										</span>
-									</div>
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											jutsu_typescript_typecheck
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Run type checking for typescript (in directories with
-											tsconfig.json) - runs:{" "}
-											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
-												npx -y --package typescript tsc
-											</code>
-										</span>
-									</div>
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											jutsu_biome_lint
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Run linter for biome projects - runs:{" "}
-											<code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
-												npx biome check
-											</code>
-										</span>
-									</div>
-								</div>
-							</div>
-
+							{/* External MCP Servers */}
 							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Tool Parameters
+								<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+									External Service Bridges (hashi-* plugins)
 								</h3>
-								<ul className="space-y-3 text-gray-600 dark:text-gray-300">
-									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											verbose
-										</code>
-										<span>Show full command output (default: false)</span>
-									</li>
-									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											failFast
-										</code>
-										<span>
-											Stop on first failure when running in multiple directories
-											(default: true)
-										</span>
-									</li>
-									<li className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											directory
-										</code>
-										<span>
-											Run only in this specific directory (relative to project
-											root)
-										</span>
-									</li>
-								</ul>
-							</div>
-
-							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mt-6">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									External MCP Integrations
-								</h3>
-								<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-									Han also provides hashi plugins that connect to external MCP
-									servers, bridging Claude Code with external services and
-									tools.
+								<p className="text-gray-600 dark:text-gray-300 mb-4">
+									Connect Claude to external services via MCP. These plugins
+									configure MCP servers that give Claude access to tools outside
+									your codebase.
 								</p>
+
 								<div className="space-y-4">
 									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-										<div className="flex items-start gap-3 mb-2">
-											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
+												hashi-github
+											</code>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											GitHub API access. Create issues, review PRs, search code,
+											manage branches. Claude can interact with your
+											repositories directly.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
+												hashi-playwright-mcp
+											</code>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Browser automation. Navigate pages, click elements, fill
+											forms, take screenshots. Claude can test and debug web UIs
+											visually.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
 												hashi-figma
 											</code>
-											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-												Design Phase
-											</span>
 										</div>
 										<p className="text-gray-600 dark:text-gray-300 text-sm">
-											Figma integration for design-to-code generation, design
-											token extraction, component sync, and frame analysis.
-											Connects to Figma Desktop MCP server via HTTP.
+											Figma design access. Extract design tokens, analyze
+											frames, generate code from designs. Requires Figma Desktop
+											MCP server.
 										</p>
 									</div>
 									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-										<div className="flex items-start gap-3 mb-2">
-											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
 												hashi-sentry
 											</code>
-											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-												Deploy & Maintain Phase
-											</span>
 										</div>
 										<p className="text-gray-600 dark:text-gray-300 text-sm">
-											Sentry integration for error tracking, performance
-											monitoring, release health, and incident response with
-											Seer AI root cause analysis. Remote HTTP OAuth server.
+											Error tracking access. View errors, analyze stack traces,
+											check release health. Claude can debug production issues
+											with real error data.
 										</p>
 									</div>
 									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
-										<div className="flex items-start gap-3 mb-2">
-											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-												hashi-han-metrics
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
+												hashi-blueprints
 											</code>
-											<span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-												Quality Measurement
-											</span>
 										</div>
 										<p className="text-gray-600 dark:text-gray-300 text-sm">
-											Agent performance tracking with self-reporting, objective
-											validation, and calibration metrics. Local SQLite storage
-											with SessionStart/Stop hooks for continuous improvement.
+											Technical documentation system. Create and maintain
+											architectural blueprints that stay in sync with your code.
+										</p>
+									</div>
+									<div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+										<div className="flex items-center gap-3 mb-2">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm">
+												hashi-context7
+											</code>
+										</div>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Library documentation lookup. Get up-to-date docs for npm
+											packages, frameworks, and APIs directly in your session.
 										</p>
 									</div>
 								</div>
 							</div>
 						</section>
 
-						{/* Agent Metrics */}
+						{/* Metrics */}
 						<section id="metrics" className="scroll-mt-8 mb-16">
 							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-								Agent Metrics
+								Local Metrics
 							</h2>
 							<p className="text-gray-600 dark:text-gray-300 mb-8">
-								Track agent performance with self-reporting and objective
-								validation. The metrics system creates a feedback loop for
-								continuous improvement in success rates and calibration
-								accuracy.
+								Track how well Claude performs on your tasks. Metrics are stored
+								locally on your machine and help identify patterns in success
+								rates and common failure points.
 							</p>
 
-							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Quick Start
+							<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 rounded-lg mb-8">
+								<h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-3">
+									100% Private
 								</h3>
-								<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-									<code>
-										npx @thebushidocollective/han plugin install
-										hashi-han-metrics
-									</code>
-								</pre>
-								<p className="text-gray-600 dark:text-gray-300 mt-4 text-sm">
-									Once installed, agents automatically track their work using
-									MCP tools and hooks validate outcomes against objective
-									signals.
-								</p>
-							</div>
-
-							<div className="grid md:grid-cols-2 gap-6 mb-8">
-								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-										Self-Reporting Agents
-									</h4>
-									<p className="text-gray-600 dark:text-gray-300 text-sm">
-										Agents use MCP tools to track tasks: start_task,
-										update_task, complete_task with confidence levels (0-1).
-										This builds self-awareness of performance patterns.
-									</p>
-								</div>
-								<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-									<h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-										Objective Validation
-									</h4>
-									<p className="text-gray-600 dark:text-gray-300 text-sm">
-										Stop hooks cross-validate self-assessments with quality
-										checks (tests, lints, types). Calculates calibration
-										accuracy to identify overconfidence or underconfidence.
-									</p>
-								</div>
+								<ul className="space-y-2 text-green-700 dark:text-green-300 text-sm">
+									<li className="flex items-start gap-2">
+										<span className="mt-0.5">✓</span>
+										<span>All data stored locally in JSONL files</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="mt-0.5">✓</span>
+										<span>No network calls or external services</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="mt-0.5">✓</span>
+										<span>You own your data, delete it anytime</span>
+									</li>
+									<li className="flex items-start gap-2">
+										<span className="mt-0.5">✓</span>
+										<span>Only task metadata, never conversation content</span>
+									</li>
+								</ul>
 							</div>
 
 							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Key Metrics
+									How It Works
 								</h3>
-								<div className="space-y-3">
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											Success Rate
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Overall and per-type success rates (implementation, fix,
-											refactor, research)
-										</span>
+								<div className="space-y-4">
+									<div>
+										<h4 className="font-medium text-gray-900 dark:text-white mb-2">
+											1. Claude tracks tasks
+										</h4>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											When working on features or fixes, Claude logs task type,
+											estimated complexity, and confidence level using MCP
+											tools.
+										</p>
 									</div>
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											Calibration Score
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											How well agent confidence matches actual outcomes (perfect
-											= 0.0)
-										</span>
+									<div>
+										<h4 className="font-medium text-gray-900 dark:text-white mb-2">
+											2. Hooks validate outcomes
+										</h4>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Stop hooks run linters, tests, and type checks. Results
+											are compared against Claude&apos;s confidence to measure
+											calibration accuracy.
+										</p>
 									</div>
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											Duration
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Average task duration by type and complexity
-										</span>
-									</div>
-									<div className="flex items-start gap-3">
-										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
-											Confidence Buckets
-										</code>
-										<span className="text-gray-600 dark:text-gray-300 text-sm">
-											Breakdown of confidence levels vs actual success to spot
-											patterns
-										</span>
+									<div>
+										<h4 className="font-medium text-gray-900 dark:text-white mb-2">
+											3. Patterns emerge
+										</h4>
+										<p className="text-gray-600 dark:text-gray-300 text-sm">
+											Over time, metrics show which task types succeed most,
+											which hooks fail often, and whether Claude is
+											overconfident or underconfident.
+										</p>
 									</div>
 								</div>
 							</div>
 
 							<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Privacy & Storage
+									What Gets Tracked
 								</h3>
-								<ul className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
-									<li className="flex items-start gap-2">
-										<span className="text-green-500 dark:text-green-400 mt-0.5">
-											✓
+								<div className="grid md:grid-cols-2 gap-4">
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Success Rate
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Overall and per-type (fix, refactor, implementation)
 										</span>
-										<span>
-											100% local - all data in SQLite at ~/.claude/metrics/
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Calibration
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Confidence vs actual outcomes
 										</span>
-									</li>
-									<li className="flex items-start gap-2">
-										<span className="text-green-500 dark:text-green-400 mt-0.5">
-											✓
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Hook Failures
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Which validation hooks fail most often
 										</span>
-										<span>No network calls or external services</span>
-									</li>
-									<li className="flex items-start gap-2">
-										<span className="text-green-500 dark:text-green-400 mt-0.5">
-											✓
+									</div>
+									<div className="flex items-start gap-3">
+										<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-sm shrink-0">
+											Sessions
+										</code>
+										<span className="text-gray-600 dark:text-gray-300 text-sm">
+											Task counts and patterns over time
 										</span>
-										<span>
-											User-owned data - query, backup, or delete anytime
-										</span>
-									</li>
-									<li className="flex items-start gap-2">
-										<span className="text-green-500 dark:text-green-400 mt-0.5">
-											✓
-										</span>
-										<span>
-											Minimal data - task descriptions, outcomes, no
-											conversations
-										</span>
-									</li>
-								</ul>
+									</div>
+								</div>
 							</div>
 						</section>
 
@@ -933,7 +876,7 @@ jutsu-eslint:
 								</code>{" "}
 								CLI commands. Use{" "}
 								<code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-									npx @thebushidocollective/han
+									han
 								</code>{" "}
 								to run any command without installation.
 							</p>
@@ -962,19 +905,19 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Interactive mode",
-												code: "npx @thebushidocollective/han plugin install",
+												code: "han plugin install",
 											},
 											{
 												desc: "Auto-detect plugins",
-												code: "npx @thebushidocollective/han plugin install --auto",
+												code: "han plugin install --auto",
 											},
 											{
 												desc: "Install specific plugin",
-												code: "npx @thebushidocollective/han plugin install jutsu-typescript",
+												code: "han plugin install jutsu-typescript",
 											},
 											{
 												desc: "Install to project scope",
-												code: "npx @thebushidocollective/han plugin install --auto --scope project",
+												code: "han plugin install --auto --scope project",
 											},
 										]}
 									/>
@@ -992,7 +935,7 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Uninstall a plugin",
-												code: "npx @thebushidocollective/han plugin uninstall jutsu-eslint",
+												code: "han plugin uninstall jutsu-eslint",
 											},
 										]}
 									/>
@@ -1004,11 +947,11 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Search for TypeScript plugins",
-												code: "npx @thebushidocollective/han plugin search typescript",
+												code: "han plugin search typescript",
 											},
 											{
 												desc: "Browse all plugins",
-												code: "npx @thebushidocollective/han plugin search",
+												code: "han plugin search",
 											},
 										]}
 									/>
@@ -1047,15 +990,15 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Run TypeScript type checking",
-												code: "npx @thebushidocollective/han hook run jutsu-typescript typecheck",
+												code: "han hook run jutsu-typescript typecheck",
 											},
 											{
 												desc: "Run with caching",
-												code: "npx @thebushidocollective/han hook run jutsu-elixir test --cached",
+												code: "han hook run jutsu-elixir test --cached",
 											},
 											{
 												desc: "Run in specific directory",
-												code: "npx @thebushidocollective/han hook run jutsu-biome lint --only=packages/core",
+												code: "han hook run jutsu-biome lint --only=packages/core",
 											},
 										]}
 									/>
@@ -1077,15 +1020,15 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Show all Han plugin hooks",
-												code: "npx @thebushidocollective/han hook explain",
+												code: "han hook explain",
 											},
 											{
 												desc: "Show only Stop hooks",
-												code: "npx @thebushidocollective/han hook explain Stop",
+												code: "han hook explain Stop",
 											},
 											{
 												desc: "Show all hooks including settings",
-												code: "npx @thebushidocollective/han hook explain --all",
+												code: "han hook explain --all",
 											},
 										]}
 									/>
@@ -1103,11 +1046,11 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Dispatch SessionStart hooks",
-												code: "npx @thebushidocollective/han hook dispatch SessionStart",
+												code: "han hook dispatch SessionStart",
 											},
 											{
 												desc: "Dispatch Stop hooks including settings",
-												code: "npx @thebushidocollective/han hook dispatch Stop --all",
+												code: "han hook dispatch Stop --all",
 											},
 										]}
 									/>
@@ -1125,11 +1068,11 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Validate hook structure",
-												code: "npx @thebushidocollective/han hook test",
+												code: "han hook test",
 											},
 											{
 												desc: "Validate and execute hooks",
-												code: "npx @thebushidocollective/han hook test --execute",
+												code: "han hook test --execute",
 											},
 										]}
 									/>
@@ -1150,7 +1093,7 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Start MCP server",
-												code: "npx @thebushidocollective/han mcp",
+												code: "han mcp",
 											},
 										]}
 									/>
@@ -1162,7 +1105,7 @@ jutsu-eslint:
 										examples={[
 											{
 												desc: "Remove Han completely",
-												code: "npx @thebushidocollective/han uninstall",
+												code: "han uninstall",
 											},
 										]}
 									/>
@@ -1177,10 +1120,7 @@ jutsu-eslint:
 			<footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 mt-16">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center text-gray-400">
-						<p>
-							MIT License - Walk the way of Bushido. Practice with Discipline.
-							Build with Honor.
-						</p>
+						<p>MIT License</p>
 					</div>
 				</div>
 			</footer>

@@ -444,7 +444,7 @@ Search: react
 ## File Organization
 
 ```
-packages/bushido-han/
+packages/han/
 ├── lib/
 │   ├── main.ts                      # CLI entry point, command registration
 │   ├── shared.ts                    # Shared utilities, types, Claude SDK integration

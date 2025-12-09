@@ -8,16 +8,16 @@ Han is a curated marketplace of Claude Code plugins built on Bushido principles.
 - **jutsu/** - Technique plugins (language/tool skills with validation hooks)
 - **do/** - Discipline plugins (specialized agents)
 - **hashi/** - Bridge plugins (MCP servers for external integrations)
-- **packages/bushido-han/** - CLI tool for plugin installation and management
+- **packages/han/** - CLI tool for plugin installation and management
 
 ## Development Commands
 
 ```bash
 # Build the CLI
-cd packages/bushido-han && npm run build
+cd packages/han && npm run build
 
 # Run tests
-cd packages/bushido-han && npm test
+cd packages/han && npm test
 
 # Format code (from website directory)
 cd website && npx biome format --write .
@@ -70,7 +70,7 @@ Command content here...
 
 ## CLI Architecture
 
-The CLI (`packages/bushido-han/`) uses:
+The CLI (`packages/han/`) uses:
 
 - **Commander.js** for CLI parsing
 - **Ink** (React for CLI) for interactive UIs
@@ -93,7 +93,7 @@ Version bumps happen automatically via GitHub Actions:
 
 ## CI/CD
 
-- **auto-tag-release.yml** - Bumps version and creates tags on changes to `packages/bushido-han/`
+- **auto-tag-release.yml** - Bumps version and creates tags on changes to `packages/han/`
 - **publish-npm.yml** - Publishes to npm using trusted publishers (OIDC, no token needed)
 - **claudelint.yml** - Validates plugin structure with claudelint
 

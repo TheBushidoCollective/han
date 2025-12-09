@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "format": {
+      "command": "shfmt -d .",
+      "dirsWith": [".shfmt.toml", "shfmt.toml", "*.sh"],
+      "ifChanged": ["**/*.sh", "**/*.bash", "**/.[!.]*"]
+    }
+  }
+}

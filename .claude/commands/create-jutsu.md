@@ -110,7 +110,7 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
 - **hooks**: Top-level object containing event hooks
 - **Stop**: Hooks that run when conversation stops
 - **type**: Always "command" for hook execution
-- **command**: Uses `npx han hook run {plugin-name} {hook-name}` format
+- **command**: Uses `han hook run {plugin-name} {hook-name}` format
 - **--fail-fast**: Stop on first error for quick feedback
 - **--cached**: Enable smart caching based on ifChanged patterns
 - **timeout**: Max execution time in milliseconds (120000 = 2 minutes)
