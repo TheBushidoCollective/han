@@ -4,14 +4,13 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import {
-	getCapabilitiesString,
-	type PluginDetails,
-} from "../lib/explain.ts";
+import { getCapabilitiesString, type PluginDetails } from "../lib/explain.ts";
 
 describe("explain.ts helper functions", () => {
 	describe("getCapabilitiesString", () => {
-		function createPlugin(overrides: Partial<PluginDetails> = {}): PluginDetails {
+		function createPlugin(
+			overrides: Partial<PluginDetails> = {},
+		): PluginDetails {
 			return {
 				name: "test-plugin",
 				scope: "user",

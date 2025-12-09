@@ -43,8 +43,8 @@ function setup(): void {
 	mkdirSync(join(projectDir, ".claude"), { recursive: true });
 
 	// Set environment for tests
-	process.env["CLAUDE_CONFIG_DIR"] = configDir;
-	process.env["HOME"] = testDir;
+	process.env.CLAUDE_CONFIG_DIR = configDir;
+	process.env.HOME = testDir;
 	// Mock cwd to point to project dir
 	process.cwd = () => projectDir;
 }
@@ -73,30 +73,30 @@ describe("shared.ts", () => {
 
 	describe("getGlobalClaudeSettingsPath", () => {
 		test("returns CLAUDE_CONFIG_DIR path when set", () => {
-			process.env["CLAUDE_CONFIG_DIR"] = "/custom/config/dir";
+			process.env.CLAUDE_CONFIG_DIR = "/custom/config/dir";
 			const result = getGlobalClaudeSettingsPath();
 			expect(result).toBe("/custom/config/dir/settings.json");
 		});
 
 		test("returns ~/.claude/settings.json when CLAUDE_CONFIG_DIR not set", () => {
-			delete process.env["CLAUDE_CONFIG_DIR"];
-			process.env["HOME"] = "/home/testuser";
+			delete process.env.CLAUDE_CONFIG_DIR;
+			process.env.HOME = "/home/testuser";
 			const result = getGlobalClaudeSettingsPath();
 			expect(result).toBe("/home/testuser/.claude/settings.json");
 		});
 
 		test("uses USERPROFILE when HOME not set", () => {
-			delete process.env["CLAUDE_CONFIG_DIR"];
-			delete process.env["HOME"];
-			process.env["USERPROFILE"] = "C:\\Users\\testuser";
+			delete process.env.CLAUDE_CONFIG_DIR;
+			delete process.env.HOME;
+			process.env.USERPROFILE = "C:\\Users\\testuser";
 			const result = getGlobalClaudeSettingsPath();
 			expect(result).toBe("C:\\Users\\testuser/.claude/settings.json");
 		});
 
 		test("handles missing home dir gracefully", () => {
-			delete process.env["CLAUDE_CONFIG_DIR"];
-			delete process.env["HOME"];
-			delete process.env["USERPROFILE"];
+			delete process.env.CLAUDE_CONFIG_DIR;
+			delete process.env.HOME;
+			delete process.env.USERPROFILE;
 			const result = getGlobalClaudeSettingsPath();
 			expect(result).toBe(".claude/settings.json");
 		});
@@ -104,7 +104,7 @@ describe("shared.ts", () => {
 
 	describe("getClaudeSettingsPath", () => {
 		test("returns global path for user scope", () => {
-			process.env["CLAUDE_CONFIG_DIR"] = "/config";
+			process.env.CLAUDE_CONFIG_DIR = "/config";
 			const result = getClaudeSettingsPath("user");
 			expect(result).toBe("/config/settings.json");
 		});
@@ -120,7 +120,7 @@ describe("shared.ts", () => {
 		});
 
 		test("defaults to user scope", () => {
-			process.env["CLAUDE_CONFIG_DIR"] = "/default";
+			process.env.CLAUDE_CONFIG_DIR = "/default";
 			const result = getClaudeSettingsPath();
 			expect(result).toBe("/default/settings.json");
 		});
@@ -128,7 +128,7 @@ describe("shared.ts", () => {
 
 	describe("getSettingsFilename", () => {
 		test("returns user config path for user scope", () => {
-			process.env["CLAUDE_CONFIG_DIR"] = "/custom/config";
+			process.env.CLAUDE_CONFIG_DIR = "/custom/config";
 			const result = getSettingsFilename("user");
 			expect(result).toBe("/custom/config/settings.json");
 		});
@@ -147,7 +147,7 @@ describe("shared.ts", () => {
 	describe("readGlobalSettings", () => {
 		test("returns empty object when no settings file exists", () => {
 			// Point to non-existent dir
-			process.env["CLAUDE_CONFIG_DIR"] = join(testDir, "nonexistent");
+			process.env.CLAUDE_CONFIG_DIR = join(testDir, "nonexistent");
 			const result = readGlobalSettings();
 			expect(result).toEqual({});
 		});
@@ -163,9 +163,7 @@ describe("shared.ts", () => {
 
 			const result = readGlobalSettings();
 			expect(result.enabledPlugins?.["jutsu-biome@han"]).toBe(true);
-			expect(result.extraKnownMarketplaces?.["han"]?.source.source).toBe(
-				"github",
-			);
+			expect(result.extraKnownMarketplaces?.han?.source.source).toBe("github");
 		});
 
 		test("returns empty object for invalid JSON", () => {
@@ -191,7 +189,7 @@ describe("shared.ts", () => {
 		});
 
 		test("creates directory if not exists", () => {
-			process.env["CLAUDE_CONFIG_DIR"] = join(testDir, "new-config-dir");
+			process.env.CLAUDE_CONFIG_DIR = join(testDir, "new-config-dir");
 
 			const settings: ClaudeSettings = { test: "value" };
 			writeGlobalSettings(settings);
@@ -213,7 +211,7 @@ describe("shared.ts", () => {
 		test("returns empty object when settings file does not exist", () => {
 			const newConfigDir = join(testDir, "read-or-create-test");
 			mkdirSync(newConfigDir, { recursive: true });
-			process.env["CLAUDE_CONFIG_DIR"] = newConfigDir;
+			process.env.CLAUDE_CONFIG_DIR = newConfigDir;
 
 			const result = readOrCreateSettings("user");
 
@@ -226,7 +224,7 @@ describe("shared.ts", () => {
 			writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
 
 			const result = readOrCreateSettings("user");
-			expect(result["existing"]).toBe("data");
+			expect(result.existing).toBe("data");
 		});
 
 		test("handles project scope", () => {
@@ -237,7 +235,7 @@ describe("shared.ts", () => {
 			);
 
 			const result = readOrCreateSettings("project");
-			expect(result["project"]).toBe(true);
+			expect(result.project).toBe(true);
 		});
 	});
 
@@ -269,7 +267,7 @@ describe("shared.ts", () => {
 	describe("ensureClaudeDirectory", () => {
 		test("creates user config directory if not exists", () => {
 			const newDir = join(testDir, "ensure-test");
-			process.env["CLAUDE_CONFIG_DIR"] = newDir;
+			process.env.CLAUDE_CONFIG_DIR = newDir;
 
 			ensureClaudeDirectory("user");
 
@@ -306,7 +304,7 @@ describe("shared.ts type definitions", () => {
 			extraKnownMarketplaces: {},
 			customKey: "custom value",
 		};
-		expect(settings["customKey"]).toBe("custom value");
+		expect(settings.customKey).toBe("custom value");
 	});
 });
 
@@ -399,7 +397,7 @@ describe("ensureDispatchHooks", () => {
 		testDir = join(tmpdir(), `han-dispatch-hooks-test-${Date.now()}-${random}`);
 		configDir = join(testDir, ".claude");
 		mkdirSync(configDir, { recursive: true });
-		process.env["CLAUDE_CONFIG_DIR"] = configDir;
+		process.env.CLAUDE_CONFIG_DIR = configDir;
 	});
 
 	afterEach(() => {
@@ -522,8 +520,8 @@ describe("detectHanScopes", () => {
 		projectDir = join(testDir, "project");
 		mkdirSync(configDir, { recursive: true });
 		mkdirSync(join(projectDir, ".claude"), { recursive: true });
-		process.env["CLAUDE_CONFIG_DIR"] = configDir;
-		process.env["HOME"] = testDir;
+		process.env.CLAUDE_CONFIG_DIR = configDir;
+		process.env.HOME = testDir;
 		process.cwd = () => projectDir;
 	});
 
@@ -628,7 +626,7 @@ describe("getInstalledPlugins", () => {
 		projectDir = join(testDir, "project");
 		mkdirSync(configDir, { recursive: true });
 		mkdirSync(join(projectDir, ".claude"), { recursive: true });
-		process.env["CLAUDE_CONFIG_DIR"] = configDir;
+		process.env.CLAUDE_CONFIG_DIR = configDir;
 		process.cwd = () => projectDir;
 	});
 
@@ -716,7 +714,7 @@ describe("removeInvalidPlugins", () => {
 		projectDir = join(testDir, "project");
 		mkdirSync(configDir, { recursive: true });
 		mkdirSync(join(projectDir, ".claude"), { recursive: true });
-		process.env["CLAUDE_CONFIG_DIR"] = configDir;
+		process.env.CLAUDE_CONFIG_DIR = configDir;
 		process.cwd = () => projectDir;
 	});
 
@@ -807,7 +805,7 @@ describe("readOrCreateSettings error handling", () => {
 		projectDir = join(testDir, "project");
 		mkdirSync(configDir, { recursive: true });
 		mkdirSync(join(projectDir, ".claude"), { recursive: true });
-		process.env["CLAUDE_CONFIG_DIR"] = configDir;
+		process.env.CLAUDE_CONFIG_DIR = configDir;
 		process.cwd = () => projectDir;
 	});
 
@@ -1045,7 +1043,7 @@ describe("Marketplace and Marketplaces types", () => {
 		};
 
 		expect(Object.keys(marketplaces)).toHaveLength(2);
-		expect(marketplaces["han"]?.source.repo).toBe("thebushidocollective/han");
+		expect(marketplaces.han?.source.repo).toBe("thebushidocollective/han");
 	});
 });
 
@@ -1280,19 +1278,19 @@ describe("fetchMarketplace verbose mode", () => {
 		const fromCache = true;
 
 		// Test verbose mode detection
-		const originalVerbose = process.env["HAN_VERBOSE"];
+		const originalVerbose = process.env.HAN_VERBOSE;
 
-		process.env["HAN_VERBOSE"] = "true";
-		const shouldLog = process.env["HAN_VERBOSE"] && fromCache;
+		process.env.HAN_VERBOSE = "true";
+		const shouldLog = process.env.HAN_VERBOSE && fromCache;
 		expect(shouldLog).toBeTruthy();
 
-		delete process.env["HAN_VERBOSE"];
-		const shouldNotLog = process.env["HAN_VERBOSE"] && fromCache;
+		delete process.env.HAN_VERBOSE;
+		const shouldNotLog = process.env.HAN_VERBOSE && fromCache;
 		expect(shouldNotLog).toBeFalsy();
 
 		// Restore
 		if (originalVerbose) {
-			process.env["HAN_VERBOSE"] = originalVerbose;
+			process.env.HAN_VERBOSE = originalVerbose;
 		}
 	});
 });

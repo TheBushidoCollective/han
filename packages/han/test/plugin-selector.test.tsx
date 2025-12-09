@@ -311,7 +311,11 @@ describe("PluginSelector component", () => {
 		test("sorts plugins alphabetically", () => {
 			const { lastFrame } = render(
 				<PluginSelector
-					detectedPlugins={["jutsu-typescript", "do-accessibility", "jutsu-bun"]}
+					detectedPlugins={[
+						"jutsu-typescript",
+						"do-accessibility",
+						"jutsu-bun",
+					]}
 					installedPlugins={[]}
 					allPlugins={mockPlugins}
 					onComplete={() => {}}

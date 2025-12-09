@@ -3,7 +3,13 @@
  * Tests the syncPluginsToSettings behavior without UI dependencies
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -51,10 +57,17 @@ describe("install.ts plugin sync logic", () => {
 			writeFileSync(join(configDir, "settings.json"), "{}");
 
 			const selectedPlugins = ["jutsu-typescript", "jutsu-biome"];
-			const validPluginNames = new Set(["core", "jutsu-typescript", "jutsu-biome", "bushido"]);
+			const validPluginNames = new Set([
+				"core",
+				"jutsu-typescript",
+				"jutsu-biome",
+				"bushido",
+			]);
 
 			// Simulate syncPluginsToSettings logic
-			const settings = JSON.parse(readFileSync(join(configDir, "settings.json"), "utf-8"));
+			const settings = JSON.parse(
+				readFileSync(join(configDir, "settings.json"), "utf-8"),
+			);
 			const pluginsToInstall = [...new Set(["core", ...selectedPlugins])];
 
 			// Add Han marketplace
@@ -73,10 +86,15 @@ describe("install.ts plugin sync logic", () => {
 				}
 			}
 
-			writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings, null, 2));
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
 
 			// Verify
-			const result = JSON.parse(readFileSync(join(configDir, "settings.json"), "utf-8"));
+			const result = JSON.parse(
+				readFileSync(join(configDir, "settings.json"), "utf-8"),
+			);
 			expect(result.enabledPlugins["core@han"]).toBe(true);
 			expect(result.enabledPlugins["jutsu-typescript@han"]).toBe(true);
 			expect(result.enabledPlugins["jutsu-biome@han"]).toBe(true);
@@ -119,7 +137,11 @@ describe("install.ts plugin sync logic", () => {
 			const scope = "project";
 			const selectedPlugins = ["core", "jutsu-typescript"];
 			const currentPlugins = ["core", "jutsu-typescript", "jutsu-biome"];
-			const validPluginNames = new Set(["core", "jutsu-typescript", "jutsu-biome"]);
+			const validPluginNames = new Set([
+				"core",
+				"jutsu-typescript",
+				"jutsu-biome",
+			]);
 
 			const removed: string[] = [];
 
@@ -202,7 +224,11 @@ describe("install.ts plugin sync logic", () => {
 		test("tracks added plugins", () => {
 			const currentPlugins: string[] = [];
 			const selectedPlugins = ["jutsu-typescript", "jutsu-biome"];
-			const validPluginNames = new Set(["core", "jutsu-typescript", "jutsu-biome"]);
+			const validPluginNames = new Set([
+				"core",
+				"jutsu-typescript",
+				"jutsu-biome",
+			]);
 
 			const added: string[] = [];
 			const pluginsToInstall = [...new Set(["core", ...selectedPlugins])];
@@ -221,7 +247,11 @@ describe("install.ts plugin sync logic", () => {
 		test("does not add already installed plugins to added list", () => {
 			const currentPlugins = ["core", "jutsu-typescript"];
 			const selectedPlugins = ["jutsu-typescript", "jutsu-biome"];
-			const validPluginNames = new Set(["core", "jutsu-typescript", "jutsu-biome"]);
+			const validPluginNames = new Set([
+				"core",
+				"jutsu-typescript",
+				"jutsu-biome",
+			]);
 
 			const added: string[] = [];
 			const pluginsToInstall = [...new Set(["core", ...selectedPlugins])];
@@ -240,8 +270,17 @@ describe("install.ts plugin sync logic", () => {
 		});
 
 		test("tracks invalid plugins for cleanup", () => {
-			const currentPlugins = ["core", "jutsu-typescript", "old-plugin", "deleted-plugin"];
-			const validPluginNames = new Set(["core", "jutsu-typescript", "jutsu-biome"]);
+			const currentPlugins = [
+				"core",
+				"jutsu-typescript",
+				"old-plugin",
+				"deleted-plugin",
+			];
+			const validPluginNames = new Set([
+				"core",
+				"jutsu-typescript",
+				"jutsu-biome",
+			]);
 
 			const invalid: string[] = [];
 
@@ -262,14 +301,22 @@ describe("install.ts plugin sync logic", () => {
 		test("adds Han marketplace when not present", () => {
 			const settings: Record<string, unknown> = {};
 
-			if (!settings.extraKnownMarketplaces || !(settings.extraKnownMarketplaces as Record<string, unknown>).han) {
+			if (
+				!settings.extraKnownMarketplaces ||
+				!(settings.extraKnownMarketplaces as Record<string, unknown>).han
+			) {
 				settings.extraKnownMarketplaces = {
-					...(settings.extraKnownMarketplaces as Record<string, unknown> || {}),
-					han: { source: { source: "github", repo: "thebushidocollective/han" } },
+					...((settings.extraKnownMarketplaces as Record<string, unknown>) ||
+						{}),
+					han: {
+						source: { source: "github", repo: "thebushidocollective/han" },
+					},
 				};
 			}
 
-			expect((settings.extraKnownMarketplaces as Record<string, unknown>).han).toBeDefined();
+			expect(
+				(settings.extraKnownMarketplaces as Record<string, unknown>).han,
+			).toBeDefined();
 		});
 
 		test("preserves existing marketplaces when adding Han", () => {
@@ -279,15 +326,23 @@ describe("install.ts plugin sync logic", () => {
 				},
 			};
 
-			const existingMarketplaces = settings.extraKnownMarketplaces as Record<string, unknown>;
+			const existingMarketplaces = settings.extraKnownMarketplaces as Record<
+				string,
+				unknown
+			>;
 			if (!existingMarketplaces.han) {
 				settings.extraKnownMarketplaces = {
 					...existingMarketplaces,
-					han: { source: { source: "github", repo: "thebushidocollective/han" } },
+					han: {
+						source: { source: "github", repo: "thebushidocollective/han" },
+					},
 				};
 			}
 
-			const marketplaces = settings.extraKnownMarketplaces as Record<string, unknown>;
+			const marketplaces = settings.extraKnownMarketplaces as Record<
+				string,
+				unknown
+			>;
 			expect(marketplaces.custom).toBeDefined();
 			expect(marketplaces.han).toBeDefined();
 		});
@@ -379,7 +434,8 @@ describe("install.ts output message generation", () => {
 	});
 
 	test("generates restart reminder", () => {
-		const message = "\n\u26a0\ufe0f  Please restart Claude Code to load the new plugins";
+		const message =
+			"\n\u26a0\ufe0f  Please restart Claude Code to load the new plugins";
 		expect(message).toContain("restart Claude Code");
 	});
 });
@@ -390,11 +446,12 @@ describe("install.ts scope handling", () => {
 
 	test("getSettingsFilename returns correct path for user scope", () => {
 		const scope = "user";
-		const filename = scope === "user"
-			? `${process.env.CLAUDE_CONFIG_DIR || "~/.claude"}/settings.json`
-			: scope === "local"
-				? ".claude/settings.local.json"
-				: ".claude/settings.json";
+		const filename =
+			scope === "user"
+				? `${process.env.CLAUDE_CONFIG_DIR || "~/.claude"}/settings.json`
+				: scope === "local"
+					? ".claude/settings.local.json"
+					: ".claude/settings.json";
 
 		expect(filename).toContain("settings.json");
 		expect(filename).toContain(configDir);
@@ -402,22 +459,24 @@ describe("install.ts scope handling", () => {
 
 	test("getSettingsFilename returns correct path for project scope", () => {
 		const scope = "project";
-		const filename = scope === "user"
-			? "~/.claude/settings.json"
-			: scope === "local"
-				? ".claude/settings.local.json"
-				: ".claude/settings.json";
+		const filename =
+			scope === "user"
+				? "~/.claude/settings.json"
+				: scope === "local"
+					? ".claude/settings.local.json"
+					: ".claude/settings.json";
 
 		expect(filename).toBe(".claude/settings.json");
 	});
 
 	test("getSettingsFilename returns correct path for local scope", () => {
 		const scope = "local";
-		const filename = scope === "user"
-			? "~/.claude/settings.json"
-			: scope === "local"
-				? ".claude/settings.local.json"
-				: ".claude/settings.json";
+		const filename =
+			scope === "user"
+				? "~/.claude/settings.json"
+				: scope === "local"
+					? ".claude/settings.local.json"
+					: ".claude/settings.json";
 
 		expect(filename).toBe(".claude/settings.local.json");
 	});

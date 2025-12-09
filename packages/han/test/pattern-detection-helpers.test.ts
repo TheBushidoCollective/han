@@ -9,7 +9,6 @@ import {
 	getHookGuidance,
 	getSeverityLevel,
 	type Pattern,
-	type Severity,
 } from "../lib/commands/metrics/pattern-detection.ts";
 
 describe("pattern-detection.ts helper functions", () => {

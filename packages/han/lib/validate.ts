@@ -44,7 +44,10 @@ export function getHanTempDir(): string {
 /**
  * Generate a unique filename for hook output
  */
-export function generateOutputFilename(hookName: string, directory: string): string {
+export function generateOutputFilename(
+	hookName: string,
+	directory: string,
+): string {
 	const timestamp = Date.now();
 	const sanitizedDir = directory.replace(/[^a-zA-Z0-9]/g, "_").slice(-30);
 	return `${hookName}_${sanitizedDir}_${timestamp}`;

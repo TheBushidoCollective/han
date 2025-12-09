@@ -5,8 +5,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-	formatStatsForPrompt,
 	type CodebaseStats,
+	formatStatsForPrompt,
 } from "../lib/codebase-analyzer.ts";
 
 describe("codebase-analyzer.ts", () => {

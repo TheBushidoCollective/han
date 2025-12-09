@@ -233,7 +233,11 @@ describe("mcp/tools.ts helper functions", () => {
 			const config = createPluginConfig({
 				test: { command: "test" },
 			});
-			const result = generateToolDescription("jutsu-typescript", "test", config);
+			const result = generateToolDescription(
+				"jutsu-typescript",
+				"test",
+				config,
+			);
 
 			expect(result).toContain("Typescript");
 			expect(result).not.toContain("jutsu-typescript");
@@ -243,7 +247,11 @@ describe("mcp/tools.ts helper functions", () => {
 			const config = createPluginConfig({
 				custom: { command: "test" },
 			});
-			const result = generateToolDescription("do-accessibility", "custom", config);
+			const result = generateToolDescription(
+				"do-accessibility",
+				"custom",
+				config,
+			);
 
 			expect(result).toContain("Accessibility");
 		});

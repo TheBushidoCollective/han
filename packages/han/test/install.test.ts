@@ -16,11 +16,11 @@ describe("install.ts syncPluginsToSettings behavior", () => {
 
 	beforeEach(() => {
 		// Save original environment and cwd
-		originalEnv = process.env["CLAUDE_CONFIG_DIR"];
+		originalEnv = process.env.CLAUDE_CONFIG_DIR;
 		originalCwd = process.cwd;
 
 		// Set up test environment
-		process.env["CLAUDE_CONFIG_DIR"] = join(testDir, "user");
+		process.env.CLAUDE_CONFIG_DIR = join(testDir, "user");
 		process.cwd = () => join(testDir, "project");
 
 		// Create directories
@@ -31,9 +31,9 @@ describe("install.ts syncPluginsToSettings behavior", () => {
 	afterEach(() => {
 		// Restore environment and cwd
 		if (originalEnv) {
-			process.env["CLAUDE_CONFIG_DIR"] = originalEnv;
+			process.env.CLAUDE_CONFIG_DIR = originalEnv;
 		} else {
-			delete process.env["CLAUDE_CONFIG_DIR"];
+			delete process.env.CLAUDE_CONFIG_DIR;
 		}
 		process.cwd = originalCwd;
 
