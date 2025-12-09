@@ -43,7 +43,7 @@ The validation system ensures that plugin configurations (han-config.json) and u
 
 ### Config Validator
 
-**File**: `packages/bushido-han/lib/config-validator.ts`
+**File**: `packages/han/lib/config-validator.ts`
 
 ```typescript
 interface ValidationResult {
@@ -421,12 +421,12 @@ HAN_DEBUG=1 han hook run plugin-name hook-name
 
 ### Implementation
 
-- `packages/bushido-han/lib/config-validator.ts` - Core validation logic
-- `packages/bushido-han/lib/hook-config.ts` - Config loading and merging
+- `packages/han/lib/config-validator.ts` - Core validation logic
+- `packages/han/lib/hook-config.ts` - Config loading and merging
 
 ### Testing
 
-- `packages/bushido-han/test/config-validator.test.ts` - Unit tests for validation
+- `packages/han/test/config-validator.test.ts` - Unit tests for validation
 
 ### CI/CD
 
@@ -434,7 +434,7 @@ HAN_DEBUG=1 han hook run plugin-name hook-name
 
 ### Schemas
 
-- `packages/bushido-han/schemas/han-config.schema.json` - JSON schema (if formalized)
+- `packages/han/schemas/han-config.schema.json` - JSON schema (if formalized)
 
 ## Related Systems
 

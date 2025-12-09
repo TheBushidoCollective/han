@@ -9,7 +9,7 @@ Entry point and command structure for the Han CLI.
 
 ## Overview
 
-The Han CLI (`packages/bushido-han`) provides plugin management, hook execution, and MCP server functionality. It uses Commander.js for command parsing and Ink (React for CLI) for interactive UIs.
+The Han CLI (`packages/han`) provides plugin management, hook execution, and MCP server functionality. It uses Commander.js for command parsing and Ink (React for CLI) for interactive UIs.
 
 ## Architecture
 

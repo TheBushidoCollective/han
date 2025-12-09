@@ -1,7 +1,0 @@
-node_modules/
-*.log
-dist/
-*.bun-build
-
-# Native modules (copied during build for embedding)
-native/

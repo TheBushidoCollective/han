@@ -48,7 +48,7 @@ feat!: change settings format → 1.2.0 → 2.0.0
 on:
   push:
     branches: [main]
-    paths: ["packages/bushido-han/**"]
+    paths: ["packages/han/**"]
 ```
 
 **Exclusions**:
@@ -452,7 +452,7 @@ on:
 ### Release Flow
 
 ```
-Code Push to main (packages/bushido-han/**)
+Code Push to main (packages/han/**)
          ↓
 auto-tag-release.yml
   - Detect version bump type

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getCategoryIcon } from "../lib/plugins";
 import Header from "./components/Header";
 
 export const metadata: Metadata = {
-	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",
+	title: "Han - Automatic Quality Gates for Claude Code",
 	description:
-		"A curated marketplace of Claude Code plugins with quality enforcement, validation hooks, and specialized agents. Master your craft through disciplined practice, quality craftsmanship, and continuous improvement.",
+		"Every Claude Code conversation ends with validation. Linting, formatting, type-checking, and tests run automatically, catching issues before they ship.",
 };
 
 export default function Home() {
@@ -17,13 +16,12 @@ export default function Home() {
 			{/* Hero */}
 			<section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
 				<h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-					Sophisticated Claude Code Plugins with Superior Accuracy
+					Automatic Quality Gates for Claude Code
 				</h1>
 				<p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-					A curated marketplace of Claude Code plugins with quality enforcement,
-					validation hooks, and specialized agents. Master your craft through
-					disciplined practice, quality craftsmanship, and continuous
-					improvement.
+					Every conversation ends with validation. Linting, formatting,
+					type-checking, and tests run automatically, catching issues before
+					they ship.
 				</p>
 				<div className="flex flex-col sm:flex-row gap-4 justify-center">
 					<a
@@ -32,270 +30,222 @@ export default function Home() {
 					>
 						Get Started
 					</a>
-					<a
-						href="https://github.com/thebushidocollective/han"
+					<Link
+						href="/plugins"
 						className="px-8 py-3 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-gray-900 transition"
 					>
-						View on GitHub
-					</a>
+						Browse 139 Plugins
+					</Link>
 				</div>
 			</section>
 
-			{/* The Han Difference - Three Pillars */}
+			{/* How It Works */}
 			<section className="bg-white dark:bg-gray-800 py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						More Than Just Prompts
+						How It Works
 					</h2>
-					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-3xl mx-auto text-lg">
-						Every Han plugin is a complete mastery system built on three
-						pillars. Not just what to do, but how to do it right, with
-						validation that ensures excellence.
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
+						Quality enforcement that runs automatically, learns from results,
+						and gets faster over time.
 					</p>
 
-					<div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-						<PillarCard
-							kanji="知"
-							reading="Chi"
-							title="Knowledge"
-							description="Deep expertise distilled into skills and patterns. Not just answers, but understanding: the wisdom to know why, not just how."
-							features={[
-								"Framework-specific best practices",
-								"Anti-patterns and pitfalls to avoid",
-								"Real-world code examples",
-							]}
+					<div className="grid md:grid-cols-4 gap-8 max-w-5xl mx-auto">
+						<StepCard
+							number={1}
+							title="Install"
+							description="One command installs the CLI and auto-detects plugins for your stack."
+							code="han plugin install --auto"
 						/>
-						<PillarCard
-							kanji="行"
-							reading="Kō"
-							title="Action"
-							description="Specialized agents and commands that execute with precision. From code review to refactoring, automated workflows that embody expertise."
-							features={[
-								"Purpose-built development agents",
-								"Slash commands for common tasks",
-								"Multi-step workflow automation",
-							]}
+						<StepCard
+							number={2}
+							title="Code"
+							description="Claude writes code as usual. No workflow changes needed."
 						/>
-						<PillarCard
-							kanji="律"
-							reading="Ritsu"
-							title="Discipline"
-							description="Validation hooks that enforce quality automatically. Every change verified, every standard upheld. Excellence through enforcement."
-							features={[
-								"Automatic linting and formatting",
-								"Pre-commit quality gates",
-								"Smart caching for fast feedback",
-							]}
+						<StepCard
+							number={3}
+							title="Validate"
+							description="Stop hooks run automatically. Linters, formatters, type checkers, and tests are all verified."
 						/>
-					</div>
-
-					<div className="mt-16 text-center">
-						<p className="text-xl text-gray-700 dark:text-gray-200 font-medium">
-							AI capability + Real verification = Shipping with confidence
-						</p>
+						<StepCard
+							number={4}
+							title="Learn"
+							description="Local metrics track success rates and calibrate confidence. Nothing leaves your machine."
+						/>
 					</div>
 				</div>
 			</section>
 
-			{/* Plugin Categories */}
+			{/* What's Inside */}
 			<section id="plugins" className="py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						Plugin Categories
+						What&apos;s Inside
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
-						Inspired by Japanese samurai traditions
+						139 plugins across four categories, all working together.
 					</p>
-					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+
+					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 						<CategoryCard
 							href="/plugins/core"
-							icon={getCategoryIcon("core")}
+							icon="⛩️"
 							title="Core"
-							subtitle="⚙️ (Required)"
-							description="Essential infrastructure - auto-installs han binary, provides hook system and MCP servers"
+							subtitle="Foundation"
+							count="2"
+							description="Essential infrastructure. Auto-installs han binary, provides metrics, MCP servers, and quality principles."
 						/>
 						<CategoryCard
 							href="/plugins/do"
-							icon={getCategoryIcon("do")}
+							icon="🛤️"
 							title="Dō"
-							subtitle="道 - The Way"
-							description="Specialized agents for development disciplines and practices"
+							subtitle="Agents"
+							count="25+"
+							description="Specialized AI agents for code review, debugging, architecture, and security."
 						/>
 						<CategoryCard
 							href="/plugins/jutsu"
-							icon={getCategoryIcon("jutsu")}
+							icon="🎯"
 							title="Jutsu"
-							subtitle="術 - Techniques"
-							description="Language and tool skills with validation hooks for quality"
+							subtitle="Tools"
+							count="100+"
+							description="Validation plugins for your stack. TypeScript, Biome, Pytest, ShellCheck, and more."
 						/>
 						<CategoryCard
 							href="/plugins/hashi"
-							icon={getCategoryIcon("hashi")}
+							icon="🌉"
 							title="Hashi"
-							subtitle="橋 - Bridges"
-							description="MCP servers providing external knowledge and integrations"
+							subtitle="Integrations"
+							count="10+"
+							description="MCP servers connecting Claude to GitHub, Jira, Sentry, and other tools."
+						/>
+					</div>
+
+					<div className="mt-12 text-center">
+						<Link
+							href="/plugins"
+							className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+						>
+							Browse all plugins →
+						</Link>
+					</div>
+				</div>
+			</section>
+
+			{/* Why It Works */}
+			<section className="bg-white dark:bg-gray-800 py-24">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-16">
+						Why It Works
+					</h2>
+
+					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+						<FeatureCard
+							icon="⚡"
+							title="Smart Caching"
+							description="Only runs validation when relevant files change. Native Rust hashing keeps it fast."
+						/>
+						<FeatureCard
+							icon="📊"
+							title="Local Metrics"
+							description="Tracks task success and confidence calibration. All data stays on your machine, never sent anywhere."
+						/>
+						<FeatureCard
+							icon="🔧"
+							title="Zero Config"
+							description="Binary auto-installs on first session. --auto flag detects your stack automatically."
+						/>
+						<FeatureCard
+							icon="🔌"
+							title="Any Stack"
+							description="TypeScript, Python, Rust, Go, Ruby, Elixir. If there's a linter, there's a plugin."
 						/>
 					</div>
 				</div>
 			</section>
 
 			{/* Getting Started */}
-			<section id="getting-started" className="bg-white dark:bg-gray-800 py-24">
+			<section id="getting-started" className="py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
 						Getting Started
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-						Install with a single command - validation hooks work out of the box
+						Two commands. That&apos;s it.
 					</p>
+
 					<div className="max-w-2xl mx-auto">
 						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-								Quick Install
-							</h3>
-							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								Install the han binary:
-							</p>
-							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4">
-								<code>curl -fsSL https://han.guru/install.sh | bash</code>
-							</pre>
-							<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-								Then auto-detect and install plugins for your project (always
-								includes required core plugin):
-							</p>
-							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>han plugin install --auto</code>
-							</pre>
+							<div className="space-y-6">
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+										1. Install the CLI:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+										<code>curl -fsSL https://han.guru/install.sh | bash</code>
+									</pre>
+								</div>
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+										2. Auto-detect and install plugins for your project:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
+										<code>han plugin install --auto</code>
+									</pre>
+								</div>
+							</div>
 						</div>
+
+						<div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+							<p className="text-sm text-blue-800 dark:text-blue-200">
+								<strong>That&apos;s it.</strong> Next time you use Claude Code,
+								validation hooks will run automatically when you finish a
+								conversation.
+							</p>
+						</div>
+
 						<div className="mt-6 text-center">
-							<Link
-								href="/docs#installation"
-								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-							>
-								More installation methods
-							</Link>
-							<span className="text-gray-500 dark:text-gray-400 mx-2">|</span>
 							<Link
 								href="/docs"
 								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
 							>
-								Full documentation
+								Read the full documentation →
 							</Link>
 						</div>
 					</div>
 				</div>
 			</section>
+		</div>
+	);
+}
 
-			{/* MCP Server - Natural Language Hook Commands */}
-			<section id="mcp-server" className="py-24">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						Natural Language Hook Commands
-					</h2>
-					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
-						Install hashi-han to run hook commands via natural language.
-						&quot;Run the elixir tests&quot; instead of remembering exact
-						commands.
-					</p>
-
-					<div className="max-w-2xl mx-auto">
-						<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-								Install the MCP Server
-							</h3>
-							<pre className="bg-gray-900 dark:bg-gray-800 text-gray-100 p-4 rounded overflow-x-auto text-sm">
-								<code>
-									npx @thebushidocollective/han plugin install hashi-han
-								</code>
-							</pre>
-						</div>
-
-						<div className="grid md:grid-cols-2 gap-4 mb-6">
-							<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-								<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-									Dynamic Discovery
-								</h4>
-								<p className="text-sm text-gray-600 dark:text-gray-300">
-									Tools are generated from installed plugins. Install
-									jutsu-typescript, get{" "}
-									<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-										jutsu_typescript_typecheck
-									</code>
-								</p>
-							</div>
-							<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-								<h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-									Smart Caching
-								</h4>
-								<p className="text-sm text-gray-600 dark:text-gray-300">
-									All hook caching applies. Only runs when files have changed.
-									Fast feedback always.
-								</p>
-							</div>
-						</div>
-
-						<div className="text-center">
-							<Link
-								href="/docs#mcp-server"
-								className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-							>
-								Learn more about the MCP Server
-							</Link>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Phases of Trust */}
-			<section className="py-24">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						Phases of Trust
-					</h2>
-					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
-						Start personal, grow to team alignment
-					</p>
-
-					<div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-						<TrustPhaseCard
-							phase={1}
-							color="blue"
-							title="User"
-							flag="--scope user"
-							isDefault
-							description="Install for yourself only. Perfect for trying out plugins across all your projects."
-							path="~/.claude/settings.json"
-						/>
-						<TrustPhaseCard
-							phase={2}
-							color="amber"
-							title="Local"
-							flag="--scope local"
-							description="Project-specific but personal. More control without affecting your team."
-							path=".claude/settings.local.json"
-							note="gitignored"
-						/>
-						<TrustPhaseCard
-							phase={3}
-							color="green"
-							title="Project"
-							flag="--scope project"
-							description="Align your team. Everyone uses the same plugins and validation hooks."
-							path=".claude/settings.json"
-							note="committed to git"
-						/>
-					</div>
-
-					<div className="mt-8 text-center">
-						<Link
-							href="/docs#installation-scopes"
-							className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-						>
-							Learn more about installation scopes →
-						</Link>
-					</div>
-				</div>
-			</section>
+function StepCard({
+	number,
+	title,
+	description,
+	code,
+}: {
+	number: number;
+	title: string;
+	description: string;
+	code?: string;
+}) {
+	return (
+		<div className="text-center">
+			<div className="w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
+				{number}
+			</div>
+			<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+				{title}
+			</h3>
+			<p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
+				{description}
+			</p>
+			{code && (
+				<code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
+					{code}
+				</code>
+			)}
 		</div>
 	);
 }
@@ -305,12 +255,14 @@ function CategoryCard({
 	icon,
 	title,
 	subtitle,
+	count,
 	description,
 }: {
 	href: string;
 	icon: string;
 	title: string;
 	subtitle: string;
+	count: string;
 	description: string;
 }) {
 	return (
@@ -318,118 +270,38 @@ function CategoryCard({
 			href={href}
 			className="bg-white dark:bg-gray-700 p-6 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-gray-900 dark:hover:border-gray-400 transition block group"
 		>
-			<div className="text-4xl mb-3">{icon}</div>
-			<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-gray-700 dark:group-hover:text-gray-200">
-				{title}
-			</h3>
-			<p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-				{subtitle}
-			</p>
+			<div className="flex items-center gap-3 mb-4">
+				<span className="text-3xl">{icon}</span>
+				<div>
+					<h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200">
+						{title}
+					</h3>
+					<p className="text-sm text-gray-500 dark:text-gray-400">
+						{subtitle} · {count}
+					</p>
+				</div>
+			</div>
 			<p className="text-gray-600 dark:text-gray-300">{description}</p>
 		</Link>
 	);
 }
 
-function PillarCard({
-	kanji,
-	reading,
+function FeatureCard({
+	icon,
 	title,
 	description,
-	features,
 }: {
-	kanji: string;
-	reading: string;
+	icon: string;
 	title: string;
 	description: string;
-	features: string[];
 }) {
 	return (
 		<div className="text-center">
-			<div className="mb-6">
-				<span className="text-7xl font-bold text-gray-900 dark:text-white">
-					{kanji}
-				</span>
-				<p className="text-sm text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">
-					{reading}
-				</p>
-			</div>
-			<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+			<div className="text-4xl mb-4">{icon}</div>
+			<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{title}
 			</h3>
-			<p className="text-gray-600 dark:text-gray-300 mb-6">{description}</p>
-			<ul className="text-left space-y-2">
-				{features.map((feature) => (
-					<li
-						key={feature}
-						className="flex items-start gap-2 text-gray-600 dark:text-gray-300"
-					>
-						<span className="text-gray-400 dark:text-gray-500 mt-1">-</span>
-						<span>{feature}</span>
-					</li>
-				))}
-			</ul>
-		</div>
-	);
-}
-
-function TrustPhaseCard({
-	phase,
-	color,
-	title,
-	flag,
-	isDefault,
-	description,
-	path,
-	note,
-}: {
-	phase: number;
-	color: "blue" | "amber" | "green";
-	title: string;
-	flag: string;
-	isDefault?: boolean;
-	description: string;
-	path: string;
-	note?: string;
-}) {
-	const colorClasses = {
-		blue: "border-blue-500 text-blue-500",
-		amber: "border-amber-500 text-amber-500",
-		green: "border-green-500 text-green-500",
-	};
-
-	return (
-		<div
-			className={`bg-white dark:bg-gray-700 p-6 rounded-lg border-l-4 ${colorClasses[color].split(" ")[0]}`}
-		>
-			<div className="flex items-center gap-3 mb-3">
-				<span
-					className={`text-2xl font-bold ${colorClasses[color].split(" ")[1]}`}
-				>
-					{phase}
-				</span>
-				<div>
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						{title}
-						{isDefault && (
-							<span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
-								(default)
-							</span>
-						)}
-					</h3>
-					<code className="text-xs text-gray-500 dark:text-gray-400">
-						{flag}
-					</code>
-				</div>
-			</div>
-			<p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
-				{description}
-			</p>
-			<p className="text-xs text-gray-500 dark:text-gray-400">
-				<code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">
-					{path}
-				</code>
-				{note && <span className="ml-1">({note})</span>}
-			</p>
+			<p className="text-gray-600 dark:text-gray-300 text-sm">{description}</p>
 		</div>
 	);
 }

@@ -1,0 +1,10 @@
+[test]
+root = "test"
+coverage = true
+# coverageThreshold = 0.55
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"
+coveragePathIgnorePatterns = "../han-native/index.js"
+
+[install]
+auto = "auto"

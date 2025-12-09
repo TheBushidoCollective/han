@@ -23,7 +23,7 @@ Once enabled, Claude will automatically apply these skills when working with rel
 ## Quality Hooks
 
 This plugin includes hooks that ensure RSpec tests pass before
-completing work. The hooks use `bushido-han` to support both
+completing work. The hooks use `han` to support both
 single-package and monorepo projects.
 
 ### Monorepo Support

@@ -885,7 +885,7 @@
   {
     "id": "jutsu-git-storytelling",
     "name": "jutsu-git-storytelling",
-    "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
+    "description": "Git storytelling guidance - helps commit work thoughtfully to tell the story of your development process.",
     "category": "jutsu",
     "tags": [
       "git",
@@ -893,7 +893,7 @@
       "commit",
       "version-control",
       "quality",
-      "enforcement"
+      "guidance"
     ],
     "path": "/plugins/jutsu/jutsu-git-storytelling",
     "components": [
@@ -1043,23 +1043,6 @@
     ],
     "path": "/plugins/hashi/hashi-han",
     "components": []
-  },
-  {
-    "id": "hashi-han-metrics",
-    "name": "hashi-han-metrics",
-    "description": "DEPRECATED: Merged into core. MCP server for agent task tracking and performance metrics.",
-    "category": "hashi",
-    "tags": [
-      "mcp",
-      "metrics",
-      "tracking",
-      "analytics",
-      "server"
-    ],
-    "path": "/plugins/hashi/hashi-han-metrics",
-    "components": [
-      "hook"
-    ]
   },
   {
     "id": "jutsu-helm",
