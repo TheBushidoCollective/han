@@ -4,10 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import {
-	formatToolUsage,
-	parseMarkdown,
-} from "../lib/install-interactive.tsx";
+import { formatToolUsage, parseMarkdown } from "../lib/install-interactive.tsx";
 
 describe("install-interactive.tsx helper functions", () => {
 	describe("formatToolUsage", () => {
@@ -104,9 +101,7 @@ describe("install-interactive.tsx helper functions", () => {
 				const longCommand =
 					"npm run build && npm run test && npm run lint && npm run format && npm run deploy";
 				const result = formatToolUsage("bash", { command: longCommand });
-				expect(result).toBe(
-					`💻 Bash: ${longCommand.slice(0, 57)}...`,
-				);
+				expect(result).toBe(`💻 Bash: ${longCommand.slice(0, 57)}...`);
 				expect(result.length).toBeLessThan(75); // 💻 Bash:  = ~10 chars + 57 + ...
 			});
 

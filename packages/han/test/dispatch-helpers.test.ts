@@ -33,9 +33,7 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 		});
 
 		test("handles single file name", () => {
-			expect(resolveToAbsolute("file.txt")).toBe(
-				"/home/user/project/file.txt",
-			);
+			expect(resolveToAbsolute("file.txt")).toBe("/home/user/project/file.txt");
 		});
 
 		test("handles dot-prefixed relative paths", () => {
@@ -62,9 +60,9 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 		});
 
 		test("extracts core plugin name", () => {
-			expect(
-				extractPluginName("/path/to/plugins/marketplaces/han/core"),
-			).toBe("core");
+			expect(extractPluginName("/path/to/plugins/marketplaces/han/core")).toBe(
+				"core",
+			);
 		});
 
 		test("handles hashi plugins", () => {
@@ -77,9 +75,7 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 
 		test("handles do plugins", () => {
 			expect(
-				extractPluginName(
-					"/path/to/plugins/marketplaces/han/do/do-testing",
-				),
+				extractPluginName("/path/to/plugins/marketplaces/han/do/do-testing"),
 			).toBe("do-testing");
 		});
 
@@ -99,9 +95,9 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 
 	describe("deriveHookName", () => {
 		test("extracts hook name from markdown file path", () => {
-			expect(
-				deriveHookName("cat hooks/metrics-tracking.md", "jutsu-bun"),
-			).toBe("metrics-tracking");
+			expect(deriveHookName("cat hooks/metrics-tracking.md", "jutsu-bun")).toBe(
+				"metrics-tracking",
+			);
 		});
 
 		test("extracts hook name from han hook reference command", () => {
@@ -114,12 +110,9 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 		});
 
 		test("extracts hook name from shell script path", () => {
-			expect(
-				deriveHookName(
-					"\${CLAUDE_PLUGIN_ROOT}/hooks/pre-push-check.sh",
-					"jutsu-git",
-				),
-			).toBe("pre-push-check");
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal ${} in hook paths
+			const hookPath = "${CLAUDE_PLUGIN_ROOT}/hooks/pre-push-check.sh";
+			expect(deriveHookName(hookPath, "jutsu-git")).toBe("pre-push-check");
 		});
 
 		test("extracts hook name from complex command with markdown", () => {
@@ -132,9 +125,9 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 		});
 
 		test("extracts hook name from shell script with arguments", () => {
-			expect(
-				deriveHookName("hooks/validate-config.sh --verbose", "core"),
-			).toBe("validate-config");
+			expect(deriveHookName("hooks/validate-config.sh --verbose", "core")).toBe(
+				"validate-config",
+			);
 		});
 
 		test("falls back to plugin name when no hook file pattern found", () => {
@@ -161,9 +154,9 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 		});
 
 		test("handles numeric characters in hook names", () => {
-			expect(
-				deriveHookName("cat hooks/hook-v2-config.md", "plugin"),
-			).toBe("hook-v2-config");
+			expect(deriveHookName("cat hooks/hook-v2-config.md", "plugin")).toBe(
+				"hook-v2-config",
+			);
 		});
 	});
 });

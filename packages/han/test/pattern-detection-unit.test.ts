@@ -19,8 +19,8 @@ describe("pattern-detection unit tests", () => {
 	beforeEach(() => {
 		testCounter++;
 		testDir = `${baseTestDir}-${testCounter}`;
-		originalEnv = process.env["CLAUDE_CONFIG_DIR"];
-		process.env["CLAUDE_CONFIG_DIR"] = join(testDir, "config");
+		originalEnv = process.env.CLAUDE_CONFIG_DIR;
+		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
 		mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
 			recursive: true,
 		});
@@ -39,9 +39,9 @@ describe("pattern-detection unit tests", () => {
 
 	afterEach(() => {
 		if (originalEnv) {
-			process.env["CLAUDE_CONFIG_DIR"] = originalEnv;
+			process.env.CLAUDE_CONFIG_DIR = originalEnv;
 		} else {
-			delete process.env["CLAUDE_CONFIG_DIR"];
+			delete process.env.CLAUDE_CONFIG_DIR;
 		}
 		rmSync(testDir, { recursive: true, force: true });
 		consoleSpy.mockRestore();
@@ -1107,7 +1107,7 @@ describe("pattern-detection helper functions", () => {
 					"**Tip:** Run `npx markdownlint-cli --fix .` before completion.",
 			};
 
-			expect(guidance["markdownlint"]).toContain("markdownlint-cli");
+			expect(guidance.markdownlint).toContain("markdownlint-cli");
 		});
 
 		test("returns default guidance for unknown hooks", () => {

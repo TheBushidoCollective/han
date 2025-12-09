@@ -338,16 +338,16 @@ describe("hook-test.ts integration behavior", () => {
 	let originalEnv: string | undefined;
 
 	beforeEach(() => {
-		originalEnv = process.env["CLAUDE_CONFIG_DIR"];
-		process.env["CLAUDE_CONFIG_DIR"] = join(testDir, "config");
+		originalEnv = process.env.CLAUDE_CONFIG_DIR;
+		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
 		mkdirSync(join(testDir, "config"), { recursive: true });
 	});
 
 	afterEach(() => {
 		if (originalEnv) {
-			process.env["CLAUDE_CONFIG_DIR"] = originalEnv;
+			process.env.CLAUDE_CONFIG_DIR = originalEnv;
 		} else {
-			delete process.env["CLAUDE_CONFIG_DIR"];
+			delete process.env.CLAUDE_CONFIG_DIR;
 		}
 		rmSync(testDir, { recursive: true, force: true });
 	});
@@ -394,7 +394,7 @@ describe("hook-test.ts integration behavior", () => {
 				},
 			};
 
-			expect(invalidHooksJson["hooks"]).toBeUndefined();
+			expect(invalidHooksJson.hooks).toBeUndefined();
 		});
 
 		test("invalid hooks.json - hook type not an array", () => {

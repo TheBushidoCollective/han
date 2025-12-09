@@ -3,7 +3,7 @@
  * These are pure functions that can be tested without side effects
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,8 +26,8 @@ summary: A test blueprint
 
 			const match = content.match(FRONTMATTER_REGEX);
 			expect(match).not.toBeNull();
-			expect(match![1]).toContain("name: test-blueprint");
-			expect(match![2]).toContain("# Content here");
+			expect(match?.[1]).toContain("name: test-blueprint");
+			expect(match?.[2]).toContain("# Content here");
 		});
 
 		test("does not match content without frontmatter", () => {
@@ -56,7 +56,7 @@ Body content`;
 
 			const match = content.match(FRONTMATTER_REGEX);
 			expect(match).not.toBeNull();
-			expect(match![1]).toContain("author: Test Author");
+			expect(match?.[1]).toContain("author: Test Author");
 		});
 	});
 
@@ -73,8 +73,8 @@ Details here...`;
 
 			const result = parseFrontmatter(content);
 			expect(result.metadata).not.toBeNull();
-			expect(result.metadata!.name).toBe("api-architecture");
-			expect(result.metadata!.summary).toBe(
+			expect(result.metadata?.name).toBe("api-architecture");
+			expect(result.metadata?.summary).toBe(
 				"Documents the API layer architecture",
 			);
 			expect(result.content).toContain("# API Architecture");
@@ -145,7 +145,7 @@ summary: CLI: The main entry point
 Content`;
 
 			const result = parseFrontmatter(content);
-			expect(result.metadata!.summary).toBe("CLI: The main entry point");
+			expect(result.metadata?.summary).toBe("CLI: The main entry point");
 		});
 
 		test("ignores unknown frontmatter keys", () => {
@@ -160,8 +160,10 @@ Content`;
 
 			const result = parseFrontmatter(content);
 			expect(result.metadata).not.toBeNull();
-			expect(result.metadata!.name).toBe("test-blueprint");
-			expect((result.metadata as Record<string, unknown>).author).toBeUndefined();
+			expect(result.metadata?.name).toBe("test-blueprint");
+			expect(
+				(result.metadata as Record<string, unknown>).author,
+			).toBeUndefined();
 		});
 	});
 
@@ -192,8 +194,8 @@ Content`;
 			const formatted = formatWithFrontmatter(blueprint);
 			const parsed = parseFrontmatter(formatted);
 
-			expect(parsed.metadata!.name).toBe("roundtrip");
-			expect(parsed.metadata!.summary).toBe("Testing roundtrip");
+			expect(parsed.metadata?.name).toBe("roundtrip");
+			expect(parsed.metadata?.summary).toBe("Testing roundtrip");
 			expect(parsed.content.trim()).toBe("# Roundtrip Test");
 		});
 
@@ -225,7 +227,8 @@ Content`;
 			const blueprint = {
 				name: "special",
 				summary: "Special chars",
-				content: "Code: `const x = 1;`\n\n```typescript\nfunction foo() {}\n```",
+				content:
+					"Code: `const x = 1;`\n\n```typescript\nfunction foo() {}\n```",
 			};
 
 			const result = formatWithFrontmatter(blueprint);
@@ -259,7 +262,8 @@ Content`;
 
 			const result = getBlueprintsDir();
 			// Use realpathSync to handle macOS /var -> /private/var symlink
-			expect(realpathSync(result!)).toBe(realpathSync(blueprintsPath));
+			expect(result).not.toBeNull();
+			expect(realpathSync(result as string)).toBe(realpathSync(blueprintsPath));
 		});
 
 		test("returns null when blueprints directory does not exist", () => {
@@ -274,15 +278,14 @@ Content`;
 			const original = {
 				name: "integration-test",
 				summary: "Tests the full roundtrip",
-				content:
-					"# Integration Test\n\nThis content should survive roundtrip.",
+				content: "# Integration Test\n\nThis content should survive roundtrip.",
 			};
 
 			const formatted = formatWithFrontmatter(original);
 			const parsed = parseFrontmatter(formatted);
 
-			expect(parsed.metadata!.name).toBe(original.name);
-			expect(parsed.metadata!.summary).toBe(original.summary);
+			expect(parsed.metadata?.name).toBe(original.name);
+			expect(parsed.metadata?.summary).toBe(original.summary);
 			expect(parsed.content.trim()).toBe(original.content);
 		});
 

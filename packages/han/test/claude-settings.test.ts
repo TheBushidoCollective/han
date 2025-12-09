@@ -80,7 +80,7 @@ describe("claude-settings.ts", () => {
 
 		beforeEach(() => {
 			const random = Math.random().toString(36).substring(2, 9);
-			testDir = "/tmp/han-settings-test-" + Date.now() + "-" + random;
+			testDir = `/tmp/han-settings-test-${Date.now()}-${random}`;
 			mkdirSync(testDir, { recursive: true });
 		});
 

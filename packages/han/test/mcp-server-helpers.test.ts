@@ -136,12 +136,13 @@ describe("mcp/server.ts helper functions", () => {
 			];
 
 			const result = formatToolsForMcp(tools);
-			const annotations = result[0].annotations!;
+			const annotations = result[0].annotations;
+			expect(annotations).toBeDefined();
 
-			expect(annotations.readOnlyHint).toBe(false);
-			expect(annotations.destructiveHint).toBe(false);
-			expect(annotations.idempotentHint).toBe(true);
-			expect(annotations.openWorldHint).toBe(false);
+			expect(annotations?.readOnlyHint).toBe(false);
+			expect(annotations?.destructiveHint).toBe(false);
+			expect(annotations?.idempotentHint).toBe(true);
+			expect(annotations?.openWorldHint).toBe(false);
 		});
 
 		test("includes input schema with cache, directory, and verbose properties", () => {

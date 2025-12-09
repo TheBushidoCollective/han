@@ -106,7 +106,7 @@ describe("validate.ts helper functions", () => {
 			// Extract timestamp from filename
 			const match = result.match(/_(\d+)$/);
 			expect(match).not.toBeNull();
-			const timestamp = Number.parseInt(match![1], 10);
+			const timestamp = Number.parseInt(match?.[1], 10);
 			expect(timestamp).toBeGreaterThanOrEqual(before);
 			expect(timestamp).toBeLessThanOrEqual(after);
 		});
@@ -158,7 +158,9 @@ describe("validate.ts helper functions", () => {
 			process.env.CLAUDE_ENV_FILE = "env/local.env";
 			delete process.env.CLAUDE_PROJECT_DIR;
 			process.cwd = () => "/current/working/dir";
-			expect(getAbsoluteEnvFilePath()).toBe("/current/working/dir/env/local.env");
+			expect(getAbsoluteEnvFilePath()).toBe(
+				"/current/working/dir/env/local.env",
+			);
 		});
 
 		test("handles nested relative paths", () => {
@@ -277,7 +279,10 @@ describe("validate.ts helper functions", () => {
 
 		beforeEach(() => {
 			const random = Math.random().toString(36).substring(2, 9);
-			testDir = join(tmpdir(), `han-validate-output-test-${Date.now()}-${random}`);
+			testDir = join(
+				tmpdir(),
+				`han-validate-output-test-${Date.now()}-${random}`,
+			);
 			mkdirSync(testDir, { recursive: true });
 		});
 
@@ -342,7 +347,11 @@ describe("validate.ts helper functions", () => {
 		});
 
 		test("handles single level subdirectory", () => {
-			const result = getCacheKeyForDirectory("typecheck", "/project/src", "/project");
+			const result = getCacheKeyForDirectory(
+				"typecheck",
+				"/project/src",
+				"/project",
+			);
 			expect(result).toBe("typecheck_src");
 		});
 
@@ -411,9 +420,7 @@ describe("validate.ts helper functions", () => {
 				"check-commits",
 				{},
 			);
-			expect(result).toBe(
-				"han hook run jutsu-git-storytelling check-commits",
-			);
+			expect(result).toBe("han hook run jutsu-git-storytelling check-commits");
 		});
 
 		test("handles hook names with hyphens", () => {

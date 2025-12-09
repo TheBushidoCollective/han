@@ -35,9 +35,21 @@ describe("commands/hook/verify.ts helper functions", () => {
 
 		test("parses hook command with different plugin names", () => {
 			const cases = [
-				{ cmd: "han hook run jutsu-biome lint", plugin: "jutsu-biome", hook: "lint" },
-				{ cmd: "han hook run do-testing validate", plugin: "do-testing", hook: "validate" },
-				{ cmd: "han hook run hashi-github create-pr", plugin: "hashi-github", hook: "create-pr" },
+				{
+					cmd: "han hook run jutsu-biome lint",
+					plugin: "jutsu-biome",
+					hook: "lint",
+				},
+				{
+					cmd: "han hook run do-testing validate",
+					plugin: "do-testing",
+					hook: "validate",
+				},
+				{
+					cmd: "han hook run hashi-github create-pr",
+					plugin: "hashi-github",
+					hook: "create-pr",
+				},
 				{ cmd: "han hook run core build", plugin: "core", hook: "build" },
 			];
 
@@ -71,13 +83,17 @@ describe("commands/hook/verify.ts helper functions", () => {
 		});
 
 		test("returns null for other han subcommands", () => {
-			expect(parseHookCommand("han plugin install jutsu-typescript")).toBeNull();
+			expect(
+				parseHookCommand("han plugin install jutsu-typescript"),
+			).toBeNull();
 			expect(parseHookCommand("han plugin list")).toBeNull();
 			expect(parseHookCommand("han explain")).toBeNull();
 		});
 
 		test("parses hook names with hyphens", () => {
-			const result = parseHookCommand("han hook run jutsu-git-storytelling check-commits");
+			const result = parseHookCommand(
+				"han hook run jutsu-git-storytelling check-commits",
+			);
 			expect(result).not.toBeNull();
 			expect(result?.pluginName).toBe("jutsu-git-storytelling");
 			expect(result?.hookName).toBe("check-commits");

@@ -9,12 +9,20 @@ import { makeLiveOutputKey } from "../lib/hook-test.ts";
 describe("hook-test.ts helper functions", () => {
 	describe("makeLiveOutputKey", () => {
 		test("creates key from hook type, plugin, and command", () => {
-			const result = makeLiveOutputKey("SessionStart", "jutsu-typescript", "npx tsc");
+			const result = makeLiveOutputKey(
+				"SessionStart",
+				"jutsu-typescript",
+				"npx tsc",
+			);
 			expect(result).toBe("SessionStart:jutsu-typescript:npx tsc");
 		});
 
 		test("handles hook type with all caps", () => {
-			const result = makeLiveOutputKey("UserPromptSubmit", "core", "cat file.md");
+			const result = makeLiveOutputKey(
+				"UserPromptSubmit",
+				"core",
+				"cat file.md",
+			);
 			expect(result).toBe("UserPromptSubmit:core:cat file.md");
 		});
 

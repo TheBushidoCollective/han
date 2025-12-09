@@ -34,9 +34,7 @@ const binaryPath = join(projectRoot, "dist", "han");
 const sourcePath = join(projectRoot, "lib", "main.ts");
 
 const USE_SOURCE =
-	process.env.HAN_TEST_SOURCE === "true" ||
-	IS_CI ||
-	!existsSync(binaryPath);
+	process.env.HAN_TEST_SOURCE === "true" || IS_CI || !existsSync(binaryPath);
 const binPath = USE_SOURCE ? sourcePath : binaryPath;
 const binCommand = USE_SOURCE ? `bun ${binPath}` : binPath;
 

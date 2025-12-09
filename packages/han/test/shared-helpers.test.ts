@@ -2,7 +2,7 @@
  * Tests for exported helper functions in shared.ts
  * These are pure functions that can be tested without file system side effects
  */
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
 	getSettingsFilename,
@@ -36,9 +36,7 @@ describe("shared.ts helper functions", () => {
 		});
 
 		test("returns local settings path", () => {
-			expect(getSettingsFilename("local")).toBe(
-				".claude/settings.local.json",
-			);
+			expect(getSettingsFilename("local")).toBe(".claude/settings.local.json");
 		});
 	});
 
@@ -97,7 +95,7 @@ describe("shared.ts helper functions", () => {
 		});
 
 		test("handles malformed JSON gracefully", () => {
-			const content = '[broken json';
+			const content = "[broken json";
 			const result = parsePluginRecommendations(content);
 			// Should fall back to regex and return bushido
 			expect(result).toContain("bushido");
