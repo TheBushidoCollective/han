@@ -62,7 +62,7 @@ validate.ts                Execution with caching
           {
             "type": "command",
             "command": "han hook run plugin-name hook-name",
-            "timeout": 120000
+            "timeout": 120
           }
         ]
       }
@@ -86,7 +86,7 @@ validate.ts                Execution with caching
 - `type` - `"command"` (execute) or `"prompt"` (output text)
 - `command` - Shell command (supports `${CLAUDE_PLUGIN_ROOT}`)
 - `prompt` - Static text for prompt hooks
-- `timeout` - Execution timeout in milliseconds (default: 30000)
+- `timeout` - Execution timeout in seconds (default: 30000)
 
 ### han-config.json Format
 

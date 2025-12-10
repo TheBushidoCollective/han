@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "han hook dispatch UserPromptSubmit",
-            "timeout": 30000
+            "timeout": 30
           }
         ]
       }
@@ -17,7 +17,7 @@
           {
             "type": "command",
             "command": "han hook dispatch SessionStart",
-            "timeout": 30000
+            "timeout": 30
           }
         ]
       }
