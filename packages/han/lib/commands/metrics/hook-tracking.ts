@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
+import { getPluginNameFromRoot } from "../../shared.ts";
 
 /**
  * Get storage instance
@@ -61,15 +62,4 @@ export async function recordHookExecution(): Promise<void> {
 		console.error("Failed to record hook execution:", error);
 		process.exit(1);
 	}
-}
-
-/**
- * Extract plugin name from plugin root path
- */
-export function extractPluginName(pluginRoot: string): string {
-	// Examples:
-	// /path/to/plugins/marketplaces/han/jutsu/jutsu-typescript -> jutsu-typescript
-	// /path/to/plugins/marketplaces/han/core -> core
-	const parts = pluginRoot.split("/");
-	return parts[parts.length - 1];
 }

@@ -13,9 +13,9 @@ import {
 } from "./hook-cache.ts";
 import {
 	getHookConfigs,
-	getPluginNameFromRoot,
 	type ResolvedHookConfig,
 } from "./hook-config.ts";
+import { getPluginNameFromRoot } from "./shared.ts";
 import {
 	checkFailureSignal,
 	clearFailureSignal,

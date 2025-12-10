@@ -12,11 +12,11 @@ import { join } from "node:path";
 import {
 	getHookConfigs,
 	getHookDefinition,
-	getPluginNameFromRoot,
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
 } from "../lib/hook-config.ts";
+import { getPluginNameFromRoot } from "../lib/shared.ts";
 
 let testDir: string;
 let pluginDir: string;
