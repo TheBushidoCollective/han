@@ -30,11 +30,14 @@ let moduleLoadFailed = false;
 
 // Only import functions if not in CI
 let getCacheAge: () => number | null;
-let getMarketplacePlugins: (
-	forceRefresh?: boolean,
-) => Promise<{ plugins: Array<{ name: string; description?: string; category?: string }>; fromCache: boolean }>;
+let getMarketplacePlugins: (forceRefresh?: boolean) => Promise<{
+	plugins: Array<{ name: string; description?: string; category?: string }>;
+	fromCache: boolean;
+}>;
 let hasCachedMarketplace: () => boolean;
-let updateMarketplaceCache: () => Promise<Array<{ name: string; description?: string; category?: string }>>;
+let updateMarketplaceCache: () => Promise<
+	Array<{ name: string; description?: string; category?: string }>
+>;
 
 if (!isCI) {
 	try {
