@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.3] - 2025-12-10
+
+### Fixed
+
+- use atomic replacement to prevent corruption ([87590e30](../../commit/87590e30))
+- disable typescript typecheck hook for Next.js website ([cea22f45](../../commit/cea22f45))
+- resolve linting and formatting issues from stop hooks ([9e242e55](../../commit/9e242e55))
+- use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
+
 ## [1.22.2] - 2025-12-10
 
 ### Added
