@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
-import { getPluginNameFromRoot } from "../../shared.ts";
 
 /**
  * Get storage instance
