@@ -38,6 +38,7 @@ describe("pattern-detection", () => {
 				{
 					encoding: "utf-8",
 					timeout: 30000,
+					cwd: join(__dirname, ".."),
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -58,6 +59,7 @@ describe("pattern-detection", () => {
 				{
 					encoding: "utf-8",
 					timeout: 30000,
+					cwd: join(__dirname, ".."),
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -95,6 +97,7 @@ describe("pattern-detection", () => {
 				{
 					encoding: "utf-8",
 					timeout: 30000,
+					cwd: join(__dirname, ".."),
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -128,6 +131,7 @@ describe("pattern-detection", () => {
 				{
 					encoding: "utf-8",
 					timeout: 30000,
+					cwd: join(__dirname, ".."),
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -331,6 +335,7 @@ describe("pattern-detection", () => {
 				{
 					encoding: "utf-8",
 					timeout: 30000,
+					cwd: join(__dirname, ".."),
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
