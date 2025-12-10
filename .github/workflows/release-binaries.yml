@@ -43,12 +43,17 @@ jobs:
             aarch64-unknown-linux-gnu
             x86_64-apple-darwin
             aarch64-apple-darwin
-            x86_64-pc-windows-msvc
+            x86_64-pc-windows-gnu
 
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
+          sudo apt-get install -y gcc-aarch64-linux-gnu mingw-w64 clang llvm
+
+      - name: Setup osxcross for macOS cross-compilation
+        uses: mbround18/setup-osxcross@v1
+        with:
+          osx-version: "12.3"
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
@@ -58,7 +63,13 @@ jobs:
         working-directory: ./packages/han-native
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: x86_64-w64-mingw32-gcc
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+          CC_x86_64_apple_darwin: o64-clang
+          CXX_x86_64_apple_darwin: o64-clang++
+          CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: o64-clang
+          CC_aarch64_apple_darwin: oa64-clang
+          CXX_aarch64_apple_darwin: oa64-clang++
+          CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: oa64-clang
         run: |
           # Linux x64 (native)
           npx napi build --platform --release --target x86_64-unknown-linux-gnu
@@ -66,14 +77,14 @@ jobs:
           # Linux arm64 (cross-compile)
           npx napi build --platform --release --target aarch64-unknown-linux-gnu
 
-          # macOS x64 (cross-compile)
+          # macOS x64 (cross-compile via osxcross)
           npx napi build --platform --release --target x86_64-apple-darwin
 
-          # macOS arm64 (cross-compile)
+          # macOS arm64 (cross-compile via osxcross)
           npx napi build --platform --release --target aarch64-apple-darwin
 
-          # Windows x64 (cross-compile)
-          npx napi build --platform --release --target x86_64-pc-windows-msvc
+          # Windows x64 (cross-compile via mingw)
+          npx napi build --platform --release --target x86_64-pc-windows-gnu
 
       - name: List built native modules
         run: |
@@ -91,7 +102,7 @@ jobs:
           cp packages/han-native/han-native.darwin-x64.node packages/han/native/ || true
           cp packages/han-native/han-native.linux-x64-gnu.node packages/han/native/ || true
           cp packages/han-native/han-native.linux-arm64-gnu.node packages/han/native/ || true
-          cp packages/han-native/han-native.win32-x64-msvc.node packages/han/native/ || true
+          cp packages/han-native/han-native.win32-x64-gnu.node packages/han/native/ || true
           echo "Copied native modules:"
           ls -la packages/han/native/
 
@@ -117,7 +128,7 @@ jobs:
           bun scripts/build-bundle.js bun-linux-arm64
 
           # windows-x64
-          cp native/han-native.win32-x64-msvc.node native/han-native.node
+          cp native/han-native.win32-x64-gnu.node native/han-native.node
           bun scripts/build-bundle.js bun-windows-x64
 
       - name: Create checksums
