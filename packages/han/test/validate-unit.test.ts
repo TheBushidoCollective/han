@@ -129,9 +129,7 @@ describe("Hook Config", () => {
 		});
 
 		test("handles versioned path with trailing slash", () => {
-			const result = getPluginNameFromRoot(
-				"/path/to/jutsu-tailwind/1.1.1/",
-			);
+			const result = getPluginNameFromRoot("/path/to/jutsu-tailwind/1.1.1/");
 			// After filtering empty parts, last part is "1.1.1", so it returns parent
 			expect(result).toBe("jutsu-tailwind");
 		});

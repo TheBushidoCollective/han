@@ -11,11 +11,7 @@ import {
 	findDirectoriesWithMarkers,
 	trackFiles,
 } from "./hook-cache.ts";
-import {
-	getHookConfigs,
-	type ResolvedHookConfig,
-} from "./hook-config.ts";
-import { getPluginNameFromRoot } from "./shared.ts";
+import { getHookConfigs, type ResolvedHookConfig } from "./hook-config.ts";
 import {
 	checkFailureSignal,
 	clearFailureSignal,
@@ -23,6 +19,7 @@ import {
 	signalFailure,
 	withSlot,
 } from "./hook-lock.ts";
+import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
  * Check if debug mode is enabled via HAN_DEBUG environment variable
