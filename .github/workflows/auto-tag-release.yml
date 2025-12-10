@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - 'packages/han/**'
+      - 'jutsu/**'
+      - 'do/**'
+      - 'hashi/**'
+      - 'core/**'
+      - 'website/**'
       - '.github/workflows/auto-tag-release.yml'
 
 permissions:
@@ -14,10 +19,92 @@ permissions:
   actions: write
 
 jobs:
-  bump-and-tag:
+  generate-changelogs:
     runs-on: ubuntu-latest
     # Skip if commit is from bot (prevent loops)
     if: github.actor != 'github-actions[bot]'
+    outputs:
+      packages_changed: ${{ steps.detect-changes.outputs.packages }}
+      plugins_changed: ${{ steps.detect-changes.outputs.plugins }}
+      website_changed: ${{ steps.detect-changes.outputs.website }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Detect changed paths
+        id: detect-changes
+        run: |
+          # Get changed files in this commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+
+          # Check what changed
+          if echo "$CHANGED" | grep -q "^packages/han/"; then
+            echo "packages=true" >> $GITHUB_OUTPUT
+          else
+            echo "packages=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED" | grep -qE "^(jutsu|do|hashi|core)/"; then
+            echo "plugins=true" >> $GITHUB_OUTPUT
+          else
+            echo "plugins=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED" | grep -q "^website/"; then
+            echo "website=true" >> $GITHUB_OUTPUT
+          else
+            echo "website=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate plugin changelogs
+        if: steps.detect-changes.outputs.plugins == 'true'
+        run: |
+          chmod +x .github/scripts/generate-changelog.sh
+
+          # Find changed plugins and generate changelogs
+          CHANGED_PLUGINS=$(git diff --name-only HEAD~1 HEAD | grep -E "^(jutsu|do|hashi|core)/" | cut -d'/' -f1-2 | sort -u || true)
+
+          for plugin in $CHANGED_PLUGINS; do
+            if [ -d "$plugin" ]; then
+              echo "Generating changelog for $plugin"
+              # Get version from plugin.json
+              if [ -f "$plugin/.claude-plugin/plugin.json" ]; then
+                VERSION=$(jq -r '.version' "$plugin/.claude-plugin/plugin.json" 2>/dev/null || echo "1.0.0")
+                .github/scripts/generate-changelog.sh "$plugin" "$VERSION" || true
+              fi
+            fi
+          done
+
+      - name: Generate website changelog
+        if: steps.detect-changes.outputs.website == 'true'
+        run: |
+          chmod +x .github/scripts/generate-changelog.sh
+          if [ -f "website/package.json" ]; then
+            VERSION=$(node -p "require('./website/package.json').version" 2>/dev/null || echo "1.0.0")
+            .github/scripts/generate-changelog.sh website "$VERSION" || true
+          fi
+
+      - name: Commit changelog updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if there are any changelog changes to commit
+          if git diff --quiet; then
+            echo "No changelog changes to commit"
+          else
+            git add "**/CHANGELOG.md" || true
+            git commit -m "chore: update changelogs [skip ci]" || true
+            git push origin main || true
+          fi
+
+  bump-and-tag:
+    needs: generate-changelogs
+    runs-on: ubuntu-latest
+    if: needs.generate-changelogs.outputs.packages_changed == 'true'
     outputs:
       tag: ${{ steps.create-tag.outputs.tag }}
     steps:
@@ -27,6 +114,9 @@ jobs:
           fetch-depth: 0
           # Use PAT instead of GITHUB_TOKEN so tag push triggers release-binaries workflow
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Pull latest changes
+        run: git pull --rebase origin main
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -119,7 +209,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate changelog
+      - name: Generate CLI changelog
         if: steps.check-tag.outputs.exists == 'false'
         run: |
           chmod +x .github/scripts/generate-changelog.sh
@@ -130,7 +220,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase --autostash origin main
           git add packages/han/package.json packages/han/CHANGELOG.md
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main
@@ -144,12 +233,4 @@ jobs:
           git push origin "$TAG"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Created tag: $TAG"
-
-      - name: Trigger release workflow
-        if: steps.check-tag.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          TAG="v${{ steps.bump-version.outputs.new_version }}"
-          echo "Triggering release-binaries workflow for $TAG"
-          gh workflow run release-binaries.yml --field tag="$TAG"
+          echo "Tag push should automatically trigger release-binaries workflow"
