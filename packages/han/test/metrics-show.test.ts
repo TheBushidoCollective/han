@@ -111,6 +111,7 @@ describe("metrics show via CLI", () => {
 		const result = spawnSync("bun", ["run", "lib/main.ts", "metrics", "show"], {
 			encoding: "utf-8",
 			timeout: 30000,
+			cwd: join(__dirname, ".."),
 			env: {
 				...process.env,
 				CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -130,6 +131,7 @@ describe("metrics show via CLI", () => {
 			{
 				encoding: "utf-8",
 				timeout: 30000,
+				cwd: join(__dirname, ".."),
 				env: {
 					...process.env,
 					CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -149,6 +151,7 @@ describe("metrics show via CLI", () => {
 			{
 				encoding: "utf-8",
 				timeout: 30000,
+				cwd: join(__dirname, ".."),
 				env: {
 					...process.env,
 					CLAUDE_CONFIG_DIR: join(testDir, "config"),
@@ -168,6 +171,7 @@ describe("metrics show via CLI", () => {
 			{
 				encoding: "utf-8",
 				timeout: 30000,
+				cwd: join(__dirname, ".."),
 				env: {
 					...process.env,
 					CLAUDE_CONFIG_DIR: join(testDir, "config"),
