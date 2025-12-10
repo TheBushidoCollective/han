@@ -579,6 +579,27 @@ export async function fetchMarketplace(
 }
 
 /**
+ * Extract plugin name from plugin root path, handling versioned cache paths.
+ *
+ * Examples:
+ * - /path/to/jutsu-elixir -> jutsu-elixir
+ * - /path/to/jutsu-elixir/1.1.1 -> jutsu-elixir (versioned cache path)
+ * - /path/to/plugins/marketplaces/han/jutsu/jutsu-typescript -> jutsu-typescript
+ * - /path/to/plugins/marketplaces/han/core -> core
+ */
+export function getPluginNameFromRoot(pluginRoot: string): string {
+	const parts = pluginRoot.split("/").filter(Boolean);
+	const lastPart = parts[parts.length - 1] || "";
+
+	// If last part looks like a version (semver pattern), use parent directory
+	if (/^\d+\.\d+\.\d+/.test(lastPart) && parts.length >= 2) {
+		return parts[parts.length - 2];
+	}
+
+	return lastPart;
+}
+
+/**
  * Parse plugin recommendations from agent response
  */
 export function parsePluginRecommendations(content: string): string[] {
