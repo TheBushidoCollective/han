@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'packages/han/**'
+      - '.github/workflows/auto-tag-release.yml'
 
 permissions:
   contents: write
