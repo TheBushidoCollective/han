@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- only activate mise if project has config ([6c7e5605](../../commit/6c7e5605))
+- use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
+
+## [1.1.4] - 2025-12-10
+
+### Fixed
+
 - use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
 
 ## [1.1.3] - 2025-12-08
