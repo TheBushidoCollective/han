@@ -40,11 +40,6 @@ jobs:
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
             cargo_output: libhan_native.dylib
-          - target: x86_64-pc-windows-gnu
-            bun_target: bun-windows-x64
-            native_file: han-native.win32-x64-gnu.node
-            binary_name: han-windows-x64
-            cargo_output: han_native.dll
 
     runs-on: ubuntu-latest
     steps:
@@ -83,7 +78,7 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
@@ -133,8 +128,61 @@ jobs:
             packages/han/dist/binaries/${{ matrix.binary_name }}
             packages/han/dist/binaries/${{ matrix.binary_name }}.sha256
 
+  # Windows requires native build due to libnode.dll requirement
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install han-native dependencies
+        working-directory: ./packages/han-native
+        run: npm ci
+
+      - name: Build native module
+        working-directory: ./packages/han-native
+        run: npx napi build --platform --release
+
+      - name: Build bun binary
+        shell: bash
+        run: |
+          cd packages/han
+          npm ci
+          mkdir -p native
+          cp ../han-native/han-native.win32-x64-msvc.node native/han-native.node
+          mkdir -p dist/binaries
+          bun scripts/build-bundle.js bun-windows-x64
+
+      - name: Create checksum
+        working-directory: ./packages/han/dist/binaries
+        shell: bash
+        run: sha256sum han-windows-x64 > han-windows-x64.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: han-windows-x64
+          path: |
+            packages/han/dist/binaries/han-windows-x64
+            packages/han/dist/binaries/han-windows-x64.sha256
+
   release:
-    needs: build
+    needs: [build, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
