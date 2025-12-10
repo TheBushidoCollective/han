@@ -70,7 +70,11 @@ jobs:
           version: 0.13.0
 
       - name: Install cargo-zigbuild
-        run: cargo install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
 
       - name: Install cross-compilation dependencies
         run: |
@@ -80,8 +84,7 @@ jobs:
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
         run: |
-          sudo mkdir -p /opt
-          curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz" | sudo tar -J -x -C /opt
+          curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz" | tar -J -x -C /opt
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
@@ -100,8 +103,8 @@ jobs:
             # Native build, no zig needed
             npx napi build --platform --release --target ${{ matrix.target }}
           else
-            # Cross-compile with zig
-            npx napi build --platform --release --target ${{ matrix.target }} --zig
+            # Cross-compile with cargo-zigbuild
+            npx napi build --platform --release --target ${{ matrix.target }} --cross-compile
           fi
 
           echo "Built native module:"
