@@ -33,7 +33,8 @@
 		"claude",
 		"claude-code",
 		"testing",
-		"ci"
+		"ci",
+		"plugins"
 	],
 	"author": "The Bushido Collective",
 	"license": "MIT",
