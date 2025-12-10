@@ -50,51 +50,44 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu mingw-w64
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+
+      - name: Download macOS SDK for cross-compilation
+        run: |
+          sudo mkdir -p /opt
+          curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz" | sudo tar -J -x -C /opt
+
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build Linux native modules
+      - name: Build native modules for all platforms
         working-directory: ./packages/han-native
         env:
+          SDKROOT: /opt/MacOSX11.3.sdk
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
         run: |
           # Linux x64 (native)
           npx napi build --platform --release --target x86_64-unknown-linux-gnu
-          # Linux arm64 (cross-compile)
-          npx napi build --platform --release --target aarch64-unknown-linux-gnu
 
-      - name: Build macOS native modules (via Docker with osxcross)
-        working-directory: ./packages/han-native
-        run: |
-          # Build macOS x64
-          docker run --rm \
-            -v "$PWD:/build" \
-            -w /build \
-            -e CC=o64-clang \
-            -e CXX=o64-clang++ \
-            joseluisq/rust-linux-darwin-builder:1.81.0 \
-            cargo build --release --target x86_64-apple-darwin
+          # Linux arm64 (cross-compile with zig)
+          npx napi build --platform --release --target aarch64-unknown-linux-gnu --zig
 
-          # Build macOS arm64
-          docker run --rm \
-            -v "$PWD:/build" \
-            -w /build \
-            -e CC=aarch64-apple-darwin22.4-clang \
-            -e CXX=aarch64-apple-darwin22.4-clang++ \
-            joseluisq/rust-linux-darwin-builder:1.81.0 \
-            cargo build --release --target aarch64-apple-darwin
+          # macOS x64 (cross-compile with zig + SDK)
+          npx napi build --platform --release --target x86_64-apple-darwin --zig
 
-          # Copy the built libraries to expected locations for napi
-          cp target/x86_64-apple-darwin/release/libhan_native.dylib han-native.darwin-x64.node || true
-          cp target/aarch64-apple-darwin/release/libhan_native.dylib han-native.darwin-arm64.node || true
+          # macOS arm64 (cross-compile with zig + SDK)
+          npx napi build --platform --release --target aarch64-apple-darwin --zig
 
-      - name: Build Windows native modules
-        working-directory: ./packages/han-native
-        env:
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
-        run: |
-          npx napi build --platform --release --target x86_64-pc-windows-gnu
+          # Windows x64 (cross-compile with zig)
+          npx napi build --platform --release --target x86_64-pc-windows-gnu --zig
 
       - name: List built native modules
         run: |
