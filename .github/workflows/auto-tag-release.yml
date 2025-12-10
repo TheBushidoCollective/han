@@ -105,7 +105,14 @@ jobs:
         working-directory: ./packages/han
 
       - name: Run tests
-        run: rm -rf ~/.bun/install/cache && bun test --no-cache --max-concurrency 1
+        run: |
+          rm -rf ~/.bun/install/cache
+          # Pre-import all source files to warm transpiler cache
+          bun run -e "
+            import('./lib/marketplace-cache.ts');
+            import('./lib/commands/metrics/display.tsx');
+          "
+          bun test --no-cache
         working-directory: ./packages/han
 
       - name: Check if tag already exists
