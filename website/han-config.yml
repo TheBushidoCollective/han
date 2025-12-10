@@ -1,0 +1,7 @@
+# Override jutsu-bun for Next.js website
+jutsu-bun:
+  build:
+    command: bun run build
+  test:
+    # Website uses Playwright, which has its own CI workflow
+    enabled: false
