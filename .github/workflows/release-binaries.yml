@@ -143,15 +143,21 @@ jobs:
 
       - name: Create checksum
         working-directory: ./packages/han/dist/binaries
-        run: sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+        run: |
+          # Windows binaries have .exe extension added by Bun
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            sha256sum ${{ matrix.binary_name }}.exe > ${{ matrix.binary_name }}.exe.sha256
+          else
+            sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.binary_name }}
           path: |
-            packages/han/dist/binaries/${{ matrix.binary_name }}
-            packages/han/dist/binaries/${{ matrix.binary_name }}.sha256
+            packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}
+            packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}.sha256
 
   release:
     needs: build
