@@ -19,6 +19,12 @@
 		"types": ["node", "bun-types"],
 		"jsx": "react-jsx"
 	},
-	"include": ["bin/**/*", "lib/**/*", "index.ts"],
-	"exclude": ["node_modules", "dist", "test/**/*", "**/*.js"]
+	"include": [
+		"bin/**/*",
+		"lib/**/*",
+		// NEVER IGNORE TESTS
+		"test/**/*"
+	],
+	// ONLY IGNORE GENERATED FILES / NODE_MODULES
+	"exclude": ["node_modules", "dist"]
 }

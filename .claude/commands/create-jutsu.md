@@ -96,7 +96,7 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
           {
             "type": "command",
             "command": "han hook run jutsu-{technology-name} {hook-name} --fail-fast --cached",
-            "timeout": 120000
+            "timeout": 120
           }
         ]
       }

@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/mise-activate-inject.sh\"",
-            "timeout": 5000
+            "timeout": 30
           }
         ]
       }

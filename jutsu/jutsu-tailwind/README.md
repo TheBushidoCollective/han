@@ -211,7 +211,7 @@ If your Tailwind build is slow, you can adjust the timeout in `hooks/hooks.json`
           {
             "type": "command",
             "command": "han hook run jutsu-tailwind build --fail-fast --cached",
-            "timeout": 300000
+            "timeout": 300
           }
         ]
       }
