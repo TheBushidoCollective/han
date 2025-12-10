@@ -8,6 +8,7 @@ import {
 	validateUserConfig,
 } from "./config-validator.ts";
 import { findDirectoriesWithMarkers } from "./hook-cache.ts";
+import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
  * Plugin hook configuration (from han-config.json)
@@ -149,15 +150,6 @@ export function loadUserConfig(
 		console.error(`Error loading user config from ${configPath}:`, error);
 		return null;
 	}
-}
-
-/**
- * Extract plugin name from CLAUDE_PLUGIN_ROOT path
- * e.g., /path/to/jutsu-elixir -> jutsu-elixir
- */
-export function getPluginNameFromRoot(pluginRoot: string): string {
-	const parts = pluginRoot.split("/");
-	return parts[parts.length - 1] || "";
 }
 
 /**
