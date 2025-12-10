@@ -1,9 +1,4 @@
 import type { Command } from "commander";
-import {
-	getCacheAge,
-	hasCachedMarketplace,
-	updateMarketplaceCache,
-} from "../../marketplace-cache.ts";
 
 /**
  * Register `han plugin update-marketplace` command
@@ -13,6 +8,10 @@ export function registerPluginUpdateMarketplace(program: Command): void {
 		.command("update-marketplace")
 		.description("Update the local marketplace cache from GitHub")
 		.action(async () => {
+			// Dynamic import to avoid module resolution issues in Bun test runner
+			const { getCacheAge, hasCachedMarketplace, updateMarketplaceCache } =
+				await import("../../marketplace-cache.ts");
+
 			try {
 				console.log("Fetching latest marketplace data from GitHub...");
 

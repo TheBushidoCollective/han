@@ -1406,7 +1406,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-monorepo",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -2069,6 +2070,25 @@
       "enforcement"
     ],
     "path": "/plugins/jutsu/jutsu-shellcheck",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-shfmt",
+    "name": "jutsu-shfmt",
+    "description": "Validation and quality enforcement for shell scripts using shfmt.",
+    "category": "jutsu",
+    "tags": [
+      "shell",
+      "bash",
+      "shfmt",
+      "formatter",
+      "validation",
+      "quality"
+    ],
+    "path": "/plugins/jutsu/jutsu-shfmt",
     "components": [
       "skill",
       "hook"

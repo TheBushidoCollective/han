@@ -1,0 +1,7 @@
+[install]
+# Use bun's lockfile
+lockfile = "bun.lock"
+
+[run]
+# Use bun's runtime for better performance
+bun = true

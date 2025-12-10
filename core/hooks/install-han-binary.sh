@@ -1,128 +1,32 @@
 #!/usr/bin/env bash
-# Install/update han binary to $CLAUDE_CONFIG_DIR/bin
+# Check that han is available in PATH (required for MCP server invocation)
 
 set -e
 
 if command -v han &>/dev/null; then
-	echo "han is already installed"
 	exit 0
 fi
 
-# Ensure CLAUDE_CONFIG_DIR is set
-if [ -z "$CLAUDE_CONFIG_DIR" ]; then
-	CLAUDE_CONFIG_DIR="${HOME}/.claude"
-fi
+# han not found - provide installation instructions
+cat >&2 <<'EOF'
+han CLI not found in PATH.
 
-BIN_DIR="${CLAUDE_CONFIG_DIR}/bin"
-HAN_BIN="${BIN_DIR}/han"
+Han is required for MCP server integration and hook execution.
 
-# Create bin directory if it doesn't exist
-mkdir -p "$BIN_DIR"
+Install via one of:
 
-# Detect platform and architecture
-detect_platform() {
-	local os
-	local arch
-	os="$(uname -s)"
-	arch="$(uname -m)"
+  # macOS (Homebrew)
+  brew install thebushidocollective/tap/han
 
-	case "$os" in
-	Darwin)
-		case "$arch" in
-		arm64 | aarch64) echo "darwin-arm64" ;;
-		x86_64 | amd64) echo "darwin-x64" ;;
-		*) echo "unsupported-arch" ;;
-		esac
-		;;
-	Linux)
-		case "$arch" in
-		arm64 | aarch64) echo "linux-arm64" ;;
-		x86_64 | amd64) echo "linux-x64" ;;
-		*) echo "unsupported-arch" ;;
-		esac
-		;;
-	MINGW* | MSYS* | CYGWIN*)
-		echo "win32-x64"
-		;;
-	*)
-		echo "unsupported-os"
-		;;
-	esac
-}
+  # curl (macOS/Linux)
+  curl -fsSL https://han.guru/install.sh | bash
 
-PLATFORM=$(detect_platform)
+  # npm (any platform)
+  npm install -g @anthropic/han
 
-if [ "$PLATFORM" = "unsupported-os" ] || [ "$PLATFORM" = "unsupported-arch" ]; then
-	echo "Unsupported platform: $(uname -s) $(uname -m)" >&2
-	echo "Falling back to npx for han execution" >&2
-	exit 0
-fi
+After installation, restart your terminal or run:
+  source ~/.bashrc  # or ~/.zshrc
 
-# Get latest version from GitHub API
-get_latest_version() {
-	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL "https://api.github.com/repos/TheBushidoCollective/han/releases/latest" |
-			grep '"tag_name":' |
-			sed -E 's/.*"tag_name": "v?([^"]+)".*/\1/'
-	elif command -v wget >/dev/null 2>&1; then
-		wget -qO- "https://api.github.com/repos/TheBushidoCollective/han/releases/latest" |
-			grep '"tag_name":' |
-			sed -E 's/.*"tag_name": "v?([^"]+)".*/\1/'
-	else
-		echo "Neither curl nor wget found. Cannot download han binary." >&2
-		exit 0
-	fi
-}
+EOF
 
-# Check if han binary exists and get its version
-get_installed_version() {
-	if [ -x "$HAN_BIN" ]; then
-		"$HAN_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
-	else
-		echo "none"
-	fi
-}
-
-INSTALLED_VERSION=$(get_installed_version)
-LATEST_VERSION=$(get_latest_version)
-
-if [ -z "$LATEST_VERSION" ]; then
-	echo "Could not determine latest version. Skipping han binary installation." >&2
-	exit 0
-fi
-
-# Only download if we don't have it or if there's a newer version
-if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
-	echo "Installing han binary v$LATEST_VERSION to $HAN_BIN..." >&2
-
-	DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}"
-
-	# Download to temporary file first to avoid executing partially downloaded binary
-	TEMP_BIN="${HAN_BIN}.tmp.$$"
-
-	# Ensure temp file is cleaned up on exit
-	trap 'rm -f "$TEMP_BIN"' EXIT
-
-	# Download binary to temp location
-	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_BIN"
-	elif command -v wget >/dev/null 2>&1; then
-		wget -qO "$TEMP_BIN" "$DOWNLOAD_URL"
-	else
-		echo "Neither curl nor wget found. Cannot download han binary." >&2
-		exit 0
-	fi
-
-	# Make it executable
-	chmod +x "$TEMP_BIN"
-
-	# Atomically move into place (atomic on same filesystem)
-	mv "$TEMP_BIN" "$HAN_BIN"
-
-	echo "Han binary v$LATEST_VERSION installed successfully to $HAN_BIN" >&2
-else
-	# Binary is up to date, no output needed
-	:
-fi
-
-exit 0
+exit 1
