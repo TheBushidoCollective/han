@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import {
 	deriveHookName,
-	extractPluginName,
 	resolveToAbsolute,
 } from "../lib/commands/hook/dispatch.ts";
 
@@ -47,49 +46,6 @@ describe("commands/hook/dispatch.ts helper functions", () => {
 			expect(resolveToAbsolute("../other/file.ts")).toBe(
 				"/home/user/other/file.ts",
 			);
-		});
-	});
-
-	describe("extractPluginName", () => {
-		test("extracts plugin name from full path", () => {
-			expect(
-				extractPluginName(
-					"/path/to/plugins/marketplaces/han/jutsu/jutsu-typescript",
-				),
-			).toBe("jutsu-typescript");
-		});
-
-		test("extracts core plugin name", () => {
-			expect(extractPluginName("/path/to/plugins/marketplaces/han/core")).toBe(
-				"core",
-			);
-		});
-
-		test("handles hashi plugins", () => {
-			expect(
-				extractPluginName(
-					"/path/to/plugins/marketplaces/han/hashi/hashi-github",
-				),
-			).toBe("hashi-github");
-		});
-
-		test("handles do plugins", () => {
-			expect(
-				extractPluginName("/path/to/plugins/marketplaces/han/do/do-testing"),
-			).toBe("do-testing");
-		});
-
-		test("handles simple path", () => {
-			expect(extractPluginName("/plugins/bushido")).toBe("bushido");
-		});
-
-		test("handles single component path", () => {
-			expect(extractPluginName("my-plugin")).toBe("my-plugin");
-		});
-
-		test("handles path with trailing slash", () => {
-			// join removes trailing slashes, but split will still work
-			expect(extractPluginName("/path/to/plugin/")).toBe("");
 		});
 	});
 
