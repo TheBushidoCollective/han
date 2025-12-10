@@ -9,6 +9,7 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 } from "../../claude-settings.ts";
+import { getPluginNameFromRoot } from "../../shared.ts";
 
 /**
  * Read and parse stdin JSON payload from Claude Code hooks
@@ -212,7 +213,7 @@ function executeCommandHook(
 		reportHookExecution({
 			hookType,
 			hookName,
-			hookSource: extractPluginName(pluginRoot),
+			hookSource: getPluginNameFromRoot(pluginRoot),
 			durationMs: duration,
 			exitCode: 0,
 			passed: true,
@@ -230,7 +231,7 @@ function executeCommandHook(
 		reportHookExecution({
 			hookType,
 			hookName,
-			hookSource: extractPluginName(pluginRoot),
+			hookSource: getPluginNameFromRoot(pluginRoot),
 			durationMs: duration,
 			exitCode,
 			passed: false,
@@ -267,17 +268,6 @@ function reportHookExecution(data: {
 	} catch {
 		// Silently fail - don't block hooks on metrics failures
 	}
-}
-
-/**
- * Extract plugin name from plugin root path
- */
-export function extractPluginName(pluginRoot: string): string {
-	// Examples:
-	// /path/to/plugins/marketplaces/han/jutsu/jutsu-typescript -> jutsu-typescript
-	// /path/to/plugins/marketplaces/han/core -> core
-	const parts = pluginRoot.split("/");
-	return parts[parts.length - 1];
 }
 
 /**
