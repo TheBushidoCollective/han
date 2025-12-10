@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 
 /**
@@ -12,13 +13,35 @@ function getStorage(): JsonlMetricsStorage {
 }
 
 /**
+ * Read session_id from stdin (piped from Claude Code via dispatch)
+ */
+function getSessionIdFromStdin(): string | undefined {
+	try {
+		const stdin = readFileSync(0, "utf-8");
+		if (stdin.trim()) {
+			const parsed = JSON.parse(stdin);
+			return typeof parsed?.session_id === "string"
+				? parsed.session_id
+				: undefined;
+		}
+	} catch {
+		// stdin not available or not valid JSON - this is fine
+	}
+	return undefined;
+}
+
+/**
  * Start a new session or resume an existing one
+ * Reads session_id from stdin (piped from Claude Code via dispatch)
  */
 export async function startSession(sessionId?: string): Promise<string> {
 	const storage = getStorage();
 
+	// Try to get session_id from stdin if not provided (piped from Claude Code via dispatch)
+	const effectiveSessionId = sessionId || getSessionIdFromStdin();
+
 	// JSONL storage doesn't need retry logic - atomic appends
-	const result = storage.startSession(sessionId);
+	const result = storage.startSession(effectiveSessionId);
 
 	// Output JSON for programmatic consumption
 	console.log(

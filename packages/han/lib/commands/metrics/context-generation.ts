@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 
 /**
@@ -9,6 +10,24 @@ function getStorage(): JsonlMetricsStorage {
 		storageInstance = new JsonlMetricsStorage();
 	}
 	return storageInstance;
+}
+
+/**
+ * Read session_id from stdin (piped from Claude Code via dispatch)
+ */
+function getSessionIdFromStdin(): string | undefined {
+	try {
+		const stdin = readFileSync(0, "utf-8");
+		if (stdin.trim()) {
+			const parsed = JSON.parse(stdin);
+			return typeof parsed?.session_id === "string"
+				? parsed.session_id
+				: undefined;
+		}
+	} catch {
+		// stdin not available or not valid JSON - this is fine
+	}
+	return undefined;
 }
 
 export interface HookFailureStats {
@@ -25,6 +44,10 @@ export interface HookFailureStats {
 export async function generateSessionContext(): Promise<void> {
 	const storage = getStorage();
 
+	// Get session ID from stdin (piped from Claude Code via dispatch)
+	// This is the authoritative source - the session_id from Claude Code
+	const sessionId = getSessionIdFromStdin();
+
 	// Query last 7 days of metrics
 	const metrics = storage.queryMetrics({ period: "week" });
 
@@ -32,7 +55,7 @@ export async function generateSessionContext(): Promise<void> {
 	const hookStats = await getHookFailureStats();
 
 	// Generate markdown output
-	const context = buildContextMarkdown(metrics, hookStats);
+	const context = buildContextMarkdown(metrics, hookStats, sessionId);
 
 	console.log(context);
 }
@@ -51,11 +74,15 @@ async function getHookFailureStats(): Promise<HookFailureStats[]> {
 export function buildContextMarkdown(
 	metrics: ReturnType<JsonlMetricsStorage["queryMetrics"]>,
 	hookStats: HookFailureStats[],
+	sessionId?: string,
 ): string {
 	// Handle no data case
 	if (metrics.total_tasks === 0) {
+		const sessionInfo = sessionId
+			? `\n**Current Session ID:** \`${sessionId}\` (pass this to \`start_task()\` calls)\n`
+			: "";
 		return `## Getting Started with Metrics
-
+${sessionInfo}
 No tasks tracked yet. The metrics system will track your work once you start using \`start_task()\`.
 
 Use metrics tracking to improve calibration and identify patterns in your development work.
@@ -65,6 +92,13 @@ Use metrics tracking to improve calibration and identify patterns in your develo
 	const lines: string[] = [];
 
 	lines.push("## Your Recent Performance (Last 7 Days)\n");
+
+	// Include session ID for MCP tool calls
+	if (sessionId) {
+		lines.push(
+			`**Current Session ID:** \`${sessionId}\` (pass this to \`start_task()\` calls)\n`,
+		);
+	}
 
 	// Overall stats
 	const successRate = Math.round(metrics.success_rate * 100);

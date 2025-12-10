@@ -476,13 +476,15 @@ export class JsonlMetricsStorage {
 
 		this.taskStartTimes.set(task_id, timestamp);
 
-		const currentSession = this.getCurrentSession();
+		// Use explicit session_id if provided, otherwise fall back to current session lookup
+		const session_id =
+			params.session_id || this.getCurrentSession()?.session_id;
 
 		this.appendEvent({
 			type: "task_start",
 			timestamp,
 			task_id,
-			session_id: currentSession?.session_id,
+			session_id,
 			description: params.description,
 			task_type: params.type,
 			complexity: params.estimated_complexity,

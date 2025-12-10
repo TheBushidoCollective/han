@@ -118,7 +118,8 @@ describe("metrics/display.tsx", () => {
 			);
 			const output = lastFrame();
 			expect(output).toContain("No metrics tracked yet");
-			expect(output).toContain("han plugin install hashi-han-metrics");
+			expect(output).toContain("MCP tools in the core plugin");
+			expect(output).toContain("start_task()");
 		});
 	});
 

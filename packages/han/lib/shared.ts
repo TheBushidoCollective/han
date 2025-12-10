@@ -549,6 +549,10 @@ export interface MarketplacePlugin {
 	description?: string;
 	keywords?: string[];
 	category?: string;
+	detection?: {
+		dirsWith?: string[];
+		dirTest?: string[];
+	};
 }
 
 /**

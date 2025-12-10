@@ -1,6 +1,7 @@
 import { render } from "ink";
 import React from "react";
 import { InstallInteractive } from "./install-interactive.tsx";
+import { detectPluginsByMarkers } from "./marker-detection.ts";
 import { PluginSelector } from "./plugin-selector.tsx";
 import {
 	detectPluginsWithAgent,
@@ -98,10 +99,22 @@ interface InstallResult {
 	error?: Error;
 }
 
+interface InstallOptions {
+	useAiAnalysis?: boolean;
+}
+
 /**
- * SDK-based auto-detect install command with Ink UI
+ * Auto-detect install command with marker detection and optional AI analysis
+ *
+ * When useAiAnalysis is true (default): runs both marker detection and AI analysis
+ * When useAiAnalysis is false: runs only marker detection (instant results)
  */
-export async function install(scope: InstallScope = "user"): Promise<void> {
+export async function install(
+	scope: InstallScope = "user",
+	options: InstallOptions = {},
+): Promise<void> {
+	const { useAiAnalysis = true } = options;
+
 	let resolveCompletion: ((result: InstallResult) => void) | undefined;
 
 	const completionPromise = new Promise<InstallResult>((resolve) => {
@@ -128,11 +141,104 @@ export async function install(scope: InstallScope = "user"): Promise<void> {
 	// Store marketplace plugins for validation after UI completes
 	let marketplacePlugins: MarketplacePlugin[] = [];
 
+	// Pre-fetch marketplace to run marker detection
+	console.log("Scanning codebase for marker files...\n");
+	marketplacePlugins = await fetchMarketplace();
+	if (marketplacePlugins.length === 0) {
+		console.error(
+			"Could not fetch marketplace. Please check your internet connection.",
+		);
+		return;
+	}
+
+	// Run marker detection first (instant)
+	const markerDetection = detectPluginsByMarkers(
+		marketplacePlugins,
+		process.cwd(),
+	);
+
+	// Show marker detection results
+	if (markerDetection.confident.length > 0) {
+		console.log(
+			`Detected via file markers: ${markerDetection.confident.join(", ")}`,
+		);
+	}
+	if (markerDetection.possible.length > 0) {
+		console.log(`Possible matches: ${markerDetection.possible.join(", ")}`);
+	}
+	if (
+		markerDetection.confident.length === 0 &&
+		markerDetection.possible.length === 0
+	) {
+		console.log("No plugins detected via file markers.");
+	}
+	console.log("");
+
+	// Combine marker-detected plugins (bushido always included)
+	const markerDetectedPlugins = [
+		...new Set([
+			"bushido",
+			...markerDetection.confident,
+			...markerDetection.possible,
+		]),
+	];
+
+	if (!useAiAnalysis) {
+		// Skip AI analysis - go directly to plugin selector with marker results
+		const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
+
+		const { unmount } = render(
+			React.createElement(PluginSelector, {
+				detectedPlugins: markerDetectedPlugins,
+				installedPlugins: existingPlugins,
+				allPlugins: marketplacePlugins,
+				onComplete: (plugins: string[]) => {
+					if (resolveCompletion)
+						resolveCompletion({ plugins, marketplacePlugins });
+				},
+				onCancel: () => {
+					if (resolveCompletion) resolveCompletion({ cancelled: true });
+				},
+			}),
+		);
+
+		const result = await completionPromise;
+		unmount();
+
+		// Show results after UI is cleared
+		if (result.cancelled) {
+			console.log("\n⚠️  Installation cancelled");
+		} else if (result.plugins) {
+			const { added, removed, invalid } = syncPluginsToSettings(
+				result.plugins,
+				validPluginNames,
+				scope,
+			);
+			showInstallResults(added, removed, invalid);
+		}
+		return;
+	}
+
+	// Use AI analysis - run InstallInteractive with marker results as starting point
+	console.log("Starting AI analysis for additional recommendations...\n");
+
 	const { unmount } = render(
 		React.createElement(InstallInteractive, {
-			detectPlugins: detectPluginsWithAgent,
+			detectPlugins: async (callbacks) => {
+				// Wrap the AI detection to merge with marker results
+				await detectPluginsWithAgent({
+					...callbacks,
+					onComplete: (aiPlugins: string[], fullText: string) => {
+						// Merge AI results with marker detection results
+						const mergedPlugins = [
+							...new Set([...markerDetectedPlugins, ...aiPlugins]),
+						];
+						callbacks.onComplete(mergedPlugins, fullText);
+					},
+				});
+			},
 			fetchMarketplace: async () => {
-				marketplacePlugins = await fetchMarketplace();
+				// Already fetched, return cached
 				return marketplacePlugins;
 			},
 			installedPlugins: existingPlugins,
@@ -166,24 +272,35 @@ export async function install(scope: InstallScope = "user"): Promise<void> {
 			validPluginNames,
 			scope,
 		);
-		if (invalid.length > 0) {
-			console.log(
-				`\n✓ Removed ${invalid.length} invalid plugin(s): ${invalid.join(", ")}`,
-			);
-		}
-		if (added.length > 0) {
-			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
-		}
-		if (removed.length > 0) {
-			console.log(
-				`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`,
-			);
-		}
-		if (added.length === 0 && removed.length === 0 && invalid.length === 0) {
-			console.log("\n✓ No changes made");
-		}
-		console.log("\n⚠️  Please restart Claude Code to load the new plugins");
+		showInstallResults(added, removed, invalid);
 	}
+}
+
+/**
+ * Display install results summary
+ */
+function showInstallResults(
+	added: string[],
+	removed: string[],
+	invalid: string[],
+): void {
+	if (invalid.length > 0) {
+		console.log(
+			`\n✓ Removed ${invalid.length} invalid plugin(s): ${invalid.join(", ")}`,
+		);
+	}
+	if (added.length > 0) {
+		console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
+	}
+	if (removed.length > 0) {
+		console.log(
+			`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`,
+		);
+	}
+	if (added.length === 0 && removed.length === 0 && invalid.length === 0) {
+		console.log("\n✓ No changes made");
+	}
+	console.log("\n⚠️  Please restart Claude Code to load the new plugins");
 }
 
 /**
@@ -246,22 +363,6 @@ export async function installInteractive(
 			validPluginNames,
 			scope,
 		);
-		if (invalid.length > 0) {
-			console.log(
-				`\n✓ Removed ${invalid.length} invalid plugin(s): ${invalid.join(", ")}`,
-			);
-		}
-		if (added.length > 0) {
-			console.log(`\n✓ Added ${added.length} plugin(s): ${added.join(", ")}`);
-		}
-		if (removed.length > 0) {
-			console.log(
-				`\n✓ Removed ${removed.length} plugin(s): ${removed.join(", ")}`,
-			);
-		}
-		if (added.length === 0 && removed.length === 0 && invalid.length === 0) {
-			console.log("\n✓ No changes made");
-		}
-		console.log("\n⚠️  Please restart Claude Code to load the new plugins");
+		showInstallResults(added, removed, invalid);
 	}
 }

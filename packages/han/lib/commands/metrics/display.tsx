@@ -666,15 +666,15 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 					</Text>
 					<Box marginTop={1}>
 						<Text dimColor>
-							Agent task metrics will appear here once you start using the
+							Metrics are tracked automatically via MCP tools in the core
+							plugin.
 						</Text>
 					</Box>
 					<Box>
-						<Text dimColor>hashi-han-metrics plugin to track your work.</Text>
-					</Box>
-					<Box marginTop={1}>
-						<Text dimColor>Install it with: </Text>
-						<Text bold>han plugin install hashi-han-metrics</Text>
+						<Text dimColor>
+							Task data will appear here once you start tracking work with
+							start_task().
+						</Text>
 					</Box>
 				</Box>
 			)}

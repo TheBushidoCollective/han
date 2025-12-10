@@ -90,6 +90,7 @@ export interface StartTaskParams {
 	description: string;
 	type: TaskType;
 	estimated_complexity?: TaskComplexity;
+	session_id?: string;
 }
 
 export interface UpdateTaskParams {
