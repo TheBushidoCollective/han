@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   build:
@@ -41,6 +40,11 @@ jobs:
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
             cargo_output: libhan_native.dylib
+          - target: x86_64-pc-windows-gnu
+            bun_target: bun-windows-x64
+            native_file: han-native.win32-x64-gnu.node
+            binary_name: han-windows-x64
+            cargo_output: han_native.dll
 
     runs-on: ubuntu-latest
     steps:
@@ -79,7 +83,7 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
 
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
@@ -121,7 +125,7 @@ jobs:
         working-directory: ./packages/han/dist/binaries
         run: sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
 
-      - name: Upload binary artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.binary_name }}
@@ -129,87 +133,11 @@ jobs:
             packages/han/dist/binaries/${{ matrix.binary_name }}
             packages/han/dist/binaries/${{ matrix.binary_name }}.sha256
 
-      - name: Upload native module artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.native_file }}
-          path: packages/han-native/${{ matrix.native_file }}
-
-  # Windows needs native build due to libnode.dll requirement
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install han-native dependencies
-        working-directory: ./packages/han-native
-        run: npm ci
-
-      - name: Build native module
-        working-directory: ./packages/han-native
-        run: npx napi build --platform --release
-
-      - name: Build bun binary
-        run: |
-          cd packages/han
-          npm ci
-          mkdir -p native
-          cp ../han-native/han-native.win32-x64-msvc.node native/han-native.node
-          mkdir -p dist/binaries
-          bun scripts/build-bundle.js bun-windows-x64
-        shell: bash
-
-      - name: Create checksum
-        working-directory: ./packages/han/dist/binaries
-        run: sha256sum han-windows-x64 > han-windows-x64.sha256
-        shell: bash
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: han-windows-x64
-          path: |
-            packages/han/dist/binaries/han-windows-x64
-            packages/han/dist/binaries/han-windows-x64.sha256
-
-      - name: Upload native module artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: han-native.win32-x64-msvc.node
-          path: packages/han-native/han-native.win32-x64-msvc.node
-
   release:
-    needs: [build, build-windows]
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Download all binary artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -217,112 +145,13 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          # Copy binaries and checksums for GitHub release
-          cp artifacts/han-linux-x64/* release/ || true
-          cp artifacts/han-linux-arm64/* release/ || true
-          cp artifacts/han-darwin-x64/* release/ || true
-          cp artifacts/han-darwin-arm64/* release/ || true
-          cp artifacts/han-windows-x64/* release/ || true
+          cp artifacts/han-linux-x64/* release/
+          cp artifacts/han-linux-arm64/* release/
+          cp artifacts/han-darwin-x64/* release/
+          cp artifacts/han-darwin-arm64/* release/
+          cp artifacts/han-windows-x64/* release/
           echo "Release files:"
           ls -la release/
-
-      - name: Prepare binaries for npm packages
-        run: |
-          mkdir -p packages/han/dist/binaries
-          # Copy binaries (without checksums) for npm platform packages
-          cp artifacts/han-linux-x64/han-linux-x64 packages/han/dist/binaries/ || true
-          cp artifacts/han-linux-arm64/han-linux-arm64 packages/han/dist/binaries/ || true
-          cp artifacts/han-darwin-x64/han-darwin-x64 packages/han/dist/binaries/ || true
-          cp artifacts/han-darwin-arm64/han-darwin-arm64 packages/han/dist/binaries/ || true
-          cp artifacts/han-windows-x64/han-windows-x64 packages/han/dist/binaries/han-windows-x64.exe || true
-          echo "Binaries for npm:"
-          ls -la packages/han/dist/binaries/
-
-      - name: Prepare native modules for npm
-        run: |
-          mkdir -p packages/han-native/dist/native
-          cp artifacts/han-native.linux-x64-gnu.node/han-native.linux-x64-gnu.node packages/han-native/dist/native/ || true
-          cp artifacts/han-native.linux-arm64-gnu.node/han-native.linux-arm64-gnu.node packages/han-native/dist/native/ || true
-          cp artifacts/han-native.darwin-x64.node/han-native.darwin-x64.node packages/han-native/dist/native/ || true
-          cp artifacts/han-native.darwin-arm64.node/han-native.darwin-arm64.node packages/han-native/dist/native/ || true
-          cp artifacts/han-native.win32-x64-msvc.node/han-native.win32-x64-msvc.node packages/han-native/dist/native/ || true
-          echo "Native modules:"
-          ls -la packages/han-native/dist/native/
-
-      - name: Install han dependencies
-        working-directory: ./packages/han
-        run: npm ci
-
-      - name: Build platform packages for npm
-        working-directory: ./packages/han
-        run: node scripts/build-platform-packages.js
-
-      - name: Publish platform packages to npm
-        working-directory: ./packages/han
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for pkg in dist/npm/*; do
-            if [ -d "$pkg" ]; then
-              echo "Publishing $pkg..."
-              cd "$pkg"
-              npm publish --provenance --access public || echo "Failed to publish $pkg (may already exist)"
-              cd - > /dev/null
-            fi
-          done
-
-      - name: Sync optionalDependencies versions
-        working-directory: ./packages/han
-        run: node scripts/sync-platform-versions.js
-
-      - name: Verify platform packages are available on npm
-        working-directory: ./packages/han
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          PACKAGES=(
-            "@thebushidocollective/han-darwin-arm64"
-            "@thebushidocollective/han-darwin-x64"
-            "@thebushidocollective/han-linux-x64"
-            "@thebushidocollective/han-linux-arm64"
-            "@thebushidocollective/han-win32-x64"
-          )
-
-          echo "Verifying all platform packages are available at version $VERSION..."
-
-          for pkg in "${PACKAGES[@]}"; do
-            echo "Checking $pkg@$VERSION..."
-            MAX_RETRIES=30
-            RETRY_COUNT=0
-
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if npm view "$pkg@$VERSION" version 2>/dev/null | grep -q "$VERSION"; then
-                echo "✓ $pkg@$VERSION is available"
-                break
-              fi
-
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-                echo "✗ $pkg@$VERSION not available after $MAX_RETRIES attempts"
-                exit 1
-              fi
-
-              echo "  Waiting for $pkg@$VERSION to propagate (attempt $RETRY_COUNT/$MAX_RETRIES)..."
-              sleep 10
-            done
-          done
-
-          echo "All platform packages verified!"
-
-      - name: Wait for CDN propagation
-        run: |
-          echo "Waiting 90 seconds for npm CDN propagation before publishing main package..."
-          sleep 90
-
-      - name: Publish main package to npm
-        working-directory: ./packages/han
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public || echo "Failed to publish main package (may already exist)"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
