@@ -7,7 +7,11 @@ export function registerPluginInstall(pluginCommand: Command): void {
 	pluginCommand
 		.command("install [plugin-names...]")
 		.description("Install plugins interactively, or use --auto to auto-detect")
-		.option("--auto", "Auto-detect and install recommended plugins")
+		.option("--auto", "Auto-detect plugins using file markers and AI analysis")
+		.option(
+			"--no-analyze",
+			"Skip AI analysis (only use file marker detection with --auto)",
+		)
 		.option(
 			"--scope <scope>",
 			'Installation scope: "user" (~/.claude/settings.json), "project" (.claude/settings.json), or "local" (.claude/settings.local.json)',
@@ -16,7 +20,7 @@ export function registerPluginInstall(pluginCommand: Command): void {
 		.action(
 			async (
 				pluginNames: string[],
-				options: { auto?: boolean; scope?: string },
+				options: { auto?: boolean; analyze?: boolean; scope?: string },
 			) => {
 				try {
 					const scope = options.scope || "user";
@@ -27,8 +31,11 @@ export function registerPluginInstall(pluginCommand: Command): void {
 						process.exit(1);
 					}
 
+					// --no-analyze sets analyze to false (commander convention)
+					const useAiAnalysis = options.analyze !== false;
+
 					if (options.auto) {
-						await install(scope as InstallScope);
+						await install(scope as InstallScope, { useAiAnalysis });
 					} else if (pluginNames.length > 0) {
 						await installPlugins(pluginNames, scope as InstallScope);
 					} else {

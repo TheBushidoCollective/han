@@ -109,7 +109,8 @@ describe("display-plain.ts", () => {
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("No metrics tracked yet");
-			expect(allLogs).toContain("han plugin install hashi-han-metrics");
+			expect(allLogs).toContain("MCP tools in the core plugin");
+			expect(allLogs).toContain("start_task()");
 		});
 
 		test("shows header", () => {

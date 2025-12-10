@@ -12,28 +12,44 @@ import {
 import { getPluginNameFromRoot } from "../../shared.ts";
 
 /**
- * Read and parse stdin JSON payload from Claude Code hooks
+ * Read raw stdin content from Claude Code hooks (for piping to child hooks)
  */
-function readStdinPayload(): Record<string, unknown> | null {
+function readStdinRaw(): string | null {
 	try {
 		// Read stdin synchronously (file descriptor 0)
 		const stdin = readFileSync(0, "utf-8");
 		if (stdin.trim()) {
-			return JSON.parse(stdin);
+			return stdin;
 		}
 	} catch {
-		// stdin not available or not valid JSON - this is fine
+		// stdin not available - this is fine
 	}
 	return null;
 }
 
-// Cache the stdin payload so it's only read once
-let cachedStdinPayload: Record<string, unknown> | null | undefined;
-function getStdinPayload(): Record<string, unknown> | null {
-	if (cachedStdinPayload === undefined) {
-		cachedStdinPayload = readStdinPayload();
+// Cache the raw stdin content so it's only read once
+let cachedStdinRaw: string | null | undefined;
+function getStdinRaw(): string | null {
+	if (cachedStdinRaw === undefined) {
+		cachedStdinRaw = readStdinRaw();
 	}
-	return cachedStdinPayload;
+	return cachedStdinRaw;
+}
+
+/**
+ * Parse stdin to extract session_id for metrics reporting
+ */
+function getSessionIdFromStdin(): string | undefined {
+	const raw = getStdinRaw();
+	if (!raw) return undefined;
+	try {
+		const parsed = JSON.parse(raw);
+		return typeof parsed?.session_id === "string"
+			? parsed.session_id
+			: undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 /**
@@ -185,12 +201,9 @@ function executeCommandHook(
 			pluginRoot,
 		);
 
-		// Extract session_id from stdin payload if available
-		const stdinPayload = getStdinPayload();
-		const sessionId =
-			typeof stdinPayload?.session_id === "string"
-				? stdinPayload.session_id
-				: undefined;
+		// Get raw stdin content to pipe to child hooks
+		const stdinContent = getStdinRaw();
+		const sessionId = getSessionIdFromStdin();
 
 		const output = execSync(resolvedCommand, {
 			encoding: "utf-8",
@@ -198,12 +211,12 @@ function executeCommandHook(
 			stdio: ["pipe", "pipe", "pipe"],
 			shell: "/bin/sh",
 			cwd: process.cwd(),
+			// Pipe the original stdin content to child hooks
+			...(stdinContent ? { input: stdinContent } : {}),
 			env: {
 				...process.env,
 				CLAUDE_PLUGIN_ROOT: pluginRoot,
 				CLAUDE_PROJECT_DIR: process.cwd(),
-				// Pass session_id for hook locking coordination
-				...(sessionId ? { HAN_SESSION_ID: sessionId } : {}),
 			},
 		});
 
@@ -236,7 +249,7 @@ function executeCommandHook(
 			exitCode,
 			passed: false,
 			error: stderr,
-			sessionId: getStdinPayload()?.session_id as string | undefined,
+			sessionId: getSessionIdFromStdin(),
 		});
 
 		// Command failed - silently skip errors for dispatch

@@ -104,7 +104,8 @@ describe("MetricsDisplay component", () => {
 			);
 
 			expect(lastFrame()).toContain("No metrics tracked yet");
-			expect(lastFrame()).toContain("han plugin install hashi-han-metrics");
+			expect(lastFrame()).toContain("MCP tools in the core plugin");
+			expect(lastFrame()).toContain("start_task()");
 		});
 
 		test("renders dashboard header", () => {

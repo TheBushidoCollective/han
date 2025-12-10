@@ -633,14 +633,10 @@ export function renderPlainText(
 		);
 		console.log();
 		console.log(
-			`  ${colors.dim}Agent task metrics will appear here once you start using the${colors.reset}`,
+			`  ${colors.dim}Metrics are tracked automatically via MCP tools in the core plugin.${colors.reset}`,
 		);
 		console.log(
-			`  ${colors.dim}hashi-han-metrics plugin to track your work.${colors.reset}`,
-		);
-		console.log();
-		console.log(
-			`  ${colors.dim}Install it with: ${colors.reset}${colors.bold}han plugin install hashi-han-metrics${colors.reset}`,
+			`  ${colors.dim}Task data will appear here once you start tracking work with start_task().${colors.reset}`,
 		);
 		console.log();
 		return;

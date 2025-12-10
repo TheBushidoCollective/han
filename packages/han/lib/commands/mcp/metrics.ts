@@ -87,6 +87,11 @@ const METRICS_TOOLS: McpTool[] = [
 					enum: ["simple", "moderate", "complex"],
 					description: "Optional estimated complexity of the task",
 				},
+				session_id: {
+					type: "string",
+					description:
+						"Session ID to associate this task with. Get this from the SessionStart hook output.",
+				},
 			},
 			required: ["description", "type"],
 		},
