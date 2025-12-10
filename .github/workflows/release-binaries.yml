@@ -217,7 +217,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          # Copy binaries and checksums
+          # Copy binaries and checksums for GitHub release
           cp artifacts/han-linux-x64/* release/ || true
           cp artifacts/han-linux-arm64/* release/ || true
           cp artifacts/han-darwin-x64/* release/ || true
@@ -226,19 +226,28 @@ jobs:
           echo "Release files:"
           ls -la release/
 
+      - name: Prepare binaries for npm packages
+        run: |
+          mkdir -p packages/han/dist/binaries
+          # Copy binaries (without checksums) for npm platform packages
+          cp artifacts/han-linux-x64/han-linux-x64 packages/han/dist/binaries/ || true
+          cp artifacts/han-linux-arm64/han-linux-arm64 packages/han/dist/binaries/ || true
+          cp artifacts/han-darwin-x64/han-darwin-x64 packages/han/dist/binaries/ || true
+          cp artifacts/han-darwin-arm64/han-darwin-arm64 packages/han/dist/binaries/ || true
+          cp artifacts/han-windows-x64/han-windows-x64 packages/han/dist/binaries/han-windows-x64.exe || true
+          echo "Binaries for npm:"
+          ls -la packages/han/dist/binaries/
+
       - name: Prepare native modules for npm
         run: |
-          mkdir -p native-modules
-          cp artifacts/han-native.linux-x64-gnu.node/han-native.linux-x64-gnu.node native-modules/ || true
-          cp artifacts/han-native.linux-arm64-gnu.node/han-native.linux-arm64-gnu.node native-modules/ || true
-          cp artifacts/han-native.darwin-x64.node/han-native.darwin-x64.node native-modules/ || true
-          cp artifacts/han-native.darwin-arm64.node/han-native.darwin-arm64.node native-modules/ || true
-          cp artifacts/han-native.win32-x64-msvc.node/han-native.win32-x64-msvc.node native-modules/ || true
+          mkdir -p packages/han-native/dist/native
+          cp artifacts/han-native.linux-x64-gnu.node/han-native.linux-x64-gnu.node packages/han-native/dist/native/ || true
+          cp artifacts/han-native.linux-arm64-gnu.node/han-native.linux-arm64-gnu.node packages/han-native/dist/native/ || true
+          cp artifacts/han-native.darwin-x64.node/han-native.darwin-x64.node packages/han-native/dist/native/ || true
+          cp artifacts/han-native.darwin-arm64.node/han-native.darwin-arm64.node packages/han-native/dist/native/ || true
+          cp artifacts/han-native.win32-x64-msvc.node/han-native.win32-x64-msvc.node packages/han-native/dist/native/ || true
           echo "Native modules:"
-          ls -la native-modules/
-
-      - name: Copy native modules to han-native package
-        run: cp native-modules/*.node packages/han-native/
+          ls -la packages/han-native/dist/native/
 
       - name: Install han dependencies
         working-directory: ./packages/han
