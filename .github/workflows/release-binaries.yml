@@ -48,42 +48,39 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu mingw-w64 clang llvm
-
-      - name: Setup osxcross for macOS cross-compilation
-        uses: mbround18/setup-osxcross@v1
-        with:
-          osx-version: "12.3"
+          sudo apt-get install -y gcc-aarch64-linux-gnu mingw-w64
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native modules for all platforms
+      - name: Build Linux native modules
         working-directory: ./packages/han-native
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
-          CC_x86_64_apple_darwin: o64-clang
-          CXX_x86_64_apple_darwin: o64-clang++
-          CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: o64-clang
-          CC_aarch64_apple_darwin: oa64-clang
-          CXX_aarch64_apple_darwin: oa64-clang++
-          CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: oa64-clang
         run: |
           # Linux x64 (native)
           npx napi build --platform --release --target x86_64-unknown-linux-gnu
-
           # Linux arm64 (cross-compile)
           npx napi build --platform --release --target aarch64-unknown-linux-gnu
 
-          # macOS x64 (cross-compile via osxcross)
-          npx napi build --platform --release --target x86_64-apple-darwin
+      - name: Build macOS native modules (via Docker with osxcross)
+        run: |
+          docker run --rm \
+            -v "$PWD/packages/han-native:/build" \
+            -w /build \
+            joseluisq/rust-linux-darwin-builder:1.81.0 \
+            sh -c "
+              npm ci &&
+              CC=o64-clang CXX=o64-clang++ npx napi build --platform --release --target x86_64-apple-darwin &&
+              CC=aarch64-apple-darwin22.4-clang CXX=aarch64-apple-darwin22.4-clang++ npx napi build --platform --release --target aarch64-apple-darwin
+            "
 
-          # macOS arm64 (cross-compile via osxcross)
-          npx napi build --platform --release --target aarch64-apple-darwin
-
-          # Windows x64 (cross-compile via mingw)
+      - name: Build Windows native modules
+        working-directory: ./packages/han-native
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+        run: |
           npx napi build --platform --release --target x86_64-pc-windows-gnu
 
       - name: List built native modules
