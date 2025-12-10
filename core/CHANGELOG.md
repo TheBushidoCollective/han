@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2025-12-10
+
+### Fixed
+
+- use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
+- read user prompt from stdin hook event JSON ([359f6b43](../../commit/359f6b43))
+
+### Changed
+
+- rename bushido-han package to han with expanded test coverage ([a320585d](../../commit/a320585d))
+
+### Other
+
+- format code with biome and rebuild native module ([50e3fbd1](../../commit/50e3fbd1))
+- format JSON files ([6b574250](../../commit/6b574250))
+
 ## [1.0.8] - 2025-12-09
 
 ### Added
