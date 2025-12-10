@@ -7,7 +7,7 @@ on:
     paths:
       - 'website/**'
       - '!website/package.json'
-      - '!website/package-lock.json'
+      - '!website/bun.lock'
 
 permissions:
   contents: write
@@ -26,10 +26,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '24'
+          bun-version: latest
 
       - name: Determine version bump type
         id: bump-type
@@ -63,7 +63,7 @@ jobs:
 
           # Get list of changed files in website (excluding package.json version changes)
           CHANGED_FILES=$(git diff --name-only "$PARENT_COMMIT" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          WEBSITE_CHANGES=$(echo "$CHANGED_FILES" | grep "^website/" | grep -v "package.json" | grep -v "package-lock.json" || true)
+          WEBSITE_CHANGES=$(echo "$CHANGED_FILES" | grep "^website/" | grep -v "package.json" | grep -v "bun.lock" || true)
 
           if [ -n "$WEBSITE_CHANGES" ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -79,7 +79,7 @@ jobs:
         id: bump-version
         working-directory: ./website
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          CURRENT_VERSION=$(bun -e "console.log(require('./package.json').version)")
           echo "Current version: $CURRENT_VERSION"
 
           # Parse version components
@@ -103,7 +103,7 @@ jobs:
           echo "old_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
           # Update package.json
-          node -e "
+          bun -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.version = '$NEW_VERSION';

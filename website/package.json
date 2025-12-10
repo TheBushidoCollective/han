@@ -3,15 +3,14 @@
 	"version": "1.22.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev",
-		"prebuild": "tsx scripts/generate-marketplace.ts && tsx scripts/generate-search-index.ts",
-		"build": "next build",
-		"start": "npx -y serve@latest out -p 3000",
-		"export": "next build && next export",
-		"test": "playwright test",
-		"test:headed": "playwright test --headed",
-		"test:debug": "playwright test --debug",
-		"test:unit": "tsx lib/search-utils.test.ts"
+		"dev": "bun run --bun next dev",
+		"prebuild": "bun run scripts/generate-marketplace.ts && bun run scripts/generate-search-index.ts",
+		"build": "bun run --bun next build",
+		"start": "bun run --bun serve out -p 3000",
+		"test": "bun run playwright test",
+		"test:headed": "bun run playwright test --headed",
+		"test:debug": "bun run playwright test --debug",
+		"test:unit": "bun run lib/search-utils.test.ts"
 	},
 	"dependencies": {
 		"fuse.js": "7.1.0",
@@ -27,12 +26,13 @@
 		"@playwright/test": "1.56.1",
 		"@tailwindcss/postcss": "^4.1.17",
 		"@tailwindcss/typography": "0.5.19",
+		"@types/bun": "latest",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",
 		"autoprefixer": "10.4.22",
 		"postcss": "8.5.6",
+		"serve": "^14.2.4",
 		"tailwindcss": "4.1.17",
-		"tsx": "^4.20.6",
 		"typescript": "5.9.3"
 	}
 }
