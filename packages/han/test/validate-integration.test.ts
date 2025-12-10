@@ -556,7 +556,7 @@ describe("validate.ts helper functions", () => {
 
 	describe("plugin name extraction", () => {
 		test("extracts plugin name from CLAUDE_PLUGIN_ROOT", () => {
-			const { getPluginNameFromRoot } = require("../lib/hook-config.ts");
+			const { getPluginNameFromRoot } = require("../lib/shared.ts");
 			const pluginRoot = "/path/to/plugins/marketplaces/han/jutsu/jutsu-biome";
 			const name = getPluginNameFromRoot(pluginRoot);
 			expect(name).toBe("jutsu-biome");
