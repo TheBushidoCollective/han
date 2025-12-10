@@ -32,8 +32,8 @@
 
 <!-- Describe how you tested these changes -->
 
-- [ ] Tests pass locally (`npm test`)
-- [ ] Linting passes (`npm run lint`)
+- [ ] Tests pass locally
+- [ ] Linting passes
 - [ ] Hooks work correctly (for plugin changes)
 - [ ] Manual testing performed
 
