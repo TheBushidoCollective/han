@@ -105,7 +105,7 @@ jobs:
         working-directory: ./packages/han
 
       - name: Run tests
-        run: bun test
+        run: rm -rf ~/.bun/install/cache && bun test --no-cache
         working-directory: ./packages/han
 
       - name: Check if tag already exists
