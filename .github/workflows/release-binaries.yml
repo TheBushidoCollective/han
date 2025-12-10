@@ -15,9 +15,6 @@ permissions:
   contents: write
   id-token: write
 
-env:
-  ZIG_VERSION: 0.13.0
-
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -48,14 +45,10 @@ jobs:
             aarch64-apple-darwin
             x86_64-pc-windows-msvc
 
-      - name: Install Zig (for cross-compilation)
+      - name: Install cross-compilation dependencies
         run: |
-          wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz
-          tar xf zig-linux-x86_64-${ZIG_VERSION}.tar.xz
-          echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}" >> $GITHUB_PATH
-
-      - name: Install cargo-zigbuild
-        run: cargo install cargo-zigbuild
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
@@ -63,21 +56,24 @@ jobs:
 
       - name: Build native modules for all platforms
         working-directory: ./packages/han-native
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: x86_64-w64-mingw32-gcc
         run: |
           # Linux x64 (native)
           npx napi build --platform --release --target x86_64-unknown-linux-gnu
 
-          # Linux arm64 (cross-compile with zig)
-          npx napi build --platform --release --target aarch64-unknown-linux-gnu --zig
+          # Linux arm64 (cross-compile)
+          npx napi build --platform --release --target aarch64-unknown-linux-gnu
 
-          # macOS x64 (cross-compile with zig)
-          npx napi build --platform --release --target x86_64-apple-darwin --zig
+          # macOS x64 (cross-compile)
+          npx napi build --platform --release --target x86_64-apple-darwin
 
-          # macOS arm64 (cross-compile with zig)
-          npx napi build --platform --release --target aarch64-apple-darwin --zig
+          # macOS arm64 (cross-compile)
+          npx napi build --platform --release --target aarch64-apple-darwin
 
-          # Windows x64 (cross-compile with zig)
-          npx napi build --platform --release --target x86_64-pc-windows-msvc --zig
+          # Windows x64 (cross-compile)
+          npx napi build --platform --release --target x86_64-pc-windows-msvc
 
       - name: List built native modules
         run: |
