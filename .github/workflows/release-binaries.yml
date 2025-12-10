@@ -65,16 +65,29 @@ jobs:
           npx napi build --platform --release --target aarch64-unknown-linux-gnu
 
       - name: Build macOS native modules (via Docker with osxcross)
+        working-directory: ./packages/han-native
         run: |
+          # Build macOS x64
           docker run --rm \
-            -v "$PWD/packages/han-native:/build" \
+            -v "$PWD:/build" \
             -w /build \
+            -e CC=o64-clang \
+            -e CXX=o64-clang++ \
             joseluisq/rust-linux-darwin-builder:1.81.0 \
-            sh -c "
-              npm ci &&
-              CC=o64-clang CXX=o64-clang++ npx napi build --platform --release --target x86_64-apple-darwin &&
-              CC=aarch64-apple-darwin22.4-clang CXX=aarch64-apple-darwin22.4-clang++ npx napi build --platform --release --target aarch64-apple-darwin
-            "
+            cargo build --release --target x86_64-apple-darwin
+
+          # Build macOS arm64
+          docker run --rm \
+            -v "$PWD:/build" \
+            -w /build \
+            -e CC=aarch64-apple-darwin22.4-clang \
+            -e CXX=aarch64-apple-darwin22.4-clang++ \
+            joseluisq/rust-linux-darwin-builder:1.81.0 \
+            cargo build --release --target aarch64-apple-darwin
+
+          # Copy the built libraries to expected locations for napi
+          cp target/x86_64-apple-darwin/release/libhan_native.dylib han-native.darwin-x64.node || true
+          cp target/aarch64-apple-darwin/release/libhan_native.dylib han-native.darwin-arm64.node || true
 
       - name: Build Windows native modules
         working-directory: ./packages/han-native
