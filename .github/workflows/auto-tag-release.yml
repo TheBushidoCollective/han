@@ -104,7 +104,7 @@ jobs:
         working-directory: ./packages/han
 
       - name: Run tests
-        run: npm test
+        run: bun test
         working-directory: ./packages/han
 
       - name: Check if tag already exists
