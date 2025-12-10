@@ -3,9 +3,32 @@
 
 set -e
 
+# Get project root (CLAUDE_PROJECT_ROOT or current working directory)
+PROJECT_ROOT="${CLAUDE_PROJECT_ROOT:-$(pwd)}"
+
+# Check for mise config files in project root
+# Supported config paths: https://mise.jdx.dev/configuration.html
+has_mise_config() {
+	local root="$1"
+	[[ -f "$root/mise.toml" ]] ||
+		[[ -f "$root/.mise.toml" ]] ||
+		[[ -f "$root/mise.local.toml" ]] ||
+		[[ -f "$root/.mise.local.toml" ]] ||
+		[[ -f "$root/.config/mise.toml" ]] ||
+		[[ -f "$root/.config/mise/config.toml" ]] ||
+		[[ -f "$root/.tool-versions" ]]
+}
+
+# Check if project has a mise config
+if ! has_mise_config "$PROJECT_ROOT"; then
+	echo "No mise config found in project root ($PROJECT_ROOT), skipping mise activation" >&2
+	exit 0
+fi
+
 # Check if mise is available
 if ! command -v mise &>/dev/null; then
-	# mise not installed, nothing to do
+	echo "mise is not installed, skipping mise activation" >&2
+	echo "Install mise: https://mise.jdx.dev/getting-started.html" >&2
 	exit 0
 fi
 
