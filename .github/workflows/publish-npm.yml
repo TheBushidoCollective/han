@@ -3,19 +3,19 @@ name: Publish to NPM
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_call:
     inputs:
       ref:
-        description: 'Git ref to checkout (tag or commit)'
+        description: "Git ref to checkout (tag or commit)"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Run in dry-run mode (do not publish)'
+        description: "Run in dry-run mode (do not publish)"
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -34,8 +34,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -43,19 +43,23 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
         working-directory: ./packages/han
 
       - name: Run tests
-        run: npm test
+        run: bun test
         working-directory: ./packages/han
 
       - name: Publish to NPM (dry-run)
         if: ${{ github.event.inputs.dry-run == 'true' }}
-        run: npm publish --dry-run --provenance --access public
+        run: bun publish --dry-run --access public
         working-directory: ./packages/han
+        env:
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to NPM
         if: ${{ github.event.inputs.dry-run != 'true' }}
-        run: npm publish --provenance --access public
+        run: bun publish --access public
         working-directory: ./packages/han
+        env:
+          NPM_CONFIG_PROVENANCE: true
