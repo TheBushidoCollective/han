@@ -14,22 +14,8 @@ import {
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-// Mock ink to avoid React rendering in tests
-const mockRender = mock(() => {
-	throw new Error("Ink not available in test");
-});
-
-mock.module("ink", () => ({
-	render: mockRender,
-	Box: () => null,
-	Text: () => null,
-}));
-
-mock.module("react", () => ({
-	default: {
-		createElement: mock(() => null),
-	},
-}));
+// Note: We don't mock ink globally here to avoid affecting other test files.
+// The showMetrics function gracefully handles rendering errors.
 
 describe("metrics show", () => {
 	const testDir = `/tmp/test-metrics-show-${Date.now()}`;
