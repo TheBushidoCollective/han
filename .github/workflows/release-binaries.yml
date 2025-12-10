@@ -25,22 +25,22 @@ jobs:
             bun_target: bun-linux-x64
             native_file: han-native.linux-x64-gnu.node
             binary_name: han-linux-x64
+            cargo_output: libhan_native.so
           - target: aarch64-unknown-linux-gnu
             bun_target: bun-linux-arm64
             native_file: han-native.linux-arm64-gnu.node
             binary_name: han-linux-arm64
+            cargo_output: libhan_native.so
           - target: x86_64-apple-darwin
             bun_target: bun-darwin-x64
             native_file: han-native.darwin-x64.node
             binary_name: han-darwin-x64
+            cargo_output: libhan_native.dylib
           - target: aarch64-apple-darwin
             bun_target: bun-darwin-arm64
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
-          - target: x86_64-pc-windows-gnu
-            bun_target: bun-windows-x64
-            native_file: han-native.win32-x64-gnu.node
-            binary_name: han-windows-x64
+            cargo_output: libhan_native.dylib
 
     runs-on: ubuntu-latest
     steps:
@@ -79,7 +79,7 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu mingw-w64
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
@@ -90,28 +90,19 @@ jobs:
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module and binary
+      - name: Build native module with cargo zigbuild
+        working-directory: ./packages/han-native
         env:
           SDKROOT: ${{ contains(matrix.target, 'apple') && '/opt/MacOSX11.3.sdk' || '' }}
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
-          set -e
-
-          # Build native module for this target
-          cd packages/han-native
-          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ]; then
-            # Native build, no zig needed
-            npx napi build --platform --release --target ${{ matrix.target }}
-          else
-            # Cross-compile with cargo-zigbuild
-            npx napi build --platform --release --target ${{ matrix.target }} --cross-compile
-          fi
-
+          cargo zigbuild --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
           echo "Built native module:"
           ls -la *.node
 
-          # Prepare native module for embedding
-          cd ../han
+      - name: Build bun binary
+        run: |
+          cd packages/han
           npm ci
           mkdir -p native
           cp ../han-native/${{ matrix.native_file }} native/han-native.node
@@ -144,8 +135,67 @@ jobs:
           name: ${{ matrix.native_file }}
           path: packages/han-native/${{ matrix.native_file }}
 
+  # Windows needs native build due to libnode.dll requirement
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install han-native dependencies
+        working-directory: ./packages/han-native
+        run: npm ci
+
+      - name: Build native module
+        working-directory: ./packages/han-native
+        run: npx napi build --platform --release
+
+      - name: Build bun binary
+        run: |
+          cd packages/han
+          npm ci
+          mkdir -p native
+          cp ../han-native/han-native.win32-x64-msvc.node native/han-native.node
+          mkdir -p dist/binaries
+          bun scripts/build-bundle.js bun-windows-x64
+        shell: bash
+
+      - name: Create checksum
+        working-directory: ./packages/han/dist/binaries
+        run: sha256sum han-windows-x64 > han-windows-x64.sha256
+        shell: bash
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: han-windows-x64
+          path: |
+            packages/han/dist/binaries/han-windows-x64
+            packages/han/dist/binaries/han-windows-x64.sha256
+
+      - name: Upload native module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: han-native.win32-x64-msvc.node
+          path: packages/han-native/han-native.win32-x64-msvc.node
+
   release:
-    needs: build
+    needs: [build, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -183,7 +233,7 @@ jobs:
           cp artifacts/han-native.linux-arm64-gnu.node/han-native.linux-arm64-gnu.node native-modules/ || true
           cp artifacts/han-native.darwin-x64.node/han-native.darwin-x64.node native-modules/ || true
           cp artifacts/han-native.darwin-arm64.node/han-native.darwin-arm64.node native-modules/ || true
-          cp artifacts/han-native.win32-x64-gnu.node/han-native.win32-x64-gnu.node native-modules/ || true
+          cp artifacts/han-native.win32-x64-msvc.node/han-native.win32-x64-msvc.node native-modules/ || true
           echo "Native modules:"
           ls -la native-modules/
 
