@@ -87,18 +87,29 @@ echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
 DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}"
 
-# Download binary
+# Download to temp file first for atomic replacement
+# This prevents corruption if download fails or han is already running
+TEMP_BIN="${HAN_BIN}.tmp.$$"
+
+cleanup() {
+	rm -f "$TEMP_BIN"
+}
+trap cleanup EXIT
+
 if command -v curl >/dev/null 2>&1; then
-	curl -fsSL "$DOWNLOAD_URL" -o "$HAN_BIN"
+	curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_BIN"
 elif command -v wget >/dev/null 2>&1; then
-	wget -qO "$HAN_BIN" "$DOWNLOAD_URL"
+	wget -qO "$TEMP_BIN" "$DOWNLOAD_URL"
 else
 	echo -e "${RED}Neither curl nor wget found. Cannot download han binary.${NC}" >&2
 	exit 1
 fi
 
 # Make it executable
-chmod +x "$HAN_BIN"
+chmod +x "$TEMP_BIN"
+
+# Atomic replacement - safe even if han is currently running
+mv -f "$TEMP_BIN" "$HAN_BIN"
 
 echo -e "${GREEN}✓ Han v$LATEST_VERSION installed successfully!${NC}"
 echo ""
