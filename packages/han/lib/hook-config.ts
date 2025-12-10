@@ -154,10 +154,18 @@ export function loadUserConfig(
 /**
  * Extract plugin name from CLAUDE_PLUGIN_ROOT path
  * e.g., /path/to/jutsu-elixir -> jutsu-elixir
+ * e.g., /path/to/jutsu-elixir/1.1.1 -> jutsu-elixir (versioned cache path)
  */
 export function getPluginNameFromRoot(pluginRoot: string): string {
-	const parts = pluginRoot.split("/");
-	return parts[parts.length - 1] || "";
+	const parts = pluginRoot.split("/").filter(Boolean);
+	const lastPart = parts[parts.length - 1] || "";
+
+	// If last part looks like a version (semver pattern), use parent directory
+	if (/^\d+\.\d+\.\d+/.test(lastPart) && parts.length >= 2) {
+		return parts[parts.length - 2];
+	}
+
+	return lastPart;
 }
 
 /**

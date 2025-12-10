@@ -76,9 +76,9 @@ describe("Hook Config", () => {
 		});
 
 		test("extracts plugin name from path with trailing slash", () => {
-			// Trailing slash means the last part is empty string
+			// After filtering empty parts, trailing slash doesn't affect the result
 			const result = getPluginNameFromRoot("/path/to/plugins/jutsu-biome/");
-			expect(result).toBe("");
+			expect(result).toBe("jutsu-biome");
 		});
 
 		test("handles single component path", () => {
@@ -96,6 +96,44 @@ describe("Hook Config", () => {
 		test("handles empty string", () => {
 			const result = getPluginNameFromRoot("");
 			expect(result).toBe("");
+		});
+
+		test("extracts plugin name from versioned cache path", () => {
+			const result = getPluginNameFromRoot(
+				"/home/user/.claude/plugins/cache/han/jutsu-tailwind/1.1.1",
+			);
+			expect(result).toBe("jutsu-tailwind");
+		});
+
+		test("extracts plugin name from versioned cache path with pre-release version", () => {
+			const result = getPluginNameFromRoot(
+				"/path/to/jutsu-eslint/1.8.13-beta.1",
+			);
+			expect(result).toBe("jutsu-eslint");
+		});
+
+		test("extracts plugin name from versioned cache path with patch version 0", () => {
+			const result = getPluginNameFromRoot("/path/to/jutsu-typescript/1.8.0");
+			expect(result).toBe("jutsu-typescript");
+		});
+
+		test("extracts plugin name from versioned cache path with major version 0", () => {
+			const result = getPluginNameFromRoot("/path/to/jutsu-prettier/0.1.0");
+			expect(result).toBe("jutsu-prettier");
+		});
+
+		test("does not treat non-version numbers as versions", () => {
+			// If the last part doesn't look like a version, return it as-is
+			const result = getPluginNameFromRoot("/path/to/plugins/1.2");
+			expect(result).toBe("1.2");
+		});
+
+		test("handles versioned path with trailing slash", () => {
+			const result = getPluginNameFromRoot(
+				"/path/to/jutsu-tailwind/1.1.1/",
+			);
+			// After filtering empty parts, last part is "1.1.1", so it returns parent
+			expect(result).toBe("jutsu-tailwind");
 		});
 	});
 
