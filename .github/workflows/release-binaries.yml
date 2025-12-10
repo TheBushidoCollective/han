@@ -40,6 +40,11 @@ jobs:
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
             cargo_output: libhan_native.dylib
+          - target: x86_64-pc-windows-msvc
+            bun_target: bun-windows-x64
+            native_file: han-native.win32-x64-msvc.node
+            binary_name: han-windows-x64
+            cargo_output: han_native.dll
 
     runs-on: ubuntu-latest
     steps:
@@ -64,16 +69,26 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup Zig
+        if: ${{ !contains(matrix.target, 'windows') }}
         uses: mlugg/setup-zig@v2
         with:
           version: 0.13.0
 
       - name: Install cargo-zigbuild
+        if: ${{ !contains(matrix.target, 'windows') }}
         uses: taiki-e/install-action@v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tool: cargo-zigbuild
+
+      - name: Install cargo-xwin
+        if: contains(matrix.target, 'windows')
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-xwin
 
       - name: Install cross-compilation dependencies
         run: |
@@ -89,12 +104,22 @@ jobs:
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module with cargo zigbuild
+      - name: Build native module (Linux/macOS)
+        if: ${{ !contains(matrix.target, 'windows') }}
         working-directory: ./packages/han-native
         env:
           SDKROOT: ${{ contains(matrix.target, 'apple') && '/opt/MacOSX11.3.sdk' || '' }}
         run: |
           cargo zigbuild --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
+          echo "Built native module:"
+          ls -la *.node
+
+      - name: Build native module (Windows)
+        if: contains(matrix.target, 'windows')
+        working-directory: ./packages/han-native
+        run: |
+          cargo xwin build --release --target ${{ matrix.target }}
           cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
           echo "Built native module:"
           ls -la *.node
@@ -128,61 +153,8 @@ jobs:
             packages/han/dist/binaries/${{ matrix.binary_name }}
             packages/han/dist/binaries/${{ matrix.binary_name }}.sha256
 
-  # Windows requires native build due to libnode.dll requirement
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install han-native dependencies
-        working-directory: ./packages/han-native
-        run: npm ci
-
-      - name: Build native module
-        working-directory: ./packages/han-native
-        run: npx napi build --platform --release
-
-      - name: Build bun binary
-        shell: bash
-        run: |
-          cd packages/han
-          npm ci
-          mkdir -p native
-          cp ../han-native/han-native.win32-x64-msvc.node native/han-native.node
-          mkdir -p dist/binaries
-          bun scripts/build-bundle.js bun-windows-x64
-
-      - name: Create checksum
-        working-directory: ./packages/han/dist/binaries
-        shell: bash
-        run: sha256sum han-windows-x64 > han-windows-x64.sha256
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: han-windows-x64
-          path: |
-            packages/han/dist/binaries/han-windows-x64
-            packages/han/dist/binaries/han-windows-x64.sha256
-
   release:
-    needs: [build, build-windows]
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
