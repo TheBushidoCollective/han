@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -90,6 +90,29 @@ export function writeOutputFile(basePath: string, output: string): string {
 	const outputPath = `${basePath}.output.txt`;
 	writeFileSync(outputPath, output, "utf-8");
 	return outputPath;
+}
+
+/**
+ * Read and format output from file for inline display
+ * Returns first N lines with truncation notice if needed
+ */
+export function readOutputPreview(
+	outputPath: string,
+	maxLines = 30,
+): string | null {
+	try {
+		const content = readFileSync(outputPath, "utf-8");
+		const lines = content.split("\n");
+
+		if (lines.length <= maxLines) {
+			return content.trim();
+		}
+
+		const preview = lines.slice(0, maxLines).join("\n");
+		return `${preview}\n... (truncated, see full output in file)`;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -742,8 +765,10 @@ export async function runConfiguredHook(
 		if (failFast) {
 			const failureInfo = checkFailureSignal(lockManager);
 			if (failureInfo) {
+				// This is an informational message only - the agent should focus on
+				// fixing the ORIGINAL failure, not this exit message
 				console.log(
-					`\n⚡ Exiting early: another hook already failed (${failureInfo.pluginName || "unknown"}/${failureInfo.hookName || "unknown"})`,
+					`\n⏭️ Skipping ${pluginName}/${hookName}: Fix the ${failureInfo.pluginName || "unknown"}/${failureInfo.hookName || "unknown"} failure first, then re-run all hooks.`,
 				);
 				process.exit(2);
 			}
@@ -788,22 +813,31 @@ export async function runConfiguredHook(
 					? " (idle timeout - no output received)"
 					: "";
 
-				const outputRef = result.outputFile
-					? `\n\nOutput saved to: ${result.outputFile}`
-					: "";
-				const debugRef = result.debugFile
-					? `\nDebug info saved to: ${result.debugFile}`
-					: "";
-
 				// Build the targeted re-run command
 				const rerunCmd = buildHookCommand(pluginName, hookName, {
 					cached: cache,
 					only: relativePath === "." ? undefined : relativePath,
 				});
 
+				// Include inline error output so agent sees the actual problem
+				const inlineOutput = result.outputFile
+					? readOutputPreview(result.outputFile)
+					: null;
+
+				const outputSection = inlineOutput
+					? `\n\n--- ERROR OUTPUT ---\n${inlineOutput}\n--- END OUTPUT ---`
+					: "";
+
+				const fileRef = result.outputFile
+					? `\nFull output: ${result.outputFile}`
+					: "";
+				const debugRef = result.debugFile
+					? `\nDebug info: ${result.debugFile}`
+					: "";
+
 				console.error(
-					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputRef}${debugRef}\n\n` +
-						`To re-run after fixing:\n  ${rerunCmd}\n\n` +
+					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputSection}${fileRef}${debugRef}\n\n` +
+						`ACTION REQUIRED: Fix the errors shown above, then re-run:\n  ${rerunCmd}\n\n` +
 						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
 				);
 				process.exit(2);
