@@ -15,61 +15,11 @@ permissions:
   contents: write
   id-token: write
 
+env:
+  ZIG_VERSION: 0.13.0
+
 jobs:
-  # Build native modules on each platform natively
-  build-native:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            node_file: han-native.darwin-arm64.node
-          - os: macos-13-large
-            target: x86_64-apple-darwin
-            node_file: han-native.darwin-x64.node
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            node_file: han-native.linux-x64-gnu.node
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            node_file: han-native.linux-arm64-gnu.node
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            node_file: han-native.win32-x64-msvc.node
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install dependencies
-        working-directory: ./packages/han-native
-        run: npm ci
-
-      - name: Build native module
-        working-directory: ./packages/han-native
-        run: npx napi build --platform --release --target ${{ matrix.target }}
-
-      - name: Upload native module
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-${{ matrix.target }}
-          path: packages/han-native/${{ matrix.node_file }}
-
-  # Build and release after native modules are ready
   build-and-release:
-    needs: build-native
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -90,24 +40,49 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Download all native modules
-        uses: actions/download-artifact@v4
         with:
-          path: packages/han-native/dist/native
-          pattern: native-*
-          merge-multiple: true
+          targets: |
+            x86_64-unknown-linux-gnu
+            aarch64-unknown-linux-gnu
+            x86_64-apple-darwin
+            aarch64-apple-darwin
+            x86_64-pc-windows-msvc
 
-      - name: List native modules
-        run: ls -la packages/han-native/dist/native/
+      - name: Install Zig (for cross-compilation)
+        run: |
+          wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz
+          tar xf zig-linux-x86_64-${ZIG_VERSION}.tar.xz
+          echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}" >> $GITHUB_PATH
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module for current platform (for tests)
+      - name: Build native modules for all platforms
         working-directory: ./packages/han-native
-        run: npm run build
+        run: |
+          # Linux x64 (native)
+          npx napi build --platform --release --target x86_64-unknown-linux-gnu
+
+          # Linux arm64 (cross-compile with zig)
+          npx napi build --platform --release --target aarch64-unknown-linux-gnu --zig
+
+          # macOS x64 (cross-compile with zig)
+          npx napi build --platform --release --target x86_64-apple-darwin --zig
+
+          # macOS arm64 (cross-compile with zig)
+          npx napi build --platform --release --target aarch64-apple-darwin --zig
+
+          # Windows x64 (cross-compile with zig)
+          npx napi build --platform --release --target x86_64-pc-windows-msvc --zig
+
+      - name: List built native modules
+        run: |
+          echo "Native modules built:"
+          find packages/han-native -name "*.node" -type f | head -20
 
       - name: Install han dependencies
         working-directory: ./packages/han
@@ -115,22 +90,19 @@ jobs:
 
       - name: Copy native modules to han for embedding
         run: |
-          # Copy native modules to han/native/ for Bun to embed during compilation
-          # Each platform build will use the appropriate native module
           mkdir -p packages/han/native
-          cp packages/han-native/dist/native/han-native.darwin-arm64.node packages/han/native/
-          cp packages/han-native/dist/native/han-native.darwin-x64.node packages/han/native/
-          cp packages/han-native/dist/native/han-native.linux-x64-gnu.node packages/han/native/
-          cp packages/han-native/dist/native/han-native.linux-arm64-gnu.node packages/han/native/
-          cp packages/han-native/dist/native/han-native.win32-x64-msvc.node packages/han/native/
+          cp packages/han-native/han-native.darwin-arm64.node packages/han/native/ || true
+          cp packages/han-native/han-native.darwin-x64.node packages/han/native/ || true
+          cp packages/han-native/han-native.linux-x64-gnu.node packages/han/native/ || true
+          cp packages/han-native/han-native.linux-arm64-gnu.node packages/han/native/ || true
+          cp packages/han-native/han-native.win32-x64-msvc.node packages/han/native/ || true
+          echo "Copied native modules:"
+          ls -la packages/han/native/
 
       - name: Cross-compile binaries with embedded native modules
         working-directory: ./packages/han
         run: |
           mkdir -p dist/binaries
-
-          # Build for each platform - native module is embedded via direct require in hook-cache.ts
-          # Copy the platform-specific native module to the generic name before each build
 
           # darwin-arm64
           cp native/han-native.darwin-arm64.node native/han-native.node
@@ -244,7 +216,7 @@ jobs:
   update-homebrew:
     needs: build-and-release
     runs-on: ubuntu-latest
-    if: ${{ !contains(inputs.tag || github.ref, '-') }}  # Skip for prereleases
+    if: ${{ !contains(inputs.tag || github.ref, '-') }}
     steps:
       - name: Checkout homebrew-tap
         uses: actions/checkout@v4
@@ -261,7 +233,6 @@ jobs:
           REPO="TheBushidoCollective/han"
           BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
 
-          # Download checksum files for binaries (native modules are now embedded)
           DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-arm64.sha256" | awk '{print $1}')
           DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-x64.sha256" | awk '{print $1}')
           LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-arm64.sha256" | awk '{print $1}')
