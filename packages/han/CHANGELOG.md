@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.56.10] - 2025-12-10
+
+### Fixed
+
+- remove tests for non-existent extractPluginName function ([4deef62a](../../commit/4deef62a))
+- extract plugin name from versioned cache paths correctly ([8fbd1740](../../commit/8fbd1740))
+- resolve linting and formatting issues from stop hooks ([9e242e55](../../commit/9e242e55))
+- add cwd to spawnSync calls in CLI integration tests ([cd4d701d](../../commit/cd4d701d))
+- skip marketplace-cache tests when module loading fails due to Bun bug ([052bfc9e](../../commit/052bfc9e))
+- skip marketplace-cache tests in CI due to Bun bug ([92567a62](../../commit/92567a62))
+- use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
+- rename marketplace-cache.test.ts to load first ([4b8c4816](../../commit/4b8c4816))
+- remove global ink mock that was breaking other test files ([b5e6b73a](../../commit/b5e6b73a))
+- regenerate package-lock.json for CI compatibility ([c4d4e0f9](../../commit/c4d4e0f9))
+- resolve biome lint warnings in test files ([2fa44c23](../../commit/2fa44c23))
+
+### Changed
+
+- consolidate Windows build into matrix with cargo-xwin ([aeedd7ae](../../commit/aeedd7ae))
+- centralize plugin name extraction logic ([2175952e](../../commit/2175952e))
+
+### Other
+
+- Merge pull request #13 from TheBushidoCollective/claude/issue-12-20251210-1809 ([c2830cb7](../../commit/c2830cb7))
+- trigger workflow after test mock fix ([21c80815](../../commit/21c80815))
+- trigger workflow after bun test fix ([cc6099f8](../../commit/cc6099f8))
+- trigger workflow test after bun install fix ([539debbf](../../commit/539debbf))
+
 ## [1.56.9] - 2025-12-10
 
 ### Fixed
