@@ -1,7 +1,10 @@
 import { render } from "ink";
 import React from "react";
 import { InstallInteractive } from "./install-interactive.tsx";
-import { detectPluginsByMarkers } from "./marker-detection.ts";
+import {
+	detectPluginsByMarkers,
+	loadPluginDetection,
+} from "./marker-detection.ts";
 import { PluginSelector } from "./plugin-selector.tsx";
 import {
 	detectPluginsWithAgent,
@@ -151,9 +154,12 @@ export async function install(
 		return;
 	}
 
+	// Load detection criteria from cached han-config.json files
+	const pluginsWithDetection = loadPluginDetection(marketplacePlugins);
+
 	// Run marker detection first (instant)
 	const markerDetection = detectPluginsByMarkers(
-		marketplacePlugins,
+		pluginsWithDetection,
 		process.cwd(),
 	);
 
