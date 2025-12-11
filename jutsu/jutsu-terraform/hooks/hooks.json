@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "han hook run jutsu-terraform format --fail-fast --cached",
-            "timeout": 120
+            "timeout": 600
           }
         ]
       }
