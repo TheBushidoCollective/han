@@ -21,6 +21,7 @@ import { registerPluginCommands } from "./commands/plugin/index.ts";
 import { explainHan } from "./explain.ts";
 import { analyzeGaps } from "./gaps.ts";
 import { generateSummary } from "./summary.ts";
+import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
 
 /**
  * Options for creating the CLI program.
@@ -190,6 +191,14 @@ const isMainModule = (() => {
 })();
 
 if (isMainModule) {
+	// Initialize OpenTelemetry if enabled
+	initTelemetry();
+
+	// Setup graceful shutdown
+	process.on("beforeExit", async () => {
+		await shutdownTelemetry();
+	});
+
 	const program = makeProgram();
 	program.parse();
 }

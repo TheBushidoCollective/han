@@ -7,6 +7,7 @@ import type {
 	StartTaskParams,
 	UpdateTaskParams,
 } from "../../metrics/types.ts";
+import { recordTaskCompletion } from "../../telemetry/index.ts";
 
 interface JsonRpcRequest {
 	jsonrpc: "2.0";
@@ -360,6 +361,14 @@ async function handleToolsCall(params: {
 			case "complete_task": {
 				const taskParams = args as unknown as CompleteTaskParams;
 				const result = getStorage().completeTask(taskParams);
+
+				// Record OTEL telemetry for task completion
+				recordTaskCompletion(
+					(result as { type?: string })?.type || "unknown",
+					taskParams.outcome,
+					taskParams.confidence,
+				);
+
 				return {
 					content: [
 						{
@@ -373,6 +382,14 @@ async function handleToolsCall(params: {
 			case "fail_task": {
 				const taskParams = args as unknown as FailTaskParams;
 				const result = getStorage().failTask(taskParams);
+
+				// Record OTEL telemetry for task failure
+				recordTaskCompletion(
+					(result as { type?: string })?.type || "unknown",
+					"failure",
+					taskParams.confidence || 0,
+				);
+
 				return {
 					content: [
 						{

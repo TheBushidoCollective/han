@@ -5,6 +5,7 @@ import {
 	readOrCreateSettings,
 	writeSettings,
 } from "./shared.ts";
+import { recordPluginUninstall } from "./telemetry/index.ts";
 
 /**
  * Uninstall one or more plugins from Claude settings
@@ -46,6 +47,11 @@ export async function uninstallPlugins(
 	}
 
 	writeSettings(settings, scope);
+
+	// Record telemetry for each uninstalled plugin
+	for (const pluginName of uninstalled) {
+		recordPluginUninstall(pluginName, true);
+	}
 
 	if (uninstalled.length > 0) {
 		console.log(

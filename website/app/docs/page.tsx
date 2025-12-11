@@ -75,6 +75,12 @@ export default function DocsPage() {
 								Metrics
 							</a>
 							<a
+								href="#telemetry"
+								className="block py-2 px-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ml-3"
+							>
+								OpenTelemetry
+							</a>
+							<a
 								href="#cli-reference"
 								className="block py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
 							>
@@ -860,6 +866,165 @@ jutsu-eslint:
 											Task counts and patterns over time
 										</span>
 									</div>
+								</div>
+							</div>
+
+							{/* OpenTelemetry Subsection */}
+							<div
+								id="telemetry"
+								className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 scroll-mt-8"
+							>
+								<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+									OpenTelemetry Integration
+								</h3>
+								<p className="text-gray-600 dark:text-gray-300 mb-6">
+									Han integrates with OpenTelemetry for enterprise
+									observability. Export metrics and logs to your existing
+									observability stack using the same environment variables as
+									Claude Code.
+								</p>
+
+								<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-6 rounded-lg mb-8">
+									<h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">
+										Claude Code Compatible
+									</h4>
+									<p className="text-blue-700 dark:text-blue-300 text-sm">
+										Han uses the same OTEL environment variables as Claude Code.
+										If you&apos;ve already configured telemetry for Claude Code,
+										Han will automatically use those settings.
+									</p>
+								</div>
+
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+									<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+										Environment Variables
+									</h4>
+									<div className="space-y-4 font-mono text-sm">
+										<div className="border-b border-gray-200 dark:border-gray-600 pb-3">
+											<code className="text-green-600 dark:text-green-400">
+												CLAUDE_CODE_ENABLE_TELEMETRY=1
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												Enable telemetry export (required)
+											</p>
+										</div>
+										<div className="border-b border-gray-200 dark:border-gray-600 pb-3">
+											<code className="text-green-600 dark:text-green-400">
+												OTEL_EXPORTER_OTLP_ENDPOINT
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												OTLP collector endpoint (default: http://localhost:4317)
+											</p>
+										</div>
+										<div className="border-b border-gray-200 dark:border-gray-600 pb-3">
+											<code className="text-green-600 dark:text-green-400">
+												OTEL_EXPORTER_OTLP_HEADERS
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												Auth headers in key=value,key2=value2 format
+											</p>
+										</div>
+										<div className="border-b border-gray-200 dark:border-gray-600 pb-3">
+											<code className="text-green-600 dark:text-green-400">
+												OTEL_METRICS_EXPORTER
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												Metrics exporter: otlp (default), console, or none
+											</p>
+										</div>
+										<div className="border-b border-gray-200 dark:border-gray-600 pb-3">
+											<code className="text-green-600 dark:text-green-400">
+												OTEL_LOGS_EXPORTER
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												Logs exporter: otlp (default), console, or none
+											</p>
+										</div>
+										<div>
+											<code className="text-green-600 dark:text-green-400">
+												OTEL_RESOURCE_ATTRIBUTES
+											</code>
+											<p className="text-gray-600 dark:text-gray-300 mt-1 font-sans">
+												Custom resource attributes (W3C Baggage format)
+											</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6">
+									<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+										Exported Metrics
+									</h4>
+									<div className="grid md:grid-cols-2 gap-4">
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.hook.execution
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												Hook execution count with success/failure
+											</span>
+										</div>
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.hook.duration_ms
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												Hook execution duration histogram
+											</span>
+										</div>
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.plugin.install
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												Plugin installation events
+											</span>
+										</div>
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.task.completed
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												Task completion with outcome and confidence
+											</span>
+										</div>
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.validation.run
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												Validation run counts with pass/fail
+											</span>
+										</div>
+										<div className="flex items-start gap-3">
+											<code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs shrink-0">
+												han.mcp.tool_call
+											</code>
+											<span className="text-gray-600 dark:text-gray-300 text-sm">
+												MCP tool invocations with duration
+											</span>
+										</div>
+									</div>
+								</div>
+
+								<div className="bg-gray-900 dark:bg-gray-950 p-6 rounded-lg">
+									<h4 className="text-lg font-semibold text-white mb-4">
+										Quick Start
+									</h4>
+									<pre className="text-green-400 text-sm overflow-x-auto">
+										<code>{`# Enable telemetry with local collector
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+# Or send to a cloud provider
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer token123"
+
+# Debug with console output
+export OTEL_METRICS_EXPORTER=console
+export OTEL_LOGS_EXPORTER=console`}</code>
+									</pre>
 								</div>
 							</div>
 						</section>

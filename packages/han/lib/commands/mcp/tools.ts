@@ -6,6 +6,7 @@ import {
 	type MarketplaceConfig,
 } from "../../claude-settings.ts";
 import { loadPluginConfig, type PluginConfig } from "../../hook-config.ts";
+import { recordMcpToolCall } from "../../telemetry/index.ts";
 import { runConfiguredHook } from "../../validate.ts";
 
 export interface PluginTool {
@@ -209,6 +210,7 @@ export async function executePluginTool(
 	options: ExecuteToolOptions,
 ): Promise<ExecuteToolResult> {
 	const { verbose = false, failFast = true, directory, cache = true } = options;
+	const startTime = Date.now();
 
 	// Capture console output
 	const outputLines: string[] = [];
@@ -276,6 +278,10 @@ export async function executePluginTool(
 		console.log = originalLog;
 		console.error = originalError;
 	}
+
+	// Record telemetry for MCP tool call
+	const duration = Date.now() - startTime;
+	recordMcpToolCall(tool.name, success, duration);
 
 	return {
 		success,

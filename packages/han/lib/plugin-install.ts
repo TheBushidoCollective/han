@@ -12,6 +12,7 @@ import {
 	removeInvalidPlugins,
 	writeSettings,
 } from "./shared.ts";
+import { recordPluginInstall } from "./telemetry/index.ts";
 
 /**
  * Show available plugins grouped by category
@@ -179,6 +180,11 @@ export async function installPlugins(
 	}
 
 	writeSettings(settings, scope);
+
+	// Record telemetry for each installed plugin
+	for (const pluginName of installed) {
+		recordPluginInstall(pluginName, scope, true);
+	}
 
 	if (installed.length > 0) {
 		console.log(
