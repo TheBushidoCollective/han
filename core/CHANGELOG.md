@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-12-11
+
+### Added
+
+- add project memory skill and learning hooks ([e4e69780](../../commit/e4e69780))
+- add DeepWiki MCP server alongside Context7 ([a8cc19f2](../../commit/a8cc19f2))
+
+### Fixed
+
+- fix markdown linting errors in project-memory files ([3db56cdd](../../commit/3db56cdd))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([770201dc](../../commit/770201dc))
+
 ## [1.1.1] - 2025-12-11
 
 ### Added
