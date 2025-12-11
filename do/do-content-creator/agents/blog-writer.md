@@ -1,6 +1,6 @@
 ---
 name: blog-writer
-description: Expert at writing engaging blog posts with SEO optimization, compelling narratives, and audience-focused content.
+description: Use when writing blog posts, articles, or long-form content. Expert at SEO optimization, compelling narratives, and audience-focused content.
 ---
 
 # Blog Writer Agent

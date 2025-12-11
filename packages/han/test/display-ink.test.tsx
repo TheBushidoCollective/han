@@ -91,6 +91,15 @@ const emptySessionMetrics = {
 	},
 };
 
+const emptyAllHookStats = {
+	totalExecutions: 0,
+	totalPassed: 0,
+	totalFailed: 0,
+	passRate: 0,
+	uniqueHooks: 0,
+	byHookType: {},
+};
+
 describe("MetricsDisplay component", () => {
 	describe("no data state", () => {
 		test("renders no metrics message when empty", () => {
@@ -100,12 +109,13 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
 			expect(lastFrame()).toContain("No metrics tracked yet");
 			expect(lastFrame()).toContain("MCP tools in the core plugin");
-			expect(lastFrame()).toContain("start_task()");
+			expect(lastFrame()).toContain("Hook executions and task data");
 		});
 
 		test("renders dashboard header", () => {
@@ -115,10 +125,11 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
-			expect(lastFrame()).toContain("Agent Task Metrics Dashboard");
+			expect(lastFrame()).toContain("Agent Metrics Dashboard");
 		});
 	});
 
@@ -130,6 +141,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -147,6 +159,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -161,6 +174,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -175,6 +189,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -189,6 +204,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -204,6 +220,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -235,6 +252,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -266,6 +284,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -297,6 +316,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -328,6 +348,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -371,6 +392,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -403,6 +425,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -423,6 +446,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -443,6 +467,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -461,6 +486,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -480,6 +506,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -512,6 +539,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -531,6 +559,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -549,6 +578,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -580,6 +610,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -618,6 +649,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -650,6 +682,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 
@@ -671,6 +704,7 @@ describe("MetricsDisplay component", () => {
 					hookStats={[]}
 					sessionMetrics={emptySessionMetrics}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 

@@ -1,6 +1,6 @@
 ---
 name: voip-engineer
-description: Expert in VoIP systems, SIP protocol, telecommunications, and real-time communications
+description: Use when working with VoIP systems, SIP protocol, telecommunications, or real-time communications. Expert in voice over IP infrastructure and protocols.
 model: sonnet
 ---
 

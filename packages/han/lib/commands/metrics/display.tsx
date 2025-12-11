@@ -10,6 +10,15 @@ interface HookFailureStat {
 	failureRate: number;
 }
 
+interface AllHookStats {
+	totalExecutions: number;
+	totalPassed: number;
+	totalFailed: number;
+	passRate: number;
+	uniqueHooks: number;
+	byHookType: Record<string, { total: number; passed: number }>;
+}
+
 interface SessionMetrics {
 	sessions: Array<{
 		session_id: string;
@@ -31,6 +40,7 @@ interface SessionMetrics {
 interface MetricsDisplayProps {
 	result: MetricsResult;
 	hookStats: HookFailureStat[];
+	allHookStats: AllHookStats;
 	sessionMetrics: SessionMetrics;
 	showCalibration: boolean;
 }
@@ -508,6 +518,95 @@ function FrustrationInsights({ result }: { result: MetricsResult }) {
 }
 
 /**
+ * Hook execution summary section
+ */
+function HookSummary({ allHookStats }: { allHookStats: AllHookStats }) {
+	if (allHookStats.totalExecutions === 0) {
+		return null;
+	}
+
+	const hookTypes = Object.entries(allHookStats.byHookType);
+
+	return (
+		<Box flexDirection="column" marginBottom={1}>
+			<Text bold color="cyan">
+				🔧 Hook Execution Summary
+			</Text>
+			<Box marginTop={1} flexDirection="column">
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Total Executions:</Text>
+					</Box>
+					<Text bold>{allHookStats.totalExecutions}</Text>
+				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Passed:</Text>
+					</Box>
+					<Text color="green">{allHookStats.totalPassed}</Text>
+				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Failed:</Text>
+					</Box>
+					<Text color={allHookStats.totalFailed > 0 ? "red" : "green"}>
+						{allHookStats.totalFailed}
+					</Text>
+				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Pass Rate:</Text>
+					</Box>
+					<Text
+						bold
+						color={
+							allHookStats.passRate > 0.9
+								? "green"
+								: allHookStats.passRate > 0.7
+									? "yellow"
+									: "red"
+						}
+					>
+						{formatPercent(allHookStats.passRate)}
+					</Text>
+				</Box>
+				<Box>
+					<Box width={25}>
+						<Text dimColor>Unique Hooks:</Text>
+					</Box>
+					<Text>{allHookStats.uniqueHooks}</Text>
+				</Box>
+			</Box>
+
+			{hookTypes.length > 0 && (
+				<Box marginTop={1} flexDirection="column">
+					<Text bold>By Hook Type:</Text>
+					{hookTypes.map(([hookType, data]) => {
+						const passRate = data.total > 0 ? data.passed / data.total : 0;
+						return (
+							<Box key={hookType} marginLeft={2}>
+								<Box width={20}>
+									<Text dimColor>{hookType}</Text>
+								</Box>
+								<Text dimColor>{data.total} runs, </Text>
+								<Text
+									color={
+										passRate > 0.9 ? "green" : passRate > 0.7 ? "yellow" : "red"
+									}
+								>
+									{formatPercent(passRate)}
+								</Text>
+								<Text dimColor> pass</Text>
+							</Box>
+						);
+					})}
+				</Box>
+			)}
+		</Box>
+	);
+}
+
+/**
  * Calibration insights section
  */
 function CalibrationInsights({ result }: { result: MetricsResult }) {
@@ -635,9 +734,14 @@ function CalibrationInsights({ result }: { result: MetricsResult }) {
  */
 export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 	result,
+	allHookStats,
+	sessionMetrics,
 	showCalibration,
 }) => {
-	const hasData = result.total_tasks > 0;
+	const hasTaskData = result.total_tasks > 0;
+	const hasHookData = allHookStats.totalExecutions > 0;
+	const hasSessionData = sessionMetrics.sessions.length > 0;
+	const hasAnyData = hasTaskData || hasHookData || hasSessionData;
 
 	return (
 		<Box flexDirection="column" padding={1}>
@@ -649,7 +753,7 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 			</Box>
 			<Box marginBottom={1}>
 				<Text bold color="cyan">
-					🤖 Agent Task Metrics Dashboard
+					🤖 Agent Metrics Dashboard
 				</Text>
 			</Box>
 			<Box marginBottom={2}>
@@ -658,8 +762,8 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 				</Text>
 			</Box>
 
-			{/* No data message */}
-			{!hasData && (
+			{/* No data message - only when there's truly no data */}
+			{!hasAnyData && (
 				<Box flexDirection="column" marginBottom={2}>
 					<Text bold color="yellow">
 						⚠️ No metrics tracked yet
@@ -672,45 +776,76 @@ export const MetricsDisplay: React.FC<MetricsDisplayProps> = ({
 					</Box>
 					<Box>
 						<Text dimColor>
-							Task data will appear here once you start tracking work with
-							start_task().
+							Hook executions and task data will appear here after your first
+							session.
 						</Text>
 					</Box>
 				</Box>
 			)}
 
-			{/* Summary Stats */}
-			{hasData && <SummaryStats result={result} />}
+			{/* Hook Execution Summary (always show if there's hook data) */}
+			{hasHookData && <HookSummary allHookStats={allHookStats} />}
 
-			{/* Charts */}
-			{hasData && Object.keys(result.by_type).length > 0 && (
-				<TaskTypeChart result={result} />
+			{/* Task-specific sections */}
+			{hasTaskData && (
+				<>
+					{/* Summary Stats */}
+					<SummaryStats result={result} />
+
+					{/* Charts */}
+					{Object.keys(result.by_type).length > 0 && (
+						<TaskTypeChart result={result} />
+					)}
+					{Object.keys(result.by_outcome).length > 0 && (
+						<TaskOutcomeChart result={result} />
+					)}
+
+					{/* Recent Tasks Table */}
+					<RecentTasksTable result={result} />
+
+					{/* Frustration Insights */}
+					{result.total_frustrations > 0 && (
+						<FrustrationInsights result={result} />
+					)}
+
+					{/* Calibration Insights (optional) */}
+					{showCalibration && <CalibrationInsights result={result} />}
+
+					{/* Footer */}
+					{!showCalibration && (
+						<Box marginTop={1}>
+							<Text dimColor>
+								Tip: Use{" "}
+								<Text bold dimColor>
+									han metrics show --calibration
+								</Text>{" "}
+								to see detailed calibration analysis
+							</Text>
+						</Box>
+					)}
+				</>
 			)}
-			{hasData && Object.keys(result.by_outcome).length > 0 && (
-				<TaskOutcomeChart result={result} />
-			)}
 
-			{/* Recent Tasks Table */}
-			{hasData && <RecentTasksTable result={result} />}
-
-			{/* Frustration Insights */}
-			{hasData && result.total_frustrations > 0 && (
-				<FrustrationInsights result={result} />
-			)}
-
-			{/* Calibration Insights (optional) */}
-			{hasData && showCalibration && <CalibrationInsights result={result} />}
-
-			{/* Footer */}
-			{hasData && !showCalibration && (
-				<Box marginTop={1}>
-					<Text dimColor>
-						Tip: Use{" "}
-						<Text bold dimColor>
-							han metrics show --calibration
-						</Text>{" "}
-						to see detailed calibration analysis
+			{/* Show task tracking message when we have hooks but no tasks */}
+			{!hasTaskData && hasAnyData && (
+				<Box flexDirection="column" marginBottom={1}>
+					<Text bold color="cyan">
+						📋 Task Tracking
 					</Text>
+					<Box marginTop={1}>
+						<Text dimColor>
+							No tasks tracked yet. Use{" "}
+							<Text bold dimColor>
+								start_task()
+							</Text>{" "}
+							MCP tool to track work.
+						</Text>
+					</Box>
+					<Box>
+						<Text dimColor>
+							Task metrics will show success rates, calibration, and more.
+						</Text>
+					</Box>
 				</Box>
 			)}
 		</Box>

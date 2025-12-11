@@ -882,6 +882,56 @@ export class JsonlMetricsStorage {
 	}
 
 	/**
+	 * Get overall hook statistics (all hooks, not just failures)
+	 */
+	getAllHookStats(period: "day" | "week" | "month" = "week"): {
+		totalExecutions: number;
+		totalPassed: number;
+		totalFailed: number;
+		passRate: number;
+		uniqueHooks: number;
+		byHookType: Record<string, { total: number; passed: number }>;
+	} {
+		let totalExecutions = 0;
+		let totalPassed = 0;
+		let totalFailed = 0;
+		const hookNames = new Set<string>();
+		const byHookType: Record<string, { total: number; passed: number }> = {};
+
+		this.forEachEventForPeriod(period, (event) => {
+			if (event.type === "hook_execution") {
+				const e = event as HookExecutionEvent;
+				totalExecutions++;
+				if (e.passed) {
+					totalPassed++;
+				} else {
+					totalFailed++;
+				}
+				hookNames.add(e.hook_name);
+
+				// Group by hook type
+				const hookType = e.hook_type || "unknown";
+				if (!byHookType[hookType]) {
+					byHookType[hookType] = { total: 0, passed: 0 };
+				}
+				byHookType[hookType].total++;
+				if (e.passed) {
+					byHookType[hookType].passed++;
+				}
+			}
+		});
+
+		return {
+			totalExecutions,
+			totalPassed,
+			totalFailed,
+			passRate: totalExecutions > 0 ? totalPassed / totalExecutions : 0,
+			uniqueHooks: hookNames.size,
+			byHookType,
+		};
+	}
+
+	/**
 	 * Query session metrics using streaming aggregation
 	 */
 	querySessionMetrics(

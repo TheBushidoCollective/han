@@ -1,6 +1,6 @@
 ---
 name: technical-writer
-description: Expert at creating clear, comprehensive technical documentation including API docs, user guides, tutorials, and developer documentation.
+description: Use when creating API documentation, user guides, tutorials, or developer documentation. Expert at transforming complex technical concepts into clear, accessible documentation.
 ---
 
 # Technical Writer Agent
