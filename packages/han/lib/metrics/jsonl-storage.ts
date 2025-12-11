@@ -10,6 +10,7 @@ import { getClaudeConfigDir } from "../claude-settings.ts";
 import type {
 	CompleteTaskParams,
 	FailTaskParams,
+	FrustrationByLevel,
 	FrustrationEvent,
 	FrustrationLevel,
 	MetricsQuery,
@@ -785,9 +786,38 @@ export class JsonlMetricsStorage {
 		// Calculate calibration score
 		const calibration_score = this.calculateCalibrationScore(tasks);
 
+		// Calculate frustration metrics with weighting
 		const total_frustrations = frustrationEvents.length;
 		const frustration_rate =
 			total_tasks > 0 ? total_frustrations / total_tasks : 0;
+
+		// Calculate weighted frustration metrics (excludes "low" level)
+		const frustration_by_level: FrustrationByLevel = {
+			low: 0,
+			moderate: 0,
+			high: 0,
+		};
+		let weighted_frustration_score = 0;
+
+		for (const event of frustrationEvents) {
+			// Count by level
+			if (event.frustration_level in frustration_by_level) {
+				frustration_by_level[event.frustration_level]++;
+			}
+
+			// Only moderate and high contribute to weighted metrics
+			if (
+				event.frustration_level === "moderate" ||
+				event.frustration_level === "high"
+			) {
+				weighted_frustration_score += event.frustration_score;
+			}
+		}
+
+		const significant_frustrations =
+			frustration_by_level.moderate + frustration_by_level.high;
+		const significant_frustration_rate =
+			total_tasks > 0 ? significant_frustrations / total_tasks : 0;
 
 		return {
 			total_tasks,
@@ -802,6 +832,10 @@ export class JsonlMetricsStorage {
 			frustration_events: frustrationEvents,
 			total_frustrations,
 			frustration_rate,
+			significant_frustrations,
+			significant_frustration_rate,
+			weighted_frustration_score,
+			frustration_by_level,
 		};
 	}
 

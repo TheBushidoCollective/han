@@ -68,6 +68,15 @@ export interface MetricsQuery {
 /**
  * Metrics query results
  */
+/**
+ * Frustration breakdown by level
+ */
+export interface FrustrationByLevel {
+	low: number;
+	moderate: number;
+	high: number;
+}
+
 export interface MetricsResult {
 	total_tasks: number;
 	completed_tasks: number;
@@ -79,8 +88,18 @@ export interface MetricsResult {
 	calibration_score: number;
 	tasks: Task[];
 	frustration_events: FrustrationEvent[];
+	/** @deprecated Use significant_frustrations instead - this counts ALL levels including low */
 	total_frustrations: number;
+	/** @deprecated Use significant_frustration_rate instead */
 	frustration_rate: number;
+	/** Count of moderate and high frustrations only (excludes low) */
+	significant_frustrations: number;
+	/** Significant frustrations per task (excludes low) */
+	significant_frustration_rate: number;
+	/** Sum of frustration_score for moderate/high events (weighted metric) */
+	weighted_frustration_score: number;
+	/** Breakdown of frustrations by level */
+	frustration_by_level: FrustrationByLevel;
 }
 
 /**
