@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -90,29 +90,6 @@ export function writeOutputFile(basePath: string, output: string): string {
 	const outputPath = `${basePath}.output.txt`;
 	writeFileSync(outputPath, output, "utf-8");
 	return outputPath;
-}
-
-/**
- * Read and format output from file for inline display
- * Returns first N lines with truncation notice if needed
- */
-export function readOutputPreview(
-	outputPath: string,
-	maxLines = 30,
-): string | null {
-	try {
-		const content = readFileSync(outputPath, "utf-8");
-		const lines = content.split("\n");
-
-		if (lines.length <= maxLines) {
-			return content.trim();
-		}
-
-		const preview = lines.slice(0, maxLines).join("\n");
-		return `${preview}\n... (truncated, see full output in file)`;
-	} catch {
-		return null;
-	}
 }
 
 /**
@@ -819,26 +796,18 @@ export async function runConfiguredHook(
 					only: relativePath === "." ? undefined : relativePath,
 				});
 
-				// Include inline error output so agent sees the actual problem
-				const inlineOutput = result.outputFile
-					? readOutputPreview(result.outputFile)
-					: null;
+				const outputFile = result.outputFile
+					? result.outputFile
+					: "(no output captured)";
 
-				const outputSection = inlineOutput
-					? `\n\n--- ERROR OUTPUT ---\n${inlineOutput}\n--- END OUTPUT ---`
-					: "";
-
-				const fileRef = result.outputFile
-					? `\nFull output: ${result.outputFile}`
-					: "";
-				const debugRef = result.debugFile
-					? `\nDebug info: ${result.debugFile}`
-					: "";
-
+				// Concise, directive error message that emphasizes subagent delegation
 				console.error(
-					`\n❌ Hook failed in \`${relativePath}\`${reason}.${outputSection}${fileRef}${debugRef}\n\n` +
-						`ACTION REQUIRED: Fix the errors shown above, then re-run:\n  ${rerunCmd}\n\n` +
-						`Do NOT ask the user any questions - proceed directly with fixing the issues.\n`,
+					`\n❌ Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n\n` +
+						`**CRITICAL**: You MUST spawn a subagent to fix this. The subagent MUST:\n` +
+						`1. Read the output file: ${outputFile}\n` +
+						`2. Analyze the errors and fix them\n` +
+						`3. Re-run: ${rerunCmd}\n\n` +
+						`Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`,
 				);
 				process.exit(2);
 			}
