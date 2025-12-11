@@ -595,7 +595,15 @@ export function buildHookCommand(
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { pluginName, hookName, failFast, cache, only, verbose } = options;
+	const { pluginName, hookName, cache, only, verbose } = options;
+
+	// Allow env var to override --fail-fast (used by han hook dispatch to prevent
+	// fail-fast behavior when running hooks as subprocesses)
+	const failFast =
+		process.env.HAN_NO_FAIL_FAST === "1" ||
+		process.env.HAN_NO_FAIL_FAST === "true"
+			? false
+			: options.failFast;
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();

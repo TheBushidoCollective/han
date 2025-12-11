@@ -217,6 +217,8 @@ function executeCommandHook(
 				...process.env,
 				CLAUDE_PLUGIN_ROOT: pluginRoot,
 				CLAUDE_PROJECT_DIR: process.cwd(),
+				// Disable fail-fast in subprocesses - dispatch handles aggregation
+				HAN_NO_FAIL_FAST: "1",
 			},
 		});
 
