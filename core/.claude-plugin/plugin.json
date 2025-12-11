@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 + DeepWiki documentation, project memory learning, and universal programming principles.",
   "author": {
     "name": "The Bushido Collective",
@@ -26,11 +26,16 @@
   "mcpServers": {
     "han": {
       "command": "han",
-      "args": ["mcp"]
+      "args": [
+        "mcp"
+      ]
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     },
     "deepwiki": {
       "type": "http",
