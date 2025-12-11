@@ -70,6 +70,10 @@
           },
           {
             "type": "command",
+            "command": "han hook reference hooks/no-excuses.md --must-read-first \"no excuses for pre-existing issues\""
+          },
+          {
+            "type": "command",
             "command": "han metrics detect-frustration"
           },
           {
