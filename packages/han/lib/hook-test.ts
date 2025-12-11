@@ -71,6 +71,21 @@ const VALID_HOOK_TYPES = [
 ];
 
 /**
+ * Generate example stdin payload for a hook type.
+ * Simulates what Claude Code would send to hooks during real invocations.
+ */
+function generateExampleStdinPayload(hookType: string): string {
+	const basePayload = {
+		session_id: `test-session-${Date.now()}`,
+	};
+
+	// Different hook types may have different payload structures
+	// For now, all hooks receive at minimum a session_id
+	// This could be expanded in the future for hook-specific fields
+	return JSON.stringify(basePayload);
+}
+
+/**
  * Execute a single hook command and collect output.
  * The command itself (e.g. han hook run) will source CLAUDE_ENV_FILE if set.
  */
@@ -106,6 +121,9 @@ async function executeHookCommand(
 		const pathSeparator = process.platform === "win32" ? ";" : ":";
 		const enhancedPath = `${claudeBinDir}${pathSeparator}${process.env.PATH || ""}`;
 
+		// Generate example stdin payload for this hook type
+		const stdinPayload = generateExampleStdinPayload(hookType);
+
 		const child = spawn(hook.command, {
 			shell: true,
 			env: {
@@ -118,6 +136,12 @@ async function executeHookCommand(
 				HAN_HOOK_RUN_VERBOSE: "1",
 			},
 		});
+
+		// Write stdin payload to the hook command
+		if (child.stdin) {
+			child.stdin.write(stdinPayload);
+			child.stdin.end();
+		}
 
 		const output: string[] = [];
 		let timedOut = false;
