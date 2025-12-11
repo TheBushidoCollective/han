@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.60.0] - 2025-12-11
+
+### Added
+
+- add DeepWiki MCP server alongside Context7 ([a8cc19f2](../../commit/a8cc19f2))
+- add HAN_NO_FAIL_FAST env var to override --fail-fast ([7f0edaa3](../../commit/7f0edaa3))
+- pipe stdin to hooks for session_id propagation ([6856a395](../../commit/6856a395))
+- add plugins keyword and trigger release workflow ([06742cac](../../commit/06742cac))
+
+### Fixed
+
+- make hook failure output focus on subagent delegation ([3a7a54fe](../../commit/3a7a54fe))
+- make hook failure output more actionable for agent ([030fd7e7](../../commit/030fd7e7))
+- remove tests for non-existent extractPluginName function ([4deef62a](../../commit/4deef62a))
+- extract plugin name from versioned cache paths correctly ([8fbd1740](../../commit/8fbd1740))
+- resolve linting and formatting issues from stop hooks ([9e242e55](../../commit/9e242e55))
+- add cwd to spawnSync calls in CLI integration tests ([cd4d701d](../../commit/cd4d701d))
+- skip marketplace-cache tests when module loading fails due to Bun bug ([052bfc9e](../../commit/052bfc9e))
+- skip marketplace-cache tests in CI due to Bun bug ([92567a62](../../commit/92567a62))
+- use dynamic import for marketplace-cache in update.ts ([c81294ad](../../commit/c81294ad))
+- rename marketplace-cache.test.ts to load first ([4b8c4816](../../commit/4b8c4816))
+
+### Changed
+
+- consolidate Windows build into matrix with cargo-xwin ([aeedd7ae](../../commit/aeedd7ae))
+- centralize plugin name extraction logic ([2175952e](../../commit/2175952e))
+
+### Other
+
+- Merge pull request #13 from TheBushidoCollective/claude/issue-12-20251210-1809 ([c2830cb7](../../commit/c2830cb7))
+
 ## [1.59.0] - 2025-12-11
 
 ### Added
