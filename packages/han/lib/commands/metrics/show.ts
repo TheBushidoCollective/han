@@ -23,6 +23,7 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 
 	const result = storage.queryMetrics(query);
 	const hookStats = storage.getHookFailureStats(options.period || "week");
+	const allHookStats = storage.getAllHookStats(options.period || "week");
 	const sessionMetrics = storage.querySessionMetrics(
 		options.period || "week",
 		10,
@@ -34,6 +35,7 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 			React.createElement(MetricsDisplay, {
 				result,
 				hookStats,
+				allHookStats,
 				sessionMetrics,
 				showCalibration: !!options.showCalibration,
 			}),
@@ -43,6 +45,7 @@ export async function showMetrics(options: ShowMetricsOptions): Promise<void> {
 		renderPlainText(
 			result,
 			hookStats,
+			allHookStats,
 			sessionMetrics,
 			!!options.showCalibration,
 		);

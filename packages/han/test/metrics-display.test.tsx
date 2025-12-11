@@ -83,6 +83,15 @@ const sampleResult: MetricsResult = {
 	],
 };
 
+const emptyAllHookStats = {
+	totalExecutions: 0,
+	totalPassed: 0,
+	totalFailed: 0,
+	passRate: 0,
+	uniqueHooks: 0,
+	byHookType: {},
+};
+
 // Empty result for no data state
 const emptyResult: MetricsResult = {
 	total_tasks: 0,
@@ -114,12 +123,13 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
 			expect(output).toContain("No metrics tracked yet");
 			expect(output).toContain("MCP tools in the core plugin");
-			expect(output).toContain("start_task()");
+			expect(output).toContain("Hook executions and task data");
 		});
 	});
 
@@ -137,10 +147,11 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
-			expect(output).toContain("Agent Task Metrics Dashboard");
+			expect(output).toContain("Agent Metrics Dashboard");
 		});
 
 		test("renders summary statistics", () => {
@@ -156,6 +167,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -181,6 +193,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -202,6 +215,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -222,6 +236,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -243,6 +258,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -263,6 +279,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -282,6 +299,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -302,6 +320,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -322,6 +341,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -347,6 +367,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -366,6 +387,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -389,6 +411,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -416,6 +439,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -454,6 +478,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -479,6 +504,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -503,6 +529,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={false}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -541,6 +568,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();
@@ -577,6 +605,7 @@ describe("metrics/display.tsx", () => {
 						},
 					}}
 					showCalibration={true}
+					allHookStats={emptyAllHookStats}
 				/>,
 			);
 			const output = lastFrame();

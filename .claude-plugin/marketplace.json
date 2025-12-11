@@ -29,38 +29,21 @@
         "validation",
         "local-testing",
         "docker"
-      ],
-      "detection": {
-        "dirsWith": [".github/workflows"]
-      }
+      ]
     },
     {
       "name": "jutsu-android",
       "description": "Android development validation with Gradle build hooks.",
       "source": "./jutsu/jutsu-android",
       "category": "Technique",
-      "keywords": [
-        "android",
-        "gradle",
-        "kotlin",
-        "java",
-        "build",
-        "validation"
-      ],
-      "detection": {
-        "dirsWith": ["build.gradle", "build.gradle.kts"]
-      }
+      "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
     },
     {
       "name": "jutsu-ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
       "source": "./jutsu/jutsu-ameba",
       "category": "Technique",
-      "keywords": ["crystal", "linting", "style", "analysis"],
-      "detection": {
-        "dirsWith": ["shard.yml"],
-        "dirTest": ["grep -qE 'ameba' shard.yml"]
-      }
+      "keywords": ["crystal", "linting", "style", "analysis"]
     },
     {
       "name": "jutsu-angular",
@@ -79,10 +62,7 @@
         "configuration-management",
         "devops",
         "automation"
-      ],
-      "detection": {
-        "dirsWith": ["*.yml,*.yaml"]
-      }
+      ]
     },
     {
       "name": "jutsu-apollo-graphql",
@@ -116,10 +96,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "detection": {
-        "dirsWith": ["biome.json"]
-      }
+      ]
     },
     {
       "name": "hashi-blueprints",
@@ -146,10 +123,7 @@
         "runtime",
         "testing",
         "bundler"
-      ],
-      "detection": {
-        "dirsWith": ["bun.lock", "bun.lockb"]
-      }
+      ]
     },
     {
       "name": "jutsu-c",
@@ -173,21 +147,14 @@
         "objective-c",
         "quality",
         "enforcement"
-      ],
-      "detection": {
-        "dirsWith": ["*.podspec"]
-      }
+      ]
     },
     {
       "name": "jutsu-checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
       "source": "./jutsu/jutsu-checkstyle",
       "category": "Technique",
-      "keywords": ["checkstyle", "linting", "java", "skill"],
-      "detection": {
-        "dirsWith": ["pom.xml"],
-        "dirTest": ["grep -qE 'checkstyle' pom.xml"]
-      }
+      "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
       "name": "jutsu-claude-agent-sdk",
@@ -202,10 +169,7 @@
         "quality",
         "enforcement",
         "ai-agents"
-      ],
-      "detection": {
-        "dirsWith": [".claude", "package.json", "tsconfig.json"]
-      }
+      ]
     },
     {
       "name": "jutsu-fnox",
@@ -221,10 +185,7 @@
         "configuration",
         "quality",
         "enforcement"
-      ],
-      "detection": {
-        "dirsWith": ["fnox.toml"]
-      }
+      ]
     },
     {
       "name": "jutsu-mise",
@@ -239,10 +200,7 @@
         "quality",
         "enforcement",
         "dev-tools"
-      ],
-      "detection": {
-        "dirsWith": [".mise.toml", "mise.toml"]
-      }
+      ]
     },
     {
       "name": "jutsu-notetaker",
@@ -266,10 +224,7 @@
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
       "source": "./jutsu/jutsu-clippy",
       "category": "Technique",
-      "keywords": ["clippy", "linting", "rust", "skill"],
-      "detection": {
-        "dirsWith": ["Cargo.toml"]
-      }
+      "keywords": ["clippy", "linting", "rust", "skill"]
     },
     {
       "name": "jutsu-cpp",
@@ -283,21 +238,14 @@
       "description": "Credo skills for Elixir code analysis and style checking",
       "source": "./jutsu/jutsu-credo",
       "category": "Technique",
-      "keywords": ["elixir", "linting", "style", "analysis"],
-      "detection": {
-        "dirsWith": ["mix.exs"],
-        "dirTest": ["grep -qE ':credo' mix.exs"]
-      }
+      "keywords": ["elixir", "linting", "style", "analysis"]
     },
     {
       "name": "jutsu-crystal",
       "description": "Skills for Crystal language development.",
       "source": "./jutsu/jutsu-crystal",
       "category": "Technique",
-      "keywords": ["crystal", "language", "performance"],
-      "detection": {
-        "dirsWith": ["shard.yml"]
-      }
+      "keywords": ["crystal", "language", "performance"]
     },
     {
       "name": "jutsu-csharp",
@@ -324,22 +272,14 @@
       "description": "Comprehensive Cypress testing framework skills for end-to-end testing of web applications with custom commands and CI/CD integration.",
       "source": "./jutsu/jutsu-cypress",
       "category": "Technique",
-      "keywords": ["cypress", "testing", "e2e", "javascript", "skill"],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"cypress\":' package.json"]
-      }
+      "keywords": ["cypress", "testing", "e2e", "javascript", "skill"]
     },
     {
       "name": "jutsu-dialyzer",
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
       "source": "./jutsu/jutsu-dialyzer",
       "category": "Technique",
-      "keywords": ["elixir", "erlang", "static-analysis", "types"],
-      "detection": {
-        "dirsWith": ["mix.exs"],
-        "dirTest": ["grep -qE ':dialyxir' mix.exs"]
-      }
+      "keywords": ["elixir", "erlang", "static-analysis", "types"]
     },
     {
       "name": "jutsu-django",
@@ -353,12 +293,7 @@
       "description": "Docker Compose validation and best practices for container orchestration",
       "source": "./jutsu/jutsu-docker-compose",
       "category": "Technique",
-      "keywords": ["docker", "docker-compose", "containers", "devops"],
-      "detection": {
-        "dirsWith": [
-          "docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml"
-        ]
-      }
+      "keywords": ["docker", "docker-compose", "containers", "devops"]
     },
     {
       "name": "jutsu-ecto",
@@ -378,20 +313,14 @@
         "functional-programming",
         "type-safety",
         "dependency-injection"
-      ],
-      "detection": {
-        "dirsWith": ["tsconfig.json"]
-      }
+      ]
     },
     {
       "name": "jutsu-elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./jutsu/jutsu-elixir",
       "category": "Technique",
-      "keywords": ["elixir", "otp", "ecto", "skill"],
-      "detection": {
-        "dirsWith": [".formatter.exs", "mix.exs"]
-      }
+      "keywords": ["elixir", "otp", "ecto", "skill"]
     },
     {
       "name": "jutsu-erlang",
@@ -405,21 +334,14 @@
         "distributed",
         "concurrent",
         "skill"
-      ],
-      "detection": {
-        "dirsWith": ["rebar.config"]
-      }
+      ]
     },
     {
       "name": "jutsu-eslint",
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
       "source": "./jutsu/jutsu-eslint",
       "category": "Technique",
-      "keywords": ["eslint", "linting", "javascript", "typescript", "skill"],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"eslint\":' package.json"]
-      }
+      "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
     },
     {
       "name": "jutsu-expo",
@@ -452,20 +374,14 @@
       "description": "Advanced Gleam programming skills for functional BEAM development",
       "source": "./jutsu/jutsu-gleam",
       "category": "Technique",
-      "keywords": ["gleam", "beam", "functional", "erlang", "skill"],
-      "detection": {
-        "dirsWith": ["gleam.toml"]
-      }
+      "keywords": ["gleam", "beam", "functional", "erlang", "skill"]
     },
     {
       "name": "jutsu-go",
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
       "source": "./jutsu/jutsu-go",
       "category": "Technique",
-      "keywords": ["go", "golang", "concurrency", "skill"],
-      "detection": {
-        "dirsWith": ["go.mod"]
-      }
+      "keywords": ["go", "golang", "concurrency", "skill"]
     },
     {
       "name": "jutsu-graphql",
@@ -479,10 +395,7 @@
       "description": "Helm chart validation and best practices for Kubernetes package management",
       "source": "./jutsu/jutsu-helm",
       "category": "Technique",
-      "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"],
-      "detection": {
-        "dirsWith": ["Chart.yaml"]
-      }
+      "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
     },
     {
       "name": "jutsu-ink",
@@ -496,10 +409,7 @@
       "description": "iOS development validation with Xcode build hooks.",
       "source": "./jutsu/jutsu-ios",
       "category": "Technique",
-      "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"],
-      "detection": {
-        "dirsWith": ["*.xcodeproj", "*.xcworkspace"]
-      }
+      "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"]
     },
     {
       "name": "jutsu-java",
@@ -513,21 +423,14 @@
       "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
       "source": "./jutsu/jutsu-jest",
       "category": "Technique",
-      "keywords": ["jest", "testing", "javascript", "typescript", "skill"],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"jest\":' package.json"]
-      }
+      "keywords": ["jest", "testing", "javascript", "typescript", "skill"]
     },
     {
       "name": "jutsu-junit",
       "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
       "source": "./jutsu/jutsu-junit",
       "category": "Technique",
-      "keywords": ["junit", "testing", "java", "skill"],
-      "detection": {
-        "dirsWith": ["pom.xml"]
-      }
+      "keywords": ["junit", "testing", "java", "skill"]
     },
     {
       "name": "jutsu-testng",
@@ -541,30 +444,21 @@
         "data-providers",
         "parallel",
         "skill"
-      ],
-      "detection": {
-        "dirsWith": ["pom.xml"]
-      }
+      ]
     },
     {
       "name": "jutsu-kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./jutsu/jutsu-kotlin",
       "category": "Technique",
-      "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"],
-      "detection": {
-        "dirsWith": ["build.gradle.kts"]
-      }
+      "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"]
     },
     {
       "name": "jutsu-lerna",
       "description": "Lerna monorepo management skills with bootstrap validation hooks.",
       "source": "./jutsu/jutsu-lerna",
       "category": "Technique",
-      "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"],
-      "detection": {
-        "dirsWith": ["lerna.json"]
-      }
+      "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"]
     },
     {
       "name": "jutsu-kubernetes",
@@ -578,10 +472,7 @@
       "description": "Kustomize configuration validation for Kubernetes customization",
       "source": "./jutsu/jutsu-kustomize",
       "category": "Technique",
-      "keywords": ["kustomize", "kubernetes", "k8s", "devops"],
-      "detection": {
-        "dirsWith": ["kustomization.yaml"]
-      }
+      "keywords": ["kustomize", "kubernetes", "k8s", "devops"]
     },
     {
       "name": "jutsu-lua",
@@ -601,10 +492,7 @@
         "documentation",
         "linting",
         "formatting"
-      ],
-      "detection": {
-        "dirsWith": [".markdownlint.*"]
-      }
+      ]
     },
     {
       "name": "jutsu-maven",
@@ -618,21 +506,14 @@
         "dependency-management",
         "pom",
         "validation"
-      ],
-      "detection": {
-        "dirsWith": ["pom.xml"]
-      }
+      ]
     },
     {
       "name": "jutsu-mocha",
       "description": "Comprehensive Mocha testing framework skills for JavaScript and Node.js projects with flexible assertion libraries.",
       "source": "./jutsu/jutsu-mocha",
       "category": "Technique",
-      "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"mocha\":' package.json"]
-      }
+      "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"]
     },
     {
       "name": "jutsu-monorepo",
@@ -660,20 +541,14 @@
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
       "source": "./jutsu/jutsu-nim",
       "category": "Technique",
-      "keywords": ["nim", "systems-programming", "metaprogramming", "skill"],
-      "detection": {
-        "dirsWith": ["*.nimble"]
-      }
+      "keywords": ["nim", "systems-programming", "metaprogramming", "skill"]
     },
     {
       "name": "jutsu-npm",
       "description": "NPM package manager skills with dependency validation hooks.",
       "source": "./jutsu/jutsu-npm",
       "category": "Technique",
-      "keywords": ["npm", "package-manager", "dependencies", "node"],
-      "detection": {
-        "dirsWith": ["package-lock.json"]
-      }
+      "keywords": ["npm", "package-manager", "dependencies", "node"]
     },
     {
       "name": "jutsu-objective-c",
@@ -721,43 +596,28 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"prettier\":' package.json"]
-      }
+      ]
     },
     {
       "name": "jutsu-pulumi",
       "description": "Pulumi infrastructure-as-code validation and best practices",
       "source": "./jutsu/jutsu-pulumi",
       "category": "Technique",
-      "keywords": ["pulumi", "infrastructure", "iac", "devops"],
-      "detection": {
-        "dirsWith": ["Pulumi.yaml"]
-      }
+      "keywords": ["pulumi", "infrastructure", "iac", "devops"]
     },
     {
       "name": "jutsu-pylint",
       "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
       "source": "./jutsu/jutsu-pylint",
       "category": "Technique",
-      "keywords": ["pylint", "linting", "python", "skill"],
-      "detection": {
-        "dirsWith": ["pyproject.toml"],
-        "dirTest": ["grep -qE '^pylint[^a-zA-Z]|\"pylint\"' pyproject.toml"]
-      }
+      "keywords": ["pylint", "linting", "python", "skill"]
     },
     {
       "name": "jutsu-pytest",
       "description": "Comprehensive Pytest testing framework skills for Python projects with fixtures, plugins, and advanced testing patterns.",
       "source": "./jutsu/jutsu-pytest",
       "category": "Technique",
-      "keywords": ["pytest", "testing", "python", "skill"],
-      "detection": {
-        "dirsWith": ["pyproject.toml"],
-        "dirTest": ["grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"]
-      }
+      "keywords": ["pytest", "testing", "python", "skill"]
     },
     {
       "name": "jutsu-python",
@@ -813,32 +673,21 @@
       "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
       "source": "./jutsu/jutsu-rspec",
       "category": "Technique",
-      "keywords": ["rspec", "testing", "ruby", "bdd", "skill"],
-      "detection": {
-        "dirsWith": ["Gemfile"],
-        "dirTest": ["grep -qE '^\\s*gem.*rspec' Gemfile"]
-      }
+      "keywords": ["rspec", "testing", "ruby", "bdd", "skill"]
     },
     {
       "name": "jutsu-ruby",
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
       "source": "./jutsu/jutsu-ruby",
       "category": "Technique",
-      "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"],
-      "detection": {
-        "dirsWith": ["Gemfile"]
-      }
+      "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"]
     },
     {
       "name": "jutsu-rubocop",
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
       "source": "./jutsu/jutsu-rubocop",
       "category": "Technique",
-      "keywords": ["rubocop", "linting", "ruby", "skill"],
-      "detection": {
-        "dirsWith": ["Gemfile"],
-        "dirTest": ["grep -qE '^\\s*gem.*rubocop' Gemfile"]
-      }
+      "keywords": ["rubocop", "linting", "ruby", "skill"]
     },
     {
       "name": "jutsu-runbooks",
@@ -854,30 +703,21 @@
         "maintenance",
         "on-call",
         "operational-procedures"
-      ],
-      "detection": {
-        "dirsWith": ["runbooks"]
-      }
+      ]
     },
     {
       "name": "jutsu-rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
       "source": "./jutsu/jutsu-rust",
       "category": "Technique",
-      "keywords": ["rust", "ownership", "async", "skill"],
-      "detection": {
-        "dirsWith": ["Cargo.toml"]
-      }
+      "keywords": ["rust", "ownership", "async", "skill"]
     },
     {
       "name": "jutsu-scala",
       "description": "Advanced Scala programming skills for functional programming and type systems",
       "source": "./jutsu/jutsu-scala",
       "category": "Technique",
-      "keywords": ["scala", "functional", "jvm", "type-system", "skill"],
-      "detection": {
-        "dirsWith": ["build.sbt"]
-      }
+      "keywords": ["scala", "functional", "jvm", "type-system", "skill"]
     },
     {
       "name": "jutsu-shellcheck",
@@ -898,17 +738,7 @@
       "description": "Validation and quality enforcement for shell scripts using shfmt formatter with configuration, formatting patterns, and best practices.",
       "source": "./jutsu/jutsu-shfmt",
       "category": "Technique",
-      "keywords": [
-        "bash",
-        "shell",
-        "shfmt",
-        "formatter",
-        "validation",
-        "posix"
-      ],
-      "detection": {
-        "dirsWith": ["*.sh", ".shfmt.toml", "shfmt.toml"]
-      }
+      "keywords": ["bash", "shell", "shfmt", "formatter", "validation", "posix"]
     },
     {
       "name": "jutsu-sip",
@@ -931,20 +761,14 @@
         "enforcement",
         "stories",
         "documentation"
-      ],
-      "detection": {
-        "dirsWith": [".storybook"]
-      }
+      ]
     },
     {
       "name": "jutsu-swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
       "source": "./jutsu/jutsu-swift",
       "category": "Technique",
-      "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"],
-      "detection": {
-        "dirsWith": ["Package.swift"]
-      }
+      "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"]
     },
     {
       "name": "jutsu-tailwind",
@@ -959,15 +783,7 @@
         "styling",
         "validation",
         "quality"
-      ],
-      "detection": {
-        "dirsWith": [
-          "tailwind.config.cjs",
-          "tailwind.config.js",
-          "tailwind.config.mjs",
-          "tailwind.config.ts"
-        ]
-      }
+      ]
     },
     {
       "name": "jutsu-tensorflow",
@@ -986,10 +802,7 @@
       "description": "Terraform configuration validation and infrastructure-as-code best practices",
       "source": "./jutsu/jutsu-terraform",
       "category": "Technique",
-      "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"],
-      "detection": {
-        "dirsWith": ["*.tf"]
-      }
+      "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"]
     },
     {
       "name": "jutsu-tdd",
@@ -1009,10 +822,7 @@
       "description": "Skills for TypeScript type system mastery.",
       "source": "./jutsu/jutsu-typescript",
       "category": "Technique",
-      "keywords": ["typescript", "types", "language"],
-      "detection": {
-        "dirsWith": ["tsconfig.json"]
-      }
+      "keywords": ["typescript", "types", "language"]
     },
     {
       "name": "jutsu-vitest",
@@ -1026,11 +836,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "detection": {
-        "dirsWith": ["package.json"],
-        "dirTest": ["grep -qE '\"vitest\":' package.json"]
-      }
+      ]
     },
     {
       "name": "jutsu-vue",
@@ -1058,10 +864,7 @@
       "description": "Yarn package manager skills with dependency validation hooks.",
       "source": "./jutsu/jutsu-yarn",
       "category": "Technique",
-      "keywords": ["yarn", "package-manager", "dependencies", "node"],
-      "detection": {
-        "dirsWith": ["yarn.lock"]
-      }
+      "keywords": ["yarn", "package-manager", "dependencies", "node"]
     },
     {
       "name": "jutsu-git-storytelling",
@@ -1088,10 +891,7 @@
         "pipelines",
         "devops",
         "validation"
-      ],
-      "detection": {
-        "dirsWith": [".gitlab-ci.yml"]
-      }
+      ]
     },
     {
       "name": "jutsu-sentry",
@@ -1104,10 +904,7 @@
         "observability",
         "performance",
         "tracing"
-      ],
-      "detection": {
-        "dirsWith": [".sentryclirc", "sentry.properties"]
-      }
+      ]
     },
     {
       "name": "jutsu-scratch",
@@ -1331,10 +1128,7 @@
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
       "source": "./do/do-claude-plugin-development",
       "category": "Discipline",
-      "keywords": ["plugin", "development", "claude-code", "quality", "agent"],
-      "detection": {
-        "dirTest": ["test -f .claude-plugin/marketplace.json"]
-      }
+      "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
     {
       "name": "do-compiler-development",

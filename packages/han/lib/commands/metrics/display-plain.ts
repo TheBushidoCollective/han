@@ -400,6 +400,67 @@ function renderCalibrationInsights(result: MetricsResult): void {
 }
 
 /**
+ * Render all hook statistics (summary)
+ */
+function renderAllHookStats(allHookStats: {
+	totalExecutions: number;
+	totalPassed: number;
+	totalFailed: number;
+	passRate: number;
+	uniqueHooks: number;
+	byHookType: Record<string, { total: number; passed: number }>;
+}): void {
+	if (allHookStats.totalExecutions === 0) {
+		return;
+	}
+
+	console.log(
+		`${colors.bold}${colors.cyan}🔧 Hook Execution Summary${colors.reset}`,
+	);
+	console.log();
+
+	const stats = [
+		["Total Executions:", allHookStats.totalExecutions.toString()],
+		["Passed:", `${colors.green}${allHookStats.totalPassed}${colors.reset}`],
+		[
+			"Failed:",
+			allHookStats.totalFailed > 0
+				? `${colors.red}${allHookStats.totalFailed}${colors.reset}`
+				: `${colors.green}0${colors.reset}`,
+		],
+		[
+			"Pass Rate:",
+			`${colors.bold}${allHookStats.passRate > 0.9 ? colors.green : allHookStats.passRate > 0.7 ? colors.yellow : colors.red}${formatPercent(allHookStats.passRate)}${colors.reset}`,
+		],
+		["Unique Hooks:", allHookStats.uniqueHooks.toString()],
+	];
+
+	for (const [label, value] of stats) {
+		console.log(`  ${colors.dim}${label.padEnd(25)}${colors.reset}${value}`);
+	}
+	console.log();
+
+	// By hook type
+	const hookTypes = Object.entries(allHookStats.byHookType);
+	if (hookTypes.length > 0) {
+		console.log(`${colors.bold}By Hook Type:${colors.reset}`);
+		for (const [hookType, data] of hookTypes) {
+			const passRate = data.total > 0 ? data.passed / data.total : 0;
+			const passColor =
+				passRate > 0.9
+					? colors.green
+					: passRate > 0.7
+						? colors.yellow
+						: colors.red;
+			console.log(
+				`  ${colors.dim}${hookType.padEnd(20)}${colors.reset}${data.total} runs, ${passColor}${formatPercent(passRate)}${colors.reset} pass`,
+			);
+		}
+		console.log();
+	}
+}
+
+/**
  * Render hook failure statistics
  */
 function renderHookFailureStats(
@@ -416,7 +477,7 @@ function renderHookFailureStats(
 	}
 
 	console.log(
-		`${colors.bold}${colors.cyan}🔧 Hook Failure Analysis${colors.reset}`,
+		`${colors.bold}${colors.cyan}⚠️  Hook Failure Analysis${colors.reset}`,
 	);
 	console.log();
 
@@ -592,6 +653,14 @@ export function renderPlainText(
 		failures: number;
 		failureRate: number;
 	}>,
+	allHookStats: {
+		totalExecutions: number;
+		totalPassed: number;
+		totalFailed: number;
+		passRate: number;
+		uniqueHooks: number;
+		byHookType: Record<string, { total: number; passed: number }>;
+	},
 	sessionMetrics: {
 		sessions: Array<{
 			session_id: string;
@@ -611,7 +680,10 @@ export function renderPlainText(
 	},
 	showCalibration: boolean,
 ): void {
-	const hasData = result.total_tasks > 0;
+	const hasTaskData = result.total_tasks > 0;
+	const hasHookData = allHookStats.totalExecutions > 0;
+	const hasSessionData = sessionMetrics.sessions.length > 0;
+	const hasAnyData = hasTaskData || hasHookData || hasSessionData;
 
 	// Header
 	console.log();
@@ -619,15 +691,15 @@ export function renderPlainText(
 		`${colors.bold}${colors.cyan}═══════════════════════════════════════════════════════════════════${colors.reset}`,
 	);
 	console.log(
-		`${colors.bold}${colors.cyan}🤖 Agent Task Metrics Dashboard${colors.reset}`,
+		`${colors.bold}${colors.cyan}🤖 Agent Metrics Dashboard${colors.reset}`,
 	);
 	console.log(
 		`${colors.bold}${colors.cyan}═══════════════════════════════════════════════════════════════════${colors.reset}`,
 	);
 	console.log();
 
-	// No data message
-	if (!hasData) {
+	// No data message - only show when there's truly no data
+	if (!hasAnyData) {
 		console.log(
 			`${colors.bold}${colors.yellow}⚠️  No metrics tracked yet${colors.reset}`,
 		);
@@ -636,46 +708,67 @@ export function renderPlainText(
 			`  ${colors.dim}Metrics are tracked automatically via MCP tools in the core plugin.${colors.reset}`,
 		);
 		console.log(
-			`  ${colors.dim}Task data will appear here once you start tracking work with start_task().${colors.reset}`,
+			`  ${colors.dim}Hook executions and task data will appear here after your first session.${colors.reset}`,
 		);
 		console.log();
 		return;
 	}
 
-	// Summary Stats
-	renderSummaryStats(result);
+	// Hook Execution Summary (always show if there's hook data)
+	if (hasHookData) {
+		renderAllHookStats(allHookStats);
+	}
 
 	// Session Performance & Trends
-	renderSessionMetrics(sessionMetrics);
+	if (hasSessionData) {
+		renderSessionMetrics(sessionMetrics);
+	}
 
-	// Hook Failure Analysis
+	// Hook Failure Analysis (high failure rate hooks)
 	renderHookFailureStats(hookStats);
 
-	// Charts
-	if (Object.keys(result.by_type).length > 0) {
-		renderTaskTypeChart(result);
-	}
-	if (Object.keys(result.by_outcome).length > 0) {
-		renderTaskOutcomeChart(result);
-	}
+	// Task-specific sections only if we have task data
+	if (hasTaskData) {
+		// Summary Stats
+		renderSummaryStats(result);
 
-	// Recent Tasks Table
-	renderRecentTasksTable(result);
+		// Charts
+		if (Object.keys(result.by_type).length > 0) {
+			renderTaskTypeChart(result);
+		}
+		if (Object.keys(result.by_outcome).length > 0) {
+			renderTaskOutcomeChart(result);
+		}
 
-	// Frustration Insights
-	if (result.total_frustrations > 0) {
-		renderFrustrationInsights(result);
-	}
+		// Recent Tasks Table
+		renderRecentTasksTable(result);
 
-	// Calibration Insights (optional)
-	if (showCalibration) {
-		renderCalibrationInsights(result);
-	}
+		// Frustration Insights
+		if (result.total_frustrations > 0) {
+			renderFrustrationInsights(result);
+		}
 
-	// Footer
-	if (!showCalibration) {
+		// Calibration Insights (optional)
+		if (showCalibration) {
+			renderCalibrationInsights(result);
+		}
+
+		// Footer
+		if (!showCalibration) {
+			console.log(
+				`${colors.dim}Tip: Use ${colors.bold}han metrics show --calibration${colors.reset}${colors.dim} to see detailed calibration analysis${colors.reset}`,
+			);
+			console.log();
+		}
+	} else {
+		// Show message about task tracking when we have hooks/sessions but no tasks
+		console.log(`${colors.bold}${colors.cyan}📋 Task Tracking${colors.reset}`);
+		console.log();
 		console.log(
-			`${colors.dim}Tip: Use ${colors.bold}han metrics show --calibration${colors.reset}${colors.dim} to see detailed calibration analysis${colors.reset}`,
+			`  ${colors.dim}No tasks tracked yet. Use${colors.reset} ${colors.bold}start_task()${colors.reset} ${colors.dim}MCP tool to track work.${colors.reset}`,
+		);
+		console.log(
+			`  ${colors.dim}Task metrics will show success rates, calibration, and more.${colors.reset}`,
 		);
 		console.log();
 	}

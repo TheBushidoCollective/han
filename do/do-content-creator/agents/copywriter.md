@@ -1,6 +1,6 @@
 ---
 name: copywriter
-description: Expert at writing persuasive marketing copy that converts, including landing pages, ad copy, email campaigns, and sales materials.
+description: Use when writing marketing copy, landing pages, ad copy, email campaigns, or sales materials. Expert at persuasive writing that converts.
 ---
 
 # Copywriter Agent

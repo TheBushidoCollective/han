@@ -103,27 +103,54 @@ describe("display-plain.ts", () => {
 		},
 	};
 
+	const emptyAllHookStats = {
+		totalExecutions: 0,
+		totalPassed: 0,
+		totalFailed: 0,
+		passRate: 0,
+		uniqueHooks: 0,
+		byHookType: {},
+	};
+
 	describe("renderPlainText - No Data", () => {
 		test("shows no data message when empty", () => {
-			renderPlainText(emptyResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				emptyResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("No metrics tracked yet");
 			expect(allLogs).toContain("MCP tools in the core plugin");
-			expect(allLogs).toContain("start_task()");
+			expect(allLogs).toContain("Hook executions and task data");
 		});
 
 		test("shows header", () => {
-			renderPlainText(emptyResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				emptyResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
-			expect(allLogs).toContain("Agent Task Metrics Dashboard");
+			expect(allLogs).toContain("Agent Metrics Dashboard");
 		});
 	});
 
 	describe("renderPlainText - With Data", () => {
 		test("renders summary statistics", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Summary Statistics");
@@ -136,7 +163,13 @@ describe("display-plain.ts", () => {
 		});
 
 		test("renders tasks by type chart", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Tasks by Type");
@@ -145,7 +178,13 @@ describe("display-plain.ts", () => {
 		});
 
 		test("renders tasks by outcome chart", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Tasks by Outcome");
@@ -153,7 +192,13 @@ describe("display-plain.ts", () => {
 		});
 
 		test("renders recent tasks table", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Recent Tasks");
@@ -162,7 +207,13 @@ describe("display-plain.ts", () => {
 		});
 
 		test("renders frustration insights when present", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("User Frustration Analysis");
@@ -170,14 +221,26 @@ describe("display-plain.ts", () => {
 		});
 
 		test("hides calibration by default", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("han metrics show --calibration");
 		});
 
 		test("shows calibration when enabled", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, true);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				true,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Calibration Analysis");
@@ -190,14 +253,26 @@ describe("display-plain.ts", () => {
 				...sampleResult,
 				average_duration_seconds: 45,
 			};
-			renderPlainText(shortResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				shortResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("45s");
 		});
 
 		test("formats minutes correctly", () => {
-			renderPlainText(sampleResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("3m");
@@ -208,7 +283,13 @@ describe("display-plain.ts", () => {
 				...sampleResult,
 				average_duration_seconds: 7200,
 			};
-			renderPlainText(longResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				longResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("2h");
@@ -227,7 +308,13 @@ describe("display-plain.ts", () => {
 				},
 			];
 
-			renderPlainText(sampleResult, hookStats, emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				hookStats,
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Hook Failure Analysis");
@@ -246,7 +333,13 @@ describe("display-plain.ts", () => {
 				},
 			];
 
-			renderPlainText(sampleResult, hookStats, emptySessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				hookStats,
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Critical");
@@ -276,7 +369,13 @@ describe("display-plain.ts", () => {
 				},
 			};
 
-			renderPlainText(sampleResult, [], sessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				sessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Session Performance");
@@ -305,7 +404,13 @@ describe("display-plain.ts", () => {
 				},
 			};
 
-			renderPlainText(sampleResult, [], sessionMetrics, false);
+			renderPlainText(
+				sampleResult,
+				[],
+				emptyAllHookStats,
+				sessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("improving");
@@ -333,7 +438,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(overconfidentResult, [], emptySessionMetrics, true);
+			renderPlainText(
+				overconfidentResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				true,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Overconfident Tasks");
@@ -358,7 +469,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(underconfidentResult, [], emptySessionMetrics, true);
+			renderPlainText(
+				underconfidentResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				true,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Underconfident Tasks");
@@ -383,7 +500,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(wellCalibratedResult, [], emptySessionMetrics, true);
+			renderPlainText(
+				wellCalibratedResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				true,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Well-calibrated");
@@ -399,7 +522,13 @@ describe("display-plain.ts", () => {
 				frustration_events: [],
 			};
 
-			renderPlainText(noFrustrationResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				noFrustrationResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).not.toContain("User Frustration Analysis");
@@ -424,7 +553,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(highFrustrationResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				highFrustrationResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Recommendations");
@@ -469,7 +604,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(mixedFrustrationResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				mixedFrustrationResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("Frustration by Level");
@@ -486,7 +627,13 @@ describe("display-plain.ts", () => {
 				by_type: {},
 			};
 
-			renderPlainText(emptyTypeResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				emptyTypeResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			// Should not crash
 			const allLogs = logs.join("\n");
@@ -499,7 +646,13 @@ describe("display-plain.ts", () => {
 				tasks: [],
 			};
 
-			renderPlainText(noTasksResult, [], emptySessionMetrics, false);
+			renderPlainText(
+				noTasksResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				false,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("No tasks found");
@@ -524,7 +677,13 @@ describe("display-plain.ts", () => {
 				],
 			};
 
-			renderPlainText(noConfidenceResult, [], emptySessionMetrics, true);
+			renderPlainText(
+				noConfidenceResult,
+				[],
+				emptyAllHookStats,
+				emptySessionMetrics,
+				true,
+			);
 
 			const allLogs = logs.join("\n");
 			expect(allLogs).toContain("No tasks with confidence data");
