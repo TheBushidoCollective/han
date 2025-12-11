@@ -89,16 +89,14 @@ Brief description of what this project does.
 
 ## Development Commands
 
-```bash
-# Build
-npm run build
+    # Build
+    npm run build
 
-# Test
-npm test
+    # Test
+    npm test
 
-# Lint
-npm run lint
-```
+    # Lint
+    npm run lint
 
 ## Architecture
 
@@ -116,13 +114,14 @@ npm run lint
 
 - `src/index.ts` - Main entry point
 - `src/config.ts` - Configuration handling
+
 ```
 
 ### 2. Add Modular Rules (Optional)
 
 Create path-specific rules in `.claude/rules/`:
 
-```
+```text
 .claude/
   rules/
     api.md          # Rules for API code
@@ -170,16 +169,14 @@ Imported files are treated as direct context.
 
 ## Quick Start
 
-```bash
-# Install dependencies
-[command]
+    # Install dependencies
+    [command]
 
-# Run development server
-[command]
+    # Run development server
+    [command]
 
-# Run tests
-[command]
-```
+    # Run tests
+    [command]
 
 ## Architecture
 
@@ -223,15 +220,14 @@ Imported files are treated as direct context.
 
 ### Running Tests
 
-```bash
-[test command]
-```
+    [test command]
 
 ## Important Notes
 
 - [Critical constraint or requirement]
 - [Security consideration]
 - [Performance consideration]
+
 ```
 
 ## Path-Specific Rules Examples
@@ -258,13 +254,12 @@ globs: ["src/api/**/*.ts"]
 
 ## Response Format
 
-```typescript
-// Success
-{ data: T, meta?: { page, total } }
+    // Success
+    { data: T, meta?: { page, total } }
 
-// Error
-{ error: string, code: string, details?: object }
-```
+    // Error
+    { error: string, code: string, details?: object }
+
 ```
 
 ### For Test Files
@@ -371,10 +366,8 @@ Build the project before deploying.
 **Good:**
 
 ```markdown
-```bash
-npm run build
-npm run deploy
-```
+    npm run build
+    npm run deploy
 ```
 
 ### Use Imports for Long Content
@@ -416,14 +409,14 @@ When writing components, always use TypeScript.
 
 ## When to Update Project Memory
 
-### Add New Instructions When:
+### Add New Instructions
 
 - Onboarding reveals missing context
 - Repeated questions indicate gaps
 - New conventions are established
 - Architecture changes significantly
 
-### Review Existing Instructions When:
+### Review Existing Instructions
 
 - Code changes make instructions outdated
 - Team feedback indicates confusion
@@ -444,13 +437,11 @@ When writing components, always use TypeScript.
 
 ## Commands
 
-```bash
-# Build all packages
-npm run build
+    # Build all packages
+    npm run build
 
-# Test specific package
-npm run test --workspace=packages/core
-```
+    # Test specific package
+    npm run test --workspace=packages/core
 
 ## Rules
 
