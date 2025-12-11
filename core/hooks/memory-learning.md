@@ -34,10 +34,8 @@ When you discover a test command:
 ```markdown
 ## Commands
 
-```bash
-# Run tests (use --only-failures for faster iteration)
-bun test --only-failures
-```
+    # Run tests (use --only-failures for faster iteration)
+    bun test --only-failures
 ```
 
 When you discover a convention:
