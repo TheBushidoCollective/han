@@ -10,6 +10,7 @@ import {
 	readSettingsFile,
 } from "../../claude-settings.ts";
 import { getPluginNameFromRoot } from "../../shared.ts";
+import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
 
 /**
  * Read raw stdin content from Claude Code hooks (for piping to child hooks)
@@ -224,7 +225,10 @@ function executeCommandHook(
 
 		const duration = Date.now() - startTime;
 
-		// Report successful hook execution
+		// Report to OTEL telemetry
+		recordOtelHookExecution(hookName, true, duration, hookType);
+
+		// Report successful hook execution to internal metrics
 		reportHookExecution({
 			hookType,
 			hookName,
@@ -242,7 +246,10 @@ function executeCommandHook(
 		const exitCode = (error as { status?: number })?.status || 1;
 		const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
 
-		// Report failed hook execution
+		// Report to OTEL telemetry
+		recordOtelHookExecution(hookName, false, duration, hookType);
+
+		// Report failed hook execution to internal metrics
 		reportHookExecution({
 			hookType,
 			hookName,
