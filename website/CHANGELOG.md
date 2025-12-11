@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.3] - 2025-12-11
+
+### Added
+
+- add OpenTelemetry integration for enterprise observability ([aa2afab9](../../commit/aa2afab9))
+
+### Fixed
+
+- use atomic replacement to prevent corruption ([87590e30](../../commit/87590e30))
+
 ## [1.22.3] - 2025-12-10
 
 ### Fixed
