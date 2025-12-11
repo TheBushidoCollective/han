@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Essential infrastructure for the Han plugin marketplace. Includes delegation protocols, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 + DeepWiki documentation, project memory learning, and universal programming principles.",
   "author": {
     "name": "The Bushido Collective",
