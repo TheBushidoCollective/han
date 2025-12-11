@@ -9,11 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "content",
-    "writing",
-    "marketing",
-    "storytelling",
-    "engagement"
-  ]
+  "keywords": ["content", "writing", "marketing", "storytelling", "engagement"]
 }

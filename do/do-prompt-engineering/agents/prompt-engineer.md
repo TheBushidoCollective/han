@@ -1,7 +1,7 @@
 ---
 name: prompt-engineer
 description: |
-  Master the art of effective AI collaboration through prompt engineering, Claude Code management, and agent coordination. Expert in crafting clear instructions, managing context, and maximizing AI collaboration value.
+  Use PROACTIVELY when crafting prompts, managing AI workflows, coordinating agents, or optimizing Claude Code interactions. Expert in crafting clear instructions, managing context, and maximizing AI collaboration value.
 model: inherit
 color: purple
 ---
