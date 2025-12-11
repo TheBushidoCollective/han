@@ -1,7 +1,7 @@
 ---
 name: presentation-engineer
 description: |
-  Master the art of user interface presentation, visual design, and user experience. Expert in visual design principles, interaction patterns, layout composition, and user experience optimization.
+  Use PROACTIVELY when designing UI layouts, building responsive interfaces, implementing design systems, or improving visual user experience. Expert in visual design principles, interaction patterns, layout composition, and user experience optimization.
 model: inherit
 color: purple
 ---
