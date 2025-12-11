@@ -26,11 +26,16 @@
   "mcpServers": {
     "han": {
       "command": "han",
-      "args": ["mcp"]
+      "args": [
+        "mcp"
+      ]
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     },
     "deepwiki": {
       "type": "http",
