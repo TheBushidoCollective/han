@@ -7,9 +7,147 @@
  */
 
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { MarketplacePlugin } from "./shared.ts";
+
+/**
+ * HanConfig structure for reading han-config.json files
+ */
+interface HanConfigHook {
+	dirsWith?: string[];
+	dirTest?: string;
+}
+
+interface HanConfig {
+	hooks?: Record<string, HanConfigHook>;
+}
+
+/**
+ * Get the path to Claude's cached plugins directory
+ * Plugins are cached at ~/.claude/plugins/marketplaces/han/
+ */
+function getCachedPluginsDir(): string {
+	const configDir =
+		process.env.CLAUDE_CONFIG_DIR ||
+		join(process.env.HOME || process.env.USERPROFILE || "", ".claude");
+	return join(configDir, "plugins", "marketplaces", "han");
+}
+
+/**
+ * Recursively find all han-config.json files in a directory
+ * Returns a map of plugin name -> han-config.json path
+ */
+function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
+	const configMap = new Map<string, string>();
+
+	function scan(dir: string, depth: number): void {
+		if (depth > maxDepth) return;
+
+		try {
+			const entries = readdirSync(dir, { withFileTypes: true });
+
+			for (const entry of entries) {
+				const fullPath = join(dir, entry.name);
+
+				if (entry.isFile() && entry.name === "han-config.json") {
+					// Found a han-config.json - get plugin name from plugin.json
+					const pluginJsonPath = join(dir, ".claude-plugin", "plugin.json");
+					if (existsSync(pluginJsonPath)) {
+						try {
+							const pluginJson = JSON.parse(
+								readFileSync(pluginJsonPath, "utf-8"),
+							);
+							if (pluginJson.name) {
+								configMap.set(pluginJson.name, fullPath);
+							}
+						} catch {
+							// Skip if plugin.json is invalid
+						}
+					}
+				} else if (entry.isDirectory() && !entry.name.startsWith(".")) {
+					scan(fullPath, depth + 1);
+				}
+			}
+		} catch {
+			// Ignore permission errors
+		}
+	}
+
+	scan(rootDir, 0);
+	return configMap;
+}
+
+/**
+ * Extract detection patterns from a han-config.json file
+ */
+function extractDetectionPatterns(
+	configPath: string,
+): { dirsWith: string[]; dirTest: string[] } | null {
+	try {
+		const content = readFileSync(configPath, "utf-8");
+		const config = JSON.parse(content) as HanConfig;
+
+		if (!config.hooks) {
+			return null;
+		}
+
+		// Collect unique dirsWith patterns from all hooks
+		const dirsWithSet = new Set<string>();
+		const dirTestSet = new Set<string>();
+
+		for (const hook of Object.values(config.hooks)) {
+			if (hook.dirsWith) {
+				for (const pattern of hook.dirsWith) {
+					dirsWithSet.add(pattern);
+				}
+			}
+			if (hook.dirTest) {
+				dirTestSet.add(hook.dirTest);
+			}
+		}
+
+		if (dirsWithSet.size === 0 && dirTestSet.size === 0) {
+			return null;
+		}
+
+		return {
+			dirsWith: Array.from(dirsWithSet),
+			dirTest: Array.from(dirTestSet),
+		};
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Load detection criteria from cached plugins' han-config.json files
+ * Scans for all han-config.json files and builds a map by plugin name
+ * Returns plugins enriched with detection data
+ */
+export function loadPluginDetection(
+	plugins: MarketplacePlugin[],
+): PluginWithDetection[] {
+	const cachedDir = getCachedPluginsDir();
+
+	if (!existsSync(cachedDir)) {
+		return plugins.map((p) => ({ ...p }));
+	}
+
+	// Find all han-config.json files and map them by plugin name
+	const configMap = findAllHanConfigs(cachedDir);
+
+	return plugins.map((plugin) => {
+		const configPath = configMap.get(plugin.name);
+		if (configPath) {
+			const detection = extractDetectionPatterns(configPath);
+			if (detection) {
+				return { ...plugin, detection };
+			}
+		}
+		return { ...plugin };
+	});
+}
 
 /**
  * Extended marketplace plugin with detection criteria
