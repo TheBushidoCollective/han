@@ -23,9 +23,15 @@ Project Memory is four interconnected pieces:
 
 When these elements work together, Claude starts building institutional knowledge about your project. The first session, it learns your test command. The second session, it already knows it.
 
+## Building on Claude Code's Native Memory
+
+Han's Project Memory feature builds on [Claude Code's native memory system](https://code.claude.com/docs/en/memory), introduced by Anthropic to give Claude persistent context across sessions. The native system provides hierarchical markdown files (`CLAUDE.md`, `.claude/rules/`, `CLAUDE.local.md`) that Claude reads at startup.
+
+What Han adds is **active learning**—MCP tools that let Claude capture insights *during* your session without you manually editing files. Instead of copying commands to CLAUDE.md yourself, Claude can call `learn()` and write properly formatted rules directly.
+
 ## The Memory Hierarchy
 
-Claude Code reads project instructions from several places, in order of precedence:
+Claude Code reads project instructions from several places, in order of precedence (see the [official documentation](https://code.claude.com/docs/en/memory)):
 
 1. **Enterprise policy** (if applicable, managed by your organization)
 2. **User memory** (`~/.claude/CLAUDE.md` - your personal defaults)
