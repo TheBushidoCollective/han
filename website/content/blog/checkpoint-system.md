@@ -11,7 +11,7 @@ Early Han was aggressive. Maybe too aggressive.
 
 When you installed a jutsu plugin with validation hooks, Han went scorched earth. It found every lint error, every type issue, every test failure across your entire codebase. On the first session. Before you'd written a single line of code.
 
-For maintainers of pristine codebases, this was fine. For everyone else—which is most of us—it was overwhelming. You'd install a plugin hoping for helpful validation, and immediately face hundreds of issues you didn't create and weren't ready to fix.
+For maintainers of pristine codebases, this was fine. For everyone else - which is most of us - it was overwhelming. You'd install a plugin hoping for helpful validation, and immediately face hundreds of issues you didn't create and weren't ready to fix.
 
 New adopters bounced. They disabled hooks or uninstalled plugins. The validation that was supposed to help became an obstacle.
 
@@ -19,11 +19,11 @@ New adopters bounced. They disabled hooks or uninstalled plugins. The validation
 
 The Boy Scout Rule says: leave the campground cleaner than you found it. Not pristine. Not spotless. Just *better*.
 
-Han's new checkpoint system applies this principle to validation. Instead of identifying every problem in your codebase, hooks now focus on **the code you actually touched**. Work in a directory? Improve that directory. Leave the rest for when you get there.
+Han's new checkpoint system applies this principle to validation. Instead of identifying every problem in your codebase, hooks now focus on **the code you actually touched**. Work in a directory? Improve that directory. Leave the rest for later.
 
 ## How Checkpoints Work
 
-When a Claude Code session starts, Han captures a checkpoint—a snapshot of file states at that moment. When hooks run at session end, they filter using this checkpoint.
+When a Claude Code session starts, Han captures a checkpoint - a snapshot of file states at that moment. When hooks run at session end, they filter using this checkpoint.
 
 **A file is only validated if:**
 - It changed since the checkpoint (you modified it), AND

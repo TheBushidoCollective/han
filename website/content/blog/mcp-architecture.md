@@ -11,11 +11,11 @@ Model Context Protocol (MCP) is the secret sauce that makes Han plugins so power
 
 ## What is MCP?
 
-Model Context Protocol is an open standard for connecting AI assistants to external data sources and tools. Think of it as APIs for AI—a standardized way for Claude to interact with the world beyond its training data.
+Model Context Protocol is an open standard for connecting AI assistants to external data sources and tools. Think of it as APIs for AI - a standardized way for Claude to interact with the world beyond its training data.
 
 ## Han's "Hashi" (Bridge) Plugins
 
-In Han's architecture, plugins starting with `hashi-` are "bridges"—MCP servers that connect Claude to external services:
+In Han's architecture, plugins starting with `hashi-` are "bridges" - MCP servers that connect Claude to external services:
 
 - `hashi-github`: GitHub Issues, PRs, Actions, Code Search
 - `hashi-jira`: Jira tickets, sprints, workflows

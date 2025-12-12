@@ -1,13 +1,13 @@
 ---
 title: "More Than Just Skills or Agents: An Introduction to Han Claude Plugins"
-description: "Discover what makes Han plugins unique—a comprehensive system combining skills, agents, validation hooks, and MCP integrations for Claude Code."
+description: "Discover what makes Han plugins unique - a comprehensive system combining skills, agents, validation hooks, and MCP integrations for Claude Code."
 date: "2024-11-30"
 author: "Jason Waldrip"
 tags: ["han", "plugins", "claude-code", "introduction"]
 category: "Getting Started"
 ---
 
-When you first hear about Han, you might think it's just another collection of prompts or agents for Claude Code. But Han is something more—a complete plugin ecosystem that transforms how you work with AI-assisted development.
+When you first hear about Han, you might think it's just another collection of prompts or agents for Claude Code. But Han is something more - a complete plugin ecosystem that transforms how you work with AI-assisted development.
 
 ## What is a Han Plugin?
 
@@ -50,11 +50,11 @@ The `bushido` plugin adds a philosophical layer based on the seven Samurai virtu
 - 名誉 Honor: Quality ownership
 - 忠義 Loyalty: Long-term thinking
 
-This is purely cultural—you get all the technical capabilities from `core` regardless. Install `bushido` only if this philosophical approach resonates with you.
+This is purely cultural - you get all the technical capabilities from `core` regardless. Install `bushido` only if this philosophical approach resonates with you.
 
 ### Jutsu (術) - Technical Skills
 
-Jutsu plugins are "techniques"—deep knowledge of specific technologies with automatic validation:
+Jutsu plugins are "techniques" - deep knowledge of specific technologies with automatic validation:
 
 - **jutsu-typescript**: TypeScript expertise + type checking hooks
 - **jutsu-playwright**: E2E testing knowledge + test validation
@@ -140,7 +140,7 @@ han plugin install core
 han plugin install bushido
 ```
 
-(Not required—`core` provides all the technical capabilities.)
+(Not required - `core` provides all the technical capabilities.)
 
 **Day 2**: Add your stack's jutsu plugins
 
@@ -175,7 +175,7 @@ I built the Han marketplace website using Han plugins. Here's what that looked l
 - **Validation hooks** ran after every change
 - Result: Production-ready site with 100% type coverage in hours, not days
 
-The difference wasn't just speed—it was confidence. Every change was automatically validated. Every feature was properly typed. Every commit was reviewed.
+The difference wasn't just speed - it was confidence. Every change was automatically validated. Every feature was properly typed. Every commit was reviewed.
 
 ## Not Just Another Tool
 
@@ -188,7 +188,7 @@ Han isn't trying to replace your tools or your judgment. It's a framework that:
 
 Skills teach Claude what to do. Agents handle how to do it. Hooks ensure it's done right. MCP servers connect it all.
 
-That's what makes Han more than just skills or agents—it's a complete development enhancement system.
+That's what makes Han more than just skills or agents - it's a complete development enhancement system.
 
 ## Try It
 
@@ -198,7 +198,7 @@ Start with the core infrastructure:
 han plugin install core
 ```
 
-Then ask Claude to help with something. You'll notice the difference immediately—not just in what Claude can do, but in the confidence you have in the results.
+Then ask Claude to help with something. You'll notice the difference immediately - not just in what Claude can do, but in the confidence you have in the results.
 
 (If you'd like to add the Bushido philosophy, you can install it anytime with `han plugin install bushido`)
 

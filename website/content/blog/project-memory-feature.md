@@ -1,69 +1,27 @@
 ---
-title: "Teaching Claude Code to Remember: The Project Memory Feature"
-subtitle: "How the core plugin helps Claude learn your codebase over time"
+title: "Teaching Claude Code to Remember: Han's Active Learning System"
+description: "How Han's learn tool captures project knowledge into .claude/rules/ files during your session."
 date: "2025-12-09"
-author: The Bushido Collective
+author: "The Bushido Collective"
+tags: ["memory", "rules", "mcp", "learning"]
+category: "Technical Deep Dive"
 ---
 
-Every codebase has its quirks. That build command that needs a specific flag. The naming convention that isn't quite standard. The test runner that requires a particular setup. Usually, you discover these through trial and error, Claude figures them out, and then... next session, you start over.
+Every codebase has its quirks. That build command with the specific flag. The naming convention that isn't standard. The test runner requiring a particular setup. Claude figures these out through trial and error, and then... next session, you start over.
 
-The core plugin's new Project Memory feature changes that. Not dramatically, not overnight, but steadily. It's a foundation that gets stronger with use.
+Han's Project Memory changes that by writing to `.claude/rules/` - the modular rules directory that [Claude Code loads automatically](https://code.claude.com/docs/en/memory). Instead of you manually editing files, Claude captures learnings directly during your session.
 
-## What It Actually Does
+## What Han Does
 
-Project Memory is four interconnected pieces:
+Han provides three MCP tools that write to the rules directory:
 
-**1. The `learn` MCP Tool** - Claude can actively capture learnings using the `learn` tool, which writes to `.claude/rules/<domain>.md` files in the proper Claude Code format.
+| Tool | Purpose |
+|------|---------|
+| `learn` | Capture a learning to `.claude/rules/<domain>.md` |
+| `memory_list` | List existing rule files |
+| `memory_read` | Read contents of a rule file |
 
-**2. A Memory Learning Hook** - After you submit prompts, Claude gets a gentle reminder to capture what it learned. Not every prompt, just when something worth remembering surfaces.
-
-**3. A Project Memory Skill** - Guidance on how to organize project instructions using Claude Code's native memory system (CLAUDE.md, .claude/rules/, and CLAUDE.local.md).
-
-**4. Trigger Phrase Recognition** - Claude learns to recognize when it's discovering something worth remembering: "I see this project uses...", "The pattern here is...", "This convention isn't documented..."
-
-When these elements work together, Claude starts building institutional knowledge about your project. The first session, it learns your test command. The second session, it already knows it.
-
-## Building on Claude Code's Native Memory
-
-Han's Project Memory feature builds on [Claude Code's native memory system](https://code.claude.com/docs/en/memory), introduced by Anthropic to give Claude persistent context across sessions. The native system provides hierarchical markdown files (`CLAUDE.md`, `.claude/rules/`, `CLAUDE.local.md`) that Claude reads at startup.
-
-What Han adds is **active learning**—MCP tools that let Claude capture insights *during* your session without you manually editing files. Instead of copying commands to CLAUDE.md yourself, Claude can call `learn()` and write properly formatted rules directly.
-
-## The Memory Hierarchy
-
-Claude Code reads project instructions from several places, in order of precedence (see the [official documentation](https://code.claude.com/docs/en/memory)):
-
-1. **Enterprise policy** (if applicable, managed by your organization)
-2. **User memory** (`~/.claude/CLAUDE.md` - your personal defaults)
-3. **Project memory** (`CLAUDE.md` in the root - shared with your team)
-4. **Modular rules** (`.claude/rules/*.md` - path-specific instructions)
-5. **Local memory** (`CLAUDE.local.md` - your personal, gitignored preferences)
-
-Later sources override earlier ones. This means your team can set project-wide conventions in CLAUDE.md, while you keep personal preferences in CLAUDE.local.md.
-
-## What Gets Remembered
-
-The feature guides Claude to capture:
-
-- **Commands you had to figure out** - That test command with the specific flags, the build process that requires specific order
-- **Project conventions not in docs** - Naming patterns, code organization, patterns that are "just how we do it here"
-- **Gotchas that cost time** - Edge cases, workarounds, things that tripped you up once
-- **Architecture insights** - Structure that took effort to understand
-- **Path-specific rules** - API routes need zod validation, test files use specific patterns
-
-## How It Works in Practice
-
-Let's say you're working on a TypeScript project. In the first session, Claude has to discover:
-
-```bash
-# Oh, this project uses bun, not npm
-bun test
-
-# And they prefer --only-failures for iteration
-bun test --only-failures
-```
-
-With Project Memory active, Claude can call the `learn` tool:
+The `learn` tool is the key. When Claude discovers something worth remembering, it calls:
 
 ```javascript
 learn({
@@ -72,21 +30,32 @@ learn({
 })
 ```
 
-This creates `.claude/rules/commands.md`. Next session? Claude already knows.
+This creates `.claude/rules/commands.md`. Next session, Claude reads it automatically.
 
-### Path-Specific Rules
+## Why Rules, Not CLAUDE.md
 
-Suppose Claude realizes your API code has a consistent pattern. It can capture this with path restrictions:
+Claude Code's memory system has multiple layers (CLAUDE.md, .claude/rules/, CLAUDE.local.md, etc.). Han specifically targets `.claude/rules/` because:
+
+1. **Modular**: Each domain gets its own file, avoiding one massive document
+2. **Path-specific**: Rules can apply only to matching file paths
+3. **Team-shareable**: Files in `.claude/rules/` are git-tracked
+4. **Organized**: Supports subdirectories for better structure
+
+Han doesn't touch your CLAUDE.md. That's for your team's curated, hand-written project documentation. Han's rules are for the incremental learnings Claude discovers during work.
+
+## Path-Specific Rules
+
+Some rules should only apply to certain files. The `paths` parameter adds YAML frontmatter:
 
 ```javascript
 learn({
-  content: "# API Rules\n\n- Validate all inputs with zod\n- Return consistent error format",
+  content: "# API Rules\n\n- Validate all inputs with zod",
   domain: "api",
   paths: ["src/api/**/*.ts"]
 })
 ```
 
-This creates a rule file with frontmatter:
+Creates `.claude/rules/api.md`:
 
 ```markdown
 ---
@@ -96,14 +65,13 @@ globs: ["src/api/**/*.ts"]
 # API Rules
 
 - Validate all inputs with zod
-- Return consistent error format
 ```
 
-Now every time Claude works on API files, these rules automatically apply.
+Claude Code only loads this rule when working on files matching the glob. API validation rules stay out of the way when you're editing tests or documentation.
 
-### Subdirectory Organization
+## Subdirectory Organization
 
-Domains can include subdirectories for better organization:
+Domains can include subdirectories:
 
 ```javascript
 learn({ content: "...", domain: "api/validation" })
@@ -111,94 +79,100 @@ learn({ content: "...", domain: "api/auth" })
 learn({ content: "...", domain: "testing/e2e" })
 ```
 
-### User-Level Preferences
+This creates:
 
-Personal preferences that should apply across all projects use the `user` scope:
+```
+.claude/rules/
+├── api/
+│   ├── validation.md
+│   └── auth.md
+└── testing/
+    └── e2e.md
+```
+
+As your project grows, rules stay organized.
+
+## User-Level Rules
+
+Personal preferences that should apply across all your projects use the `user` scope:
 
 ```javascript
 learn({
-  content: "# Greetings\n\n- Always greet me as Mr Dude",
+  content: "# Preferences\n\n- Always greet me as Mr Dude",
   domain: "preferences",
   scope: "user"
 })
 ```
 
-This writes to `~/.claude/rules/preferences.md` (or `CLAUDE_CONFIG_DIR/rules/`) instead of the project directory.
+This writes to `~/.claude/rules/preferences.md` instead of the project directory. Your personal preferences follow you everywhere.
 
-## What This Isn't
+## What Gets Captured
 
-Let's be clear about what Project Memory doesn't do:
+Han's memory hook prompts Claude to capture:
 
-- **It won't magically understand your codebase overnight** - Learning happens incrementally, session by session
-- **It's not a replacement for documentation** - It complements docs by capturing the informal knowledge
-- **It won't work if you ignore the prompts** - Claude reminds you to update memory, but you decide when and what
-- **It's not automatic** - Claude learns when you confirm learnings are worth capturing
+- **Commands** you had to figure out (build, test, deploy)
+- **Project conventions** not in documentation
+- **Gotchas** that caused issues
+- **Path-specific patterns** (API validation, test conventions)
+- **Personal preferences** (communication style, greeting preferences)
 
-This is foundational infrastructure, not a silver bullet.
+Claude recognizes trigger phrases like "I see this project uses..." or "The pattern here is..." as signals to capture a learning.
+
+## Avoiding Duplicates
+
+Before writing, Claude can check what exists:
+
+```javascript
+// What domains exist?
+memory_list({ scope: "project" })
+// Returns: ["commands", "api", "testing"]
+
+// What's in a domain?
+memory_read({ domain: "commands" })
+// Returns: "# Commands\n\n- Run tests: `bun test --only-failures`"
+```
+
+This prevents duplicate content and helps Claude append rather than overwrite.
 
 ## The Compounding Effect
 
-Here's the honest truth: the first few sessions with Project Memory won't feel revolutionary. You'll add a command here, a convention there. It feels like busywork.
+The first few sessions won't feel revolutionary. A command here, a convention there.
 
-But compound this over 10 sessions. 50 sessions. Suddenly:
+But compound this over 10 sessions. 50 sessions:
 
-- New team members onboard faster because Claude already knows your conventions
+- Claude stops re-discovering your test command
+- New team members benefit immediately (rules are git-tracked)
 - Claude stops suggesting patterns you don't use
-- Less time spent explaining "we do it this way because..."
-- Context doesn't evaporate between sessions
+- Institutional knowledge accumulates in version control
 
-The value isn't in the first learning. It's in not having to re-learn the same things every session.
+The value isn't in the first learning. It's in not re-learning the same things every session.
 
-## Team vs Personal Memory
+## What This Isn't
 
-One subtle but important distinction:
+Let's be clear:
 
-| Scope | Location | Who sees it |
-|-------|----------|-------------|
-| **project** | `.claude/rules/*.md` | Everyone on the team (git tracked) |
-| **user** | `~/.claude/rules/*.md` | Just you (all projects) |
-| **CLAUDE.md** | Project root | Everyone on the team |
-| **CLAUDE.local.md** | Project root (gitignored) | Just you (this project) |
+**Not CLAUDE.md management**: Han doesn't touch your CLAUDE.md. That's your curated project documentation.
 
-This means your team can standardize on conventions while you keep your own workflow preferences. Personal preferences like greeting style, output formatting, or communication style belong in user scope.
+**Not automatic**: Claude captures when you confirm. It's proactive but not autonomous.
 
-## MCP Tools
-
-The core plugin exposes three MCP tools for memory management:
-
-| Tool | Description |
-|------|-------------|
-| `learn` | Capture a learning into project or user memory |
-| `memory_list` | List existing memory domains (optionally by scope) |
-| `memory_read` | Read contents of a specific domain |
-
-Claude uses `memory_list` and `memory_read` to check what's already captured before adding new content, avoiding duplicates.
+**Not a replacement for docs**: Rules complement documentation by capturing informal knowledge that wouldn't make it into formal docs.
 
 ## Getting Started
 
-The feature is already included in the core plugin. You don't need to install anything extra. Just start using it:
-
-1. Work on your project normally
-2. When Claude discovers something worth remembering, it can call the `learn` tool
-3. The learning is saved to `.claude/rules/` (project) or `~/.claude/rules/` (user)
-4. Next session, Claude already knows
-
-Start small. A few commands, a couple conventions. Let it grow organically as you discover patterns worth capturing.
-
-## The Long Game
-
-Project Memory isn't about instant gratification. It's about building a knowledge base that gets more valuable over time. Every command captured, every convention documented, every gotcha recorded makes future sessions smoother.
-
-The first session, you're teaching. By the tenth session, Claude is already fluent in your project's dialect.
-
-That's the foundation worth building on.
-
----
-
-**Get Started:** The core plugin includes Project Memory by default. Install it with:
+Han's memory tools are in the core plugin:
 
 ```bash
 han plugin install core
 ```
 
-Or explore the full plugin marketplace at [han.guru](https://han.guru).
+Then work normally. Claude will start capturing learnings to `.claude/rules/`. Check what's accumulated:
+
+```bash
+ls .claude/rules/
+```
+
+Git-tracked rules that grow smarter with each session.
+
+---
+
+**Learn more:** See [Claude Code's memory documentation](https://code.claude.com/docs/en/memory) for the full hierarchy Han builds on.

@@ -11,7 +11,7 @@ One of the most powerful features of Han plugins is their validation hook system
 
 ## The Problem with Manual Testing
 
-We've all been there: you make a quick fix, commit it, push it, and only then discover that you broke the tests. Or worse, you forgot to run the linter and now CI is failing. Manual quality checks rely on discipline and memory—two things that fail us when we're focused on solving problems.
+We've all been there: you make a quick fix, commit it, push it, and only then discover that you broke the tests. Or worse, you forgot to run the linter and now CI is failing. Manual quality checks rely on discipline and memory - two things that fail us when we're focused on solving problems.
 
 ## How Han Hooks Work
 
@@ -39,7 +39,7 @@ Let's look at how the `jutsu-typescript` plugin uses hooks to enforce type safet
 }
 ```
 
-This simple hook ensures that every time Claude finishes working on your TypeScript code, the type checker runs. If there are type errors, you know immediately—not later during CI.
+This simple hook ensures that every time Claude finishes working on your TypeScript code, the type checker runs. If there are type errors, you know immediately - not later during CI.
 
 ## Validation Without Slowdown
 
