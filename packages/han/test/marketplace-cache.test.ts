@@ -25,9 +25,9 @@ import {
 	updateMarketplaceCache,
 } from "../lib/marketplace-cache.ts";
 
-// Skip in CI due to Bun module resolution bug
-const _isCI =
-	process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+// Skip in CI due to Bun module resolution bug where concurrent test loading
+// causes globalThis.fetch mocking to fail
+const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
 
 // Import types for TypeScript (these don't cause the bug)
 import type { MarketplaceCache } from "../lib/marketplace-cache.ts";
@@ -88,8 +88,10 @@ function teardown(): void {
 	}
 }
 
-// Use describe.skip when in CI or when module loading failed (Bun concurrent loading bug)
-describe("marketplace-cache.ts", () => {
+// Skip in CI due to Bun concurrent loading bug with globalThis.fetch mocking
+const describeOrSkip = isCI ? describe.skip : describe;
+
+describeOrSkip("marketplace-cache.ts", () => {
 	beforeEach(() => {
 		setup();
 	});
