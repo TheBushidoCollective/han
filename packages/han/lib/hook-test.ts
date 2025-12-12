@@ -74,7 +74,7 @@ const VALID_HOOK_TYPES = [
  * Generate example stdin payload for a hook type.
  * Simulates what Claude Code would send to hooks during real invocations.
  */
-function generateExampleStdinPayload(hookType: string): string {
+function generateExampleStdinPayload(_hookType: string): string {
 	const basePayload = {
 		session_id: `test-session-${Date.now()}`,
 	};
