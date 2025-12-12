@@ -61,13 +61,14 @@ console.log(`Building han v${version} for ${target}...`);
 mkdirSync(dirname(outfile), { recursive: true });
 
 // Map target to platform identifier for native module
+// These names must match the workflow matrix native_file values
 const platformMap = {
 	bun: `${process.platform}-${process.arch}`,
 	"bun-darwin-arm64": "darwin-arm64",
 	"bun-darwin-x64": "darwin-x64",
-	"bun-linux-x64": "linux-x64",
-	"bun-linux-arm64": "linux-arm64",
-	"bun-windows-x64": "win32-x64",
+	"bun-linux-x64": "linux-x64-gnu",
+	"bun-linux-arm64": "linux-arm64-gnu",
+	"bun-windows-x64": "win32-x64-msvc",
 };
 
 const platform = platformMap[target];
