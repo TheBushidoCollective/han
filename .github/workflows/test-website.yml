@@ -34,6 +34,10 @@ jobs:
         working-directory: website
         run: bun run playwright install --with-deps chromium
 
+      - name: Run unit tests
+        working-directory: website
+        run: bun test
+
       - name: Build website
         working-directory: website
         run: bun run build
@@ -44,9 +48,9 @@ jobs:
           bun run serve out -l 3000 &
           sleep 5
 
-      - name: Run Playwright tests
+      - name: Run E2E tests
         working-directory: website
-        run: bun run test
+        run: bun run test:e2e
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

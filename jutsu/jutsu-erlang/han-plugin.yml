@@ -1,0 +1,21 @@
+hooks:
+  build:
+    command: "rebar3 compile warnings_as_errors=true"
+    dirs_with:
+      - "rebar.config"
+    if_changed:
+      - "**/*.erl"
+      - "**/*.hrl"
+      - "**/*.app.src"
+      - "rebar.config"
+      - "rebar.lock"
+  test:
+    command: "rebar3 eunit"
+    dirs_with:
+      - "rebar.config"
+    if_changed:
+      - "**/*.erl"
+      - "**/*.hrl"
+      - "**/*.app.src"
+      - "rebar.config"
+      - "rebar.lock"

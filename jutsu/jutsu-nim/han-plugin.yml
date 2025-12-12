@@ -1,0 +1,9 @@
+hooks:
+  lint:
+    command: "nim check *.nim"
+    dirs_with:
+      - "*.nimble"
+    if_changed:
+      - "**/*.nim"
+      - "**/*.nimble"
+      - "nim.cfg"

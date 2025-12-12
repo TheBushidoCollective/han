@@ -1,0 +1,12 @@
+hooks:
+  preview:
+    command: "pulumi preview --non-interactive --suppress-outputs || true"
+    dirs_with:
+      - "Pulumi.yaml"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+      - "**/*.go"
+      - "Pulumi.yaml"
+      - "Pulumi.*.yaml"

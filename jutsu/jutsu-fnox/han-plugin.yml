@@ -1,0 +1,9 @@
+hooks:
+  doctor:
+    command: "fnox doctor"
+    dirs_with:
+      - "fnox.toml"
+    if_changed:
+      - "fnox.toml"
+      - "fnox.*.toml"
+      - "fnox.local.toml"

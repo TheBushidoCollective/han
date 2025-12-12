@@ -7,11 +7,12 @@ import {
 	validatePluginConfig,
 	validateUserConfig,
 } from "./config-validator.ts";
+import { getPluginHookSettings } from "./han-settings.ts";
 import { findDirectoriesWithMarkers } from "./hook-cache.ts";
 import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
- * Plugin hook configuration (from han-config.json)
+ * Plugin hook configuration (from han-config.json or han-plugin.yml)
  */
 export interface PluginHookDefinition {
 	dirsWith?: string[];
@@ -35,6 +36,59 @@ export interface PluginHookDefinition {
 	 * Default: no idle timeout (only overall timeout applies)
 	 */
 	idleTimeout?: number;
+}
+
+/**
+ * YAML plugin hook definition with snake_case keys
+ * (from han-plugin.yml)
+ */
+interface YamlPluginHookDefinition {
+	dirs_with?: string[];
+	dir_test?: string;
+	command: string;
+	description?: string;
+	if_changed?: string[];
+	idle_timeout?: number;
+}
+
+/**
+ * YAML plugin config structure (from han-plugin.yml)
+ */
+interface YamlPluginConfig {
+	name?: string;
+	version?: string;
+	description?: string;
+	keywords?: string[];
+	hooks: Record<string, YamlPluginHookDefinition>;
+}
+
+/**
+ * Convert YAML snake_case hook definition to camelCase
+ */
+function convertYamlHook(
+	yamlHook: YamlPluginHookDefinition,
+): PluginHookDefinition {
+	return {
+		command: yamlHook.command,
+		...(yamlHook.dirs_with && { dirsWith: yamlHook.dirs_with }),
+		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),
+		...(yamlHook.description && { description: yamlHook.description }),
+		...(yamlHook.if_changed && { ifChanged: yamlHook.if_changed }),
+		...(yamlHook.idle_timeout !== undefined && {
+			idleTimeout: yamlHook.idle_timeout,
+		}),
+	};
+}
+
+/**
+ * Convert YAML plugin config to standard PluginConfig
+ */
+function convertYamlPluginConfig(yamlConfig: YamlPluginConfig): PluginConfig {
+	const hooks: Record<string, PluginHookDefinition> = {};
+	for (const [hookName, hookDef] of Object.entries(yamlConfig.hooks)) {
+		hooks[hookName] = convertYamlHook(hookDef);
+	}
+	return { hooks };
 }
 
 export interface PluginConfig {
@@ -84,7 +138,8 @@ export interface ResolvedHookConfig {
 }
 
 /**
- * Load plugin config from han-config.json at the plugin root
+ * Load plugin config from han-plugin.yml or han-config.json at the plugin root
+ * Prefers YAML format over JSON (han-plugin.yml takes precedence)
  * @param pluginRoot - The plugin directory, typically from CLAUDE_PLUGIN_ROOT env var
  * @param validate - Whether to validate the config (default: true)
  */
@@ -92,54 +147,146 @@ export function loadPluginConfig(
 	pluginRoot: string,
 	validate = true,
 ): PluginConfig | null {
-	const configPath = join(pluginRoot, "han-config.json");
+	// Try YAML first (preferred format)
+	const yamlPath = join(pluginRoot, "han-plugin.yml");
+	if (existsSync(yamlPath)) {
+		try {
+			const content = readFileSync(yamlPath, "utf-8");
+			const yamlConfig = YAML.parse(content) as YamlPluginConfig;
 
-	if (!existsSync(configPath)) {
+			if (!yamlConfig?.hooks) {
+				console.error(`Invalid plugin config at ${yamlPath}: missing 'hooks'`);
+				return null;
+			}
+
+			const config = convertYamlPluginConfig(yamlConfig);
+
+			if (validate) {
+				const result = validatePluginConfig(config);
+				if (!result.valid) {
+					console.error(formatValidationErrors(yamlPath, result));
+					return null;
+				}
+			}
+
+			return config;
+		} catch (error) {
+			console.error(`Error loading plugin config from ${yamlPath}:`, error);
+			return null;
+		}
+	}
+
+	// Fall back to JSON (legacy format)
+	const jsonPath = join(pluginRoot, "han-config.json");
+	if (!existsSync(jsonPath)) {
 		return null;
 	}
 
 	try {
-		const content = readFileSync(configPath, "utf-8");
+		const content = readFileSync(jsonPath, "utf-8");
 		const config = JSON.parse(content);
 
 		if (validate) {
 			const result = validatePluginConfig(config);
 			if (!result.valid) {
-				console.error(formatValidationErrors(configPath, result));
+				console.error(formatValidationErrors(jsonPath, result));
 				return null;
 			}
 		}
 
 		return config as PluginConfig;
 	} catch (error) {
-		console.error(`Error loading plugin config from ${configPath}:`, error);
+		console.error(`Error loading plugin config from ${jsonPath}:`, error);
 		return null;
 	}
 }
 
 /**
- * Load user override config from han-config.yml in a directory
- * @param directory - The directory containing the han-config.yml file
+ * YAML user config structure with nested plugins.hooks format
+ * (from han.yml)
+ */
+interface YamlUserConfig {
+	hooks?: {
+		enabled?: boolean;
+		checkpoints?: boolean;
+	};
+	plugins?: {
+		[pluginName: string]: {
+			hooks?: {
+				[hookName: string]: UserHookOverride;
+			};
+		};
+	};
+}
+
+/**
+ * Extract UserConfig from new YAML format with nested plugins.hooks structure
+ */
+function extractUserConfigFromYaml(
+	yamlConfig: YamlUserConfig,
+): UserConfig | null {
+	if (!yamlConfig.plugins) {
+		return null;
+	}
+
+	const userConfig: UserConfig = {};
+
+	for (const [pluginName, pluginData] of Object.entries(yamlConfig.plugins)) {
+		if (pluginData.hooks) {
+			userConfig[pluginName] = pluginData.hooks;
+		}
+	}
+
+	return Object.keys(userConfig).length > 0 ? userConfig : null;
+}
+
+/**
+ * Load user override config from han.yml or han-config.yml in a directory
+ * Checks for han.yml (new format) first, then falls back to han-config.yml (legacy)
+ * @param directory - The directory containing the config file
  * @param validate - Whether to validate the config (default: true)
  */
 export function loadUserConfig(
 	directory: string,
 	validate = true,
 ): UserConfig | null {
-	const configPath = join(directory, "han-config.yml");
+	// Try han.yml first (new format with nested plugins.hooks structure)
+	const newConfigPath = join(directory, "han.yml");
+	if (existsSync(newConfigPath)) {
+		try {
+			const content = readFileSync(newConfigPath, "utf-8");
+			const yamlConfig = YAML.parse(content) as YamlUserConfig;
 
-	if (!existsSync(configPath)) {
+			// Extract user config from the plugins section
+			const userConfig = extractUserConfigFromYaml(yamlConfig);
+			if (userConfig && validate) {
+				const result = validateUserConfig(userConfig);
+				if (!result.valid) {
+					console.error(formatValidationErrors(newConfigPath, result));
+					// Don't return null for user config - just warn and continue
+				}
+			}
+			return userConfig;
+		} catch (error) {
+			console.error(`Error loading user config from ${newConfigPath}:`, error);
+			return null;
+		}
+	}
+
+	// Fall back to han-config.yml (legacy flat format)
+	const legacyConfigPath = join(directory, "han-config.yml");
+	if (!existsSync(legacyConfigPath)) {
 		return null;
 	}
 
 	try {
-		const content = readFileSync(configPath, "utf-8");
+		const content = readFileSync(legacyConfigPath, "utf-8");
 		const config = YAML.parse(content);
 
 		if (validate) {
 			const result = validateUserConfig(config);
 			if (!result.valid) {
-				console.error(formatValidationErrors(configPath, result));
+				console.error(formatValidationErrors(legacyConfigPath, result));
 				// Don't return null for user config - just warn and continue
 				// This allows partial overrides to work even if some fields are invalid
 			}
@@ -147,7 +294,7 @@ export function loadUserConfig(
 
 		return config as UserConfig;
 	} catch (error) {
-		console.error(`Error loading user config from ${configPath}:`, error);
+		console.error(`Error loading user config from ${legacyConfigPath}:`, error);
 		return null;
 	}
 }
@@ -234,9 +381,20 @@ export function getHookConfigs(
 	const pluginName = getPluginNameFromRoot(pluginRoot);
 
 	// Helper to resolve config for a directory
+	// Uses full precedence chain: global → project → local → root → directory
 	const resolveConfigForDir = (dir: string): ResolvedHookConfig => {
-		const userConfig = loadUserConfig(dir);
-		const userOverride = userConfig?.[pluginName]?.[hookName];
+		// Get settings from the full han.yml precedence chain
+		const globalSettings = getPluginHookSettings(pluginName, hookName, dir);
+
+		// Also check legacy directory-specific han-config.yml (for backwards compat)
+		const legacyConfig = loadUserConfig(dir);
+		const legacyOverride = legacyConfig?.[pluginName]?.[hookName];
+
+		// Merge: global settings take precedence over legacy per-directory config
+		const userOverride = {
+			...legacyOverride,
+			...globalSettings,
+		};
 
 		// Resolve idle timeout: user override takes precedence
 		// User can set to false/0 to disable, or a number to override

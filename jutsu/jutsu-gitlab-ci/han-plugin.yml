@@ -1,0 +1,6 @@
+hooks:
+  lint:
+    description: "Validates GitLab CI configuration using glab CLI"
+    dirs_with:
+      - ".gitlab-ci.yml"
+    command: "glab ci lint"

@@ -1,0 +1,8 @@
+hooks:
+  format:
+    command: "npx -y prettier --check ."
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"prettier\":' package.json"
+    if_changed:
+      - "**/*.{js,jsx,ts,tsx,mjs,cjs,json,md,css,scss,html,yaml,yml}"

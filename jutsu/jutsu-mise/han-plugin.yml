@@ -1,0 +1,11 @@
+hooks:
+  validate:
+    command: "mise tasks validate"
+    dirs_with:
+      - "mise.toml"
+      - ".mise.toml"
+    if_changed:
+      - "mise.toml"
+      - ".mise.toml"
+      - "mise/**/*"
+      - ".mise/**/*"

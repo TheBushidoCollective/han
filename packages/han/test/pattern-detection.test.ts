@@ -3,6 +3,7 @@
  * Tests pattern detection functions
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
@@ -30,8 +31,6 @@ describe("pattern-detection", () => {
 
 	describe("detectPatterns via CLI", () => {
 		test("outputs nothing when no patterns detected", async () => {
-			const { spawnSync } = await import("node:child_process");
-
 			const result = spawnSync(
 				"bun",
 				["run", "lib/main.ts", "metrics", "detect-patterns"],
@@ -51,8 +50,6 @@ describe("pattern-detection", () => {
 		});
 
 		test("outputs JSON format with --json flag", async () => {
-			const { spawnSync } = await import("node:child_process");
-
 			const result = spawnSync(
 				"bun",
 				["run", "lib/main.ts", "metrics", "detect-patterns", "--json"],
@@ -89,8 +86,6 @@ describe("pattern-detection", () => {
 				});
 			}
 
-			const { spawnSync } = await import("node:child_process");
-
 			const result = spawnSync(
 				"bun",
 				["run", "lib/main.ts", "metrics", "detect-patterns", "--json"],
@@ -115,8 +110,6 @@ describe("pattern-detection", () => {
 		});
 
 		test("filters patterns by minimum severity", async () => {
-			const { spawnSync } = await import("node:child_process");
-
 			const result = spawnSync(
 				"bun",
 				[
@@ -326,8 +319,6 @@ describe("pattern-detection", () => {
 					confidence: 0.95, // Very high confidence but failing
 				});
 			}
-
-			const { spawnSync } = await import("node:child_process");
 
 			const result = spawnSync(
 				"bun",

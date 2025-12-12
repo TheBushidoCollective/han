@@ -200,6 +200,41 @@ export interface ExecuteToolOptions {
 export interface ExecuteToolResult {
 	success: boolean;
 	output: string;
+	idleTimedOut?: boolean;
+}
+
+/**
+ * Get MCP absolute timeout in milliseconds (default: 10 minutes)
+ * This is the maximum time a tool can run before being forcibly terminated.
+ */
+function getMcpTimeout(): number {
+	const envValue = process.env.HAN_MCP_TIMEOUT;
+	if (envValue) {
+		const parsed = Number.parseInt(envValue, 10);
+		if (!Number.isNaN(parsed) && parsed > 0) {
+			return parsed;
+		}
+	}
+	return 10 * 60 * 1000; // 10 minutes default
+}
+
+/**
+ * Create a timeout promise that rejects after the specified duration
+ */
+function createTimeoutPromise(
+	ms: number,
+	toolName: string,
+): { promise: Promise<never>; cancel: () => void } {
+	let timeoutId: NodeJS.Timeout;
+	const promise = new Promise<never>((_resolve, reject) => {
+		timeoutId = setTimeout(() => {
+			reject(new Error(`MCP_TIMEOUT: Tool ${toolName} exceeded ${ms}ms limit`));
+		}, ms);
+	});
+	return {
+		promise,
+		cancel: () => clearTimeout(timeoutId),
+	};
 }
 
 /**
@@ -209,28 +244,38 @@ export async function executePluginTool(
 	tool: PluginTool,
 	options: ExecuteToolOptions,
 ): Promise<ExecuteToolResult> {
-	const { verbose = false, failFast = true, directory, cache = true } = options;
-	const startTime = Date.now();
+	const { verbose = false, failFast = true, directory } = options;
 
-	// Capture console output
+	// When targeting a specific directory, disable cache and checkpoints
+	// This is a targeted re-run, so we want to run unconditionally
+	const cache = directory ? false : (options.cache ?? true);
+
+	const startTime = Date.now();
+	const timeout = getMcpTimeout();
+	let timedOut = false;
+
+	// Capture console output and stream to stderr for progress visibility
 	const outputLines: string[] = [];
 	const originalLog = console.log;
 	const originalError = console.error;
 
 	console.log = (...args) => {
-		outputLines.push(args.join(" "));
-		if (verbose) {
-			originalLog.apply(console, args);
-		}
+		const line = args.join(" ");
+		outputLines.push(line);
+		// Stream to stderr so agent can see progress (stderr not captured in context)
+		process.stderr.write(`[${tool.pluginName}/${tool.hookName}] ${line}\n`);
 	};
 	console.error = (...args) => {
-		outputLines.push(args.join(" "));
-		if (verbose) {
-			originalError.apply(console, args);
-		}
+		const line = args.join(" ");
+		outputLines.push(line);
+		// Stream to stderr so agent can see progress
+		process.stderr.write(`[${tool.pluginName}/${tool.hookName}] ${line}\n`);
 	};
 
 	let success = true;
+
+	// Create timeout for the entire operation
+	const timeoutControl = createTimeoutPromise(timeout, tool.name);
 
 	try {
 		// Set CLAUDE_PLUGIN_ROOT for the hook
@@ -245,30 +290,53 @@ export async function executePluginTool(
 			throw new Error(`__EXIT_${exitCode}__`);
 		}) as never;
 
+		// Create the hook execution promise
+		const hookPromise = (async () => {
+			try {
+				await runConfiguredHook({
+					pluginName: tool.pluginName,
+					hookName: tool.hookName,
+					failFast,
+					cache,
+					only: directory,
+					verbose,
+				});
+			} catch (e) {
+				const error = e as Error;
+				if (error.message?.startsWith("__EXIT_")) {
+					exitCode = Number.parseInt(
+						error.message.replace("__EXIT_", "").replace("__", ""),
+						10,
+					);
+				} else {
+					throw e;
+				}
+			}
+			return exitCode;
+		})();
+
 		try {
-			await runConfiguredHook({
-				pluginName: tool.pluginName,
-				hookName: tool.hookName,
-				failFast,
-				cache,
-				only: directory,
-				verbose,
-			});
+			// Race between hook execution and timeout
+			exitCode = await Promise.race([hookPromise, timeoutControl.promise]);
+			success = exitCode === 0;
 		} catch (e) {
 			const error = e as Error;
-			if (error.message?.startsWith("__EXIT_")) {
-				exitCode = Number.parseInt(
-					error.message.replace("__EXIT_", "").replace("__", ""),
-					10,
+			if (error.message?.startsWith("MCP_TIMEOUT:")) {
+				timedOut = true;
+				success = false;
+				outputLines.push(
+					`\n⏱️ Timeout: Tool execution exceeded ${Math.round(timeout / 1000)}s limit and was terminated.`,
+				);
+				process.stderr.write(
+					`[${tool.pluginName}/${tool.hookName}] ⏱️ Timeout after ${Math.round(timeout / 1000)}s\n`,
 				);
 			} else {
 				throw e;
 			}
 		} finally {
 			process.exit = originalExit;
+			timeoutControl.cancel();
 		}
-
-		success = exitCode === 0;
 	} catch (error) {
 		success = false;
 		outputLines.push(
@@ -286,5 +354,6 @@ export async function executePluginTool(
 	return {
 		success,
 		output: outputLines.join("\n") || (success ? "Success" : "Failed"),
+		idleTimedOut: timedOut,
 	};
 }

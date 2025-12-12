@@ -8,6 +8,15 @@ import type {
 	UpdateTaskParams,
 } from "../../metrics/types.ts";
 import { recordTaskCompletion } from "../../telemetry/index.ts";
+import { cleanCheckpoints } from "../checkpoint/clean.ts";
+import { listCheckpoints } from "../checkpoint/list.ts";
+import {
+	captureMemory,
+	type LearnParams,
+	listMemoryFiles,
+	type MemoryScope,
+	readMemoryFile,
+} from "./memory.ts";
 import {
 	discoverPluginTools,
 	executePluginTool,
@@ -127,6 +136,48 @@ export function handleInitialize(): unknown {
 		},
 	};
 }
+
+// Checkpoint tools definition
+const CHECKPOINT_TOOLS: McpTool[] = [
+	{
+		name: "checkpoint_list",
+		description:
+			"List checkpoints for current project. Shows session and agent checkpoints with creation time and file counts.",
+		annotations: {
+			title: "List Checkpoints",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {},
+		},
+	},
+	{
+		name: "checkpoint_clean",
+		description:
+			"Clean stale checkpoints with optional maxAge parameter. Removes checkpoints older than specified age.",
+		annotations: {
+			title: "Clean Checkpoints",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				maxAge: {
+					type: "number",
+					description:
+						"Maximum age in hours (default: 24). Checkpoints older than this will be removed.",
+				},
+			},
+		},
+	},
+];
 
 // Metrics tools definition
 const METRICS_TOOLS: McpTool[] = [
@@ -314,9 +365,115 @@ const METRICS_TOOLS: McpTool[] = [
 	},
 ];
 
+// Memory tools definition
+const MEMORY_TOOLS: McpTool[] = [
+	{
+		name: "learn",
+		description:
+			"Capture a learning into project memory. Use this PROACTIVELY when you discover project conventions, commands, gotchas, or patterns worth remembering. Writes to .claude/rules/<domain>.md files that persist across sessions.",
+		annotations: {
+			title: "Learn",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				content: {
+					type: "string",
+					description:
+						"The learning content in markdown format. Should be concise, actionable, and include context. Example: '# API Rules\\n\\n- Validate all inputs with zod\\n- Return consistent error format'",
+				},
+				domain: {
+					type: "string",
+					description:
+						"Domain name for the rule file (e.g., 'api', 'testing', 'api/validation'). Can include subdirectories. Creates .claude/rules/<domain>.md",
+				},
+				paths: {
+					type: "array",
+					items: { type: "string" },
+					description:
+						"Optional path patterns for path-specific rules. Example: ['src/api/**/*.ts', 'src/services/**/*.ts']. If provided, rules only apply when editing matching files.",
+				},
+				append: {
+					type: "boolean",
+					description:
+						"Whether to append to existing file (true, default) or replace it (false).",
+				},
+				scope: {
+					type: "string",
+					enum: ["project", "user"],
+					description:
+						"Where to store the rule. 'project' (default) stores in .claude/rules/ for project-specific rules. 'user' stores in ~/.claude/rules/ for personal preferences across all projects.",
+				},
+			},
+			required: ["content", "domain"],
+		},
+	},
+	{
+		name: "memory_list",
+		description:
+			"List all existing memory domains (rule files). Returns the names of .claude/rules/*.md files, including subdirectories.",
+		annotations: {
+			title: "List Memory",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				scope: {
+					type: "string",
+					enum: ["project", "user"],
+					description:
+						"Which rules to list. 'project' (default) lists project rules, 'user' lists personal rules from ~/.claude/rules/.",
+				},
+			},
+		},
+	},
+	{
+		name: "memory_read",
+		description:
+			"Read the contents of a specific memory domain. Use this to check what's already been learned before adding new content.",
+		annotations: {
+			title: "Read Memory",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				domain: {
+					type: "string",
+					description:
+						"The domain name to read (without .md extension). Can include subdirectories like 'api/validation'.",
+				},
+				scope: {
+					type: "string",
+					enum: ["project", "user"],
+					description:
+						"Which scope to read from. 'project' (default) reads project rules, 'user' reads personal rules from ~/.claude/rules/.",
+				},
+			},
+			required: ["domain"],
+		},
+	},
+];
+
 function handleToolsList(): unknown {
 	const hookTools = formatToolsForMcp(discoverTools());
-	const allTools = [...hookTools, ...METRICS_TOOLS];
+	const allTools = [
+		...hookTools,
+		...CHECKPOINT_TOOLS,
+		...METRICS_TOOLS,
+		...MEMORY_TOOLS,
+	];
 	return {
 		tools: allTools,
 	};
@@ -327,6 +484,83 @@ async function handleToolsCall(params: {
 	arguments?: Record<string, unknown>;
 }): Promise<unknown> {
 	const args = params.arguments || {};
+
+	// Check if this is a checkpoint tool
+	const isCheckpointTool = CHECKPOINT_TOOLS.some((t) => t.name === params.name);
+
+	if (isCheckpointTool) {
+		// Handle checkpoint tools
+		try {
+			switch (params.name) {
+				case "checkpoint_list": {
+					// Capture output by temporarily overriding console.log
+					const output: string[] = [];
+					const originalLog = console.log;
+					console.log = (...args: unknown[]) => {
+						output.push(args.join(" "));
+					};
+
+					try {
+						await listCheckpoints();
+					} finally {
+						console.log = originalLog;
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: output.join("\n"),
+							},
+						],
+					};
+				}
+
+				case "checkpoint_clean": {
+					const maxAge = typeof args.maxAge === "number" ? args.maxAge : 24;
+
+					// Capture output by temporarily overriding console.log
+					const output: string[] = [];
+					const originalLog = console.log;
+					console.log = (...args: unknown[]) => {
+						output.push(args.join(" "));
+					};
+
+					try {
+						await cleanCheckpoints({ maxAge: maxAge.toString() });
+					} finally {
+						console.log = originalLog;
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: output.join("\n"),
+							},
+						],
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown checkpoint tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
 
 	// Check if this is a metrics tool
 	const isMetricsTool = METRICS_TOOLS.some((t) => t.name === params.name);
@@ -420,6 +654,84 @@ async function handleToolsCall(params: {
 					throw {
 						code: -32602,
 						message: `Unknown metrics tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Check if this is a memory tool
+	const isMemoryTool = MEMORY_TOOLS.some((t) => t.name === params.name);
+
+	if (isMemoryTool) {
+		// Handle memory tools
+		try {
+			switch (params.name) {
+				case "learn": {
+					const learnParams = args as unknown as LearnParams;
+					const result = captureMemory(learnParams);
+					return {
+						content: [
+							{
+								type: "text",
+								text: result.success
+									? `✅ ${result.message}`
+									: `❌ ${result.message}`,
+							},
+						],
+						isError: !result.success,
+					};
+				}
+
+				case "memory_list": {
+					const scope = (args.scope as MemoryScope) || "project";
+					const domains = listMemoryFiles(scope);
+					const scopeLabel = scope === "user" ? "user" : "project";
+					const text =
+						domains.length > 0
+							? `Memory domains (${scopeLabel}):\n${domains.map((d) => `  - ${d}`).join("\n")}`
+							: `No ${scopeLabel} memory files found. Use the 'learn' tool to create one.`;
+					return {
+						content: [
+							{
+								type: "text",
+								text,
+							},
+						],
+					};
+				}
+
+				case "memory_read": {
+					const domain = args.domain as string;
+					const readScope = (args.scope as MemoryScope) || "project";
+					const content = readMemoryFile(domain, readScope);
+					return {
+						content: [
+							{
+								type: "text",
+								text:
+									content ??
+									`Memory domain '${domain}' not found in ${readScope} scope.`,
+							},
+						],
+						isError: content === null,
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown memory tool: ${params.name}`,
 					};
 			}
 		} catch (error) {

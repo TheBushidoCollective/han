@@ -1,0 +1,9 @@
+hooks:
+  build:
+    command: "kustomize build . > /dev/null"
+    dirs_with:
+      - "kustomization.yaml"
+    if_changed:
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "kustomization.yaml"

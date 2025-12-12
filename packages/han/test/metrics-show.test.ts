@@ -3,8 +3,10 @@
  * Tests the showMetrics function with mocked Ink
  */
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { showMetrics } from "../lib/commands/metrics/show.ts";
 
 // Note: We don't mock ink globally here to avoid affecting other test files.
 // The showMetrics function gracefully handles rendering errors.
@@ -35,8 +37,6 @@ describe("metrics show", () => {
 			// Capture console output
 			const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
 
-			const { showMetrics } = await import("../lib/commands/metrics/show.ts");
-
 			await showMetrics({});
 
 			// The function should have called queryMetrics and rendered
@@ -47,8 +47,6 @@ describe("metrics show", () => {
 		test("passes period option to storage", async () => {
 			const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
 
-			const { showMetrics } = await import("../lib/commands/metrics/show.ts");
-
 			await showMetrics({ period: "day" });
 
 			consoleSpy.mockRestore();
@@ -57,8 +55,6 @@ describe("metrics show", () => {
 		test("passes taskType option to storage", async () => {
 			const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
 
-			const { showMetrics } = await import("../lib/commands/metrics/show.ts");
-
 			await showMetrics({ taskType: "fix" });
 
 			consoleSpy.mockRestore();
@@ -66,8 +62,6 @@ describe("metrics show", () => {
 
 		test("handles showCalibration option", async () => {
 			const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
-
-			const { showMetrics } = await import("../lib/commands/metrics/show.ts");
 
 			await showMetrics({ showCalibration: true });
 
@@ -98,8 +92,6 @@ describe("metrics show via CLI", () => {
 	});
 
 	test("shows metrics via CLI", async () => {
-		const { spawnSync } = await import("node:child_process");
-
 		const result = spawnSync("bun", ["run", "lib/main.ts", "metrics", "show"], {
 			encoding: "utf-8",
 			timeout: 30000,
@@ -115,8 +107,6 @@ describe("metrics show via CLI", () => {
 	});
 
 	test("shows metrics with --period option", async () => {
-		const { spawnSync } = await import("node:child_process");
-
 		const result = spawnSync(
 			"bun",
 			["run", "lib/main.ts", "metrics", "show", "--period", "day"],
@@ -135,8 +125,6 @@ describe("metrics show via CLI", () => {
 	});
 
 	test("shows metrics with --type option", async () => {
-		const { spawnSync } = await import("node:child_process");
-
 		const result = spawnSync(
 			"bun",
 			["run", "lib/main.ts", "metrics", "show", "--type", "fix"],
@@ -155,8 +143,6 @@ describe("metrics show via CLI", () => {
 	});
 
 	test("shows metrics with --calibration flag", async () => {
-		const { spawnSync } = await import("node:child_process");
-
 		const result = spawnSync(
 			"bun",
 			["run", "lib/main.ts", "metrics", "show", "--calibration"],

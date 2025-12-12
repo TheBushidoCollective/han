@@ -1,0 +1,12 @@
+hooks:
+  test:
+    command: "pytest"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
+    if_changed:
+      - "**/*.py"
+      - "**/*.pyi"
+      - "pyproject.toml"
+      - "pytest.ini"
+      - "conftest.py"

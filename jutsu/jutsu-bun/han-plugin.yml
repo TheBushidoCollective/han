@@ -1,0 +1,27 @@
+hooks:
+  build:
+    command: "bun build --target=bun --no-bundle"
+    dirs_with:
+      - "bun.lock"
+      - "bun.lockb"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "bun.lock"
+      - "bun.lockb"
+      - "bunfig.toml"
+  test:
+    command: "bun test --only-failures"
+    dirs_with:
+      - "bun.lock"
+      - "bun.lockb"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "bun.lock"
+      - "bun.lockb"
+      - "bunfig.toml"

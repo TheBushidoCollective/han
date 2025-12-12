@@ -1,0 +1,14 @@
+hooks:
+  typecheck:
+    command: "mix dialyzer --plt"
+    dirs_with:
+      - "mix.exs"
+    dir_test: "grep -qE ':dialyxir' mix.exs"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"

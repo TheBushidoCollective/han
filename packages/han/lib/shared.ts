@@ -9,6 +9,7 @@ import {
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.ts";
+import { getMarketplacePlugins } from "./marketplace-cache.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -565,7 +566,6 @@ export async function fetchMarketplace(
 ): Promise<MarketplacePlugin[]> {
 	// Import statically at module level would create circular dependency
 	// This is the one exception where we need dynamic import
-	const { getMarketplacePlugins } = await import("./marketplace-cache.ts");
 
 	try {
 		const { plugins, fromCache } = await getMarketplacePlugins(forceRefresh);

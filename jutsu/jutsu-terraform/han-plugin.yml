@@ -1,0 +1,8 @@
+hooks:
+  format:
+    command: "terraform init && terraform fmt -check && terraform validate"
+    dirs_with:
+      - "*.tf"
+    if_changed:
+      - "**/*.tf"
+      - "**/*.tfvars"

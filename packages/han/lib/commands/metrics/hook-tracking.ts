@@ -30,8 +30,18 @@ interface HookExecutionData {
  */
 export async function recordHookExecution(): Promise<void> {
 	try {
-		// Read JSON from stdin
+		// In a TTY, stdin is interactive - can't read
+		if (process.stdin.isTTY) {
+			console.error("No stdin data available (running in terminal)");
+			process.exit(1);
+		}
+
+		// Try to read JSON from stdin
 		const stdin = readFileSync(0, "utf-8");
+		if (!stdin || !stdin.trim()) {
+			console.error("No stdin data available (empty input)");
+			process.exit(1);
+		}
 		const data: HookExecutionData = JSON.parse(stdin);
 
 		const storage = getStorage();

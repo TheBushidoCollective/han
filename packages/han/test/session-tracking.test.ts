@@ -7,7 +7,11 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-
+import {
+	endSession,
+	getCurrentSession,
+	startSession,
+} from "../lib/commands/metrics/session-tracking.ts";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
 describe("session-tracking.ts", () => {
@@ -178,11 +182,6 @@ describe("session-tracking.ts", () => {
 		// via CLAUDE_CONFIG_DIR pointing to a unique temp directory per test
 
 		test("startSession outputs JSON to console", async () => {
-			// Re-import to get fresh module with isolated storage
-			const { startSession } = await import(
-				"../lib/commands/metrics/session-tracking.ts"
-			);
-
 			const sessionId = await startSession();
 
 			expect(sessionId).toBeDefined();
@@ -194,10 +193,6 @@ describe("session-tracking.ts", () => {
 		});
 
 		test("endSession outputs success JSON", async () => {
-			const { startSession, endSession } = await import(
-				"../lib/commands/metrics/session-tracking.ts"
-			);
-
 			const sessionId = await startSession();
 			logs = []; // Clear logs
 
@@ -210,10 +205,6 @@ describe("session-tracking.ts", () => {
 		});
 
 		test("getCurrentSession outputs JSON", async () => {
-			const { startSession, getCurrentSession } = await import(
-				"../lib/commands/metrics/session-tracking.ts"
-			);
-
 			const sessionId = await startSession();
 			logs = []; // Clear logs
 

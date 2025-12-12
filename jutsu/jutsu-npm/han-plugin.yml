@@ -1,0 +1,8 @@
+hooks:
+  npm-install:
+    dirs_with:
+      - "package-lock.json"
+    command: "npm ci 2>/dev/null || npm install"
+    if_changed:
+      - "**/package.json"
+      - "package-lock.json"

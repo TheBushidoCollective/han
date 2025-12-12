@@ -18,43 +18,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+	getCacheAge,
+	getMarketplacePlugins,
+	hasCachedMarketplace,
+	updateMarketplaceCache,
+} from "../lib/marketplace-cache.ts";
 
 // Skip in CI due to Bun module resolution bug
-const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+const _isCI =
+	process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
 
 // Import types for TypeScript (these don't cause the bug)
 import type { MarketplaceCache } from "../lib/marketplace-cache.ts";
-
-// Track if module loaded successfully
-let moduleLoadFailed = false;
-
-// Only import functions if not in CI
-let getCacheAge: () => number | null;
-let getMarketplacePlugins: (forceRefresh?: boolean) => Promise<{
-	plugins: Array<{ name: string; description?: string; category?: string }>;
-	fromCache: boolean;
-}>;
-let hasCachedMarketplace: () => boolean;
-let updateMarketplaceCache: () => Promise<
-	Array<{ name: string; description?: string; category?: string }>
->;
-
-if (!isCI) {
-	try {
-		const mod = await import("../lib/marketplace-cache.ts");
-		getCacheAge = mod.getCacheAge;
-		getMarketplacePlugins = mod.getMarketplacePlugins;
-		hasCachedMarketplace = mod.hasCachedMarketplace;
-		updateMarketplaceCache = mod.updateMarketplaceCache;
-
-		// Verify functions loaded correctly (Bun bug can cause undefined exports)
-		if (typeof hasCachedMarketplace !== "function") {
-			moduleLoadFailed = true;
-		}
-	} catch {
-		moduleLoadFailed = true;
-	}
-}
 
 // Store original environment and fetch
 const originalEnv = { ...process.env };
@@ -76,6 +52,8 @@ function setup(): void {
 	tempDir = join(tmpdir(), `han-test-cache-${Date.now()}-${random}`);
 	mkdirSync(tempDir, { recursive: true });
 	process.env.CLAUDE_CONFIG_DIR = tempDir;
+	// Also set CLAUDE_PROJECT_DIR to temp dir so isHanInstalled() doesn't find repo's settings
+	process.env.CLAUDE_PROJECT_DIR = tempDir;
 	mockFetchSuccess = true;
 
 	// Mock fetch
@@ -111,10 +89,7 @@ function teardown(): void {
 }
 
 // Use describe.skip when in CI or when module loading failed (Bun concurrent loading bug)
-const shouldSkip = isCI || moduleLoadFailed;
-const describeTests = shouldSkip ? describe.skip : describe;
-
-describeTests("marketplace-cache.ts", () => {
+describe("marketplace-cache.ts", () => {
 	beforeEach(() => {
 		setup();
 	});
@@ -283,5 +258,58 @@ describeTests("marketplace-cache.ts", () => {
 			expect(error instanceof Error).toBe(true);
 			expect((error as Error).message).toContain("Failed to fetch marketplace");
 		}
+	});
+
+	test("uses stale cache when Han is installed in Claude settings", async () => {
+		// First fetch to populate cache
+		await getMarketplacePlugins();
+
+		const cacheDir = join(tempDir, "cache");
+		const cachePath = join(cacheDir, "han-marketplace.json");
+
+		// Read current cache and make it stale (25 hours old)
+		const cacheData = readFileSync(cachePath, "utf-8");
+		const cache = JSON.parse(cacheData) as MarketplaceCache;
+		cache.timestamp = Date.now() - 25 * 60 * 60 * 1000;
+		writeFileSync(cachePath, JSON.stringify(cache));
+
+		// Configure Han in user settings
+		const settingsPath = join(tempDir, "settings.json");
+		writeFileSync(
+			settingsPath,
+			JSON.stringify({
+				extraKnownMarketplaces: {
+					han: {
+						source: "github",
+						owner: "TheBushidoCollective",
+						repo: "han",
+					},
+				},
+			}),
+		);
+
+		// Should use stale cache instead of fetching, because Han is installed
+		const { plugins, fromCache } = await getMarketplacePlugins();
+		expect(fromCache).toBe(true);
+		expect(plugins.length).toBe(2);
+	});
+
+	test("fetches from GitHub when Han is not installed and cache is stale", async () => {
+		// First fetch to populate cache
+		await getMarketplacePlugins();
+
+		const cacheDir = join(tempDir, "cache");
+		const cachePath = join(cacheDir, "han-marketplace.json");
+
+		// Read current cache and make it stale (25 hours old)
+		const cacheData = readFileSync(cachePath, "utf-8");
+		const cache = JSON.parse(cacheData) as MarketplaceCache;
+		cache.timestamp = Date.now() - 25 * 60 * 60 * 1000;
+		writeFileSync(cachePath, JSON.stringify(cache));
+
+		// No Han configuration in settings - cache should be refreshed
+		const { plugins, fromCache } = await getMarketplacePlugins();
+		expect(fromCache).toBe(false);
+		expect(plugins.length).toBe(2);
 	});
 });

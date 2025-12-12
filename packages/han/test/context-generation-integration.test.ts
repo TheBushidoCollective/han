@@ -3,6 +3,7 @@
  * Tests the generateSessionContext function with actual JsonlMetricsStorage
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
@@ -30,8 +31,6 @@ describe("context-generation integration", () => {
 
 	describe("generateSessionContext via CLI", () => {
 		test("outputs getting started when no tasks tracked", async () => {
-			const { spawnSync } = await import("node:child_process");
-
 			const result = spawnSync(
 				"bun",
 				["run", "lib/main.ts", "metrics", "session-context"],
@@ -67,8 +66,6 @@ describe("context-generation integration", () => {
 					confidence: 0.85,
 				});
 			}
-
-			const { spawnSync } = await import("node:child_process");
 
 			const result = spawnSync(
 				"bun",

@@ -1,0 +1,9 @@
+hooks:
+  test:
+    command: "swift test"
+    dirs_with:
+      - "Package.swift"
+    if_changed:
+      - "**/*.swift"
+      - "Package.swift"
+      - "Package.resolved"

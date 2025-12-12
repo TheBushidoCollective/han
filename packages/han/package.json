@@ -14,6 +14,8 @@
 		"test:source": "HAN_TEST_SOURCE=true bun test test/*.test.ts",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
+		"lint:config-sync": "bun scripts/lint-plugin-config-sync.ts",
+		"convert-config": "bun scripts/convert-plugin-config.ts",
 		"prepack": "npm test",
 		"build:binary": "bun scripts/build-bundle.js",
 		"build:bundle": "bun scripts/build-bundle.js"

@@ -20,7 +20,13 @@
  *   - bun-linux-arm64
  *   - bun-windows-x64
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,6 +59,43 @@ console.log(`Building han v${version} for ${target}...`);
 
 // Ensure output directory exists
 mkdirSync(dirname(outfile), { recursive: true });
+
+// Map target to platform identifier for native module
+const platformMap = {
+	bun: `${process.platform}-${process.arch}`,
+	"bun-darwin-arm64": "darwin-arm64",
+	"bun-darwin-x64": "darwin-x64",
+	"bun-linux-x64": "linux-x64",
+	"bun-linux-arm64": "linux-arm64",
+	"bun-windows-x64": "win32-x64",
+};
+
+const platform = platformMap[target];
+if (!platform) {
+	console.error(`Unknown target: ${target}`);
+	process.exit(1);
+}
+
+// Copy the native module for the target platform
+const nativeModuleSrc = join(
+	__dirname,
+	"..",
+	"..",
+	"han-native",
+	`han-native.${platform}.node`,
+);
+const nativeModuleDest = join(__dirname, "..", "native", "han-native.node");
+
+if (!existsSync(nativeModuleSrc)) {
+	console.error(
+		`Native module not found for platform ${platform}: ${nativeModuleSrc}`,
+	);
+	process.exit(1);
+}
+
+mkdirSync(dirname(nativeModuleDest), { recursive: true });
+copyFileSync(nativeModuleSrc, nativeModuleDest);
+console.log(`Copied native module: ${nativeModuleSrc} -> ${nativeModuleDest}`);
 
 // Generate build-info.ts with version and prompt embedded
 const buildInfoPath = join(__dirname, "..", "lib", "build-info.generated.ts");

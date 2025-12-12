@@ -1,0 +1,10 @@
+hooks:
+  lint:
+    command: "mvn checkstyle:check"
+    dirs_with:
+      - "pom.xml"
+    dir_test: "grep -qE 'checkstyle' pom.xml"
+    if_changed:
+      - "**/*.java"
+      - "pom.xml"
+      - "checkstyle.xml"

@@ -1,0 +1,48 @@
+hooks:
+  test:
+    dirs_with:
+      - "mix.exs"
+    command: "mix test --stale"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"
+  format:
+    dirs_with:
+      - ".formatter.exs"
+    command: "mix format --check-formatted"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - ".formatter.exs"
+  compile:
+    dirs_with:
+      - "mix.exs"
+    command: "mix compile --warnings-as-errors"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"
+  typecheck:
+    dirs_with:
+      - "mix.exs"
+    command: "mix dialyzer"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"

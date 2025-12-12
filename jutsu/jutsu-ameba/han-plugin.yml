@@ -1,0 +1,11 @@
+hooks:
+  lint:
+    command: "shards install && ameba"
+    dirs_with:
+      - "shard.yml"
+    dir_test: "grep -qE 'ameba' shard.yml"
+    if_changed:
+      - "**/*.cr"
+      - "**/*.ecr"
+      - "shard.yml"
+      - ".ameba.yml"

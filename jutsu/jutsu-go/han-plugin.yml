@@ -1,0 +1,28 @@
+hooks:
+  format:
+    command: "go fmt ./..."
+    dirs_with:
+      - "go.mod"
+    if_changed:
+      - "**/*.go"
+      - "**/*.tmpl"
+      - "go.mod"
+      - "go.sum"
+  vet:
+    command: "go vet ./..."
+    dirs_with:
+      - "go.mod"
+    if_changed:
+      - "**/*.go"
+      - "**/*.tmpl"
+      - "go.mod"
+      - "go.sum"
+  test:
+    command: "go test ./..."
+    dirs_with:
+      - "go.mod"
+    if_changed:
+      - "**/*.go"
+      - "**/*.tmpl"
+      - "go.mod"
+      - "go.sum"

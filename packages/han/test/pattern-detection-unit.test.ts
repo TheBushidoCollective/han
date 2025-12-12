@@ -5,6 +5,11 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import {
+	detectPatterns,
+	resetStorageInstance,
+} from "../lib/commands/metrics/pattern-detection.ts";
+import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
 // Generate unique test dir for each run to avoid module caching issues
 const baseTestDir = `/tmp/test-pattern-unit-${Date.now()}`;
@@ -28,13 +33,8 @@ describe("pattern-detection unit tests", () => {
 		consoleSpy = spyOn(console, "log").mockImplementation((...args) => {
 			logs.push(args.join(" "));
 		});
-
-		// Clear module caches for fresh imports
-		for (const key of Object.keys(require.cache)) {
-			if (key.includes("pattern-detection") || key.includes("jsonl-storage")) {
-				delete require.cache[key];
-			}
-		}
+		// Reset storage singleton so it uses the new config dir
+		resetStorageInstance();
 	});
 
 	afterEach(() => {
@@ -49,10 +49,6 @@ describe("pattern-detection unit tests", () => {
 
 	describe("detectPatterns", () => {
 		test("outputs empty JSON when no patterns and json=true", async () => {
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -61,19 +57,12 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("outputs nothing when no patterns and json=false", async () => {
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: false });
 
 			expect(logs.length).toBe(0);
 		});
 
 		test("detects consecutive failures pattern", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 3; i++) {
@@ -87,10 +76,6 @@ describe("pattern-detection unit tests", () => {
 					confidence: 0.8,
 				});
 			}
-
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
 
 			await detectPatterns({ json: true });
 
@@ -108,9 +93,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("detects hook failure pattern with high severity (>50%)", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -135,10 +117,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -152,9 +130,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("detects hook failure pattern with medium severity (30-50%)", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -179,10 +154,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -196,9 +167,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("detects calibration drift when score is low", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 6; i++) {
@@ -213,10 +181,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -229,9 +193,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("filters patterns by minimum severity", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 3; i++) {
@@ -245,10 +206,6 @@ describe("pattern-detection unit tests", () => {
 					confidence: 0.8,
 				});
 			}
-
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
 
 			await detectPatterns({ json: true, minSeverity: "high" });
 
@@ -260,9 +217,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("outputs markdown format when json=false and patterns exist", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 3; i++) {
@@ -277,10 +231,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: false });
 
 			const output = logs.join("\n");
@@ -289,9 +239,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("provides guidance for bun-test hook", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -316,10 +263,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -331,9 +274,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("provides guidance for check-commits hook", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -358,10 +298,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -373,9 +309,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("provides guidance for markdownlint hook", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -400,10 +333,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -415,9 +344,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("provides default guidance for unknown hooks", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -442,10 +368,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -458,9 +380,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("detects underconfident calibration direction", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 6; i++) {
@@ -475,10 +394,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -487,9 +402,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("detects neutral calibration direction with mixed results", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 6; i++) {
@@ -512,10 +424,6 @@ describe("pattern-detection unit tests", () => {
 				}
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -524,9 +432,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("severity high calibration drift when score < 0.3", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -541,10 +446,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -558,9 +459,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("no consecutive failures when only 2 recent tasks failed", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 2; i++) {
@@ -584,10 +482,6 @@ describe("pattern-detection unit tests", () => {
 				confidence: 0.8,
 			});
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -599,9 +493,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("no hook failure pattern when failure rate <= 30%", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -626,10 +517,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -641,9 +528,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("no calibration drift when fewer than 5 completed tasks", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 4; i++) {
@@ -658,10 +542,6 @@ describe("pattern-detection unit tests", () => {
 				});
 			}
 
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
-
 			await detectPatterns({ json: true });
 
 			const output = logs.join("\n");
@@ -673,9 +553,6 @@ describe("pattern-detection unit tests", () => {
 		});
 
 		test("filters out low severity patterns when minSeverity is medium", async () => {
-			const { JsonlMetricsStorage } = await import(
-				"../lib/metrics/jsonl-storage.ts"
-			);
 			const storage = new JsonlMetricsStorage();
 
 			for (let i = 0; i < 10; i++) {
@@ -699,10 +576,6 @@ describe("pattern-detection unit tests", () => {
 					exitCode: hooksPassed ? 0 : 1,
 				});
 			}
-
-			const { detectPatterns } = await import(
-				"../lib/commands/metrics/pattern-detection.ts"
-			);
 
 			await detectPatterns({ json: true, minSeverity: "medium" });
 

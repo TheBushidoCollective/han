@@ -1,0 +1,11 @@
+hooks:
+  test:
+    command: "npm test"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"vitest\":' package.json"
+    if_changed:
+      - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
+      - "**/*.test.{js,jsx,ts,tsx}"
+      - "**/*.spec.{js,jsx,ts,tsx}"
+      - "vitest.config.*"

@@ -36,6 +36,11 @@ export function registerHookRun(hookCommand: Command): void {
 			"--verbose",
 			"Show full command output (also settable via HAN_HOOK_RUN_VERBOSE=1)",
 		)
+		.option(
+			"--checkpoint-type <type>",
+			"Checkpoint type to filter against (session or agent)",
+		)
+		.option("--checkpoint-id <id>", "Checkpoint ID to filter against")
 		.allowUnknownOption()
 		.action(
 			async (
@@ -48,6 +53,8 @@ export function registerHookRun(hookCommand: Command): void {
 					cache?: boolean;
 					only?: string;
 					verbose?: boolean;
+					checkpointType?: string;
+					checkpointId?: string;
 				},
 			) => {
 				// Allow global disable of all hooks via environment variable
@@ -114,6 +121,36 @@ export function registerHookRun(hookCommand: Command): void {
 						process.exit(1);
 					}
 
+					// Read checkpoint info from options or environment variables
+					const checkpointTypeRaw =
+						options.checkpointType || process.env.HAN_CHECKPOINT_TYPE;
+					const checkpointId =
+						options.checkpointId || process.env.HAN_CHECKPOINT_ID;
+
+					// Validate checkpoint options
+					if (checkpointTypeRaw && !checkpointId) {
+						console.error(
+							"Error: --checkpoint-id is required when --checkpoint-type is set",
+						);
+						process.exit(1);
+					}
+					if (
+						checkpointTypeRaw &&
+						checkpointTypeRaw !== "session" &&
+						checkpointTypeRaw !== "agent"
+					) {
+						console.error(
+							"Error: --checkpoint-type must be 'session' or 'agent'",
+						);
+						process.exit(1);
+					}
+
+					// Type-safe checkpoint type
+					const checkpointType: "session" | "agent" | undefined =
+						checkpointTypeRaw === "session" || checkpointTypeRaw === "agent"
+							? checkpointTypeRaw
+							: undefined;
+
 					await runConfiguredHook({
 						pluginName,
 						hookName,
@@ -121,6 +158,8 @@ export function registerHookRun(hookCommand: Command): void {
 						cache: useCache,
 						only: options.only,
 						verbose,
+						checkpointType,
+						checkpointId,
 					});
 				}
 			},

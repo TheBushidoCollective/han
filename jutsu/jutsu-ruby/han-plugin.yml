@@ -1,0 +1,9 @@
+hooks:
+  syntax:
+    command: "ruby -c"
+    dirs_with:
+      - "Gemfile"
+    if_changed:
+      - "**/*.rb"
+      - "**/*.erb"
+      - "Gemfile"

@@ -1,0 +1,9 @@
+hooks:
+  build:
+    command: "npm run build-storybook"
+    dirs_with:
+      - ".storybook"
+    if_changed:
+      - "**/*.stories.@(js|jsx|ts|tsx)"
+      - "**/*.mdx"
+      - ".storybook/**/*"

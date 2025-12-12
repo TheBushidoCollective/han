@@ -1,0 +1,7 @@
+hooks:
+  info:
+    description: "Verifies Sentry CLI configuration and authentication"
+    dirs_with:
+      - ".sentryclirc"
+      - "sentry.properties"
+    command: "sentry-cli info"
