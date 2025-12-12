@@ -1,6 +1,6 @@
 {
   "name": "jutsu-eslint",
-  "version": "1.8.17",
+  "version": "1.9.0",
   "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["eslint", "linting", "javascript", "typescript"]
+  "keywords": [
+    "eslint",
+    "linting",
+    "javascript",
+    "typescript"
+  ]
 }

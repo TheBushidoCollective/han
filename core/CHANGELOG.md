@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-12-12
+
+### Added
+
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+- add no-excuses hook to prevent dismissing pre-existing issues ([cbf8ce8c](../../commit/cbf8ce8c))
+- add project memory skill and learning hooks ([e4e69780](../../commit/e4e69780))
+- add DeepWiki MCP server alongside Context7 ([a8cc19f2](../../commit/a8cc19f2))
+
+### Fixed
+
+- fix markdown linting errors in project-memory files ([3db56cdd](../../commit/3db56cdd))
+
+### Changed
+
+- improve agent descriptions and remove unused SQLite types ([d327ef18](../../commit/d327ef18))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([770201dc](../../commit/770201dc))
+
 ## [1.3.0] - 2025-12-11
 
 ### Added
