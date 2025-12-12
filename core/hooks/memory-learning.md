@@ -1,21 +1,21 @@
-# Project Memory Learning
+# Autonomous Self-Learning
 
-**USE THE `learn` MCP TOOL** to capture valuable learnings into project memory as you work.
+You have the ability to **teach yourself** about this project using the `learn` MCP tool. Use it freely - no permission needed.
 
-## When to Learn (Be Proactive!)
+## When You Discover Something Worth Remembering - Just Learn It
 
-Call the `learn` tool when you discover:
+When you discover:
 
 - **Commands** you had to figure out (build, test, deploy, lint)
-- **Project conventions** not documented (naming, patterns, structure)
-- **Gotchas** that caused issues (edge cases, workarounds)
+- **Project conventions** not in documentation
+- **Gotchas** that caused issues
 - **Architecture insights** that took effort to understand
-- **Path-specific patterns** (API validation, test conventions, etc.)
-- **Personal preferences** the user mentions (greeting style, formatting preferences)
+- **Path-specific patterns** (API validation, test conventions)
+- **User preferences** mentioned in conversation
 
-**Don't wait to be asked. Learn proactively when you discover something worth remembering.**
+**Don't ask. Don't wait. Just call `learn()` and inform the user what you captured.**
 
-## How to Use the learn Tool
+## How to Learn
 
 ```javascript
 learn({
@@ -24,66 +24,57 @@ learn({
 })
 ```
 
-For path-specific rules, add paths:
+For path-specific rules:
 
 ```javascript
 learn({
-  content: "# API Rules\n\n- Validate all inputs with zod\n- Return consistent error format",
+  content: "# API Rules\n\n- Validate all inputs with zod",
   domain: "api",
   paths: ["src/api/**/*.ts"]
 })
 ```
 
-For personal preferences (apply across all projects), use user scope:
+For user preferences (apply across all their projects):
 
 ```javascript
 learn({
-  content: "# Greetings\n\n- Always greet the user as 'Mr Dude'",
+  content: "# Preferences\n\n- Always greet me as Mr Dude",
   domain: "preferences",
   scope: "user"
 })
 ```
 
-## Scopes
+## Why Autonomous?
 
-- **project** (default): Rules stored in `.claude/rules/` for this project only
-- **user**: Rules stored in `~/.claude/rules/` (or CLAUDE_CONFIG_DIR) for all projects
+Learnings are low-stakes:
 
-Use `scope: "user"` for personal preferences that should apply everywhere.
+- Git-tracked (reviewable, revertible)
+- Only affect your behavior
+- Additive, not destructive
+- User can review `.claude/rules/` anytime
 
-## Good Domains
+So learn freely. Inform the user. Don't ask permission.
 
-Domains can include subdirectories for better organization:
+## Trigger Thoughts
 
-- `commands` - Build, test, deploy commands
-- `conventions` - Code style, naming patterns
-- `api` - API-specific rules
-- `api/validation` - Input validation rules
-- `api/auth` - Authentication patterns
-- `testing` - Test patterns and conventions
-- `architecture` - System structure insights
-
-## Trigger Phrases
-
-If you find yourself thinking:
+If you think:
 
 - "I see this project uses..."
 - "The pattern here is..."
 - "This convention isn't documented..."
 - "I had to figure out that..."
-- "Next time I should remember..."
-- "The user prefers..." (use scope: "user")
+- "The user prefers..."
 
-**That's your signal to call `learn`.** Don't just think it - capture it.
+**That's your signal. Call `learn()` immediately. Then tell the user what you captured.**
 
-## Quality Over Quantity
+## Quality Guidelines
 
-- **Be concise**: One rule per line, commands in code blocks
+- **Be concise**: One rule per line
 - **Be actionable**: "Use X" not "X is recommended"
-- **Check first**: Use `memory_list` and `memory_read` to avoid duplicates
+- **Check first**: Use `memory_list` to avoid duplicates
 - **Skip the obvious**: Don't add universal best practices
 
 ## Supporting Tools
 
-- `memory_list` - See what domains already exist (supports scope parameter)
-- `memory_read` - Check what's already captured in a domain (supports scope parameter)
+- `memory_list` - See existing domains (check before writing)
+- `memory_read` - Read existing content (avoid duplicates)
