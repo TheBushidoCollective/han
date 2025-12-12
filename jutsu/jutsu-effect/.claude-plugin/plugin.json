@@ -1,6 +1,6 @@
 {
   "name": "jutsu-effect",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
   "author": {
     "name": "The Bushido Collective",

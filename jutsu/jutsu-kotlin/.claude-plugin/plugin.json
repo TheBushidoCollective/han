@@ -1,6 +1,6 @@
 {
   "name": "jutsu-kotlin",
-  "version": "1.8.16",
+  "version": "1.9.0",
   "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["kotlin", "coroutines", "android", "jvm"]
+  "keywords": [
+    "kotlin",
+    "coroutines",
+    "android",
+    "jvm"
+  ]
 }

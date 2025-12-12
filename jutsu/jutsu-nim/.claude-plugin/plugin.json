@@ -1,6 +1,6 @@
 {
   "name": "jutsu-nim",
-  "version": "1.8.16",
+  "version": "1.9.0",
   "description": "Advanced Nim programming skills for systems programming and metaprogramming",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["nim", "systems-programming", "metaprogramming"]
+  "keywords": [
+    "nim",
+    "systems-programming",
+    "metaprogramming"
+  ]
 }
