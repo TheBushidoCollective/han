@@ -1,7 +1,7 @@
 ---
 title: "Teaching Claude Code to Remember: The Project Memory Feature"
 subtitle: "How the core plugin helps Claude learn your codebase over time"
-date: 2025-12-12
+date: "2025-12-09"
 author: The Bushido Collective
 ---
 
