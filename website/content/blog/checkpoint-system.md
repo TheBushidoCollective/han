@@ -1,6 +1,13 @@
-# Stop Getting Blamed for Code You Never Touched
+---
+title: "Stop Getting Blamed for Code You Never Touched"
+description: "How Han's Checkpoint System fixes hook fatigue in large monorepos by scoping validation to only the files you actually changed."
+date: "2025-12-12"
+author: "The Bushido Collective"
+tags: ["checkpoints", "hooks", "monorepo", "validation"]
+category: "Technical Deep Dive"
+---
 
-## How Han's Checkpoint System Fixes Hook Fatigue in Large Monorepos
+Han's Checkpoint System fixes hook fatigue in large monorepos by scoping validation to only the files you actually changed.
 
 If you've worked in a large monorepo with pre-existing linting errors, you know the frustration: you change one file, and suddenly your pre-commit hooks explode with hundreds of errors from code written months ago by someone else. Your session fails. You didn't break anything. You just had the misfortune of working in the same directory.
 
