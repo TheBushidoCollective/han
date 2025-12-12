@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
+- reframe project memory as autonomous self-learning ([f917b23f](../../commit/f917b23f))
+- update blog posts - focus on rules, remove em dashes ([6fd7396a](../../commit/6fd7396a))
+- add metrics blog post, update project memory and checkpoint posts ([374854e2](../../commit/374854e2))
+
+## [1.22.5] - 2025-12-12
+
+### Added
+
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+- add OpenTelemetry integration for enterprise observability ([aa2afab9](../../commit/aa2afab9))
+
+### Fixed
+
+- add blank lines around lists in blog posts (MD032) ([897a0674](../../commit/897a0674))
+- add frontmatter to checkpoint-system blog post ([c34c33f0](../../commit/c34c33f0))
+- use atomic replacement to prevent corruption ([87590e30](../../commit/87590e30))
+
+### Other
+
 - update blog posts - focus on rules, remove em dashes ([6fd7396a](../../commit/6fd7396a))
 - add metrics blog post, update project memory and checkpoint posts ([374854e2](../../commit/374854e2))
 
