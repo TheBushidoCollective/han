@@ -13,7 +13,7 @@ How do you know if an AI assistant is actually getting better at helping you? No
 
 AI assistants often express confidence that doesn't match reality. "I've fixed the bug" when the tests still fail. "This should work" when it doesn't. Without feedback loops, there's no way to improve.
 
-Han's metrics system creates that feedback loop. When Claude tracks tasks with confidence estimates, then compares those estimates against actual outcomes, patterns emerge. Over time, both you and Claude can see where confidence aligns with reality—and where it doesn't.
+Han's metrics system creates that feedback loop. When Claude tracks tasks with confidence estimates, then compares those estimates against actual outcomes, patterns emerge. Over time, both you and Claude can see where confidence aligns with reality - and where it doesn't.
 
 ## MCP Tools for Task Tracking
 
@@ -90,7 +90,7 @@ fail_task({
 })
 ```
 
-Recording failures with attempted solutions helps identify patterns—certain types of tasks that consistently hit the same blockers.
+Recording failures with attempted solutions helps identify patterns - certain types of tasks that consistently hit the same blockers.
 
 ## Calibration: The Core Value
 
@@ -212,7 +212,7 @@ Claude will call the appropriate query tools and present the data.
 
 ## The Long View
 
-Metrics aren't about judgment. They're about learning. A 60% success rate isn't "bad"—it's information. It might mean you're tackling hard problems. It might mean certain patterns need attention. It might mean nothing without more context.
+Metrics aren't about judgment. They're about learning. A 60% success rate isn't "bad" - it's information. It might mean you're tackling hard problems. It might mean certain patterns need attention. It might mean nothing without more context.
 
 The value is in the trends, the patterns, the calibration over time. After months of tracking, you'll have a real picture of how AI-assisted development works in your specific context.
 
