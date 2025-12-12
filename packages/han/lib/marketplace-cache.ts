@@ -2,6 +2,60 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MarketplacePlugin } from "./shared.ts";
 
+/**
+ * Check if Han marketplace is configured in Claude settings
+ * Returns true if Han is installed in any scope (user, project, or local)
+ */
+function isHanInstalled(): boolean {
+	const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+	const configDir = process.env.CLAUDE_CONFIG_DIR || join(homeDir, ".claude");
+
+	// Check user scope
+	const userSettings = join(configDir, "settings.json");
+	if (existsSync(userSettings)) {
+		try {
+			const data = JSON.parse(readFileSync(userSettings, "utf-8"));
+			if (data.extraKnownMarketplaces?.han) {
+				return true;
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	}
+
+	// Use CLAUDE_PROJECT_DIR for project settings if set (for testability)
+	// Otherwise fall back to process.cwd()
+	const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+	// Check project scope
+	const projectSettings = join(projectDir, ".claude", "settings.json");
+	if (existsSync(projectSettings)) {
+		try {
+			const data = JSON.parse(readFileSync(projectSettings, "utf-8"));
+			if (data.extraKnownMarketplaces?.han) {
+				return true;
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	}
+
+	// Check local scope
+	const localSettings = join(projectDir, ".claude", "settings.local.json");
+	if (existsSync(localSettings)) {
+		try {
+			const data = JSON.parse(readFileSync(localSettings, "utf-8"));
+			if (data.extraKnownMarketplaces?.han) {
+				return true;
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	}
+
+	return false;
+}
+
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MARKETPLACE_URL =
 	"https://raw.githubusercontent.com/TheBushidoCollective/han/refs/heads/main/.claude-plugin/marketplace.json";
@@ -101,6 +155,18 @@ export async function getMarketplacePlugins(
 		if (cache && !isCacheStale(cache)) {
 			return { plugins: cache.plugins, fromCache: true };
 		}
+	}
+
+	// If Han is already installed in Claude settings, prefer cache over network fetch
+	// (Claude Code already has access to marketplace via the configured marketplace)
+	const hanInstalled = isHanInstalled();
+	if (hanInstalled && !forceRefresh) {
+		// Use cache if available, even if stale
+		const cache = readCache();
+		if (cache) {
+			return { plugins: cache.plugins, fromCache: true };
+		}
+		// No cache available yet - fall through to fetch and create initial cache
 	}
 
 	// Cache miss, stale, or forced refresh - fetch from GitHub

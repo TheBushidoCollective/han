@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
+import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerMetricsCommand } from "./commands/metrics/index.ts";
@@ -100,6 +101,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerHookCommands(program);
 	registerMcpCommands(program);
 	registerMetricsCommand(program);
+	registerCheckpointCommands(program);
 	registerAliasCommands(program);
 
 	// Register top-level explain command

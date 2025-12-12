@@ -1,0 +1,11 @@
+hooks:
+  test:
+    command: "sbt test"
+    dirs_with:
+      - "build.sbt"
+    if_changed:
+      - "**/*.scala"
+      - "**/*.sc"
+      - "**/*.sbt"
+      - "build.sbt"
+      - "project/**/*"

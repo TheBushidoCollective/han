@@ -273,6 +273,57 @@ const [issues, prs, actions] = await Promise.all([
 ])
 ```
 
+## Han's Core MCP Server
+
+Beyond external integrations, Han provides a core MCP server with powerful built-in tools:
+
+### Memory Tools
+
+Claude can capture and recall project-specific learnings:
+
+```javascript
+// Capture a learning
+learn({
+  content: "# API Rules\n- Validate all inputs with zod",
+  domain: "api",
+  paths: ["src/api/**/*.ts"],  // Optional: apply to specific paths
+  scope: "project"  // or "user" for personal preferences
+})
+
+// Check existing learnings
+memory_list({ scope: "project" })
+memory_read({ domain: "api" })
+```
+
+### Checkpoint Tools
+
+Track file changes across sessions for intelligent caching:
+
+```javascript
+checkpoint_list()  // See existing checkpoints
+checkpoint_clean({ maxAge: 24 })  // Remove old checkpoints
+```
+
+### Metrics Tools
+
+Track task performance and calibration:
+
+```javascript
+start_task({ description: "Fix login bug", type: "fix" })
+complete_task({ task_id: "...", outcome: "success", confidence: 0.85 })
+query_metrics({ period: "week" })
+```
+
+### Blueprint Tools (hashi-blueprints)
+
+When the hashi-blueprints plugin is installed:
+
+```javascript
+search_blueprints({ keyword: "api" })
+read_blueprint({ name: "cli-architecture" })
+write_blueprint({ name: "auth-system", summary: "...", content: "..." })
+```
+
 ## Available Hashi Plugins
 
 Current MCP bridges in Han marketplace:
@@ -284,6 +335,7 @@ Current MCP bridges in Han marketplace:
 - **hashi-sentry**: Error tracking and monitoring
 - **hashi-figma**: Design-to-code workflows
 - **hashi-gitlab**: GitLab integration
+- **hashi-blueprints**: Technical documentation management
 
 ## What's Next?
 

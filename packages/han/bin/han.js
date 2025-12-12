@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { execSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -84,10 +85,8 @@ async function selfRepairIfNeeded() {
 			execSync("npx clear-npx-cache", { stdio: "pipe" });
 		} catch {
 			// Try manual clear if clear-npx-cache not available
-			const { homedir } = await import("node:os");
 			const npxCachePath = join(homedir(), ".npm", "_npx");
 			if (existsSync(npxCachePath)) {
-				const { rmSync } = await import("node:fs");
 				rmSync(npxCachePath, { recursive: true, force: true });
 			}
 		}
@@ -224,10 +223,8 @@ if (!tryRunBinary()) {
 			try {
 				execSync("npx clear-npx-cache", { stdio: "pipe" });
 			} catch {
-				const { homedir } = await import("node:os");
 				const npxCachePath = join(homedir(), ".npm", "_npx");
 				if (existsSync(npxCachePath)) {
-					const { rmSync } = await import("node:fs");
 					rmSync(npxCachePath, { recursive: true, force: true });
 				}
 			}

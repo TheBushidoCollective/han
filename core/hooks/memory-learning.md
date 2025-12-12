@@ -1,81 +1,89 @@
 # Project Memory Learning
 
-As you work, capture valuable learnings into project memory.
+**USE THE `learn` MCP TOOL** to capture valuable learnings into project memory as you work.
 
-## When to Update Memory
+## When to Learn (Be Proactive!)
 
-Update CLAUDE.md or `.claude/rules/` when you discover:
+Call the `learn` tool when you discover:
 
+- **Commands** you had to figure out (build, test, deploy, lint)
 - **Project conventions** not documented (naming, patterns, structure)
-- **Commands** you had to figure out (build, test, deploy)
 - **Gotchas** that caused issues (edge cases, workarounds)
 - **Architecture insights** that took effort to understand
-- **Constraints** that affected your work (performance, security, compatibility)
+- **Path-specific patterns** (API validation, test conventions, etc.)
+- **Personal preferences** the user mentions (greeting style, formatting preferences)
 
-## Where to Add Learnings
+**Don't wait to be asked. Learn proactively when you discover something worth remembering.**
 
-| Learning Type | Location |
-|---------------|----------|
-| General project info | `CLAUDE.md` |
-| Path-specific rules | `.claude/rules/<domain>.md` |
-| Personal preferences | `CLAUDE.local.md` (gitignored) |
+## How to Use the learn Tool
 
-## How to Capture
-
-1. **Check if exists**: Read CLAUDE.md first to avoid duplicates
-2. **Be concise**: One line per convention, commands in code blocks
-3. **Be actionable**: "Use X" not "X is recommended"
-4. **Include context**: Why this matters, not just what to do
-
-## Example Updates
-
-When you discover a test command:
-
-```markdown
-## Commands
-
-    # Run tests (use --only-failures for faster iteration)
-    bun test --only-failures
+```javascript
+learn({
+  content: "# Commands\n\n- Run tests: `bun test --only-failures`",
+  domain: "commands"
+})
 ```
 
-When you discover a convention:
+For path-specific rules, add paths:
 
-```markdown
-## Conventions
-
-- All API functions must be async
-- Use `Result<T, Error>` pattern for error handling
+```javascript
+learn({
+  content: "# API Rules\n\n- Validate all inputs with zod\n- Return consistent error format",
+  domain: "api",
+  paths: ["src/api/**/*.ts"]
+})
 ```
 
-When you discover a path-specific rule:
+For personal preferences (apply across all projects), use user scope:
 
-```markdown
-<!-- .claude/rules/api.md -->
----
-globs: ["src/api/**/*.ts"]
----
-
-# API Rules
-
-- Validate all inputs with zod
-- Return consistent error format
+```javascript
+learn({
+  content: "# Greetings\n\n- Always greet the user as 'Mr Dude'",
+  domain: "preferences",
+  scope: "user"
+})
 ```
+
+## Scopes
+
+- **project** (default): Rules stored in `.claude/rules/` for this project only
+- **user**: Rules stored in `~/.claude/rules/` (or CLAUDE_CONFIG_DIR) for all projects
+
+Use `scope: "user"` for personal preferences that should apply everywhere.
+
+## Good Domains
+
+Domains can include subdirectories for better organization:
+
+- `commands` - Build, test, deploy commands
+- `conventions` - Code style, naming patterns
+- `api` - API-specific rules
+- `api/validation` - Input validation rules
+- `api/auth` - Authentication patterns
+- `testing` - Test patterns and conventions
+- `architecture` - System structure insights
 
 ## Trigger Phrases
 
-If you find yourself thinking or saying:
+If you find yourself thinking:
 
 - "I see this project uses..."
 - "The pattern here is..."
 - "This convention isn't documented..."
 - "I had to figure out that..."
 - "Next time I should remember..."
+- "The user prefers..." (use scope: "user")
 
-**That's a signal to update project memory.**
+**That's your signal to call `learn`.** Don't just think it - capture it.
 
-## Do Not
+## Quality Over Quantity
 
-- Duplicate existing documentation
-- Add obvious/universal best practices
-- Create huge memory files (keep them focused)
-- Add learnings specific to one debugging session
+- **Be concise**: One rule per line, commands in code blocks
+- **Be actionable**: "Use X" not "X is recommended"
+- **Check first**: Use `memory_list` and `memory_read` to avoid duplicates
+- **Skip the obvious**: Don't add universal best practices
+
+## Supporting Tools
+
+- `memory_list` - See what domains already exist (supports scope parameter)
+- `memory_read` - Check what's already captured in a domain (supports scope parameter)

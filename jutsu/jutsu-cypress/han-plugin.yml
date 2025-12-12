@@ -1,0 +1,10 @@
+hooks:
+  test:
+    command: "npx -y cypress run"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"cypress\":' package.json"
+    if_changed:
+      - "**/*.{js,jsx,ts,tsx}"
+      - "cypress/**/*"
+      - "cypress.config.*"

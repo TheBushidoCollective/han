@@ -1,0 +1,17 @@
+hooks:
+  typecheck:
+    command: "npx -y --package typescript tsc"
+    dirs_with:
+      - "package.json"
+      - "tsconfig.json"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "tsconfig.json"
+  validate-structure:
+    command: "node -e \"const fs=require('fs');const path=require('path');const dirs=['.claude/agents','.claude/skills','.claude/commands'].filter(d=>fs.existsSync(d));if(dirs.length>0){const errs=[];dirs.forEach(d=>{const files=fs.readdirSync(d,{recursive:true});files.forEach(f=>{const fp=path.join(d,f);if(fs.statSync(fp).isFile()){if(d.includes('agents')&&!f.endsWith('.md'))errs.push('Agent '+f+' must be .md file');if(d.includes('skills')&&path.basename(f)!=='SKILL.md'&&f.endsWith('.md'))errs.push('Skill file must be SKILL.md, found: '+f);if(d.includes('commands')&&!f.endsWith('.md'))errs.push('Command '+f+' must be .md file');}});});if(errs.length>0){console.error('\\n❌ Claude Agent SDK structure validation failed:\\n');errs.forEach(e=>console.error('  • '+e));process.exit(1);}else{console.log('✅ Claude Agent SDK structure valid');}}else{console.log('ℹ️  No .claude directory found - skipping structure validation');}\""
+    dirs_with:
+      - ".claude"
+    if_changed:
+      - ".claude/**/*.md"
+      - ".claude/**/*.json"

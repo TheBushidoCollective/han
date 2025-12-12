@@ -1,0 +1,8 @@
+hooks:
+  validate:
+    command: "\"act --dryrun\""
+    dirs_with:
+      - ".github/workflows"
+    if_changed:
+      - ".github/workflows/**/*.yml"
+      - ".github/workflows/**/*.yaml"

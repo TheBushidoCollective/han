@@ -1,0 +1,11 @@
+hooks:
+  format:
+    command: "shfmt -d ."
+    dirs_with:
+      - ".shfmt.toml"
+      - "shfmt.toml"
+      - "*.sh"
+    if_changed:
+      - "**/*.sh"
+      - "**/*.bash"
+      - "**/.[!.]*"

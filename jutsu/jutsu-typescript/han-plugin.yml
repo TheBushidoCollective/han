@@ -1,0 +1,8 @@
+hooks:
+  typecheck:
+    command: "npx -y --package typescript tsc"
+    dirs_with:
+      - "tsconfig.json"
+    if_changed:
+      - "**/*.{ts,tsx,mts,cts}"
+      - "tsconfig*.json"

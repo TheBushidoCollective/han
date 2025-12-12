@@ -1,0 +1,15 @@
+hooks:
+  format:
+    command: "gleam format --check"
+    dirs_with:
+      - "gleam.toml"
+    if_changed:
+      - "**/*.gleam"
+      - "gleam.toml"
+  test:
+    command: "gleam test"
+    dirs_with:
+      - "gleam.toml"
+    if_changed:
+      - "**/*.gleam"
+      - "gleam.toml"

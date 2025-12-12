@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
@@ -9,14 +9,47 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 } from "../../claude-settings.ts";
+import { isCheckpointsEnabled } from "../../han-settings.ts";
 import { getPluginNameFromRoot } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
+
+/**
+ * Check if stdin has data available without blocking
+ */
+function hasStdinData(): boolean {
+	try {
+		// In a TTY, stdin is interactive - never try to read
+		if (process.stdin.isTTY) {
+			return false;
+		}
+		// For piped stdin, check if there's data available
+		// readableLength > 0 means data is buffered and ready to read
+		if (process.stdin.readable && process.stdin.readableLength > 0) {
+			return true;
+		}
+		// Check if stdin is a file (not a pipe/FIFO)
+		const { fstatSync } = require("node:fs");
+		const stat = fstatSync(0);
+		// Only read from actual files, not pipes/FIFOs (which would block)
+		if (stat.isFile()) {
+			return true;
+		}
+		// Don't try to read from pipes/FIFOs/sockets without buffered data
+		return false;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Read raw stdin content from Claude Code hooks (for piping to child hooks)
  */
 function readStdinRaw(): string | null {
 	try {
+		// Only read if stdin has data available
+		if (!hasStdinData()) {
+			return null;
+		}
 		// Read stdin synchronously (file descriptor 0)
 		const stdin = readFileSync(0, "utf-8");
 		if (stdin.trim()) {
@@ -38,19 +71,34 @@ function getStdinRaw(): string | null {
 }
 
 /**
+ * Hook payload structure from Claude Code
+ */
+interface HookPayload {
+	session_id?: string;
+	hook_event_name?: string;
+	agent_id?: string;
+	agent_type?: string;
+}
+
+/**
+ * Parse stdin to get full hook payload
+ */
+function getStdinPayload(): HookPayload | null {
+	const raw = getStdinRaw();
+	if (!raw) return null;
+	try {
+		return JSON.parse(raw) as HookPayload;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Parse stdin to extract session_id for metrics reporting
  */
 function getSessionIdFromStdin(): string | undefined {
-	const raw = getStdinRaw();
-	if (!raw) return undefined;
-	try {
-		const parsed = JSON.parse(raw);
-		return typeof parsed?.session_id === "string"
-			? parsed.session_id
-			: undefined;
-	} catch {
-		return undefined;
-	}
+	const payload = getStdinPayload();
+	return payload?.session_id;
 }
 
 /**
@@ -204,7 +252,24 @@ function executeCommandHook(
 
 		// Get raw stdin content to pipe to child hooks
 		const stdinContent = getStdinRaw();
-		const sessionId = getSessionIdFromStdin();
+		const payload = getStdinPayload();
+		const sessionId = payload?.session_id;
+		const agentId = payload?.agent_id;
+
+		// Determine checkpoint context from hook type and payload
+		let checkpointType: "session" | "agent" | undefined;
+		let checkpointId: string | undefined;
+
+		// Stop hooks use session checkpoint
+		if (hookType === "Stop" && sessionId) {
+			checkpointType = "session";
+			checkpointId = sessionId;
+		}
+		// SubagentStop hooks use agent checkpoint
+		else if (hookType === "SubagentStop" && agentId) {
+			checkpointType = "agent";
+			checkpointId = agentId;
+		}
 
 		const output = execSync(resolvedCommand, {
 			encoding: "utf-8",
@@ -220,6 +285,13 @@ function executeCommandHook(
 				CLAUDE_PROJECT_DIR: process.cwd(),
 				// Disable fail-fast in subprocesses - dispatch handles aggregation
 				HAN_NO_FAIL_FAST: "1",
+				// Pass checkpoint context to hook run commands
+				...(checkpointType && checkpointId
+					? {
+							HAN_CHECKPOINT_TYPE: checkpointType,
+							HAN_CHECKPOINT_ID: checkpointId,
+						}
+					: {}),
 			},
 		});
 
@@ -405,6 +477,63 @@ function dispatchHooks(hookType: string, includeSettings = false): void {
 		process.env.HAN_DISABLE_HOOKS === "1"
 	) {
 		process.exit(0);
+	}
+
+	// Capture checkpoint at session/agent start in background (fire-and-forget)
+	// This prevents large monorepos from blocking hook dispatch
+	if (isCheckpointsEnabled()) {
+		try {
+			const payload = getStdinPayload();
+
+			// Capture session checkpoint at SessionStart (background)
+			if (hookType === "SessionStart" && payload?.session_id) {
+				// Fire-and-forget: run checkpoint capture in detached background process
+				const child = spawn(
+					process.execPath,
+					[
+						process.argv[1],
+						"checkpoint",
+						"capture",
+						"--type",
+						"session",
+						"--id",
+						payload.session_id,
+					],
+					{
+						detached: true,
+						stdio: "ignore",
+						cwd: process.cwd(),
+					},
+				);
+				child.unref(); // Allow parent to exit independently
+			}
+
+			// Capture agent checkpoint at SubagentStart (background)
+			if (hookType === "SubagentStart" && payload?.agent_id) {
+				// Fire-and-forget: run checkpoint capture in detached background process
+				const child = spawn(
+					process.execPath,
+					[
+						process.argv[1],
+						"checkpoint",
+						"capture",
+						"--type",
+						"agent",
+						"--id",
+						payload.agent_id,
+					],
+					{
+						detached: true,
+						stdio: "ignore",
+						cwd: process.cwd(),
+					},
+				);
+				child.unref(); // Allow parent to exit independently
+			}
+		} catch {
+			// Checkpoint spawn failed - log but continue with hook dispatch
+			// We don't want to block hooks on checkpoint failures
+		}
 	}
 
 	const outputs: string[] = [];

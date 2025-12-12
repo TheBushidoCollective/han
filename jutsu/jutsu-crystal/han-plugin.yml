@@ -1,0 +1,19 @@
+hooks:
+  format:
+    command: "shards install && crystal tool format --check"
+    dirs_with:
+      - "shard.yml"
+    if_changed:
+      - "**/*.cr"
+      - "**/*.ecr"
+      - "shard.yml"
+      - "shard.lock"
+  test:
+    command: "shards install && crystal spec"
+    dirs_with:
+      - "shard.yml"
+    if_changed:
+      - "**/*.cr"
+      - "**/*.ecr"
+      - "shard.yml"
+      - "shard.lock"

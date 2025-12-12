@@ -1,0 +1,13 @@
+hooks:
+  test:
+    command: "bundle exec rspec"
+    dirs_with:
+      - "Gemfile"
+    dir_test: "grep -qE '^\\s*gem.*rspec' Gemfile"
+    if_changed:
+      - "**/*.rb"
+      - "**/*.erb"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - "spec/**/*"
+      - ".rspec"

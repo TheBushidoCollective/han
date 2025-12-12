@@ -1,0 +1,13 @@
+hooks:
+  lint:
+    command: "mix credo"
+    dirs_with:
+      - "mix.exs"
+    dir_test: "grep -qE ':credo' mix.exs"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - ".credo.exs"

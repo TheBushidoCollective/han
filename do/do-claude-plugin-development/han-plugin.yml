@@ -1,0 +1,15 @@
+hooks:
+  claudelint:
+    command: "uvx claudelint . --strict"
+    dir_test: "test -f .claude-plugin/marketplace.json"
+  markdownlint:
+    command: "npx -y markdownlint-cli --config ${CLAUDE_PLUGIN_ROOT}/hooks/.markdownlint.json --ignore node_modules ."
+    dir_test: "test -f .claude-plugin/marketplace.json"
+    if_changed:
+      - "**/*.md"
+  config-sync:
+    command: "cd packages/han && bun run lint:config-sync"
+    dir_test: "test -d packages/han && test -f packages/han/package.json"
+    if_changed:
+      - "**/han-config.json"
+      - "**/han-plugin.yml"

@@ -8,6 +8,7 @@
         "**/*.tsx",
         "**/*.js",
         "**/*.jsx",
+        "bun.lock",
         "bun.lockb",
         "bunfig.toml"
       ]
@@ -20,6 +21,7 @@
         "**/*.tsx",
         "**/*.js",
         "**/*.jsx",
+        "bun.lock",
         "bun.lockb",
         "bunfig.toml"
       ]

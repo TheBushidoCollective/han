@@ -1,0 +1,7 @@
+hooks:
+  validate:
+    command: "npx -y markdownlint-cli runbooks/**/*.md --ignore node_modules"
+    dirs_with:
+      - "runbooks"
+    if_changed:
+      - "runbooks/**/*.md"

@@ -9,10 +9,11 @@
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import YAML from "yaml";
 import type { MarketplacePlugin } from "./shared.ts";
 
 /**
- * HanConfig structure for reading han-config.json files
+ * HanConfig structure for reading han-config.json files (legacy)
  */
 interface HanConfigHook {
 	dirsWith?: string[];
@@ -21,6 +22,18 @@ interface HanConfigHook {
 
 interface HanConfig {
 	hooks?: Record<string, HanConfigHook>;
+}
+
+/**
+ * YAML plugin config structure for han-plugin.yml (new format)
+ */
+interface YamlPluginHook {
+	dirs_with?: string[];
+	dir_test?: string;
+}
+
+interface YamlPluginConfig {
+	hooks?: Record<string, YamlPluginHook>;
 }
 
 /**
@@ -35,8 +48,8 @@ function getCachedPluginsDir(): string {
 }
 
 /**
- * Recursively find all han-config.json files in a directory
- * Returns a map of plugin name -> han-config.json path
+ * Recursively find all plugin config files (han-plugin.yml or han-config.json) in a directory
+ * Returns a map of plugin name -> config path (prefers YAML over JSON)
  */
 function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 	const configMap = new Map<string, string>();
@@ -50,8 +63,8 @@ function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 			for (const entry of entries) {
 				const fullPath = join(dir, entry.name);
 
-				if (entry.isFile() && entry.name === "han-config.json") {
-					// Found a han-config.json - get plugin name from plugin.json
+				// Check for YAML config first (preferred)
+				if (entry.isFile() && entry.name === "han-plugin.yml") {
 					const pluginJsonPath = join(dir, ".claude-plugin", "plugin.json");
 					if (existsSync(pluginJsonPath)) {
 						try {
@@ -59,6 +72,22 @@ function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 								readFileSync(pluginJsonPath, "utf-8"),
 							);
 							if (pluginJson.name) {
+								configMap.set(pluginJson.name, fullPath);
+							}
+						} catch {
+							// Skip if plugin.json is invalid
+						}
+					}
+				}
+				// Fall back to JSON config (legacy) only if YAML not already found
+				else if (entry.isFile() && entry.name === "han-config.json") {
+					const pluginJsonPath = join(dir, ".claude-plugin", "plugin.json");
+					if (existsSync(pluginJsonPath)) {
+						try {
+							const pluginJson = JSON.parse(
+								readFileSync(pluginJsonPath, "utf-8"),
+							);
+							if (pluginJson.name && !configMap.has(pluginJson.name)) {
 								configMap.set(pluginJson.name, fullPath);
 							}
 						} catch {
@@ -79,31 +108,50 @@ function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 }
 
 /**
- * Extract detection patterns from a han-config.json file
+ * Extract detection patterns from a plugin config file (YAML or JSON)
  */
 function extractDetectionPatterns(
 	configPath: string,
 ): { dirsWith: string[]; dirTest: string[] } | null {
 	try {
 		const content = readFileSync(configPath, "utf-8");
-		const config = JSON.parse(content) as HanConfig;
-
-		if (!config.hooks) {
-			return null;
-		}
+		const isYaml = configPath.endsWith(".yml") || configPath.endsWith(".yaml");
 
 		// Collect unique dirsWith patterns from all hooks
 		const dirsWithSet = new Set<string>();
 		const dirTestSet = new Set<string>();
 
-		for (const hook of Object.values(config.hooks)) {
-			if (hook.dirsWith) {
-				for (const pattern of hook.dirsWith) {
-					dirsWithSet.add(pattern);
+		if (isYaml) {
+			const config = YAML.parse(content) as YamlPluginConfig;
+			if (!config.hooks) {
+				return null;
+			}
+
+			for (const hook of Object.values(config.hooks)) {
+				if (hook.dirs_with) {
+					for (const pattern of hook.dirs_with) {
+						dirsWithSet.add(pattern);
+					}
+				}
+				if (hook.dir_test) {
+					dirTestSet.add(hook.dir_test);
 				}
 			}
-			if (hook.dirTest) {
-				dirTestSet.add(hook.dirTest);
+		} else {
+			const config = JSON.parse(content) as HanConfig;
+			if (!config.hooks) {
+				return null;
+			}
+
+			for (const hook of Object.values(config.hooks)) {
+				if (hook.dirsWith) {
+					for (const pattern of hook.dirsWith) {
+						dirsWithSet.add(pattern);
+					}
+				}
+				if (hook.dirTest) {
+					dirTestSet.add(hook.dirTest);
+				}
 			}
 		}
 
@@ -121,8 +169,8 @@ function extractDetectionPatterns(
 }
 
 /**
- * Load detection criteria from cached plugins' han-config.json files
- * Scans for all han-config.json files and builds a map by plugin name
+ * Load detection criteria from cached plugins' config files (han-plugin.yml or han-config.json)
+ * Scans for config files and builds a map by plugin name
  * Returns plugins enriched with detection data
  */
 export function loadPluginDetection(

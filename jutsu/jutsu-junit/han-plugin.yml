@@ -1,0 +1,8 @@
+hooks:
+  test:
+    command: "mvn test"
+    dirs_with:
+      - "pom.xml"
+    if_changed:
+      - "**/*.java"
+      - "pom.xml"

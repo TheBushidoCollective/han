@@ -2,10 +2,12 @@ import { execSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { hasChangedSinceCheckpoint, loadCheckpoint } from "./checkpoint.ts";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 } from "./claude-settings.ts";
+import { isCheckpointsEnabled } from "./han-settings.ts";
 import {
 	checkForChanges,
 	findDirectoriesWithMarkers,
@@ -119,9 +121,9 @@ export function wrapCommandWithEnvFile(cmd: string): string {
 		// Source the env file before running the command
 		return `source "${envFile}" && ${cmd}`;
 	}
-	// No CLAUDE_ENV_FILE - use login shell to get user's environment
-	// This ensures PATH includes version managers like mise, asdf, etc.
-	return `/bin/bash -l -c ${JSON.stringify(cmd)}`;
+	// No CLAUDE_ENV_FILE - just run the command directly
+	// The shell: "/bin/bash" in execSync will provide a proper environment
+	return cmd;
 }
 
 interface ValidateOptions {
@@ -554,6 +556,18 @@ export interface RunConfiguredHookOptions {
 	 * Also settable via HAN_HOOK_RUN_VERBOSE=1 environment variable.
 	 */
 	verbose?: boolean;
+	/**
+	 * Checkpoint type to filter against (session or agent)
+	 * When set, only runs hook if files changed since both:
+	 * 1. Last hook run (cache check)
+	 * 2. Checkpoint creation (checkpoint check)
+	 */
+	checkpointType?: "session" | "agent";
+	/**
+	 * Checkpoint ID to filter against
+	 * Required when checkpointType is set
+	 */
+	checkpointId?: string;
 }
 
 /**
@@ -571,7 +585,7 @@ export function getCacheKeyForDirectory(
 }
 
 /**
- * Build the han hook run command for error messages
+ * Build the han hook run command for error messages (legacy - prefer MCP)
  */
 export function buildHookCommand(
 	pluginName: string,
@@ -589,13 +603,43 @@ export function buildHookCommand(
 }
 
 /**
+ * Build MCP tool re-run instruction for error messages
+ * When targeting a specific directory, cache is disabled automatically
+ */
+export function buildMcpToolInstruction(
+	pluginName: string,
+	hookName: string,
+	options: { only?: string },
+): string {
+	const toolName = `${pluginName}_${hookName}`.replace(/-/g, "_");
+	const args: string[] = [];
+
+	if (options.only) {
+		args.push(`directory: "${options.only}"`);
+	}
+
+	if (args.length > 0) {
+		return `${toolName}(${args.join(", ")})`;
+	}
+	return `${toolName}()`;
+}
+
+/**
  * Run a hook using plugin config and user overrides.
  * This is the new format: `han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]`
  */
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { pluginName, hookName, cache, only, verbose } = options;
+	const {
+		pluginName,
+		hookName,
+		cache,
+		only,
+		verbose,
+		checkpointType,
+		checkpointId,
+	} = options;
 
 	// Allow env var to override --fail-fast (used by han hook dispatch to prevent
 	// fail-fast behavior when running hooks as subprocesses)
@@ -666,6 +710,7 @@ export async function runConfiguredHook(
 	let totalFound = 0;
 	let disabledCount = 0;
 	let skippedCount = 0;
+	let checkpointSkippedCount = 0;
 
 	for (const config of configs) {
 		totalFound++;
@@ -695,6 +740,39 @@ export async function runConfiguredHook(
 				skippedCount++;
 				continue;
 			}
+
+			// NEW: Also check checkpoint if available
+			if (
+				hasChanges &&
+				checkpointType &&
+				checkpointId &&
+				isCheckpointsEnabled()
+			) {
+				const checkpoint = loadCheckpoint(checkpointType, checkpointId);
+				if (checkpoint) {
+					const changedSinceCheckpoint = hasChangedSinceCheckpoint(
+						checkpoint,
+						config.directory,
+						config.ifChanged,
+					);
+					if (!changedSinceCheckpoint) {
+						// File changed since last hook run, but NOT since checkpoint
+						// Skip this hook
+						if (verbose) {
+							const relativePath =
+								config.directory === projectRoot
+									? "."
+									: config.directory.replace(`${projectRoot}/`, "");
+							console.log(
+								`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
+							);
+						}
+						checkpointSkippedCount++;
+						continue;
+					}
+				}
+				// If no checkpoint, fall through to run hook (graceful degradation)
+			}
 		}
 
 		// This config needs to run
@@ -716,10 +794,20 @@ export async function runConfiguredHook(
 		process.exit(0);
 	}
 
-	if (configsToRun.length === 0 && skippedCount > 0) {
-		console.log(
-			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
-		);
+	if (
+		configsToRun.length === 0 &&
+		(skippedCount > 0 || checkpointSkippedCount > 0)
+	) {
+		if (skippedCount > 0) {
+			console.log(
+				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+			);
+		}
+		if (checkpointSkippedCount > 0) {
+			console.log(
+				`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
+			);
+		}
 		console.log("No changes detected in any directories. Nothing to run.");
 		process.exit(0);
 	}
@@ -798,9 +886,8 @@ export async function runConfiguredHook(
 					? " (idle timeout - no output received)"
 					: "";
 
-				// Build the targeted re-run command
-				const rerunCmd = buildHookCommand(pluginName, hookName, {
-					cached: cache,
+				// Build the MCP tool re-run instruction (preferred over bash)
+				const mcpToolCall = buildMcpToolInstruction(pluginName, hookName, {
 					only: relativePath === "." ? undefined : relativePath,
 				});
 
@@ -809,12 +896,13 @@ export async function runConfiguredHook(
 					: "(no output captured)";
 
 				// Concise, directive error message that emphasizes subagent delegation
+				// Uses MCP tool for re-run (better context control than bash)
 				console.error(
 					`\n❌ Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n\n` +
 						`**CRITICAL**: You MUST spawn a subagent to fix this. The subagent MUST:\n` +
 						`1. Read the output file: ${outputFile}\n` +
 						`2. Analyze the errors and fix them\n` +
-						`3. Re-run: ${rerunCmd}\n\n` +
+						`3. Re-run using MCP tool: ${mcpToolCall}\n\n` +
 						`Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`,
 				);
 				process.exit(2);
@@ -830,6 +918,11 @@ export async function runConfiguredHook(
 	if (skippedCount > 0) {
 		console.log(
 			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+		);
+	}
+	if (checkpointSkippedCount > 0) {
+		console.log(
+			`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
 		);
 	}
 

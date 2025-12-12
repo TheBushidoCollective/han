@@ -11,6 +11,13 @@ function getStorage(): JsonlMetricsStorage {
 	return storageInstance;
 }
 
+/**
+ * Reset the storage instance (for testing)
+ */
+export function resetStorageInstance(): void {
+	storageInstance = null;
+}
+
 export type Severity = "low" | "medium" | "high";
 
 export interface Pattern {

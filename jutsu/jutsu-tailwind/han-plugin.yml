@@ -1,0 +1,12 @@
+hooks:
+  build:
+    command: "npx -y tailwindcss -i ./src/input.css -o ./dist/output.css --minify"
+    dirs_with:
+      - "tailwind.config.js"
+      - "tailwind.config.ts"
+      - "tailwind.config.cjs"
+      - "tailwind.config.mjs"
+    if_changed:
+      - "**/*.{html,js,jsx,ts,tsx,vue,svelte}"
+      - "tailwind.config.*"
+      - "**/*.css"

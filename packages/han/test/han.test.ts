@@ -42,15 +42,21 @@ console.log(`\nTesting: ${USE_SOURCE ? "Source (bun)" : "Binary (bun)"}`);
 console.log(`Path: ${binPath}\n`);
 
 function setup(): string {
-	const testDir = join(__dirname, "fixtures");
-	rmSync(testDir, { recursive: true, force: true });
+	const random = Math.random().toString(36).substring(2, 9);
+	const testDir = join(tmpdir(), `han-test-${Date.now()}-${random}`);
 	mkdirSync(testDir, { recursive: true });
 	return testDir;
 }
 
-function teardown(): void {
-	const testDir = join(__dirname, "fixtures");
-	rmSync(testDir, { recursive: true, force: true });
+function teardown(testDir: string): void {
+	// Clean up only this test's temp directory
+	if (testDir && existsSync(testDir)) {
+		try {
+			rmSync(testDir, { recursive: true, force: true });
+		} catch {
+			// Ignore cleanup errors
+		}
+	}
 }
 
 interface ExecError extends Error {
@@ -103,7 +109,7 @@ describe("HAN_DISABLE_HOOKS", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("causes hook run to exit 0 silently", () => {
@@ -151,7 +157,7 @@ describe("Hook verify", () => {
 		} else {
 			process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
 		}
-		teardown();
+		teardown(testDir);
 	});
 
 	test("exits 0 when all hooks are cached", () => {
@@ -332,7 +338,7 @@ describe("Hook run", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("shows error when no plugin name or hook name", () => {
@@ -431,6 +437,7 @@ describe("Hook run", () => {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: ["pipe", "pipe", "pipe"],
+				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
 			} as ExecSyncOptionsWithStringEncoding,
 		);
 
@@ -457,10 +464,12 @@ describe("Hook run", () => {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: ["pipe", "pipe", "pipe"],
+				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
 			} as ExecSyncOptionsWithStringEncoding,
 		);
 
-		expect(output).toContain("1 directory");
+		// Should only find 1 directory (project/), not deps/lib/ (gitignored)
+		expect(output).toMatch(/1 director(y|ies) passed validation/);
 	});
 });
 
@@ -476,7 +485,7 @@ describe("Validate command", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("works as alias for hook run", () => {
@@ -511,7 +520,7 @@ describe("Hook test command", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("shows help", () => {
@@ -551,6 +560,7 @@ describe("Hook test command", () => {
 			env: {
 				...process.env,
 				CLAUDE_CONFIG_DIR: testDir,
+				CLAUDE_PROJECT_DIR: testDir,
 			},
 		});
 
@@ -652,7 +662,7 @@ describe("Plugin install/uninstall", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	function setupClaudeDir(testDir: string): string {
@@ -813,17 +823,22 @@ describe("Hook run without --dirs-with", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("runs in current directory when no --dirs-with specified", () => {
 		writeFileSync(join(testDir, "marker.txt"), "test");
+
+		// Initialize git repo so hook execution works
+		execSync("git init", { cwd: testDir, stdio: "pipe" });
+		execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
 		expect(() => {
 			execSync(`${binCommand} hook run -- cat marker.txt`, {
 				cwd: testDir,
 				encoding: "utf8",
 				stdio: ["pipe", "pipe", "pipe"],
+				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
 			} as ExecSyncOptionsWithStringEncoding);
 		}).not.toThrow();
 	});
@@ -858,7 +873,7 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("shows error when plugin not found and CLAUDE_PLUGIN_ROOT not set", () => {
@@ -1193,7 +1208,7 @@ describe("Plugin list command", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("shows help", () => {
@@ -1271,7 +1286,7 @@ describe("Explain command", () => {
 	});
 
 	afterEach(() => {
-		teardown();
+		teardown(testDir);
 	});
 
 	test("shows help", () => {

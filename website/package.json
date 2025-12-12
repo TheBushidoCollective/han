@@ -7,10 +7,10 @@
 		"prebuild": "bun run scripts/generate-marketplace.ts && bun run scripts/generate-search-index.ts",
 		"build": "bun run --bun next build",
 		"start": "bun run --bun serve out -p 3000",
-		"test": "bun run playwright test",
-		"test:headed": "bun run playwright test --headed",
-		"test:debug": "bun run playwright test --debug",
-		"test:unit": "bun run lib/search-utils.test.ts"
+		"test": "bun test",
+		"test:e2e": "bun run playwright test",
+		"test:e2e:headed": "bun run playwright test --headed",
+		"test:e2e:debug": "bun run playwright test --debug"
 	},
 	"dependencies": {
 		"fuse.js": "7.1.0",

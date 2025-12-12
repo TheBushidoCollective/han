@@ -1,0 +1,7 @@
+hooks:
+  validate:
+    command: "mvn validate -q"
+    dirs_with:
+      - "pom.xml"
+    if_changed:
+      - "pom.xml"

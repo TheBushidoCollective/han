@@ -1,0 +1,11 @@
+hooks:
+  lint:
+    command: "helm lint . && helm template . --debug > /dev/null"
+    dirs_with:
+      - "Chart.yaml"
+    if_changed:
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "**/*.tpl"
+      - "Chart.yaml"
+      - "values.yaml"

@@ -1,0 +1,11 @@
+hooks:
+  validate:
+    command: "docker compose config > /dev/null"
+    dirs_with:
+      - "docker-compose.*.yaml,docker-compose.*.yml,compose.*.yaml,compose.*.yml"
+    if_changed:
+      - "docker-compose*.yaml"
+      - "docker-compose*.yml"
+      - "compose*.yaml"
+      - "compose*.yml"
+      - ".env"
