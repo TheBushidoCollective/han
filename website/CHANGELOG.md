@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- add frontmatter to checkpoint-system blog post ([c34c33f0](../../commit/c34c33f0))
+- use atomic replacement to prevent corruption ([87590e30](../../commit/87590e30))
+
+## [1.22.4] - 2025-12-12
+
+### Added
+
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+- add OpenTelemetry integration for enterprise observability ([aa2afab9](../../commit/aa2afab9))
+
+### Fixed
+
 - use atomic replacement to prevent corruption ([87590e30](../../commit/87590e30))
 
 ## [1.22.3] - 2025-12-11
