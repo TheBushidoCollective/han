@@ -121,6 +121,7 @@ query_hook_metrics({
 ```
 
 This shows which hooks fail frequently. A lint hook with 40% failure rate might indicate:
+
 - Overly strict rules
 - A specific file pattern that always fails
 - A configuration issue worth investigating
@@ -139,6 +140,7 @@ query_session_metrics({
 ```
 
 This aggregates across sessions, showing:
+
 - Tasks per session
 - Success rates over time
 - Common failure patterns
@@ -179,6 +181,7 @@ You don't need to think about metrics constantly. The system works in the backgr
 5. **Session ends**: Hooks validate, metrics updated
 
 The value compounds. After 50 sessions, you have real data on:
+
 - Which task types have highest success rates
 - Where confidence tends to be miscalibrated
 - Which hooks fail most often
@@ -187,6 +190,7 @@ The value compounds. After 50 sessions, you have real data on:
 ## Privacy by Design
 
 Everything stays local:
+
 - No cloud storage
 - No external APIs
 - No telemetry unless you explicitly enable it

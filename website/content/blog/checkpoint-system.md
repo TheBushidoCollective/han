@@ -26,6 +26,7 @@ Han's new checkpoint system applies this principle to validation. Instead of ide
 When a Claude Code session starts, Han captures a checkpoint - a snapshot of file states at that moment. When hooks run at session end, they filter using this checkpoint.
 
 **A file is only validated if:**
+
 - It changed since the checkpoint (you modified it), AND
 - It changed since the last hook run
 
@@ -70,16 +71,19 @@ Instead, checkpoint-based validation creates a sustainable path:
 Checkpoints live in `~/.claude/projects/{slug}/han/checkpoints/`:
 
 **Session Checkpoints**: `session_{session_id}.json`
+
 - Created on SessionStart
 - Contains SHA-256 hashes of all files
 - Cleaned up after 24 hours
 
 **Agent Checkpoints**: `agent_{agent_id}.json`
+
 - Created for subagents (separate Claude instances)
 - Scopes validation to each agent's work
 - Prevents cross-contamination between parallel work
 
 **Graceful Degradation**
+
 - Missing checkpoint? Normal hook behavior
 - Never silently skips validation
 - Backwards compatible with existing workflows
@@ -102,6 +106,7 @@ Most teams should keep checkpoints enabled. Disable only when deliberately addre
 Consider a monorepo with 2,500 files and 300 pre-existing lint errors:
 
 **Without checkpoints (old behavior):**
+
 - Developer changes 1 file
 - Hook runs on entire affected scope
 - Gets 300+ errors
@@ -109,6 +114,7 @@ Consider a monorepo with 2,500 files and 300 pre-existing lint errors:
 - Validation abandoned
 
 **With checkpoints (new behavior):**
+
 - Developer changes 1 file
 - Hook runs on 1 file
 - Gets feedback on their actual work
