@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.61.6] - 2025-12-12
+
+### Added
+
+- make memory-learning hook explicitly autonomous ([fd2b4e0e](../../commit/fd2b4e0e))
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+- add OpenTelemetry integration for enterprise observability ([aa2afab9](../../commit/aa2afab9))
+
+### Fixed
+
+- align native module naming with workflow matrix ([70760b21](../../commit/70760b21))
+- skip marketplace-cache tests in CI due to Bun fetch mocking bug ([99273d9f](../../commit/99273d9f))
+- harden no-excuses rule to prevent categorizing failures ([bb30c9c6](../../commit/bb30c9c6))
+- prefix unused hookType parameter with underscore ([717549b1](../../commit/717549b1))
+- sync package-lock.json and add weighted frustration metrics ([ff37f37d](../../commit/ff37f37d))
+- pass stdin payload to hooks during test execution ([06eff448](../../commit/06eff448))
+
+### Changed
+
+- use marker-based detection for gaps and install ([687b89c5](../../commit/687b89c5))
+- use dynamic scanning for plugin detection configs ([5a89530a](../../commit/5a89530a))
+- improve agent descriptions and remove unused SQLite types ([d327ef18](../../commit/d327ef18))
+
+### Other
+
+- reframe project memory as autonomous self-learning ([f917b23f](../../commit/f917b23f))
+- Merge pull request #15 from TheBushidoCollective/claude/issue-14-20251211-1808 ([dbfe42d8](../../commit/dbfe42d8))
+
 ## [1.61.5] - 2025-12-12
 
 ### Added
