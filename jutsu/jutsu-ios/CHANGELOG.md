@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2025-12-13
+
+### BREAKING CHANGES
+
+- make caching and fail-fast default behavior for hooks ([491fd7a1](../../commit/491fd7a1))
+
+### Added
+
+- add SubagentStart and SubagentStop hooks to all plugins ([1b4dba0d](../../commit/1b4dba0d))
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+
+### Changed
+
+- normalize hook names to remove duplicative prefixes ([e182590e](../../commit/e182590e))
+
 ## [1.6.0] - 2025-12-12
 
 ### Added
