@@ -1,0 +1,44 @@
+{
+	"sections": [
+		{
+			"title": "Getting Started",
+			"items": [
+				{ "title": "Overview", "slug": "" },
+				{ "title": "What is Han?", "slug": "getting-started" },
+				{ "title": "Plugin Categories", "slug": "plugin-categories" }
+			]
+		},
+		{
+			"title": "Installation",
+			"items": [
+				{ "title": "Installation Methods", "slug": "installation" },
+				{ "title": "Installing Plugins", "slug": "installation/plugins" },
+				{ "title": "Installation Scopes", "slug": "installation/scopes" }
+			]
+		},
+		{
+			"title": "Configuration",
+			"items": [
+				{ "title": "Configuration", "slug": "configuration" },
+				{ "title": "Smart Caching", "slug": "configuration/caching" }
+			]
+		},
+		{
+			"title": "Features",
+			"items": [
+				{ "title": "MCP Integrations", "slug": "integrations" },
+				{ "title": "Local Metrics", "slug": "metrics" },
+				{ "title": "OpenTelemetry", "slug": "metrics/opentelemetry" }
+			]
+		},
+		{
+			"title": "CLI Reference",
+			"items": [
+				{ "title": "Overview", "slug": "cli" },
+				{ "title": "Plugin Commands", "slug": "cli/plugins" },
+				{ "title": "Hook Commands", "slug": "cli/hooks" },
+				{ "title": "Other Commands", "slug": "cli/other" }
+			]
+		}
+	]
+}
