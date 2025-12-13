@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.1] - 2025-12-13
+
+### BREAKING CHANGES
+
+- make caching and fail-fast default behavior for hooks ([491fd7a1](../../commit/491fd7a1))
+
+### Added
+
+- convert docs to multi-page markdown system ([1f2e1269](../../commit/1f2e1269))
+- unified YAML config, MCP memory tools, checkpoint system ([f74f40ed](../../commit/f74f40ed))
+- add OpenTelemetry integration for enterprise observability ([aa2afab9](../../commit/aa2afab9))
+
+### Fixed
+
+- add blank lines around lists in blog posts (MD032) ([897a0674](../../commit/897a0674))
+- add frontmatter to checkpoint-system blog post ([c34c33f0](../../commit/c34c33f0))
+
+### Other
+
+- expand MCP architecture with detailed tool documentation ([7dbc7bbb](../../commit/7dbc7bbb))
+- reframe project memory as autonomous self-learning ([f917b23f](../../commit/f917b23f))
+- update blog posts - focus on rules, remove em dashes ([6fd7396a](../../commit/6fd7396a))
+- add metrics blog post, update project memory and checkpoint posts ([374854e2](../../commit/374854e2))
+
 ## [1.23.0] - 2025-12-13
 
 ### Added
