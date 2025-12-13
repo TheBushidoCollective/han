@@ -1,148 +1,14 @@
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	unlinkSync,
-	writeFileSync,
-} from "node:fs";
-import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-
-// Create require function for ESM context (used for dynamic paths in Node.js)
-const dynamicRequire = createRequire(import.meta.url);
 
 /**
  * Native module type definition
  */
 type NativeModule = typeof import("../../han-native");
 
-/**
- * Cached native module instance
- */
-let cachedNativeModule: NativeModule | null = null;
-
-/**
- * Load the native module.
- * Order of attempts:
- * 1. npm package (for npm installs)
- * 2. Monorepo path (for development)
- * 3. Embedded path (for Bun compiled binaries - static require for Bun to detect)
- * 4. Next to executable (legacy fallback)
- *
- * @throws Error if native module cannot be loaded
- */
-function loadNativeModule(): NativeModule {
-	if (cachedNativeModule) {
-		return cachedNativeModule;
-	}
-
-	const errors: string[] = [];
-
-	// For npm installs: try the package first (most common case)
-	try {
-		cachedNativeModule = dynamicRequire(
-			"@thebushidocollective/han-native",
-		) as NativeModule;
-		return cachedNativeModule;
-	} catch (e) {
-		errors.push(
-			`@thebushidocollective/han-native: ${e instanceof Error ? e.message : String(e)}`,
-		);
-	}
-
-	// For monorepo development: try relative path
-	const currentDir = dirname(new URL(import.meta.url).pathname);
-	const isInDist = currentDir.includes("/dist/");
-	const relativeToHanNative = isInDist
-		? "../../../han-native"
-		: "../../han-native";
-	const monorepoPath = join(currentDir, relativeToHanNative);
-	try {
-		cachedNativeModule = dynamicRequire(monorepoPath) as NativeModule;
-		return cachedNativeModule;
-	} catch (e) {
-		errors.push(
-			`${monorepoPath}: ${e instanceof Error ? e.message : String(e)}`,
-		);
-	}
-
-	// For Bun compiled binaries: embedded native module
-	// Bun embeds files into a virtual filesystem (/$bunfs/) that dlopen() can't access
-	// We detect this and extract the embedded binary to a temp file before loading
-	try {
-		// Check if we're in a Bun compiled binary by looking for bunfs paths
-		// import.meta.url will be something like "file:///$bunfs/root/han" in compiled binaries
-		const isBunBinary = import.meta.url.includes("/$bunfs/");
-
-		if (isBunBinary) {
-			// In a Bun binary, we need to extract the native module to a temp file
-			// because dlopen() can't read from Bun's virtual filesystem
-			try {
-				// Build the path manually using import.meta.dir (Bun's __dirname equivalent)
-				// In bunfs this will be something like "/$bunfs/root"
-				const bunfsDir =
-					typeof import.meta.dir === "string"
-						? import.meta.dir
-						: dirname(new URL(import.meta.url).pathname);
-				const embeddedPath = join(bunfsDir, "..", "native", "han-native.node");
-
-				// Read embedded bytes using readFileSync (Bun intercepts this for bunfs)
-				const embeddedBytes = readFileSync(embeddedPath);
-
-				// Extract to temp directory with unique name
-				const extractedPath = join(
-					tmpdir(),
-					`han-native-${process.pid}-${Date.now()}.node`,
-				);
-				writeFileSync(extractedPath, embeddedBytes, {
-					mode: 0o755,
-				});
-
-				// Load from extracted path
-				cachedNativeModule = dynamicRequire(extractedPath) as NativeModule;
-
-				// Clean up temp file (dlopen keeps handle open so this is safe)
-				try {
-					unlinkSync(extractedPath);
-				} catch {
-					// Ignore - may be locked on Windows
-				}
-				return cachedNativeModule;
-			} catch (extractError) {
-				errors.push(
-					`embedded-extract: ${extractError instanceof Error ? extractError.message : String(extractError)}`,
-				);
-			}
-		}
-
-		// Not in bundle or extraction failed - try direct require
-		// This static path is also needed for Bun to detect and embed the file
-		cachedNativeModule = require("../native/han-native.node") as NativeModule;
-		return cachedNativeModule;
-	} catch (e) {
-		errors.push(`embedded: ${e instanceof Error ? e.message : String(e)}`);
-	}
-
-	// Legacy fallback: look for .node file next to the executable
-	const executableDir = dirname(process.execPath);
-	const nodeFilePath = join(executableDir, "han-native.node");
-	if (existsSync(nodeFilePath)) {
-		try {
-			cachedNativeModule = dynamicRequire(nodeFilePath) as NativeModule;
-			return cachedNativeModule;
-		} catch (e) {
-			errors.push(
-				`${nodeFilePath}: ${e instanceof Error ? e.message : String(e)}`,
-			);
-		}
-	}
-
-	throw new Error(
-		`Failed to load han-native module. Tried:\n${errors.join("\n")}\n\n` +
-			"This is a required dependency. Please ensure han is installed correctly.",
-	);
-}
+// Bun requires require() for .node files, not import
+// This static require path tells Bun to embed the file in compiled binaries
+const nativeModule = require("../native/han-native.node") as NativeModule;
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -206,7 +72,6 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
-	const nativeModule = loadNativeModule();
 	return nativeModule.computeFileHash(filePath);
 }
 
@@ -257,7 +122,6 @@ export function findFilesWithGlob(
 	rootDir: string,
 	patterns: string[],
 ): string[] {
-	const nativeModule = loadNativeModule();
 	return nativeModule.findFilesWithGlob(rootDir, patterns);
 }
 
@@ -265,7 +129,6 @@ export function findFilesWithGlob(
  * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
-	const nativeModule = loadNativeModule();
 	return nativeModule.buildManifest(files, rootDir);
 }
 
@@ -281,7 +144,6 @@ function hasChanges(
 	if (!cachedManifest) {
 		return true;
 	}
-	const nativeModule = loadNativeModule();
 	return nativeModule.hasChanges(rootDir, patterns, cachedManifest);
 }
 
@@ -367,6 +229,5 @@ export function findDirectoriesWithMarkers(
 	rootDir: string,
 	markerPatterns: string[],
 ): string[] {
-	const nativeModule = loadNativeModule();
 	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
