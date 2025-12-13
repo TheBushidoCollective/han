@@ -15,6 +15,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-erlang build",
+            "timeout": 300
+          }
+        ]
+      }
     ]
   }
 }

@@ -15,6 +15,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run do-claude-plugin-development claudelint",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }

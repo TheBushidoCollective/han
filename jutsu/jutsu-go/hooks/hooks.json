@@ -20,6 +20,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-go format",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }

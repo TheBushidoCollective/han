@@ -21,6 +21,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-yarn yarn-install",
+            "timeout": 300
+          }
+        ]
+      }
     ]
   }
 }

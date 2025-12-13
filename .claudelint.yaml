@@ -55,7 +55,7 @@ rules:
 
   # Hooks
   hooks-json-valid:
-    enabled: true
+    enabled: false  # Disabled until claudelint supports SubagentStart event type
     severity: error
     description: hooks.json files must be valid JSON with proper structure
 

@@ -93,6 +93,28 @@
           }
         ]
       }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han checkpoint capture",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "# Subagent Task Review\n\nYou are evaluating whether this subagent completed its assigned task correctly.\n\n## Context\n\n$ARGUMENTS\n\n## Review Checklist\n\n1. **Task Completion**: Did the subagent complete the specific task it was delegated?\n\n2. **Quality**: Was the work done to an acceptable standard?\n\n3. **Scope**: Did the subagent stay within its assigned scope?\n\n## Decision Criteria\n\n**Approve** if the subagent completed its task correctly\n**Block** if the subagent failed or deviated significantly from the task\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"brief explanation\", \"systemMessage\": \"✓ Subagent task verified\" or \"⚠️ Subagent issue detected\"}",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }
