@@ -34,6 +34,7 @@
  * ```
  */
 
+import { isMemoryEnabled } from "../han-settings.ts";
 import { getMemoryStore } from "./storage.ts";
 
 /**
@@ -46,6 +47,11 @@ import { getMemoryStore } from "./storage.ts";
  * @returns Formatted markdown context string, or empty string if no recent sessions
  */
 export function injectSessionContext(limit = 5): string {
+	// Skip if memory is disabled
+	if (!isMemoryEnabled()) {
+		return "";
+	}
+
 	const store = getMemoryStore();
 	const recentSessions = store.getRecentSessions(limit);
 

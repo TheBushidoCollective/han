@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-crystal format --fail-fast --cached",
+            "command": "han hook run jutsu-crystal format",
             "timeout": 120
           },
           {
             "type": "command",
-            "command": "han hook run jutsu-crystal test --fail-fast --cached",
+            "command": "han hook run jutsu-crystal test",
             "timeout": 900
           }
         ]

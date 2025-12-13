@@ -244,11 +244,13 @@ export async function executePluginTool(
 	tool: PluginTool,
 	options: ExecuteToolOptions,
 ): Promise<ExecuteToolResult> {
-	const { verbose = false, failFast = true, directory } = options;
+	const { verbose = false, directory } = options;
 
 	// When targeting a specific directory, disable cache and checkpoints
 	// This is a targeted re-run, so we want to run unconditionally
-	const cache = directory ? false : (options.cache ?? true);
+	// Otherwise, let validate.ts use han.yml defaults for cache and failFast
+	const cache = directory ? false : options.cache;
+	const failFast = options.failFast; // undefined = use han.yml default
 
 	const startTime = Date.now();
 	const timeout = getMcpTimeout();

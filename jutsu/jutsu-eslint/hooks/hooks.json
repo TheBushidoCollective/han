@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-eslint lint --fail-fast --cached",
+            "command": "han hook run jutsu-eslint lint",
             "timeout": 120
           }
         ]

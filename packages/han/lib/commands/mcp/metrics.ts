@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { isMetricsEnabled } from "../../han-settings.ts";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 import type {
 	CompleteTaskParams,
@@ -319,6 +320,10 @@ function handleInitialize(): unknown {
 }
 
 function handleToolsList(): unknown {
+	// Return empty tools list if metrics disabled
+	if (!isMetricsEnabled()) {
+		return { tools: [] };
+	}
 	return {
 		tools: METRICS_TOOLS,
 	};
@@ -328,6 +333,19 @@ async function handleToolsCall(params: {
 	name: string;
 	arguments?: Record<string, unknown>;
 }): Promise<unknown> {
+	// Block all calls if metrics disabled
+	if (!isMetricsEnabled()) {
+		return {
+			content: [
+				{
+					type: "text",
+					text: "Metrics tracking is disabled. Enable it in han.yml with: metrics:\n  enabled: true",
+				},
+			],
+			isError: true,
+		};
+	}
+
 	try {
 		const args = params.arguments || {};
 

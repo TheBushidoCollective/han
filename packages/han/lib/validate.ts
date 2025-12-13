@@ -7,7 +7,11 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 } from "./claude-settings.ts";
-import { isCheckpointsEnabled } from "./han-settings.ts";
+import {
+	isCacheEnabled,
+	isCheckpointsEnabled,
+	isFailFastEnabled,
+} from "./han-settings.ts";
 import {
 	checkForChanges,
 	findDirectoriesWithMarkers,
@@ -176,6 +180,8 @@ function runCommandSync(dir: string, cmd: string, verbose?: boolean): boolean {
 interface RunCommandResult {
 	success: boolean;
 	idleTimedOut?: boolean;
+	/** Captured stdout/stderr output */
+	output?: string;
 	/** Path to the output file containing stdout/stderr (only on failure) */
 	outputFile?: string;
 	/** Path to the debug file (only when HAN_DEBUG=true) */
@@ -247,14 +253,20 @@ async function runCommand(
 			}, idleTimeout);
 		}
 
-		// Capture output and track for idle timeout (only when not inheriting stdio)
+		// Capture output, stream to stderr for visibility, and track for idle timeout
 		if (!verbose) {
 			child.stdout?.on("data", (data) => {
-				outputChunks.push(data.toString());
+				const text = data.toString();
+				outputChunks.push(text);
+				// Stream to stderr so MCP clients can see progress without polluting context
+				process.stderr.write(text);
 				resetIdleTimeout();
 			});
 			child.stderr?.on("data", (data) => {
-				outputChunks.push(data.toString());
+				const text = data.toString();
+				outputChunks.push(text);
+				// Stream to stderr so MCP clients can see progress without polluting context
+				process.stderr.write(text);
 				resetIdleTimeout();
 			});
 		}
@@ -264,9 +276,11 @@ async function runCommand(
 				clearTimeout(idleTimeoutHandle);
 			}
 
+			const combinedOutput = outputChunks.join("");
 			const result: RunCommandResult = {
 				success,
 				idleTimedOut,
+				output: combinedOutput || undefined,
 			};
 
 			// Write output and debug files on failure (or always in debug mode)
@@ -275,8 +289,8 @@ async function runCommand(
 				const basePath = join(tempDir, generateOutputFilename(hookName, dir));
 
 				// Write output file if we captured any output
-				if (outputChunks.length > 0) {
-					result.outputFile = writeOutputFile(basePath, outputChunks.join(""));
+				if (combinedOutput) {
+					result.outputFile = writeOutputFile(basePath, combinedOutput);
 				}
 
 				// Write debug file in debug mode
@@ -291,7 +305,7 @@ async function runCommand(
 						idleTimedOut,
 						exitSuccess: success,
 						durationMs: duration,
-						outputLength: outputChunks.join("").length,
+						outputLength: combinedOutput.length,
 					});
 				}
 			}
@@ -539,11 +553,15 @@ export interface RunConfiguredHookOptions {
 	 */
 	pluginName: string;
 	hookName: string;
-	failFast: boolean;
 	/**
-	 * When true, check if files have changed before running hooks.
-	 * If no changes detected, skip the hook and exit 0.
-	 * After successful execution, update the cache manifest.
+	 * Stop on first failure. Defaults to han.yml hooks.fail_fast (true if not set).
+	 * Can be overridden by HAN_NO_FAIL_FAST=1 environment variable.
+	 */
+	failFast?: boolean;
+	/**
+	 * Enable caching - skip hooks if no files changed since last successful run.
+	 * Defaults to han.yml hooks.cache (true if not set).
+	 * Can be overridden by HAN_NO_CACHE=1 environment variable.
 	 */
 	cache?: boolean;
 	/**
@@ -631,23 +649,40 @@ export function buildMcpToolInstruction(
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const {
-		pluginName,
-		hookName,
-		cache,
-		only,
-		verbose,
-		checkpointType,
-		checkpointId,
-	} = options;
+	const { pluginName, hookName, only, verbose, checkpointType, checkpointId } =
+		options;
 
-	// Allow env var to override --fail-fast (used by han hook dispatch to prevent
-	// fail-fast behavior when running hooks as subprocesses)
+	// Settings resolution priority (highest to lowest):
+	// 1. Environment variable (HAN_NO_X=1 forces false)
+	// 2. CLI option (options.X if explicitly passed)
+	// 3. han.yml config (via helper functions)
+	//
+	// Note: We can't distinguish "CLI passed --fail-fast" from "default true"
+	// so we rely on --no-X patterns and env vars for explicit overrides.
+
+	// Resolve fail-fast setting
+	// Priority: HAN_NO_FAIL_FAST env > options.failFast > han.yml default
 	const failFast =
 		process.env.HAN_NO_FAIL_FAST === "1" ||
 		process.env.HAN_NO_FAIL_FAST === "true"
 			? false
-			: options.failFast;
+			: (options.failFast ?? isFailFastEnabled());
+
+	// Resolve cache setting
+	// Priority: HAN_NO_CACHE env > options.cache > han.yml default
+	const cache =
+		process.env.HAN_NO_CACHE === "1" || process.env.HAN_NO_CACHE === "true"
+			? false
+			: (options.cache ?? isCacheEnabled());
+
+	// Resolve checkpoints setting
+	// Priority: HAN_NO_CHECKPOINTS env > checkpointType presence > han.yml default
+	// Note: If checkpointType is not provided, checkpoints are effectively disabled
+	const checkpointsEnabled =
+		process.env.HAN_NO_CHECKPOINTS === "1" ||
+		process.env.HAN_NO_CHECKPOINTS === "true"
+			? false
+			: isCheckpointsEnabled();
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -742,12 +777,7 @@ export async function runConfiguredHook(
 			}
 
 			// NEW: Also check checkpoint if available
-			if (
-				hasChanges &&
-				checkpointType &&
-				checkpointId &&
-				isCheckpointsEnabled()
-			) {
+			if (hasChanges && checkpointType && checkpointId && checkpointsEnabled) {
 				const checkpoint = loadCheckpoint(checkpointType, checkpointId);
 				if (checkpoint) {
 					const changedSinceCheckpoint = hasChangedSinceCheckpoint(

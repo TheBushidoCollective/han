@@ -48,6 +48,21 @@ export {
 	normalizeGitRemote,
 	setMemoryRoot,
 } from "./paths.ts";
+// Auto-Promotion (self-learning)
+export type { DetectedPattern, PromotionResult } from "./promotion.ts";
+export {
+	autoPromotePatterns,
+	clearPatternStore,
+	extractPatterns,
+	extractPatternsFromEvidence,
+	getPatternStats,
+	getPromotionCandidates,
+	inferDomain,
+	learnFromObservations,
+	learnFromResearch,
+	promotePattern,
+	trackPattern,
+} from "./promotion.ts";
 // Providers (for Team memory extraction)
 export { gitProvider } from "./providers/git.ts";
 export type { MCPClient } from "./providers/github.ts";

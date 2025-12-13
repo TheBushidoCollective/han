@@ -29,6 +29,14 @@ export interface HanConfig {
 	hooks?: {
 		enabled?: boolean; // Master switch (default: true)
 		checkpoints?: boolean; // Enable checkpoints (default: true)
+		cache?: boolean; // Enable caching (default: true)
+		fail_fast?: boolean; // Stop on first failure (default: true)
+	};
+	memory?: {
+		enabled?: boolean; // Enable memory system (default: true)
+	};
+	metrics?: {
+		enabled?: boolean; // Enable metrics tracking (default: true)
 	};
 	plugins?: {
 		[pluginName: string]: PluginSettings;
@@ -194,6 +202,22 @@ export function getMergedHanConfig(): HanConfig {
 				};
 			}
 
+			// Merge memory section
+			if (config.memory) {
+				merged.memory = {
+					...merged.memory,
+					...config.memory,
+				};
+			}
+
+			// Merge metrics section
+			if (config.metrics) {
+				merged.metrics = {
+					...merged.metrics,
+					...config.metrics,
+				};
+			}
+
 			// Merge plugins section
 			if (config.plugins) {
 				merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
@@ -219,6 +243,22 @@ export function getMergedHanConfigForDirectory(directory: string): HanConfig {
 				merged.hooks = {
 					...merged.hooks,
 					...config.hooks,
+				};
+			}
+
+			// Merge memory section
+			if (config.memory) {
+				merged.memory = {
+					...merged.memory,
+					...config.memory,
+				};
+			}
+
+			// Merge metrics section
+			if (config.metrics) {
+				merged.metrics = {
+					...merged.metrics,
+					...config.metrics,
 				};
 			}
 
@@ -269,4 +309,51 @@ export function isCheckpointsEnabled(): boolean {
 	}
 
 	return config.hooks?.checkpoints !== false;
+}
+
+/**
+ * Check if memory system is enabled (default: true)
+ */
+export function isMemoryEnabled(): boolean {
+	const config = getMergedHanConfig();
+	return config.memory?.enabled !== false;
+}
+
+/**
+ * Check if metrics tracking is enabled (default: true)
+ */
+export function isMetricsEnabled(): boolean {
+	const config = getMergedHanConfig();
+	return config.metrics?.enabled !== false;
+}
+
+/**
+ * Check if hook caching is enabled (default: true)
+ * Note: If hooks are globally disabled, caching setting is irrelevant
+ */
+export function isCacheEnabled(): boolean {
+	const config = getMergedHanConfig();
+
+	// If hooks are globally disabled, cache setting doesn't matter
+	if (config.hooks?.enabled === false) {
+		return false;
+	}
+
+	return config.hooks?.cache !== false;
+}
+
+/**
+ * Check if fail-fast mode is enabled (default: true)
+ * When enabled, hooks stop on first failure.
+ * Note: If hooks are globally disabled, fail_fast setting is irrelevant
+ */
+export function isFailFastEnabled(): boolean {
+	const config = getMergedHanConfig();
+
+	// If hooks are globally disabled, fail_fast setting doesn't matter
+	if (config.hooks?.enabled === false) {
+		return false;
+	}
+
+	return config.hooks?.fail_fast !== false;
 }

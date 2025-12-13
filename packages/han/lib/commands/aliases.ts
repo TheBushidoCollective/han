@@ -49,7 +49,11 @@ export function registerAliasCommands(program: Command): void {
 		.description(
 			"Alias for 'hook run'. Requires -- before command (e.g., han validate --dirs-with package.json -- npm test)",
 		)
-		.option("--fail-fast", "Stop on first failure")
+		.option(
+			"--no-fail-fast",
+			"Disable fail-fast - continue running even after failures",
+		)
+		.option("--fail-fast", "(Deprecated) Fail-fast is now the default behavior")
 		.option(
 			"--dirs-with <file>",
 			"Only run in directories containing the specified file",
@@ -79,8 +83,12 @@ export function registerAliasCommands(program: Command): void {
 					process.exit(1);
 				}
 
+				// Commander sets failFast=false when --no-fail-fast is used
+				// Default to true for legacy format
+				const failFast = options.failFast !== false;
+
 				await validate({
-					failFast: options.failFast || false,
+					failFast,
 					dirsWith: options.dirsWith || null,
 					command: commandArgs.join(" "),
 				});
