@@ -26,6 +26,9 @@
 		{
 			"title": "Features",
 			"items": [
+				{ "title": "Hook System", "slug": "features/hooks" },
+				{ "title": "Checkpoints", "slug": "features/checkpoints" },
+				{ "title": "Project Memory", "slug": "features/memory" },
 				{ "title": "MCP Integrations", "slug": "integrations" },
 				{ "title": "Local Metrics", "slug": "metrics" },
 				{ "title": "OpenTelemetry", "slug": "metrics/opentelemetry" }
