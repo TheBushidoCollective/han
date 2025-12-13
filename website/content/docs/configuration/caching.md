@@ -16,6 +16,7 @@ Han v2.0.0 introduced a **default-ON** philosophy for performance features:
 | `fail_fast` | OFF | **ON** | Use `--no-fail-fast` or `hooks.fail_fast: false` |
 
 **Why this change?** Most users want optimized, fast hook execution by default. The new defaults provide:
+
 - Faster development cycles through smart caching
 - Fresh validation at session boundaries via checkpoints
 - Quicker feedback via fail-fast behavior
@@ -160,6 +161,7 @@ plugins:
 ```
 
 **Priority chain:**
+
 1. `HAN_NO_CACHE=1` environment variable (overrides everything)
 2. `--no-cache` CLI flag
 3. `hooks.cache: false` in han.yml
@@ -229,6 +231,7 @@ Recommended CI setup:
 ```
 
 **Note:** Using the environment variable is preferred over the CLI flag in CI scripts because it:
+
 - Applies to all hook commands automatically
 - Can be set at the workflow or step level
 - Makes scripts cleaner and more maintainable
