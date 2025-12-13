@@ -18,6 +18,11 @@ import {
 	readMemoryFile,
 } from "./memory.ts";
 import {
+	formatTeamMemoryResult,
+	queryTeamMemory,
+	type TeamQueryParams,
+} from "./team-memory.ts";
+import {
 	discoverPluginTools,
 	executePluginTool,
 	type PluginTool,
@@ -365,6 +370,38 @@ const METRICS_TOOLS: McpTool[] = [
 	},
 ];
 
+// Team Memory tools definition (for querying git/PR history)
+const TEAM_MEMORY_TOOLS: McpTool[] = [
+	{
+		name: "team_query",
+		description:
+			"Query team memory to find who worked on what, why decisions were made, or what changes occurred. Uses research engine to search git commits, PRs, and indexed observations. Examples: 'who knows about authentication?', 'why did we switch to TypeScript?', 'what changed in the API last month?'",
+		annotations: {
+			title: "Team Query",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				question: {
+					type: "string",
+					description:
+						"The question to research. Can be about people ('who knows about X?'), decisions ('why did we choose Y?'), history ('what changed in Z?'), or expertise ('who implemented feature W?').",
+				},
+				limit: {
+					type: "number",
+					description:
+						"Maximum number of results to search through (default: 10). Increase for broader searches.",
+				},
+			},
+			required: ["question"],
+		},
+	},
+];
+
 // Memory tools definition
 const MEMORY_TOOLS: McpTool[] = [
 	{
@@ -472,6 +509,7 @@ function handleToolsList(): unknown {
 		...hookTools,
 		...CHECKPOINT_TOOLS,
 		...METRICS_TOOLS,
+		...TEAM_MEMORY_TOOLS,
 		...MEMORY_TOOLS,
 	];
 	return {
@@ -654,6 +692,50 @@ async function handleToolsCall(params: {
 					throw {
 						code: -32602,
 						message: `Unknown metrics tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Check if this is a team memory tool
+	const isTeamMemoryTool = TEAM_MEMORY_TOOLS.some(
+		(t) => t.name === params.name,
+	);
+
+	if (isTeamMemoryTool) {
+		// Handle team memory tools
+		try {
+			switch (params.name) {
+				case "team_query": {
+					const queryParams = args as unknown as TeamQueryParams;
+					const result = await queryTeamMemory(queryParams);
+					const formatted = formatTeamMemoryResult(result);
+					return {
+						content: [
+							{
+								type: "text",
+								text: formatted,
+							},
+						],
+						isError: !result.success,
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown team memory tool: ${params.name}`,
 					};
 			}
 		} catch (error) {
