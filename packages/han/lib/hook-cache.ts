@@ -1,5 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 // Create require function for ESM context (used for dynamic paths in Node.js)
@@ -61,9 +68,63 @@ function loadNativeModule(): NativeModule {
 	}
 
 	// For Bun compiled binaries: embedded native module
-	// This MUST be a bare require with a static string literal for Bun to detect and embed
-	// The build process will embed the correct .node file for each platform
+	// Bun embeds files into a virtual filesystem (/$bunfs/) that dlopen() can't access
+	// We detect this and extract the embedded binary to a temp file before loading
 	try {
+		// Check if we're in a Bun compiled binary
+		// In a compiled binary, execPath points to the binary itself (e.g., ~/.claude/bin/han)
+		// Not to bun or node executable
+		const isBunBinary =
+			!process.execPath.endsWith("/bun") &&
+			!process.execPath.endsWith("\\bun.exe") &&
+			!process.execPath.endsWith("/node") &&
+			!process.execPath.endsWith("\\node.exe") &&
+			!process.execPath.includes("/bun/") &&
+			!process.execPath.includes("/node/") &&
+			!process.execPath.includes("/nodejs/");
+
+		if (isBunBinary) {
+			// In a Bun binary, we need to extract the native module to a temp file
+			// because dlopen() can't read from Bun's virtual filesystem
+			// The static require() tells Bun to embed the file at compile time
+			// but we intercept and extract before native loading
+			try {
+				// Resolve the embedded path - import.meta.resolveSync works in Bun
+				const embeddedPath = import.meta.resolveSync(
+					"../native/han-native.node",
+				);
+
+				// Read embedded bytes using readFileSync (works with bunfs)
+				const embeddedBytes = readFileSync(embeddedPath);
+
+				// Extract to temp directory
+				const extractedPath = join(
+					tmpdir(),
+					`han-native-${process.pid}-${Date.now()}.node`,
+				);
+				writeFileSync(extractedPath, embeddedBytes, {
+					mode: 0o755,
+				});
+
+				// Load from extracted path
+				cachedNativeModule = dynamicRequire(extractedPath) as NativeModule;
+
+				// Clean up temp file (dlopen keeps handle open so this is safe)
+				try {
+					unlinkSync(extractedPath);
+				} catch {
+					// Ignore - may be locked on Windows
+				}
+				return cachedNativeModule;
+			} catch (extractError) {
+				errors.push(
+					`embedded-extract: ${extractError instanceof Error ? extractError.message : String(extractError)}`,
+				);
+			}
+		}
+
+		// Not in bundle or extraction failed - try direct require
+		// This static path is also needed for Bun to detect and embed the file
 		cachedNativeModule = require("../native/han-native.node") as NativeModule;
 		return cachedNativeModule;
 	} catch (e) {
