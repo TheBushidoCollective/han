@@ -92,12 +92,27 @@ export function getAllDocPages(): DocPageMetadata[] {
  * "" -> "index.md"
  * "getting-started" -> "getting-started.md"
  * "installation/plugins" -> "installation/plugins.md"
+ * "metrics" -> "metrics/index.md" (if metrics.md doesn't exist but metrics/index.md does)
  */
 function slugToFilePath(slug: string): string {
 	if (slug === "") {
 		return path.join(DOCS_DIR, "index.md");
 	}
-	return path.join(DOCS_DIR, `${slug}.md`);
+
+	// Try direct file first
+	const directPath = path.join(DOCS_DIR, `${slug}.md`);
+	if (fs.existsSync(directPath)) {
+		return directPath;
+	}
+
+	// Try directory with index.md
+	const indexPath = path.join(DOCS_DIR, slug, "index.md");
+	if (fs.existsSync(indexPath)) {
+		return indexPath;
+	}
+
+	// Return direct path (will fail gracefully in getDocPage)
+	return directPath;
 }
 
 /**
