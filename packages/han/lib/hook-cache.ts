@@ -71,33 +71,26 @@ function loadNativeModule(): NativeModule {
 	// Bun embeds files into a virtual filesystem (/$bunfs/) that dlopen() can't access
 	// We detect this and extract the embedded binary to a temp file before loading
 	try {
-		// Check if we're in a Bun compiled binary
-		// In a compiled binary, execPath points to the binary itself (e.g., ~/.claude/bin/han)
-		// Not to bun or node executable
-		const isBunBinary =
-			!process.execPath.endsWith("/bun") &&
-			!process.execPath.endsWith("\\bun.exe") &&
-			!process.execPath.endsWith("/node") &&
-			!process.execPath.endsWith("\\node.exe") &&
-			!process.execPath.includes("/bun/") &&
-			!process.execPath.includes("/node/") &&
-			!process.execPath.includes("/nodejs/");
+		// Check if we're in a Bun compiled binary by looking for bunfs paths
+		// import.meta.url will be something like "file:///$bunfs/root/han" in compiled binaries
+		const isBunBinary = import.meta.url.includes("/$bunfs/");
 
 		if (isBunBinary) {
 			// In a Bun binary, we need to extract the native module to a temp file
 			// because dlopen() can't read from Bun's virtual filesystem
-			// The static require() tells Bun to embed the file at compile time
-			// but we intercept and extract before native loading
 			try {
-				// Resolve the embedded path - import.meta.resolveSync works in Bun
-				const embeddedPath = import.meta.resolveSync(
-					"../native/han-native.node",
-				);
+				// Build the path manually using import.meta.dir (Bun's __dirname equivalent)
+				// In bunfs this will be something like "/$bunfs/root"
+				const bunfsDir =
+					typeof import.meta.dir === "string"
+						? import.meta.dir
+						: dirname(new URL(import.meta.url).pathname);
+				const embeddedPath = join(bunfsDir, "..", "native", "han-native.node");
 
-				// Read embedded bytes using readFileSync (works with bunfs)
+				// Read embedded bytes using readFileSync (Bun intercepts this for bunfs)
 				const embeddedBytes = readFileSync(embeddedPath);
 
-				// Extract to temp directory
+				// Extract to temp directory with unique name
 				const extractedPath = join(
 					tmpdir(),
 					`han-native-${process.pid}-${Date.now()}.node`,
