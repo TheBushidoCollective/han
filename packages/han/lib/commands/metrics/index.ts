@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { generateMemoryContext } from "../memory-context.ts";
 import { generateSessionContext } from "./context-generation.ts";
 import { detectFrustrationFromStdin } from "./detect-frustration.ts";
 import { recordHookExecution } from "./hook-tracking.ts";
@@ -139,6 +140,25 @@ export function registerMetricsCommand(program: Command): void {
 			} catch (error: unknown) {
 				console.error(
 					"Error generating session context:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
+	// Memory context generation
+	metricsCommand
+		.command("memory-context")
+		.description(
+			"Generate memory context for SessionStart injection (recent work and in-progress items)",
+		)
+		.action(async () => {
+			try {
+				await generateMemoryContext();
+				process.exit(0);
+			} catch (error: unknown) {
+				console.error(
+					"Error generating memory context:",
 					error instanceof Error ? error.message : error,
 				);
 				process.exit(1);

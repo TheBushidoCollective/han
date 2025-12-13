@@ -17,6 +17,7 @@ import { registerAliasCommands } from "./commands/aliases.ts";
 import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
+import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerMetricsCommand } from "./commands/metrics/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
 import { explainHan } from "./explain.ts";
@@ -100,6 +101,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerPluginCommands(program);
 	registerHookCommands(program);
 	registerMcpCommands(program);
+	registerMemoryCommand(program);
 	registerMetricsCommand(program);
 	registerCheckpointCommands(program);
 	registerAliasCommands(program);
