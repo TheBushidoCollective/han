@@ -275,53 +275,270 @@ const [issues, prs, actions] = await Promise.all([
 
 ## Han's Core MCP Server
 
-Beyond external integrations, Han provides a core MCP server with powerful built-in tools:
+Beyond external integrations, Han provides its own MCP server that exposes powerful built-in capabilities. This is where Han differs from simple plugin installers. The core MCP server runs via `han mcp server` and communicates over JSON-RPC via stdio.
 
-### Memory Tools
+### How It Works
 
-Claude can capture and recall project-specific learnings:
+When you install the core plugin, Han registers as an MCP server in Claude Code's configuration:
+
+```json
+{
+  "mcpServers": {
+    "han": {
+      "command": "han",
+      "args": ["mcp", "server"]
+    }
+  }
+}
+```
+
+The server implements the MCP protocol (version 2024-11-05) and exposes tools in four categories:
+
+1. **Plugin Hook Tools** - Dynamically generated from installed plugins
+2. **Memory Tools** - Self-learning project rules
+3. **Metrics Tools** - Task tracking and calibration
+4. **Checkpoint Tools** - Session-scoped caching
+
+### Plugin Hook Tools (Dynamic)
+
+This is Han's key innovation: every hook defined in an installed plugin automatically becomes an MCP tool. When you install `jutsu-typescript`, Claude immediately gains access to a `jutsu_typescript_typecheck` tool.
+
+The MCP server discovers these at runtime by scanning installed plugins:
 
 ```javascript
-// Capture a learning
+// From jutsu-bun/han-plugin.yml
+hooks:
+  test:
+    command: bun test --only-failures
+    dirsWith: [bun.lock, bun.lockb]
+    description: Run Bun tests
+
+// Becomes MCP tool:
+{
+  name: "jutsu_bun_test",
+  description: "Run Bun tests. Triggers: 'run the tests', 'run bun tests',
+    'check if tests pass'. Runs in directories containing: bun.lock,
+    bun.lockb. Command: bun test --only-failures",
+  inputSchema: {
+    type: "object",
+    properties: {
+      cache: {
+        type: "boolean",
+        description: "Use cached results when files haven't changed"
+      },
+      directory: {
+        type: "string",
+        description: "Limit execution to a specific directory path"
+      },
+      verbose: {
+        type: "boolean",
+        description: "Show full command output in real-time"
+      }
+    }
+  }
+}
+```
+
+When Claude says "run the tests", it can now call this tool directly:
+
+```javascript
+// Claude calls:
+await mcp.tools.jutsu_bun_test({ cache: true })
+
+// Returns:
+{
+  content: [{ type: "text", text: "15 pass\n0 fail\n..." }]
+}
+```
+
+All plugin hooks support three standard parameters:
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `cache` | `true` | Skip if files unchanged since last run |
+| `directory` | all | Target specific directory |
+| `verbose` | `false` | Stream output in real-time |
+
+### Memory Tools (Self-Learning)
+
+Han's memory system lets Claude write directly to `.claude/rules/`. Claude can teach itself about your project without asking permission.
+
+**`learn`** - Capture project knowledge
+
+```javascript
 learn({
-  content: "# API Rules\n- Validate all inputs with zod",
+  content: "# API Rules\n\n- Validate all inputs with zod\n- Return
+    consistent error format",
   domain: "api",
-  paths: ["src/api/**/*.ts"],  // Optional: apply to specific paths
-  scope: "project"  // or "user" for personal preferences
+  paths: ["src/api/**/*.ts"],  // Optional: path-specific rules
+  scope: "project",  // or "user" for personal preferences
+  append: true  // Add to existing file
 })
+```
 
-// Check existing learnings
+Creates `.claude/rules/api.md` with YAML frontmatter for path restrictions:
+
+```markdown
+---
+globs: ["src/api/**/*.ts"]
+---
+
+# API Rules
+
+- Validate all inputs with zod
+- Return consistent error format
+```
+
+**`memory_list`** - See existing domains
+
+```javascript
 memory_list({ scope: "project" })
-memory_read({ domain: "api" })
+// Returns: ["api", "testing", "commands"]
 ```
 
-### Checkpoint Tools
-
-Track file changes across sessions for intelligent caching:
+**`memory_read`** - Read domain content
 
 ```javascript
-checkpoint_list()  // See existing checkpoints
-checkpoint_clean({ maxAge: 24 })  // Remove old checkpoints
+memory_read({ domain: "api", scope: "project" })
+// Returns the full markdown content
 ```
 
-### Metrics Tools
+The memory system supports two scopes:
 
-Track task performance and calibration:
+| Scope | Location | Purpose |
+|-------|----------|---------|
+| `project` | `.claude/rules/` | Team knowledge, git-tracked |
+| `user` | `~/.claude/rules/` | Personal preferences |
+
+### Metrics Tools (Self-Awareness)
+
+Task tracking with confidence calibration. Claude records its work and estimates confidence, then compares against actual outcomes.
+
+**`start_task`** - Begin tracking
 
 ```javascript
-start_task({ description: "Fix login bug", type: "fix" })
-complete_task({ task_id: "...", outcome: "success", confidence: 0.85 })
-query_metrics({ period: "week" })
+start_task({
+  description: "Fix authentication timeout bug",
+  type: "fix",  // implementation, fix, refactor, research
+  estimated_complexity: "moderate"  // simple, moderate, complex
+})
+// Returns: { task_id: "task_abc123" }
 ```
 
-### Blueprint Tools (hashi-blueprints)
+**`update_task`** - Log progress
 
-When the hashi-blueprints plugin is installed:
+```javascript
+update_task({
+  task_id: "task_abc123",
+  notes: "Found root cause - session expiry not refreshing"
+})
+```
+
+**`complete_task`** - Record outcome
+
+```javascript
+complete_task({
+  task_id: "task_abc123",
+  outcome: "success",  // success, partial, failure
+  confidence: 0.85,  // 0.0 to 1.0
+  files_modified: ["src/auth/session.ts"],
+  tests_added: 2
+})
+```
+
+**`fail_task`** - Record failure with context
+
+```javascript
+fail_task({
+  task_id: "task_abc123",
+  reason: "Requires database migration that needs approval",
+  attempted_solutions: [
+    "Tried updating schema in-place",
+    "Attempted backwards-compatible approach"
+  ]
+})
+```
+
+**`query_metrics`** - Analyze performance
+
+```javascript
+query_metrics({
+  period: "week",  // day, week, month
+  task_type: "fix",  // Optional filter
+  outcome: "success"  // Optional filter
+})
+// Returns aggregated stats, success rates, calibration scores
+```
+
+All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. Nothing leaves your machine.
+
+### Checkpoint Tools (Smart Caching)
+
+Checkpoints track which files have changed since the last hook run, enabling intelligent caching.
+
+**`checkpoint_list`** - See existing checkpoints
+
+```javascript
+checkpoint_list()
+// Shows session and agent checkpoints with file counts
+```
+
+**`checkpoint_clean`** - Remove stale checkpoints
+
+```javascript
+checkpoint_clean({ maxAge: 24 })  // Hours
+// Removes checkpoints older than 24 hours
+```
+
+Checkpoints are created automatically when hooks run with `cache=true`. Each checkpoint records file modification times, so subsequent runs can skip unchanged files.
+
+### Tool Annotations
+
+All Han MCP tools include MCP annotations for better AI behavior:
+
+```javascript
+{
+  name: "learn",
+  annotations: {
+    title: "Learn",
+    readOnlyHint: false,     // May modify files
+    destructiveHint: false,  // Safe operation
+    idempotentHint: true,    // Same input = same result
+    openWorldHint: false     // Works with local files only
+  }
+}
+```
+
+### Blueprint Tools (via hashi-blueprints)
+
+When the hashi-blueprints plugin is installed, additional MCP tools become available:
 
 ```javascript
 search_blueprints({ keyword: "api" })
 read_blueprint({ name: "cli-architecture" })
-write_blueprint({ name: "auth-system", summary: "...", content: "..." })
+write_blueprint({
+  name: "auth-system",
+  summary: "Authentication and authorization architecture",
+  content: "# Auth System\n\n## Overview..."
+})
+```
+
+### Debugging the MCP Server
+
+Run the MCP server manually to test:
+
+```bash
+# Start server in stdio mode
+han mcp server
+
+# Send a tools/list request
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | han mcp server
+```
+
+Set timeouts via environment variable:
+
+```bash
+export HAN_MCP_TIMEOUT=600000  # 10 minutes (default)
 ```
 
 ## Available Hashi Plugins
