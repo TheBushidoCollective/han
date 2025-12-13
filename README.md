@@ -1,5 +1,7 @@
 # Han
 
+[![GitHub Release](https://img.shields.io/github/v/release/TheBushidoCollective/han)](https://github.com/TheBushidoCollective/han/releases)
+
 Automatic quality gates for Claude Code. Every conversation ends with validation—linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
 
 ## Getting Started
