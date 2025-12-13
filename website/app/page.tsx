@@ -18,20 +18,6 @@ export default function Home() {
 				<h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
 					Automatic Quality Gates for Claude Code
 				</h1>
-				<div className="flex gap-3 justify-center mb-6">
-					<a href="https://github.com/TheBushidoCollective/han/releases">
-						<img
-							src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
-							alt="GitHub Release"
-						/>
-					</a>
-					<a href="https://github.com/TheBushidoCollective/han">
-						<img
-							src="https://img.shields.io/github/stars/TheBushidoCollective/han"
-							alt="GitHub Stars"
-						/>
-					</a>
-				</div>
 				<p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
 					Every conversation ends with validation. Linting, formatting,
 					type-checking, and tests run automatically, catching issues before
