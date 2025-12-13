@@ -270,28 +270,24 @@ export default function Header() {
 							Docs
 						</Link>
 
-						<a
-							href="https://github.com/TheBushidoCollective/han/releases"
-							className="hidden sm:block"
-						>
-							{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
-							<img
-								src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
-								alt="GitHub Release"
-								className="h-5"
-							/>
-						</a>
-						<a
-							href="https://github.com/TheBushidoCollective/han"
-							className="hidden sm:block"
-						>
-							{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
-							<img
-								src="https://img.shields.io/github/stars/TheBushidoCollective/han"
-								alt="GitHub Stars"
-								className="h-5"
-							/>
-						</a>
+						<div className="hidden sm:flex items-center gap-2">
+							<a href="https://github.com/TheBushidoCollective/han/releases">
+								{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
+								<img
+									src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
+									alt="GitHub Release"
+									className="h-5"
+								/>
+							</a>
+							<a href="https://github.com/TheBushidoCollective/han">
+								{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
+								<img
+									src="https://img.shields.io/github/stars/TheBushidoCollective/han"
+									alt="GitHub Stars"
+									className="h-5"
+								/>
+							</a>
+						</div>
 
 						<a
 							href="https://github.com/thebushidocollective/han"

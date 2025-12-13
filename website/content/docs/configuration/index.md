@@ -82,6 +82,7 @@ Settings are applied in this order (later overrides earlier):
 4. **Environment variables** - `HAN_HOOKS_CACHE=false`, etc.
 
 Example:
+
 ```bash
 # Disable caching via CLI (overrides han.yml)
 han hook run jutsu-biome lint --cache=false
@@ -268,4 +269,4 @@ Now that you understand configuration:
 
 - Learn about [smart caching](/docs/configuration/caching) to optimize performance
 - Explore [CLI commands](/docs/cli/hooks) to run hooks manually
-- Review [plugin-specific documentation](/docs/plugins) for available options
+- Review [plugin categories](/docs/plugin-categories) for available options
