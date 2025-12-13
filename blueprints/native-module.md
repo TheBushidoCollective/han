@@ -65,7 +65,7 @@ function sha256(filePath: string): string;
 
 ## Loading Strategy
 
-The native module implements a fallback loading strategy to work in multiple environments:
+The native module implements a multi-step fallback loading strategy to work in multiple environments:
 
 ```typescript
 // From lib/hook-cache.ts
@@ -80,30 +80,51 @@ function loadNativeModule() {
     return require('../../han-native');
   } catch {}
 
-  // 3. Try embedded path (Bun compiled binaries)
+  // 3. Bun compiled binaries - extract and load
+  // Bun embeds files in /$bunfs/ virtual filesystem
+  // dlopen() can't read from bunfs, so we extract to temp
+  if (isBunBinary) {
+    const embeddedPath = import.meta.resolveSync('../native/han-native.node');
+    const bytes = readFileSync(embeddedPath);
+    const tempPath = join(tmpdir(), `han-native-${pid}.node`);
+    writeFileSync(tempPath, bytes, { mode: 0o755 });
+    const module = require(tempPath);
+    unlinkSync(tempPath); // dlopen keeps handle open
+    return module;
+  }
+
+  // 4. Direct embedded require (non-Bun bundles)
   try {
-    const embeddedPath = path.join(process.execPath, '..', 'han-native.node');
-    return require(embeddedPath);
+    return require('../native/han-native.node');
   } catch {}
 
-  // 4. Try legacy fallback (next to executable)
+  // 5. Legacy fallback (next to executable)
   try {
-    const legacyPath = path.join(path.dirname(process.execPath), 'han-native.node');
-    return require(legacyPath);
+    return require(join(dirname(process.execPath), 'han-native.node'));
   } catch {}
 
-  // Fallback to JavaScript implementation
-  return null;
+  throw new Error('Failed to load native module');
 }
 ```
 
 ### Loading Contexts
 
-1. **npm Installation**: Loads from node_modules
-2. **Monorepo Development**: Loads from relative path
-3. **Bun Bundle**: Loads from embedded binary location
-4. **Standalone Binary**: Loads from executable directory
-5. **JavaScript Fallback**: Uses pure JS implementation when native unavailable
+1. **npm Installation**: Loads from `@thebushidocollective/han-native` package
+2. **Monorepo Development**: Loads from relative `../../han-native` path
+3. **Bun Compiled Binary**: Extracts embedded `.node` from bunfs to temp, then loads
+4. **Direct Embedded**: For non-Bun bundlers that support native modules directly
+5. **Standalone Binary**: Loads from executable directory
+
+### Bun Bundle Extraction (Critical)
+
+Bun compiles binaries embed files in a virtual filesystem (`/$bunfs/`). Native `.node` modules require `dlopen()` which cannot read from the virtual filesystem. The solution:
+
+1. Detect if running in a Bun binary (execPath is not bun/node)
+2. Use `import.meta.resolveSync()` to get the embedded path
+3. Read bytes with `readFileSync()` (works with bunfs)
+4. Write to temp file with executable permissions
+5. Load via `require()` from real filesystem
+6. Clean up temp file (dlopen keeps handle, so safe to delete)
 
 ## Behavior
 
@@ -115,14 +136,19 @@ Native module significantly improves hook execution performance:
 - **SHA256 hashing**: ~5x faster than JavaScript crypto
 - **Memory usage**: Lower memory footprint for large file sets
 
-### Graceful Degradation
+### Error Handling
 
-If native module loading fails:
+The loader now throws errors with detailed diagnostics instead of silent fallback:
 
-- System automatically falls back to JavaScript implementations
-- Functionality remains identical
-- Performance degrades but system continues working
-- No user-visible errors
+```
+Failed to load han-native module. Tried:
+@thebushidocollective/han-native: Cannot find module...
+../../han-native: Cannot find module...
+embedded-extract: <extraction error if any>
+embedded: <direct load error>
+
+This is a required dependency. Please ensure han is installed correctly.
+```
 
 ## Build Process
 
@@ -135,31 +161,20 @@ cargo build --release
 
 ### CI/CD
 
-Built in `.github/workflows/release-binaries.yml`:
+Built in `.github/workflows/release-binaries.yml` using cross-compilation:
 
-```yaml
-strategy:
-  matrix:
-    settings:
-      - host: macos-latest
-        target: x86_64-apple-darwin
-      - host: macos-latest
-        target: aarch64-apple-darwin
-      - host: ubuntu-latest
-        target: x86_64-unknown-linux-gnu
-      - host: ubuntu-latest
-        target: aarch64-unknown-linux-gnu
-      - host: windows-latest
-        target: x86_64-pc-windows-msvc
-```
+- Uses `cargo-zigbuild` for Linux/macOS cross-compilation
+- Uses `cargo-xwin` for Windows cross-compilation
+- All builds run on ubuntu-latest for consistency
 
 ### Build Steps
 
 1. Checkout code
-2. Setup Rust toolchain
-3. Add target platform
-4. Build release binary
-5. Upload artifact to GitHub release
+2. Setup Rust toolchain with target platform
+3. Build native module with cargo zigbuild/xwin
+4. Copy to `native/han-native.node` for embedding
+5. Build Bun binary with `bun build --compile`
+6. Upload artifacts to GitHub release
 
 ## Files
 
@@ -173,7 +188,7 @@ strategy:
 ### Build Configuration
 
 - `.github/workflows/release-binaries.yml` - Multi-platform build workflow
-- `packages/han-native/build.rs` - Build script (if needed)
+- `packages/han/scripts/build-bundle.js` - Bun compilation script
 
 ### Usage
 
