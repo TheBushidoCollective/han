@@ -29,8 +29,10 @@ A typical `han.yml` file has two main sections:
 ```yaml
 # Global hook settings
 hooks:
-  enabled: true       # Master switch for all hooks
-  checkpoints: true   # Session-scoped filtering
+  enabled: true       # Master switch for all hooks (default: true)
+  checkpoints: true   # Session/agent checkpoint filtering (default: true)
+  cache: true         # Smart caching - skip if no changes (default: true)
+  fail_fast: true     # Stop on first hook failure (default: true)
 
 # Plugin-specific settings
 plugins:
@@ -47,7 +49,48 @@ plugins:
         command: npx tsc --noEmit
 ```
 
-## Hook Configuration
+**Note:** As of v2.0.0, all hook settings default to **enabled** (`true`). This means hooks are active by default unless explicitly disabled.
+
+## Global Hook Settings
+
+The `hooks` section controls behavior for all hooks across all plugins:
+
+```yaml
+hooks:
+  enabled: true       # Master switch - disable all hooks
+  checkpoints: true   # Filter hooks by session/agent context
+  cache: true         # Skip hooks when files haven't changed
+  fail_fast: true     # Stop execution on first hook failure
+```
+
+### Global Hook Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `true` | Master switch to enable/disable all hooks |
+| `checkpoints` | boolean | `true` | Enable session-scoped filtering (only run relevant hooks) |
+| `cache` | boolean | `true` | Enable smart caching to skip unchanged files |
+| `fail_fast` | boolean | `true` | Stop on first hook failure instead of running all |
+
+### Configuration Priority
+
+Settings are applied in this order (later overrides earlier):
+
+1. **Built-in defaults** - All settings default to `true` in v2.0.0
+2. **`han.yml` configuration** - Values from config hierarchy
+3. **CLI options** - Flags like `--cache=false` or `--no-fail-fast`
+4. **Environment variables** - `HAN_HOOKS_CACHE=false`, etc.
+
+Example:
+```bash
+# Disable caching via CLI (overrides han.yml)
+han hook run jutsu-biome lint --cache=false
+
+# Disable via environment variable
+HAN_HOOKS_CACHE=false han hook run jutsu-biome lint
+```
+
+## Per-Hook Configuration
 
 Each plugin can define multiple hooks. You can configure them individually:
 
@@ -58,7 +101,7 @@ plugins:
       lint:
         enabled: true              # Enable/disable this hook
         command: npx biome check   # Override the default command
-        cache: true                # Enable smart caching
+        cache: true                # Enable smart caching for this hook
         dirs_with:                 # Only run in dirs with these files
           - biome.json
         if_changed:                # Only run if these patterns changed
@@ -66,13 +109,13 @@ plugins:
           - "**/*.tsx"
 ```
 
-### Hook Options
+### Per-Hook Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `enabled` | boolean | Enable or disable the hook |
+| `enabled` | boolean | Enable or disable this specific hook |
 | `command` | string | Command to execute |
-| `cache` | boolean | Use smart caching (default: true) |
+| `cache` | boolean | Use smart caching (inherits global default: true) |
 | `dirs_with` | array | File patterns that must exist |
 | `if_changed` | array | Only run if matching files changed |
 | `idle_timeout` | number | Milliseconds to wait for file stability |
@@ -108,9 +151,12 @@ plugins:
 ### Full Configuration
 
 ```yaml
+# Global hook settings (all default to true in v2.0.0)
 hooks:
-  enabled: true
-  checkpoints: true
+  enabled: true       # Master switch
+  checkpoints: true   # Session filtering
+  cache: true         # Smart caching
+  fail_fast: true     # Stop on first failure
 
 plugins:
   jutsu-biome:
@@ -162,7 +208,7 @@ plugins:
 
 ## Disabling Hooks
 
-To temporarily disable a hook without removing the plugin:
+To temporarily disable a specific hook without removing the plugin:
 
 ```yaml
 plugins:
@@ -177,6 +223,25 @@ Or disable all hooks globally:
 ```yaml
 hooks:
   enabled: false
+```
+
+You can also disable specific features:
+
+```yaml
+hooks:
+  cache: false       # Always run hooks, never use cache
+  fail_fast: false   # Continue running all hooks even if one fails
+  checkpoints: false # Run all hooks regardless of context
+```
+
+Or via CLI for one-off runs:
+
+```bash
+# Disable caching for this run
+han hook run jutsu-biome lint --cache=false
+
+# Run all hooks even if some fail
+han hook run --no-fail-fast
 ```
 
 ## Best Practices

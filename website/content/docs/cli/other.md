@@ -292,6 +292,118 @@ Install with:
   han plugin install jutsu-react hashi-postgresql do-code-reviewer
 ```
 
+## `han checkpoint`
+
+Manage session and agent checkpoints for validation filtering.
+
+Checkpoints capture the state of files at specific points (session start, subagent start) to enable efficient validation filtering. Hooks can use the `if_changed` option to only run when relevant files have changed since the checkpoint.
+
+### `han checkpoint capture`
+
+Capture a checkpoint of current file state. Can read from stdin (hook payload) or use explicit options.
+
+#### Usage
+
+```bash
+# From hook (reads stdin JSON with hook_event_name and session_id/agent_id)
+echo '{"hook_event_name": "SessionStart", "session_id": "abc123"}' | han checkpoint capture
+
+# With explicit options
+han checkpoint capture --type session --id abc123
+han checkpoint capture --type agent --id agent-xyz
+```
+
+#### Auto-detection
+
+When reading from stdin, checkpoint type is automatically determined:
+
+- `SessionStart` → captures session checkpoint using `session_id`
+- `SubagentStart` → captures agent checkpoint using `agent_id`
+
+#### Options
+
+| Option | Description |
+|--------|-------------|
+| `--type <type>` | Checkpoint type: `session` or `agent` |
+| `--id <id>` | Checkpoint ID (session_id or agent_id) |
+
+#### Example
+
+```bash
+# Typically called from SessionStart hook
+han checkpoint capture < /tmp/hook-payload.json
+
+# Manual capture
+han checkpoint capture --type session --id my-session-123
+
+# Output
+Checkpoint captured: session/my-session-123
+```
+
+### `han checkpoint list`
+
+List active checkpoints for the current project.
+
+#### Usage
+
+```bash
+han checkpoint list
+```
+
+#### Output
+
+```bash
+$ han checkpoint list
+
+Active Checkpoints
+==================
+
+Session Checkpoints:
+  - abc123 (captured 2 hours ago)
+  - def456 (captured 1 day ago)
+
+Agent Checkpoints:
+  - agent-xyz (captured 5 minutes ago)
+  - agent-abc (captured 3 hours ago)
+
+Total: 4 checkpoints
+```
+
+### `han checkpoint clean`
+
+Remove stale checkpoints older than specified age.
+
+#### Usage
+
+```bash
+# Remove checkpoints older than 24 hours (default)
+han checkpoint clean
+
+# Custom age in hours
+han checkpoint clean --max-age 48
+```
+
+#### Options
+
+| Option | Description |
+|--------|-------------|
+| `--max-age <hours>` | Remove checkpoints older than N hours (default: 24) |
+
+#### Example
+
+```bash
+$ han checkpoint clean --max-age 48
+
+Cleaning checkpoints older than 48 hours...
+
+Removed:
+  - session/old-session-1 (72 hours old)
+  - session/old-session-2 (96 hours old)
+  - agent/old-agent-1 (120 hours old)
+
+Cleaned 3 checkpoints
+```
+
 ## Learn More
 
 - [Installation Guide](/docs/installation) - Getting started with Han

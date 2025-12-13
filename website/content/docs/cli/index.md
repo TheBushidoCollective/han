@@ -67,8 +67,15 @@ Han respects these environment variables:
 |----------|-------------|
 | `HAN_DISABLE_HOOKS` | Set to `1` or `true` to disable all hooks |
 | `HAN_HOOK_RUN_VERBOSE` | Set to `1` or `true` to enable verbose hook output |
+| `HAN_NO_CACHE` | Set to `1` to disable smart caching (force hooks to run) |
+| `HAN_NO_FAIL_FAST` | Set to `1` to continue running hooks even after failures |
+| `HAN_NO_CHECKPOINTS` | Set to `1` to disable checkpoint-based filtering |
+| `HAN_CHECKPOINT_TYPE` | Checkpoint type for filtering (`session` or `agent`) |
+| `HAN_CHECKPOINT_ID` | Checkpoint ID for filtering hooks |
 | `CLAUDE_CODE_ENABLE_TELEMETRY` | Set to `1` to enable OpenTelemetry export |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint |
+
+**Note:** Environment variables override `han.yml` settings at runtime.
 
 See [OpenTelemetry](/docs/metrics/opentelemetry) for more telemetry variables.
 

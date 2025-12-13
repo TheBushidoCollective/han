@@ -103,7 +103,10 @@ export function registerCheckpointCommands(program: Command): void {
 					}
 				}
 
-				await captureCheckpointCommand({ type: checkpointType, id: checkpointId });
+				await captureCheckpointCommand({
+					type: checkpointType,
+					id: checkpointId,
+				});
 				console.log(`${checkpointType} checkpoint: ${checkpointId}`);
 				process.exit(0);
 			} catch (error: unknown) {

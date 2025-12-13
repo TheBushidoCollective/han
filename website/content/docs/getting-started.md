@@ -45,7 +45,11 @@ Quality checks run at key lifecycle points:
 
 - **Stop hooks** - Run when conversations end
 - **SessionStart hooks** - Run when Claude Code starts
+- **SubagentStart hooks** - Capture checkpoint when a subagent is spawned
+- **SubagentStop hooks** - Validate subagent work using the agent checkpoint
 - **Pre-commit hooks** - Run before git commits (optional)
+
+Subagents receive the same validation treatment as the main session, but scoped to their own checkpoint. This ensures quality gates apply consistently whether Claude is working directly or delegating to specialized agents.
 
 You don't need to remember to run tests or check types. Han does it automatically.
 
