@@ -274,6 +274,7 @@ export default function Header() {
 							href="https://github.com/TheBushidoCollective/han/releases"
 							className="hidden sm:block"
 						>
+							{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
 							<img
 								src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
 								alt="GitHub Release"
@@ -284,6 +285,7 @@ export default function Header() {
 							href="https://github.com/TheBushidoCollective/han"
 							className="hidden sm:block"
 						>
+							{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
 							<img
 								src="https://img.shields.io/github/stars/TheBushidoCollective/han"
 								alt="GitHub Stars"

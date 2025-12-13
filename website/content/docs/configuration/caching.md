@@ -3,7 +3,24 @@ title: "Smart Caching"
 description: "Han's intelligent caching system skips redundant validations."
 ---
 
-Han's smart caching system eliminates redundant hook executions, saving time and reducing unnecessary work. Understanding how caching works helps you optimize your development workflow.
+Han's smart caching system eliminates redundant hook executions, saving time and reducing unnecessary work. **Caching is enabled by default** (as of v2.0.0) to optimize your development workflow automatically.
+
+## Breaking Change in v2.0.0
+
+Han v2.0.0 introduced a **default-ON** philosophy for performance features:
+
+| Feature | v1.x Default | v2.0.0+ Default | Migration |
+|---------|--------------|-----------------|-----------|
+| `cache` | OFF | **ON** | Use `--no-cache` or `HAN_NO_CACHE=1` |
+| `checkpoints` | OFF | **ON** | Use `--no-checkpoints` or `hooks.checkpoints: false` |
+| `fail_fast` | OFF | **ON** | Use `--no-fail-fast` or `hooks.fail_fast: false` |
+
+**Why this change?** Most users want optimized, fast hook execution by default. The new defaults provide:
+- Faster development cycles through smart caching
+- Fresh validation at session boundaries via checkpoints
+- Quicker feedback via fail-fast behavior
+
+**Upgrading from v1.x:** If you relied on opt-in caching, your hooks will now cache by default. To restore v1.x behavior, set `hooks.cache: false` in your `han.yml`.
 
 ## How Caching Works
 
@@ -23,11 +40,12 @@ This means hooks only run when something meaningful has changed.
 
 ## Cache Granularity
 
-Caching is session-scoped by default when checkpoints are enabled:
+**Caching is session-scoped by default** through checkpoints (enabled by default as of v2.0.0):
 
 ```yaml
 hooks:
-  checkpoints: true  # Cache is reset at session boundaries
+  cache: true         # Enabled by default
+  checkpoints: true   # Enabled by default - cache resets at session boundaries
 ```
 
 This ensures:
@@ -35,6 +53,7 @@ This ensures:
 - Fresh validation at the start of each work session
 - No stale results from previous days
 - Consistent behavior across team members
+- Automatic cache invalidation at natural boundaries
 
 ## File-Based Cache Invalidation
 
@@ -105,22 +124,46 @@ han hook run jutsu-biome lint
 
 ## Disabling Cache
 
-Sometimes you need to force re-execution:
+**Caching is enabled by default.** To disable it, you have three options (in priority order):
+
+### 1. Environment Variable (Highest Priority)
+
+```bash
+# Disable cache for all commands in this shell
+export HAN_NO_CACHE=1
+han hook run jutsu-biome lint
+
+# Or for a single command
+HAN_NO_CACHE=1 han hook run jutsu-biome lint
+```
+
+### 2. CLI Flag
 
 ```bash
 # Disable cache for a single run
-han hook run jutsu-biome lint --cache=false
-
-# Or via configuration
+han hook run jutsu-biome lint --no-cache
 ```
 
+### 3. Configuration File (Lowest Priority)
+
 ```yaml
+# Disable globally for all hooks
+hooks:
+  cache: false
+
+# Or per-plugin
 plugins:
   jutsu-biome:
     hooks:
       lint:
-        cache: false  # Disable caching for this hook
+        cache: false  # Disable caching for this specific hook
 ```
+
+**Priority chain:**
+1. `HAN_NO_CACHE=1` environment variable (overrides everything)
+2. `--no-cache` CLI flag
+3. `hooks.cache: false` in han.yml
+4. Built-in default (true)
 
 **When to disable caching:**
 
@@ -128,6 +171,7 @@ plugins:
 - Verifying fixes after cache-related bugs
 - Testing hook configuration changes
 - Running in CI/CD (though Han auto-detects CI environments)
+- Benchmarking actual hook performance
 
 ## Cache Storage
 
@@ -164,19 +208,30 @@ Cache hit ✓ Skipping execution
 
 ## CI/CD Considerations
 
-Han automatically detects CI environments and adjusts caching:
+Han automatically detects CI environments. While caching is enabled by default, you may want to disable it in CI for consistent, reproducible builds:
 
-- Cache is disabled by default in CI
-- Set `CLAUDE_CACHE_ENABLED=true` to enable in CI
-- Use `--cache=false` to override in scripts
+```bash
+# Disable cache in CI
+HAN_NO_CACHE=1 han hook run --all
+
+# Or use the CLI flag
+han hook run --all --no-cache
+```
 
 Recommended CI setup:
 
 ```yaml
 # .github/workflows/validate.yml
 - name: Run validations
-  run: han hook run --all --cache=false
+  env:
+    HAN_NO_CACHE: 1
+  run: han hook run --all
 ```
+
+**Note:** Using the environment variable is preferred over the CLI flag in CI scripts because it:
+- Applies to all hook commands automatically
+- Can be set at the workflow or step level
+- Makes scripts cleaner and more maintainable
 
 ## Cache Invalidation Patterns
 
@@ -206,18 +261,26 @@ Common scenarios that invalidate cache:
      - "**/*"
    ```
 
-2. **Enable checkpoints** for session-scoped freshness:
+2. **Keep checkpoints enabled** (default) for session-scoped freshness - disable only if you understand the implications:
 
    ```yaml
    hooks:
-     checkpoints: true
+     checkpoints: true  # Default - recommended for most workflows
    ```
 
 3. **Monitor cache hits** - if you're seeing frequent misses, patterns may be too broad
 
-4. **Clear cache when debugging** - don't blame the tool if cache is stale during development
+4. **Use `--no-cache` when debugging** - don't assume cache behavior during development
 
-5. **Document cache requirements** - if a hook needs cache disabled, explain why in comments
+5. **Document cache requirements** - if a hook needs cache disabled, explain why in comments:
+
+   ```yaml
+   plugins:
+     custom-hook:
+       hooks:
+         validate:
+           cache: false  # Disabled because this hook checks external state
+   ```
 
 ## Troubleshooting
 
@@ -237,7 +300,7 @@ find . -name "*.ts" -type f
 Run with `--verbose` to see what's causing invalidation:
 
 ```bash
-han hook run jutsu-biome lint --verbose --cache=false
+han hook run jutsu-biome lint --verbose --no-cache
 ```
 
 ### Cache taking too much space

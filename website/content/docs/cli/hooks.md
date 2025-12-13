@@ -16,7 +16,10 @@ Run a validation hook from an installed plugin.
 han hook run <plugin-name> <hook-name>
 
 # With options
-han hook run <plugin-name> <hook-name> --cache --verbose
+han hook run <plugin-name> <hook-name> --verbose
+
+# Disable caching or fail-fast
+han hook run <plugin-name> <hook-name> --no-cache --no-fail-fast
 
 # Legacy format: Run custom command across directories
 han hook run --dirs-with <file> -- <command>
@@ -26,10 +29,11 @@ han hook run --dirs-with <file> -- <command>
 
 | Option | Description |
 |--------|-------------|
-| `--cache` | Use cached results (skip if files unchanged since last run) |
+| `--no-cache` | Disable caching (caching is ON by default in v2.0.0+) |
+| `--no-fail-fast` | Continue on failures (fail-fast is ON by default in v2.0.0+) |
+| `--no-checkpoints` | Disable checkpoint filtering (checkpoints are ON by default) |
 | `--verbose` | Show full command output in real-time |
 | `--directory <path>` | Limit execution to specific directory |
-| `--fail-fast` | Stop on first failure |
 | `--checkpoint-type <type>` | Filter against checkpoint type (`session` or `agent`) |
 | `--checkpoint-id <id>` | Filter against specific checkpoint ID |
 
@@ -40,28 +44,36 @@ han hook run --dirs-with <file> -- <command>
 | `--dirs-with <file>` | Only run in directories containing the specified file |
 | `--test-dir <command>` | Only include directories where this command exits 0 |
 
+**Breaking Change (v2.0.0):** Caching and fail-fast are now enabled by default. Use `--no-cache` or `--no-fail-fast` to disable them.
+
 ### Caching Behavior
 
-When `--cache` is enabled (or via `--cached`):
+Caching is enabled by default (since v2.0.0):
 
 1. Han creates a checkpoint with file modification times
 2. On subsequent runs, compares current file times to checkpoint
 3. Skips execution if no files have changed
 4. Clears checkpoint on failure (ensures retry on next run)
 
-Checkpoints are session-scoped by default, meaning they're cleared when the Claude Code session ends.
+Checkpoints are session-scoped by default, meaning they're cleared when the Claude Code session ends. Use `--no-checkpoints` to disable checkpoint filtering entirely.
 
 ### Examples
 
 ```bash
-# Run Bun tests with caching
-han hook run jutsu-bun test --cache
+# Run Bun tests (caching enabled by default)
+han hook run jutsu-bun test
+
+# Run without caching
+han hook run jutsu-bun test --no-cache
 
 # Run TypeScript type checking verbosely
 han hook run jutsu-typescript typecheck --verbose
 
 # Run Biome lint in specific directory
 han hook run jutsu-biome lint --directory packages/core
+
+# Continue on failures instead of stopping
+han hook run jutsu-playwright test --no-fail-fast
 
 # Legacy: Run npm test in directories with package.json
 han hook run --dirs-with package.json -- npm test
@@ -83,9 +95,10 @@ hooks:
 When you run `han hook run jutsu-bun test`, Han:
 
 1. Finds directories containing `bun.lock` or `bun.lockb`
-2. Checks if files matching `**/*.ts` or `**/*.test.ts` have changed (if `--cache` enabled)
+2. Checks if files matching `**/*.ts` or `**/*.test.ts` have changed (caching is enabled by default)
 3. Runs `bun test --only-failures` in each directory
 4. Records the result and updates checkpoints
+5. Stops on first failure (fail-fast is enabled by default)
 
 ## `han hook list`
 
@@ -175,11 +188,11 @@ File Patterns: Triggers when these files change:
   - **/*.ts
   - **/*.test.ts
 
-Cache: Enabled by default (use --cache to enable)
+Cache: Enabled by default (use --no-cache to disable)
 
 Usage:
   han hook run jutsu-bun test
-  han hook run jutsu-bun test --cache
+  han hook run jutsu-bun test --no-cache
   han hook run jutsu-bun test --verbose --directory packages/core
 ```
 
@@ -255,7 +268,7 @@ han hook run jutsu-bun test  # Always shows full output
 
 ## Integration with Claude Code
 
-Hooks run automatically at session boundaries when configured in plugin `hooks.json`:
+Hooks run automatically at lifecycle events when configured in plugin `hooks.json`:
 
 ```json
 {
@@ -263,7 +276,14 @@ Hooks run automatically at session boundaries when configured in plugin `hooks.j
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-bun test --cache" }
+          { "type": "command", "command": "han hook run jutsu-bun test" }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "han hook run jutsu-typescript typecheck" }
         ]
       }
     ]
@@ -271,7 +291,34 @@ Hooks run automatically at session boundaries when configured in plugin `hooks.j
 }
 ```
 
-This runs `han hook run jutsu-bun test --cache` when the Claude Code session ends, validating all changes before commit.
+### Hook Lifecycle
+
+Han supports these Claude Code hook points:
+
+| Hook | When It Fires | Checkpoint Type | Purpose |
+|------|---------------|-----------------|---------|
+| `SessionStart` | Claude Code session begins | Creates session checkpoint | Initialize session state |
+| `SubagentStart` | Subagent is spawned | Creates agent checkpoint | Capture pre-subagent state |
+| `UserPromptSubmit` | User submits a prompt | N/A | Pre-process user input |
+| `PreToolUse` | Before each tool call | N/A | Validate tool usage |
+| `PostToolUse` | After each tool call | N/A | Post-process tool results |
+| `Stop` | Agent about to respond | Validates using session checkpoint | Validate all session changes |
+| `SubagentStop` | Subagent completes | Validates using agent checkpoint | Validate subagent changes |
+| `SessionEnd` | Session ends | N/A | Cleanup session state |
+
+### Checkpoint Filtering
+
+Hooks automatically filter what files they check based on when they run:
+
+- **Stop hooks** validate against the session checkpoint (created at `SessionStart`)
+  - Only checks files modified during the entire session
+  - Use for session-wide validations (tests, builds, linting)
+
+- **SubagentStop hooks** validate against the agent checkpoint (created at `SubagentStart`)
+  - Only checks files modified by that specific subagent
+  - Use for focused validations (type checking, unit tests)
+
+This ensures hooks only validate relevant changes and skip unchanged files automatically.
 
 ## Learn More
 
