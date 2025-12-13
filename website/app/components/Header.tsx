@@ -269,12 +269,27 @@ export default function Header() {
 						>
 							Docs
 						</Link>
-						<Link
-							href="/docs#mcp-server"
-							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+
+						<a
+							href="https://github.com/TheBushidoCollective/han/releases"
+							className="hidden sm:block"
 						>
-							MCP
-						</Link>
+							<img
+								src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
+								alt="GitHub Release"
+								className="h-5"
+							/>
+						</a>
+						<a
+							href="https://github.com/TheBushidoCollective/han"
+							className="hidden sm:block"
+						>
+							<img
+								src="https://img.shields.io/github/stars/TheBushidoCollective/han"
+								alt="GitHub Stars"
+								className="h-5"
+							/>
+						</a>
 
 						<a
 							href="https://github.com/thebushidocollective/han"
