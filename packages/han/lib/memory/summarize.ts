@@ -5,6 +5,7 @@
  * without AI - uses simple heuristics and pattern matching.
  */
 
+import { isMemoryEnabled } from "../han-settings.ts";
 import { getGitRemote } from "./paths.ts";
 import type { MemoryStore } from "./storage.ts";
 import type {
@@ -34,6 +35,11 @@ export function summarizeSession(
 	store: MemoryStore,
 	options: SummarizeOptions = {},
 ): SessionSummary | null {
+	// Skip if memory is disabled
+	if (!isMemoryEnabled()) {
+		return null;
+	}
+
 	const observations = store.getSessionObservations(sessionId);
 
 	if (observations.length === 0) {

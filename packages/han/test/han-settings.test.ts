@@ -9,8 +9,12 @@ import { join } from "node:path";
 import {
 	getHanConfigPaths,
 	getMergedHanConfig,
+	isCacheEnabled,
 	isCheckpointsEnabled,
+	isFailFastEnabled,
 	isHooksEnabled,
+	isMemoryEnabled,
+	isMetricsEnabled,
 	loadHanConfigFile,
 } from "../lib/han-settings.ts";
 
@@ -300,6 +304,159 @@ describe("han-settings.ts", () => {
 
 			// When hooks are disabled globally, checkpoints should also be disabled
 			expect(isCheckpointsEnabled()).toBe(false);
+		});
+	});
+
+	describe("isMemoryEnabled", () => {
+		test("returns true by default when no config exists", () => {
+			expect(isMemoryEnabled()).toBe(true);
+		});
+
+		test("returns true when memory.enabled is explicitly true", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "memory:\n  enabled: true\n");
+
+			expect(isMemoryEnabled()).toBe(true);
+		});
+
+		test("returns false when memory.enabled is false", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "memory:\n  enabled: false\n");
+
+			expect(isMemoryEnabled()).toBe(false);
+		});
+
+		test("respects config precedence (project overrides user)", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(userConfigPath, "memory:\n  enabled: true\n");
+			writeFileSync(projectConfigPath, "memory:\n  enabled: false\n");
+
+			expect(isMemoryEnabled()).toBe(false);
+		});
+	});
+
+	describe("isMetricsEnabled", () => {
+		test("returns true by default when no config exists", () => {
+			expect(isMetricsEnabled()).toBe(true);
+		});
+
+		test("returns true when metrics.enabled is explicitly true", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "metrics:\n  enabled: true\n");
+
+			expect(isMetricsEnabled()).toBe(true);
+		});
+
+		test("returns false when metrics.enabled is false", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "metrics:\n  enabled: false\n");
+
+			expect(isMetricsEnabled()).toBe(false);
+		});
+
+		test("respects config precedence (local overrides user)", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+
+			writeFileSync(userConfigPath, "metrics:\n  enabled: false\n");
+			writeFileSync(localConfigPath, "metrics:\n  enabled: true\n");
+
+			expect(isMetricsEnabled()).toBe(true);
+		});
+	});
+
+	describe("isCacheEnabled", () => {
+		test("returns true by default when no config exists", () => {
+			expect(isCacheEnabled()).toBe(true);
+		});
+
+		test("returns true when hooks.cache is explicitly true", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  cache: true\n");
+
+			expect(isCacheEnabled()).toBe(true);
+		});
+
+		test("returns false when hooks.cache is false", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  cache: false\n");
+
+			expect(isCacheEnabled()).toBe(false);
+		});
+
+		test("returns true when hooks section exists but cache is undefined", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  enabled: true\n");
+
+			expect(isCacheEnabled()).toBe(true);
+		});
+
+		test("respects config precedence (project overrides user)", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(userConfigPath, "hooks:\n  cache: true\n");
+			writeFileSync(projectConfigPath, "hooks:\n  cache: false\n");
+
+			expect(isCacheEnabled()).toBe(false);
+		});
+
+		test("returns false when hooks are globally disabled", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  enabled: false\n  cache: true\n");
+
+			// When hooks are disabled globally, cache should also be disabled
+			expect(isCacheEnabled()).toBe(false);
+		});
+	});
+
+	describe("isFailFastEnabled", () => {
+		test("returns true by default when no config exists", () => {
+			expect(isFailFastEnabled()).toBe(true);
+		});
+
+		test("returns true when hooks.fail_fast is explicitly true", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  fail_fast: true\n");
+
+			expect(isFailFastEnabled()).toBe(true);
+		});
+
+		test("returns false when hooks.fail_fast is false", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  fail_fast: false\n");
+
+			expect(isFailFastEnabled()).toBe(false);
+		});
+
+		test("returns true when hooks section exists but fail_fast is undefined", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  enabled: true\n");
+
+			expect(isFailFastEnabled()).toBe(true);
+		});
+
+		test("respects config precedence (local overrides project)", () => {
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+
+			writeFileSync(projectConfigPath, "hooks:\n  fail_fast: true\n");
+			writeFileSync(localConfigPath, "hooks:\n  fail_fast: false\n");
+
+			expect(isFailFastEnabled()).toBe(false);
+		});
+
+		test("returns false when hooks are globally disabled", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				configPath,
+				"hooks:\n  enabled: false\n  fail_fast: true\n",
+			);
+
+			// When hooks are disabled globally, fail_fast should also be disabled
+			expect(isFailFastEnabled()).toBe(false);
 		});
 	});
 });

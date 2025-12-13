@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-erlang build --fail-fast --cached",
+            "command": "han hook run jutsu-erlang build",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "han hook run jutsu-erlang test --fail-fast --cached",
+            "command": "han hook run jutsu-erlang test",
             "timeout": 900
           }
         ]

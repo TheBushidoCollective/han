@@ -6,6 +6,7 @@
  * and stores it as a RawObservation using the memory storage layer.
  */
 
+import { isMemoryEnabled } from "../han-settings.ts";
 import { generateId } from "./paths.ts";
 import { getMemoryStore } from "./storage.ts";
 import type { RawObservation } from "./types.ts";
@@ -192,6 +193,11 @@ function extractFilesModified(
  * it using the memory storage layer.
  */
 export async function captureToolUse(event: ToolUseEvent): Promise<void> {
+	// Skip if memory is disabled
+	if (!isMemoryEnabled()) {
+		return;
+	}
+
 	// Skip if no session ID (shouldn't happen in practice)
 	if (!event.session_id) {
 		return;

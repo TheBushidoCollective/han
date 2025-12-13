@@ -140,7 +140,7 @@ function loadPluginHooks(
 
 /**
  * Parse a hook command to extract plugin name and hook name
- * Example: "han hook run jutsu-typescript test --fail-fast --cached"
+ * Example: "han hook run jutsu-typescript test"
  * Returns: { pluginName: "jutsu-typescript", hookName: "test" }
  */
 export function parseHookCommand(

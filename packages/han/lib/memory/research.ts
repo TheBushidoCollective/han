@@ -16,6 +16,7 @@
  * - Low: No strong sources OR contradictory evidence
  */
 
+import { learnFromResearch } from "./promotion.ts";
 import type {
 	Citation,
 	Evidence,
@@ -87,6 +88,10 @@ export function createResearchEngine(searchFn: SearchFn) {
 				const assessment = assessConfidence(question, evidence);
 
 				if (assessment.confident || leads.length === 0) {
+					// Auto-learn from research (self-learning)
+					if (evidence.length > 0) {
+						learnFromResearch(evidence);
+					}
 					// Either confident or exhausted leads
 					return formatAnswer(question, evidence, assessment, searchedSources);
 				}
@@ -97,6 +102,11 @@ export function createResearchEngine(searchFn: SearchFn) {
 						leads.push(newLead);
 					}
 				}
+			}
+
+			// Auto-learn even from low-confidence research
+			if (evidence.length > 0) {
+				learnFromResearch(evidence);
 			}
 
 			// Exhausted all leads without reaching confidence

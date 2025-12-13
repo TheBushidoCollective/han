@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { isMemoryEnabled } from "../../han-settings.ts";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 import type {
 	CompleteTaskParams,
@@ -11,12 +12,22 @@ import { recordTaskCompletion } from "../../telemetry/index.ts";
 import { cleanCheckpoints } from "../checkpoint/clean.ts";
 import { listCheckpoints } from "../checkpoint/list.ts";
 import {
+	type AutoLearnParams,
+	autoLearn,
+	formatAutoLearnResult,
+} from "./auto-learn.ts";
+import {
 	captureMemory,
 	type LearnParams,
 	listMemoryFiles,
 	type MemoryScope,
 	readMemoryFile,
 } from "./memory.ts";
+import {
+	formatMemoryResult,
+	type MemoryParams,
+	queryMemory,
+} from "./memory-router.ts";
 import {
 	formatTeamMemoryResult,
 	queryTeamMemory,
@@ -402,6 +413,61 @@ const TEAM_MEMORY_TOOLS: McpTool[] = [
 	},
 ];
 
+// Unified memory tool (auto-routes to Personal, Team, or Rules)
+const UNIFIED_MEMORY_TOOLS: McpTool[] = [
+	{
+		name: "memory",
+		description:
+			"Query memory with auto-routing. Automatically determines whether to check personal sessions, team knowledge, or project conventions. Use this as the primary entry point for all memory queries. Examples: 'what was I working on?', 'who knows about authentication?', 'how do we handle errors?'",
+		annotations: {
+			title: "Memory (Unified)",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				question: {
+					type: "string",
+					description:
+						"Any question about your work, the team, or project conventions. The system will automatically route to the appropriate memory layer.",
+				},
+			},
+			required: ["question"],
+		},
+	},
+];
+
+// Auto-Learn tools (self-learning pattern promotion)
+const AUTO_LEARN_TOOLS: McpTool[] = [
+	{
+		name: "auto_learn",
+		description:
+			"Check status of auto-learning or trigger pattern promotion. Claude automatically learns patterns from research and promotes high-confidence ones to .claude/rules/. Use 'status' to see stats, 'candidates' to view ready patterns, 'promote' to trigger promotion.",
+		annotations: {
+			title: "Auto Learn",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				action: {
+					type: "string",
+					enum: ["status", "candidates", "promote"],
+					description:
+						"Action to perform: 'status' shows learning stats, 'candidates' lists patterns ready for promotion, 'promote' writes ready patterns to .claude/rules/",
+				},
+			},
+			required: ["action"],
+		},
+	},
+];
+
 // Memory tools definition
 const MEMORY_TOOLS: McpTool[] = [
 	{
@@ -505,12 +571,17 @@ const MEMORY_TOOLS: McpTool[] = [
 
 function handleToolsList(): unknown {
 	const hookTools = formatToolsForMcp(discoverTools());
+	const memoryEnabled = isMemoryEnabled();
+
 	const allTools = [
 		...hookTools,
 		...CHECKPOINT_TOOLS,
 		...METRICS_TOOLS,
-		...TEAM_MEMORY_TOOLS,
-		...MEMORY_TOOLS,
+		// Only include memory tools if memory is enabled
+		...(memoryEnabled ? UNIFIED_MEMORY_TOOLS : []),
+		...(memoryEnabled ? TEAM_MEMORY_TOOLS : []),
+		...(memoryEnabled ? AUTO_LEARN_TOOLS : []),
+		...(memoryEnabled ? MEMORY_TOOLS : []),
 	];
 	return {
 		tools: allTools,
@@ -708,12 +779,79 @@ async function handleToolsCall(params: {
 		}
 	}
 
+	// Check if this is the unified memory tool
+	const isUnifiedMemoryTool = UNIFIED_MEMORY_TOOLS.some(
+		(t) => t.name === params.name,
+	);
+
+	if (isUnifiedMemoryTool) {
+		// Block if memory is disabled
+		if (!isMemoryEnabled()) {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
+					},
+				],
+				isError: true,
+			};
+		}
+		try {
+			switch (params.name) {
+				case "memory": {
+					const memoryParams = args as unknown as MemoryParams;
+					const result = await queryMemory(memoryParams);
+					const formatted = formatMemoryResult(result);
+					return {
+						content: [
+							{
+								type: "text",
+								text: formatted,
+							},
+						],
+						isError: !result.success,
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown unified memory tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
 	// Check if this is a team memory tool
 	const isTeamMemoryTool = TEAM_MEMORY_TOOLS.some(
 		(t) => t.name === params.name,
 	);
 
 	if (isTeamMemoryTool) {
+		// Block if memory is disabled
+		if (!isMemoryEnabled()) {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
+					},
+				],
+				isError: true,
+			};
+		}
 		// Handle team memory tools
 		try {
 			switch (params.name) {
@@ -752,10 +890,75 @@ async function handleToolsCall(params: {
 		}
 	}
 
+	// Check if this is an auto-learn tool
+	const isAutoLearnTool = AUTO_LEARN_TOOLS.some((t) => t.name === params.name);
+
+	if (isAutoLearnTool) {
+		// Block if memory is disabled
+		if (!isMemoryEnabled()) {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
+					},
+				],
+				isError: true,
+			};
+		}
+		try {
+			switch (params.name) {
+				case "auto_learn": {
+					const learnParams = args as unknown as AutoLearnParams;
+					const result = autoLearn(learnParams);
+					const formatted = formatAutoLearnResult(result);
+					return {
+						content: [
+							{
+								type: "text",
+								text: formatted,
+							},
+						],
+						isError: !result.success,
+					};
+				}
+
+				default:
+					throw {
+						code: -32602,
+						message: `Unknown auto-learn tool: ${params.name}`,
+					};
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
 	// Check if this is a memory tool
 	const isMemoryTool = MEMORY_TOOLS.some((t) => t.name === params.name);
 
 	if (isMemoryTool) {
+		// Block if memory is disabled
+		if (!isMemoryEnabled()) {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
+					},
+				],
+				isError: true,
+			};
+		}
 		// Handle memory tools
 		try {
 			switch (params.name) {

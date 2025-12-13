@@ -240,6 +240,8 @@ function executeCommandHook(
 	timeout: number,
 	hookType: string,
 	hookName: string,
+	noCache = false,
+	noCheckpoints = false,
 ): string | null {
 	const startTime = Date.now();
 
@@ -285,8 +287,12 @@ function executeCommandHook(
 				CLAUDE_PROJECT_DIR: process.cwd(),
 				// Disable fail-fast in subprocesses - dispatch handles aggregation
 				HAN_NO_FAIL_FAST: "1",
-				// Pass checkpoint context to hook run commands
-				...(checkpointType && checkpointId
+				// Disable cache if --no-cache was passed to dispatch
+				...(noCache ? { HAN_NO_CACHE: "1" } : {}),
+				// Disable checkpoints if --no-checkpoints was passed to dispatch
+				...(noCheckpoints ? { HAN_NO_CHECKPOINTS: "1" } : {}),
+				// Pass checkpoint context to hook run commands (unless checkpoints disabled)
+				...(!noCheckpoints && checkpointType && checkpointId
 					? {
 							HAN_CHECKPOINT_TYPE: checkpointType,
 							HAN_CHECKPOINT_ID: checkpointId,
@@ -386,7 +392,12 @@ export function deriveHookName(command: string, pluginName: string): string {
 /**
  * Execute hooks from settings files (not from Han plugins)
  */
-function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
+function dispatchSettingsHooks(
+	hookType: string,
+	outputs: string[],
+	noCache = false,
+	noCheckpoints = false,
+): void {
 	for (const { path } of getSettingsPaths()) {
 		// Check settings.json for hooks
 		const settings = readSettingsFile(path);
@@ -408,6 +419,8 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
 									hook.timeout || 30000,
 									hookType,
 									"settings-hook",
+									noCache,
+									noCheckpoints,
 								);
 								if (output) {
 									outputs.push(output);
@@ -450,6 +463,8 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
 										hook.timeout || 30000,
 										hookType,
 										"settings-hook",
+										noCache,
+										noCheckpoints,
 									);
 									if (output) {
 										outputs.push(output);
@@ -470,7 +485,12 @@ function dispatchSettingsHooks(hookType: string, outputs: string[]): void {
  * Dispatch hooks of a specific type across all installed plugins.
  * Uses merged settings from all scopes (user, project, local, enterprise).
  */
-function dispatchHooks(hookType: string, includeSettings = false): void {
+function dispatchHooks(
+	hookType: string,
+	includeSettings = false,
+	noCache = false,
+	noCheckpoints = false,
+): void {
 	// Allow global disable of all hooks via environment variable
 	if (
 		process.env.HAN_DISABLE_HOOKS === "true" ||
@@ -540,7 +560,7 @@ function dispatchHooks(hookType: string, includeSettings = false): void {
 
 	// Dispatch settings hooks if --all is specified
 	if (includeSettings) {
-		dispatchSettingsHooks(hookType, outputs);
+		dispatchSettingsHooks(hookType, outputs, noCache, noCheckpoints);
 	}
 
 	// Dispatch Han plugin hooks
@@ -570,6 +590,8 @@ function dispatchHooks(hookType: string, includeSettings = false): void {
 						hook.timeout || 30000,
 						hookType,
 						hookName,
+						noCache,
+						noCheckpoints,
 					);
 					if (output) {
 						outputs.push(output);
@@ -604,7 +626,26 @@ export function registerHookDispatch(hookCommand: Command): void {
 			"-a, --all",
 			"Include hooks from Claude Code settings (not just Han plugins)",
 		)
-		.action((hookType: string, options: { all?: boolean }) => {
-			dispatchHooks(hookType, options.all ?? false);
-		});
+		.option(
+			"--no-cache",
+			"Disable caching - force all hooks to run regardless of file changes",
+		)
+		.option(
+			"--no-checkpoints",
+			"Disable checkpoint filtering - ignore session/agent checkpoint state",
+		)
+		.action(
+			(
+				hookType: string,
+				options: { all?: boolean; cache?: boolean; checkpoints?: boolean },
+			) => {
+				// Commander uses --no-X pattern which sets cache/checkpoints to false when used
+				dispatchHooks(
+					hookType,
+					options.all ?? false,
+					options.cache === false,
+					options.checkpoints === false,
+				);
+			},
+		);
 }

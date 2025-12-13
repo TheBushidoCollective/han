@@ -19,6 +19,12 @@ hooks:
   enabled: true       # Master switch
   checkpoints: true   # Session-scoped filtering
 
+memory:
+  enabled: true       # Enable memory system (session capture, research, promotion)
+
+metrics:
+  enabled: true       # Enable task metrics tracking
+
 plugins:
   jutsu-biome:
     hooks:

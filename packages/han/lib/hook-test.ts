@@ -86,6 +86,15 @@ function generateExampleStdinPayload(_hookType: string): string {
 }
 
 /**
+ * Settings for hook execution
+ */
+interface ExecuteHookSettings {
+	cache: boolean;
+	checkpoints: boolean;
+	failFast: boolean;
+}
+
+/**
  * Execute a single hook command and collect output.
  * The command itself (e.g. han hook run) will source CLAUDE_ENV_FILE if set.
  */
@@ -93,6 +102,7 @@ async function executeHookCommand(
 	hook: HookCommand,
 	hookType: string,
 	verbose: boolean,
+	settings: ExecuteHookSettings,
 	liveOutput?: LiveOutputState,
 ): Promise<HookResult> {
 	// Handle prompt type hooks - instant pass
@@ -134,6 +144,11 @@ async function executeHookCommand(
 				PATH: enhancedPath,
 				// Enable verbose output for hook run commands during testing
 				HAN_HOOK_RUN_VERBOSE: "1",
+				// Pass settings as environment variables
+				// These override han.yml defaults in the spawned hook commands
+				...(settings.cache ? {} : { HAN_NO_CACHE: "1" }),
+				...(settings.checkpoints ? {} : { HAN_NO_CHECKPOINTS: "1" }),
+				...(settings.failFast ? {} : { HAN_NO_FAIL_FAST: "1" }),
 			},
 		});
 
@@ -418,14 +433,29 @@ function collectHooks(
 }
 
 /**
- * Test all hooks in installed plugins
+ * Options for hook testing
  */
-export async function testHooks(options?: {
+export interface TestHooksOptions {
 	execute?: boolean;
 	verbose?: boolean;
-}): Promise<void> {
+	/** Enable caching (disabled by default for testing) */
+	cache?: boolean;
+	/** Enable checkpoint filtering (disabled by default for testing) */
+	checkpoints?: boolean;
+	/** Enable fail-fast mode (disabled by default for testing) */
+	failFast?: boolean;
+}
+
+/**
+ * Test all hooks in installed plugins
+ */
+export async function testHooks(options?: TestHooksOptions): Promise<void> {
 	const executeHooks = options?.execute ?? false;
 	const verbose = options?.verbose ?? false;
+	// Testing defaults: disabled for fresh test runs
+	const cache = options?.cache ?? false;
+	const checkpoints = options?.checkpoints ?? false;
+	const failFast = options?.failFast ?? false;
 
 	if (!executeHooks) {
 		// Validation-only mode (keep existing console output)
@@ -470,12 +500,20 @@ export async function testHooks(options?: {
 	// Check if we have a TTY with raw mode support for interactive UI
 	const isTTY = process.stdin.isTTY && process.stdout.isTTY;
 
+	// Build settings object to pass to execution functions
+	const settings: ExecuteHookSettings = { cache, checkpoints, failFast };
+
 	if (isTTY) {
 		// Execute hooks with interactive UI
-		await executeHooksWithUI(hookTypesFound, hooksByType, verbose);
+		await executeHooksWithUI(hookTypesFound, hooksByType, verbose, settings);
 	} else {
 		// Execute hooks with simple console output (non-interactive mode)
-		await executeHooksWithConsole(hookTypesFound, hooksByType, verbose);
+		await executeHooksWithConsole(
+			hookTypesFound,
+			hooksByType,
+			verbose,
+			settings,
+		);
 	}
 }
 
@@ -486,6 +524,7 @@ async function executeHooksWithUI(
 	hookTypesFound: string[],
 	hooksByType: HooksByType,
 	verbose: boolean,
+	settings: ExecuteHookSettings,
 ): Promise<void> {
 	return new Promise((_resolve) => {
 		// Build hook structure first (hooksByType already contains HookCommand with type and timeout)
@@ -582,6 +621,7 @@ async function executeHooksWithUI(
 								hook,
 								hookType,
 								verbose,
+								settings,
 								liveOutput,
 							);
 							results.push(result);
@@ -628,6 +668,7 @@ async function executeHooksWithConsole(
 	hookTypesFound: string[],
 	hooksByType: HooksByType,
 	verbose: boolean,
+	settings: ExecuteHookSettings,
 ): Promise<void> {
 	console.log("🔍 Running hook tests...\n");
 
@@ -643,7 +684,9 @@ async function executeHooksWithConsole(
 
 		// Run all hooks of this type in parallel
 		const results = await Promise.all(
-			hooks.map((hook) => executeHookCommand(hook, hookType, verbose)),
+			hooks.map((hook) =>
+				executeHookCommand(hook, hookType, verbose, settings),
+			),
 		);
 
 		allResults.set(hookType, results);
