@@ -16,7 +16,7 @@ han plugin install jutsu-yarn
 
 ## Hooks
 
-### yarn-install (Stop hook)
+### install (Stop hook)
 
 Automatically runs when you stop Claude Code to ensure dependencies are in sync:
 
@@ -32,7 +32,7 @@ You can customize the hook behavior in your project's `han-config.yml`:
 ```yaml
 jutsu-yarn:
   hooks:
-    yarn-install:
+    install:
       enabled: true
       # Override the command if needed
       # command: "yarn install"
@@ -43,6 +43,6 @@ To disable the hook for a specific project:
 ```yaml
 jutsu-yarn:
   hooks:
-    yarn-install:
+    install:
       enabled: false
 ```

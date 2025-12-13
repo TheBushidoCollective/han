@@ -16,7 +16,7 @@ han plugin install jutsu-npm
 
 ## Hooks
 
-### npm-install (Stop hook)
+### install (Stop hook)
 
 Automatically runs when you stop Claude Code to ensure dependencies are in sync:
 
@@ -32,7 +32,7 @@ You can customize the hook behavior in your project's `han-config.yml`:
 ```yaml
 jutsu-npm:
   hooks:
-    npm-install:
+    install:
       enabled: true
       # Override the command if needed
       # command: "npm install"
@@ -43,7 +43,7 @@ To disable the hook for a specific project:
 ```yaml
 jutsu-npm:
   hooks:
-    npm-install:
+    install:
       enabled: false
 ```
 

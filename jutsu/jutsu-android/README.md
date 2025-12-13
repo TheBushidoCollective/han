@@ -16,7 +16,7 @@ han plugin install jutsu-android
 
 ## Hooks
 
-### android-build (Stop hook)
+### build (Stop hook)
 
 Automatically runs when you stop Claude Code to ensure the Android project builds:
 
@@ -32,7 +32,7 @@ You can customize the hook behavior in your project's `han-config.yml`:
 ```yaml
 jutsu-android:
   hooks:
-    android-build:
+    build:
       enabled: true
       # Override with a specific build variant
       # command: "./gradlew assembleRelease --no-daemon -q"
@@ -43,7 +43,7 @@ To disable the hook for a specific project:
 ```yaml
 jutsu-android:
   hooks:
-    android-build:
+    build:
       enabled: false
 ```
 

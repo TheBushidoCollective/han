@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-ios ios-build",
+            "command": "han hook run jutsu-ios build",
             "timeout": 900
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-ios ios-build",
+            "command": "han hook run jutsu-ios build",
             "timeout": 900
           }
         ]

@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "lerna-bootstrap": {
+    "bootstrap": {
       "dirsWith": ["lerna.json"],
       "command": "npx -y lerna bootstrap --ci 2>/dev/null || npx -y lerna bootstrap",
       "ifChanged": [

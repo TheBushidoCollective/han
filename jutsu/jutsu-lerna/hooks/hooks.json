@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-lerna lerna-bootstrap",
+            "command": "han hook run jutsu-lerna bootstrap",
             "timeout": 300
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-lerna lerna-bootstrap",
+            "command": "han hook run jutsu-lerna bootstrap",
             "timeout": 300
           }
         ]

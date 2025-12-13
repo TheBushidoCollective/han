@@ -16,7 +16,7 @@ han plugin install jutsu-lerna
 
 ## Hooks
 
-### lerna-bootstrap (Stop hook)
+### bootstrap (Stop hook)
 
 Automatically runs when you stop Claude Code to ensure monorepo dependencies are properly linked:
 
@@ -32,7 +32,7 @@ You can customize the hook behavior in your project's `han-config.yml`:
 ```yaml
 jutsu-lerna:
   hooks:
-    lerna-bootstrap:
+    bootstrap:
       enabled: true
       # Override the command if needed
       # command: "npx lerna bootstrap"
@@ -43,7 +43,7 @@ To disable the hook for a specific project:
 ```yaml
 jutsu-lerna:
   hooks:
-    lerna-bootstrap:
+    bootstrap:
       enabled: false
 ```
 

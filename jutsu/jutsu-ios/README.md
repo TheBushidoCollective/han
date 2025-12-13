@@ -16,7 +16,7 @@ han plugin install jutsu-ios
 
 ## Hooks
 
-### ios-build (Stop hook)
+### build (Stop hook)
 
 Automatically runs when you stop Claude Code to ensure the iOS project builds:
 
@@ -32,7 +32,7 @@ You can customize the hook behavior in your project's `han-config.yml`:
 ```yaml
 jutsu-ios:
   hooks:
-    ios-build:
+    build:
       enabled: true
       # Override with a specific scheme and destination
       # command: "xcodebuild -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 16' build CODE_SIGNING_ALLOWED=NO"
@@ -43,7 +43,7 @@ To disable the hook for a specific project:
 ```yaml
 jutsu-ios:
   hooks:
-    ios-build:
+    build:
       enabled: false
 ```
 
