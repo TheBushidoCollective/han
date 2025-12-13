@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-yarn yarn-install",
+            "command": "han hook run jutsu-yarn install",
             "timeout": 300
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-yarn yarn-install",
+            "command": "han hook run jutsu-yarn install",
             "timeout": 300
           }
         ]

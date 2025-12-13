@@ -1,5 +1,5 @@
 hooks:
-  yarn-install:
+  install:
     dirs_with:
       - "yarn.lock"
     command: "yarn install --check-files --frozen-lockfile 2>/dev/null || yarn install"

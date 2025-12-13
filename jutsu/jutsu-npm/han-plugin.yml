@@ -1,5 +1,5 @@
 hooks:
-  npm-install:
+  install:
     dirs_with:
       - "package-lock.json"
     command: "npm ci 2>/dev/null || npm install"

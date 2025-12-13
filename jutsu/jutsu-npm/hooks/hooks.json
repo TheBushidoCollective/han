@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-npm npm-install",
+            "command": "han hook run jutsu-npm install",
             "timeout": 300
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-npm npm-install",
+            "command": "han hook run jutsu-npm install",
             "timeout": 300
           }
         ]

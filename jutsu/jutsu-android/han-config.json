@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "android-build": {
+    "build": {
       "dirsWith": ["build.gradle", "build.gradle.kts"],
       "testDir": "test -f gradlew && grep -q 'com.android' build.gradle* 2>/dev/null",
       "command": "./gradlew assembleDebug --no-daemon -q 2>&1 | tail -30 || exit 1",
