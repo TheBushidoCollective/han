@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-runbooks validate",
+            "timeout": 60
+          }
+        ]
+      }
     ]
   }
 }

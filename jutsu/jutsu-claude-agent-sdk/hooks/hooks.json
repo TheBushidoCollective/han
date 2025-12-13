@@ -15,6 +15,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-claude-agent-sdk typecheck",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }

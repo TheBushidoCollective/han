@@ -9,6 +9,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run jutsu-gitlab-ci lint",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }
