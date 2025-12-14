@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-12-14
+
+### BREAKING CHANGES
+
+- make caching and fail-fast default behavior for hooks ([fa35e80f](../../commit/fa35e80f))
+
+### Added
+
+- add historical context system with FTS indexing ([0ea5fb75](../../commit/0ea5fb75))
+- add SubagentStart and SubagentStop hooks to all plugins ([a8925a99](../../commit/a8925a99))
+- add memory system with team and personal storage ([4ac6eadf](../../commit/4ac6eadf))
+
+### Fixed
+
+- trigger release on han-native changes ([3df8db77](../../commit/3df8db77))
+- use real createResearchEngine in mcp-team-memory tests ([78a63ad7](../../commit/78a63ad7))
+- filter follow-up queries in mock by pattern ([208b99b4](../../commit/208b99b4))
+- return results only on first search call ([103ac36d](../../commit/103ac36d))
+- use direct mock search function for deterministic tests ([d27ac866](../../commit/d27ac866))
+- make research tests deterministic with scoreOverrides Map ([ed8676a5](../../commit/ed8676a5))
+- use hasOwnProperty for _testScore check ([13b59a99](../../commit/13b59a99))
+- make research tests deterministic with explicit scores ([1af0d686](../../commit/1af0d686))
+- graceful degradation when native module unavailable ([fb03e69c](../../commit/fb03e69c))
+- simplify native module loading with top-level require ([ea594223](../../commit/ea594223))
+- use import.meta.dir for bunfs native module extraction ([629aa9f9](../../commit/629aa9f9))
+- extract native module from bunfs to temp before loading ([250cc9ba](../../commit/250cc9ba))
+- align native module naming with workflow matrix ([7ed1812f](../../commit/7ed1812f))
+
+### Other
+
+- improve memory indexer module documentation ([fd19b28a](../../commit/fd19b28a))
+- add memory and metrics commands to README ([3364b80b](../../commit/3364b80b))
+- update website for v2.0.0 features ([53cf28bd](../../commit/53cf28bd))
+
 ## [2.0.1] - 2025-12-14
 
 ### BREAKING CHANGES
