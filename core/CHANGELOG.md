@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-12-14
+
+### Added
+
+- add legacy-code-safety skill and hook ([05e0d6ad](../../commit/05e0d6ad))
+- add SubagentStart and SubagentStop hooks to all plugins ([a8925a99](../../commit/a8925a99))
+- make memory-learning hook explicitly autonomous ([e1260fb6](../../commit/e1260fb6))
+
+### Fixed
+
+- harden no-excuses rule to prevent categorizing failures ([9d29eb7b](../../commit/9d29eb7b))
+
 ## [1.5.1] - 2025-12-12
 
 ### Added
