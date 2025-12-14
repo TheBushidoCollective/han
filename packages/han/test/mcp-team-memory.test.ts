@@ -1,61 +1,43 @@
 /**
  * Tests for Team Memory MCP Tool
+ *
+ * NOTE: This test file carefully mocks only specific functions to avoid
+ * leaking mocks to other test files. Do NOT use mock.module() for modules
+ * that are also tested elsewhere (like research.ts).
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	formatTeamMemoryResult,
 	queryTeamMemory,
 } from "../lib/commands/mcp/team-memory.ts";
-import type { SearchResult } from "../lib/memory/types.ts";
+import type { SearchResult, IndexedObservation } from "../lib/memory/types.ts";
 
-// Mock the memory module
+// Mock the memory module - only mock path helpers and vector store, NOT createResearchEngine
+// This allows the real research engine to run with mocked data
 const mockSearch = mock(() => Promise.resolve([] as SearchResult[]));
 
-// Mock getVectorStore to return a mock store
-mock.module("../lib/memory/index.ts", () => ({
-	createResearchEngine: (searchFn: (q: string) => Promise<unknown[]>) => ({
-		async research(question: string) {
-			const results = await searchFn(question);
-			if (results.length === 0) {
-				return {
-					answer:
-						"I researched thoroughly but couldn't find a definitive answer.",
-					confidence: "low",
-					citations: [],
-					caveats: [],
-					searched_sources: [`query:${question}`],
-				};
-			}
-			// Simulate research engine with actual results
-			return {
-				answer: `Found ${results.length} relevant results`,
-				confidence: "high",
-				citations: results.map((r: unknown) => ({
-					source: (r as { observation: { source: string } }).observation.source,
-					excerpt: (r as { excerpt: string }).excerpt,
-					relevance: (r as { score: number }).score,
-					author: (r as { observation: { author: string } }).observation.author,
-					timestamp: (r as { observation: { timestamp: number } }).observation
-						.timestamp,
-				})),
-				caveats: [],
-				searched_sources: [`query:${question}`],
-			};
-		},
-	}),
-	getGitRemote: () => "git@github.com:test/repo.git",
-	getProjectIndexPath: () => "/tmp/test-memory/.index",
-	getVectorStore: (_dbPath: string) =>
-		Promise.resolve({
-			search: mockSearch,
-			index: mock(() => Promise.resolve()),
-			clear: mock(() => Promise.resolve()),
-			isAvailable: mock(() => Promise.resolve(true)),
-			embed: mock(() => Promise.resolve([])),
-			embedBatch: mock(() => Promise.resolve([])),
-			close: mock(() => Promise.resolve()),
-		}),
-}));
+mock.module("../lib/memory/index.ts", () => {
+	// Re-export the real createResearchEngine from research.ts
+	const { createResearchEngine } = require("../lib/memory/research.ts");
+
+	return {
+		// Use the real research engine
+		createResearchEngine,
+		// Mock only path helpers and vector store
+		getGitRemote: () => "git@github.com:test/repo.git",
+		getProjectIndexPath: () => "/tmp/test-memory/.index",
+		getVectorStore: (_dbPath: string) =>
+			Promise.resolve({
+				search: mockSearch,
+				index: mock(() => Promise.resolve()),
+				clear: mock(() => Promise.resolve()),
+				isAvailable: mock(() => Promise.resolve(true)),
+				embed: mock(() => Promise.resolve([])),
+				embedBatch: mock(() => Promise.resolve([])),
+				close: mock(() => Promise.resolve()),
+			}),
+	};
+});
 
 describe("Team Memory MCP Tool", () => {
 	beforeEach(() => {
