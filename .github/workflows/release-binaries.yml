@@ -93,7 +93,7 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu protobuf-compiler
 
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
