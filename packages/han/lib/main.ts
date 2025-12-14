@@ -16,6 +16,7 @@ import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
 import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
+import { registerIndexCommand } from "./commands/index/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerMetricsCommand } from "./commands/metrics/index.ts";
@@ -104,6 +105,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerMemoryCommand(program);
 	registerMetricsCommand(program);
 	registerCheckpointCommands(program);
+	registerIndexCommand(program);
 	registerAliasCommands(program);
 
 	// Register top-level explain command

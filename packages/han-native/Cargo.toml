@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # napi-rs for Node.js bindings
-napi = { version = "2", default-features = false, features = ["napi8", "async", "serde-json"] }
+napi = { version = "2", default-features = false, features = ["napi8", "async", "serde-json", "tokio_rt"] }
 napi-derive = "2"
 # Fast glob matching
 globset = "0.4"
@@ -24,6 +24,17 @@ rayon = "1.10"
 # Serde for JSON serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# LanceDB for vector/FTS storage
+lancedb = "0.22"
+# Arrow for data interchange (must match lancedb's version)
+arrow-array = "56"
+arrow-schema = "56"
+# Async runtime for LanceDB
+tokio = { version = "1", features = ["rt-multi-thread"] }
+# Futures for async stream handling
+futures = "0.3"
+# Text embeddings (ONNX-based, bundles well)
+fastembed = "4"
 
 [build-dependencies]
 napi-build = "2"

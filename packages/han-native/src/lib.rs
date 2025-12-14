@@ -1,6 +1,12 @@
 #![deny(clippy::all)]
 
+use arrow_array::{Array, RecordBatch, RecordBatchIterator, StringArray};
+use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
 use ignore::WalkBuilder;
+use lancedb::index::scalar::{FtsIndexBuilder, FullTextSearchQuery};
+use lancedb::index::Index;
+use lancedb::query::{ExecutableQuery, QueryBase};
 use napi_derive::napi;
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
@@ -8,6 +14,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Arc;
 
 /// Compute SHA256 hash of a file's contents
 /// Returns empty string if file cannot be read
@@ -465,4 +472,375 @@ pub fn check_and_build_manifest(
         manifest,
         files,
     }
+}
+
+// ============================================================================
+// LanceDB Full-Text Search (FTS) Functions
+// ============================================================================
+
+/// A document record for FTS indexing
+#[napi(object)]
+pub struct FtsDocument {
+    /// Unique identifier for the document
+    pub id: String,
+    /// The text content to index
+    pub content: String,
+    /// Optional metadata as JSON string
+    pub metadata: Option<String>,
+}
+
+/// A search result from FTS query
+#[napi(object)]
+pub struct FtsSearchResult {
+    /// Document ID
+    pub id: String,
+    /// The matched content
+    pub content: String,
+    /// Optional metadata as JSON string
+    pub metadata: Option<String>,
+    /// BM25 relevance score
+    pub score: f64,
+}
+
+/// Initialize or open an FTS index at the given path
+/// Creates the table if it doesn't exist
+#[napi]
+pub async fn fts_init(db_path: String, table_name: String) -> napi::Result<bool> {
+    let result = tokio::task::spawn_blocking(move || {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create runtime: {}", e))
+        })?;
+
+        rt.block_on(async {
+            let db = lancedb::connect(&db_path)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to connect: {}", e)))?;
+
+            // Check if table exists
+            let tables = db.table_names().execute().await.map_err(|e| {
+                napi::Error::from_reason(format!("Failed to list tables: {}", e))
+            })?;
+
+            if tables.contains(&table_name) {
+                return Ok::<bool, napi::Error>(true);
+            }
+
+            // Create table with schema: id (string), content (string), metadata (string)
+            let schema = Arc::new(Schema::new(vec![
+                Field::new("id", DataType::Utf8, false),
+                Field::new("content", DataType::Utf8, false),
+                Field::new("metadata", DataType::Utf8, true),
+            ]));
+
+            // Create empty table
+            let empty_batch = RecordBatch::try_new(
+                schema.clone(),
+                vec![
+                    Arc::new(StringArray::from(Vec::<&str>::new())),
+                    Arc::new(StringArray::from(Vec::<&str>::new())),
+                    Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
+                ],
+            )
+            .map_err(|e| napi::Error::from_reason(format!("Failed to create batch: {}", e)))?;
+
+            let batches = RecordBatchIterator::new(vec![Ok(empty_batch)], schema);
+
+            db.create_table(&table_name, Box::new(batches))
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to create table: {}", e)))?;
+
+            Ok(true)
+        })
+    })
+    .await
+    .map_err(|e| napi::Error::from_reason(format!("Task failed: {}", e)))??;
+
+    Ok(result)
+}
+
+/// Index documents for FTS
+/// Adds documents to the table and creates/updates the FTS index
+#[napi]
+pub async fn fts_index(
+    db_path: String,
+    table_name: String,
+    documents: Vec<FtsDocument>,
+) -> napi::Result<u32> {
+    if documents.is_empty() {
+        return Ok(0);
+    }
+
+    let count = documents.len() as u32;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create runtime: {}", e))
+        })?;
+
+        rt.block_on(async {
+            let db = lancedb::connect(&db_path)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to connect: {}", e)))?;
+
+            let table = db
+                .open_table(&table_name)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to open table: {}", e)))?;
+
+            // Build arrays from documents
+            let ids: Vec<&str> = documents.iter().map(|d| d.id.as_str()).collect();
+            let contents: Vec<&str> = documents.iter().map(|d| d.content.as_str()).collect();
+            let metadata: Vec<Option<&str>> = documents
+                .iter()
+                .map(|d| d.metadata.as_deref())
+                .collect();
+
+            let schema = Arc::new(Schema::new(vec![
+                Field::new("id", DataType::Utf8, false),
+                Field::new("content", DataType::Utf8, false),
+                Field::new("metadata", DataType::Utf8, true),
+            ]));
+
+            let batch = RecordBatch::try_new(
+                schema.clone(),
+                vec![
+                    Arc::new(StringArray::from(ids)),
+                    Arc::new(StringArray::from(contents)),
+                    Arc::new(StringArray::from(metadata)),
+                ],
+            )
+            .map_err(|e| napi::Error::from_reason(format!("Failed to create batch: {}", e)))?;
+
+            let batches = RecordBatchIterator::new(vec![Ok(batch)], schema);
+
+            // Add documents to table
+            table
+                .add(Box::new(batches))
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to add documents: {}", e)))?;
+
+            // Create or update FTS index on content column
+            table
+                .create_index(&["content"], Index::FTS(FtsIndexBuilder::default()))
+                .execute()
+                .await
+                .map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to create FTS index: {}", e))
+                })?;
+
+            Ok::<u32, napi::Error>(count)
+        })
+    })
+    .await
+    .map_err(|e| napi::Error::from_reason(format!("Task failed: {}", e)))??;
+
+    Ok(result)
+}
+
+/// Search documents using FTS (BM25)
+#[napi]
+pub async fn fts_search(
+    db_path: String,
+    table_name: String,
+    query: String,
+    limit: Option<u32>,
+) -> napi::Result<Vec<FtsSearchResult>> {
+    let limit = limit.unwrap_or(10) as usize;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create runtime: {}", e))
+        })?;
+
+        rt.block_on(async {
+            let db = lancedb::connect(&db_path)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to connect: {}", e)))?;
+
+            let table = db
+                .open_table(&table_name)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to open table: {}", e)))?;
+
+            // Execute FTS query
+            let results = table
+                .query()
+                .full_text_search(FullTextSearchQuery::new(query))
+                .limit(limit)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to execute query: {}", e)))?
+                .try_collect::<Vec<_>>()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to collect results: {}", e)))?;
+
+            // Convert results to FtsSearchResult
+            let mut search_results = Vec::new();
+            for batch in results {
+                let id_col = batch
+                    .column_by_name("id")
+                    .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+                let content_col = batch
+                    .column_by_name("content")
+                    .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+                let metadata_col = batch
+                    .column_by_name("metadata")
+                    .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+                let score_col = batch
+                    .column_by_name("_score")
+                    .and_then(|c| c.as_any().downcast_ref::<arrow_array::Float32Array>());
+
+                if let (Some(ids), Some(contents)) = (id_col, content_col) {
+                    for i in 0..batch.num_rows() {
+                        let id = ids.value(i).to_string();
+                        let content = contents.value(i).to_string();
+                        let metadata = metadata_col.and_then(|m| {
+                            if m.is_null(i) {
+                                None
+                            } else {
+                                Some(m.value(i).to_string())
+                            }
+                        });
+                        let score = score_col.map(|s| s.value(i) as f64).unwrap_or(0.0);
+
+                        search_results.push(FtsSearchResult {
+                            id,
+                            content,
+                            metadata,
+                            score,
+                        });
+                    }
+                }
+            }
+
+            Ok::<Vec<FtsSearchResult>, napi::Error>(search_results)
+        })
+    })
+    .await
+    .map_err(|e| napi::Error::from_reason(format!("Task failed: {}", e)))??;
+
+    Ok(result)
+}
+
+/// Delete documents by ID from the FTS index
+#[napi]
+pub async fn fts_delete(
+    db_path: String,
+    table_name: String,
+    ids: Vec<String>,
+) -> napi::Result<u32> {
+    if ids.is_empty() {
+        return Ok(0);
+    }
+
+    let result = tokio::task::spawn_blocking(move || {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create runtime: {}", e))
+        })?;
+
+        rt.block_on(async {
+            let db = lancedb::connect(&db_path)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to connect: {}", e)))?;
+
+            let table = db
+                .open_table(&table_name)
+                .execute()
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to open table: {}", e)))?;
+
+            // Build delete predicate: id IN ('id1', 'id2', ...)
+            let id_list: Vec<String> = ids.iter().map(|id| format!("'{}'", id.replace("'", "''"))).collect();
+            let predicate = format!("id IN ({})", id_list.join(", "));
+
+            table
+                .delete(&predicate)
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("Failed to delete: {}", e)))?;
+
+            Ok::<u32, napi::Error>(ids.len() as u32)
+        })
+    })
+    .await
+    .map_err(|e| napi::Error::from_reason(format!("Task failed: {}", e)))??;
+
+    Ok(result)
+}
+
+// ============================================================================
+// Text Embedding Functions (using fastembed)
+// ============================================================================
+
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+use std::sync::{Mutex, OnceLock};
+
+// Global embedding model instance (lazy initialized with fallible init)
+static EMBEDDING_MODEL: OnceLock<Mutex<Option<TextEmbedding>>> = OnceLock::new();
+
+fn get_embedding_model() -> napi::Result<std::sync::MutexGuard<'static, Option<TextEmbedding>>> {
+    let cell = EMBEDDING_MODEL.get_or_init(|| Mutex::new(None));
+    let mut guard = cell
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Lock poisoned: {}", e)))?;
+
+    if guard.is_none() {
+        let model = TextEmbedding::try_new(InitOptions::new(EmbeddingModel::AllMiniLML6V2))
+            .map_err(|e| napi::Error::from_reason(format!("Failed to initialize embedding model: {}", e)))?;
+        *guard = Some(model);
+    }
+
+    Ok(guard)
+}
+
+/// Generate embeddings for a list of texts
+/// Returns a 2D array of embeddings (one per text)
+#[napi]
+pub fn generate_embeddings(texts: Vec<String>) -> napi::Result<Vec<Vec<f32>>> {
+    if texts.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let guard = get_embedding_model()?;
+    let model = guard.as_ref().ok_or_else(|| {
+        napi::Error::from_reason("Embedding model not initialized".to_string())
+    })?;
+
+    let embeddings = model
+        .embed(texts, None)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to generate embeddings: {}", e)))?;
+
+    Ok(embeddings)
+}
+
+/// Generate embedding for a single text
+/// Returns a 1D array (the embedding vector)
+#[napi]
+pub fn generate_embedding(text: String) -> napi::Result<Vec<f32>> {
+    let guard = get_embedding_model()?;
+    let model = guard.as_ref().ok_or_else(|| {
+        napi::Error::from_reason("Embedding model not initialized".to_string())
+    })?;
+
+    let embeddings = model
+        .embed(vec![text], None)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to generate embedding: {}", e)))?;
+
+    embeddings
+        .into_iter()
+        .next()
+        .ok_or_else(|| napi::Error::from_reason("No embedding returned".to_string()))
+}
+
+/// Get the embedding dimension (384 for all-MiniLM-L6-v2)
+#[napi]
+pub fn get_embedding_dimension() -> u32 {
+    384 // all-MiniLM-L6-v2 produces 384-dimensional embeddings
 }

@@ -319,7 +319,7 @@ describe("Auto-Promotion Engine", () => {
 			mkdirSync(rulesDir, { recursive: true });
 			const rulesPath = join(rulesDir, "testing.md");
 			const initialContent = "# Testing Conventions\n\n- Existing rule\n";
-			require("fs").writeFileSync(rulesPath, initialContent);
+			require("node:fs").writeFileSync(rulesPath, initialContent);
 
 			const pattern: DetectedPattern = {
 				id: "testing:new-rule",
@@ -346,7 +346,7 @@ describe("Auto-Promotion Engine", () => {
 			mkdirSync(rulesDir, { recursive: true });
 			const rulesPath = join(rulesDir, "testing.md");
 			const content = "# Testing Conventions\n\n- Always write tests\n";
-			require("fs").writeFileSync(rulesPath, content);
+			require("node:fs").writeFileSync(rulesPath, content);
 
 			const pattern: DetectedPattern = {
 				id: "testing:always-tests",

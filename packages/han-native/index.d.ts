@@ -64,3 +64,67 @@ export declare function checkAndBuildManifest(
   patterns: Array<string>,
   cachedManifest?: Record<string, string> | undefined | null
 ): CheckResult;
+/** A document record for FTS indexing */
+export interface FtsDocument {
+  /** Unique identifier for the document */
+  id: string;
+  /** The text content to index */
+  content: string;
+  /** Optional metadata as JSON string */
+  metadata?: string;
+}
+/** A search result from FTS query */
+export interface FtsSearchResult {
+  /** Document ID */
+  id: string;
+  /** The matched content */
+  content: string;
+  /** Optional metadata as JSON string */
+  metadata?: string;
+  /** BM25 relevance score */
+  score: number;
+}
+/**
+ * Initialize or open an FTS index at the given path
+ * Creates the table if it doesn't exist
+ */
+export declare function ftsInit(
+  dbPath: string,
+  tableName: string
+): Promise<boolean>;
+/**
+ * Index documents for FTS
+ * Adds documents to the table and creates/updates the FTS index
+ */
+export declare function ftsIndex(
+  dbPath: string,
+  tableName: string,
+  documents: Array<FtsDocument>
+): Promise<number>;
+/** Search documents using FTS (BM25) */
+export declare function ftsSearch(
+  dbPath: string,
+  tableName: string,
+  query: string,
+  limit?: number | undefined | null
+): Promise<Array<FtsSearchResult>>;
+/** Delete documents by ID from the FTS index */
+export declare function ftsDelete(
+  dbPath: string,
+  tableName: string,
+  ids: Array<string>
+): Promise<number>;
+/**
+ * Generate embeddings for a list of texts
+ * Returns a 2D array of embeddings (one per text)
+ */
+export declare function generateEmbeddings(
+  texts: Array<string>
+): Array<Array<number>>;
+/**
+ * Generate embedding for a single text
+ * Returns a 1D array (the embedding vector)
+ */
+export declare function generateEmbedding(text: string): Array<number>;
+/** Get the embedding dimension (384 for all-MiniLM-L6-v2) */
+export declare function getEmbeddingDimension(): number;

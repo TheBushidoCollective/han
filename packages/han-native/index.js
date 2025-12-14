@@ -331,6 +331,13 @@ const {
   buildManifest,
   hasChanges,
   checkAndBuildManifest,
+  ftsInit,
+  ftsIndex,
+  ftsSearch,
+  ftsDelete,
+  generateEmbeddings,
+  generateEmbedding,
+  getEmbeddingDimension,
 } = nativeBinding;
 
 module.exports.computeFileHash = computeFileHash;
@@ -340,3 +347,10 @@ module.exports.findDirectoriesWithMarkers = findDirectoriesWithMarkers;
 module.exports.buildManifest = buildManifest;
 module.exports.hasChanges = hasChanges;
 module.exports.checkAndBuildManifest = checkAndBuildManifest;
+module.exports.ftsInit = ftsInit;
+module.exports.ftsIndex = ftsIndex;
+module.exports.ftsSearch = ftsSearch;
+module.exports.ftsDelete = ftsDelete;
+module.exports.generateEmbeddings = generateEmbeddings;
+module.exports.generateEmbedding = generateEmbedding;
+module.exports.getEmbeddingDimension = getEmbeddingDimension;

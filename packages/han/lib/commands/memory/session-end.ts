@@ -6,6 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { getMemoryStore, summarizeSession } from "../../memory/index.ts";
+import { indexObservations } from "../../memory/indexer.ts";
 
 /**
  * Check if stdin has data available without blocking
@@ -82,6 +83,15 @@ export async function endSessionWithSummary(sessionId?: string): Promise<void> {
 		autoStore: true,
 	});
 
+	// Index the session's observations into FTS
+	let indexedCount = 0;
+	try {
+		indexedCount = await indexObservations(effectiveSessionId);
+	} catch {
+		// Indexing failure should not block session end
+		// Observations are still stored in JSONL files
+	}
+
 	if (summary) {
 		console.log(
 			JSON.stringify({
@@ -92,6 +102,7 @@ export async function endSessionWithSummary(sessionId?: string): Promise<void> {
 					in_progress: summary.in_progress.length,
 					decisions: summary.decisions.length,
 				},
+				indexed: indexedCount,
 			}),
 		);
 	} else {
@@ -101,6 +112,7 @@ export async function endSessionWithSummary(sessionId?: string): Promise<void> {
 				success: true,
 				session_id: effectiveSessionId,
 				summary: null,
+				indexed: indexedCount,
 			}),
 		);
 	}

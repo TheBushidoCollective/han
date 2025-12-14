@@ -2,12 +2,23 @@
  * Han Memory Query Router
  *
  * Provides a unified `memory` MCP tool that auto-routes questions
- * to the appropriate memory layer (Personal, Team, or Rules).
+ * to the appropriate memory layer:
+ * - Layer 1: Rules (.claude/rules/) - Project conventions
+ * - Layer 2: Summaries (~/.claude/han/memory/summaries/) - Session overviews
+ * - Layer 3: Observations (~/.claude/han/memory/sessions/) - Tool usage
+ * - Layer 4: Transcripts (~/.claude/projects/) - Full conversations
+ * - Layer 5: Team Memory (git history) - Commits, PRs, decisions
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getMemoryStore, type SessionSummary } from "../../memory/index.ts";
+import { getGitRemote } from "../../memory/paths.ts";
+import {
+	searchTranscripts,
+	searchTranscriptsText,
+	type TranscriptSearchResult,
+} from "../../memory/transcript-search.ts";
 import {
 	queryTeamMemory,
 	type TeamQueryParams,
@@ -21,12 +32,24 @@ export type QuestionType =
 	| "personal_recent"
 	| "personal_continue"
 	| "personal_search"
+	| "transcript_conversation"
+	| "transcript_reasoning"
 	| "team_expertise"
 	| "team_temporal"
 	| "team_decisions"
 	| "team_changes"
 	| "conventions"
 	| "general";
+
+/**
+ * Memory layer types
+ */
+export type MemoryLayer =
+	| "rules"
+	| "summaries"
+	| "observations"
+	| "transcripts"
+	| "team";
 
 /**
  * Classification result
@@ -54,15 +77,17 @@ export interface MemoryParams {
 export interface MemoryResult {
 	success: boolean;
 	answer: string;
-	source: "personal" | "team" | "rules" | "combined";
+	source: "personal" | "team" | "rules" | "transcripts" | "combined";
 	confidence: "high" | "medium" | "low";
 	citations: Array<{
 		source: string;
 		excerpt: string;
 		author?: string;
 		timestamp?: number;
+		layer?: MemoryLayer;
 	}>;
 	caveats: string[];
+	layersSearched?: MemoryLayer[];
 }
 
 /**
@@ -100,6 +125,32 @@ export function classifyQuestion(question: string): Classification {
 		q.includes("have i worked on")
 	) {
 		return { type: "personal_search" };
+	}
+
+	// Transcript - conversation history queries
+	if (
+		q.includes("we discuss") ||
+		q.includes("we talked about") ||
+		q.includes("conversation about") ||
+		q.includes("discussed") ||
+		q.includes("you said") ||
+		q.includes("i asked") ||
+		q.includes("earlier session") ||
+		q.includes("previous conversation") ||
+		q.includes("chat history")
+	) {
+		return { type: "transcript_conversation" };
+	}
+
+	// Transcript - reasoning/thinking queries
+	if (
+		q.includes("why did you") ||
+		q.includes("your reasoning") ||
+		q.includes("how did you decide") ||
+		q.includes("your thinking") ||
+		q.includes("what was your approach")
+	) {
+		return { type: "transcript_reasoning" };
 	}
 
 	// Team - expertise queries
@@ -469,9 +520,115 @@ function teamResultToMemoryResult(result: TeamQueryResult): MemoryResult {
 		answer: result.answer,
 		source: "team",
 		confidence: result.confidence,
-		citations: result.citations,
+		citations: result.citations.map((c) => ({ ...c, layer: "team" as const })),
 		caveats: result.caveats,
+		layersSearched: ["team"],
 	};
+}
+
+/**
+ * Format transcript search results for display
+ */
+function formatTranscriptResults(
+	results: TranscriptSearchResult[],
+	query: string,
+): string {
+	if (results.length === 0) {
+		return `No transcript results found for "${query}".`;
+	}
+
+	const lines: string[] = ["## Transcript Search Results\n"];
+
+	for (const result of results) {
+		const date = result.timestamp
+			? new Date(result.timestamp).toLocaleDateString()
+			: "Unknown date";
+		const roleLabel = result.type === "user" ? "User" : "Assistant";
+		const peerIndicator = result.isPeerWorktree ? " (peer worktree)" : "";
+
+		lines.push(`### ${date} - ${roleLabel}${peerIndicator}`);
+		lines.push(`_Session: ${result.sessionId}_`);
+		lines.push("");
+		lines.push(result.excerpt);
+		lines.push("");
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Query transcript history
+ */
+async function queryTranscripts(
+	question: string,
+	includeThinking = false,
+): Promise<MemoryResult> {
+	try {
+		const gitRemote = getGitRemote() || undefined;
+
+		// Try FTS search first, fall back to text search
+		let results: TranscriptSearchResult[];
+		try {
+			results = await searchTranscripts({
+				query: question,
+				gitRemote,
+				limit: 10,
+				scope: "peers", // Search current and peer worktrees
+				includeThinking,
+			});
+		} catch {
+			// Fall back to text-based search
+			results = searchTranscriptsText({
+				query: question,
+				gitRemote,
+				limit: 10,
+				scope: "peers",
+				includeThinking,
+			});
+		}
+
+		if (results.length === 0) {
+			return {
+				success: true,
+				answer: `No relevant conversations found for "${question}".`,
+				source: "transcripts",
+				confidence: "low",
+				citations: [],
+				caveats: [
+					"No matching transcripts found. Try different keywords or check if transcripts have been indexed.",
+				],
+				layersSearched: ["transcripts"],
+			};
+		}
+
+		return {
+			success: true,
+			answer: formatTranscriptResults(results, question),
+			source: "transcripts",
+			confidence: results[0].score > 0.5 ? "high" : "medium",
+			citations: results.map((r) => ({
+				source: `transcript:${r.sessionId}`,
+				excerpt: r.excerpt.slice(0, 200),
+				timestamp: r.timestamp ? new Date(r.timestamp).getTime() : undefined,
+				layer: "transcripts" as const,
+			})),
+			caveats: results.some((r) => r.isPeerWorktree)
+				? ["Some results are from peer worktrees (same git repository)."]
+				: [],
+			layersSearched: ["transcripts"],
+		};
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		return {
+			success: false,
+			answer: `Failed to search transcripts: ${message}`,
+			source: "transcripts",
+			confidence: "low",
+			citations: [],
+			caveats: [],
+			layersSearched: ["transcripts"],
+		};
+	}
 }
 
 /**
@@ -504,6 +661,12 @@ export async function queryMemory(params: MemoryParams): Promise<MemoryResult> {
 		case "personal_search":
 			return queryPersonalMemory("search", question);
 
+		case "transcript_conversation":
+			return queryTranscripts(question, false);
+
+		case "transcript_reasoning":
+			return queryTranscripts(question, true);
+
 		case "conventions": {
 			// Check rules first
 			const rules = checkRules(question);
@@ -515,6 +678,7 @@ export async function queryMemory(params: MemoryParams): Promise<MemoryResult> {
 					confidence: "high",
 					citations: [],
 					caveats: ["Answer based on project conventions in .claude/rules/"],
+					layersSearched: ["rules"],
 				};
 			}
 			// Fall through to team memory
@@ -554,14 +718,14 @@ export function formatMemoryResult(result: MemoryResult): string {
 	const lines: string[] = [];
 
 	// Source indicator
-	const sourceIcon =
-		result.source === "personal"
-			? "Personal Memory"
-			: result.source === "team"
-				? "Team Memory"
-				: result.source === "rules"
-					? "Project Conventions"
-					: "Combined Sources";
+	const sourceLabels: Record<MemoryResult["source"], string> = {
+		personal: "Personal Memory",
+		team: "Team Memory",
+		rules: "Project Conventions",
+		transcripts: "Conversation History",
+		combined: "Combined Sources",
+	};
+	const sourceIcon = sourceLabels[result.source];
 
 	const confidenceEmoji =
 		result.confidence === "high"
