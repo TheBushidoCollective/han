@@ -2,7 +2,8 @@
  * Han Memory Indexer
  *
  * Orchestrates indexing of memory content into LanceDB via han-native.
- * Provides FTS (BM25) search and embedding generation.
+ * Provides FTS (BM25) search and embedding generation for the 5-layer
+ * memory system: rules, summaries, observations, transcripts, and team memory.
  *
  * Storage location: ~/.claude/han/memory/index/
  */
