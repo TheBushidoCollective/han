@@ -7,19 +7,25 @@ import { createResearchEngine } from "../lib/memory/research.ts";
 import type { IndexedObservation, SearchResult } from "../lib/memory/types.ts";
 
 /**
- * Create a simple mock search function that returns fixed results only once.
- * Subsequent calls return empty results to prevent evidence accumulation
- * when the research engine follows leads.
+ * Create a simple mock search function that returns fixed results.
+ * Only returns results for queries that don't look like follow-up searches
+ * (e.g., pr:123, commit hashes, file paths).
  */
 function createMockSearchFn(
 	results: SearchResult[],
 ): (query: string) => Promise<SearchResult[]> {
-	let called = false;
-	return async (_query: string) => {
-		// Only return results on first call (initial query)
-		// Follow-up calls for leads should return empty
-		if (called) return [];
-		called = true;
+	return async (query: string) => {
+		// Follow-up queries from lead investigation - return empty
+		// These patterns indicate the engine is following leads
+		if (
+			query.match(/^pr:\d+$/) || // PR number lookup
+			query.match(/^[a-f0-9]{7,40}$/) || // Commit SHA lookup
+			query.match(/\.(ts|js|tsx|jsx|json|md)$/) || // File path lookup
+			query.includes("@") // Author email lookup
+		) {
+			return [];
+		}
+		// Initial query - return the mocked results
 		return results;
 	};
 }
