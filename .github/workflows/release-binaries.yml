@@ -93,7 +93,14 @@ jobs:
       - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu protobuf-compiler
+          sudo apt-get install -y gcc-aarch64-linux-gnu protobuf-compiler libssl-dev pkg-config
+
+      - name: Install LLVM and NASM (for Windows builds)
+        if: contains(matrix.target, 'windows')
+        run: |
+          sudo apt-get install -y llvm clang lld nasm cmake
+          # Ensure llvm-lib is available via symlink
+          sudo ln -sf /usr/bin/llvm-ar /usr/bin/llvm-lib || true
 
       - name: Download macOS SDK (for darwin targets)
         if: contains(matrix.target, 'apple')
