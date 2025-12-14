@@ -6,18 +6,13 @@ import { describe, expect, test } from "bun:test";
 import { createResearchEngine } from "../lib/memory/research.ts";
 import type { IndexedObservation, SearchResult } from "../lib/memory/types.ts";
 
-// Extended observation type with optional test score override
-interface TestObservation extends IndexedObservation {
-	_testScore?: number; // Optional fixed score for deterministic testing
-}
-
-// Mock storage layer
-function createMockStorage() {
-	const observations: TestObservation[] = [];
+// Mock storage layer with optional fixed score map
+function createMockStorage(scoreOverrides?: Map<string, number>) {
+	const observations: IndexedObservation[] = [];
 
 	return {
 		observations,
-		addObservations(obs: TestObservation[]) {
+		addObservations(obs: IndexedObservation[]) {
 			observations.push(...obs);
 		},
 		async search(query: string): Promise<SearchResult[]> {
@@ -30,14 +25,30 @@ function createMockStorage() {
 				const prNumber = prMatch[1];
 				for (const obs of observations) {
 					if (obs.source === `github:pr:${prNumber}`) {
+						const score = scoreOverrides?.get(obs.id) ?? 1.0;
 						results.push({
 							observation: obs,
-							score: obs._testScore ?? 1.0,
+							score,
 							excerpt: obs.detail.slice(0, 200),
 						});
 					}
 				}
 				return results;
+			}
+
+			// If score overrides provided, use them for deterministic testing
+			if (scoreOverrides && scoreOverrides.size > 0) {
+				for (const obs of observations) {
+					const score = scoreOverrides.get(obs.id);
+					if (score !== undefined && score > 0) {
+						results.push({
+							observation: obs,
+							score,
+							excerpt: obs.detail.slice(0, 200),
+						});
+					}
+				}
+				return results.sort((a, b) => b.score - a.score);
 			}
 
 			// Filter out common stop words
@@ -72,23 +83,6 @@ function createMockStorage() {
 			]);
 
 			for (const obs of observations) {
-				// If test score is explicitly set, use it directly (deterministic)
-				// Use hasOwnProperty for reliable property check across Bun versions
-				if (
-					Object.prototype.hasOwnProperty.call(obs, "_testScore") &&
-					typeof obs._testScore === "number"
-				) {
-					if (obs._testScore > 0) {
-						results.push({
-							observation: obs,
-							score: obs._testScore,
-							excerpt: obs.detail.slice(0, 200),
-						});
-					}
-					continue;
-				}
-
-				// Otherwise, calculate score based on query matching
 				const searchText =
 					`${obs.summary} ${obs.detail} ${obs.author} ${obs.files.join(" ")} ${obs.patterns.join(" ")}`.toLowerCase();
 
@@ -134,10 +128,15 @@ function createMockStorage() {
 describe("research.ts", () => {
 	describe("research engine", () => {
 		test("returns high confidence when multiple independent sources found", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior across Bun versions
+			const scores = new Map([
+				["1", 0.8], // Strong evidence from alice
+				["2", 0.7], // Strong evidence from bob
+				["3", 0.6], // Strong evidence from alice
+			]);
+			const storage = createMockStorage(scores);
 
 			// Add multiple independent sources about authentication
-			// Use explicit _testScore for deterministic behavior across Bun versions
 			storage.addObservations([
 				{
 					id: "1",
@@ -150,7 +149,6 @@ describe("research.ts", () => {
 						"Added OAuth2 authentication flow using industry-standard libraries. Implemented token refresh and session management.",
 					files: ["src/auth/oauth.ts"],
 					patterns: ["authentication", "oauth"],
-					_testScore: 0.8, // Strong evidence
 				},
 				{
 					id: "2",
@@ -163,7 +161,6 @@ describe("research.ts", () => {
 						"Reviewed OAuth2 implementation. The authentication system follows best practices and includes proper token management.",
 					files: ["src/auth/oauth.ts"],
 					patterns: ["authentication", "review"],
-					_testScore: 0.7, // Strong evidence, different author
 				},
 				{
 					id: "3",
@@ -176,7 +173,6 @@ describe("research.ts", () => {
 						"Comprehensive test suite for OAuth2 authentication flow covering all edge cases.",
 					files: ["tests/auth.test.ts"],
 					patterns: ["authentication", "testing"],
-					_testScore: 0.6, // Strong evidence
 				},
 			]);
 
@@ -189,10 +185,11 @@ describe("research.ts", () => {
 		});
 
 		test("returns medium confidence with single strong source", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			const scores = new Map([["1", 0.7]]); // Single strong source
+			const storage = createMockStorage(scores);
 
 			// Add single strong source
-			// Use explicit _testScore for deterministic behavior
 			storage.addObservations([
 				{
 					id: "1",
@@ -205,7 +202,6 @@ describe("research.ts", () => {
 						"Implemented comprehensive payment processing system using Stripe API with webhooks, refunds, and subscription management.",
 					files: ["src/payments/stripe.ts"],
 					patterns: ["payment", "stripe"],
-					_testScore: 0.7, // Single strong source = medium confidence
 				},
 			]);
 
@@ -218,10 +214,12 @@ describe("research.ts", () => {
 		});
 
 		test("returns low confidence when no strong sources found", async () => {
-			const storage = createMockStorage();
+			// Empty score map means no results match
+			const scores = new Map<string, number>();
+			const storage = createMockStorage(scores);
 
 			// Add observations about different topics (unrelated to the query)
-			// Use _testScore: 0 to ensure no matches (simulating irrelevant results)
+			// Not included in scoreOverrides so they won't be returned
 			storage.addObservations([
 				{
 					id: "1",
@@ -233,7 +231,6 @@ describe("research.ts", () => {
 					detail: "Fixed spelling mistake",
 					files: ["README.md"],
 					patterns: ["documentation"],
-					_testScore: 0, // No match - completely unrelated topic
 				},
 			]);
 
@@ -318,10 +315,14 @@ describe("research.ts", () => {
 		});
 
 		test("includes caveats for contradictory evidence", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			const scores = new Map([
+				["1", 0.8], // Strong match for database query
+				["2", 0.9], // Strong match, more recent
+			]);
+			const storage = createMockStorage(scores);
 
 			// Add contradictory observations
-			// Use explicit _testScore for deterministic behavior
 			storage.addObservations([
 				{
 					id: "1",
@@ -333,7 +334,6 @@ describe("research.ts", () => {
 					detail: "Decided to use MongoDB for its flexibility and scalability",
 					files: ["src/db/mongo.ts"],
 					patterns: ["database"],
-					_testScore: 0.8, // Strong match for database query
 				},
 				{
 					id: "2",
@@ -346,7 +346,6 @@ describe("research.ts", () => {
 						"Migrated from MongoDB to PostgreSQL for better relational data support and ACID guarantees",
 					files: ["src/db/postgres.ts"],
 					patterns: ["database", "migration"],
-					_testScore: 0.9, // Strong match, more recent
 				},
 			]);
 
@@ -398,10 +397,16 @@ describe("research.ts", () => {
 		});
 
 		test("extracts author expertise from multiple contributions", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			// 3+ strong contributions from same author = high confidence
+			const scores = new Map([
+				["1", 0.7], // Strong evidence
+				["2", 0.8], // Strong evidence
+				["3", 0.9], // Strong evidence
+			]);
+			const storage = createMockStorage(scores);
 
 			// Add multiple observations from same author on same topic
-			// 3+ strong contributions from same author = high confidence
 			storage.addObservations([
 				{
 					id: "1",
@@ -413,7 +418,6 @@ describe("research.ts", () => {
 					detail: "Set up WebSocket server with Socket.IO",
 					files: ["src/websocket/server.ts"],
 					patterns: ["websocket"],
-					_testScore: 0.7, // Strong evidence
 				},
 				{
 					id: "2",
@@ -425,7 +429,6 @@ describe("research.ts", () => {
 					detail: "Integrated JWT authentication with WebSocket connections",
 					files: ["src/websocket/auth.ts"],
 					patterns: ["websocket", "auth"],
-					_testScore: 0.8, // Strong evidence
 				},
 				{
 					id: "3",
@@ -438,7 +441,6 @@ describe("research.ts", () => {
 						"Implemented automatic reconnection with exponential backoff for WebSocket clients",
 					files: ["src/websocket/client.ts"],
 					patterns: ["websocket"],
-					_testScore: 0.9, // Strong evidence
 				},
 			]);
 
@@ -486,10 +488,14 @@ describe("research.ts", () => {
 		});
 
 		test("prioritizes more recent evidence", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			const scores = new Map([
+				["1", 0.7], // Strong match
+				["2", 0.8], // Strong match, more recent
+			]);
+			const storage = createMockStorage(scores);
 
 			const now = Date.now();
-			// Use explicit _testScore for deterministic behavior
 			storage.addObservations([
 				{
 					id: "1",
@@ -501,7 +507,6 @@ describe("research.ts", () => {
 					detail: "Using Redis for all caching",
 					files: ["src/cache.ts"],
 					patterns: ["caching"],
-					_testScore: 0.7, // Strong match
 				},
 				{
 					id: "2",
@@ -513,7 +518,6 @@ describe("research.ts", () => {
 					detail: "Migrated to hybrid approach: Redis + in-memory LRU cache",
 					files: ["src/cache.ts"],
 					patterns: ["caching"],
-					_testScore: 0.8, // Strong match, more recent
 				},
 			]);
 
@@ -527,10 +531,12 @@ describe("research.ts", () => {
 
 	describe("confidence assessment", () => {
 		test("high confidence requires multiple independent sources", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			// Single strong source = medium confidence (not high)
+			const scores = new Map([["1", 0.6]]);
+			const storage = createMockStorage(scores);
 
 			// Single source - should not be high confidence
-			// Use explicit _testScore for deterministic behavior
 			storage.addObservations([
 				{
 					id: "1",
@@ -542,7 +548,6 @@ describe("research.ts", () => {
 					detail: "Details about something",
 					files: ["src/something.ts"],
 					patterns: ["something"],
-					_testScore: 0.6, // Single strong source = medium confidence (not high)
 				},
 			]);
 
@@ -553,10 +558,15 @@ describe("research.ts", () => {
 		});
 
 		test("multiple sources from same author counts as medium confidence", async () => {
-			const storage = createMockStorage();
+			// Use score overrides for deterministic behavior
+			// 2 contributions from same author = medium confidence, need 3 for high
+			const scores = new Map([
+				["1", 0.7], // Strong evidence
+				["2", 0.8], // Strong evidence
+			]);
+			const storage = createMockStorage(scores);
 
-			// Multiple commits from same author (2 contributions = medium, need 3 for high)
-			// Use explicit _testScore for deterministic behavior
+			// Multiple commits from same author
 			storage.addObservations([
 				{
 					id: "1",
@@ -568,7 +578,6 @@ describe("research.ts", () => {
 					detail: "Implemented feature A",
 					files: ["src/a.ts"],
 					patterns: ["feature"],
-					_testScore: 0.7, // Strong evidence
 				},
 				{
 					id: "2",
@@ -580,7 +589,6 @@ describe("research.ts", () => {
 					detail: "Enhanced feature A with better performance",
 					files: ["src/a.ts"],
 					patterns: ["feature"],
-					_testScore: 0.8, // Strong evidence
 				},
 			]);
 
