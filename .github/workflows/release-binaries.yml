@@ -25,28 +25,33 @@ jobs:
             native_file: han-native.linux-x64-gnu.node
             binary_name: han-linux-x64
             cargo_output: libhan_native.so
+            os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             bun_target: bun-linux-arm64
             native_file: han-native.linux-arm64-gnu.node
             binary_name: han-linux-arm64
             cargo_output: libhan_native.so
+            os: ubuntu-latest
           - target: x86_64-apple-darwin
             bun_target: bun-darwin-x64
             native_file: han-native.darwin-x64.node
             binary_name: han-darwin-x64
             cargo_output: libhan_native.dylib
+            os: macos-13
           - target: aarch64-apple-darwin
             bun_target: bun-darwin-arm64
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
             cargo_output: libhan_native.dylib
+            os: macos-latest
           - target: x86_64-pc-windows-msvc
             bun_target: bun-windows-x64
             native_file: han-native.win32-x64-msvc.node
             binary_name: han-windows-x64
             cargo_output: han_native.dll
+            os: windows-latest
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,70 +73,66 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Setup Zig
-        if: ${{ !contains(matrix.target, 'windows') }}
+      - name: Setup Zig (for Linux ARM64 cross-compilation)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         uses: mlugg/setup-zig@v2
         with:
           version: 0.13.0
 
-      - name: Install cargo-zigbuild
-        if: ${{ !contains(matrix.target, 'windows') }}
+      - name: Install cargo-zigbuild (for Linux ARM64 cross-compilation)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         uses: taiki-e/install-action@v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tool: cargo-zigbuild
 
-      - name: Install cargo-xwin
-        if: contains(matrix.target, 'windows')
-        uses: taiki-e/install-action@v2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tool: cargo-xwin
-
-      - name: Install cross-compilation dependencies
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu protobuf-compiler libssl-dev pkg-config
+          sudo apt-get install -y protobuf-compiler libssl-dev pkg-config
+          # For ARM64 cross-compilation
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
 
-      - name: Install LLVM and NASM (for Windows builds)
-        if: contains(matrix.target, 'windows')
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
         run: |
-          sudo apt-get install -y llvm clang lld nasm cmake
-          # Ensure llvm-lib is available via symlink
-          sudo ln -sf /usr/bin/llvm-ar /usr/bin/llvm-lib || true
+          brew install protobuf
 
-      - name: Download macOS SDK (for darwin targets)
-        if: contains(matrix.target, 'apple')
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
         run: |
-          curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz" | tar -J -x -C /opt
+          choco install protoc -y
 
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module (Linux/macOS)
-        if: ${{ !contains(matrix.target, 'windows') }}
+      - name: Build native module (Linux ARM64 cross-compile)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         working-directory: ./packages/han-native
-        env:
-          SDKROOT: ${{ contains(matrix.target, 'apple') && '/opt/MacOSX11.3.sdk' || '' }}
         run: |
           cargo zigbuild --release --target ${{ matrix.target }}
           cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
           echo "Built native module:"
           ls -la *.node
 
-      - name: Build native module (Windows)
-        if: contains(matrix.target, 'windows')
+      - name: Build native module (native builds)
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
         working-directory: ./packages/han-native
+        shell: bash
         run: |
-          cargo xwin build --release --target ${{ matrix.target }}
+          cargo build --release --target ${{ matrix.target }}
           cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
           echo "Built native module:"
           ls -la *.node
 
       - name: Build bun binary
+        shell: bash
         run: |
           cd packages/han
           npm ci
@@ -148,15 +149,18 @@ jobs:
           echo "Built binary:"
           ls -la dist/binaries/
 
-      - name: Create checksum
+      - name: Create checksum (Unix)
+        if: runner.os != 'Windows'
         working-directory: ./packages/han/dist/binaries
+        run: sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+
+      - name: Create checksum (Windows)
+        if: runner.os == 'Windows'
+        working-directory: ./packages/han/dist/binaries
+        shell: pwsh
         run: |
-          # Windows binaries have .exe extension added by Bun
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            sha256sum ${{ matrix.binary_name }}.exe > ${{ matrix.binary_name }}.exe.sha256
-          else
-            sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
-          fi
+          $hash = (Get-FileHash -Algorithm SHA256 "${{ matrix.binary_name }}.exe").Hash.ToLower()
+          "$hash  ${{ matrix.binary_name }}.exe" | Out-File -Encoding utf8 "${{ matrix.binary_name }}.exe.sha256"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
