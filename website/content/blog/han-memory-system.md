@@ -1,183 +1,223 @@
 ---
-title: "Beyond Project Memory: Han's Three-Layer Memory System"
-description: "How Han's memory system goes beyond simple rule capture to provide session continuity, team knowledge research, and self-learning promotion."
+title: "Han's Five-Layer Memory System: Full Historical Context"
+description: "How Han's memory system provides complete historical context through rules, summaries, observations, transcripts, and team knowledge."
 date: "2025-12-13"
 author: "The Bushido Collective"
-tags: ["memory", "research", "mcp", "learning", "team"]
+tags: ["memory", "research", "mcp", "learning", "team", "transcripts"]
 category: "Technical Deep Dive"
 ---
 
 Our [previous post on project memory](/blog/project-memory-feature) introduced Han's `learn` tool - Claude autonomously capturing knowledge to `.claude/rules/`. That was step one.
 
-But real memory is more than just writing things down. It's continuity across sessions. It's knowing who on your team knows what. It's patterns emerging from practice, not just explicit capture.
+But real memory is more than just writing things down. It's full historical context. It's knowing what you discussed three sessions ago. It's finding the reasoning behind decisions. It's patterns emerging from practice.
 
-Han's Memory System delivers all three.
+Han's Memory System delivers all five layers.
 
-## Three Layers of Memory
+## Five Layers of Context
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 3: Permanent Wisdom (.claude/rules/)                     │
-│  ─────────────────────────────────────────                      │
-│  Git-tracked, team-reviewed conventions                         │
-│  Always loaded, highest authority                               │
-│  ↑ AUTO-PROMOTED from Layer 2 when confidence >= 0.8            │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 2: Team Memory (authoritative sources)                   │
-│  ─────────────────────────────────────────                      │
-│  Git commits, PRs, Issues, Reviews                              │
-│  Researched on-demand via MCP                                   │
-│  "Who knows X?" → Research until confident                      │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 1: Personal Memory (local sessions)                      │
-│  ─────────────────────────────────────────                      │
-│  Session capture, AI summaries, continuity                      │
-│  "What was I working on?" → Check recent sessions               │
-└─────────────────────────────────────────────────────────────────┘
+Query: "What did we discuss about authentication?"
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: Rules (.claude/rules/)                             │
+│ - Check for auth conventions, patterns                      │
+│ - Fast, always available                                    │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: Session Summaries                                  │
+│ - High-level: "Implemented JWT auth", "Fixed login bug"     │
+│ - Quick overview of work done                               │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: Observations                                       │
+│ - Files touched: auth/jwt.ts, test/auth.test.ts             │
+│ - Commands run: npm test, git commit                        │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 4: Transcripts ← FULL CONVERSATION HISTORY            │
+│ - "Should we use JWT or sessions?"                          │
+│ - "JWT is stateless, better for microservices"              │
+│ - Decisions made, problems discussed, solutions explored    │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 5: Team Memory (git commits, PRs)                     │
+│ - Who implemented auth: "john@example.com"                  │
+│ - PR discussion, code review comments                       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Each layer serves a different purpose. Together, they create genuine memory.
+Each layer provides different depth. Together, they give Claude complete context.
 
-## Layer 1: Personal Memory - Session Continuity
+## Layer 1: Rules - Instant Conventions
 
-Ever close a Claude session and lose your context? Han captures what happened.
+The fastest layer. Project conventions captured in `.claude/rules/`:
 
-**During the session**: Every tool use is logged - files read, edits made, commands run. Not the full conversation (that's private), but the actions taken.
+```markdown
+# .claude/rules/auth.md
 
-**When you stop**: Han's AI summarizes the session into structured YAML:
+- Use JWT for stateless authentication
+- Validate all inputs with zod
+- Hash passwords with argon2
+```
+
+Always loaded, always available. Write rules manually with `learn()` or let them auto-promote from patterns.
+
+## Layer 2: Session Summaries - Work Overview
+
+When you stop a session, Han summarizes what happened:
 
 ```yaml
-session:
-  duration: 45m
-  files_touched: 12
+session_id: session-abc123
+project: github.com/user/repo
+started_at: 2025-12-13T10:00:00Z
+ended_at: 2025-12-13T11:30:00Z
+
+summary: "Implemented JWT authentication with refresh tokens"
 
 work_items:
-  - description: "Implemented user authentication"
-    files: ["src/auth.ts", "src/middleware.ts"]
-    status: completed
+  - description: "Added JWT verification middleware"
+    outcome: completed
+    files: ["src/auth/middleware.ts"]
 
-  - description: "Started payment integration"
-    files: ["src/payments/stripe.ts"]
-    status: in_progress
-    next_steps:
-      - "Add webhook handler"
-      - "Write integration tests"
+  - description: "Started refresh token rotation"
+    outcome: in_progress
 
 decisions:
-  - choice: "JWT over session cookies"
+  - description: "JWT over session cookies"
     rationale: "Stateless auth for API scalability"
 ```
 
-**Next session**: Han injects this context automatically. Claude doesn't start from scratch - it knows what you were doing.
+Quick to search, gives you the "what" without the noise.
 
-```text
-You: continue where I left off
+## Layer 3: Observations - Detailed Breadcrumbs
 
-Claude: Based on your last session, you were implementing payment integration.
-You completed user authentication (JWT-based) and started the Stripe setup.
-Next steps were adding a webhook handler and writing integration tests.
-Let me continue with the webhook handler...
+Every tool use is logged:
+
+```jsonl
+{"tool":"Read","files_read":["src/auth/jwt.ts"],"timestamp":"2025-12-13T10:15:00Z"}
+{"tool":"Edit","files_modified":["src/auth/middleware.ts"],"timestamp":"2025-12-13T10:20:00Z"}
+{"tool":"Bash","command":"npm test","timestamp":"2025-12-13T10:25:00Z"}
 ```
 
-No manual handoff. No "remind me what we did." Just continuity.
+More detail than summaries. Search for "what files did I touch" or "did I run the tests."
 
-## Layer 2: Team Memory - Research Until Confident
+## Layer 4: Transcripts - The Missing Link
 
-Your codebase contains institutional knowledge. It's in commit messages, PR descriptions, code review comments. But who has time to search through 3,000 commits?
+**This is new.** Claude Code stores full conversation history at `~/.claude/projects/{slug}/*.jsonl`. Han can now search these.
 
-Han's research engine does.
+Why does this matter? Because context lives in conversations:
 
 ```text
-You: who knows about the payment processing system?
+You: Should we use JWT or session-based auth?
 
-Claude: Based on my research of the git history:
+Claude: JWT is better here because:
+1. Your API is stateless
+2. You need to support mobile clients
+3. Microservices architecture benefits from...
+
+You: What about refresh tokens?
+
+Claude: Here's how we'll implement refresh token rotation...
+```
+
+That reasoning was lost when sessions ended. Not anymore.
+
+### Cross-Worktree Search
+
+Working on feature branches in separate worktrees? Han finds context from peer worktrees sharing the same git remote:
+
+```text
+You: What did we discuss about the payment refactor?
+
+Claude: Found in peer worktree (feature/payments branch):
+- Discussed switching from Stripe to internal processor
+- Decided to keep Stripe for international, add internal for domestic
+- Implementation started in src/payments/processor.ts
+```
+
+Same repo, different worktree, shared context.
+
+## Layer 5: Team Memory - Institutional Knowledge
+
+Your codebase contains institutional knowledge buried in commit messages, PR descriptions, and code reviews.
+
+```text
+You: Who knows about the payment system?
+
+Claude: Based on git history research:
 
 **Primary expert: Sarah Chen** (@schen)
 - 47 commits touching payments/
 - Authored the original Stripe integration (PR #234)
-- Most recent: refactored error handling last month
-
-**Secondary: Michael Torres** (@mtorres)
-- 12 commits, mainly webhook handlers
-- Reviewed most payment PRs
 
 **Key decisions found:**
-- Chose Stripe over Braintree for international support (PR #234)
-- Moved to idempotency keys after duplicate charge incident (commit abc123)
-
-Citations:
-- [PR #234] "Stripe integration for payments"
-- [commit abc123] "fix: add idempotency to prevent duplicates"
+- Chose Stripe over Braintree for international support
+- Moved to idempotency keys after duplicate charge incident
 ```
 
-This isn't keyword matching. It's a **research engine** that:
+Citations included. Evidence-based answers.
 
-1. Generates search queries from your question
-2. Searches indexed commits, PRs, and observations
-3. Assesses confidence based on evidence found
-4. If not confident, refines the query and searches again
-5. Returns answers with citations and caveats
+## Search Acceleration: FTS Indexing
 
-The "research until confident" pattern means Claude doesn't guess. It keeps investigating until it has evidence or admits uncertainty.
+All layers (except rules) are indexed using full-text search (BM25) via LanceDB:
 
-### Sources
+```bash
+# Index all content
+han index run
 
-Han pulls from multiple sources:
+# Index specific layer
+han index run --layer transcripts
 
-| Source | What's extracted |
-|--------|------------------|
-| Git commits | Messages, diffs, authors, timestamps |
-| GitHub PRs | Descriptions, reviews, comments |
-| GitHub Issues | Context, decisions, discussions |
-| Session observations | Tool uses, file touches, patterns |
+# Search across layers
+han index search "authentication"
 
-All indexed locally using LanceDB for fast semantic search.
-
-## Layer 3: Permanent Wisdom - Auto-Promotion
-
-Here's where it gets interesting. Han doesn't just wait for you to call `learn()`. It **watches for patterns** and promotes them automatically.
-
-### How Auto-Promotion Works
-
-As Claude researches and works:
-
-1. **Pattern detection**: Han extracts patterns from evidence and observations
-2. **Pattern tracking**: Patterns are stored with occurrence counts and confidence scores
-3. **Threshold check**: When a pattern hits 3+ occurrences and 0.8+ confidence
-4. **Automatic promotion**: Pattern is written to `.claude/rules/{domain}.md`
-
-```text
-# Auto-promoted to .claude/rules/testing.md
-
-- Always run tests before committing
-  - Pattern detected in 5 commits from 3 different authors
-  - Confidence: 92%
+# Check index status
+han index status
 ```
 
-### The Self-Learning Loop
+Indexing happens automatically:
 
-```text
-Research → Detect patterns → Track occurrences → Promote when ready
-    ↓                                                    ↓
-    └──────────── Rules loaded next session ←────────────┘
+- **Session end**: Observations indexed via Stop hook
+- **On-demand**: Transcripts indexed when first queried
+- **Manual**: `han index run` for full reindex
+
+## The Unified Query Interface
+
+One tool routes all memory questions:
+
+```javascript
+memory({ question: "what was I working on?" })
+// → Layer 2-3: Personal summaries and observations
+
+memory({ question: "what did we discuss about auth?" })
+// → Layer 4: Transcript search
+
+memory({ question: "who knows about payments?" })
+// → Layer 5: Team memory research
+
+memory({ question: "how do we handle errors?" })
+// → Layer 1: Rules/conventions
 ```
 
-Claude learns from your team's actual practices. Not what the README says to do - what developers actually do.
+Claude determines the question type and searches appropriate layers.
 
-### Promotion Criteria
+## Auto-Promotion: Patterns Become Rules
 
-Not everything gets promoted. Patterns must meet:
+Han watches for patterns and promotes them automatically:
 
-- **3+ occurrences** across different sources
-- **0.8+ confidence** score
-- **Multiple authors** (bonus: increases confidence)
-- **Not already documented** in rules
-
-This prevents noise. Only consistent, team-wide patterns become rules.
-
-### Visibility
-
-You're never in the dark:
+1. **Pattern detection**: Extracts patterns from observations and research
+2. **Tracking**: Stores patterns with occurrence counts and confidence
+3. **Threshold**: When a pattern hits 3+ occurrences and 0.8+ confidence
+4. **Promotion**: Written to `.claude/rules/{domain}.md`
 
 ```javascript
 // Check auto-learning status
@@ -186,29 +226,12 @@ auto_learn({ action: "status" })
 
 // See what's ready
 auto_learn({ action: "candidates" })
-// → Lists patterns meeting threshold
 
-// Manually trigger promotion
+// Trigger promotion
 auto_learn({ action: "promote" })
-// → Writes ready patterns to .claude/rules/
 ```
 
-## The Unified Query Interface
-
-One tool routes all memory questions:
-
-```javascript
-memory({ question: "what was I working on?" })
-// → Routes to personal memory
-
-memory({ question: "who knows about auth?" })
-// → Routes to team memory research
-
-memory({ question: "how do we handle errors?" })
-// → Routes to conventions (rules)
-```
-
-Claude figures out what kind of question it is and goes to the right layer.
+Conservative thresholds prevent noise. Only consistent patterns become rules.
 
 ## Storage Layout
 
@@ -217,54 +240,41 @@ Claude figures out what kind of question it is and goes to the right layer.
   han/
     memory/
       personal/
-        sessions/           # Raw observations (append-only JSONL)
-        summaries/          # AI-compressed YAML summaries
-        .index/             # Personal LanceDB index
+        sessions/           # Layer 3: Raw observations (JSONL)
+        summaries/          # Layer 2: AI summaries (YAML)
+
+      index/
+        fts.db              # FTS index (LanceDB/SQLite)
 
       projects/
         github.com_org_repo/
-          .index/           # Team memory LanceDB index
-          meta.yaml         # Index metadata, source cursors
+          meta.yaml         # Team memory metadata
+
+  projects/
+    {project-slug}/         # Layer 4: Claude transcripts (JSONL)
+      *.jsonl
 
 .claude/                    # In project repo (git-tracked)
-  rules/                    # Permanent wisdom - auto-promoted
+  rules/                    # Layer 1: Permanent rules
     testing.md
     api.md
-    auth.md
 ```
 
 Personal memory stays local. Project rules are git-tracked.
 
-## Philosophy: Learn, Don't Suggest
-
-Traditional AI assistants suggest. "You might want to add this to your documentation." "Consider saving this for later."
-
-Han's philosophy is different:
-
-> **Claude should actively learn, not just suggest.**
-
-The auto-promotion system is:
-
-- **Low-stakes**: Git-tracked, reviewable, revertible
-- **Additive**: Only adds new rules, never modifies existing
-- **Conservative**: High thresholds prevent noise
-- **Transparent**: All promotions visible in git history
-
-If Claude sees a pattern three times from multiple authors, that's not a suggestion - that's how your team works. Write it down.
-
 ## What This Enables
 
-**Session continuity**: "Continue where I left off" just works.
+**Full conversation recall**: "What did we discuss about X?" searches actual conversations.
 
-**Onboarding acceleration**: New Claude sessions inherit all learned patterns immediately.
+**Cross-worktree context**: Context follows the repo, not just the directory.
+
+**Session continuity**: "Continue where I left off" with full context.
+
+**Decision archaeology**: Find not just what was decided, but the reasoning.
 
 **Expertise mapping**: "Who knows about X?" with cited evidence.
 
-**Decision archaeology**: "Why did we choose Y?" traced back to the PR.
-
-**Institutional memory**: Team knowledge survives personnel changes.
-
-**Emergent documentation**: Rules that reflect actual practice, not aspirational guidelines.
+**Emergent documentation**: Rules reflect actual practice, not aspirational guidelines.
 
 ## Getting Started
 
@@ -277,11 +287,15 @@ han plugin install core
 The hooks automatically:
 
 - Capture tool observations (PostToolUse)
-- Summarize sessions (Stop)
+- Summarize and index sessions (Stop)
 - Inject context (SessionStart)
 
-Memory queries are available via MCP. Auto-promotion runs after research.
+For full transcript indexing:
+
+```bash
+han index run --layer transcripts
+```
 
 ---
 
-Memory isn't just storage. It's continuity, research, and learning. Han delivers all three.
+Memory isn't just storage. It's five layers of context working together - from instant conventions to full conversation history. Han delivers it all.

@@ -1,11 +1,27 @@
 ---
-title: "Project Memory"
-description: "How Han enables Claude to capture and recall project knowledge autonomously through .claude/rules/."
+title: "Memory System"
+description: "Han's five-layer memory system provides full historical context - from instant rules to complete conversation history."
 ---
 
-Every codebase has quirks that aren't in the README. That build command with the specific flag. The naming convention that isn't standard. Claude figures these out through trial and error, then next session... starts over.
+Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with five layers of context.
 
-Han's project memory system lets Claude **teach itself** about your project.
+## Five Layers of Memory
+
+| Layer | Source | Speed | Contains |
+|-------|--------|-------|----------|
+| **1. Rules** | `.claude/rules/` | Instant | Conventions, patterns |
+| **2. Summaries** | Session end | Fast | Work done, decisions |
+| **3. Observations** | Tool usage | Fast | Files touched, commands |
+| **4. Transcripts** | Conversations | Moderate | Full discussion history |
+| **5. Team Memory** | Git history | Varies | Commits, PRs, expertise |
+
+All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) for fast retrieval.
+
+---
+
+## Layer 1: Rules - The Learn Tool
+
+Han lets Claude **teach itself** about your project by writing to `.claude/rules/`.
 
 ## How It Works
 
@@ -231,6 +247,75 @@ No additional configuration needed. Claude will start learning automatically.
 **Not permanent**: You can delete any learning. Nothing is locked in.
 
 **Not shared externally**: Everything stays in your project or user directory.
+
+---
+
+## Layer 2-3: Session Memory
+
+Han automatically captures what happens during sessions:
+
+**Summaries** (Layer 2): AI-generated overviews at session end
+
+- Work completed and in-progress
+- Decisions made with rationale
+- Key files touched
+
+**Observations** (Layer 3): Raw tool usage logs
+
+- Every file read/edited
+- Commands executed
+- Timestamps for everything
+
+Query with: `memory({ question: "what was I working on?" })`
+
+---
+
+## Layer 4: Transcript Search
+
+**New in this release.** Han can search your full Claude Code conversation history stored at `~/.claude/projects/`.
+
+This recovers context that was previously lost:
+
+- "What did we discuss about authentication?"
+- "Why did we choose JWT over sessions?"
+- Full reasoning, not just summaries
+
+### Cross-Worktree Support
+
+Working in multiple worktrees? Han finds context from peer worktrees sharing the same git remote.
+
+Query with: `memory({ question: "what did we discuss about X?" })`
+
+---
+
+## Layer 5: Team Memory
+
+Research institutional knowledge from git history:
+
+- Who has expertise in what areas
+- Why decisions were made (PR discussions)
+- Historical context from commits
+
+Query with: `memory({ question: "who knows about payments?" })`
+
+---
+
+## Indexing
+
+All layers (except rules) are indexed for fast search:
+
+```bash
+# Index all content
+han index run
+
+# Index specific layer
+han index run --layer transcripts
+
+# Search directly
+han index search "authentication"
+```
+
+Indexing happens automatically at session end. Manual indexing is optional.
 
 ## Next Steps
 
