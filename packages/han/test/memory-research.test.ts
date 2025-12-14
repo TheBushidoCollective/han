@@ -73,7 +73,11 @@ function createMockStorage() {
 
 			for (const obs of observations) {
 				// If test score is explicitly set, use it directly (deterministic)
-				if (obs._testScore !== undefined) {
+				// Use hasOwnProperty for reliable property check across Bun versions
+				if (
+					Object.prototype.hasOwnProperty.call(obs, "_testScore") &&
+					typeof obs._testScore === "number"
+				) {
 					if (obs._testScore > 0) {
 						results.push({
 							observation: obs,
