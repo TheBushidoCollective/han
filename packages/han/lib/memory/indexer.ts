@@ -6,6 +6,9 @@
  * memory system: rules, summaries, observations, transcripts, and team memory.
  *
  * Storage location: ~/.claude/han/memory/index/
+ *
+ * @note The native module (han-native) requires OpenSSL for LanceDB connections.
+ * Cross-compilation uses vendored OpenSSL to avoid system dependency issues.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";

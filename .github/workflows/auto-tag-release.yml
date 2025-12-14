@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'packages/han/**'
+      - 'packages/han-native/**'
       - 'jutsu/**'
       - 'do/**'
       - 'hashi/**'
@@ -41,7 +42,7 @@ jobs:
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
 
           # Check what changed
-          if echo "$CHANGED" | grep -q "^packages/han/"; then
+          if echo "$CHANGED" | grep -qE "^packages/han(-native)?/"; then
             echo "packages=true" >> $GITHUB_OUTPUT
           else
             echo "packages=false" >> $GITHUB_OUTPUT
