@@ -12,6 +12,7 @@
 - simplicity-principles
 - boy-scout-rule
 - baseline-restorer
+- legacy-code-safety
 
 ## Process
 
