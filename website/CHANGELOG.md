@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.3] - 2025-12-14
+
+### BREAKING CHANGES
+
+- make caching and fail-fast default behavior for hooks ([fa35e80f](../../commit/fa35e80f))
+
+### Added
+
+- move badges to header and remove MCP link ([729755a2](../../commit/729755a2))
+- add release and stars badges to hero ([04cccaa6](../../commit/04cccaa6))
+- convert docs to multi-page markdown system ([57d666b6](../../commit/57d666b6))
+
+### Fixed
+
+- reduce badge gap and fix lint errors ([8f637f56](../../commit/8f637f56))
+- reduce badge gap and fix lint errors ([5fe769e9](../../commit/5fe769e9))
+- add blank lines around lists in blog posts (MD032) ([f936b57b](../../commit/f936b57b))
+- add frontmatter to checkpoint-system blog post ([665cd8e9](../../commit/665cd8e9))
+
+### Changed
+
+- normalize hook names to remove duplicative prefixes ([940e304c](../../commit/940e304c))
+
+### Other
+
+- update memory docs for five-layer system ([b68f25aa](../../commit/b68f25aa))
+- add features documentation for hooks, checkpoints, and memory ([c1a1cb24](../../commit/c1a1cb24))
+- update website for v2.0.0 features ([53cf28bd](../../commit/53cf28bd))
+- expand MCP architecture with detailed tool documentation ([958cbd9f](../../commit/958cbd9f))
+- reframe project memory as autonomous self-learning ([d5762fb7](../../commit/d5762fb7))
+- update blog posts - focus on rules, remove em dashes ([c541c16d](../../commit/c541c16d))
+- add metrics blog post, update project memory and checkpoint posts ([6cb9feeb](../../commit/6cb9feeb))
+
 ## [1.23.2] - 2025-12-13
 
 ### BREAKING CHANGES
