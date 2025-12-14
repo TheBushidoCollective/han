@@ -7,13 +7,21 @@ import { createResearchEngine } from "../lib/memory/research.ts";
 import type { IndexedObservation, SearchResult } from "../lib/memory/types.ts";
 
 /**
- * Create a simple mock search function that returns fixed results.
- * This is the most deterministic approach for testing confidence levels.
+ * Create a simple mock search function that returns fixed results only once.
+ * Subsequent calls return empty results to prevent evidence accumulation
+ * when the research engine follows leads.
  */
 function createMockSearchFn(
 	results: SearchResult[],
 ): (query: string) => Promise<SearchResult[]> {
-	return async (_query: string) => results;
+	let called = false;
+	return async (_query: string) => {
+		// Only return results on first call (initial query)
+		// Follow-up calls for leads should return empty
+		if (called) return [];
+		called = true;
+		return results;
+	};
 }
 
 /**
