@@ -87,6 +87,24 @@ han mcp
 
 Exposes tools based on installed plugins. Run hooks with natural language like "run the elixir tests".
 
+### memory
+
+Query project memory and team knowledge:
+
+```bash
+han memory "who worked on authentication?"
+han memory "how do we handle errors?"
+```
+
+### metrics
+
+View task tracking metrics:
+
+```bash
+han metrics              # Show recent task metrics
+han metrics --period=week  # Filter by time period
+```
+
 ### uninstall
 
 Remove all Han plugins:
