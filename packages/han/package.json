@@ -36,7 +36,9 @@
 		"claude-code",
 		"testing",
 		"ci",
-		"plugins"
+		"plugins",
+		"memory",
+		"metrics"
 	],
 	"author": "The Bushido Collective",
 	"license": "MIT",
