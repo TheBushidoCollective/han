@@ -142,6 +142,11 @@ jobs:
           npm ci
           npm run build
 
+      - name: Copy native module to CLI package
+        run: |
+          mkdir -p ./packages/han/native
+          cp ./packages/han-native/*.node ./packages/han/native/han-native.node
+
       - name: Determine version bump type
         id: bump-type
         env:
