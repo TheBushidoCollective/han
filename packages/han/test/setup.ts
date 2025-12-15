@@ -1,3 +1,4 @@
+// Test setup - runs before all tests
 import { beforeAll } from "bun:test";
 import { rmSync } from "node:fs";
 import { homedir } from "node:os";
