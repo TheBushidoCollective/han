@@ -66,6 +66,7 @@ const VALID_HOOK_TYPES = [
 	"SessionEnd",
 	"SessionStart",
 	"Stop",
+	"SubagentStart",
 	"SubagentStop",
 	"UserPromptSubmit",
 ];
