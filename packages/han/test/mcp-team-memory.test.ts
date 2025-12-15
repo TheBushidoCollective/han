@@ -10,7 +10,7 @@ import {
 	formatTeamMemoryResult,
 	queryTeamMemory,
 } from "../lib/commands/mcp/team-memory.ts";
-import type { SearchResult, IndexedObservation } from "../lib/memory/types.ts";
+import type { SearchResult } from "../lib/memory/types.ts";
 
 // Mock the memory module - only mock path helpers and vector store, NOT createResearchEngine
 // This allows the real research engine to run with mocked data
