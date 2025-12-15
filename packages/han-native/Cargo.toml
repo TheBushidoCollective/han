@@ -34,7 +34,8 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 # Futures for async stream handling
 futures = "0.3"
 # Text embeddings (ONNX-based, bundles well)
-fastembed = "4"
+# Use rustls instead of native-tls to avoid openssl-sys on Windows
+fastembed = { version = "4", default-features = false, features = ["ort-download-binaries", "hf-hub-rustls-tls"] }
 
 [build-dependencies]
 napi-build = "2"
