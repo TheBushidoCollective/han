@@ -1,6 +1,6 @@
 {
   "name": "hashi-agent-sop",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and SOP authoring skills.",
   "author": {
     "name": "The Bushido Collective",
@@ -23,7 +23,11 @@
   "mcpServers": {
     "agent-sops": {
       "command": "strands-agents-sops",
-      "args": ["mcp", "--sop-paths", "${AGENT_SOP_PATHS-$PLUGIN_ROOT_DIR/sops}"]
+      "args": [
+        "mcp",
+        "--sop-paths",
+        "${AGENT_SOP_PATHS-$PLUGIN_ROOT_DIR/sops}"
+      ]
     }
   }
 }

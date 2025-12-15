@@ -1,6 +1,6 @@
 {
   "name": "hashi-github",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
   "author": {
     "name": "The Bushido Collective",
