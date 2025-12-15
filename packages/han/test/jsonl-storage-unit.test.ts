@@ -66,7 +66,7 @@ function readMetricsEvents(): unknown[] {
 		.map((line) => JSON.parse(line));
 }
 
-describe.serial("JsonlMetricsStorage", () => {
+describe("JsonlMetricsStorage", () => {
 	beforeEach(() => {
 		setup();
 	});

@@ -59,7 +59,7 @@ function generateContext(): string {
 	}
 }
 
-describe.serial("Metrics Context Generation", () => {
+describe("Metrics Context Generation", () => {
 	beforeEach(() => {
 		setup();
 	});

@@ -8,7 +8,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
-describe.serial("pattern-detection", () => {
+describe("pattern-detection", () => {
 	const testDir = `/tmp/test-pattern-detection-${Date.now()}`;
 	let originalEnv: string | undefined;
 
