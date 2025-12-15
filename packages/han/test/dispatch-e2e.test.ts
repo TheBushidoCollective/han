@@ -7,7 +7,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-describe("dispatch end-to-end execution", () => {
+describe.serial("dispatch end-to-end execution", () => {
 	const testDir = `/tmp/test-dispatch-e2e-${Date.now()}`;
 	let originalEnv: NodeJS.ProcessEnv;
 	let originalCwd: string;

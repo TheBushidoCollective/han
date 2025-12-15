@@ -15,7 +15,7 @@ import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 const baseTestDir = `/tmp/test-pattern-unit-${Date.now()}`;
 let testCounter = 0;
 
-describe("pattern-detection unit tests", () => {
+describe.serial("pattern-detection unit tests", () => {
 	let testDir: string;
 	let originalEnv: string | undefined;
 	let consoleSpy: ReturnType<typeof spyOn>;

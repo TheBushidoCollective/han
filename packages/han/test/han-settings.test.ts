@@ -61,7 +61,7 @@ function teardown(): void {
 	}
 }
 
-describe("han-settings.ts", () => {
+describe.serial("han-settings.ts", () => {
 	beforeEach(() => {
 		setup();
 	});

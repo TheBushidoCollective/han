@@ -13,7 +13,7 @@ import {
 	readSettingsFile,
 } from "../lib/claude-settings.ts";
 
-describe("claude-settings.ts", () => {
+describe.serial("claude-settings.ts", () => {
 	describe("getClaudeConfigDir", () => {
 		const originalConfigDir = process.env.CLAUDE_CONFIG_DIR;
 		const originalHome = process.env.HOME;

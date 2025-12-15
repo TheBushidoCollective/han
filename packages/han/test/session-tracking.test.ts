@@ -14,7 +14,7 @@ import {
 } from "../lib/commands/metrics/session-tracking.ts";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
-describe("session-tracking.ts", () => {
+describe.serial("session-tracking.ts", () => {
 	const testDir = `/tmp/test-session-tracking-${Date.now()}`;
 	let consoleLogSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;

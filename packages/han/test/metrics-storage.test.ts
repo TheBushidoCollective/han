@@ -39,7 +39,7 @@ function teardown(): void {
 	}
 }
 
-describe("JsonlMetricsStorage", () => {
+describe.serial("JsonlMetricsStorage", () => {
 	beforeEach(() => {
 		setup();
 	});
