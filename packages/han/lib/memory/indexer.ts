@@ -25,30 +25,7 @@ import type {
 	RawObservation,
 	SessionSummary,
 } from "./types.ts";
-
-/**
- * Native module type definition for FTS functions
- */
-type NativeModule = typeof import("../../../han-native");
-
-/**
- * Lazy-loaded native module with graceful degradation.
- * Returns null if native module cannot be loaded (e.g., in compiled binary).
- */
-let _nativeModule: NativeModule | null | undefined;
-function getNativeModule(): NativeModule | null {
-	if (_nativeModule === undefined) {
-		try {
-			// Bun requires require() for .node files
-			// Path is relative to lib/memory/ directory -> ../../native/
-			_nativeModule = require("../../native/han-native.node") as NativeModule;
-		} catch {
-			// Native module not available (compiled binary, missing file, etc.)
-			_nativeModule = null;
-		}
-	}
-	return _nativeModule;
-}
+import { tryGetNativeModule } from "../native.ts";
 
 /**
  * Document for FTS indexing
@@ -117,7 +94,7 @@ export function getTableName(layer: IndexLayer, gitRemote?: string): string {
  * Initialize the database (creates if not exists)
  */
 export async function initTable(_tableName: string): Promise<boolean> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return false;
 	ensureIndexDir();
 	const dbPath = getIndexDbPath();
@@ -132,7 +109,7 @@ export async function indexDocuments(
 	tableName: string,
 	documents: IndexDocument[],
 ): Promise<number> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return 0;
 	ensureIndexDir();
 	const dbPath = getIndexDbPath();
@@ -155,7 +132,7 @@ export async function searchFts(
 	query: string,
 	limit = 10,
 ): Promise<FtsResult[]> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return [];
 	const dbPath = getIndexDbPath();
 
@@ -181,7 +158,7 @@ export async function deleteDocuments(
 	tableName: string,
 	ids: string[],
 ): Promise<number> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return 0;
 	const dbPath = getIndexDbPath();
 	return nativeModule.ftsDelete(dbPath, tableName, ids);
@@ -191,7 +168,7 @@ export async function deleteDocuments(
  * Generate embedding for a single text
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return [];
 	return nativeModule.generateEmbedding(text);
 }
@@ -200,7 +177,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  * Generate embeddings for multiple texts (batched)
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return [];
 	return nativeModule.generateEmbeddings(texts);
 }
@@ -209,7 +186,7 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
  * Get embedding dimension (384 for all-MiniLM-L6-v2)
  */
 export function getEmbeddingDimension(): number {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return 384; // Default for all-MiniLM-L6-v2
 	return nativeModule.getEmbeddingDimension();
 }

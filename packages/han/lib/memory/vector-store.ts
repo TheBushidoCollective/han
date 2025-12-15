@@ -8,29 +8,7 @@
  */
 
 import type { IndexedObservation, SearchResult } from "./types.ts";
-
-/**
- * Native module type definition
- */
-type NativeModule = typeof import("../../../han-native");
-
-/**
- * Lazy-loaded native module with graceful degradation.
- * Returns null if native module cannot be loaded.
- */
-let _nativeModule: NativeModule | null | undefined;
-function getNativeModule(): NativeModule | null {
-	if (_nativeModule === undefined) {
-		try {
-			// Bun requires require() for .node files
-			_nativeModule = require("../../native/han-native.node") as NativeModule;
-		} catch {
-			// Native module not available
-			_nativeModule = null;
-		}
-	}
-	return _nativeModule;
-}
+import { tryGetNativeModule } from "../native.ts";
 
 /**
  * Vector store interface for semantic search
@@ -123,7 +101,7 @@ export function createFallbackVectorStore(): VectorStore {
  * Create native-backed vector store using SurrealDB + ONNX Runtime
  */
 export async function createNativeVectorStore(): Promise<VectorStore> {
-	const nativeModule = getNativeModule();
+	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) {
 		return createFallbackVectorStore();
 	}

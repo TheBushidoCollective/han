@@ -1,14 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-
-/**
- * Native module type definition
- */
-type NativeModule = typeof import("../../han-native");
-
-// Bun requires require() for .node files, not import
-// This static require path tells Bun to embed the file in compiled binaries
-const nativeModule = require("../native/han-native.node") as NativeModule;
+import { getNativeModule } from "./native.ts";
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -72,7 +64,7 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
-	return nativeModule.computeFileHash(filePath);
+	return getNativeModule().computeFileHash(filePath);
 }
 
 /**
@@ -122,14 +114,14 @@ export function findFilesWithGlob(
 	rootDir: string,
 	patterns: string[],
 ): string[] {
-	return nativeModule.findFilesWithGlob(rootDir, patterns);
+	return getNativeModule().findFilesWithGlob(rootDir, patterns);
 }
 
 /**
  * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
-	return nativeModule.buildManifest(files, rootDir);
+	return getNativeModule().buildManifest(files, rootDir);
 }
 
 /**
@@ -144,7 +136,7 @@ function hasChanges(
 	if (!cachedManifest) {
 		return true;
 	}
-	return nativeModule.hasChanges(rootDir, patterns, cachedManifest);
+	return getNativeModule().hasChanges(rootDir, patterns, cachedManifest);
 }
 
 /**
@@ -229,5 +221,5 @@ export function findDirectoriesWithMarkers(
 	rootDir: string,
 	markerPatterns: string[],
 ): string[] {
-	return nativeModule.findDirectoriesWithMarkers(rootDir, markerPatterns);
+	return getNativeModule().findDirectoriesWithMarkers(rootDir, markerPatterns);
 }
