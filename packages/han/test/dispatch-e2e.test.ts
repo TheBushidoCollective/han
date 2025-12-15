@@ -29,23 +29,9 @@ describe.serial("dispatch end-to-end execution", () => {
 		try {
 			hanBinary = execSync("which han", { encoding: "utf-8" }).trim();
 		} catch {
-			// Try relative path to built binary
-			const possiblePaths = [
-				join(originalCwd, "bin", "han.js"),
-				join(originalCwd, "dist", "han.js"),
-				join(originalCwd, "..", "..", "bin", "han"),
-			];
-
-			for (const path of possiblePaths) {
-				if (existsSync(path)) {
-					hanBinary = path;
-					break;
-				}
-			}
-
-			if (!hanBinary) {
-				hanBinary = "bun run lib/main.ts";
-			}
+			// In development/CI, run via bun directly
+			// bin/han.js is for npm distribution and requires native binaries
+			hanBinary = `bun run ${join(originalCwd, "lib/main.ts")}`;
 		}
 	});
 
