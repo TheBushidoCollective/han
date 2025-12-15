@@ -1022,22 +1022,6 @@
       ]
     },
     {
-      "name": "hashi-han",
-      "description": "MCP server for running Han plugin hook commands. Dynamically exposes tools for installed plugins - test, lint, format, typecheck commands with smart caching and directory detection.",
-      "source": "./hashi/hashi-han",
-      "category": "Bridge",
-      "keywords": [
-        "mcp",
-        "han",
-        "hooks",
-        "testing",
-        "linting",
-        "formatting",
-        "validation",
-        "server"
-      ]
-    },
-    {
       "name": "hashi-agent-sop",
       "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring skills.",
       "source": "./hashi/hashi-agent-sop",

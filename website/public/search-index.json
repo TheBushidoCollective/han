@@ -1031,24 +1031,6 @@
     ]
   },
   {
-    "id": "hashi-han",
-    "name": "hashi-han",
-    "description": "DEPRECATED: Merged into core. MCP server for running Han plugin hook commands.",
-    "category": "hashi",
-    "tags": [
-      "mcp",
-      "han",
-      "hooks",
-      "testing",
-      "linting",
-      "formatting",
-      "validation",
-      "server"
-    ],
-    "path": "/plugins/hashi/hashi-han",
-    "components": []
-  },
-  {
     "id": "jutsu-helm",
     "name": "jutsu-helm",
     "description": "Helm chart validation and best practices",

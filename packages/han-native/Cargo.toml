@@ -24,18 +24,34 @@ rayon = "1.10"
 # Serde for JSON serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# LanceDB for vector/FTS storage
-lancedb = "0.22"
-# Arrow for data interchange (must match lancedb's version)
-arrow-array = "56"
-arrow-schema = "56"
-# Async runtime for LanceDB
-tokio = { version = "1", features = ["rt-multi-thread"] }
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "fs", "io-util"] }
 # Futures for async stream handling
 futures = "0.3"
-# Text embeddings (ONNX-based, bundles well)
-# Use rustls instead of native-tls to avoid openssl-sys on Windows
-fastembed = { version = "4", default-features = false, features = ["ort-download-binaries", "hf-hub-rustls-tls"] }
+
+# SurrealDB for FTS + vector storage (pure Rust, no SSL deps)
+surrealdb = { version = "2", default-features = false, features = ["kv-surrealkv"] }
+
+# ONNX Runtime for embeddings (load-dynamic = no link-time dependency)
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
+# ndarray for tensor manipulation
+ndarray = "0.16"
+
+# HTTP client for runtime downloads (rustls = pure Rust TLS)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+# Async compression for extracting downloads
+async-compression = { version = "0.4", features = ["tokio", "gzip", "zstd"] }
+# Tar extraction
+tar = "0.4"
+# Gzip decompression
+flate2 = "1.0"
+# Zip extraction (for Windows ONNX RT)
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+# Directory utilities
+dirs = "5"
+# Tracing for debug logging
+tracing = "0.1"
 
 [build-dependencies]
 napi-build = "2"

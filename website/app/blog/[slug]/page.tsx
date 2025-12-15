@@ -1,10 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MDXRemote } from "next-mdx-remote/rsc";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { formatDate, getAllBlogPosts, getBlogPost } from "../../../lib/blog";
 import Header from "../../components/Header";
+import {
+	ArchitectureDiagram,
+	Callout,
+	CodeBlock,
+	FileTree,
+	MemoryStorageTree,
+	Tab,
+	Tabs,
+	Terminal,
+} from "../../components/mdx";
+
+// MDX components mapping
+const mdxComponents = {
+	Callout,
+	CodeBlock,
+	Tabs,
+	Tab,
+	Terminal,
+	ArchitectureDiagram,
+	FileTree,
+	MemoryStorageTree,
+};
 
 export async function generateStaticParams() {
 	const posts = getAllBlogPosts();
@@ -107,9 +130,21 @@ export default async function BlogPostPage({
 
 						{/* Content */}
 						<div className="prose prose-lg dark:prose-invert max-w-none">
-							<ReactMarkdown remarkPlugins={[remarkGfm]}>
-								{post.content}
-							</ReactMarkdown>
+							{post.isMdx ? (
+								<MDXRemote
+									source={post.content}
+									components={mdxComponents}
+									options={{
+										mdxOptions: {
+											remarkPlugins: [remarkGfm],
+										},
+									}}
+								/>
+							) : (
+								<ReactMarkdown remarkPlugins={[remarkGfm]}>
+									{post.content}
+								</ReactMarkdown>
+							)}
 						</div>
 
 						{/* Footer */}

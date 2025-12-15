@@ -225,6 +225,60 @@ describe("hook-cache.ts", () => {
 			const result = loadCacheManifest("invalid-plugin", "invalid-hook");
 			expect(result).toBeNull();
 		});
+
+		test("saves empty manifest", () => {
+			const manifest: CacheManifest = {};
+
+			const saved = saveCacheManifest("empty-plugin", "empty-hook", manifest);
+			expect(saved).toBe(true);
+
+			const loaded = loadCacheManifest("empty-plugin", "empty-hook");
+			expect(loaded).toEqual({});
+		});
+
+		test("overwrites existing cache manifest", () => {
+			const manifest1: CacheManifest = { "old.ts": "old-hash" };
+			const manifest2: CacheManifest = { "new.ts": "new-hash" };
+
+			saveCacheManifest("overwrite-plugin", "overwrite-hook", manifest1);
+			const loaded1 = loadCacheManifest("overwrite-plugin", "overwrite-hook");
+			expect(loaded1).toEqual(manifest1);
+
+			saveCacheManifest("overwrite-plugin", "overwrite-hook", manifest2);
+			const loaded2 = loadCacheManifest("overwrite-plugin", "overwrite-hook");
+			expect(loaded2).toEqual(manifest2);
+		});
+
+		test("handles manifest with special characters in paths", () => {
+			const manifest: CacheManifest = {
+				"src/file-with-dashes.ts": "hash1",
+				"src/file with spaces.ts": "hash2",
+				"src/file.spec.ts": "hash3",
+			};
+
+			const saved = saveCacheManifest(
+				"special-plugin",
+				"special-hook",
+				manifest,
+			);
+			expect(saved).toBe(true);
+
+			const loaded = loadCacheManifest("special-plugin", "special-hook");
+			expect(loaded).toEqual(manifest);
+		});
+
+		test("returns null for empty file", () => {
+			const cachePath = getCacheFilePath(
+				"empty-file-plugin",
+				"empty-file-hook",
+			);
+			const cacheDir = join(cachePath, "..");
+			mkdirSync(cacheDir, { recursive: true });
+			writeFileSync(cachePath, "");
+
+			const result = loadCacheManifest("empty-file-plugin", "empty-file-hook");
+			expect(result).toBeNull();
+		});
 	});
 
 	describe("findFilesWithGlob", () => {
@@ -255,6 +309,56 @@ describe("hook-cache.ts", () => {
 			const files = findFilesWithGlob(projectDir, ["**/*.xyz"]);
 			expect(files).toEqual([]);
 		});
+
+		test("handles nested directories", () => {
+			mkdirSync(join(projectDir, "src", "utils", "helpers"), {
+				recursive: true,
+			});
+			writeFileSync(join(projectDir, "src", "index.ts"), "");
+			writeFileSync(join(projectDir, "src", "utils", "logger.ts"), "");
+			writeFileSync(
+				join(projectDir, "src", "utils", "helpers", "format.ts"),
+				"",
+			);
+
+			const files = findFilesWithGlob(projectDir, ["**/*.ts"]);
+
+			expect(files.length).toBe(3);
+		});
+
+		test("respects gitignore", () => {
+			// Initialize git repo
+			mkdirSync(join(projectDir, ".git"), { recursive: true });
+			writeFileSync(join(projectDir, ".gitignore"), "ignored.ts\n");
+
+			writeFileSync(join(projectDir, "included.ts"), "");
+			writeFileSync(join(projectDir, "ignored.ts"), "");
+
+			const files = findFilesWithGlob(projectDir, ["**/*.ts"]);
+
+			expect(files.length).toBe(1);
+			expect(files[0]).toContain("included.ts");
+		});
+
+		test("handles empty directory", () => {
+			const emptyDir = join(projectDir, "empty");
+			mkdirSync(emptyDir, { recursive: true });
+
+			const files = findFilesWithGlob(emptyDir, ["**/*.ts"]);
+
+			expect(files).toEqual([]);
+		});
+
+		test("handles specific file patterns", () => {
+			writeFileSync(join(projectDir, "index.ts"), "");
+			writeFileSync(join(projectDir, "index.test.ts"), "");
+			writeFileSync(join(projectDir, "utils.ts"), "");
+
+			const files = findFilesWithGlob(projectDir, ["**/*.test.ts"]);
+
+			expect(files.length).toBe(1);
+			expect(files[0]).toContain("index.test.ts");
+		});
 	});
 
 	describe("buildManifest", () => {
@@ -280,6 +384,47 @@ describe("hook-cache.ts", () => {
 		test("returns empty manifest for empty file list", () => {
 			const manifest = buildManifest([], projectDir);
 			expect(manifest).toEqual({});
+		});
+
+		test("builds manifest with nested file paths", () => {
+			mkdirSync(join(projectDir, "src"), { recursive: true });
+			writeFileSync(join(projectDir, "src", "index.ts"), "content");
+
+			const files = findFilesWithGlob(projectDir, ["**/*.ts"]);
+			const canonicalProjectDir = files[0].replace("/src/index.ts", "");
+
+			const manifest = buildManifest(files, canonicalProjectDir);
+
+			expect(Object.keys(manifest).length).toBe(1);
+			expect(manifest["src/index.ts"]).toBeDefined();
+		});
+
+		test("generates different hashes for different content", () => {
+			writeFileSync(join(projectDir, "a.ts"), "content a");
+			writeFileSync(join(projectDir, "b.ts"), "content b");
+
+			const files = findFilesWithGlob(projectDir, ["**/*.ts"]);
+			const canonicalProjectDir = files[0]
+				.replace("/a.ts", "")
+				.replace("/b.ts", "");
+
+			const manifest = buildManifest(files, canonicalProjectDir);
+
+			expect(manifest["a.ts"]).not.toBe(manifest["b.ts"]);
+		});
+
+		test("generates same hash for identical content", () => {
+			writeFileSync(join(projectDir, "x.ts"), "same content");
+			writeFileSync(join(projectDir, "y.ts"), "same content");
+
+			const files = findFilesWithGlob(projectDir, ["**/*.ts"]);
+			const canonicalProjectDir = files[0]
+				.replace("/x.ts", "")
+				.replace("/y.ts", "");
+
+			const manifest = buildManifest(files, canonicalProjectDir);
+
+			expect(manifest["x.ts"]).toBe(manifest["y.ts"]);
 		});
 	});
 
@@ -332,6 +477,54 @@ describe("hook-cache.ts", () => {
 			const pluginManifest = loadCacheManifest("test-plugin", "__plugin__");
 			expect(projectManifest).not.toBeNull();
 			expect(pluginManifest).not.toBeNull();
+		});
+
+		test("tracks empty project directory", () => {
+			const result = trackFiles("empty-plugin", "empty-hook", projectDir, [
+				"**/*.ts",
+			]);
+
+			expect(result).toBe(true);
+
+			const manifest = loadCacheManifest("empty-plugin", "empty-hook");
+			expect(manifest).not.toBeNull();
+		});
+
+		test("tracks multiple file types", () => {
+			writeFileSync(join(projectDir, "index.ts"), "ts content");
+			writeFileSync(join(projectDir, "style.css"), "css content");
+			writeFileSync(join(projectDir, "README.md"), "md content");
+
+			const result = trackFiles("multi-plugin", "multi-hook", projectDir, [
+				"**/*.ts",
+				"**/*.css",
+				"**/*.md",
+			]);
+
+			expect(result).toBe(true);
+
+			const manifest = loadCacheManifest("multi-plugin", "multi-hook");
+			expect(manifest).not.toBeNull();
+			if (manifest) {
+				const keys = Object.keys(manifest);
+				expect(keys.some((k) => k.includes("index.ts"))).toBe(true);
+				expect(keys.some((k) => k.includes("style.css"))).toBe(true);
+				expect(keys.some((k) => k.includes("README.md"))).toBe(true);
+			}
+		});
+
+		test("updates manifest on subsequent tracks", () => {
+			writeFileSync(join(projectDir, "file.ts"), "original");
+
+			trackFiles("update-plugin", "update-hook", projectDir, ["**/*.ts"]);
+			const manifest1 = loadCacheManifest("update-plugin", "update-hook");
+
+			writeFileSync(join(projectDir, "file.ts"), "modified");
+
+			trackFiles("update-plugin", "update-hook", projectDir, ["**/*.ts"]);
+			const manifest2 = loadCacheManifest("update-plugin", "update-hook");
+
+			expect(manifest1).not.toEqual(manifest2);
 		});
 	});
 
@@ -424,6 +617,132 @@ describe("hook-cache.ts", () => {
 
 			expect(result).toBe(true);
 		});
+
+		test("returns false when plugin files unchanged", () => {
+			const pluginDir = join(testDir, "plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(join(pluginDir, "plugin.json"), "{}");
+			writeFileSync(join(projectDir, "index.ts"), "");
+
+			// Track first
+			trackFiles(
+				"plugin-no-change",
+				"hook",
+				projectDir,
+				["**/*.ts"],
+				pluginDir,
+			);
+
+			// Check without any changes
+			const result = checkForChanges(
+				"plugin-no-change",
+				"hook",
+				projectDir,
+				["**/*.ts"],
+				pluginDir,
+			);
+
+			expect(result).toBe(false);
+		});
+
+		test("returns true when file is deleted", () => {
+			const filePath = join(projectDir, "temp.ts");
+			writeFileSync(filePath, "content");
+
+			// Track first
+			trackFiles("delete-plugin", "delete-hook", projectDir, ["**/*.ts"]);
+
+			// Delete file
+			rmSync(filePath);
+
+			// Check for changes - should be true
+			const result = checkForChanges(
+				"delete-plugin",
+				"delete-hook",
+				projectDir,
+				["**/*.ts"],
+			);
+
+			expect(result).toBe(true);
+		});
+
+		test("returns false for empty project with no changes", () => {
+			// Create han-config.yml so it's in the manifest
+			writeFileSync(join(projectDir, "han-config.yml"), "");
+
+			// Track empty directory (with only han-config.yml)
+			trackFiles("empty-check", "empty-hook", projectDir, ["**/*.ts"]);
+
+			// Check with no changes
+			const result = checkForChanges("empty-check", "empty-hook", projectDir, [
+				"**/*.ts",
+			]);
+
+			expect(result).toBe(false);
+		});
+
+		test("detects changes in nested directories", () => {
+			mkdirSync(join(projectDir, "src"), { recursive: true });
+			writeFileSync(join(projectDir, "src", "index.ts"), "original");
+
+			// Track first
+			trackFiles("nested-plugin", "nested-hook", projectDir, ["**/*.ts"]);
+
+			// Modify nested file
+			writeFileSync(join(projectDir, "src", "index.ts"), "modified");
+
+			// Check for changes - should be true
+			const result = checkForChanges(
+				"nested-plugin",
+				"nested-hook",
+				projectDir,
+				["**/*.ts"],
+			);
+
+			expect(result).toBe(true);
+		});
+
+		test("returns false when only non-tracked files change", () => {
+			writeFileSync(join(projectDir, "index.ts"), "ts content");
+			writeFileSync(join(projectDir, "README.md"), "readme");
+
+			// Only track TS files
+			trackFiles("selective-plugin", "selective-hook", projectDir, ["**/*.ts"]);
+
+			// Modify non-tracked file
+			writeFileSync(join(projectDir, "README.md"), "updated readme");
+
+			// Check for changes - should be false (only tracked .ts)
+			const result = checkForChanges(
+				"selective-plugin",
+				"selective-hook",
+				projectDir,
+				["**/*.ts"],
+			);
+
+			expect(result).toBe(false);
+		});
+
+		test("handles han-config.yml changes", () => {
+			writeFileSync(join(projectDir, "index.ts"), "content");
+			writeFileSync(join(projectDir, "han-config.yml"), "config: true");
+
+			// Track (han-config.yml automatically included)
+			trackFiles("config-plugin", "config-hook", projectDir, ["**/*.ts"]);
+
+			// Modify han-config.yml
+			writeFileSync(join(projectDir, "han-config.yml"), "config: false");
+
+			// Check for changes - should be true
+			const result = checkForChanges(
+				"config-plugin",
+				"config-hook",
+				projectDir,
+				["**/*.ts"],
+			);
+
+			expect(result).toBe(true);
+		});
 	});
 
 	describe("findDirectoriesWithMarkers", () => {
@@ -485,6 +804,76 @@ describe("hook-cache.ts", () => {
 			const included = join(projectDir, "included");
 			mkdirSync(included, { recursive: true });
 			writeFileSync(join(included, "package.json"), "{}");
+
+			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
+
+			expect(result.length).toBe(1);
+			expect(result[0]).toContain("included");
+		});
+
+		test("handles deeply nested directories", () => {
+			const nested = join(projectDir, "a", "b", "c", "d");
+			mkdirSync(nested, { recursive: true });
+			writeFileSync(join(nested, "package.json"), "{}");
+
+			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
+
+			expect(result.length).toBe(1);
+			expect(result[0]).toContain("a/b/c/d");
+		});
+
+		test("handles empty directory", () => {
+			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
+
+			expect(result).toEqual([]);
+		});
+
+		test("finds multiple markers in same directory", () => {
+			writeFileSync(join(projectDir, "package.json"), "{}");
+			writeFileSync(join(projectDir, "Cargo.toml"), "");
+
+			const result1 = findDirectoriesWithMarkers(projectDir, ["package.json"]);
+			const result2 = findDirectoriesWithMarkers(projectDir, ["Cargo.toml"]);
+			const result3 = findDirectoriesWithMarkers(projectDir, [
+				"package.json",
+				"Cargo.toml",
+			]);
+
+			expect(result1.length).toBe(1);
+			expect(result2.length).toBe(1);
+			// With multiple patterns, it finds the dir once (not duplicated)
+			expect(result3.length).toBe(1);
+		});
+
+		test("handles directories with special characters", () => {
+			const specialDir = join(projectDir, "my-project_v1.0");
+			mkdirSync(specialDir, { recursive: true });
+			writeFileSync(join(specialDir, "package.json"), "{}");
+
+			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
+
+			expect(result.length).toBe(1);
+			expect(result[0]).toContain("my-project_v1.0");
+		});
+
+		test("respects nested gitignore files", () => {
+			// Initialize git repo
+			mkdirSync(join(projectDir, ".git"), { recursive: true });
+
+			// Create nested structure with nested .gitignore
+			const subdir = join(projectDir, "subdir");
+			mkdirSync(subdir, { recursive: true });
+			writeFileSync(join(subdir, ".gitignore"), "local-ignored/\n");
+
+			// Create locally ignored directory
+			const localIgnored = join(subdir, "local-ignored");
+			mkdirSync(localIgnored, { recursive: true });
+			writeFileSync(join(localIgnored, "package.json"), "{}");
+
+			// Create non-ignored directory in subdir
+			const notIgnored = join(subdir, "included");
+			mkdirSync(notIgnored, { recursive: true });
+			writeFileSync(join(notIgnored, "package.json"), "{}");
 
 			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
 

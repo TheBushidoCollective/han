@@ -8,7 +8,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	getHanConfigPaths,
+	getHanConfigPathsForDirectory,
 	getMergedHanConfig,
+	getMergedHanConfigForDirectory,
+	getPluginHookSettings,
 	isCacheEnabled,
 	isCheckpointsEnabled,
 	isFailFastEnabled,
@@ -457,6 +460,537 @@ describe("han-settings.ts", () => {
 
 			// When hooks are disabled globally, fail_fast should also be disabled
 			expect(isFailFastEnabled()).toBe(false);
+		});
+	});
+
+	describe("getHanConfigPathsForDirectory", () => {
+		test("includes directory-specific config when directory differs from project root", () => {
+			const subDir = join(tempProjectDir, "src", "components");
+			mkdirSync(subDir, { recursive: true });
+
+			const paths = getHanConfigPathsForDirectory(subDir);
+
+			expect(paths).toHaveLength(5);
+			expect(paths[0].scope).toBe("user");
+			expect(paths[1].scope).toBe("project");
+			expect(paths[2].scope).toBe("local");
+			expect(paths[3].scope).toBe("root");
+			expect(paths[4].scope).toBe("directory");
+			expect(paths[4].path).toBe(join(subDir, "han.yml"));
+		});
+
+		test("does not include directory config when directory is project root", () => {
+			const paths = getHanConfigPathsForDirectory(tempProjectDir);
+
+			expect(paths).toHaveLength(4);
+			expect(paths.every((p) => p.scope !== "directory")).toBe(true);
+		});
+
+		test("handles nested directory paths", () => {
+			const deepDir = join(tempProjectDir, "src", "lib", "utils");
+			mkdirSync(deepDir, { recursive: true });
+
+			const paths = getHanConfigPathsForDirectory(deepDir);
+
+			expect(paths[4].scope).toBe("directory");
+			expect(paths[4].path).toBe(join(deepDir, "han.yml"));
+		});
+	});
+
+	describe("getMergedHanConfigForDirectory", () => {
+		test("merges directory-specific config with base configs", () => {
+			const subDir = join(tempProjectDir, "src");
+			mkdirSync(subDir, { recursive: true });
+
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const dirConfigPath = join(subDir, "han.yml");
+
+			writeFileSync(userConfigPath, "hooks:\n  enabled: true\n  cache: true\n");
+			writeFileSync(dirConfigPath, "hooks:\n  cache: false\n");
+
+			const merged = getMergedHanConfigForDirectory(subDir);
+
+			expect(merged.hooks?.enabled).toBe(true); // From user
+			expect(merged.hooks?.cache).toBe(false); // Directory overrides user
+		});
+
+		test("respects full precedence chain with directory config", () => {
+			const subDir = join(tempProjectDir, "src");
+			mkdirSync(subDir, { recursive: true });
+
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+			const dirConfigPath = join(subDir, "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				"hooks:\n  enabled: true\n  cache: true\n  checkpoints: true\n",
+			);
+			writeFileSync(projectConfigPath, "hooks:\n  cache: false\n");
+			writeFileSync(localConfigPath, "hooks:\n  checkpoints: false\n");
+			writeFileSync(dirConfigPath, "hooks:\n  fail_fast: false\n");
+
+			const merged = getMergedHanConfigForDirectory(subDir);
+
+			expect(merged.hooks?.enabled).toBe(true); // From user
+			expect(merged.hooks?.cache).toBe(false); // From project
+			expect(merged.hooks?.checkpoints).toBe(false); // From local
+			expect(merged.hooks?.fail_fast).toBe(false); // From directory
+		});
+
+		test("handles directory config for project root (same as getMergedHanConfig)", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(userConfigPath, "hooks:\n  enabled: false\n");
+
+			const merged = getMergedHanConfigForDirectory(tempProjectDir);
+
+			expect(merged.hooks?.enabled).toBe(false);
+			expect(merged).toEqual(getMergedHanConfig());
+		});
+
+		test("merges memory and metrics sections from directory config", () => {
+			const subDir = join(tempProjectDir, "src");
+			mkdirSync(subDir, { recursive: true });
+
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const dirConfigPath = join(subDir, "han.yml");
+
+			writeFileSync(userConfigPath, "memory:\n  enabled: true\n");
+			writeFileSync(
+				dirConfigPath,
+				"memory:\n  enabled: false\nmetrics:\n  enabled: false\n",
+			);
+
+			const merged = getMergedHanConfigForDirectory(subDir);
+
+			expect(merged.memory?.enabled).toBe(false); // Directory overrides user
+			expect(merged.metrics?.enabled).toBe(false); // From directory
+		});
+
+		test("merges plugin settings from directory config", () => {
+			const subDir = join(tempProjectDir, "src");
+			mkdirSync(subDir, { recursive: true });
+
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const dirConfigPath = join(subDir, "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: true\n",
+			);
+			writeFileSync(
+				dirConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n",
+			);
+
+			const merged = getMergedHanConfigForDirectory(subDir);
+
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(false);
+		});
+	});
+
+	describe("getPluginHookSettings", () => {
+		test("returns undefined when no plugin settings exist", () => {
+			const settings = getPluginHookSettings("jutsu-biome", "lint");
+
+			expect(settings).toBeUndefined();
+		});
+
+		test("returns hook settings for a specific plugin and hook", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n        command: npx biome check\n",
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "lint");
+
+			expect(settings).not.toBeUndefined();
+			expect(settings?.enabled).toBe(false);
+			expect(settings?.command).toBe("npx biome check");
+		});
+
+		test("returns undefined for non-existent plugin", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n",
+			);
+
+			const settings = getPluginHookSettings("jutsu-typescript", "lint");
+
+			expect(settings).toBeUndefined();
+		});
+
+		test("returns undefined for non-existent hook in existing plugin", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n",
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "format");
+
+			expect(settings).toBeUndefined();
+		});
+
+		test("later config completely overrides hook settings", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: true\n        command: npx biome check\n",
+			);
+			writeFileSync(
+				projectConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n",
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "lint");
+
+			// Project config completely replaces user config for this hook
+			expect(settings?.enabled).toBe(false);
+			expect(settings?.command).toBeUndefined(); // Not preserved from user
+		});
+
+		test("uses directory-specific config when directory parameter is provided", () => {
+			const subDir = join(tempProjectDir, "src");
+			mkdirSync(subDir, { recursive: true });
+
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const dirConfigPath = join(subDir, "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: true\n",
+			);
+			writeFileSync(
+				dirConfigPath,
+				"plugins:\n  jutsu-biome:\n    hooks:\n      lint:\n        enabled: false\n        if_changed:\n          - '*.ts'\n",
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "lint", subDir);
+
+			expect(settings?.enabled).toBe(false); // Directory overrides user
+			expect(settings?.if_changed).toEqual(["*.ts"]); // From directory
+		});
+
+		test("handles all hook override properties", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-typescript:
+    hooks:
+      typecheck:
+        enabled: true
+        command: tsc --noEmit
+        if_changed:
+          - '*.ts'
+          - '*.tsx'
+        idle_timeout: 5000
+`,
+			);
+
+			const settings = getPluginHookSettings("jutsu-typescript", "typecheck");
+
+			expect(settings?.enabled).toBe(true);
+			expect(settings?.command).toBe("tsc --noEmit");
+			expect(settings?.if_changed).toEqual(["*.ts", "*.tsx"]);
+			expect(settings?.idle_timeout).toBe(5000);
+		});
+
+		test("handles idle_timeout set to false", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        idle_timeout: false
+`,
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "lint");
+
+			expect(settings?.idle_timeout).toBe(false);
+		});
+	});
+
+	describe("plugin settings merging", () => {
+		test("handles undefined base plugin settings", () => {
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(
+				projectConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(true);
+		});
+
+		test("merges multiple plugins from different config sources", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+  jutsu-typescript:
+    hooks:
+      typecheck:
+        enabled: true
+`,
+			);
+			writeFileSync(
+				projectConfigPath,
+				`plugins:
+  jutsu-npm:
+    hooks:
+      audit:
+        enabled: false
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(true);
+			expect(
+				merged.plugins?.["jutsu-typescript"]?.hooks?.typecheck?.enabled,
+			).toBe(true);
+			expect(merged.plugins?.["jutsu-npm"]?.hooks?.audit?.enabled).toBe(false);
+		});
+
+		test("merges hooks within same plugin from different sources", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+      format:
+        enabled: true
+`,
+			);
+			writeFileSync(
+				projectConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: false
+      check:
+        enabled: true
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(false); // Project overrides
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.format?.enabled).toBe(
+				true,
+			); // From user
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.check?.enabled).toBe(true); // From project
+		});
+
+		test("hook override replaces entire hook object", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+        command: npx biome check --write .
+        if_changed:
+          - '*.ts'
+`,
+			);
+			writeFileSync(
+				projectConfigPath,
+				`plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: false
+`,
+			);
+
+			const settings = getPluginHookSettings("jutsu-biome", "lint");
+
+			// Later config replaces entire hook object
+			expect(settings?.enabled).toBe(false);
+			expect(settings?.command).toBeUndefined(); // Not preserved
+			expect(settings?.if_changed).toBeUndefined(); // Not preserved
+		});
+
+		test("handles empty plugins section", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(userConfigPath, "plugins: {}\n");
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.plugins).toEqual({});
+		});
+
+		test("handles plugin with no hooks section", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				`plugins:
+  jutsu-biome: {}
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.plugins?.["jutsu-biome"]).toEqual({});
+		});
+	});
+
+	describe("root config precedence", () => {
+		test("root han.yml overrides project .claude/han.yml", () => {
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+			const rootConfigPath = join(tempProjectDir, "han.yml");
+
+			writeFileSync(projectConfigPath, "hooks:\n  enabled: true\n");
+			writeFileSync(rootConfigPath, "hooks:\n  enabled: false\n");
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.hooks?.enabled).toBe(false); // Root overrides project
+		});
+
+		test("root config overrides local config", () => {
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+			const rootConfigPath = join(tempProjectDir, "han.yml");
+
+			writeFileSync(localConfigPath, "hooks:\n  cache: true\n");
+			writeFileSync(rootConfigPath, "hooks:\n  cache: false\n");
+
+			const merged = getMergedHanConfig();
+
+			// Precedence: user < project < local < root
+			expect(merged.hooks?.cache).toBe(false); // Root overrides local
+		});
+
+		test("root config is highest precedence", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+			const rootConfigPath = join(tempProjectDir, "han.yml");
+
+			writeFileSync(userConfigPath, "hooks:\n  fail_fast: false\n");
+			writeFileSync(projectConfigPath, "hooks:\n  fail_fast: false\n");
+			writeFileSync(localConfigPath, "hooks:\n  fail_fast: false\n");
+			writeFileSync(rootConfigPath, "hooks:\n  fail_fast: true\n");
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.hooks?.fail_fast).toBe(true); // Root has highest precedence
+		});
+	});
+
+	describe("complex config scenarios", () => {
+		test("merges all config sections simultaneously", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				userConfigPath,
+				`hooks:
+  enabled: true
+  checkpoints: true
+  cache: true
+  fail_fast: true
+memory:
+  enabled: true
+metrics:
+  enabled: true
+plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.hooks?.enabled).toBe(true);
+			expect(merged.hooks?.checkpoints).toBe(true);
+			expect(merged.hooks?.cache).toBe(true);
+			expect(merged.hooks?.fail_fast).toBe(true);
+			expect(merged.memory?.enabled).toBe(true);
+			expect(merged.metrics?.enabled).toBe(true);
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(true);
+		});
+
+		test("handles selective overrides across all sections", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+
+			writeFileSync(
+				userConfigPath,
+				`hooks:
+  enabled: true
+  checkpoints: true
+  cache: true
+memory:
+  enabled: true
+metrics:
+  enabled: true
+plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        enabled: true
+`,
+			);
+			writeFileSync(
+				localConfigPath,
+				`hooks:
+  checkpoints: false
+memory:
+  enabled: false
+plugins:
+  jutsu-biome:
+    hooks:
+      format:
+        command: custom-format
+`,
+			);
+
+			const merged = getMergedHanConfig();
+
+			expect(merged.hooks?.enabled).toBe(true); // From user
+			expect(merged.hooks?.checkpoints).toBe(false); // Overridden by local
+			expect(merged.hooks?.cache).toBe(true); // From user
+			expect(merged.memory?.enabled).toBe(false); // Overridden by local
+			expect(merged.metrics?.enabled).toBe(true); // From user
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.lint?.enabled).toBe(true); // From user
+			expect(merged.plugins?.["jutsu-biome"]?.hooks?.format?.command).toBe(
+				"custom-format",
+			); // From local (different hook)
 		});
 	});
 });

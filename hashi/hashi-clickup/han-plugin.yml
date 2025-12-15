@@ -1,0 +1,21 @@
+# hashi-clickup plugin configuration
+# This plugin provides ClickUp integration via MCP server
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction from ClickUp
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-clickup_clickup__list_tasks
+    - mcp__plugin_hashi-clickup_clickup__get_task
+    - mcp__plugin_hashi-clickup_clickup__list_spaces
+  system_prompt: |
+    Extract observations from ClickUp tasks and spaces. For each item, capture:
+    - author: ClickUp user who created/assigned
+    - timestamp: when created/updated/completed
+    - summary: task name and description highlights
+    - status: task status
+    - type: 'task', 'subtask', or 'comment'
+    Return as JSON array of observations.

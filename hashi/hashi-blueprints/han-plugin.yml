@@ -1,0 +1,20 @@
+# hashi-blueprints plugin configuration
+# This plugin provides technical blueprint documentation via MCP server
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction from blueprints
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-blueprints_blueprints__search_blueprints
+    - mcp__plugin_hashi-blueprints_blueprints__read_blueprint
+  system_prompt: |
+    Extract observations from technical blueprints. For each item, capture:
+    - timestamp: when the blueprint was created/updated
+    - summary: key architectural decisions and patterns documented
+    - status: whether the blueprint is current or needs update
+    - type: 'blueprint', 'architecture', or 'design_decision'
+    Focus on architectural patterns, API designs, and system behaviors.
+    Return as JSON array of observations.

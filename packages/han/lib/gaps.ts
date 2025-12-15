@@ -22,7 +22,7 @@ export async function analyzeGaps(): Promise<void> {
 		// Fetch marketplace plugins
 		const marketplacePlugins = await fetchMarketplace();
 
-		// Load detection criteria from cached han-config.json files
+		// Load detection criteria from cached han-plugin.yml files
 		console.log("Loading detection patterns from cached plugins...\n");
 		const pluginsWithDetection = loadPluginDetection(marketplacePlugins);
 

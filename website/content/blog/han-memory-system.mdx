@@ -1,0 +1,216 @@
+---
+title: "Han's Five-Layer Memory System: Context That Matters"
+description: "How Han transforms fleeting conversations into lasting institutional knowledge - connecting personal work history, team expertise, and project wisdom."
+date: "2025-12-13"
+author: "The Bushido Collective"
+tags: ["memory", "research", "mcp", "learning", "team", "context"]
+category: "Features"
+---
+
+Our [previous post on project memory](/blog/project-memory-feature) introduced Han's `learn` tool - Claude autonomously capturing knowledge to `.claude/rules/`. That was step one.
+
+But real memory is more than just writing things down. It's knowing what you discussed three sessions ago. It's finding the reasoning behind decisions. It's understanding who on your team has expertise in what. It's patterns emerging from practice across your entire organization.
+
+Han's Memory System delivers all five layers.
+
+## The Problem: Context Vanishes
+
+Every developer has experienced this:
+
+- "Why did we choose this approach?" *No one remembers.*
+- "Who built the payment system?" *They left six months ago.*
+- "What did we try last time this broke?" *Lost in a Slack thread somewhere.*
+- "What was I working on yesterday?" *Scrolling through git log...*
+
+AI assistants make this worse. You have an incredible conversation with Claude - exploring tradeoffs, making decisions, building understanding. Then the session ends and it's gone. The next session starts fresh, asking questions you already answered.
+
+**Han fixes this.** Not with some abstract "memory database" but with five layers of context that mirror how teams actually work.
+
+## Five Layers of Context
+
+<ArchitectureDiagram />
+
+Each layer answers different questions at different speeds. Together, they give Claude - and you - complete context.
+
+## Layer 1: Rules - How We Do Things Here
+
+The fastest layer. Project conventions that apply immediately:
+
+<Callout type="tip" title="What Rules Capture">
+
+- Coding standards specific to your project
+- Architectural decisions ("always use X for Y")
+- Testing conventions
+- Error handling patterns
+- Team agreements
+
+</Callout>
+
+Rules live in `.claude/rules/` and are git-tracked. They're shared with your team, versioned, and reviewable. Unlike scattered documentation, they're injected directly into Claude's context - always present, always applied.
+
+Rules can be written manually or auto-promoted from patterns Han observes in practice. Your conventions become documented naturally.
+
+## Layer 2: Session Summaries - What You've Been Doing
+
+When you end a session, Han summarizes what happened: what you worked on, what decisions were made, what's still in progress.
+
+This isn't just a log. It's searchable context:
+
+<Terminal title="Picking Up Where You Left Off">
+```
+You: What was I working on yesterday?
+
+Claude: Yesterday's session (2.5 hours):
+
+- Implemented refresh token rotation
+- Fixed the race condition in logout
+- Started but didn't finish: rate limiting middleware
+
+You left a note: "Rate limiter needs Redis - check with ops first"
+```
+</Terminal>
+
+No more digging through git logs or trying to remember where you left off.
+
+## Layer 3: Observations - The Detailed Trail
+
+Every tool use is logged: files read, files modified, commands run, tests executed. This creates a detailed trail of work without you doing anything.
+
+When summaries aren't enough, observations provide the detail:
+
+- "What files did I touch related to auth?"
+- "Did I run the tests before committing?"
+- "What commands did I use to debug this?"
+
+This layer exists for when you need specifics, not just summaries.
+
+## Layer 4: Transcripts - The Reasoning
+
+<Callout type="info" title="The Missing Link">
+Claude Code stores full conversation history. Han can now search it.
+</Callout>
+
+This is the game-changer. Because context lives in conversations:
+
+<Terminal title="Finding the 'Why'">
+```
+You: Why did we use JWT instead of sessions?
+
+Claude: Found in conversation from December 10th:
+
+You discussed this with Claude for about 20 minutes. The key points:
+- API is stateless, needs to scale horizontally
+- Mobile clients need offline token validation
+- Microservices benefit from decentralized auth
+- You considered sessions but rejected for latency reasons
+
+The decision was made with full context of your architecture.
+```
+</Terminal>
+
+That reasoning was lost when sessions ended. Now it's searchable, forever.
+
+**Cross-worktree search** means context follows the repository, not just the directory. Working on a feature branch in a separate worktree? Han finds relevant context from all worktrees sharing the same repo.
+
+## Layer 5: Team Memory - Institutional Knowledge
+
+This is where Han goes beyond personal memory. Your team's institutional knowledge exists - it's just scattered:
+
+<Callout type="note" title="Team Knowledge Sources">
+
+- **Git history**: Who changed what, when, and why (commit messages, PR descriptions)
+- **Issue trackers**: Decisions made in GitHub Issues, Linear, Jira
+- **Project management**: Context from ClickUp, Asana, Monday
+- **Communication**: Relevant discussions (where accessible)
+- **Documentation**: READMEs, wikis, architectural decision records
+
+</Callout>
+
+Han's team memory isn't just git. It's a research engine that connects to your team's actual knowledge sources through MCP integrations:
+
+<Terminal title="Finding Team Expertise">
+```
+You: Who should I talk to about the payment system?
+
+Claude: Based on team memory research:
+
+**Primary expert: Sarah Chen** (@schen)
+- 47 commits touching payments/ (highest contributor)
+- Authored PR #234 "Stripe integration"
+- Resolved Issues #89, #112, #156 (all payment-related)
+
+**Key context found:**
+- Linear issue LIN-234: "Chose Stripe over Braintree for international"
+- GitHub discussion: "Idempotency keys added after incident"
+- Last significant change: 3 weeks ago
+
+Sarah would be your best starting point.
+```
+</Terminal>
+
+Evidence-based answers. Not just "ask someone" but "ask this specific person, here's why."
+
+## Practical Impact
+
+<Callout type="tip" title="What This Actually Means">
+
+**Onboarding acceleration**: New team members get context immediately. "Who owns this?" and "Why is it this way?" have answers.
+
+**Decision archaeology**: Find not just what was decided, but the full discussion. Understand constraints that existed at the time.
+
+**Expertise mapping**: Know who to ask without bothering everyone. See contribution patterns, not just org charts.
+
+**Session continuity**: Pick up exactly where you left off. Context survives session boundaries.
+
+**Emergent documentation**: Rules reflect actual practice, not aspirational guidelines. Your conventions document themselves.
+
+</Callout>
+
+## The Unified Query
+
+One interface handles all memory questions:
+
+<Terminal title="Natural Memory Queries">
+```
+"What was I working on?"
+→ Your recent sessions and observations
+
+"What did we discuss about auth?"
+→ Full conversation transcripts
+
+"Who knows about payments?"
+→ Team expertise and git history
+
+"How do we handle errors here?"
+→ Project rules and conventions
+```
+</Terminal>
+
+Claude determines the question type and searches appropriate layers. You don't think about layers - you just ask questions.
+
+## Getting Started
+
+Han's memory system activates with the core plugin:
+
+```bash
+han plugin install core
+```
+
+Everything happens automatically:
+
+- Observations captured as you work
+- Sessions summarized when you stop
+- Context injected when you start
+
+For team memory integrations (GitHub Issues, Linear, etc.), add the relevant hashi plugins:
+
+```bash
+han plugin install hashi-github
+han plugin install hashi-linear
+```
+
+---
+
+<Callout type="info">
+Memory isn't a feature. It's how teams actually work - building on each other's knowledge, learning from past decisions, knowing who to ask. Han makes that work for AI assistance too.
+</Callout>

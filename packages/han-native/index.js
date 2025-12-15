@@ -331,10 +331,14 @@ const {
   buildManifest,
   hasChanges,
   checkAndBuildManifest,
-  ftsInit,
+  dbInit,
   ftsIndex,
   ftsSearch,
   ftsDelete,
+  vectorIndex,
+  vectorSearch,
+  embeddingIsAvailable,
+  embeddingEnsureAvailable,
   generateEmbeddings,
   generateEmbedding,
   getEmbeddingDimension,
@@ -347,10 +351,14 @@ module.exports.findDirectoriesWithMarkers = findDirectoriesWithMarkers;
 module.exports.buildManifest = buildManifest;
 module.exports.hasChanges = hasChanges;
 module.exports.checkAndBuildManifest = checkAndBuildManifest;
-module.exports.ftsInit = ftsInit;
+module.exports.dbInit = dbInit;
 module.exports.ftsIndex = ftsIndex;
 module.exports.ftsSearch = ftsSearch;
 module.exports.ftsDelete = ftsDelete;
+module.exports.vectorIndex = vectorIndex;
+module.exports.vectorSearch = vectorSearch;
+module.exports.embeddingIsAvailable = embeddingIsAvailable;
+module.exports.embeddingEnsureAvailable = embeddingEnsureAvailable;
 module.exports.generateEmbeddings = generateEmbeddings;
 module.exports.generateEmbedding = generateEmbedding;
 module.exports.getEmbeddingDimension = getEmbeddingDimension;

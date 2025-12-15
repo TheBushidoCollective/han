@@ -1,0 +1,21 @@
+# hashi-agent-sop plugin configuration
+# This plugin provides Standard Operating Procedures via MCP server
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction from SOPs
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-agent-sop_agent-sops__list_sops
+    - mcp__plugin_hashi-agent-sop_agent-sops__get_sop
+    - mcp__plugin_hashi-agent-sop_agent-sops__search_sops
+  system_prompt: |
+    Extract observations from Standard Operating Procedures. For each item, capture:
+    - timestamp: when the SOP was created/updated
+    - summary: key workflow steps and requirements
+    - status: whether the SOP is active or deprecated
+    - type: 'sop', 'workflow', or 'procedure'
+    Focus on operational patterns, required steps, and RFC 2119 requirements.
+    Return as JSON array of observations.

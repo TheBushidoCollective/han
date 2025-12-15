@@ -1,14 +1,14 @@
 /**
  * Han Memory Indexer
  *
- * Orchestrates indexing of memory content into LanceDB via han-native.
+ * Orchestrates indexing of memory content via han-native using SurrealDB.
  * Provides FTS (BM25) search and embedding generation for the 5-layer
  * memory system: rules, summaries, observations, transcripts, and team memory.
  *
  * Storage location: ~/.claude/han/memory/index/
  *
- * @note The native module (han-native) requires OpenSSL for LanceDB connections.
- * Cross-compilation uses vendored OpenSSL to avoid system dependency issues.
+ * @note The native module uses pure Rust dependencies (SurrealDB with kv-surrealkv,
+ * ort with load-dynamic) for cross-compilation compatibility.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
@@ -114,14 +114,15 @@ export function getTableName(layer: IndexLayer, gitRemote?: string): string {
 }
 
 /**
- * Initialize an FTS table
+ * Initialize the database (creates if not exists)
  */
-export async function initTable(tableName: string): Promise<boolean> {
+export async function initTable(_tableName: string): Promise<boolean> {
 	const nativeModule = getNativeModule();
 	if (!nativeModule) return false;
 	ensureIndexDir();
 	const dbPath = getIndexDbPath();
-	return nativeModule.ftsInit(dbPath, tableName);
+	// dbInit initializes the database; tables are created implicitly on first index
+	return nativeModule.dbInit(dbPath);
 }
 
 /**
@@ -189,7 +190,7 @@ export async function deleteDocuments(
 /**
  * Generate embedding for a single text
  */
-export function generateEmbedding(text: string): number[] {
+export async function generateEmbedding(text: string): Promise<number[]> {
 	const nativeModule = getNativeModule();
 	if (!nativeModule) return [];
 	return nativeModule.generateEmbedding(text);
@@ -198,7 +199,7 @@ export function generateEmbedding(text: string): number[] {
 /**
  * Generate embeddings for multiple texts (batched)
  */
-export function generateEmbeddings(texts: string[]): number[][] {
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 	const nativeModule = getNativeModule();
 	if (!nativeModule) return [];
 	return nativeModule.generateEmbeddings(texts);

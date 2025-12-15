@@ -433,10 +433,11 @@ describe("CLI integration tests", () => {
 	describe("han validate", () => {
 		test("validates configuration with minimal setup", () => {
 			// Create minimal project structure
+			const YAML = require("yaml");
 			const projectDir = join(testDir, "project");
 			writeFileSync(
-				join(projectDir, "han-config.json"),
-				JSON.stringify({ hooks: {} }),
+				join(projectDir, "han-plugin.yml"),
+				YAML.stringify({ hooks: {} }),
 			);
 
 			const result = spawnSync(

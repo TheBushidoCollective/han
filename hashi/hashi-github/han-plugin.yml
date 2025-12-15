@@ -1,0 +1,21 @@
+# hashi-github plugin configuration
+# This plugin provides GitHub integration via MCP server
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-github_github__list_pull_requests
+    - mcp__plugin_hashi-github_github__pull_request_read
+    - mcp__plugin_hashi-github_github__list_issues
+  system_prompt: |
+    Extract observations from GitHub PRs and issues. For each item, capture:
+    - author: GitHub username
+    - timestamp: when created/merged
+    - summary: title and key points from description
+    - files: list of files changed (for PRs)
+    - type: 'pr', 'review', or 'issue'
+    Return as JSON array of observations.

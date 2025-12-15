@@ -185,8 +185,8 @@ export class JsonlMetricsStorage {
 	private currentSessionId: string | null = null;
 	private taskStartTimes: Map<string, string> = new Map();
 
-	constructor() {
-		this.metricsDir = getMetricsDir();
+	constructor(customDir?: string) {
+		this.metricsDir = customDir || getMetricsDir();
 
 		// Ensure directory exists
 		if (!existsSync(this.metricsDir)) {
@@ -195,11 +195,19 @@ export class JsonlMetricsStorage {
 	}
 
 	/**
+	 * Get the JSONL file path for a specific date (uses UTC date)
+	 */
+	private getMetricsFilePath(date: Date = new Date()): string {
+		const dateStr = getUtcDateString(date);
+		return join(this.metricsDir, `metrics-${dateStr}.jsonl`);
+	}
+
+	/**
 	 * Append an event to today's JSONL file
 	 * Uses atomic append for concurrent safety
 	 */
 	private appendEvent(event: MetricEvent): void {
-		const filePath = getMetricsFilePath();
+		const filePath = this.getMetricsFilePath();
 		const line = `${JSON.stringify(event)}\n`;
 		appendFileSync(filePath, line, { encoding: "utf-8" });
 	}

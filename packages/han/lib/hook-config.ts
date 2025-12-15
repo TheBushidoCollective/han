@@ -12,7 +12,7 @@ import { findDirectoriesWithMarkers } from "./hook-cache.ts";
 import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
- * Plugin hook configuration (from han-config.json or han-plugin.yml)
+ * Plugin hook configuration (from han-plugin.yml)
  */
 export interface PluginHookDefinition {
 	dirsWith?: string[];
@@ -52,6 +52,19 @@ interface YamlPluginHookDefinition {
 }
 
 /**
+ * Memory configuration in plugin config
+ *
+ * Convention-based: provider name derived from plugin name,
+ * script always at memory-provider.ts
+ */
+export interface PluginMemoryConfig {
+	/** MCP tools the memory agent is allowed to use */
+	allowed_tools?: string[];
+	/** System prompt for the memory extraction agent */
+	system_prompt?: string;
+}
+
+/**
  * YAML plugin config structure (from han-plugin.yml)
  */
 interface YamlPluginConfig {
@@ -60,6 +73,7 @@ interface YamlPluginConfig {
 	description?: string;
 	keywords?: string[];
 	hooks: Record<string, YamlPluginHookDefinition>;
+	memory?: PluginMemoryConfig;
 }
 
 /**
@@ -88,11 +102,15 @@ function convertYamlPluginConfig(yamlConfig: YamlPluginConfig): PluginConfig {
 	for (const [hookName, hookDef] of Object.entries(yamlConfig.hooks)) {
 		hooks[hookName] = convertYamlHook(hookDef);
 	}
-	return { hooks };
+	return {
+		hooks,
+		...(yamlConfig.memory && { memory: yamlConfig.memory }),
+	};
 }
 
 export interface PluginConfig {
 	hooks: Record<string, PluginHookDefinition>;
+	memory?: PluginMemoryConfig;
 }
 
 /**
@@ -127,7 +145,7 @@ export interface ResolvedHookConfig {
 	command: string;
 	directory: string;
 	/**
-	 * Glob patterns for change detection (from ifChanged in han-config.json)
+	 * Glob patterns for change detection (from ifChanged in han-plugin.yml)
 	 */
 	ifChanged?: string[];
 	/**
@@ -138,8 +156,7 @@ export interface ResolvedHookConfig {
 }
 
 /**
- * Load plugin config from han-plugin.yml or han-config.json at the plugin root
- * Prefers YAML format over JSON (han-plugin.yml takes precedence)
+ * Load plugin config from han-plugin.yml at the plugin root
  * @param pluginRoot - The plugin directory, typically from CLAUDE_PLUGIN_ROOT env var
  * @param validate - Whether to validate the config (default: true)
  */
@@ -147,56 +164,33 @@ export function loadPluginConfig(
 	pluginRoot: string,
 	validate = true,
 ): PluginConfig | null {
-	// Try YAML first (preferred format)
 	const yamlPath = join(pluginRoot, "han-plugin.yml");
-	if (existsSync(yamlPath)) {
-		try {
-			const content = readFileSync(yamlPath, "utf-8");
-			const yamlConfig = YAML.parse(content) as YamlPluginConfig;
-
-			if (!yamlConfig?.hooks) {
-				console.error(`Invalid plugin config at ${yamlPath}: missing 'hooks'`);
-				return null;
-			}
-
-			const config = convertYamlPluginConfig(yamlConfig);
-
-			if (validate) {
-				const result = validatePluginConfig(config);
-				if (!result.valid) {
-					console.error(formatValidationErrors(yamlPath, result));
-					return null;
-				}
-			}
-
-			return config;
-		} catch (error) {
-			console.error(`Error loading plugin config from ${yamlPath}:`, error);
-			return null;
-		}
-	}
-
-	// Fall back to JSON (legacy format)
-	const jsonPath = join(pluginRoot, "han-config.json");
-	if (!existsSync(jsonPath)) {
+	if (!existsSync(yamlPath)) {
 		return null;
 	}
 
 	try {
-		const content = readFileSync(jsonPath, "utf-8");
-		const config = JSON.parse(content);
+		const content = readFileSync(yamlPath, "utf-8");
+		const yamlConfig = YAML.parse(content) as YamlPluginConfig;
+
+		if (!yamlConfig?.hooks) {
+			console.error(`Invalid plugin config at ${yamlPath}: missing 'hooks'`);
+			return null;
+		}
+
+		const config = convertYamlPluginConfig(yamlConfig);
 
 		if (validate) {
 			const result = validatePluginConfig(config);
 			if (!result.valid) {
-				console.error(formatValidationErrors(jsonPath, result));
+				console.error(formatValidationErrors(yamlPath, result));
 				return null;
 			}
 		}
 
-		return config as PluginConfig;
+		return config;
 	} catch (error) {
-		console.error(`Error loading plugin config from ${jsonPath}:`, error);
+		console.error(`Error loading plugin config from ${yamlPath}:`, error);
 		return null;
 	}
 }

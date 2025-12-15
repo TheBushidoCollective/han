@@ -66,7 +66,7 @@ function readMetricsEvents(): unknown[] {
 		.map((line) => JSON.parse(line));
 }
 
-describe("JsonlMetricsStorage", () => {
+describe.serial("JsonlMetricsStorage", () => {
 	beforeEach(() => {
 		setup();
 	});
@@ -77,7 +77,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("constructor", () => {
 		test("creates metrics directory on initialization", () => {
-			new JsonlMetricsStorage();
+			new JsonlMetricsStorage(getMetricsDir());
 			expect(existsSync(getMetricsDir())).toBe(true);
 		});
 
@@ -85,7 +85,7 @@ describe("JsonlMetricsStorage", () => {
 			mkdirSync(getMetricsDir(), { recursive: true });
 			writeFileSync(join(getMetricsDir(), "test.txt"), "test");
 
-			new JsonlMetricsStorage();
+			new JsonlMetricsStorage(getMetricsDir());
 
 			expect(existsSync(join(getMetricsDir(), "test.txt"))).toBe(true);
 		});
@@ -93,7 +93,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("session management", () => {
 		test("startSession creates new session", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const result = storage.startSession();
 
 			expect(result.session_id).toMatch(/^session-\d+-[a-z0-9]+$/);
@@ -105,7 +105,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("startSession with provided ID creates session with that ID", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const result = storage.startSession("my-session-123");
 
 			expect(result.session_id).toBe("my-session-123");
@@ -113,7 +113,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("startSession resumes existing session", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const first = storage.startSession("test-session");
 			expect(first.resumed).toBe(false);
 
@@ -134,7 +134,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("endSession records session end", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 
 			const result = storage.endSession(session_id);
@@ -149,7 +149,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("getCurrentSession returns active session", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 
 			const current = storage.getCurrentSession();
@@ -158,12 +158,12 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("getCurrentSession returns null after session ends", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 			storage.endSession(session_id);
 
 			// Create a new storage instance to test file-based lookup
-			const storage2 = new JsonlMetricsStorage();
+			const storage2 = new JsonlMetricsStorage(getMetricsDir());
 			const current = storage2.getCurrentSession();
 			expect(current).toBeNull();
 		});
@@ -171,7 +171,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("task management", () => {
 		test("startTask creates new task", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const result = storage.startTask({
 				description: "Test task",
 				type: "implementation",
@@ -194,7 +194,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("startTask associates with current session", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 			storage.startTask({
 				description: "Test task",
@@ -209,7 +209,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("updateTask records task update", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { task_id } = storage.startTask({
 				description: "Test task",
 				type: "implementation",
@@ -233,7 +233,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("completeTask records successful completion", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { task_id } = storage.startTask({
 				description: "Test task",
 				type: "implementation",
@@ -263,7 +263,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("failTask records task failure", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { task_id } = storage.startTask({
 				description: "Test task",
 				type: "implementation",
@@ -294,7 +294,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("hook execution recording", () => {
 		test("recordHookExecution records hook success", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			const result = storage.recordHookExecution({
 				hookType: "Stop",
@@ -317,7 +317,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("recordHookExecution records hook failure", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			storage.recordHookExecution({
 				hookType: "Stop",
@@ -337,7 +337,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("recordHookExecution with session and task", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 			const { task_id } = storage.startTask({
 				description: "Test",
@@ -365,7 +365,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("frustration recording", () => {
 		test("recordFrustration records frustration event", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			const result = storage.recordFrustration({
 				frustration_level: "moderate",
@@ -390,7 +390,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("recordFrustration with task association", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { task_id } = storage.startTask({
 				description: "Frustrating task",
 				type: "fix",
@@ -418,7 +418,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("queryMetrics", () => {
 		test("queryMetrics returns empty result with no data", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const result = storage.queryMetrics({});
 
 			expect(result.total_tasks).toBe(0);
@@ -427,7 +427,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("queryMetrics returns task statistics", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Create some tasks
 			const { task_id: task1 } = storage.startTask({
@@ -469,7 +469,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("queryMetrics filters by task type", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			storage.startTask({ description: "Impl 1", type: "implementation" });
 			storage.startTask({ description: "Fix 1", type: "fix" });
@@ -484,7 +484,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("queryMetrics filters by outcome", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			const { task_id: task1 } = storage.startTask({
 				description: "Task 1",
@@ -515,7 +515,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("queryMetrics calculates calibration score", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// High confidence, success -> good calibration
 			const { task_id: task1 } = storage.startTask({
@@ -542,7 +542,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("queryMetrics includes frustration events", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			storage.recordFrustration({
 				frustration_level: "low",
@@ -567,13 +567,13 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("getHookFailureStats", () => {
 		test("returns empty array with no hook data", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const stats = storage.getHookFailureStats();
 			expect(stats).toHaveLength(0);
 		});
 
 		test("filters hooks with low failure rate", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Hook with 100% pass rate (0% failure)
 			for (let i = 0; i < 10; i++) {
@@ -593,7 +593,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("returns hooks with high failure rate", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Hook with 50% failure rate
 			for (let i = 0; i < 5; i++) {
@@ -622,7 +622,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("sorts by failure rate descending", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Hook A: 30% failure
 			for (let i = 0; i < 7; i++) {
@@ -672,7 +672,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("querySessionMetrics", () => {
 		test("returns empty result with no sessions", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const result = storage.querySessionMetrics();
 
 			expect(result.sessions).toHaveLength(0);
@@ -681,7 +681,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("returns session statistics", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			const { session_id } = storage.startSession();
 			const { task_id } = storage.startTask({
@@ -699,7 +699,7 @@ describe("JsonlMetricsStorage", () => {
 		});
 
 		test("tracks hook counts per session", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const { session_id } = storage.startSession();
 
 			storage.recordHookExecution({
@@ -730,7 +730,7 @@ describe("JsonlMetricsStorage", () => {
 
 	describe("close", () => {
 		test("close is a no-op but does not error", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			storage.startSession();
 
 			// Should not throw

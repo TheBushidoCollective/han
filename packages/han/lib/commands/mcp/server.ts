@@ -11,28 +11,12 @@ import type {
 import { recordTaskCompletion } from "../../telemetry/index.ts";
 import { cleanCheckpoints } from "../checkpoint/clean.ts";
 import { listCheckpoints } from "../checkpoint/list.ts";
-import {
-	type AutoLearnParams,
-	autoLearn,
-	formatAutoLearnResult,
-} from "./auto-learn.ts";
-import {
-	captureMemory,
-	type LearnParams,
-	listMemoryFiles,
-	type MemoryScope,
-	readMemoryFile,
-} from "./memory.ts";
+import { captureMemory, type LearnParams } from "./memory.ts";
 import {
 	formatMemoryResult,
 	type MemoryParams,
 	queryMemory,
 } from "./memory-router.ts";
-import {
-	formatTeamMemoryResult,
-	queryTeamMemory,
-	type TeamQueryParams,
-} from "./team-memory.ts";
 import {
 	discoverPluginTools,
 	executePluginTool,
@@ -381,38 +365,6 @@ const METRICS_TOOLS: McpTool[] = [
 	},
 ];
 
-// Team Memory tools definition (for querying git/PR history)
-const TEAM_MEMORY_TOOLS: McpTool[] = [
-	{
-		name: "team_query",
-		description:
-			"Query team memory to find who worked on what, why decisions were made, or what changes occurred. Uses research engine to search git commits, PRs, and indexed observations. Examples: 'who knows about authentication?', 'why did we switch to TypeScript?', 'what changed in the API last month?'",
-		annotations: {
-			title: "Team Query",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				question: {
-					type: "string",
-					description:
-						"The question to research. Can be about people ('who knows about X?'), decisions ('why did we choose Y?'), history ('what changed in Z?'), or expertise ('who implemented feature W?').",
-				},
-				limit: {
-					type: "number",
-					description:
-						"Maximum number of results to search through (default: 10). Increase for broader searches.",
-				},
-			},
-			required: ["question"],
-		},
-	},
-];
-
 // Unified memory tool (auto-routes to Personal, Team, or Rules)
 const UNIFIED_MEMORY_TOOLS: McpTool[] = [
 	{
@@ -434,42 +386,19 @@ const UNIFIED_MEMORY_TOOLS: McpTool[] = [
 					description:
 						"Any question about your work, the team, or project conventions. The system will automatically route to the appropriate memory layer.",
 				},
+				session_id: {
+					type: "string",
+					description:
+						"Current Claude session ID. Used to associate queries with the active session context.",
+				},
 			},
 			required: ["question"],
 		},
 	},
 ];
 
-// Auto-Learn tools (self-learning pattern promotion)
-const AUTO_LEARN_TOOLS: McpTool[] = [
-	{
-		name: "auto_learn",
-		description:
-			"Check status of auto-learning or trigger pattern promotion. Claude automatically learns patterns from research and promotes high-confidence ones to .claude/rules/. Use 'status' to see stats, 'candidates' to view ready patterns, 'promote' to trigger promotion.",
-		annotations: {
-			title: "Auto Learn",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: false,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				action: {
-					type: "string",
-					enum: ["status", "candidates", "promote"],
-					description:
-						"Action to perform: 'status' shows learning stats, 'candidates' lists patterns ready for promotion, 'promote' writes ready patterns to .claude/rules/",
-				},
-			},
-			required: ["action"],
-		},
-	},
-];
-
-// Memory tools definition
-const MEMORY_TOOLS: McpTool[] = [
+// Learn tool - captures learnings to .claude/rules/
+const LEARN_TOOLS: McpTool[] = [
 	{
 		name: "learn",
 		description:
@@ -515,58 +444,6 @@ const MEMORY_TOOLS: McpTool[] = [
 			required: ["content", "domain"],
 		},
 	},
-	{
-		name: "memory_list",
-		description:
-			"List all existing memory domains (rule files). Returns the names of .claude/rules/*.md files, including subdirectories.",
-		annotations: {
-			title: "List Memory",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				scope: {
-					type: "string",
-					enum: ["project", "user"],
-					description:
-						"Which rules to list. 'project' (default) lists project rules, 'user' lists personal rules from ~/.claude/rules/.",
-				},
-			},
-		},
-	},
-	{
-		name: "memory_read",
-		description:
-			"Read the contents of a specific memory domain. Use this to check what's already been learned before adding new content.",
-		annotations: {
-			title: "Read Memory",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				domain: {
-					type: "string",
-					description:
-						"The domain name to read (without .md extension). Can include subdirectories like 'api/validation'.",
-				},
-				scope: {
-					type: "string",
-					enum: ["project", "user"],
-					description:
-						"Which scope to read from. 'project' (default) reads project rules, 'user' reads personal rules from ~/.claude/rules/.",
-				},
-			},
-			required: ["domain"],
-		},
-	},
 ];
 
 function handleToolsList(): unknown {
@@ -578,10 +455,9 @@ function handleToolsList(): unknown {
 		...CHECKPOINT_TOOLS,
 		...METRICS_TOOLS,
 		// Only include memory tools if memory is enabled
+		// Two tools: `memory` (query) and `learn` (write)
 		...(memoryEnabled ? UNIFIED_MEMORY_TOOLS : []),
-		...(memoryEnabled ? TEAM_MEMORY_TOOLS : []),
-		...(memoryEnabled ? AUTO_LEARN_TOOLS : []),
-		...(memoryEnabled ? MEMORY_TOOLS : []),
+		...(memoryEnabled ? LEARN_TOOLS : []),
 	];
 	return {
 		tools: allTools,
@@ -834,12 +710,10 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Check if this is a team memory tool
-	const isTeamMemoryTool = TEAM_MEMORY_TOOLS.some(
-		(t) => t.name === params.name,
-	);
+	// Check if this is a learn tool
+	const isLearnTool = LEARN_TOOLS.some((t) => t.name === params.name);
 
-	if (isTeamMemoryTool) {
+	if (isLearnTool) {
 		// Block if memory is disabled
 		if (!isMemoryEnabled()) {
 			return {
@@ -852,180 +726,28 @@ async function handleToolsCall(params: {
 				isError: true,
 			};
 		}
-		// Handle team memory tools
+		// Handle learn tool
 		try {
-			switch (params.name) {
-				case "team_query": {
-					const queryParams = args as unknown as TeamQueryParams;
-					const result = await queryTeamMemory(queryParams);
-					const formatted = formatTeamMemoryResult(result);
-					return {
-						content: [
-							{
-								type: "text",
-								text: formatted,
-							},
-						],
-						isError: !result.success,
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown team memory tool: ${params.name}`,
-					};
-			}
+			const learnParams = args as unknown as LearnParams;
+			const result = captureMemory(learnParams);
+			return {
+				content: [
+					{
+						type: "text",
+						text: result.success
+							? `✅ ${result.message}`
+							: `❌ ${result.message}`,
+					},
+				],
+				isError: !result.success,
+			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			return {
 				content: [
 					{
 						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
-		}
-	}
-
-	// Check if this is an auto-learn tool
-	const isAutoLearnTool = AUTO_LEARN_TOOLS.some((t) => t.name === params.name);
-
-	if (isAutoLearnTool) {
-		// Block if memory is disabled
-		if (!isMemoryEnabled()) {
-			return {
-				content: [
-					{
-						type: "text",
-						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
-					},
-				],
-				isError: true,
-			};
-		}
-		try {
-			switch (params.name) {
-				case "auto_learn": {
-					const learnParams = args as unknown as AutoLearnParams;
-					const result = autoLearn(learnParams);
-					const formatted = formatAutoLearnResult(result);
-					return {
-						content: [
-							{
-								type: "text",
-								text: formatted,
-							},
-						],
-						isError: !result.success,
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown auto-learn tool: ${params.name}`,
-					};
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
-		}
-	}
-
-	// Check if this is a memory tool
-	const isMemoryTool = MEMORY_TOOLS.some((t) => t.name === params.name);
-
-	if (isMemoryTool) {
-		// Block if memory is disabled
-		if (!isMemoryEnabled()) {
-			return {
-				content: [
-					{
-						type: "text",
-						text: "Memory system is disabled. Enable it in han.yml with: memory:\n  enabled: true",
-					},
-				],
-				isError: true,
-			};
-		}
-		// Handle memory tools
-		try {
-			switch (params.name) {
-				case "learn": {
-					const learnParams = args as unknown as LearnParams;
-					const result = captureMemory(learnParams);
-					return {
-						content: [
-							{
-								type: "text",
-								text: result.success
-									? `✅ ${result.message}`
-									: `❌ ${result.message}`,
-							},
-						],
-						isError: !result.success,
-					};
-				}
-
-				case "memory_list": {
-					const scope = (args.scope as MemoryScope) || "project";
-					const domains = listMemoryFiles(scope);
-					const scopeLabel = scope === "user" ? "user" : "project";
-					const text =
-						domains.length > 0
-							? `Memory domains (${scopeLabel}):\n${domains.map((d) => `  - ${d}`).join("\n")}`
-							: `No ${scopeLabel} memory files found. Use the 'learn' tool to create one.`;
-					return {
-						content: [
-							{
-								type: "text",
-								text,
-							},
-						],
-					};
-				}
-
-				case "memory_read": {
-					const domain = args.domain as string;
-					const readScope = (args.scope as MemoryScope) || "project";
-					const content = readMemoryFile(domain, readScope);
-					return {
-						content: [
-							{
-								type: "text",
-								text:
-									content ??
-									`Memory domain '${domain}' not found in ${readScope} scope.`,
-							},
-						],
-						isError: content === null,
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown memory tool: ${params.name}`,
-					};
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
+						text: `Error executing learn: ${message}`,
 					},
 				],
 				isError: true,

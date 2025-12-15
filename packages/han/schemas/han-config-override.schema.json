@@ -40,7 +40,7 @@
 						{
 							"type": "integer",
 							"minimum": 1,
-							"description": "Override the idle timeout in milliseconds"
+							"description": "Override the idle timeout in seconds"
 						},
 						{
 							"type": "boolean",
@@ -53,7 +53,7 @@
 							"description": "Set to 0 to disable idle timeout checking"
 						}
 					],
-					"description": "Override the idle timeout. Set to a number (milliseconds), false, or 0 to disable."
+					"description": "Override the idle timeout. Set to a number (seconds), false, or 0 to disable."
 				}
 			},
 			"additionalProperties": false

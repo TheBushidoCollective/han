@@ -1,6 +1,6 @@
 /**
  * Unit tests for config-validator.ts
- * Tests validation logic for han-config.json and han-config.yml files.
+ * Tests validation logic for han-plugin.yml files.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -31,7 +31,7 @@ describe("Config Validator", () => {
 							dirTest: "test -f jest.config.ts",
 							description: "Run tests",
 							ifChanged: ["**/*.ts", "**/*.tsx"],
-							idleTimeout: 30000,
+							idleTimeout: 30,
 						},
 					},
 				});
@@ -283,7 +283,7 @@ describe("Config Validator", () => {
 			test("validates idle_timeout as number", () => {
 				const result = validateUserConfig({
 					"jutsu-test": {
-						test: { idle_timeout: 60000 },
+						test: { idle_timeout: 60 },
 					},
 				});
 				expect(result.valid).toBe(true);

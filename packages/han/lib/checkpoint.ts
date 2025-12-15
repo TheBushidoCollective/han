@@ -7,7 +7,7 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
@@ -149,21 +149,42 @@ export function hasChangedSinceCheckpoint(
 	patterns: string[],
 ): boolean {
 	try {
+		const projectRoot = getProjectRoot();
+
 		// Find current files matching patterns
 		const currentFiles = findFilesWithGlob(directory, patterns);
 
-		// Build current manifest
+		// Build current manifest (paths relative to directory)
 		const currentManifest = buildManifest(currentFiles, directory);
 
+		// Calculate relative path from project root to directory
+		// If directory=/project/packages/core and projectRoot=/project
+		// then relativePath=packages/core
+		const relativePath = relative(projectRoot, directory);
+
+		// Filter checkpoint files to only those within directory
+		// and convert paths for comparison
+		const checkpointFilesInDir: Record<string, string> = {};
+		const prefix = relativePath ? `${relativePath}/` : "";
+
+		for (const [path, hash] of Object.entries(checkpoint.files)) {
+			if (relativePath === "" || path.startsWith(prefix)) {
+				// Strip the prefix to get path relative to directory
+				const pathInDir =
+					relativePath === "" ? path : path.slice(prefix.length);
+				checkpointFilesInDir[pathInDir] = hash;
+			}
+		}
+
 		// Compare file counts first (quick check)
-		const checkpointFileCount = Object.keys(checkpoint.files).length;
+		const checkpointFileCount = Object.keys(checkpointFilesInDir).length;
 		const currentFileCount = Object.keys(currentManifest).length;
 		if (checkpointFileCount !== currentFileCount) {
 			return true;
 		}
 
 		// Check if any files in checkpoint are missing or changed
-		for (const [path, hash] of Object.entries(checkpoint.files)) {
+		for (const [path, hash] of Object.entries(checkpointFilesInDir)) {
 			if (currentManifest[path] !== hash) {
 				return true;
 			}
@@ -171,7 +192,7 @@ export function hasChangedSinceCheckpoint(
 
 		// Check if any new files exist that weren't in checkpoint
 		for (const path of Object.keys(currentManifest)) {
-			if (!(path in checkpoint.files)) {
+			if (!(path in checkpointFilesInDir)) {
 				return true;
 			}
 		}

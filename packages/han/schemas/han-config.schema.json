@@ -45,7 +45,7 @@
 				"idleTimeout": {
 					"type": "integer",
 					"minimum": 0,
-					"description": "Maximum time in milliseconds to wait for output before considering the hook as hanging. If no output is received within this period, the hook will be terminated and reported as failed."
+					"description": "Maximum time in seconds to wait for output before considering the hook as hanging. If no output is received within this period, the hook will be terminated and reported as failed."
 				}
 			},
 			"required": ["command"],

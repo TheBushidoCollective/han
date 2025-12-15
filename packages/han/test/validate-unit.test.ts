@@ -43,13 +43,11 @@ function teardown(): void {
 }
 
 /**
- * Create a valid han-config.json in the plugin directory
+ * Create a valid han-plugin.yml in the plugin directory
  */
 function createPluginConfig(hooks: Record<string, unknown> = {}): void {
-	writeFileSync(
-		join(pluginDir, "han-config.json"),
-		JSON.stringify({ hooks }, null, 2),
-	);
+	const YAML = require("yaml");
+	writeFileSync(join(pluginDir, "han-plugin.yml"), YAML.stringify({ hooks }));
 }
 
 /**
@@ -141,12 +139,12 @@ describe("Hook Config", () => {
 			expect(result).toBeNull();
 		});
 
-		test("returns null for directory without han-config.json", () => {
+		test("returns null for directory without han-plugin.yml", () => {
 			const result = loadPluginConfig(pluginDir);
 			expect(result).toBeNull();
 		});
 
-		test("loads valid han-config.json", () => {
+		test("loads valid han-plugin.yml", () => {
 			createPluginConfig({
 				lint: { command: "npm run lint" },
 			});
@@ -159,8 +157,8 @@ describe("Hook Config", () => {
 		test("loads config with multiple hooks", () => {
 			createPluginConfig({
 				lint: { command: "npm run lint" },
-				test: { command: "npm test", dirsWith: ["package.json"] },
-				typecheck: { command: "tsc --noEmit", ifChanged: ["**/*.ts"] },
+				test: { command: "npm test", dirs_with: ["package.json"] },
+				typecheck: { command: "tsc --noEmit", if_changed: ["**/*.ts"] },
 			});
 
 			const result = loadPluginConfig(pluginDir);
@@ -171,18 +169,22 @@ describe("Hook Config", () => {
 		});
 
 		test("loads config with validation disabled", () => {
+			const YAML = require("yaml");
 			// Write invalid config (missing hooks wrapper intentionally)
 			writeFileSync(
-				join(pluginDir, "han-config.json"),
-				JSON.stringify({ hooks: { test: { command: "echo test" } } }),
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({ hooks: { test: { command: "echo test" } } }),
 			);
 
 			const result = loadPluginConfig(pluginDir, false);
 			expect(result).not.toBeNull();
 		});
 
-		test("returns null for invalid JSON", () => {
-			writeFileSync(join(pluginDir, "han-config.json"), "not valid json {");
+		test("returns null for invalid YAML", () => {
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				"invalid: yaml: content: :",
+			);
 
 			const result = loadPluginConfig(pluginDir);
 			expect(result).toBeNull();
@@ -260,10 +262,11 @@ describe("Hook Config", () => {
 
 	describe("loadPluginConfig validation errors", () => {
 		test("returns null for plugin config with invalid structure when validation enabled", () => {
+			const YAML = require("yaml");
 			// Write config that will fail validation (missing required command in hook)
 			writeFileSync(
-				join(pluginDir, "han-config.json"),
-				JSON.stringify({
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
 					hooks: {
 						test: {
 							// Missing required "command" field
@@ -284,7 +287,7 @@ describe("Hook Config", () => {
 			expect(result).toEqual([]);
 		});
 
-		test("returns empty array for plugin without han-config.json", () => {
+		test("returns empty array for plugin without han-plugin.yml", () => {
 			const result = listAvailableHooks(pluginDir);
 			expect(result).toEqual([]);
 		});
@@ -350,10 +353,10 @@ describe("Hook Config", () => {
 			createPluginConfig({
 				test: {
 					command: "npm test",
-					dirsWith: ["package.json"],
-					dirTest: "test -f jest.config.ts",
-					ifChanged: ["**/*.ts", "**/*.tsx"],
-					idleTimeout: 30000,
+					dirs_with: ["package.json"],
+					dir_test: "test -f jest.config.ts",
+					if_changed: ["**/*.ts", "**/*.tsx"],
+					idle_timeout: 30,
 					description: "Run tests",
 				},
 			});
@@ -364,7 +367,7 @@ describe("Hook Config", () => {
 			expect(result?.dirsWith).toEqual(["package.json"]);
 			expect(result?.dirTest).toBe("test -f jest.config.ts");
 			expect(result?.ifChanged).toEqual(["**/*.ts", "**/*.tsx"]);
-			expect(result?.idleTimeout).toBe(30000);
+			expect(result?.idleTimeout).toBe(30);
 		});
 	});
 
@@ -399,7 +402,7 @@ describe("Hook Config", () => {
 			createPluginConfig({
 				typecheck: {
 					command: "tsc --noEmit",
-					ifChanged: ["**/*.ts", "**/*.tsx"],
+					if_changed: ["**/*.ts", "**/*.tsx"],
 				},
 			});
 
@@ -412,13 +415,13 @@ describe("Hook Config", () => {
 			createPluginConfig({
 				test: {
 					command: "npm test",
-					idleTimeout: 60000,
+					idle_timeout: 60,
 				},
 			});
 
 			const result = getHookConfigs(pluginDir, "test", projectDir);
 			expect(result).toHaveLength(1);
-			expect(result[0].idleTimeout).toBe(60000);
+			expect(result[0].idleTimeout).toBe(60);
 		});
 
 		test("finds directories with marker files", () => {
@@ -430,7 +433,7 @@ describe("Hook Config", () => {
 			createPluginConfig({
 				test: {
 					command: "npm test",
-					dirsWith: ["package.json"],
+					dirs_with: ["package.json"],
 				},
 			});
 
@@ -453,12 +456,13 @@ describe("Hook Config", () => {
 				lint: { command: "npm run lint" },
 			});
 
+			const YAML = require("yaml");
 			// Rename plugin dir to have proper name for user override matching
 			const namedPluginDir = join(testDir, "jutsu-test");
 			mkdirSync(namedPluginDir, { recursive: true });
 			writeFileSync(
-				join(namedPluginDir, "han-config.json"),
-				JSON.stringify({ hooks: { lint: { command: "npm run lint" } } }),
+				join(namedPluginDir, "han-plugin.yml"),
+				YAML.stringify({ hooks: { lint: { command: "npm run lint" } } }),
 			);
 
 			createUserConfig(projectDir, {
@@ -473,11 +477,12 @@ describe("Hook Config", () => {
 		});
 
 		test("applies user override for command", () => {
+			const YAML = require("yaml");
 			const namedPluginDir = join(testDir, "jutsu-biome");
 			mkdirSync(namedPluginDir, { recursive: true });
 			writeFileSync(
-				join(namedPluginDir, "han-config.json"),
-				JSON.stringify({ hooks: { lint: { command: "biome check" } } }),
+				join(namedPluginDir, "han-plugin.yml"),
+				YAML.stringify({ hooks: { lint: { command: "biome check" } } }),
 			);
 
 			createUserConfig(projectDir, {
@@ -492,15 +497,16 @@ describe("Hook Config", () => {
 		});
 
 		test("merges user ifChanged patterns with plugin patterns", () => {
+			const YAML = require("yaml");
 			const namedPluginDir = join(testDir, "jutsu-typescript");
 			mkdirSync(namedPluginDir, { recursive: true });
 			writeFileSync(
-				join(namedPluginDir, "han-config.json"),
-				JSON.stringify({
+				join(namedPluginDir, "han-plugin.yml"),
+				YAML.stringify({
 					hooks: {
 						typecheck: {
 							command: "tsc --noEmit",
-							ifChanged: ["**/*.ts"],
+							if_changed: ["**/*.ts"],
 						},
 					},
 				}),
@@ -520,15 +526,16 @@ describe("Hook Config", () => {
 		});
 
 		test("user can disable idle timeout", () => {
+			const YAML = require("yaml");
 			const namedPluginDir = join(testDir, "jutsu-test");
 			mkdirSync(namedPluginDir, { recursive: true });
 			writeFileSync(
-				join(namedPluginDir, "han-config.json"),
-				JSON.stringify({
+				join(namedPluginDir, "han-plugin.yml"),
+				YAML.stringify({
 					hooks: {
 						test: {
 							command: "npm test",
-							idleTimeout: 30000,
+							idle_timeout: 30,
 						},
 					},
 				}),
@@ -546,15 +553,16 @@ describe("Hook Config", () => {
 		});
 
 		test("user can override idle timeout", () => {
+			const YAML = require("yaml");
 			const namedPluginDir = join(testDir, "jutsu-test");
 			mkdirSync(namedPluginDir, { recursive: true });
 			writeFileSync(
-				join(namedPluginDir, "han-config.json"),
-				JSON.stringify({
+				join(namedPluginDir, "han-plugin.yml"),
+				YAML.stringify({
 					hooks: {
 						test: {
 							command: "npm test",
-							idleTimeout: 30000,
+							idle_timeout: 30,
 						},
 					},
 				}),
@@ -562,13 +570,13 @@ describe("Hook Config", () => {
 
 			createUserConfig(projectDir, {
 				"jutsu-test": {
-					test: { idle_timeout: 120000 },
+					test: { idle_timeout: 120 },
 				},
 			});
 
 			const result = getHookConfigs(namedPluginDir, "test", projectDir);
 			expect(result).toHaveLength(1);
-			expect(result[0].idleTimeout).toBe(120000);
+			expect(result[0].idleTimeout).toBe(120);
 		});
 	});
 });

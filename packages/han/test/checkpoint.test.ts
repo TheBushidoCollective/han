@@ -3,7 +3,13 @@
  * Tests checkpoint capture, loading, change detection, and cleanup
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	realpathSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,7 +31,9 @@ let projectDir: string;
 
 function setup(): void {
 	const random = Math.random().toString(36).substring(2, 9);
-	testDir = join(tmpdir(), `han-checkpoint-test-${Date.now()}-${random}`);
+	// Use realpath to resolve symlinks (e.g., /var -> /private/var on macOS)
+	const baseTmpDir = realpathSync(tmpdir());
+	testDir = join(baseTmpDir, `han-checkpoint-test-${Date.now()}-${random}`);
 	configDir = join(testDir, ".claude");
 	projectDir = join(testDir, "project");
 	mkdirSync(configDir, { recursive: true });
@@ -36,7 +44,17 @@ function setup(): void {
 }
 
 function teardown(): void {
-	process.env = { ...originalEnv };
+	// Restore environment variables properly
+	// Delete any keys that were added
+	for (const key in process.env) {
+		if (!(key in originalEnv)) {
+			delete process.env[key];
+		}
+	}
+	// Restore original values
+	for (const key in originalEnv) {
+		process.env[key] = originalEnv[key];
+	}
 
 	if (testDir && existsSync(testDir)) {
 		try {
@@ -438,6 +456,188 @@ describe("checkpoint.ts", () => {
 			expect(loadCheckpoint("agent", "old-agent")).toBeNull();
 			expect(loadCheckpoint("session", "new-session")).not.toBeNull();
 			expect(loadCheckpoint("agent", "new-agent")).not.toBeNull();
+		});
+	});
+
+	describe("subdirectory path matching", () => {
+		test("correctly compares files in subdirectory against project-root checkpoint", () => {
+			// Create files in a subdirectory (simulating packages/han/lib structure)
+			const subDir = join(projectDir, "packages", "core");
+			mkdirSync(subDir, { recursive: true });
+			writeFileSync(join(subDir, "index.ts"), "original content");
+			writeFileSync(join(subDir, "utils.ts"), "helper content");
+
+			// Capture checkpoint at project root (how SessionStart captures it)
+			captureCheckpoint("session", "subdir-test", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "subdir-test");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Verify checkpoint has project-root-relative paths
+			expect(checkpoint.files["packages/core/index.ts"]).toBeDefined();
+			expect(checkpoint.files["packages/core/utils.ts"]).toBeDefined();
+
+			// Check for changes from subdirectory - should return false (no changes)
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, subDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(false);
+		});
+
+		test("detects changes in subdirectory when comparing against project-root checkpoint", () => {
+			// Create files in a subdirectory
+			const subDir = join(projectDir, "packages", "core");
+			mkdirSync(subDir, { recursive: true });
+			writeFileSync(join(subDir, "index.ts"), "original content");
+
+			// Capture checkpoint at project root
+			captureCheckpoint("session", "subdir-change", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "subdir-change");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Modify file in subdirectory
+			writeFileSync(join(subDir, "index.ts"), "modified content");
+
+			// Check for changes from subdirectory - should return true
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, subDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(true);
+		});
+
+		test("handles checking subdirectory when checkpoint has files from multiple directories", () => {
+			// Create files in multiple subdirectories
+			const coreDir = join(projectDir, "packages", "core");
+			const webDir = join(projectDir, "packages", "web");
+			mkdirSync(coreDir, { recursive: true });
+			mkdirSync(webDir, { recursive: true });
+			writeFileSync(join(coreDir, "index.ts"), "core content");
+			writeFileSync(join(webDir, "app.ts"), "web content");
+
+			// Capture checkpoint at project root (includes both directories)
+			captureCheckpoint("session", "multi-dir", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "multi-dir");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Modify only web directory
+			writeFileSync(join(webDir, "app.ts"), "modified web content");
+
+			// Check core directory - should return false (core unchanged)
+			const coreHasChanges = hasChangedSinceCheckpoint(checkpoint, coreDir, [
+				"**/*.ts",
+			]);
+			expect(coreHasChanges).toBe(false);
+
+			// Check web directory - should return true (web changed)
+			const webHasChanges = hasChangedSinceCheckpoint(checkpoint, webDir, [
+				"**/*.ts",
+			]);
+			expect(webHasChanges).toBe(true);
+		});
+	});
+
+	describe("subdirectory edge cases", () => {
+		test("handles deeply nested subdirectory", () => {
+			// Create deeply nested structure
+			const deepDir = join(projectDir, "packages", "core", "lib", "utils");
+			mkdirSync(deepDir, { recursive: true });
+			writeFileSync(join(deepDir, "helper.ts"), "deep content");
+
+			// Capture at project root
+			captureCheckpoint("session", "deep-nested", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "deep-nested");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+			expect(
+				checkpoint.files["packages/core/lib/utils/helper.ts"],
+			).toBeDefined();
+
+			// Check from deep subdirectory - no changes
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, deepDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(false);
+		});
+
+		test("detects new file added in subdirectory after checkpoint", () => {
+			const subDir = join(projectDir, "packages", "core");
+			mkdirSync(subDir, { recursive: true });
+			writeFileSync(join(subDir, "existing.ts"), "existing");
+
+			captureCheckpoint("session", "new-file-subdir", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "new-file-subdir");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Add new file in subdirectory
+			writeFileSync(join(subDir, "new.ts"), "new content");
+
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, subDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(true);
+		});
+
+		test("detects file deleted from subdirectory after checkpoint", () => {
+			const subDir = join(projectDir, "packages", "core");
+			mkdirSync(subDir, { recursive: true });
+			writeFileSync(join(subDir, "keep.ts"), "keep");
+			writeFileSync(join(subDir, "delete.ts"), "delete");
+
+			captureCheckpoint("session", "delete-file-subdir", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "delete-file-subdir");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Delete file from subdirectory
+			rmSync(join(subDir, "delete.ts"));
+
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, subDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(true);
+		});
+
+		test("returns no changes when subdirectory not in checkpoint", () => {
+			// Create file only at root
+			writeFileSync(join(projectDir, "root.ts"), "root content");
+
+			captureCheckpoint("session", "root-only", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "root-only");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Create new subdirectory that wasn't in checkpoint
+			const newDir = join(projectDir, "packages", "new");
+			mkdirSync(newDir, { recursive: true });
+
+			// Check empty subdirectory - checkpoint had no files there
+			// This should return false (no changes - 0 files matched in both)
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, newDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(false);
+		});
+
+		test("handles checking project root after subdirectory checkpoint", () => {
+			// Create files in subdirectory
+			const subDir = join(projectDir, "packages", "core");
+			mkdirSync(subDir, { recursive: true });
+			writeFileSync(join(subDir, "index.ts"), "content");
+
+			// Capture at project root
+			captureCheckpoint("session", "root-check", ["**/*.ts"]);
+			const checkpoint = loadCheckpoint("session", "root-check");
+
+			if (!checkpoint) throw new Error("Checkpoint should exist");
+
+			// Check from project root (same as checkpoint) - no changes
+			const hasChanges = hasChangedSinceCheckpoint(checkpoint, projectDir, [
+				"**/*.ts",
+			]);
+			expect(hasChanges).toBe(false);
 		});
 	});
 

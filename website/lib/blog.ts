@@ -13,6 +13,7 @@ export interface BlogPost {
 	tags: string[];
 	category: string;
 	content: string;
+	isMdx: boolean;
 }
 
 export interface BlogPostMetadata {
@@ -36,11 +37,11 @@ export function getAllBlogPosts(): BlogPostMetadata[] {
 
 		const files = fs
 			.readdirSync(BLOG_DIR)
-			.filter((file) => file.endsWith(".md"));
+			.filter((file) => file.endsWith(".md") || file.endsWith(".mdx"));
 
 		const posts = files
 			.map((file) => {
-				const slug = file.replace(/\.md$/, "");
+				const slug = file.replace(/\.mdx?$/, "");
 				const filePath = path.join(BLOG_DIR, file);
 				const fileContent = fs.readFileSync(filePath, "utf-8");
 				const { data } = matter(fileContent);
@@ -72,10 +73,17 @@ export function getAllBlogPosts(): BlogPostMetadata[] {
  */
 export function getBlogPost(slug: string): BlogPost | null {
 	try {
-		const filePath = path.join(BLOG_DIR, `${slug}.md`);
+		// Try .mdx first, then fall back to .md
+		let filePath = path.join(BLOG_DIR, `${slug}.mdx`);
+		let isMdx = true;
 
 		if (!fs.existsSync(filePath)) {
-			return null;
+			filePath = path.join(BLOG_DIR, `${slug}.md`);
+			isMdx = false;
+
+			if (!fs.existsSync(filePath)) {
+				return null;
+			}
 		}
 
 		const fileContent = fs.readFileSync(filePath, "utf-8");
@@ -90,6 +98,7 @@ export function getBlogPost(slug: string): BlogPost | null {
 			tags: data.tags || [],
 			category: data.category || "Uncategorized",
 			content,
+			isMdx,
 		};
 	} catch (error) {
 		console.error(`Error reading blog post ${slug}:`, error);

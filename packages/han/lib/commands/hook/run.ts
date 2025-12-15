@@ -4,7 +4,7 @@ import { runConfiguredHook, validate } from "../../validate.ts";
 export function registerHookRun(hookCommand: Command): void {
 	// Supports two formats:
 	// 1. New format: han hook run <plugin-name> <hook-name> [--no-cache] [--no-fail-fast] [--only=<dir>]
-	//    Uses plugin han-config.json to determine dirsWith and default command
+	//    Uses plugin han-plugin.yml to determine dirsWith and default command
 	// 2. Legacy format: han hook run --dirs-with <file> -- <command>
 	//    Explicit dirsWith and command specification
 	hookCommand

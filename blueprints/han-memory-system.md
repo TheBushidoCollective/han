@@ -18,7 +18,7 @@ A three-layer memory system that provides personal session continuity, team know
 | Phase 3 | Research Engine | ✅ Complete |
 | Phase 3 | Team Query MCP Tool | ✅ Complete |
 | Phase 4 | Query Router | ✅ Complete |
-| Phase 5 | Embeddings (Optional) | ✅ Complete |
+| Phase 5 | Native Embeddings (SurrealDB + ONNX) | ✅ Complete |
 | Phase 6 | Auto-Promotion Engine | ✅ Complete |
 
 ## Vision
@@ -49,7 +49,7 @@ Han Memory solves everything Claude Mem does AND more:
 │  LAYER 2: Team Memory (authoritative sources)                   │
 │  ─────────────────────────────────────────                      │
 │  Git commits, PRs, Issues, Reviews                              │
-│  Researched on-demand, cached in LanceDB                        │
+│  Researched on-demand, cached in SurrealDB                      │
 │  "Who knows X?" → Research until confident                      │
 │  Patterns tracked → Promoted when ready                         │
 ├─────────────────────────────────────────────────────────────────┤
@@ -59,6 +59,36 @@ Han Memory solves everything Claude Mem does AND more:
 │  "What was I working on?" → Check recent sessions               │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## Native Backend Architecture
+
+The memory system uses a pure-Rust native module (`han-native`) for cross-compilation compatibility:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  han-native (Rust, napi-rs)                                     │
+├─────────────────────────────────────────────────────────────────┤
+│  SurrealDB (kv-surrealkv)       │  ONNX Runtime (ort)           │
+│  ─────────────────────────      │  ───────────────────          │
+│  • FTS with BM25 scoring        │  • load-dynamic feature       │
+│  • Vector search with HNSW      │  • all-MiniLM-L6-v2 model     │
+│  • Pure Rust, no native deps    │  • Runtime download on first  │
+│  • Multi-process safe           │    use (~150MB + 90MB model)  │
+├─────────────────────────────────────────────────────────────────┤
+│  reqwest (rustls-tls)           │  Storage Location             │
+│  ─────────────────────          │  ────────────────             │
+│  • Pure Rust TLS                │  ~/.claude/han/memory/index/  │
+│  • Downloads ONNX Runtime       │  • fts.db (FTS index)         │
+│  • Downloads embedding model    │  • vectors.db (vector store)  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Design Decisions:**
+
+- **No OpenSSL**: Uses rustls for TLS, enabling Linux cross-compilation
+- **No link-time ONNX**: Uses `load-dynamic` to download ONNX Runtime at runtime
+- **SurrealDB over LanceDB**: Avoids aws-lc-sys cross-compilation issues
+- **Single binary**: All dependencies bundled, ONNX downloaded on first use
 
 ## MCP Tools
 
@@ -170,12 +200,24 @@ Patterns are classified into domains based on keywords:
           {date}-{session_id}.jsonl    # Raw observations (append-only)
         summaries/
           {date}-{session_id}.yaml     # AI-compressed summaries
-        .index/                         # Personal LanceDB index
+      
+      index/
+        fts.db                          # SurrealDB FTS index
+        vectors.db                      # SurrealDB vector store
       
       projects/
         github.com_org_repo/            # Denormalized git remote path
-          .index/                       # Team memory LanceDB index
           meta.yaml                     # Index metadata, source cursors
+    
+    onnxruntime/                        # Downloaded ONNX Runtime
+      onnxruntime-v1.20.1/
+        lib/
+          libonnxruntime.dylib          # Platform-specific library
+    
+    models/
+      all-MiniLM-L6-v2/                 # Downloaded embedding model
+        model.onnx
+        tokenizer.json
           
 .claude/                                # In project repo (git-tracked)
   rules/                                # Permanent wisdom - AUTO-PROMOTED
@@ -218,12 +260,21 @@ Implements self-learning pattern detection and promotion:
 
 ### Vector Store (`lib/memory/vector-store.ts`)
 
-Optional embeddings layer with graceful fallback:
+Native embeddings layer using han-native:
 
-- Uses `@xenova/transformers` for local embeddings
-- LanceDB for vector storage and similarity search
-- Falls back to keyword matching if deps unavailable
-- Zero-config: auto-detects available dependencies
+- Uses `han-native` for ONNX Runtime embeddings (all-MiniLM-L6-v2, 384 dimensions)
+- SurrealDB for vector storage with HNSW index
+- Cosine similarity search
+- Zero-config: downloads dependencies on first use
+- Graceful fallback if native module unavailable
+
+### FTS Indexer (`lib/memory/indexer.ts`)
+
+Full-text search layer using han-native:
+
+- SurrealDB with BM25 scoring
+- Indexes observations, summaries, transcripts, team memory
+- Per-project table namespacing
 
 ### Source Providers
 
@@ -262,7 +313,8 @@ packages/han/
       capture.ts         # PostToolUse hook for observation capture
       summarize.ts       # Stop hook for session summarization
       context-injection.ts # SessionStart hook for continuity
-      vector-store.ts    # Optional embeddings layer
+      vector-store.ts    # Native embeddings layer (SurrealDB + ONNX)
+      indexer.ts         # FTS indexer (SurrealDB BM25)
       types.ts           # Type definitions
       index.ts           # Module exports
       providers/
@@ -275,6 +327,13 @@ packages/han/
       auto-learn.ts      # Auto-learn status/trigger tool
       memory.ts          # Learn tool and memory file utilities
       server.ts          # MCP server with all tools
+
+packages/han-native/
+  src/
+    lib.rs              # Main exports, file utilities
+    db.rs               # SurrealDB wrapper (FTS + vector)
+    embedding.rs        # ONNX Runtime embeddings
+    download.rs         # Runtime download manager
 ```
 
 ## Test Coverage

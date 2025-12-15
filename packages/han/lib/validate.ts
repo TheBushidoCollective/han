@@ -232,41 +232,40 @@ async function runCommand(
 		let idleTimedOut = false;
 		const outputChunks: string[] = [];
 
+		// Convert seconds to milliseconds for setTimeout
+		const idleTimeoutMs = idleTimeout ? idleTimeout * 1000 : undefined;
+
 		// Reset idle timeout on output
 		const resetIdleTimeout = () => {
 			if (idleTimeoutHandle) {
 				clearTimeout(idleTimeoutHandle);
 			}
-			if (idleTimeout && idleTimeout > 0) {
+			if (idleTimeoutMs && idleTimeoutMs > 0) {
 				idleTimeoutHandle = setTimeout(() => {
 					idleTimedOut = true;
 					child.kill();
-				}, idleTimeout);
+				}, idleTimeoutMs);
 			}
 		};
 
 		// Start initial idle timeout
-		if (idleTimeout && idleTimeout > 0) {
+		if (idleTimeoutMs && idleTimeoutMs > 0) {
 			idleTimeoutHandle = setTimeout(() => {
 				idleTimedOut = true;
 				child.kill();
-			}, idleTimeout);
+			}, idleTimeoutMs);
 		}
 
-		// Capture output, stream to stderr for visibility, and track for idle timeout
+		// Capture output to file only (no streaming to avoid polluting context)
 		if (!verbose) {
 			child.stdout?.on("data", (data) => {
 				const text = data.toString();
 				outputChunks.push(text);
-				// Stream to stderr so MCP clients can see progress without polluting context
-				process.stderr.write(text);
 				resetIdleTimeout();
 			});
 			child.stderr?.on("data", (data) => {
 				const text = data.toString();
 				outputChunks.push(text);
-				// Stream to stderr so MCP clients can see progress without polluting context
-				process.stderr.write(text);
 				resetIdleTimeout();
 			});
 		}

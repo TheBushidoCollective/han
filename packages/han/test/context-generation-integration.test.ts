@@ -8,14 +8,17 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
-describe("context-generation integration", () => {
+describe.serial("context-generation integration", () => {
 	const testDir = `/tmp/test-context-gen-integration-${Date.now()}`;
 	let originalEnv: string | undefined;
+
+	const getMetricsDir = () =>
+		join(testDir, "config", "han", "metrics", "jsonldb");
 
 	beforeEach(() => {
 		originalEnv = process.env.CLAUDE_CONFIG_DIR;
 		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
-		mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
+		mkdirSync(getMetricsDir(), {
 			recursive: true,
 		});
 	});
@@ -52,7 +55,7 @@ describe("context-generation integration", () => {
 
 		test("outputs performance metrics when tasks exist", async () => {
 			// Create tasks directly in storage
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Start and complete several tasks
 			for (let i = 0; i < 5; i++) {
@@ -90,7 +93,7 @@ describe("context-generation integration", () => {
 
 	describe("JsonlMetricsStorage queryMetrics", () => {
 		test("returns empty metrics for fresh storage", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const metrics = storage.queryMetrics({ period: "week" });
 
 			expect(metrics.total_tasks).toBe(0);
@@ -100,7 +103,7 @@ describe("context-generation integration", () => {
 		});
 
 		test("returns populated metrics after tasks", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Start and complete a task
 			const task = storage.startTask({
@@ -123,7 +126,7 @@ describe("context-generation integration", () => {
 		});
 
 		test("calculates success rate correctly", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// 2 successes, 1 failure = 66.67% success rate
 			for (let i = 0; i < 3; i++) {
@@ -145,7 +148,7 @@ describe("context-generation integration", () => {
 		});
 
 		test("calculates calibration score", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Well-calibrated: 0.8 confidence, actual success
 			const task1 = storage.startTask({
@@ -179,7 +182,7 @@ describe("context-generation integration", () => {
 
 	describe("JsonlMetricsStorage hook failure stats", () => {
 		test("returns empty array when no hook executions", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 			const stats = storage.getHookFailureStats("week");
 
 			expect(Array.isArray(stats)).toBe(true);
@@ -187,7 +190,7 @@ describe("context-generation integration", () => {
 		});
 
 		test("tracks hook execution failures", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Record some hook executions
 			storage.recordHookExecution({
@@ -217,7 +220,7 @@ describe("context-generation integration", () => {
 
 	describe("task type filtering in queryMetrics", () => {
 		test("filters by task type when specified", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Create different task types
 			const fixTask = storage.startTask({
@@ -260,7 +263,7 @@ describe("context-generation integration", () => {
 		});
 
 		test("filters by outcome when specified", () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Create tasks with different outcomes
 			const task1 = storage.startTask({

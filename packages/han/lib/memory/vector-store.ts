@@ -1,13 +1,36 @@
 /**
  * Vector Store Abstraction for Han Memory
  *
- * Provides semantic search capabilities using LanceDB when available.
- * Falls back to simple text matching if LanceDB is not installed.
+ * Provides semantic search capabilities using the native SurrealDB + ONNX Runtime backend.
+ * The native module handles all embedding generation and vector storage internally.
  *
- * LanceDB is pure WebAssembly - no native bindings, no setup required.
+ * Storage location: ~/.claude/han/memory/index/
  */
 
 import type { IndexedObservation, SearchResult } from "./types.ts";
+
+/**
+ * Native module type definition
+ */
+type NativeModule = typeof import("../../../han-native");
+
+/**
+ * Lazy-loaded native module with graceful degradation.
+ * Returns null if native module cannot be loaded.
+ */
+let _nativeModule: NativeModule | null | undefined;
+function getNativeModule(): NativeModule | null {
+	if (_nativeModule === undefined) {
+		try {
+			// Bun requires require() for .node files
+			_nativeModule = require("../../native/han-native.node") as NativeModule;
+		} catch {
+			// Native module not available
+			_nativeModule = null;
+		}
+	}
+	return _nativeModule;
+}
 
 /**
  * Vector store interface for semantic search
@@ -37,8 +60,30 @@ export interface VectorStore {
 }
 
 /**
+ * Get the vector database path
+ */
+function getVectorDbPath(): string {
+	const { homedir } = require("node:os");
+	const { join } = require("node:path");
+	return join(homedir(), ".claude", "han", "memory", "index", "vectors.db");
+}
+
+/**
+ * Ensure the database directory exists
+ */
+function ensureDbDir(): void {
+	const { existsSync, mkdirSync } = require("node:fs");
+	const { homedir } = require("node:os");
+	const { join } = require("node:path");
+	const dir = join(homedir(), ".claude", "han", "memory", "index");
+	if (!existsSync(dir)) {
+		mkdirSync(dir, { recursive: true });
+	}
+}
+
+/**
  * Placeholder vector store that reports unavailability
- * Used when LanceDB is not installed
+ * Used when native module cannot be loaded
  */
 export function createFallbackVectorStore(): VectorStore {
 	return {
@@ -48,19 +93,19 @@ export function createFallbackVectorStore(): VectorStore {
 
 		async embed(_text: string) {
 			throw new Error(
-				"Vector store not available. Install @lancedb/lancedb for semantic search.",
+				"Vector store not available. Native module failed to load.",
 			);
 		},
 
 		async embedBatch(_texts: string[]) {
 			throw new Error(
-				"Vector store not available. Install @lancedb/lancedb for semantic search.",
+				"Vector store not available. Native module failed to load.",
 			);
 		},
 
 		async index(_tableName: string, _observations: IndexedObservation[]) {
 			throw new Error(
-				"Vector store not available. Install @lancedb/lancedb for semantic search.",
+				"Vector store not available. Native module failed to load.",
 			);
 		},
 
@@ -75,163 +120,125 @@ export function createFallbackVectorStore(): VectorStore {
 }
 
 /**
- * Create LanceDB-backed vector store
- * Lazily loads LanceDB and transformers.js to avoid startup cost
+ * Create native-backed vector store using SurrealDB + ONNX Runtime
  */
-/**
- * LanceDB module type (when available)
- */
-interface LanceDBModule {
-	connect: (path: string) => Promise<unknown>;
-}
+export async function createNativeVectorStore(): Promise<VectorStore> {
+	const nativeModule = getNativeModule();
+	if (!nativeModule) {
+		return createFallbackVectorStore();
+	}
 
-export async function createLanceVectorStore(
-	dbPath: string,
-): Promise<VectorStore> {
-	// Try to load LanceDB
-	let lancedb: LanceDBModule | null = null;
-	let pipeline: (() => Promise<unknown>) | null = null;
-	let db: unknown = null;
-
+	// Check if embeddings are available, ensure dependencies downloaded
+	let embeddingsReady = false;
 	try {
-		// Dynamic import to avoid bundling if not used
-		// These are optional dependencies - will throw if not installed
-		// Use Function constructor to prevent TypeScript from analyzing these imports
-		const dynamicImport = new Function(
-			"moduleName",
-			"return import(moduleName)",
-		) as (name: string) => Promise<unknown>;
-
-		const lanceModule = await dynamicImport("@lancedb/lancedb").catch(
-			() => null,
-		);
-		const transformersModule = await dynamicImport(
-			"@xenova/transformers",
-		).catch(() => null);
-
-		if (!lanceModule || !transformersModule) {
-			return createFallbackVectorStore();
+		embeddingsReady = await nativeModule.embeddingIsAvailable();
+		if (!embeddingsReady) {
+			// Download ONNX Runtime and model on first use
+			await nativeModule.embeddingEnsureAvailable();
+			embeddingsReady = true;
 		}
+	} catch {
+		// Embedding system failed to initialize
+		return createFallbackVectorStore();
+	}
 
-		lancedb = lanceModule as LanceDBModule;
-		pipeline = () =>
-			(
-				transformersModule as {
-					pipeline: (...args: unknown[]) => Promise<unknown>;
-				}
-			).pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+	// Initialize database
+	const dbPath = getVectorDbPath();
+	ensureDbDir();
+	try {
+		await nativeModule.dbInit(dbPath);
 	} catch {
 		return createFallbackVectorStore();
 	}
 
-	let embedder: unknown = null;
-
 	const store: VectorStore = {
 		async isAvailable() {
-			return lancedb !== null;
+			return embeddingsReady;
 		},
 
 		async embed(text: string) {
-			if (!embedder && pipeline) {
-				embedder = await pipeline();
-			}
-			const result = await (
-				embedder as (
-					text: string,
-					options: unknown,
-				) => Promise<{ data: Float32Array }>
-			)(text, {
-				pooling: "mean",
-				normalize: true,
-			});
-			return Array.from(result.data);
+			if (!nativeModule) throw new Error("Native module not available");
+			return nativeModule.generateEmbedding(text);
 		},
 
 		async embedBatch(texts: string[]) {
-			const results: number[][] = [];
-			for (const text of texts) {
-				results.push(await this.embed(text));
-			}
-			return results;
+			if (!nativeModule) throw new Error("Native module not available");
+			return nativeModule.generateEmbeddings(texts);
 		},
 
 		async index(tableName: string, observations: IndexedObservation[]) {
-			if (!db && lancedb) {
-				db = await lancedb.connect(dbPath);
-			}
+			if (!nativeModule) throw new Error("Native module not available");
 
 			// Generate embeddings for observations without them
-			const withEmbeddings = await Promise.all(
+			const docsWithEmbeddings = await Promise.all(
 				observations.map(async (obs) => {
-					if (obs.embedding) return obs;
-					const embedding = await this.embed(`${obs.summary} ${obs.detail}`);
-					return { ...obs, embedding };
+					let embedding = obs.embedding;
+					if (!embedding) {
+						embedding = await this.embed(`${obs.summary} ${obs.detail}`);
+					}
+					return {
+						id: obs.id,
+						content: `${obs.summary}\n${obs.detail}`,
+						vector: embedding,
+						metadata: JSON.stringify({
+							source: obs.source,
+							type: obs.type,
+							timestamp: obs.timestamp,
+							author: obs.author,
+							files: obs.files,
+							patterns: obs.patterns,
+							pr_context: obs.pr_context,
+						}),
+					};
 				}),
 			);
 
-			// Upsert into table
-			const table = await (
-				db as { openTable: (name: string) => Promise<unknown> }
-			)
-				.openTable(tableName)
-				.catch(async () => {
-					// Create table if it doesn't exist
-					return (
-						db as {
-							createTable: (name: string, data: unknown[]) => Promise<unknown>;
-						}
-					).createTable(tableName, withEmbeddings);
-				});
-
-			if (table && withEmbeddings.length > 0) {
-				await (table as { add: (data: unknown[]) => Promise<void> }).add(
-					withEmbeddings,
-				);
-			}
+			await nativeModule.vectorIndex(dbPath, tableName, docsWithEmbeddings);
 		},
 
 		async search(tableName: string, query: string, limit = 10) {
-			if (!db && lancedb) {
-				db = await lancedb.connect(dbPath);
-			}
+			if (!nativeModule) return [];
 
-			try {
-				const table = await (
-					db as { openTable: (name: string) => Promise<unknown> }
-				).openTable(tableName);
-				const queryEmbedding = await this.embed(query);
+			// Generate query embedding
+			const queryEmbedding = await this.embed(query);
 
-				const results = await (
-					table as {
-						search: (embedding: number[]) => {
-							limit: (n: number) => {
-								execute: () => Promise<
-									Array<IndexedObservation & { _distance: number }>
-								>;
-							};
-						};
-					}
-				)
-					.search(queryEmbedding)
-					.limit(limit)
-					.execute();
+			// Search by vector similarity
+			const results = await nativeModule.vectorSearch(
+				dbPath,
+				tableName,
+				queryEmbedding,
+				limit,
+			);
 
-				return results.map((row) => ({
-					observation: row as IndexedObservation,
-					score: 1 - (row._distance || 0), // LanceDB returns distance, convert to similarity
-					excerpt: row.summary || "",
-				}));
-			} catch {
-				// Table doesn't exist yet
-				return [];
-			}
+			return results.map((r) => {
+				let metadata: Record<string, unknown> = {};
+				try {
+					metadata = r.metadata ? JSON.parse(r.metadata) : {};
+				} catch {
+					// Invalid metadata JSON
+				}
+
+				return {
+					observation: {
+						id: r.id,
+						source: (metadata.source as string) || r.id,
+						type: (metadata.type as IndexedObservation["type"]) || "commit",
+						timestamp: (metadata.timestamp as number) || 0,
+						author: (metadata.author as string) || "",
+						summary: r.content.split("\n")[0] || "",
+						detail: r.content,
+						files: (metadata.files as string[]) || [],
+						patterns: (metadata.patterns as string[]) || [],
+						pr_context: metadata.pr_context as IndexedObservation["pr_context"],
+					},
+					score: r.score,
+					excerpt: r.content.split("\n")[0] || "",
+				};
+			});
 		},
 
 		async close() {
-			if (db) {
-				// LanceDB doesn't require explicit close
-				db = null;
-			}
+			// SurrealDB handles cleanup automatically
 		},
 	};
 
@@ -245,11 +252,14 @@ let vectorStoreInstance: VectorStore | null = null;
 
 /**
  * Get or create the vector store
- * Attempts to use LanceDB, falls back to placeholder if unavailable
+ * Uses native SurrealDB + ONNX Runtime backend
  */
-export async function getVectorStore(dbPath: string): Promise<VectorStore> {
+export async function getVectorStore(_dbPath?: string): Promise<VectorStore> {
 	if (!vectorStoreInstance) {
-		vectorStoreInstance = await createLanceVectorStore(dbPath);
+		vectorStoreInstance = await createNativeVectorStore();
 	}
 	return vectorStoreInstance;
 }
+
+// Legacy export for backwards compatibility
+export const createLanceVectorStore = createNativeVectorStore;

@@ -11,5 +11,4 @@ hooks:
     command: "cd packages/han && bun run lint:config-sync"
     dir_test: "test -d packages/han && test -f packages/han/package.json"
     if_changed:
-      - "**/han-config.json"
       - "**/han-plugin.yml"

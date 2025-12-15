@@ -1,5 +1,4 @@
 import type { Command } from "commander";
-import { endSessionWithSummary } from "./session-end.ts";
 
 /**
  * Register memory command
@@ -16,6 +15,8 @@ export function registerMemoryCommand(program: Command): void {
 		.option("--session-id <id>", "Session ID to summarize")
 		.action(async (options: { sessionId?: string }) => {
 			try {
+				// Lazy import to avoid loading native module until needed
+				const { endSessionWithSummary } = await import("./session-end.ts");
 				await endSessionWithSummary(options.sessionId);
 				process.exit(0);
 			} catch (error: unknown) {

@@ -225,6 +225,16 @@ This is sustainable. Demanding perfection on day one isn't.
 - Corrupted checkpoint? Falls back gracefully
 - Never silently skips validation
 
+### Debugging
+
+Checkpoint capture fails silently by default to avoid blocking hooks. To see error messages:
+
+```bash
+HAN_VERBOSE=1 han checkpoint capture --type session --id test-123
+```
+
+The `HAN_VERBOSE=1` environment variable enables detailed error output for troubleshooting.
+
 ## Next Steps
 
 - Learn about [smart caching](/docs/configuration/caching) for faster hook execution

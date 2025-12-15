@@ -63,9 +63,22 @@ export {
 	promotePattern,
 	trackPattern,
 } from "./promotion.ts";
+// Provider Discovery (for plugin-based providers)
+export type {
+	DiscoveredProvider,
+	LoadedProvider,
+	MCPClient,
+	ProviderFactory,
+} from "./provider-discovery.ts";
+export {
+	discoverProviders,
+	loadAllProviders,
+	loadProviderScript,
+} from "./provider-discovery.ts";
 // Providers (for Team memory extraction)
 export { gitProvider } from "./providers/git.ts";
-export type { MCPClient } from "./providers/github.ts";
+// Legacy: createGitHubProvider is now provided by hashi-github plugin
+// Kept for backwards compatibility during transition
 export { createGitHubProvider } from "./providers/github.ts";
 // Research Engine
 export { createResearchEngine } from "./research.ts";

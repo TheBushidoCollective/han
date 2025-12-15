@@ -29,8 +29,9 @@ interface PluginHooks {
 
 /**
  * Find plugin in a marketplace root directory
+ * @internal - Exported for testing
  */
-function findPluginInMarketplace(
+export function findPluginInMarketplace(
 	marketplaceRoot: string,
 	pluginName: string,
 ): string | null {
@@ -52,8 +53,9 @@ function findPluginInMarketplace(
 
 /**
  * Resolve a path to absolute, relative to cwd
+ * @internal - Exported for testing
  */
-function resolveToAbsolute(path: string): string {
+export function resolveToAbsolute(path: string): string {
 	if (path.startsWith("/")) {
 		return path;
 	}
@@ -62,8 +64,9 @@ function resolveToAbsolute(path: string): string {
 
 /**
  * Get plugin directory based on plugin name, marketplace, and marketplace config
+ * @internal - Exported for testing
  */
-function getPluginDir(
+export function getPluginDir(
 	pluginName: string,
 	marketplace: string,
 	marketplaceConfig: MarketplaceConfig | undefined,
@@ -111,8 +114,9 @@ function getPluginDir(
 
 /**
  * Load a plugin's hooks.json
+ * @internal - Exported for testing
  */
-function loadPluginHooks(
+export function loadPluginHooks(
 	pluginName: string,
 	marketplace: string,
 	marketplaceConfig: MarketplaceConfig | undefined,
@@ -159,8 +163,9 @@ export function parseHookCommand(
 
 /**
  * Verify that all hooks of a specific type have been run and are cached
+ * @internal - Exported for testing
  */
-function verifyHooks(hookType: string): number {
+export function verifyHooks(hookType: string): number {
 	// Allow global disable of all hooks via environment variable
 	if (
 		process.env.HAN_DISABLE_HOOKS === "true" ||
@@ -202,7 +207,7 @@ function verifyHooks(hookType: string): number {
 
 					const { pluginName: targetPlugin, hookName: targetHook } = parsed;
 
-					// Get the plugin's han-config.json to find the hook configuration
+					// Get the plugin's han-plugin.yml to find the hook configuration
 					const targetPluginRoot = getPluginDir(
 						targetPlugin,
 						marketplace,

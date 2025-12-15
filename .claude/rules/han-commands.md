@@ -27,10 +27,6 @@ han hook run jutsu-biome lint --cached
 han hook run jutsu-biome lint --cache=false
 ```
 
-## Plugin Config Formats
+## Plugin Config Format
 
-Plugins support both formats (YAML preferred):
-- `han-plugin.yml` - New YAML format with snake_case keys
-- `han-config.json` - Legacy JSON format with camelCase keys
-
-When both exist, YAML takes precedence.
+Plugins use `han-plugin.yml` with snake_case keys for hook configuration.

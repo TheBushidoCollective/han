@@ -10,12 +10,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let storage: JsonlMetricsStorage | null = null;
+let testDir: string;
+
+function getMetricsDir(): string {
+	return join(testDir, "han", "metrics", "jsonldb");
+}
 
 function setup(): void {
 	const random = Math.random().toString(36).substring(2, 9);
-	const testDir = join(tmpdir(), `han-metrics-test-${Date.now()}-${random}`);
+	testDir = join(tmpdir(), `han-metrics-test-${Date.now()}-${random}`);
 	process.env.CLAUDE_CONFIG_DIR = testDir;
-	storage = new JsonlMetricsStorage();
+	storage = new JsonlMetricsStorage(getMetricsDir());
 }
 
 function getStorage(): JsonlMetricsStorage {
@@ -64,7 +69,7 @@ function detectPatterns(minSeverity?: "low" | "medium" | "high"): Array<{
 	}
 }
 
-describe("Metrics Pattern Detection", () => {
+describe.serial("Metrics Pattern Detection", () => {
 	beforeEach(() => {
 		setup();
 	});

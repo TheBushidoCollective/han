@@ -1,5 +1,5 @@
 /**
- * Config validation for han-config.json and han-config.yml files
+ * Config validation for han-plugin.yml files
  * Lightweight validation without external dependencies
  */
 
@@ -14,7 +14,7 @@ export interface ValidationResult {
 }
 
 /**
- * Validate a plugin han-config.json file
+ * Validate a plugin han-plugin.yml file
  */
 export function validatePluginConfig(config: unknown): ValidationResult {
 	const errors: ValidationError[] = [];
@@ -109,7 +109,7 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			}
 		}
 
-		// Optional: idleTimeout (positive integer)
+		// Optional: idleTimeout (positive integer, in seconds)
 		if ("idleTimeout" in hook) {
 			if (
 				typeof hook.idleTimeout !== "number" ||
@@ -118,8 +118,7 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			) {
 				errors.push({
 					path: `${hookPath}.idleTimeout`,
-					message:
-						"'idleTimeout' must be a non-negative integer (milliseconds)",
+					message: "'idleTimeout' must be a non-negative integer (seconds)",
 				});
 			}
 		}
@@ -230,7 +229,7 @@ export function validateUserConfig(config: unknown): ValidationResult {
 				}
 			}
 
-			// Optional: idle_timeout (positive integer, false, or 0)
+			// Optional: idle_timeout (positive integer in seconds, false, or 0)
 			if ("idle_timeout" in override) {
 				const timeout = override.idle_timeout;
 				const isValidNumber =
@@ -243,7 +242,7 @@ export function validateUserConfig(config: unknown): ValidationResult {
 					errors.push({
 						path: `${hookPath}.idle_timeout`,
 						message:
-							"'idle_timeout' must be a non-negative integer (milliseconds) or false to disable",
+							"'idle_timeout' must be a non-negative integer (seconds) or false to disable",
 					});
 				}
 			}

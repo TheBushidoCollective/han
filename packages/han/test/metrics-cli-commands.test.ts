@@ -15,7 +15,8 @@ function setup(): void {
 	const random = Math.random().toString(36).substring(2, 9);
 	const testDir = join(tmpdir(), `han-metrics-test-${Date.now()}-${random}`);
 	process.env.CLAUDE_CONFIG_DIR = testDir;
-	storage = new JsonlMetricsStorage();
+	const metricsDir = join(testDir, "han", "metrics", "jsonldb");
+	storage = new JsonlMetricsStorage(metricsDir);
 }
 
 function getStorage(): JsonlMetricsStorage {
@@ -51,7 +52,7 @@ function runCommand(command: string, input?: string): string {
 	return output.trim();
 }
 
-describe("Metrics CLI Commands", () => {
+describe.serial("Metrics CLI Commands", () => {
 	beforeEach(() => {
 		setup();
 	});

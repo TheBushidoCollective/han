@@ -13,12 +13,7 @@
  */
 
 import type { Command } from "commander";
-import {
-	type IndexLayer,
-	type IndexOptions,
-	runIndex,
-	searchAll,
-} from "../../memory/indexer.ts";
+import { type IndexLayer, searchAll } from "../../memory/indexer.ts";
 import { getGitRemote } from "../../memory/paths.ts";
 
 /**
@@ -48,6 +43,11 @@ export function registerIndexCommand(program: Command): void {
 				verbose?: boolean;
 			}) => {
 				try {
+					// Lazy import to avoid loading native module until needed
+					const { runIndex } = await import("../../memory/indexer.ts");
+					type IndexLayer = import("../../memory/indexer.ts").IndexLayer;
+					type IndexOptions = import("../../memory/indexer.ts").IndexOptions;
+
 					// Validate layer if provided
 					const validLayers: IndexLayer[] = [
 						"observations",

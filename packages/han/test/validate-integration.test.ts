@@ -40,12 +40,10 @@ function _createPluginConfig(
 	hooks: Record<string, unknown>,
 	dir: string = pluginDir,
 ): void {
+	const YAML = require("yaml");
 	const configDir = join(dir, ".claude-plugin");
 	mkdirSync(configDir, { recursive: true });
-	writeFileSync(
-		join(dir, "han-config.json"),
-		JSON.stringify({ hooks }, null, 2),
-	);
+	writeFileSync(join(dir, "han-plugin.yml"), YAML.stringify({ hooks }));
 }
 
 describe("validate.ts helper functions", () => {
@@ -410,7 +408,7 @@ describe("validate.ts helper functions", () => {
 				command: "npm run lint",
 				wrappedCommand: '/bin/bash -l -c "npm run lint"',
 				directory: "/home/user/project",
-				idleTimeout: 30000,
+				idleTimeout: 30,
 				idleTimedOut: false,
 				exitSuccess: true,
 				durationMs: 1234,

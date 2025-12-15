@@ -154,7 +154,7 @@ export async function install(
 		return;
 	}
 
-	// Load detection criteria from cached han-config.json files
+	// Load detection criteria from cached han-plugin.yml files
 	const pluginsWithDetection = loadPluginDetection(marketplacePlugins);
 
 	// Run marker detection first (instant)

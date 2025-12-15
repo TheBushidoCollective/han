@@ -161,6 +161,7 @@ describe("Hook verify", () => {
 	});
 
 	test("exits 0 when all hooks are cached", () => {
+		const YAML = require("yaml");
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 
@@ -171,8 +172,8 @@ describe("Hook verify", () => {
 		const pluginDir = join(marketplaceDir, "jutsu", "no-cache-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					build: {
 						command: "echo no-cache-test",
@@ -235,6 +236,7 @@ describe("Hook verify", () => {
 	});
 
 	test("exits non-zero when hooks are stale", () => {
+		const YAML = require("yaml");
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 		writeFileSync(join(projectDir, "package.json"), "{}");
@@ -247,13 +249,13 @@ describe("Hook verify", () => {
 		const pluginDir = join(marketplaceDir, "jutsu", "stale-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					check: {
-						dirsWith: ["package.json"],
+						dirs_with: ["package.json"],
 						command: "echo verify-test",
-						ifChanged: ["**/*.ts"],
+						if_changed: ["**/*.ts"],
 					},
 				},
 			}),
@@ -862,10 +864,10 @@ describe("Hook run without --dirs-with", () => {
 
 // Continue in next message due to length...
 // ============================================
-// Hook config tests (han-config.json)
+// Hook config tests (han-plugin.yml)
 // ============================================
 
-describe("Hook config (han-config.json)", () => {
+describe("Hook config (han-plugin.yml)", () => {
 	let testDir: string;
 
 	beforeEach(() => {
@@ -888,6 +890,7 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("auto-discovers plugin from settings when CLAUDE_PLUGIN_ROOT not set", () => {
+		const YAML = require("yaml");
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 		writeFileSync(join(projectDir, "package.json"), "{}");
@@ -900,11 +903,11 @@ describe("Hook config (han-config.json)", () => {
 		mkdirSync(pluginDir, { recursive: true });
 
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: {
-						dirsWith: ["package.json"],
+						dirs_with: ["package.json"],
 						command: "echo discovered-plugin-success",
 					},
 				},
@@ -946,6 +949,7 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("shows discovered plugin root in verbose mode", () => {
+		const YAML = require("yaml");
 		const projectDir = join(testDir, "project");
 		mkdirSync(projectDir, { recursive: true });
 		writeFileSync(join(projectDir, "package.json"), "{}");
@@ -958,11 +962,11 @@ describe("Hook config (han-config.json)", () => {
 		mkdirSync(pluginDir, { recursive: true });
 
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: {
-						dirsWith: ["package.json"],
+						dirs_with: ["package.json"],
 						command: "echo verbose-test-success",
 					},
 				},
@@ -1007,15 +1011,16 @@ describe("Hook config (han-config.json)", () => {
 		expect(output).toContain("jutsu-verbose-test");
 	});
 
-	test("loads han-config.json and runs command", () => {
+	test("loads han-plugin.yml and runs command", () => {
+		const YAML = require("yaml");
 		const pluginDir = join(testDir, "test-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: {
-						dirsWith: ["package.json"],
+						dirs_with: ["package.json"],
 						command: "echo hook-success",
 					},
 				},
@@ -1044,11 +1049,12 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("runs in current directory when dirsWith is empty", () => {
+		const YAML = require("yaml");
 		const pluginDir = join(testDir, "test-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					lint: {
 						command: "echo no-dirs-with-success",
@@ -1075,11 +1081,12 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("reports when hook not found in config", () => {
+		const YAML = require("yaml");
 		const pluginDir = join(testDir, "test-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: { command: "echo test" },
 				},
@@ -1106,14 +1113,15 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("with --fail-fast stops on first failure", () => {
+		const YAML = require("yaml");
 		const pluginDir = join(testDir, "test-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: {
-						dirsWith: ["marker.txt"],
+						dirs_with: ["marker.txt"],
 						command: "exit 1",
 					},
 				},
@@ -1144,14 +1152,15 @@ describe("Hook config (han-config.json)", () => {
 	});
 
 	test("--fail-fast clears stale failure signals from previous runs", () => {
+		const YAML = require("yaml");
 		const pluginDir = join(testDir, "test-plugin");
 		mkdirSync(pluginDir, { recursive: true });
 		writeFileSync(
-			join(pluginDir, "han-config.json"),
-			JSON.stringify({
+			join(pluginDir, "han-plugin.yml"),
+			YAML.stringify({
 				hooks: {
 					test: {
-						dirsWith: ["marker.txt"],
+						dirs_with: ["marker.txt"],
 						command: "echo success",
 					},
 				},

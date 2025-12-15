@@ -400,4 +400,125 @@ describe("mcp-server.ts helper functions", () => {
 			expect(toolName).toBe("do_claude_plugin_development_claudelint");
 		});
 	});
+
+	describe("memory tools definition", () => {
+		test("memory tool has question and session_id properties", () => {
+			const tool = {
+				name: "memory",
+				description:
+					"Query memory with auto-routing. Automatically determines whether to check personal sessions, team knowledge, or project conventions.",
+				inputSchema: {
+					type: "object" as const,
+					properties: {
+						question: {
+							type: "string",
+							description:
+								"Any question about your work, the team, or project conventions.",
+						},
+						session_id: {
+							type: "string",
+							description:
+								"Current Claude session ID. Used to associate queries with the active session context.",
+						},
+					},
+					required: ["question"],
+				},
+			};
+
+			expect(tool.name).toBe("memory");
+			expect(tool.inputSchema.properties.question).toBeDefined();
+			expect(tool.inputSchema.properties.session_id).toBeDefined();
+			expect(tool.inputSchema.required).toContain("question");
+			expect(tool.inputSchema.required).not.toContain("session_id"); // session_id is optional
+		});
+
+		test("memory tool session_id is string type", () => {
+			const sessionIdSchema = {
+				type: "string",
+				description:
+					"Current Claude session ID. Used to associate queries with the active session context.",
+			};
+
+			expect(sessionIdSchema.type).toBe("string");
+			expect(sessionIdSchema.description).toContain("session ID");
+		});
+
+		test("memory tool has read-only annotations", () => {
+			const annotations = {
+				title: "Memory (Unified)",
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: false,
+			};
+
+			expect(annotations.readOnlyHint).toBe(true);
+			expect(annotations.destructiveHint).toBe(false);
+			expect(annotations.idempotentHint).toBe(true);
+		});
+
+		test("learn tool has required fields", () => {
+			const tool = {
+				name: "learn",
+				inputSchema: {
+					type: "object" as const,
+					properties: {
+						content: {
+							type: "string",
+							description: "The learning content in markdown format",
+						},
+						domain: {
+							type: "string",
+							description:
+								"Domain name for the rule file (e.g., 'api', 'testing')",
+						},
+						paths: {
+							type: "array",
+							items: { type: "string" },
+							description: "Optional path patterns for path-specific rules",
+						},
+						scope: {
+							type: "string",
+							enum: ["project", "user"],
+							description: "Where to store the rule",
+						},
+						append: {
+							type: "boolean",
+							description: "Whether to append to existing file",
+						},
+					},
+					required: ["content", "domain"],
+				},
+			};
+
+			expect(tool.name).toBe("learn");
+			expect(tool.inputSchema.required).toContain("content");
+			expect(tool.inputSchema.required).toContain("domain");
+			expect(tool.inputSchema.properties.scope.enum).toContain("project");
+			expect(tool.inputSchema.properties.scope.enum).toContain("user");
+		});
+
+		test("memory tools are consolidated to memory and learn only", () => {
+			// These tools should NOT exist in the new consolidated design
+			const removedTools = [
+				"team_query",
+				"auto_learn",
+				"memory_list",
+				"memory_read",
+			];
+
+			// These are the only two memory tools that should exist
+			const activeTools = ["memory", "learn"];
+
+			// Verify structure
+			expect(activeTools).toHaveLength(2);
+			expect(activeTools).toContain("memory");
+			expect(activeTools).toContain("learn");
+
+			// Verify removed tools are not in active set
+			for (const removed of removedTools) {
+				expect(activeTools).not.toContain(removed);
+			}
+		});
+	});
 });

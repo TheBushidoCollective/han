@@ -1,9 +1,9 @@
 ---
 title: "Memory System"
-description: "Han's five-layer memory system provides full historical context - from instant rules to complete conversation history."
+description: "Han's five-layer memory system provides full historical context - from instant rules to complete conversation history, with automatic pattern promotion."
 ---
 
-Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with five layers of context.
+Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with five layers of context and automatic pattern promotion.
 
 ## Five Layers of Memory
 
@@ -13,9 +13,9 @@ Every codebase has quirks that aren't in the README. Claude figures these out, t
 | **2. Summaries** | Session end | Fast | Work done, decisions |
 | **3. Observations** | Tool usage | Fast | Files touched, commands |
 | **4. Transcripts** | Conversations | Moderate | Full discussion history |
-| **5. Team Memory** | Git history | Varies | Commits, PRs, expertise |
+| **5. Team Memory** | Git + integrations | Varies | Commits, PRs, expertise |
 
-All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) for fast retrieval.
+All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) and semantic search for fast retrieval.
 
 ---
 
@@ -23,7 +23,7 @@ All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed usin
 
 Han lets Claude **teach itself** about your project by writing to `.claude/rules/`.
 
-## How It Works
+### How It Works
 
 Han provides MCP tools that let Claude write to `.claude/rules/` - the modular rules directory that Claude Code loads automatically. When Claude discovers something worth remembering, it captures it.
 
@@ -37,7 +37,7 @@ learn({
 
 This creates `.claude/rules/commands.md`. Next session, Claude reads it automatically. The learning persists.
 
-## Why Autonomous?
+### Why Autonomous?
 
 Confirmation dialogs create friction. Claude's learnings are low-stakes:
 
@@ -48,15 +48,14 @@ Confirmation dialogs create friction. Claude's learnings are low-stakes:
 
 So Han lets Claude learn freely and informs you what was captured.
 
-## MCP Tools
-
-Three tools power the memory system:
+### MCP Tools
 
 | Tool | Purpose |
 |------|---------|
 | `learn` | Write a learning to `.claude/rules/<domain>.md` |
 | `memory_list` | List existing rule domains |
 | `memory_read` | Read a domain's content (avoid duplicates) |
+| `auto_learn` | Check status and trigger pattern promotion |
 
 ### The `learn` Tool
 
@@ -139,140 +138,107 @@ learn({
 
 Writes to `~/.claude/rules/preferences.md` instead of the project directory.
 
-## What Claude Learns
+---
 
-Han's memory hook guides Claude to recognize learning opportunities:
+## Auto-Promotion Engine
 
-| Type | Example |
-|------|---------|
-| **Commands** | Build scripts, test runners, deployment commands |
-| **Conventions** | Naming patterns, file organization, code style |
-| **Gotchas** | Common mistakes, edge cases, workarounds |
-| **Architecture** | Module boundaries, data flow, key abstractions |
-| **Preferences** | Communication style, formatting choices |
+Beyond manual learning, Han automatically promotes patterns to rules when they're observed repeatedly across your work.
 
-When Claude thinks "I see this project uses..." or "The pattern here is..." - that's the trigger to capture it.
+### How It Works
 
-## The Self-Improvement Loop
+1. As you work, Han tracks patterns from observations, research, and team memory
+2. Each occurrence increases a pattern's confidence score (starts at 0.5, gains 0.15 per occurrence)
+3. When a pattern reaches **3+ occurrences** and **≥0.8 confidence**, it's promoted to `.claude/rules/`
 
-Each session, Claude gets smarter about your project:
+### Promotion Criteria
 
-1. Claude works on your code
-2. Claude discovers patterns, commands, conventions
-3. Claude captures them to `.claude/rules/`
-4. Next session, Claude already knows them
-5. Repeat
+| Criteria | Threshold |
+|----------|-----------|
+| Minimum occurrences | 3 |
+| Confidence score | ≥ 0.8 |
+| Multiple authors (bonus) | +0.1 confidence |
 
-Not through external training, but through self-directed learning within your codebase.
+### Domain Detection
 
-## Team Benefits
+Patterns are automatically classified into domains based on keywords:
 
-Since `.claude/rules/` is git-tracked:
+| Domain | Keywords |
+|--------|----------|
+| testing | test, spec, mock, fixture, assert |
+| api | endpoint, route, handler, request |
+| auth | auth, login, session, token, jwt |
+| database | db, query, migration, schema |
+| error | error, exception, catch, throw |
+| commands | command, cli, script, npm, bun |
 
-- **Immediate onboarding**: New team members benefit instantly
-- **Shared knowledge**: Claude's learnings become team knowledge
-- **Institutional memory**: Survives personnel changes
-- **Living documentation**: Captures the informal "how we do things"
+### The `auto_learn` Tool
 
-## Memory vs CLAUDE.md
+Check and manage auto-promotion:
 
-| File | Purpose | Who Writes |
-|------|---------|------------|
-| `CLAUDE.md` | Curated project instructions | You (the developer) |
-| `.claude/rules/` | Discovered project knowledge | Claude (autonomously) |
+```javascript
+// View tracked patterns and statistics
+auto_learn({ action: "status" })
 
-Han never touches your CLAUDE.md. That's for your team's hand-written documentation. The rules directory captures knowledge that wouldn't make it into formal docs.
+// See patterns ready for promotion
+auto_learn({ action: "candidates" })
 
-## Directory Structure
-
-```text
-.claude/
-├── rules/                    # Claude's learned knowledge
-│   ├── commands.md           # Build/test commands
-│   ├── conventions.md        # Code style, naming
-│   ├── api/
-│   │   ├── validation.md     # API-specific rules
-│   │   └── auth.md
-│   └── testing/
-│       └── e2e.md
-├── settings.json             # Project settings
-└── settings.local.json       # Local overrides (gitignored)
+// Trigger promotion cycle manually
+auto_learn({ action: "promote" })
 ```
 
-User-level rules live in `~/.claude/rules/`.
+### Why This Matters
 
-## Reviewing and Editing
-
-You maintain full control:
-
-```bash
-# See what Claude has learned
-ls .claude/rules/
-
-# Read a specific domain
-cat .claude/rules/commands.md
-
-# Edit or delete any rule
-vim .claude/rules/conventions.md
-rm .claude/rules/outdated-info.md
-```
-
-Wrong learnings? Just delete the file. Claude will relearn correctly.
-
-## Triggering Learning
-
-Han's UserPromptSubmit hook includes guidance for when to learn:
-
-- After discovering undocumented commands
-- When figuring out project conventions
-- After encountering (and solving) gotchas
-- When noticing patterns worth preserving
-
-Claude autonomously evaluates each session for learning opportunities.
-
-## Configuration
-
-Memory tools are part of the core plugin:
-
-```bash
-han plugin install core
-```
-
-No additional configuration needed. Claude will start learning automatically.
-
-## What Memory Isn't
-
-**Not a database**: Memory is flat markdown files, human-readable and editable.
-
-**Not permanent**: You can delete any learning. Nothing is locked in.
-
-**Not shared externally**: Everything stays in your project or user directory.
+- **Emergent documentation**: Patterns document themselves through practice
+- **Conservative**: High thresholds prevent noise
+- **Transparent**: All promotions visible in git history
+- **Low-stakes**: Git-tracked, reviewable, revertible
 
 ---
 
 ## Layer 2-3: Session Memory
 
-Han automatically captures what happens during sessions:
+Han automatically captures what happens during sessions.
 
-**Summaries** (Layer 2): AI-generated overviews at session end
+### Summaries (Layer 2)
+
+AI-generated overviews created at session end:
 
 - Work completed and in-progress
 - Decisions made with rationale
 - Key files touched
+- Notes for next session
 
-**Observations** (Layer 3): Raw tool usage logs
+### Observations (Layer 3)
+
+Raw tool usage logs captured in real-time:
 
 - Every file read/edited
 - Commands executed
 - Timestamps for everything
+- Full context trail
 
 Query with: `memory({ question: "what was I working on?" })`
+
+### Session End
+
+When a session ends, Han:
+
+1. Reads all observations from the session
+2. Generates an AI summary
+3. Indexes both for future search
+
+CLI access:
+
+```bash
+# End session and create summary
+han memory session-end --session-id <id>
+```
 
 ---
 
 ## Layer 4: Transcript Search
 
-**New in this release.** Han can search your full Claude Code conversation history stored at `~/.claude/projects/`.
+Han searches your full Claude Code conversation history stored at `~/.claude/projects/`.
 
 This recovers context that was previously lost:
 
@@ -282,7 +248,7 @@ This recovers context that was previously lost:
 
 ### Cross-Worktree Support
 
-Working in multiple worktrees? Han finds context from peer worktrees sharing the same git remote.
+Working in multiple worktrees? Han finds context from peer worktrees sharing the same git remote. Context follows the repository, not just the directory.
 
 Query with: `memory({ question: "what did we discuss about X?" })`
 
@@ -290,11 +256,55 @@ Query with: `memory({ question: "what did we discuss about X?" })`
 
 ## Layer 5: Team Memory
 
-Research institutional knowledge from git history:
+Team memory goes beyond personal sessions to research institutional knowledge from multiple sources.
 
-- Who has expertise in what areas
-- Why decisions were made (PR discussions)
-- Historical context from commits
+### Knowledge Sources
+
+| Source | What It Provides |
+|--------|-----------------|
+| **Git history** | Commits, diffs, who changed what |
+| **GitHub** | PRs, reviews, issue discussions |
+| **Linear** | Issue context, project decisions |
+| **Jira** | Ticket history, sprint context |
+
+### Research Engine
+
+Team queries use a "research until confident" approach:
+
+1. Generate initial search query from your question
+2. Execute semantic search on indexed content
+3. Assess confidence based on evidence found
+4. If not confident, refine query and iterate
+5. Return answer with citations
+
+### Expertise Mapping
+
+Find who knows what:
+
+```javascript
+memory({ question: "who should I talk to about payments?" })
+```
+
+Returns evidence-based answers:
+
+- Commit frequency by author in relevant areas
+- PR authorship and reviews
+- Issue resolution history
+- Confidence scores
+
+### Provider Discovery
+
+Team memory integrates with external sources through hashi plugins:
+
+```bash
+# Add GitHub integration
+han plugin install hashi-github
+
+# Add Linear integration
+han plugin install hashi-linear
+```
+
+Each provider contributes to the team knowledge base. The research engine searches across all configured providers.
 
 Query with: `memory({ question: "who knows about payments?" })`
 
@@ -302,20 +312,104 @@ Query with: `memory({ question: "who knows about payments?" })`
 
 ## Indexing
 
-All layers (except rules) are indexed for fast search:
+All layers (except rules) are indexed for fast search using BM25 full-text search and semantic embeddings.
+
+### CLI Commands
 
 ```bash
-# Index all content
+# Index all content for current project
 han index run
 
 # Index specific layer
 han index run --layer transcripts
+han index run --layer observations
+han index run --layer summaries
+han index run --layer team
 
-# Search directly
+# Index specific session
+han index run --session <session-id>
+
+# Search indexed content
 han index search "authentication"
+han index search "error handling" --layer team --limit 20
+
+# Check index status
+han index status
 ```
 
-Indexing happens automatically at session end. Manual indexing is optional.
+### Automatic Indexing
+
+Indexing happens automatically at session end. Manual indexing is optional but useful for:
+
+- Initial setup after installing Han
+- Troubleshooting search issues
+- Forcing a reindex after data changes
+
+---
+
+## Unified Query Interface
+
+The `memory` MCP tool routes questions to appropriate layers automatically:
+
+| Question Type | Routes To |
+|--------------|-----------|
+| "What was I working on?" | Personal sessions (Layer 2-3) |
+| "Continue where I left off" | Recent session context |
+| "Who knows about X?" | Team memory research (Layer 5) |
+| "Why did we choose Y?" | Transcripts + team (Layer 4-5) |
+| "How do we handle Z?" | Rules + conventions (Layer 1) |
+
+You don't think about layers - you just ask questions.
+
+---
+
+## Storage Layout
+
+```text
+~/.claude/
+  han/
+    memory/
+      personal/
+        sessions/           # Layer 3: Raw observations (JSONL)
+        summaries/          # Layer 2: AI summaries (YAML)
+      index/
+        fts.db              # Full-text search index
+      projects/
+        github.com_org_repo/
+          meta.yaml         # Team memory metadata
+
+  projects/
+    {project-slug}/         # Layer 4: Claude transcripts (JSONL)
+
+.claude/                    # In project repo (git-tracked)
+  rules/                    # Layer 1: Permanent rules
+```
+
+---
+
+## Configuration
+
+Memory is enabled by default with the core plugin:
+
+```bash
+han plugin install core
+```
+
+### Disable Memory
+
+```yaml
+# han.yml
+memory:
+  enabled: false
+```
+
+### What Memory Isn't
+
+- **Not a database**: Memory is flat files, human-readable and editable
+- **Not permanent**: You can delete any learning
+- **Not shared externally**: Everything stays local
+
+---
 
 ## Next Steps
 

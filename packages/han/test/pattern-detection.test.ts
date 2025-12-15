@@ -8,14 +8,17 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
-describe("pattern-detection", () => {
+describe.serial("pattern-detection", () => {
 	const testDir = `/tmp/test-pattern-detection-${Date.now()}`;
 	let originalEnv: string | undefined;
+
+	const getMetricsDir = () =>
+		join(testDir, "config", "han", "metrics", "jsonldb");
 
 	beforeEach(() => {
 		originalEnv = process.env.CLAUDE_CONFIG_DIR;
 		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
-		mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
+		mkdirSync(getMetricsDir(), {
 			recursive: true,
 		});
 	});
@@ -71,7 +74,7 @@ describe("pattern-detection", () => {
 		});
 
 		test("detects consecutive failures pattern", async () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Create 3 consecutive failures
 			for (let i = 0; i < 3; i++) {
@@ -305,7 +308,7 @@ describe("pattern-detection", () => {
 
 	describe("calibration drift detection with actual data", () => {
 		test("detects calibration drift when score is low", async () => {
-			const storage = new JsonlMetricsStorage();
+			const storage = new JsonlMetricsStorage(getMetricsDir());
 
 			// Create 5 tasks with poor calibration (always overconfident)
 			for (let i = 0; i < 5; i++) {
