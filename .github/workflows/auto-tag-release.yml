@@ -206,7 +206,7 @@ jobs:
         working-directory: ./packages/han
 
       - name: Run tests
-        run: bun test
+        run: bun test --concurrency 1
         working-directory: ./packages/han
 
       - name: Check if tag already exists
