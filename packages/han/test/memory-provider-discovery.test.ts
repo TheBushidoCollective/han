@@ -8,34 +8,54 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Store original environment
-const originalEnv = { ...process.env };
+// Store original environment - MUST save CLAUDE_CONFIG_DIR specifically
+const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
 
 let testDir: string;
 let configDir: string;
 
-// Mock the claude-settings module
-let mockPluginsMap: Map<string, string>;
-let mockMarketplacesMap: Map<
+// Track plugins/marketplaces for settings.json generation
+let installedPlugins: Map<string, string>;
+let installedMarketplaces: Map<
 	string,
 	{ source?: { source: string; path?: string } }
 >;
 
-mock.module("../lib/claude-settings.ts", () => ({
-	getClaudeConfigDir: () => configDir,
-	getMergedPluginsAndMarketplaces: () => ({
-		plugins: mockPluginsMap,
-		marketplaces: mockMarketplacesMap,
-	}),
-}));
-
-// Import after mocking
+// Import provider-discovery (no mocking needed - uses env vars and real files)
 import {
 	discoverProviders,
 	loadAllProviders,
 	loadProviderScript,
 	type MCPClient,
 } from "../lib/memory/provider-discovery.ts";
+
+function writeSettingsJson(): void {
+	// Convert plugins map to enabledPlugins format
+	// Key format MUST be "pluginName@marketplace" per claude-settings.ts line 127
+	const enabledPlugins: Record<string, boolean> = {};
+	for (const [pluginName, marketplace] of installedPlugins) {
+		enabledPlugins[`${pluginName}@${marketplace}`] = true;
+	}
+
+	// Convert marketplaces map to extraKnownMarketplaces format
+	const extraKnownMarketplaces: Record<
+		string,
+		{ source?: { source: string; path?: string } }
+	> = {};
+	for (const [name, config] of installedMarketplaces) {
+		extraKnownMarketplaces[name] = config;
+	}
+
+	const settings = {
+		enabledPlugins,
+		extraKnownMarketplaces,
+	};
+
+	writeFileSync(
+		join(configDir, "settings.json"),
+		JSON.stringify(settings, null, 2),
+	);
+}
 
 function setup(): void {
 	const random = Math.random().toString(36).substring(2, 9);
@@ -46,13 +66,24 @@ function setup(): void {
 	configDir = join(testDir, "claude-config");
 	mkdirSync(configDir, { recursive: true });
 
-	// Reset mocks
-	mockPluginsMap = new Map();
-	mockMarketplacesMap = new Map();
+	// Set environment variable for config dir
+	process.env.CLAUDE_CONFIG_DIR = configDir;
+
+	// Reset tracking maps
+	installedPlugins = new Map();
+	installedMarketplaces = new Map();
+
+	// Write initial empty settings
+	writeSettingsJson();
 }
 
 function teardown(): void {
-	process.env = { ...originalEnv };
+	// Restore CLAUDE_CONFIG_DIR to original value
+	if (originalClaudeConfigDir !== undefined) {
+		process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
+	} else {
+		delete process.env.CLAUDE_CONFIG_DIR;
+	}
 
 	if (testDir && existsSync(testDir)) {
 		try {
@@ -116,14 +147,17 @@ export function createProvider(mcpClient, availableTools) {
 		writeFileSync(join(pluginRoot, "memory-provider.ts"), scriptContent);
 	}
 
-	// Register plugin in mock
-	mockPluginsMap.set(pluginName, marketplaceName);
-	mockMarketplacesMap.set(marketplaceName, {});
+	// Register plugin in tracking maps and update settings.json
+	installedPlugins.set(pluginName, marketplaceName);
+	if (!installedMarketplaces.has(marketplaceName)) {
+		installedMarketplaces.set(marketplaceName, {});
+	}
+	writeSettingsJson();
 
 	return pluginRoot;
 }
 
-describe("Memory Provider Discovery", () => {
+describe.serial("Memory Provider Discovery", () => {
 	beforeEach(() => {
 		setup();
 	});
@@ -139,14 +173,14 @@ describe("Memory Provider Discovery", () => {
 		});
 
 		test("returns empty array when config dir is null", async () => {
-			// Set config dir to undefined to test null handling
-			const originalConfigDir = configDir;
-			configDir = undefined as unknown as string;
+			// Temporarily unset config dir
+			delete process.env.CLAUDE_CONFIG_DIR;
 
 			const providers = await discoverProviders();
 			expect(providers).toEqual([]);
 
-			configDir = originalConfigDir;
+			// Restore for cleanup
+			process.env.CLAUDE_CONFIG_DIR = configDir;
 		});
 
 		test("discovers plugin with memory config", async () => {
@@ -197,8 +231,9 @@ describe("Memory Provider Discovery", () => {
 `,
 			);
 
-			mockPluginsMap.set("jutsu-biome", "han");
-			mockMarketplacesMap.set("han", {});
+			installedPlugins.set("jutsu-biome", "han");
+			installedMarketplaces.set("han", {});
+			writeSettingsJson();
 
 			const providers = await discoverProviders();
 
@@ -222,8 +257,9 @@ memory:
 				"export function createProvider() {}",
 			);
 
-			mockPluginsMap.set("hashi-empty", "han");
-			mockMarketplacesMap.set("han", {});
+			installedPlugins.set("hashi-empty", "han");
+			installedMarketplaces.set("han", {});
+			writeSettingsJson();
 
 			const providers = await discoverProviders();
 
@@ -274,10 +310,11 @@ memory:
 				"export function createProvider() {}",
 			);
 
-			mockPluginsMap.set("hashi-custom", "custom-mkt");
-			mockMarketplacesMap.set("custom-mkt", {
+			installedPlugins.set("hashi-custom", "custom-mkt");
+			installedMarketplaces.set("custom-mkt", {
 				source: { source: "directory", path: customMarketplaceDir },
 			});
+			writeSettingsJson();
 
 			const providers = await discoverProviders();
 
@@ -480,8 +517,9 @@ memory:
 				"export function createProvider() { return { name: 'custom', isAvailable: async () => true, extract: async () => [] }; }",
 			);
 
-			mockPluginsMap.set("custom-plugin", "han");
-			mockMarketplacesMap.set("han", {});
+			installedPlugins.set("custom-plugin", "han");
+			installedMarketplaces.set("han", {});
+			writeSettingsJson();
 
 			const providers = await discoverProviders();
 
