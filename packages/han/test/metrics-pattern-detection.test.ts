@@ -69,7 +69,7 @@ function detectPatterns(minSeverity?: "low" | "medium" | "high"): Array<{
 	}
 }
 
-describe("Metrics Pattern Detection", () => {
+describe.serial("Metrics Pattern Detection", () => {
 	beforeEach(() => {
 		setup();
 	});

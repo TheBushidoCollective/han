@@ -52,7 +52,7 @@ function runCommand(command: string, input?: string): string {
 	return output.trim();
 }
 
-describe("Metrics CLI Commands", () => {
+describe.serial("Metrics CLI Commands", () => {
 	beforeEach(() => {
 		setup();
 	});

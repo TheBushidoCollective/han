@@ -8,7 +8,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
-describe("context-generation integration", () => {
+describe.serial("context-generation integration", () => {
 	const testDir = `/tmp/test-context-gen-integration-${Date.now()}`;
 	let originalEnv: string | undefined;
 
