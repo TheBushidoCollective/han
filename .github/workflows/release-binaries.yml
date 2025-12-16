@@ -37,7 +37,7 @@ jobs:
             native_file: han-native.darwin-x64.node
             binary_name: han-darwin-x64
             cargo_output: libhan_native.dylib
-            os: macos-13
+            os: macos-15-large
           - target: aarch64-apple-darwin
             bun_target: bun-darwin-arm64
             native_file: han-native.darwin-arm64.node
