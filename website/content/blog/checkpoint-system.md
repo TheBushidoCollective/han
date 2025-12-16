@@ -47,7 +47,7 @@ Session Stop (t1):
 └─ Pre-existing issues in utils/format.ts: not your problem today
 ```
 
-## Incremental Improvement, Not Paralysis
+## Incremental Improvement
 
 The old approach had a certain logic: surface all problems so you know what exists. But in practice, this created paralysis:
 
@@ -101,28 +101,6 @@ hooks:
 
 Most teams should keep checkpoints enabled. Disable only when deliberately addressing accumulated debt.
 
-## Real Impact
-
-Consider a monorepo with 2,500 files and 300 pre-existing lint errors:
-
-**Without checkpoints (old behavior):**
-
-- Developer changes 1 file
-- Hook runs on entire affected scope
-- Gets 300+ errors
-- Disables hooks in frustration
-- Validation abandoned
-
-**With checkpoints (new behavior):**
-
-- Developer changes 1 file
-- Hook runs on 1 file
-- Gets feedback on their actual work
-- Fixes issues in code they were already touching
-- Hooks stay enabled, trust maintained
-
-The math is simple: sustainable small improvements beat unsustainable demands for perfection.
-
 ## Subagent Isolation
 
 In complex workflows with spawned subagents, each gets its own checkpoint:
@@ -139,24 +117,6 @@ Main Session (session_abc):
 ```
 
 When Subagent 1 finishes, hooks only validate its changes. Subagent 2's work is isolated. No cascading failures.
-
-## What This Doesn't Do
-
-Let's be clear:
-
-**Not hiding problems**: Pre-existing issues still exist. They surface when you touch those files.
-
-**Not replacing CI**: Your CI should validate the full codebase. Checkpoints optimize the developer feedback loop, not the merge gate.
-
-**Not retroactive**: Only applies to sessions after upgrading. Existing sessions fall back to normal behavior.
-
-## The Philosophy Shift
-
-Early Han assumed you wanted to know everything immediately. That assumption was wrong for most adopters.
-
-The new approach respects your attention. It assumes you're here to do work, not audit the entire codebase. It gives you feedback on what you changed, trusting that incremental improvement compounds over time.
-
-This is how the Boy Scout Rule works. You don't make the forest pristine in one hike. You pick up trash on the trail you're walking. Visit enough trails, the forest improves.
 
 ## Getting Started
 
