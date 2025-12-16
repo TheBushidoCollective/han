@@ -46,7 +46,7 @@ test.describe("Plugin Detail Page", () => {
 	test("should display installation section", async ({ page }) => {
 		await page.goto("/plugins/core/core");
 		await expect(
-			page.getByRole("heading", { name: "Installation" }),
+			page.getByRole("heading", { name: "Installation" }).first(),
 		).toBeVisible();
 	});
 

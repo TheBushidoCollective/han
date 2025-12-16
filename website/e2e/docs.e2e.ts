@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Documentation Page", () => {
-	test("should redirect docs to plugins page", async ({ page }) => {
+	test("should load docs page", async ({ page }) => {
 		await page.goto("/docs");
-		await expect(page).toHaveURL(/\/plugins/);
+		await expect(page).toHaveURL(/\/docs/);
 	});
 
 	test("should have navigation to plugin categories", async ({ page }) => {
