@@ -324,7 +324,7 @@ MIT License - see LICENSE file for details.
 
 - **Documentation**: [Han Marketplace](https://github.com/thebushidocollective/han)
 - **Issues**: [GitHub Issues](https://github.com/thebushidocollective/han/issues)
-- **Discord**: [The The Bushido Collective](https://discord.gg/bushido)
+- **Discord**: [The Bushido Collective](https://discord.gg/bushido)
 
 ## Related Plugins
 
