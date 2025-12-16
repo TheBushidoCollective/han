@@ -26,7 +26,7 @@ describe("CLI integration tests", () => {
 	});
 
 	describe("han --version", () => {
-		test("outputs version number", () => {
+		test("outputs version number and binary info", () => {
 			const result = spawnSync("bun", ["run", "lib/main.ts", "--version"], {
 				encoding: "utf-8",
 				timeout: 10000,
@@ -34,7 +34,9 @@ describe("CLI integration tests", () => {
 			});
 
 			expect(result.status).toBe(0);
-			expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
+			// Version output now includes version and binary location
+			expect(result.stdout).toMatch(/^han \d+\.\d+\.\d+/);
+			expect(result.stdout).toContain("Binary:");
 		});
 	});
 

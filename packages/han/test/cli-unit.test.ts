@@ -90,7 +90,8 @@ describe("CLI Unit Tests", () => {
 				expect(err).toBeInstanceOf(CommanderError);
 			}
 
-			expect(stdout).toMatch(/^\d+\.\d+\.\d+/);
+			// Version output now starts with "han X.X.X" and includes binary info
+			expect(stdout).toMatch(/^han \d+\.\d+\.\d+/);
 		});
 
 		test("exitOverride prevents process.exit", () => {

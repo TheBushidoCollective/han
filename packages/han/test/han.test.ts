@@ -73,7 +73,8 @@ interface ExecError extends Error {
 describe("Basic CLI", () => {
 	test("shows version", () => {
 		const output = execSync(`${binCommand} --version`, { encoding: "utf8" });
-		expect(/^\d+\.\d+\.\d+/.test(output.trim())).toBe(true);
+		// Version output now starts with "han X.X.X" and includes binary info
+		expect(/^han \d+\.\d+\.\d+/.test(output.trim())).toBe(true);
 	});
 
 	test("shows help when no command provided", () => {

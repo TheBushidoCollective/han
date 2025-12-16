@@ -8,6 +8,7 @@
  *
  * Metrics feature uses bun:sqlite (built-in) for binary compatibility.
  */
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +20,7 @@ import {
 	handleGetCompletions,
 	registerCompletionCommand,
 } from "./commands/completion/index.ts";
+import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerIndexCommand } from "./commands/index/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
@@ -27,8 +29,103 @@ import { registerMetricsCommand } from "./commands/metrics/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
 import { explainHan } from "./explain.ts";
 import { analyzeGaps } from "./gaps.ts";
+import { getMergedHanConfig } from "./han-settings.ts";
 import { generateSummary } from "./summary.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
+
+/**
+ * Get extended version information including binary location and config status.
+ */
+export function getVersionInfo(): string {
+	const lines = [`han ${version}`];
+
+	// Show binary location
+	const binaryPath = process.argv[1] || "unknown";
+	lines.push(`  Binary: ${binaryPath}`);
+
+	// Check hanBinary configuration
+	try {
+		const config = getMergedHanConfig();
+		if (config.hanBinary) {
+			const isActive = process.env.HAN_REEXEC === "1";
+			lines.push(
+				`  hanBinary: ${config.hanBinary}${isActive ? " (active)" : ""}`,
+			);
+		}
+	} catch {
+		// Config loading failed, skip hanBinary info
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Check if we should re-exec to a different han binary.
+ * This allows development setups to redirect all han commands to a local version.
+ *
+ * @returns Object with reexec flag and binary path if re-exec is needed
+ */
+export function shouldReexec(): { reexec: boolean; binary?: string } {
+	// Skip if we're already a re-exec (prevent infinite loops)
+	if (process.env.HAN_REEXEC === "1") {
+		return { reexec: false };
+	}
+
+	// Skip for --version and --help (show current binary info)
+	const args = process.argv.slice(2);
+	if (
+		args.includes("--version") ||
+		args.includes("-V") ||
+		args.includes("--help") ||
+		args.includes("-h") ||
+		args.includes("doctor")
+	) {
+		return { reexec: false };
+	}
+
+	let config: ReturnType<typeof getMergedHanConfig>;
+	try {
+		config = getMergedHanConfig();
+	} catch {
+		// Config loading failed, don't re-exec
+		return { reexec: false };
+	}
+
+	if (!config.hanBinary) {
+		return { reexec: false };
+	}
+
+	// Check if hanBinary points to a different binary
+	const currentBinary = process.argv[1]; // Current script path
+	if (config.hanBinary === "han" || config.hanBinary === currentBinary) {
+		return { reexec: false };
+	}
+
+	// Check if the configured binary matches our current location
+	// e.g., "bun run /path/to/main.ts" should match when we're running from that path
+	if (currentBinary && config.hanBinary.includes(currentBinary)) {
+		return { reexec: false };
+	}
+
+	return { reexec: true, binary: config.hanBinary };
+}
+
+/**
+ * Re-exec to a different han binary if configured.
+ * This function never returns if re-exec happens.
+ */
+export function maybeReexec(): void {
+	const { reexec, binary } = shouldReexec();
+	if (reexec && binary) {
+		const args = process.argv.slice(2);
+		const result = spawnSync(binary, args, {
+			stdio: "inherit",
+			env: { ...process.env, HAN_REEXEC: "1" },
+			shell: true,
+		});
+		process.exit(result.status ?? 0);
+	}
+}
 
 /**
  * Options for creating the CLI program.
@@ -100,7 +197,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	program
 		.name("han")
 		.description("Utilities for The Bushido Collective's Han Code Marketplace")
-		.version(version);
+		.version(getVersionInfo(), "-V, --version", "output the version number");
 
 	// Register command groups
 	registerPluginCommands(program);
@@ -112,6 +209,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerIndexCommand(program);
 	registerAliasCommands(program);
 	registerCompletionCommand(program);
+	registerDoctorCommand(program);
 
 	// Register top-level explain command
 	program
@@ -202,6 +300,10 @@ const isMainModule = (() => {
 })();
 
 if (isMainModule) {
+	// Check if we should re-exec to a configured hanBinary
+	// This must happen BEFORE any other processing
+	maybeReexec();
+
 	// Handle --get-completions before Commander.js parsing
 	// This is used by shell completion scripts for dynamic completions
 	const getCompletionsIndex = process.argv.indexOf("--get-completions");
