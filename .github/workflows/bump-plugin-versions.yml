@@ -29,6 +29,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pull latest changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+
       - name: Determine version bump type
         id: bump-type
         env:
@@ -173,14 +179,8 @@ jobs:
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
           # Add all plugin.json files, changelogs, and marketplace.json
           git add '**/plugin.json' '**/CHANGELOG.md' '.claude-plugin/marketplace.json'
-
-          # Pull latest changes before committing
-          git pull --rebase --autostash origin main
 
           # Create commit message
           COMMIT_MSG="chore(plugins): bump plugin versions [skip ci]
@@ -189,4 +189,14 @@ jobs:
           ${{ steps.bump-versions.outputs.bumped_plugins }}"
 
           git commit -m "$COMMIT_MSG"
+
+          # Pull latest and rebase, handling conflicts gracefully
+          if ! git pull --rebase origin main; then
+            echo "Rebase conflict detected - another workflow likely pushed first"
+            echo "Aborting rebase and exiting cleanly (next push will retry)"
+            git rebase --abort 2>/dev/null || true
+            exit 0
+          fi
+
+          # Push the rebased commit
           git push origin main
