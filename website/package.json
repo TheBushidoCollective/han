@@ -1,6 +1,6 @@
 {
 	"name": "han-website",
-	"version": "1.23.3",
+	"version": "1.23.4",
 	"private": true,
 	"scripts": {
 		"dev": "bun run --bun next dev",
