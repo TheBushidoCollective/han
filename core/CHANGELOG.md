@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2025-12-16
+
+### Added
+
+- add legacy-code-safety skill and hook ([05e0d6ad](../../commit/05e0d6ad))
+
+### Other
+
+- fix duplicate word in Discord link ([b7f9790c](../../commit/b7f9790c))
+- comprehensive memory system documentation and test improvements ([c57e03be](../../commit/c57e03be))
+
 ## [1.6.0] - 2025-12-14
 
 ### Added
