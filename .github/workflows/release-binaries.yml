@@ -104,8 +104,8 @@ jobs:
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module (zigbuild)
-        if: ${{ !contains(matrix.target, 'windows') }}
+      - name: Build native module (zigbuild for Linux)
+        if: contains(matrix.target, 'linux')
         working-directory: ./packages/han-native
         shell: bash
         run: |
@@ -113,6 +113,19 @@ jobs:
           cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
           echo "Built native module:"
           ls -la *.node
+
+      - name: Build native module (zigbuild for Darwin via Docker)
+        if: contains(matrix.target, 'apple')
+        shell: bash
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/io \
+            -w /io/packages/han-native \
+            ghcr.io/rust-cross/cargo-zigbuild:latest \
+            cargo zigbuild --release --target ${{ matrix.target }}
+          cp packages/han-native/target/${{ matrix.target }}/release/${{ matrix.cargo_output }} packages/han-native/${{ matrix.native_file }}
+          echo "Built native module:"
+          ls -la packages/han-native/*.node
 
       - name: Build native module (xwin)
         if: contains(matrix.target, 'windows')
