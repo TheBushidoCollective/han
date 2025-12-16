@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-12-16
+
+### Added
+
+- configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
+
+### Fixed
+
+- cross-compile Windows builds from Linux too ([7d72ab5d](../../commit/7d72ab5d))
+- also set HOME env var to prevent fallback to user's real plugins ([4ef9ce2a](../../commit/4ef9ce2a))
+- remove mock.module() to prevent test pollution ([8c276bf2](../../commit/8c276bf2))
+- use absolute path for han binary fallback in dispatch-e2e ([95a8d693](../../commit/95a8d693))
+- TypeScript error in completions.ts and correct bun test flag ([c3000442](../../commit/c3000442))
+- add SubagentStart to valid hook types and fix bun test flag ([992436fc](../../commit/992436fc))
+- add describe.serial to more env-modifying tests ([56d49205](../../commit/56d49205))
+- restore describe.serial and bump Bun to 1.3.4 ([8fd9a0b2](../../commit/8fd9a0b2))
+- centralize native module loading with retry logic ([c255908d](../../commit/c255908d))
+- replace describe.serial with describe for CI compatibility ([8abb86f6](../../commit/8abb86f6))
+- remove vendored OpenSSL, use platform native TLS ([51a81c9b](../../commit/51a81c9b))
+- trigger release on han-native changes ([3df8db77](../../commit/3df8db77))
+- use real createResearchEngine in mcp-team-memory tests ([78a63ad7](../../commit/78a63ad7))
+- filter follow-up queries in mock by pattern ([208b99b4](../../commit/208b99b4))
+- return results only on first search call ([103ac36d](../../commit/103ac36d))
+- use direct mock search function for deterministic tests ([d27ac866](../../commit/d27ac866))
+- make research tests deterministic with scoreOverrides Map ([ed8676a5](../../commit/ed8676a5))
+- use hasOwnProperty for _testScore check ([13b59a99](../../commit/13b59a99))
+- make research tests deterministic with explicit scores ([1af0d686](../../commit/1af0d686))
+- graceful degradation when native module unavailable ([fb03e69c](../../commit/fb03e69c))
+
+### Other
+
+- comprehensive memory system documentation and test improvements ([c57e03be](../../commit/c57e03be))
+- improve memory indexer module documentation ([fd19b28a](../../commit/fd19b28a))
+- add memory and metrics commands to README ([3364b80b](../../commit/3364b80b))
+
 ## [2.1.0] - 2025-12-16
 
 ### Added
