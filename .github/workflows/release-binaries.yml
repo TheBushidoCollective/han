@@ -122,7 +122,7 @@ jobs:
             -v ${{ github.workspace }}:/io \
             -w /io/packages/han-native \
             ghcr.io/rust-cross/cargo-zigbuild:latest \
-            cargo zigbuild --release --target ${{ matrix.target }}
+            bash -c "rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }}"
           cp packages/han-native/target/${{ matrix.target }}/release/${{ matrix.cargo_output }} packages/han-native/${{ matrix.native_file }}
           echo "Built native module:"
           ls -la packages/han-native/*.node
