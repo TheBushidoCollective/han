@@ -50,14 +50,14 @@ jobs:
             cargo_output: libhan_native.dylib
             os: ubuntu-latest
             use_zigbuild: true
-          # Windows build (native)
-          - target: x86_64-pc-windows-msvc
+          # Windows build (cross-compiled from Linux using zigbuild)
+          - target: x86_64-pc-windows-gnu
             bun_target: bun-windows-x64
             native_file: han-native.win32-x64-msvc.node
             binary_name: han-windows-x64
             cargo_output: han_native.dll
-            os: windows-latest
-            use_zigbuild: false
+            os: ubuntu-latest
+            use_zigbuild: true
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -129,18 +129,14 @@ jobs:
           echo "Built binary:"
           ls -la dist/binaries/
 
-      - name: Create checksum (Unix)
-        if: runner.os != 'Windows'
+      - name: Create checksum
         working-directory: ./packages/han/dist/binaries
-        run: sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
-
-      - name: Create checksum (Windows)
-        if: runner.os == 'Windows'
-        working-directory: ./packages/han/dist/binaries
-        shell: pwsh
         run: |
-          $hash = (Get-FileHash -Algorithm SHA256 "${{ matrix.binary_name }}.exe").Hash.ToLower()
-          "$hash  ${{ matrix.binary_name }}.exe" | Out-File -Encoding utf8 "${{ matrix.binary_name }}.exe.sha256"
+          if [ -f "${{ matrix.binary_name }}.exe" ]; then
+            sha256sum ${{ matrix.binary_name }}.exe > ${{ matrix.binary_name }}.exe.sha256
+          else
+            sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
