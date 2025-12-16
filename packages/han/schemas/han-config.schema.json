@@ -46,6 +46,10 @@
 					"type": "integer",
 					"minimum": 0,
 					"description": "Maximum time in seconds to wait for output before considering the hook as hanging. If no output is received within this period, the hook will be terminated and reported as failed."
+				},
+				"tip": {
+					"type": "string",
+					"description": "Guidance tip shown when this hook fails repeatedly. Should include the MCP tool name to use for this hook."
 				}
 			},
 			"required": ["command"],

@@ -9,6 +9,7 @@ import {
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.ts";
+import { getHanBinary } from "./han-settings.ts";
 import { getMarketplacePlugins } from "./marketplace-cache.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -113,9 +114,11 @@ export interface HookGroup {
 }
 
 /**
- * Dispatch hook command template
+ * Get the dispatch hook command using the configured han binary
  */
-const DISPATCH_HOOK_COMMAND = "han hook dispatch";
+function getDispatchHookCommand(): string {
+	return `${getHanBinary()} hook dispatch`;
+}
 
 /**
  * Ensure dispatch hooks are configured in global settings
@@ -139,7 +142,7 @@ export function ensureDispatchHooks(): void {
 	const hookTypes = ["UserPromptSubmit", "SessionStart"];
 
 	for (const hookType of hookTypes) {
-		const dispatchCommand = `${DISPATCH_HOOK_COMMAND} ${hookType}`;
+		const dispatchCommand = `${getDispatchHookCommand()} ${hookType}`;
 
 		// Check if this hook type has any groups
 		if (!hooks[hookType]) {

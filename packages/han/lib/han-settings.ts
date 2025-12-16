@@ -26,6 +26,14 @@ export interface PluginSettings {
  * Han configuration structure
  */
 export interface HanConfig {
+	/**
+	 * Custom han binary command or path.
+	 * Useful for development to run local version instead of installed binary.
+	 * @example "bun run /path/to/han/packages/han/lib/main.ts"
+	 * @example "/path/to/han"
+	 * @default "han" (from PATH)
+	 */
+	hanBinary?: string;
 	hooks?: {
 		enabled?: boolean; // Master switch (default: true)
 		checkpoints?: boolean; // Enable checkpoints (default: true)
@@ -194,6 +202,11 @@ export function getMergedHanConfig(): HanConfig {
 	for (const { path } of getHanConfigPaths()) {
 		const config = loadHanConfigFile(path);
 		if (config) {
+			// hanBinary - later config wins
+			if (config.hanBinary !== undefined) {
+				merged.hanBinary = config.hanBinary;
+			}
+
 			// Merge hooks section
 			if (config.hooks) {
 				merged.hooks = {
@@ -238,6 +251,11 @@ export function getMergedHanConfigForDirectory(directory: string): HanConfig {
 	for (const { path } of getHanConfigPathsForDirectory(directory)) {
 		const config = loadHanConfigFile(path);
 		if (config) {
+			// hanBinary - later config wins
+			if (config.hanBinary !== undefined) {
+				merged.hanBinary = config.hanBinary;
+			}
+
 			// Merge hooks section
 			if (config.hooks) {
 				merged.hooks = {
@@ -356,4 +374,33 @@ export function isFailFastEnabled(): boolean {
 	}
 
 	return config.hooks?.fail_fast !== false;
+}
+
+/**
+ * Get the han binary command to use.
+ * Priority (highest to lowest):
+ *   1. HAN_BINARY environment variable
+ *   2. hanBinary in config files (han.yml)
+ *   3. "han" (default, uses PATH)
+ *
+ * This allows development setups to use a local version of han.
+ *
+ * @example
+ * // Via environment variable:
+ * // HAN_BINARY="bun run /path/to/han/lib/main.ts" claude
+ *
+ * // Or in han.yml:
+ * // hanBinary: "bun run /path/to/han/packages/han/lib/main.ts"
+ *
+ * const han = getHanBinary(); // "bun run /path/to/han/..."
+ * execSync(`${han} hook dispatch SessionStart`);
+ */
+export function getHanBinary(): string {
+	// Environment variable takes highest priority
+	if (process.env.HAN_BINARY) {
+		return process.env.HAN_BINARY;
+	}
+
+	const config = getMergedHanConfig();
+	return config.hanBinary || "han";
 }

@@ -1,3 +1,7 @@
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import YAML from "yaml";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 
 /**
@@ -67,14 +71,14 @@ export async function detectPatterns(options: {
 				type: "hook_failure_pattern",
 				severity: "high",
 				message: `Hook "${stat.name}" failing ${stat.failureRate}% of the time (${stat.failures}/${stat.total})`,
-				guidance: getHookGuidance(stat.name),
+				guidance: getHookGuidance(stat.name, stat.source),
 			});
 		} else if (stat.failureRate > 30) {
 			patterns.push({
 				type: "hook_failure_pattern",
 				severity: "medium",
 				message: `Hook "${stat.name}" failing ${stat.failureRate}% of the time (${stat.failures}/${stat.total})`,
-				guidance: getHookGuidance(stat.name),
+				guidance: getHookGuidance(stat.name, stat.source),
 			});
 		}
 	}
@@ -188,24 +192,70 @@ function getCalibrationGuidance(
 }
 
 /**
- * Get hook-specific guidance
+ * Find the plugin root directory from a plugin name
  */
-export function getHookGuidance(hookName: string): string {
-	const guidance: Record<string, string> = {
-		"typescript-typecheck":
-			"**Tip:** Run `npx -y --package typescript tsc` during development, not just at completion.",
-		"biome-lint":
-			"**Tip:** Run `npx biome check --write .` before marking complete.",
-		"bun-test":
-			"**Tip:** Run `bun test` locally before completion. Update tests when changing behavior.",
-		"check-commits":
-			"**Tip:** Follow conventional format: `type(scope): description`. Valid types: feat, fix, docs, refactor, test, chore.",
-		markdownlint:
-			"**Tip:** Run `npx markdownlint-cli --fix .` before completion.",
-	};
+function findPluginRoot(pluginName: string): string | null {
+	const homeDir = process.env.HOME || homedir();
+	const configDir = process.env.CLAUDE_CONFIG_DIR || join(homeDir, ".claude");
+	const marketplaceDir = join(configDir, "plugins", "marketplaces", "han");
 
-	return (
-		guidance[hookName] ||
-		`**Tip:** Review the output from ${hookName} and fix issues before completion.`
-	);
+	// Check common plugin directories
+	const prefixes = ["jutsu", "do", "hashi", "core"];
+	for (const prefix of prefixes) {
+		const pluginPath = join(marketplaceDir, prefix, pluginName);
+		if (existsSync(join(pluginPath, "han-plugin.yml"))) {
+			return pluginPath;
+		}
+	}
+
+	// Also check if we're in the han repo itself (for development)
+	const cwd = process.cwd();
+	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
+		for (const prefix of prefixes) {
+			const pluginPath = join(cwd, prefix, pluginName);
+			if (existsSync(join(pluginPath, "han-plugin.yml"))) {
+				return pluginPath;
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Get tip from plugin config for a specific hook
+ */
+function getHookTipFromConfig(
+	pluginName: string,
+	hookName: string,
+): string | null {
+	const pluginRoot = findPluginRoot(pluginName);
+	if (!pluginRoot) return null;
+
+	try {
+		const configPath = join(pluginRoot, "han-plugin.yml");
+		const content = readFileSync(configPath, "utf-8");
+		const config = YAML.parse(content);
+		return config?.hooks?.[hookName]?.tip ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Get hook-specific guidance
+ * Looks up the tip from the plugin's han-plugin.yml if available,
+ * otherwise falls back to a generic message.
+ */
+export function getHookGuidance(hookName: string, pluginName?: string): string {
+	// Try to get tip from plugin config
+	if (pluginName) {
+		const tip = getHookTipFromConfig(pluginName, hookName);
+		if (tip) {
+			return `**Tip:** ${tip}`;
+		}
+	}
+
+	// Fallback to generic guidance
+	return `**Tip:** Use the appropriate MCP hook tool for ${hookName} and fix issues before completion.`;
 }

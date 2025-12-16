@@ -2,11 +2,74 @@
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"$id": "https://han.guru/schemas/han-config-override.schema.json",
 	"title": "Han User Override Configuration",
-	"description": "Configuration schema for han-config.yml files that override plugin defaults",
+	"description": "Configuration schema for han.yml files that configure Han behavior and override plugin defaults",
 	"type": "object",
-	"additionalProperties": {
-		"$ref": "#/definitions/pluginOverrides"
+	"properties": {
+		"hanBinary": {
+			"type": "string",
+			"description": "Custom han command or path. Useful for development to run local version instead of installed binary.",
+			"examples": [
+				"bun run /path/to/han/packages/han/lib/main.ts",
+				"/path/to/han"
+			]
+		},
+		"hooks": {
+			"type": "object",
+			"description": "Global hook settings",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"description": "Master switch to enable/disable all hooks",
+					"default": true
+				},
+				"checkpoints": {
+					"type": "boolean",
+					"description": "Enable session checkpoints",
+					"default": true
+				},
+				"cache": {
+					"type": "boolean",
+					"description": "Enable hook caching",
+					"default": true
+				},
+				"fail_fast": {
+					"type": "boolean",
+					"description": "Stop on first hook failure",
+					"default": true
+				}
+			}
+		},
+		"memory": {
+			"type": "object",
+			"description": "Memory system settings",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"description": "Enable memory system",
+					"default": true
+				}
+			}
+		},
+		"metrics": {
+			"type": "object",
+			"description": "Metrics tracking settings",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"description": "Enable metrics tracking",
+					"default": true
+				}
+			}
+		},
+		"plugins": {
+			"type": "object",
+			"description": "Per-plugin override settings",
+			"additionalProperties": {
+				"$ref": "#/definitions/pluginOverrides"
+			}
+		}
 	},
+	"additionalProperties": false,
 	"definitions": {
 		"pluginOverrides": {
 			"type": "object",

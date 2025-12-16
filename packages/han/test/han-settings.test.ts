@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	getHanBinary,
 	getHanConfigPaths,
 	getHanConfigPathsForDirectory,
 	getMergedHanConfig,
@@ -460,6 +461,99 @@ describe.serial("han-settings.ts", () => {
 
 			// When hooks are disabled globally, fail_fast should also be disabled
 			expect(isFailFastEnabled()).toBe(false);
+		});
+	});
+
+	describe("getHanBinary", () => {
+		test("returns 'han' by default when no config exists", () => {
+			expect(getHanBinary()).toBe("han");
+		});
+
+		test("returns 'han' when config exists but hanBinary is not set", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hooks:\n  enabled: true\n");
+
+			expect(getHanBinary()).toBe("han");
+		});
+
+		test("returns custom value when hanBinary is configured", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				configPath,
+				"hanBinary: bun run /path/to/han/packages/han/lib/main.ts\n",
+			);
+
+			expect(getHanBinary()).toBe(
+				"bun run /path/to/han/packages/han/lib/main.ts",
+			);
+		});
+
+		test("returns custom path when hanBinary is a simple path", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hanBinary: /usr/local/bin/han-dev\n");
+
+			expect(getHanBinary()).toBe("/usr/local/bin/han-dev");
+		});
+
+		test("respects config precedence (project overrides user)", () => {
+			const userConfigPath = join(tempUserDir, "han.yml");
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+
+			writeFileSync(userConfigPath, "hanBinary: /user/bin/han\n");
+			writeFileSync(projectConfigPath, "hanBinary: /project/bin/han\n");
+
+			expect(getHanBinary()).toBe("/project/bin/han");
+		});
+
+		test("respects config precedence (local overrides project)", () => {
+			const projectConfigPath = join(tempProjectDir, ".claude", "han.yml");
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+
+			writeFileSync(projectConfigPath, "hanBinary: /project/bin/han\n");
+			writeFileSync(localConfigPath, "hanBinary: /local/bin/han\n");
+
+			expect(getHanBinary()).toBe("/local/bin/han");
+		});
+
+		test("respects config precedence (root overrides local)", () => {
+			const localConfigPath = join(tempProjectDir, ".claude", "han.local.yml");
+			const rootConfigPath = join(tempProjectDir, "han.yml");
+
+			writeFileSync(localConfigPath, "hanBinary: /local/bin/han\n");
+			writeFileSync(rootConfigPath, "hanBinary: /root/bin/han\n");
+
+			expect(getHanBinary()).toBe("/root/bin/han");
+		});
+
+		test("handles hanBinary with other config options", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(
+				configPath,
+				`hanBinary: bun run /dev/han/main.ts
+hooks:
+  enabled: true
+  checkpoints: false
+memory:
+  enabled: true
+`,
+			);
+
+			expect(getHanBinary()).toBe("bun run /dev/han/main.ts");
+		});
+
+		test("HAN_BINARY env var takes priority over config", () => {
+			const configPath = join(tempUserDir, "han.yml");
+			writeFileSync(configPath, "hanBinary: /config/bin/han\n");
+
+			process.env.HAN_BINARY = "/env/bin/han";
+			expect(getHanBinary()).toBe("/env/bin/han");
+			delete process.env.HAN_BINARY;
+		});
+
+		test("HAN_BINARY env var takes priority over default", () => {
+			process.env.HAN_BINARY = "bun run /custom/main.ts";
+			expect(getHanBinary()).toBe("bun run /custom/main.ts");
+			delete process.env.HAN_BINARY;
 		});
 	});
 

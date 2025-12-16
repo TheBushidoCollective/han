@@ -391,13 +391,17 @@ describe("ensureDispatchHooks", () => {
 	const originalEnv = { ...process.env };
 	let testDir: string;
 	let configDir: string;
+	let projectDir: string;
 
 	beforeEach(() => {
 		const random = Math.random().toString(36).substring(2, 9);
 		testDir = join(tmpdir(), `han-dispatch-hooks-test-${Date.now()}-${random}`);
 		configDir = join(testDir, ".claude");
+		projectDir = join(testDir, "project");
 		mkdirSync(configDir, { recursive: true });
+		mkdirSync(join(projectDir, ".claude"), { recursive: true });
 		process.env.CLAUDE_CONFIG_DIR = configDir;
+		process.env.CLAUDE_PROJECT_DIR = projectDir;
 	});
 
 	afterEach(() => {

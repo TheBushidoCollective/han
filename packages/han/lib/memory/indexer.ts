@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { tryGetNativeModule } from "../native.ts";
 import {
 	getGitRemote,
 	getSessionsPath,
@@ -25,7 +26,6 @@ import type {
 	RawObservation,
 	SessionSummary,
 } from "./types.ts";
-import { tryGetNativeModule } from "../native.ts";
 
 /**
  * Document for FTS indexing

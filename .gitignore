@@ -3,3 +3,6 @@
 
 # Native modules are built in CI
 packages/han-native/*.node
+
+# Local config overrides (personal settings, not team-shared)
+*.local.*

@@ -6,3 +6,4 @@ hooks:
     if_changed:
       - "**/*.md"
       - ".markdownlint.*"
+    tip: "Use the `jutsu_markdown_lint` MCP tool before completion."

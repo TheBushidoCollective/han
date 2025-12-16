@@ -110,47 +110,39 @@ describe("pattern-detection.ts helper functions", () => {
 	});
 
 	describe("getHookGuidance", () => {
-		test("returns typescript guidance for typescript-typecheck", () => {
-			const guidance = getHookGuidance("typescript-typecheck");
+		// Note: getHookGuidance now looks up tips from han-plugin.yml files
+		// When plugin config is not available (like in tests), it returns generic guidance
+
+		test("returns generic guidance when no plugin name provided", () => {
+			const guidance = getHookGuidance("typecheck");
 			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("tsc");
+			expect(guidance).toContain("typecheck");
+			expect(guidance).toContain("MCP hook tool");
 		});
 
-		test("returns biome guidance for biome-lint", () => {
-			const guidance = getHookGuidance("biome-lint");
+		test("returns generic guidance for unknown plugin", () => {
+			const guidance = getHookGuidance("lint", "unknown-plugin");
 			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("biome check");
-		});
-
-		test("returns bun test guidance for bun-test", () => {
-			const guidance = getHookGuidance("bun-test");
-			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("bun test");
-		});
-
-		test("returns commit guidance for check-commits", () => {
-			const guidance = getHookGuidance("check-commits");
-			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("conventional");
-		});
-
-		test("returns markdown guidance for markdownlint", () => {
-			const guidance = getHookGuidance("markdownlint");
-			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("markdownlint");
+			expect(guidance).toContain("lint");
+			expect(guidance).toContain("MCP hook tool");
 		});
 
 		test("returns generic guidance for unknown hooks", () => {
 			const guidance = getHookGuidance("unknown-hook");
 			expect(guidance).toContain("Tip");
 			expect(guidance).toContain("unknown-hook");
-			expect(guidance).toContain("Review the output");
+			expect(guidance).toContain("MCP hook tool");
 		});
 
 		test("returns generic guidance for empty string", () => {
 			const guidance = getHookGuidance("");
 			expect(guidance).toContain("Tip");
-			expect(guidance).toContain("Review the output");
+			expect(guidance).toContain("MCP hook tool");
+		});
+
+		test("includes hook name in generic fallback", () => {
+			const guidance = getHookGuidance("custom-hook", "some-plugin");
+			expect(guidance).toContain("custom-hook");
 		});
 	});
 });

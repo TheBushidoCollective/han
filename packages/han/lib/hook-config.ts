@@ -36,6 +36,12 @@ export interface PluginHookDefinition {
 	 * Default: no idle timeout (only overall timeout applies)
 	 */
 	idleTimeout?: number;
+	/**
+	 * Guidance tip shown when this hook fails repeatedly.
+	 * Should include the MCP tool name to use for this hook.
+	 * Example: "Use the `jutsu_biome_lint` MCP tool before marking complete."
+	 */
+	tip?: string;
 }
 
 /**
@@ -49,6 +55,7 @@ interface YamlPluginHookDefinition {
 	description?: string;
 	if_changed?: string[];
 	idle_timeout?: number;
+	tip?: string;
 }
 
 /**
@@ -91,6 +98,7 @@ function convertYamlHook(
 		...(yamlHook.idle_timeout !== undefined && {
 			idleTimeout: yamlHook.idle_timeout,
 		}),
+		...(yamlHook.tip && { tip: yamlHook.tip }),
 	};
 }
 

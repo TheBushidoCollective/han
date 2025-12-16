@@ -7,8 +7,8 @@
  * Storage location: ~/.claude/han/memory/index/
  */
 
-import type { IndexedObservation, SearchResult } from "./types.ts";
 import { tryGetNativeModule } from "../native.ts";
+import type { IndexedObservation, SearchResult } from "./types.ts";
 
 /**
  * Vector store interface for semantic search

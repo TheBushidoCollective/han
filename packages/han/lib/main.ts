@@ -15,6 +15,10 @@ import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
 import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
+import {
+	handleGetCompletions,
+	registerCompletionCommand,
+} from "./commands/completion/index.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerIndexCommand } from "./commands/index/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
@@ -107,6 +111,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerCheckpointCommands(program);
 	registerIndexCommand(program);
 	registerAliasCommands(program);
+	registerCompletionCommand(program);
 
 	// Register top-level explain command
 	program
@@ -197,14 +202,24 @@ const isMainModule = (() => {
 })();
 
 if (isMainModule) {
-	// Initialize OpenTelemetry if enabled
-	initTelemetry();
+	// Handle --get-completions before Commander.js parsing
+	// This is used by shell completion scripts for dynamic completions
+	const getCompletionsIndex = process.argv.indexOf("--get-completions");
+	if (getCompletionsIndex !== -1) {
+		const words = process.argv.slice(getCompletionsIndex + 1);
+		handleGetCompletions(words)
+			.then(() => process.exit(0))
+			.catch(() => process.exit(1));
+	} else {
+		// Initialize OpenTelemetry if enabled
+		initTelemetry();
 
-	// Setup graceful shutdown
-	process.on("beforeExit", async () => {
-		await shutdownTelemetry();
-	});
+		// Setup graceful shutdown
+		process.on("beforeExit", async () => {
+			await shutdownTelemetry();
+		});
 
-	const program = makeProgram();
-	program.parse();
+		const program = makeProgram();
+		program.parse();
+	}
 }

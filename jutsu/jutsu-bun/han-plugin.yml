@@ -12,6 +12,7 @@ hooks:
       - "bun.lock"
       - "bun.lockb"
       - "bunfig.toml"
+    tip: "Use the `jutsu_bun_build` MCP tool before marking complete."
   test:
     command: "bun test --only-failures"
     dirs_with:
@@ -25,3 +26,4 @@ hooks:
       - "bun.lock"
       - "bun.lockb"
       - "bunfig.toml"
+    tip: "Use the `jutsu_bun_test` MCP tool before completion. Update tests when changing behavior."

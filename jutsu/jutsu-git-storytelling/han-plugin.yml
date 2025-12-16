@@ -2,3 +2,4 @@ hooks:
   check-commits:
     command: "\"${CLAUDE_PLUGIN_ROOT}/hooks/git-storytelling.sh\""
     description: "Commit work early and often for git storytelling"
+    tip: "Use the `jutsu_git_storytelling_check_commits` MCP tool. Follow conventional format: `type(scope): description`."

@@ -253,9 +253,9 @@ describe.serial("pattern-detection unit tests", () => {
 					confidence: 0.8,
 				});
 				storage.recordHookExecution({
-					hookName: "bun-test",
+					hookName: "test",
 					hookType: "Stop",
-					hookSource: "plugin",
+					hookSource: "jutsu-bun",
 					taskId: task.task_id,
 					passed: hooksPassed,
 					durationMs: 100,
@@ -270,7 +270,9 @@ describe.serial("pattern-detection unit tests", () => {
 			const hookFailure = parsed.patterns.find(
 				(p: { type: string }) => p.type === "hook_failure_pattern",
 			);
-			expect(hookFailure?.guidance).toContain("bun test");
+			// Falls back to generic guidance since plugin config not available in tests
+			expect(hookFailure?.guidance).toContain("Tip");
+			expect(hookFailure?.guidance).toContain("MCP hook tool");
 		});
 
 		test("provides guidance for check-commits hook", async () => {
@@ -290,7 +292,7 @@ describe.serial("pattern-detection unit tests", () => {
 				storage.recordHookExecution({
 					hookName: "check-commits",
 					hookType: "Stop",
-					hookSource: "plugin",
+					hookSource: "jutsu-git-storytelling",
 					taskId: task.task_id,
 					passed: hooksPassed,
 					durationMs: 100,
@@ -305,7 +307,9 @@ describe.serial("pattern-detection unit tests", () => {
 			const hookFailure = parsed.patterns.find(
 				(p: { type: string }) => p.type === "hook_failure_pattern",
 			);
-			expect(hookFailure?.guidance).toContain("conventional format");
+			// Falls back to generic guidance since plugin config not available in tests
+			expect(hookFailure?.guidance).toContain("Tip");
+			expect(hookFailure?.guidance).toContain("check-commits");
 		});
 
 		test("provides guidance for markdownlint hook", async () => {
@@ -323,9 +327,9 @@ describe.serial("pattern-detection unit tests", () => {
 					confidence: 0.8,
 				});
 				storage.recordHookExecution({
-					hookName: "markdownlint",
+					hookName: "lint",
 					hookType: "Stop",
-					hookSource: "plugin",
+					hookSource: "jutsu-markdown",
 					taskId: task.task_id,
 					passed: hooksPassed,
 					durationMs: 100,
@@ -340,7 +344,9 @@ describe.serial("pattern-detection unit tests", () => {
 			const hookFailure = parsed.patterns.find(
 				(p: { type: string }) => p.type === "hook_failure_pattern",
 			);
-			expect(hookFailure?.guidance).toContain("markdownlint");
+			// Falls back to generic guidance since plugin config not available in tests
+			expect(hookFailure?.guidance).toContain("Tip");
+			expect(hookFailure?.guidance).toContain("lint");
 		});
 
 		test("provides default guidance for unknown hooks", async () => {
@@ -360,7 +366,7 @@ describe.serial("pattern-detection unit tests", () => {
 				storage.recordHookExecution({
 					hookName: "unknown-custom-hook",
 					hookType: "Stop",
-					hookSource: "plugin",
+					hookSource: "unknown-plugin",
 					taskId: task.task_id,
 					passed: hooksPassed,
 					durationMs: 100,
@@ -376,7 +382,7 @@ describe.serial("pattern-detection unit tests", () => {
 				(p: { type: string }) => p.type === "hook_failure_pattern",
 			);
 			expect(hookFailure?.guidance).toContain("unknown-custom-hook");
-			expect(hookFailure?.guidance).toContain("Review the output");
+			expect(hookFailure?.guidance).toContain("MCP hook tool");
 		});
 
 		test("detects underconfident calibration direction", async () => {

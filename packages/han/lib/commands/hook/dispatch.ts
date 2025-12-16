@@ -9,7 +9,7 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 } from "../../claude-settings.ts";
-import { isCheckpointsEnabled } from "../../han-settings.ts";
+import { getHanBinary, isCheckpointsEnabled } from "../../han-settings.ts";
 import { getPluginNameFromRoot } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
 
@@ -360,7 +360,7 @@ function reportHookExecution(data: {
 	sessionId?: string;
 }): void {
 	try {
-		execSync("han metrics hook-exec", {
+		execSync(`${getHanBinary()} metrics hook-exec`, {
 			input: JSON.stringify(data),
 			stdio: "pipe",
 			timeout: 5000, // 5 second timeout for reporting
