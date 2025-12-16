@@ -20,36 +20,44 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux builds (native)
           - target: x86_64-unknown-linux-gnu
             bun_target: bun-linux-x64
             native_file: han-native.linux-x64-gnu.node
             binary_name: han-linux-x64
             cargo_output: libhan_native.so
             os: ubuntu-latest
+            use_zigbuild: false
           - target: aarch64-unknown-linux-gnu
             bun_target: bun-linux-arm64
             native_file: han-native.linux-arm64-gnu.node
             binary_name: han-linux-arm64
             cargo_output: libhan_native.so
             os: ubuntu-24.04-arm
+            use_zigbuild: false
+          # Darwin builds (cross-compiled from Linux using zigbuild)
           - target: x86_64-apple-darwin
             bun_target: bun-darwin-x64
             native_file: han-native.darwin-x64.node
             binary_name: han-darwin-x64
             cargo_output: libhan_native.dylib
-            os: macos-15-large
+            os: ubuntu-latest
+            use_zigbuild: true
           - target: aarch64-apple-darwin
             bun_target: bun-darwin-arm64
             native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
             cargo_output: libhan_native.dylib
-            os: macos-latest
+            os: ubuntu-latest
+            use_zigbuild: true
+          # Windows build (native)
           - target: x86_64-pc-windows-msvc
             bun_target: bun-windows-x64
             native_file: han-native.win32-x64-msvc.node
             binary_name: han-windows-x64
             cargo_output: han_native.dll
             os: windows-latest
+            use_zigbuild: false
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -73,11 +81,28 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install cargo-zigbuild
+        if: matrix.use_zigbuild
+        run: |
+          pip3 install ziglang
+          cargo install cargo-zigbuild
+
       - name: Install han-native dependencies
         working-directory: ./packages/han-native
         run: npm ci
 
-      - name: Build native module
+      - name: Build native module (zigbuild)
+        if: matrix.use_zigbuild
+        working-directory: ./packages/han-native
+        shell: bash
+        run: |
+          cargo zigbuild --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
+          echo "Built native module:"
+          ls -la *.node
+
+      - name: Build native module (native)
+        if: ${{ !matrix.use_zigbuild }}
         working-directory: ./packages/han-native
         shell: bash
         run: |
