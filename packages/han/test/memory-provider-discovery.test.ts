@@ -8,8 +8,9 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Store original environment - MUST save CLAUDE_CONFIG_DIR specifically
+// Store original environment - MUST save CLAUDE_CONFIG_DIR and HOME specifically
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
+const originalHome = process.env.HOME;
 
 let testDir: string;
 let configDir: string;
@@ -83,6 +84,13 @@ function teardown(): void {
 		process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
 	} else {
 		delete process.env.CLAUDE_CONFIG_DIR;
+	}
+
+	// Restore HOME to original value
+	if (originalHome !== undefined) {
+		process.env.HOME = originalHome;
+	} else {
+		delete process.env.HOME;
 	}
 
 	if (testDir && existsSync(testDir)) {
@@ -173,14 +181,19 @@ describe.serial("Memory Provider Discovery", () => {
 		});
 
 		test("returns empty array when config dir is null", async () => {
-			// Temporarily unset config dir
+			// Temporarily unset config dir AND set HOME to test dir
+			// This prevents fallback to user's real ~/.claude
 			delete process.env.CLAUDE_CONFIG_DIR;
+			process.env.HOME = testDir;
 
 			const providers = await discoverProviders();
 			expect(providers).toEqual([]);
 
 			// Restore for cleanup
 			process.env.CLAUDE_CONFIG_DIR = configDir;
+			if (originalHome !== undefined) {
+				process.env.HOME = originalHome;
+			}
 		});
 
 		test("discovers plugin with memory config", async () => {
