@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2025-12-17
+
+### Fixed
+
+- cross-compile Windows builds from Linux too ([7d72ab5d](../../commit/7d72ab5d))
+
+### Other
+
+- add comprehensive tests for critical untested systems ([23b61742](../../commit/23b61742))
+- fix duplicate word in Discord link ([b7f9790c](../../commit/b7f9790c))
+- comprehensive memory system documentation and test improvements ([c57e03be](../../commit/c57e03be))
+
 ## [1.6.1] - 2025-12-16
 
 ### Added
