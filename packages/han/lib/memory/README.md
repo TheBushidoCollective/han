@@ -26,95 +26,61 @@ A three-layer memory architecture for personal session continuity and team knowl
 
 ## Personal Memory (Layer 1)
 
-### Session Flow
+### Session Lifecycle
 
-1. **Capture (PostToolUse hook)**: Records tool usage as observations
-2. **Summarize (Stop hook)**: Generates session summary when session ends
-3. **Context (SessionStart hook)**: Injects recent session context
+Sessions are long-lived and don't have explicit start/end hooks. Instead:
 
-### Stop Hook: Session Summarization
+1. **Capture (PostToolUse hook)**: Records tool usage as observations continuously
+2. **Query (on-demand)**: Search observations via the `memory` MCP tool
 
-The Stop hook creates structured summaries from raw observations using pattern extraction (no AI required for basic version).
+The `session_id` comes from Claude Code and is passed implicitly with each PostToolUse event.
 
-#### What it extracts
+### Observation Capture
 
-- **Work Items**: Completed tasks from file modifications
-- **In Progress**: Work started but not finished (reads without edits)
-- **Decisions**: Choices made (research followed by implementation)
+The PostToolUse hook captures tool usage automatically:
 
-#### Example
-
-```typescript
-import { summarizeSession, getMemoryStore } from "@thebushidocollective/han/memory";
-
-const store = getMemoryStore();
-const summary = summarizeSession(sessionId, store, { autoStore: true });
-
-// summary = {
-//   session_id: "abc123",
-//   project: "my-app",
-//   started_at: 1234567890,
-//   ended_at: 1234567999,
-//   summary: "Worked on authentication, testing",
-//   work_items: [
-//     {
-//       description: "Implemented auth with tests",
-//       files: ["src/auth/jwt.ts", "test/auth/jwt.test.ts"],
-//       outcome: "completed"
-//     }
-//   ],
-//   in_progress: ["Investigating payments"],
-//   decisions: [
-//     {
-//       description: "Chose JWT approach",
-//       rationale: "Found authentication comparison articles"
-//     }
-//   ]
-// }
+```
+PostToolUse fired → han memory capture (reads stdin) → captureToolUse()
+                                                            ↓
+                                        Appends to ~/.claude/han/memory/sessions/{session_id}.jsonl
 ```
 
-#### CLI Command
+Each observation includes:
+
+- Tool name and input/output summaries
+- Files read and modified
+- Timestamp
+
+### CLI Command
 
 ```bash
-# Called from Stop hook
-han memory session-end --session-id abc123
-
-# Output:
-# {
-#   "success": true,
-#   "session_id": "abc123",
-#   "summary": {
-#     "work_items": 2,
-#     "in_progress": 1,
-#     "decisions": 1
-#   }
-# }
+# Called automatically from PostToolUse hook
+# Reads event from stdin, extracts session_id, tool_name, tool_input, tool_result
+han memory capture
 ```
 
-### Pattern Extraction (No AI)
+### Optional Summarization
 
-The summarization uses heuristics to extract patterns:
+Summaries can be generated on-demand if needed:
+
+```bash
+han memory session-end --session-id abc123
+```
+
+This extracts patterns from observations:
 
 **Work Items**:
 
 - Groups related file modifications (e.g., component + styles + test)
 - Infers outcome from subsequent test results
-- Marks as `partial` if errors detected, `completed` otherwise
 
 **In Progress**:
 
-- Identifies consecutive reads in same area without corresponding edits
-- Detects blocked work from "not found" or error messages
+- Identifies consecutive reads without corresponding edits
 
 **Decisions**:
 
 - Finds research (WebSearch, Read) followed by implementation (Write, Edit)
-- Extracts technical terms (JWT, OAuth, GraphQL, etc.)
-
-**Summary Text**:
-
-- Extracts key topics from work items
-- Groups by area (authentication, payments, UI components, etc.)
 
 ### Storage
 

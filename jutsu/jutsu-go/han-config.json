@@ -5,7 +5,7 @@
       "dirsWith": ["go.mod"],
       "ifChanged": ["**/*.go", "**/*.tmpl", "go.mod", "go.sum"]
     },
-    "vet": {
+    "lint": {
       "command": "go vet ./...",
       "dirsWith": ["go.mod"],
       "ifChanged": ["**/*.go", "**/*.tmpl", "go.mod", "go.sum"]

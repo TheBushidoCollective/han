@@ -137,7 +137,7 @@ pub async fn fts_index(
     let index_query = format!(
         r#"
         DEFINE INDEX IF NOT EXISTS {table}_content_fts ON {table}
-        FIELDS content FULLTEXT ANALYZER content_analyzer BM25;
+        FIELDS content SEARCH ANALYZER content_analyzer BM25(1.2, 0.75);
         "#,
         table = table_name
     );

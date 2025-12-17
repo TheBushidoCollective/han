@@ -197,20 +197,21 @@ auto_learn({ action: "promote" })
 
 ## Layer 2-3: Session Memory
 
-Han automatically captures what happens during sessions.
+Han automatically captures what happens during sessions via the PostToolUse hook.
 
-### Summaries (Layer 2)
+### Session Lifecycle
 
-AI-generated overviews created at session end:
+Sessions are long-lived and don't have explicit start/end triggers. The `session_id` comes from Claude Code and flows implicitly through PostToolUse events.
 
-- Work completed and in-progress
-- Decisions made with rationale
-- Key files touched
-- Notes for next session
+```
+PostToolUse fired → han memory capture → observations stored
+                                              ↓
+                         ~/.claude/han/memory/sessions/{session_id}.jsonl
+```
 
 ### Observations (Layer 3)
 
-Raw tool usage logs captured in real-time:
+Raw tool usage logs captured continuously:
 
 - Every file read/edited
 - Commands executed
@@ -219,18 +220,18 @@ Raw tool usage logs captured in real-time:
 
 Query with: `memory({ question: "what was I working on?" })`
 
-### Session End
+### Summaries (Layer 2)
 
-When a session ends, Han:
+Summaries can be generated on-demand from observations:
 
-1. Reads all observations from the session
-2. Generates an AI summary
-3. Indexes both for future search
+- Work completed and in-progress
+- Decisions made with rationale
+- Key files touched
 
 CLI access:
 
 ```bash
-# End session and create summary
+# Generate summary from observations (optional)
 han memory session-end --session-id <id>
 ```
 

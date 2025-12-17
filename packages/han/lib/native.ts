@@ -146,6 +146,12 @@ function ensureNativeBuilt(): void {
 /**
  * Internal loader with retry logic.
  * Returns the module or null if loading fails after all retries.
+ *
+ * When running as a compiled Bun binary, multiple han processes may
+ * start simultaneously (e.g., during hooks), causing a race condition
+ * where one process extracts the native module while another tries to
+ * load a partially-written file. We use longer delays and more retries
+ * to handle this.
  */
 function loadNativeModule(): NativeModule | null {
 	// Return cached module if already loaded
@@ -157,7 +163,9 @@ function loadNativeModule(): NativeModule | null {
 	// In dev mode, check if rebuild is needed
 	ensureNativeBuilt();
 
-	const maxRetries = 5;
+	// More retries with longer delays to handle race conditions
+	// when multiple hook processes start simultaneously
+	const maxRetries = 8;
 	let lastError: Error | null = null;
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -168,10 +176,18 @@ function loadNativeModule(): NativeModule | null {
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
 
+			// Check if this is a dlopen error (file might still be extracting)
+			const isDlopenError =
+				lastError.message.includes("dlopen") ||
+				lastError.message.includes("ERR_DLOPEN_FAILED") ||
+				lastError.message.includes("no such file");
+
 			// Don't retry on the last attempt
 			if (attempt < maxRetries - 1) {
-				// Exponential backoff: 50ms, 100ms, 200ms, 400ms
-				const delay = 50 * 2 ** attempt;
+				// Longer exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, 3200ms, 6400ms
+				// For dlopen errors, wait even longer as the file might still be extracting
+				const baseDelay = isDlopenError ? 200 : 100;
+				const delay = baseDelay * 2 ** attempt;
 				Bun.sleepSync(delay);
 			}
 		}

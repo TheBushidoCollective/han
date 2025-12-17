@@ -2,7 +2,7 @@
   "hooks": {
     "build": {
       "dirsWith": ["*.xcodeproj", "*.xcworkspace"],
-      "command": "\"$CLAUDE_PLUGIN_ROOT/scripts/build.sh\"",
+      "command": "\"$CLAUDE_PLUGIN_ROOT/scripts/ios-build.sh\"",
       "ifChanged": [
         "**/*.swift",
         "**/*.m",

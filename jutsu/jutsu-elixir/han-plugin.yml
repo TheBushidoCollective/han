@@ -22,7 +22,7 @@ hooks:
       - "**/*.leex"
       - "**/*.heex"
       - ".formatter.exs"
-  compile:
+  build:
     dirs_with:
       - "mix.exs"
     command: "mix compile --warnings-as-errors"

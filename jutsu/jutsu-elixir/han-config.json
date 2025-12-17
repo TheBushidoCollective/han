@@ -25,7 +25,7 @@
         ".formatter.exs"
       ]
     },
-    "compile": {
+    "build": {
       "dirsWith": ["mix.exs"],
       "command": "mix compile --warnings-as-errors",
       "ifChanged": [

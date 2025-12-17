@@ -32,10 +32,12 @@ Call `start_task()` BEFORE your first tool call for any of these:
 User: "Fix the login bug"
 
 # STEP 1: Start task IMMEDIATELY (before any other tool calls)
+# session_id is REQUIRED - get it from Claude Code context
 start_task({
   description: "Fix login bug",
   type: "fix",
-  estimated_complexity: "moderate"
+  estimated_complexity: "moderate",
+  session_id: "<from Claude Code context>"
 })
 # Returns: { task_id: "task_123" }
 

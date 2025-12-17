@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { getMergedHanConfig } from "../han-settings.ts";
+import { tryGetNativeModule } from "../native.ts";
 import { readGlobalSettings } from "../shared.ts";
 
 interface DiagnosticResult {
@@ -140,21 +141,20 @@ function checkPlugins(): DiagnosticResult {
  * Check native module availability
  */
 function checkNativeModule(): DiagnosticResult {
-	try {
-		require("han-native");
+	const nativeModule = tryGetNativeModule();
+	if (nativeModule) {
 		return {
 			name: "Native Module",
 			status: "ok",
 			message: "available",
 		};
-	} catch {
-		return {
-			name: "Native Module",
-			status: "warning",
-			message: "not available",
-			details: ["Some features may be limited without han-native"],
-		};
 	}
+	return {
+		name: "Native Module",
+		status: "warning",
+		message: "not available",
+		details: ["Some features may be limited without han-native"],
+	};
 }
 
 /**

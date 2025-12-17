@@ -92,10 +92,10 @@ const METRICS_TOOLS: McpTool[] = [
 				session_id: {
 					type: "string",
 					description:
-						"Session ID to associate this task with. Get this from the SessionStart hook output.",
+						"Session ID to associate this task with. Available from Claude Code context.",
 				},
 			},
-			required: ["description", "type"],
+			required: ["description", "type", "session_id"],
 		},
 	},
 	{

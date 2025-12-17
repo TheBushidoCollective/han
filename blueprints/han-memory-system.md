@@ -1,11 +1,11 @@
 ---
 name: han-memory-system
-summary: Complete architecture and implementation of Han Memory - team-shared semantic memory with personal session continuity and self-learning promotion
+summary: Complete architecture and implementation of Han Memory - team-shared semantic memory with personal session continuity, multi-layer racing, and self-learning promotion
 ---
 
 # Han Memory System
 
-A three-layer memory system that provides personal session continuity, team knowledge research, permanent wisdom, and **self-learning promotion** - all with zero setup, research-until-confident accuracy, and citation-backed answers.
+A five-layer memory system that provides personal session continuity, team knowledge research, permanent wisdom, and **self-learning promotion** - all with zero setup, research-until-confident accuracy, and citation-backed answers.
 
 ## Implementation Status
 
@@ -20,6 +20,7 @@ A three-layer memory system that provides personal session continuity, team know
 | Phase 4 | Query Router | ✅ Complete |
 | Phase 5 | Native Embeddings (SurrealDB + ONNX) | ✅ Complete |
 | Phase 6 | Auto-Promotion Engine | ✅ Complete |
+| Phase 7 | **Multi-Layer Racing** | ✅ Complete |
 
 ## Vision
 
@@ -35,29 +36,88 @@ Han Memory solves everything Claude Mem does AND more:
 - Decision archaeology ("why did we choose X?")
 - Permanent conventions (`.claude/rules/`)
 - **Self-learning promotion** (patterns auto-promoted to rules)
+- **Multi-layer racing** (search all layers in parallel)
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 3: Permanent Wisdom (.claude/rules/)                     │
+│  LAYER 1: Rules (.claude/rules/)                                │
 │  ─────────────────────────────────────────                      │
 │  Git-tracked, team-reviewed conventions                         │
-│  Always loaded, highest authority                               │
-│  ↑ AUTO-PROMOTED from Layer 2 when confidence >= 0.8            │
+│  Highest authority, always searched                             │
+│  ↑ AUTO-PROMOTED from team memory when confidence >= 0.8        │
 ├─────────────────────────────────────────────────────────────────┤
-│  LAYER 2: Team Memory (authoritative sources)                   │
+│  LAYER 2: Summaries (~/.claude/han/memory/summaries/)           │
+│  ─────────────────────────────────────────                      │
+│  AI-compressed session overviews                                │
+│  "What was I working on?" → Recent session context              │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 3: Observations (~/.claude/han/memory/sessions/)         │
+│  ─────────────────────────────────────────                      │
+│  Raw tool usage logs (append-only JSONL)                        │
+│  Detailed work history for pattern extraction                   │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 4: Transcripts (~/.claude/projects/)                     │
+│  ─────────────────────────────────────────                      │
+│  Full conversation history with Claude                          │
+│  "What did we discuss?" → Search past conversations             │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 5: Team Memory (git history)                             │
 │  ─────────────────────────────────────────                      │
 │  Git commits, PRs, Issues, Reviews                              │
 │  Researched on-demand, cached in SurrealDB                      │
 │  "Who knows X?" → Research until confident                      │
-│  Patterns tracked → Promoted when ready                         │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 1: Personal Memory (local sessions)                      │
-│  ─────────────────────────────────────────                      │
-│  Session capture, AI summaries, continuity                      │
-│  "What was I working on?" → Check recent sessions               │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+## Multi-Layer Racing (Key Architecture)
+
+**The memory system searches ALL layers in parallel**, not just one layer based on keyword classification.
+
+### Old (Broken) Approach
+
+```
+Question → Classify by keywords → Pick ONE layer → Search → Low confidence? Too bad.
+```
+
+Problems with keyword routing:
+
+- "How do we handle X" → ✅ matches "conventions"
+- "How do engagements work" → ❌ doesn't match (no "we")
+- "What production issues?" → ❌ doesn't match any pattern
+
+### New (Racing) Approach
+
+```
+Question → Search ALL layers in parallel → Combine results → Return best matches
+```
+
+The `searchAllLayers()` function:
+
+1. Races all layers concurrently using `Promise.all()`
+2. Each layer returns results with confidence scores
+3. Results are combined with source attribution
+4. Best matches are returned regardless of which layer found them
+
+### Layer Priority
+
+When multiple layers have content:
+
+1. **Rules** (highest authority - git-tracked conventions)
+2. **Transcripts** (conversation history)
+3. **Team Memory** (git/PRs)
+
+### Result Format
+
+```typescript
+interface MemoryResult {
+  answer: string;
+  source: "rules" | "team" | "transcripts" | "combined";
+  confidence: "high" | "medium" | "low";
+  citations: Citation[];
+  layersSearched: MemoryLayer[];  // Shows which layers were searched
+}
 ```
 
 ## Native Backend Architecture
@@ -94,7 +154,7 @@ The memory system uses a pure-Rust native module (`han-native`) for cross-compil
 
 ### `memory` (Unified Query Router)
 
-**Primary entry point for all memory queries.** Auto-routes to appropriate layer.
+**Primary entry point for all memory queries.** Searches all layers in parallel.
 
 ```typescript
 interface MemoryParams {
@@ -102,14 +162,7 @@ interface MemoryParams {
 }
 ```
 
-Classifies questions and routes to:
-
-- **personal_recent**: "what was I working on?"
-- **personal_continue**: "continue where I left off"
-- **team_expertise**: "who knows about X?"
-- **team_temporal**: "what changed last week?"
-- **team_decisions**: "why did we choose Y?"
-- **conventions**: "how do we handle Z?"
+For most questions, uses multi-layer racing. Only personal questions ("what was I working on?") are routed specifically to personal memory.
 
 ### `team_query` (Team Memory Research)
 
@@ -236,6 +289,23 @@ Patterns are classified into domains based on keywords:
 
 ## Core Components
 
+### Multi-Layer Search (`lib/commands/mcp/memory-router.ts`)
+
+The `searchAllLayers()` function races all layers:
+
+```typescript
+async function searchAllLayers(question: string): Promise<MemoryResult> {
+  const [rulesResult, transcriptsResult, teamResult] = await Promise.all([
+    searchRules(question),
+    searchTranscripts(question),
+    searchTeamMemory(question),
+  ]);
+  
+  // Combine results, prioritize by layer authority
+  return combineResults([rulesResult, transcriptsResult, teamResult]);
+}
+```
+
 ### Research Engine (`lib/memory/research.ts`)
 
 Implements "research until confident" pattern:
@@ -290,16 +360,6 @@ Full-text search layer using han-native:
 - Extracts PR descriptions, reviews, comments
 - Links commits to PR context
 
-### Query Router (`lib/commands/mcp/memory-router.ts`)
-
-Classifies questions using keyword patterns:
-
-- Personal indicators: "I was", "my", "continue", "resume"
-- Team expertise: "who knows", "who worked on"
-- Temporal: "last week", "recently", "this month"
-- Decisions: "why did we", "rationale", "decision"
-- Conventions: "how do we", "best practice", "standard"
-
 ## Key Files
 
 ```
@@ -322,7 +382,7 @@ packages/han/
         github.ts        # GitHub source provider (via MCP)
       
     commands/mcp/
-      memory-router.ts   # Unified memory tool (auto-routing)
+      memory-router.ts   # Unified memory tool (multi-layer racing)
       team-memory.ts     # Team query tool
       auto-learn.ts      # Auto-learn status/trigger tool
       memory.ts          # Learn tool and memory file utilities
@@ -339,7 +399,7 @@ packages/han-native/
 ## Test Coverage
 
 - `memory-storage.test.ts`: Storage layer tests
-- `memory-router.test.ts`: Query classification tests
+- `memory-router.test.ts`: Query classification and multi-layer search tests (99 tests)
 - `mcp-team-memory.test.ts`: Team query MCP tool tests
 - `research.test.ts`: Research engine tests
 - `promotion.test.ts`: Auto-promotion engine tests (25 tests)

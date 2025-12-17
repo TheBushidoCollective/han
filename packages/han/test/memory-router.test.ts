@@ -1,5 +1,12 @@
 /**
  * Tests for the Memory Query Router
+ *
+ * The router has been simplified:
+ * - Personal questions → personal memory
+ * - Everything else → search all layers (rules, transcripts, team)
+ *
+ * The hook (memory-confidence.md) guides Claude on WHEN to use memory.
+ * The router just needs to search effectively when called.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -11,8 +18,8 @@ import {
 } from "../lib/commands/mcp/memory-router.ts";
 
 describe("Memory Router", () => {
-	describe("classifyQuestion", () => {
-		describe("personal_recent", () => {
+	describe("classifyQuestion (simplified)", () => {
+		describe("personal questions", () => {
 			test("detects 'what was I working on'", () => {
 				expect(classifyQuestion("what was I working on?").type).toBe(
 					"personal_recent",
@@ -36,9 +43,7 @@ describe("Memory Router", () => {
 					"personal_recent",
 				);
 			});
-		});
 
-		describe("personal_continue", () => {
 			test("detects 'continue where I left off'", () => {
 				expect(classifyQuestion("continue where I left off").type).toBe(
 					"personal_continue",
@@ -62,9 +67,7 @@ describe("Memory Router", () => {
 					classifyQuestion("where was I in the implementation?").type,
 				).toBe("personal_continue");
 			});
-		});
 
-		describe("personal_search", () => {
 			test("detects 'my work on'", () => {
 				expect(classifyQuestion("my work on the auth system").type).toBe(
 					"personal_search",
@@ -84,170 +87,65 @@ describe("Memory Router", () => {
 			});
 		});
 
-		describe("team_expertise", () => {
-			test("detects 'who knows about'", () => {
+		describe("general questions (all non-personal)", () => {
+			// All non-personal questions should be classified as "general"
+			// and search all layers (rules, transcripts, team)
+
+			test("who questions → general", () => {
 				expect(classifyQuestion("who knows about authentication?").type).toBe(
-					"team_expertise",
+					"general",
 				);
-			});
-
-			test("detects 'who worked on'", () => {
 				expect(classifyQuestion("who worked on the payment system?").type).toBe(
-					"team_expertise",
+					"general",
 				);
-			});
-
-			test("detects 'who implemented'", () => {
 				expect(
 					classifyQuestion("who implemented the caching layer?").type,
-				).toBe("team_expertise");
+				).toBe("general");
 			});
 
-			test("detects 'who is expert'", () => {
-				expect(classifyQuestion("who is expert in React?").type).toBe(
-					"team_expertise",
+			test("when/temporal questions → general", () => {
+				expect(classifyQuestion("what happened last week?").type).toBe(
+					"general",
+				);
+				expect(classifyQuestion("when did we implement this?").type).toBe(
+					"general",
 				);
 			});
 
-			test("detects 'who created'", () => {
-				expect(classifyQuestion("who created this component?").type).toBe(
-					"team_expertise",
-				);
-			});
-
-			test("detects 'who wrote'", () => {
-				expect(classifyQuestion("who wrote the migration script?").type).toBe(
-					"team_expertise",
-				);
-			});
-		});
-
-		describe("team_decisions", () => {
-			test("detects 'why did we choose'", () => {
+			test("why/decision questions → general", () => {
 				expect(classifyQuestion("why did we choose TypeScript?").type).toBe(
-					"team_decisions",
+					"general",
+				);
+				expect(classifyQuestion("what was the rationale?").type).toBe(
+					"general",
 				);
 			});
 
-			test("detects 'what decision'", () => {
-				expect(
-					classifyQuestion("what decision did we make about caching?").type,
-				).toBe("team_decisions");
-			});
-
-			test("detects 'rationale for'", () => {
-				expect(
-					classifyQuestion("what's the rationale for using Redux?").type,
-				).toBe("team_decisions");
-			});
-
-			test("detects 'reason for'", () => {
-				expect(
-					classifyQuestion("what's the reason for this architecture?").type,
-				).toBe("team_decisions");
-			});
-		});
-
-		describe("team_changes", () => {
-			test("detects 'changes to'", () => {
-				expect(classifyQuestion("what are the changes to the API?").type).toBe(
-					"team_changes",
-				);
-			});
-
-			test("detects 'history of'", () => {
-				expect(
-					classifyQuestion("what's the history of the auth module?").type,
-				).toBe("team_changes");
-			});
-
-			test("detects 'evolution of'", () => {
-				expect(
-					classifyQuestion("show me the evolution of the data model").type,
-				).toBe("team_changes");
-			});
-
-			test("detects 'how has X changed'", () => {
-				expect(
-					classifyQuestion("how has the config changed over time?").type,
-				).toBe("team_changes");
-			});
-		});
-
-		describe("conventions", () => {
-			test("detects 'how do we'", () => {
+			test("how/convention questions → general", () => {
 				expect(classifyQuestion("how do we handle errors?").type).toBe(
-					"conventions",
+					"general",
 				);
-			});
-
-			test("detects 'should we'", () => {
-				expect(classifyQuestion("should we use async/await here?").type).toBe(
-					"conventions",
-				);
-			});
-
-			test("detects 'best practice'", () => {
 				expect(
 					classifyQuestion("what's the best practice for testing?").type,
-				).toBe("conventions");
+				).toBe("general");
 			});
 
-			test("detects 'our approach'", () => {
-				expect(classifyQuestion("what's our approach to logging?").type).toBe(
-					"conventions",
+			test("what/where questions → general", () => {
+				expect(classifyQuestion("what does this function do?").type).toBe(
+					"general",
+				);
+				expect(classifyQuestion("where is authentication defined?").type).toBe(
+					"general",
 				);
 			});
 
-			test("detects 'standard way'", () => {
-				expect(
-					classifyQuestion("what's the standard way to handle auth?").type,
-				).toBe("conventions");
-			});
-
-			test("detects 'convention'", () => {
-				expect(classifyQuestion("what's the naming convention?").type).toBe(
-					"conventions",
-				);
-			});
-		});
-
-		describe("team_temporal", () => {
-			test("detects 'what happened last week'", () => {
-				const result = classifyQuestion("what happened last week?");
-				expect(result.type).toBe("team_temporal");
-				expect(result.timeframe?.description).toBe("last week");
-			});
-
-			test("detects 'activity this month'", () => {
-				const result = classifyQuestion("show me the activity this month");
-				expect(result.type).toBe("team_temporal");
-				expect(result.timeframe?.description).toBe("this month");
-			});
-
-			test("detects 'what was done recently'", () => {
-				const result = classifyQuestion("what was done recently?");
-				expect(result.type).toBe("team_temporal");
-				expect(result.timeframe?.description).toBe("recently");
-			});
-		});
-
-		describe("general fallback", () => {
-			test("falls back to general for ambiguous questions", () => {
+			test("ambiguous questions → general", () => {
 				expect(classifyQuestion("tell me about the system").type).toBe(
 					"general",
 				);
-			});
-
-			test("falls back to general for simple questions", () => {
 				expect(classifyQuestion("what is the architecture?").type).toBe(
 					"general",
 				);
-			});
-
-			test("falls back to team_temporal for temporal without action words", () => {
-				const result = classifyQuestion("what happened last month?");
-				expect(result.type).toBe("team_temporal");
 			});
 		});
 	});
@@ -354,94 +252,60 @@ describe("Memory Router", () => {
 			});
 		});
 
-		describe("routing logic", () => {
-			test("routes personal_recent questions to personal memory", async () => {
+		describe("routing (all questions search all layers)", () => {
+			test("all questions search all layers", async () => {
 				const result = await queryMemory({
 					question: "what was I working on recently?",
 				});
-				// Should route to personal memory
-				expect(result.source).toBe("personal");
+				// All questions now go through searchAllLayers
+				expect(result.layersSearched).toBeDefined();
+				expect(result.layersSearched?.length).toBeGreaterThan(0);
 			});
 
-			test("routes personal_continue questions to personal memory", async () => {
-				const result = await queryMemory({
-					question: "continue where I left off",
-				});
-				expect(result.source).toBe("personal");
-			});
-
-			test("routes personal_search questions to personal memory", async () => {
-				const result = await queryMemory({
-					question: "did I ever work on authentication?",
-				});
-				expect(result.source).toBe("personal");
-			});
-
-			test("routes transcript_conversation questions correctly", async () => {
-				const result = await queryMemory({
-					question: "what did we discuss about the API?",
-				});
-				expect(result.source).toBe("transcripts");
-			});
-
-			test("routes transcript_reasoning questions with includeThinking flag", async () => {
-				const result = await queryMemory({
-					question: "why did you decide to use React?",
-				});
-				expect(result.source).toBe("transcripts");
-			});
-
-			test("routes team_expertise questions to team memory", async () => {
+			test("who questions search all layers", async () => {
 				const result = await queryMemory({
 					question: "who knows about the payment system?",
 				});
-				expect(result.source).toBe("team");
+				expect(result.layersSearched).toBeDefined();
+				expect(result.layersSearched?.length).toBeGreaterThan(0);
 			});
 
-			test("routes team_decisions questions to team memory", async () => {
+			test("why questions search all layers", async () => {
 				const result = await queryMemory({
 					question: "why did we choose TypeScript?",
 				});
-				expect(result.source).toBe("team");
+				expect(result.layersSearched).toBeDefined();
 			});
 
-			test("routes team_changes questions to team memory", async () => {
+			test("how questions search all layers", async () => {
 				const result = await queryMemory({
-					question: "what are the changes to the auth module?",
+					question: "how do we handle errors?",
 				});
-				expect(result.source).toBe("team");
-			});
-
-			test("routes team_temporal questions with timeframe", async () => {
-				const result = await queryMemory({
-					question: "what happened last week?",
-				});
-				expect(result.source).toBe("team");
-			});
-
-			test("routes general questions to team memory", async () => {
-				const result = await queryMemory({
-					question: "tell me about the architecture",
-				});
-				expect(result.source).toBe("team");
+				expect(result.layersSearched).toBeDefined();
 			});
 		});
 
-		describe("conventions routing", () => {
-			test("checks rules for convention questions", async () => {
+		describe("multi-layer search", () => {
+			test("searches rules layer", async () => {
 				const result = await queryMemory({
-					question: "what's our coding convention?",
+					question: "How do engagements move through the system?",
 				});
-				// Should check rules first, then potentially fall back to team
-				expect(["rules", "team"]).toContain(result.source);
+				expect(result.layersSearched).toContain("rules");
 			});
 
-			test("falls back to team when no rules found", async () => {
+			test("searches multiple layers", async () => {
 				const result = await queryMemory({
-					question: "how should we handle errors?",
+					question: "What production issues have we been dealing with?",
 				});
-				// Will likely be team since we don't have specific rules in test env
-				expect(["rules", "team"]).toContain(result.source);
+				expect(result.layersSearched).toBeDefined();
+				expect(result.layersSearched?.length).toBeGreaterThan(1);
+			});
+
+			test("searches team layer", async () => {
+				const result = await queryMemory({
+					question: "who implemented the caching system?",
+				});
+				expect(result.layersSearched).toContain("team");
 			});
 		});
 	});
@@ -512,30 +376,6 @@ describe("Memory Router", () => {
 			expect(formatted).not.toContain("**Sources:**"); // Rules don't show citations
 		});
 
-		test("formats transcripts result", () => {
-			const result: MemoryResult = {
-				success: true,
-				answer: "We discussed API versioning strategies.",
-				source: "transcripts",
-				confidence: "high",
-				citations: [
-					{
-						source: "transcript:xyz789",
-						excerpt: "API v2 will use semantic versioning",
-						timestamp: Date.now(),
-						layer: "transcripts",
-					},
-				],
-				caveats: ["Some results are from peer worktrees."],
-			};
-
-			const formatted = formatMemoryResult(result);
-			expect(formatted).toContain("Conversation History");
-			expect(formatted).toContain("API versioning");
-			expect(formatted).toContain("transcript:xyz789");
-			expect(formatted).toContain("peer worktrees");
-		});
-
 		test("formats combined result", () => {
 			const result: MemoryResult = {
 				success: true,
@@ -582,7 +422,6 @@ describe("Memory Router", () => {
 			};
 
 			const formatted = formatMemoryResult(result);
-			// Should only show first 5 citations
 			expect(formatted).toContain("source:0");
 			expect(formatted).toContain("source:4");
 			expect(formatted).not.toContain("source:5");
@@ -605,7 +444,6 @@ describe("Memory Router", () => {
 
 			const formatted = formatMemoryResult(result);
 			expect(formatted).toContain("commit:abc");
-			// Should not crash without timestamp
 		});
 
 		test("handles empty citations array", () => {
@@ -639,146 +477,22 @@ describe("Memory Router", () => {
 	});
 
 	describe("edge cases", () => {
-		describe("classification edge cases", () => {
-			test("handles mixed question types - prioritizes personal_recent", () => {
-				const result = classifyQuestion(
-					"what was I working on and who else worked on it?",
-				);
-				// personal_recent should take priority
-				expect(result.type).toBe("personal_recent");
-			});
-
-			test("handles questions with multiple temporal indicators", () => {
-				const result = classifyQuestion(
-					"what changed last week and last month?",
-				);
-				expect(result.type).toBe("team_temporal");
-				expect(result.timeframe).toBeDefined();
-			});
-
-			test("handles case insensitive matching", () => {
-				expect(classifyQuestion("WHAT WAS I WORKING ON?").type).toBe(
-					"personal_recent",
-				);
-				expect(classifyQuestion("Who Knows About React?").type).toBe(
-					"team_expertise",
-				);
-			});
-
-			test("handles questions with special characters", () => {
-				const result = classifyQuestion(
-					"what was I working on? (last session)",
-				);
-				expect(result.type).toBe("personal_recent");
-			});
-
-			test("classifies question with only temporal phrase as team_temporal", () => {
-				const result = classifyQuestion("last 3 weeks");
-				expect(result.type).toBe("team_temporal");
-				expect(result.timeframe?.description).toBe("last 3 weeks");
-			});
+		test("handles case insensitive matching", () => {
+			expect(classifyQuestion("WHAT WAS I WORKING ON?").type).toBe(
+				"personal_recent",
+			);
 		});
 
-		describe("transcript_conversation classification", () => {
-			test("detects 'you said'", () => {
-				expect(classifyQuestion("you said something about testing").type).toBe(
-					"transcript_conversation",
-				);
-			});
-
-			test("detects 'I asked'", () => {
-				expect(classifyQuestion("I asked about error handling").type).toBe(
-					"transcript_conversation",
-				);
-			});
-
-			test("detects 'earlier session'", () => {
-				expect(
-					classifyQuestion("in an earlier session we covered this").type,
-				).toBe("transcript_conversation");
-			});
-
-			test("detects 'previous conversation'", () => {
-				expect(
-					classifyQuestion("in a previous conversation we discussed APIs").type,
-				).toBe("transcript_conversation");
-			});
-
-			test("detects 'chat history'", () => {
-				expect(classifyQuestion("search my chat history for API").type).toBe(
-					"transcript_conversation",
-				);
-			});
+		test("handles questions with special characters", () => {
+			const result = classifyQuestion("what was I working on? (last session)");
+			expect(result.type).toBe("personal_recent");
 		});
 
-		describe("transcript_reasoning classification", () => {
-			test("detects 'why did you'", () => {
-				expect(classifyQuestion("why did you choose that approach?").type).toBe(
-					"transcript_reasoning",
-				);
-			});
-
-			test("detects 'your reasoning'", () => {
-				expect(classifyQuestion("what was your reasoning?").type).toBe(
-					"transcript_reasoning",
-				);
-			});
-
-			test("detects 'how did you decide'", () => {
-				expect(classifyQuestion("how did you decide on React?").type).toBe(
-					"transcript_reasoning",
-				);
-			});
-
-			test("detects 'your thinking'", () => {
-				expect(classifyQuestion("explain your thinking process").type).toBe(
-					"transcript_reasoning",
-				);
-			});
-
-			test("detects 'what was your approach'", () => {
-				expect(
-					classifyQuestion("what was your approach to solving this?").type,
-				).toBe("transcript_reasoning");
-			});
-		});
-
-		describe("team_expertise classification", () => {
-			test("detects 'who understands'", () => {
-				expect(classifyQuestion("who understands the payment flow?").type).toBe(
-					"team_expertise",
-				);
-			});
-		});
-
-		describe("team_decisions classification variations", () => {
-			test("detects 'why was'", () => {
-				expect(classifyQuestion("why was this approach chosen?").type).toBe(
-					"team_decisions",
-				);
-			});
-
-			test("detects 'chose'", () => {
-				expect(classifyQuestion("we chose Redux, why?").type).toBe(
-					"team_decisions",
-				);
-			});
-		});
-
-		describe("team_changes classification variations", () => {
-			test("detects 'what changes'", () => {
-				expect(classifyQuestion("what changes were made to auth?").type).toBe(
-					"team_changes",
-				);
-			});
-		});
-
-		describe("conventions classification variations", () => {
-			test("detects 'how should'", () => {
-				expect(classifyQuestion("how should we format code?").type).toBe(
-					"conventions",
-				);
-			});
+		test("mixed question types prioritize personal", () => {
+			const result = classifyQuestion(
+				"what was I working on and who else worked on it?",
+			);
+			expect(result.type).toBe("personal_recent");
 		});
 	});
 });

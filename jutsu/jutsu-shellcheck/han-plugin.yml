@@ -1,5 +1,5 @@
 hooks:
-  shellcheck:
+  lint:
     command: "git ls-files | grep '.*.sh$' | xargs shellcheck"
     if_changed:
       - "**/*.sh"

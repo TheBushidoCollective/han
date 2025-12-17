@@ -19,11 +19,7 @@ import {
 	searchTranscriptsText,
 	type TranscriptSearchResult,
 } from "../../memory/transcript-search.ts";
-import {
-	queryTeamMemory,
-	type TeamQueryParams,
-	type TeamQueryResult,
-} from "./team-memory.ts";
+import { queryTeamMemory, type TeamQueryResult } from "./team-memory.ts";
 
 /**
  * Question classification types
@@ -91,12 +87,15 @@ export interface MemoryResult {
 }
 
 /**
- * Classify a question to determine which memory layer to query
+ * Classify a question - simplified to just detect personal session queries
+ *
+ * The hook (memory-confidence.md) guides Claude on WHEN to use memory.
+ * This router just needs to detect personal session questions vs everything else.
  */
 export function classifyQuestion(question: string): Classification {
 	const q = question.toLowerCase();
 
-	// Personal - recent sessions
+	// Personal - recent sessions (what was I working on?)
 	if (
 		q.includes("i was") ||
 		q.includes("what was i") ||
@@ -107,7 +106,7 @@ export function classifyQuestion(question: string): Classification {
 		return { type: "personal_recent" };
 	}
 
-	// Personal - continue work
+	// Personal - continue work (pick up where I left off)
 	if (
 		q.includes("continue") ||
 		q.includes("pick up") ||
@@ -127,108 +126,8 @@ export function classifyQuestion(question: string): Classification {
 		return { type: "personal_search" };
 	}
 
-	// Transcript - conversation history queries
-	if (
-		q.includes("we discuss") ||
-		q.includes("we talked about") ||
-		q.includes("conversation about") ||
-		q.includes("discussed") ||
-		q.includes("you said") ||
-		q.includes("i asked") ||
-		q.includes("earlier session") ||
-		q.includes("previous conversation") ||
-		q.includes("chat history")
-	) {
-		return { type: "transcript_conversation" };
-	}
-
-	// Transcript - reasoning/thinking queries
-	if (
-		q.includes("why did you") ||
-		q.includes("your reasoning") ||
-		q.includes("how did you decide") ||
-		q.includes("your thinking") ||
-		q.includes("what was your approach")
-	) {
-		return { type: "transcript_reasoning" };
-	}
-
-	// Team - expertise queries
-	if (
-		q.includes("who knows") ||
-		q.includes("who worked on") ||
-		q.includes("who is expert") ||
-		q.includes("who understands") ||
-		q.includes("who implemented") ||
-		q.includes("who created") ||
-		q.includes("who wrote")
-	) {
-		return { type: "team_expertise" };
-	}
-
-	// Team - temporal queries
-	const temporalResult = extractTimeframe(q);
-	if (
-		temporalResult &&
-		(q.includes("what happened") ||
-			q.includes("what changed") ||
-			q.includes("what was done") ||
-			q.includes("activity"))
-	) {
-		return {
-			type: "team_temporal",
-			timeframe: temporalResult,
-		};
-	}
-
-	// Team - decision archaeology
-	if (
-		q.includes("decision") ||
-		q.includes("why did we") ||
-		q.includes("why was") ||
-		q.includes("chose") ||
-		q.includes("reason for") ||
-		q.includes("rationale")
-	) {
-		return { type: "team_decisions" };
-	}
-
-	// Team - changes to specific areas
-	if (
-		q.includes("changes to") ||
-		q.includes("history of") ||
-		q.includes("evolution of") ||
-		q.includes("how has") ||
-		q.includes("what changes")
-	) {
-		return {
-			type: "team_changes",
-			timeframe: temporalResult || undefined,
-		};
-	}
-
-	// Conventions - check rules first
-	if (
-		q.includes("convention") ||
-		q.includes("how do we") ||
-		q.includes("should we") ||
-		q.includes("how should") ||
-		q.includes("best practice") ||
-		q.includes("our approach") ||
-		q.includes("standard way")
-	) {
-		return { type: "conventions" };
-	}
-
-	// If temporal indicators present, treat as team temporal
-	if (temporalResult) {
-		return {
-			type: "team_temporal",
-			timeframe: temporalResult,
-		};
-	}
-
-	// Default to general research
+	// Everything else: search all layers (rules, transcripts, team)
+	// The hook tells Claude when to call memory; we just search effectively
 	return { type: "general" };
 }
 
@@ -328,39 +227,6 @@ function formatRecentSessions(sessions: SessionSummary[]): string {
 }
 
 /**
- * Format continuation context from most recent session
- */
-function formatContinuationContext(session: SessionSummary): string {
-	const lines: string[] = ["## Continue From Last Session\n"];
-
-	const date = new Date(session.started_at).toLocaleDateString();
-	lines.push(`**Last session:** ${date}`);
-	lines.push(`**Project:** ${session.project || "Unknown"}`);
-	lines.push(`\n${session.summary}\n`);
-
-	if (session.in_progress && session.in_progress.length > 0) {
-		lines.push("### Still In Progress");
-		for (const item of session.in_progress) {
-			lines.push(`- [ ] ${item}`);
-		}
-		lines.push("");
-	}
-
-	if (session.decisions && session.decisions.length > 0) {
-		lines.push("### Recent Decisions");
-		for (const decision of session.decisions) {
-			lines.push(`- **${decision.description}**`);
-			if (decision.rationale) {
-				lines.push(`  _Rationale: ${decision.rationale}_`);
-			}
-		}
-		lines.push("");
-	}
-
-	return lines.join("\n");
-}
-
-/**
  * Check .claude/rules/ for relevant conventions
  */
 function checkRules(question: string): string | null {
@@ -421,93 +287,6 @@ function checkRules(question: string): string | null {
 		return lines.join("\n");
 	} catch {
 		return null;
-	}
-}
-
-/**
- * Query personal memory (recent sessions)
- */
-async function queryPersonalMemory(
-	type: "recent" | "continue" | "search",
-	_searchText?: string,
-): Promise<MemoryResult> {
-	const store = getMemoryStore();
-
-	try {
-		if (type === "recent") {
-			const sessions = store.getRecentSessions(5);
-			return {
-				success: true,
-				answer: formatRecentSessions(sessions),
-				source: "personal",
-				confidence: sessions.length > 0 ? "high" : "low",
-				citations: sessions.map((s) => ({
-					source: `session:${s.session_id}`,
-					excerpt: s.summary,
-					timestamp: s.started_at,
-				})),
-				caveats:
-					sessions.length === 0
-						? ["No session history found. This may be your first session."]
-						: [],
-			};
-		}
-
-		if (type === "continue") {
-			const sessions = store.getRecentSessions(1);
-			if (sessions.length === 0) {
-				return {
-					success: true,
-					answer: "No recent sessions found to continue from.",
-					source: "personal",
-					confidence: "low",
-					citations: [],
-					caveats: ["This appears to be your first session in this project."],
-				};
-			}
-
-			return {
-				success: true,
-				answer: formatContinuationContext(sessions[0]),
-				source: "personal",
-				confidence: "high",
-				citations: [
-					{
-						source: `session:${sessions[0].session_id}`,
-						excerpt: sessions[0].summary,
-						timestamp: sessions[0].started_at,
-					},
-				],
-				caveats: [],
-			};
-		}
-
-		// Search not yet implemented - fallback to recent
-		const sessions = store.getRecentSessions(10);
-		return {
-			success: true,
-			answer: formatRecentSessions(sessions),
-			source: "personal",
-			confidence: "medium",
-			citations: sessions.map((s) => ({
-				source: `session:${s.session_id}`,
-				excerpt: s.summary,
-				timestamp: s.started_at,
-			})),
-			caveats: [
-				"Personal search not yet implemented. Showing recent sessions.",
-			],
-		};
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return {
-			success: false,
-			answer: `Failed to query personal memory: ${message}`,
-			source: "personal",
-			confidence: "low",
-			citations: [],
-			caveats: [],
-		};
 	}
 }
 
@@ -632,6 +411,229 @@ async function queryTranscripts(
 }
 
 /**
+ * Layer search result for combining
+ */
+interface LayerResult {
+	layer: MemoryLayer;
+	result: MemoryResult | null;
+	hasContent: boolean;
+}
+
+/**
+ * Search all layers in parallel and combine results
+ * Every question searches everything - return what's relevant
+ */
+async function searchAllLayers(question: string): Promise<MemoryResult> {
+	const layersSearched: MemoryLayer[] = [];
+	const layerResults: LayerResult[] = [];
+
+	// Race all layers in parallel
+	const [rulesResult, summariesResult, transcriptsResult, teamResult] =
+		await Promise.all([
+			// Layer 1: Rules (.claude/rules/)
+			(async (): Promise<LayerResult> => {
+				const rules = checkRules(question);
+				layersSearched.push("rules");
+				if (rules) {
+					return {
+						layer: "rules",
+						result: {
+							success: true,
+							answer: rules,
+							source: "rules",
+							confidence: "high",
+							citations: [],
+							caveats: ["From project conventions in .claude/rules/"],
+							layersSearched: ["rules"],
+						},
+						hasContent: true,
+					};
+				}
+				return { layer: "rules", result: null, hasContent: false };
+			})(),
+
+			// Layer 2: Summaries (personal session history)
+			(async (): Promise<LayerResult> => {
+				try {
+					const store = getMemoryStore();
+					const sessions = store.getRecentSessions(5);
+					layersSearched.push("summaries");
+
+					if (sessions.length === 0) {
+						return { layer: "summaries", result: null, hasContent: false };
+					}
+
+					// Check if question is relevant to session content
+					const questionLower = question.toLowerCase();
+					const relevantSessions = sessions.filter((s) => {
+						const summaryLower = s.summary.toLowerCase();
+						const questionWords = questionLower
+							.split(/\s+/)
+							.filter((w) => w.length > 3);
+						return questionWords.some((word) => summaryLower.includes(word));
+					});
+
+					if (relevantSessions.length === 0) {
+						return { layer: "summaries", result: null, hasContent: false };
+					}
+
+					return {
+						layer: "summaries",
+						result: {
+							success: true,
+							answer: formatRecentSessions(relevantSessions),
+							source: "personal",
+							confidence: "medium",
+							citations: relevantSessions.map((s) => ({
+								source: `session:${s.session_id}`,
+								excerpt: s.summary,
+								timestamp: s.started_at,
+							})),
+							caveats: ["From recent session history"],
+							layersSearched: ["summaries"],
+						},
+						hasContent: true,
+					};
+				} catch {
+					layersSearched.push("summaries");
+					return { layer: "summaries", result: null, hasContent: false };
+				}
+			})(),
+
+			// Layer 4: Transcripts (conversation history)
+			(async (): Promise<LayerResult> => {
+				try {
+					const result = await queryTranscripts(question, false);
+					layersSearched.push("transcripts");
+					const hasContent =
+						result.success &&
+						result.confidence !== "low" &&
+						result.citations.length > 0;
+					return { layer: "transcripts", result, hasContent };
+				} catch {
+					layersSearched.push("transcripts");
+					return { layer: "transcripts", result: null, hasContent: false };
+				}
+			})(),
+
+			// Layer 5: Team memory (git/PRs)
+			(async (): Promise<LayerResult> => {
+				try {
+					const teamQueryResult = await queryTeamMemory({ question });
+					const result = teamResultToMemoryResult(teamQueryResult);
+					layersSearched.push("team");
+					const hasContent =
+						result.success &&
+						result.confidence !== "low" &&
+						result.citations.length > 0;
+					return { layer: "team", result, hasContent };
+				} catch {
+					layersSearched.push("team");
+					return { layer: "team", result: null, hasContent: false };
+				}
+			})(),
+		]);
+
+	layerResults.push(
+		rulesResult,
+		summariesResult,
+		transcriptsResult,
+		teamResult,
+	);
+
+	// Filter to layers with content
+	const layersWithContent = layerResults.filter((lr) => lr.hasContent);
+
+	// If no layers have content, return low confidence
+	if (layersWithContent.length === 0) {
+		return {
+			success: true,
+			answer:
+				"I searched all memory layers but couldn't find relevant information.",
+			source: "combined",
+			confidence: "low",
+			citations: [],
+			caveats: [
+				`Searched: ${layersSearched.join(", ")}`,
+				"Try rephrasing your question or check if the information has been captured.",
+			],
+			layersSearched,
+		};
+	}
+
+	// If only one layer has content, return it
+	if (layersWithContent.length === 1) {
+		const best = layersWithContent[0].result;
+		if (best) {
+			return {
+				...best,
+				layersSearched,
+			};
+		}
+	}
+
+	// Multiple layers have content - combine them
+	const allCitations: MemoryResult["citations"] = [];
+	const allCaveats: string[] = [];
+	const answers: string[] = [];
+
+	// Prioritize by layer authority: rules > summaries > transcripts > team
+	const priorityOrder: MemoryLayer[] = [
+		"rules",
+		"summaries",
+		"transcripts",
+		"team",
+	];
+
+	for (const layer of priorityOrder) {
+		const layerResult = layersWithContent.find((lr) => lr.layer === layer);
+		if (layerResult?.result) {
+			answers.push(
+				`**From ${getLayerLabel(layer)}:**\n${layerResult.result.answer}`,
+			);
+			allCitations.push(...layerResult.result.citations);
+			allCaveats.push(...layerResult.result.caveats);
+		}
+	}
+
+	// Determine overall confidence
+	const confidenceLevels = layersWithContent
+		.map((lr) => lr.result?.confidence)
+		.filter(Boolean);
+	const hasHigh = confidenceLevels.includes("high");
+	const hasMedium = confidenceLevels.includes("medium");
+	const overallConfidence: "high" | "medium" | "low" = hasHigh
+		? "high"
+		: hasMedium
+			? "medium"
+			: "low";
+
+	return {
+		success: true,
+		answer: answers.join("\n\n"),
+		source: "combined",
+		confidence: overallConfidence,
+		citations: allCitations.slice(0, 10), // Limit citations
+		caveats: [...new Set(allCaveats)], // Deduplicate caveats
+		layersSearched,
+	};
+}
+
+/**
+ * Get human-readable label for a layer
+ */
+function getLayerLabel(layer: MemoryLayer): string {
+	const labels: Record<MemoryLayer, string> = {
+		rules: "Project Conventions",
+		summaries: "Session Summaries",
+		observations: "Tool Observations",
+		transcripts: "Conversation History",
+		team: "Team Memory",
+	};
+	return labels[layer];
+}
+
+/**
  * Query memory with auto-routing
  */
 export async function queryMemory(params: MemoryParams): Promise<MemoryResult> {
@@ -648,67 +650,9 @@ export async function queryMemory(params: MemoryParams): Promise<MemoryResult> {
 		};
 	}
 
-	const classification = classifyQuestion(question);
-
-	// Route based on classification
-	switch (classification.type) {
-		case "personal_recent":
-			return queryPersonalMemory("recent");
-
-		case "personal_continue":
-			return queryPersonalMemory("continue");
-
-		case "personal_search":
-			return queryPersonalMemory("search", question);
-
-		case "transcript_conversation":
-			return queryTranscripts(question, false);
-
-		case "transcript_reasoning":
-			return queryTranscripts(question, true);
-
-		case "conventions": {
-			// Check rules first
-			const rules = checkRules(question);
-			if (rules) {
-				return {
-					success: true,
-					answer: rules,
-					source: "rules",
-					confidence: "high",
-					citations: [],
-					caveats: ["Answer based on project conventions in .claude/rules/"],
-					layersSearched: ["rules"],
-				};
-			}
-			// Fall through to team memory
-			const teamResult = await queryTeamMemory({ question });
-			return teamResultToMemoryResult(teamResult);
-		}
-
-		case "team_expertise":
-		case "team_decisions":
-		case "team_changes":
-		case "general": {
-			const teamResult = await queryTeamMemory({ question });
-			return teamResultToMemoryResult(teamResult);
-		}
-
-		case "team_temporal": {
-			// Include timeframe in team query
-			const teamParams: TeamQueryParams = { question };
-			// Timeframe would be passed to team memory for filtering
-			// For now, include in question context
-			const teamResult = await queryTeamMemory(teamParams);
-			return teamResultToMemoryResult(teamResult);
-		}
-
-		default: {
-			// General fallback to team memory
-			const teamResult = await queryTeamMemory({ question });
-			return teamResultToMemoryResult(teamResult);
-		}
-	}
+	// Search ALL layers in parallel - return what's relevant
+	// No routing, no classification - just search everything
+	return searchAllLayers(question);
 }
 
 /**

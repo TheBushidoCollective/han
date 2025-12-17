@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "check-commits": {
+    "check_commits": {
       "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/git-storytelling.sh\"",
       "description": "Commit work early and often for git storytelling"
     }

@@ -17,12 +17,14 @@ The metrics system enables agents to track their work progress and outcomes, whi
 ┌─────────────────────────────────────────────────────────┐
 │                    SessionStart Hook                     │
 │         Injects metrics tracking instructions            │
+│         (han metrics session-context)                    │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ↓
          ┌─────────────────────────────┐
          │   Agent Begins Work         │
-         │   Calls start_task()        │
+         │   Calls start_task() with   │
+         │   session_id (required)     │
          └──────────┬──────────────────┘
                     │
                     ↓
@@ -43,9 +45,18 @@ The metrics system enables agents to track their work progress and outcomes, whi
                        ↓
               ┌────────────────┐
               │ Metrics Database│
-              │ (SQLite local)  │
+              │  (JSONL files)  │
               └────────────────┘
 ```
+
+### Session Lifecycle
+
+Sessions are long-lived and don't have explicit start/end management. Instead:
+
+- **session_id** is a required parameter when calling `start_task()`
+- The session_id comes from Claude Code context and is passed explicitly
+- Tasks are grouped by session_id for analysis
+- No session-start or session-end hooks for metrics lifecycle
 
 ## Components
 
@@ -63,7 +74,7 @@ The metrics system enables agents to track their work progress and outcomes, whi
 - `fail_task` - Record task failure with details
 - `query_metrics` - Query performance analytics
 
-**Storage**: SQLite at `~/.claude/metrics/metrics.db`
+**Storage**: JSONL files at `~/.claude/han/metrics/jsonldb/`
 
 **Transport**: STDIO (subprocess)
 
@@ -98,42 +109,43 @@ The metrics system enables agents to track their work progress and outcomes, whi
 
 **Integration**: Defined in `hashi-han-metrics/hooks/hooks.json` Stop event
 
-### 4. Storage Schema
+### 4. Storage Format
 
-**Database**: `~/.claude/metrics/metrics.db`
+**Location**: `~/.claude/han/metrics/jsonldb/`
 
-**Tables**:
+**Files**: Daily partitioned JSONL files (`metrics-YYYY-MM-DD.jsonl`)
 
-```sql
--- Main task tracking
-CREATE TABLE tasks (
-  id TEXT PRIMARY KEY,
-  description TEXT NOT NULL,
-  type TEXT NOT NULL,           -- implementation, fix, refactor, research
-  complexity TEXT,              -- simple, moderate, complex
-  started_at DATETIME NOT NULL,
-  completed_at DATETIME,
-  duration_seconds INTEGER,
-  status TEXT NOT NULL,         -- in_progress, completed, failed
-  outcome TEXT,                 -- success, partial, failure
-  confidence REAL,              -- 0-1, agent's self-assessment
-  notes TEXT,
-  files_modified TEXT,          -- JSON array
-  tests_added INTEGER,
-  failure_reason TEXT,
-  attempted_solutions TEXT,     -- JSON array
-  hooks_passed BOOLEAN,         -- Objective validation
-  hook_results TEXT             -- JSON
-);
+**Task Record Schema**:
 
--- Progress log
-CREATE TABLE task_updates (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  task_id TEXT REFERENCES tasks(id),
-  timestamp DATETIME NOT NULL,
-  status TEXT,
-  notes TEXT
-);
+```json
+{
+  "id": "task-1234567890-abc123",
+  "session_id": "session-1234567890-xyz789",
+  "description": "Fix authentication bug",
+  "type": "fix",
+  "estimated_complexity": "moderate",
+  "started_at": 1734300000000,
+  "completed_at": 1734300180000,
+  "status": "completed",
+  "outcome": "success",
+  "confidence": 0.85,
+  "files_modified": ["src/auth.ts"],
+  "tests_added": 3,
+  "notes": "All tests passing"
+}
+```
+
+**Hook Execution Record Schema**:
+
+```json
+{
+  "hook_name": "jutsu-biome_lint",
+  "plugin_name": "jutsu-biome",
+  "success": true,
+  "duration_ms": 1234,
+  "timestamp": 1734300000000,
+  "session_id": "session-1234567890-xyz789"
+}
 ```
 
 ## Workflow
@@ -144,10 +156,12 @@ CREATE TABLE task_updates (
 
 ```typescript
 // User asks: "Add user authentication"
+// session_id comes from Claude Code context
 const { task_id } = await start_task({
   description: "Add JWT authentication",
   type: "implementation",
-  estimated_complexity: "moderate"
+  estimated_complexity: "moderate",
+  session_id: "session-1234567890-xyz789"  // Required
 });
 ```
 
@@ -349,13 +363,13 @@ LIMIT 10;
 
 **Local-First**:
 
-- All data stored in `~/.claude/metrics/metrics.db`
+- All data stored in `~/.claude/han/metrics/jsonldb/`
 - No network calls
 - No external tracking
 
 **User-Owned**:
 
-- Database can be queried directly via SQLite
+- JSONL files are human-readable and easily searchable
 - Data can be exported, backed up, or deleted
 - Full transparency
 

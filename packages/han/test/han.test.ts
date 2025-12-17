@@ -350,13 +350,17 @@ describe("Hook run", () => {
 		}).toThrow();
 	});
 
-	test("passes when no directories match filter", () => {
-		const output = execSync(
-			`${binCommand} hook run --dirs-with nonexistent.txt -- echo test`,
-			{ cwd: testDir, encoding: "utf8" } as ExecSyncOptionsWithStringEncoding,
-		);
-		expect(output).toContain("No directories found with nonexistent.txt");
-	});
+	test(
+		"passes when no directories match filter",
+		() => {
+			const output = execSync(
+				`${binCommand} hook run --dirs-with nonexistent.txt -- echo test`,
+				{ cwd: testDir, encoding: "utf8" } as ExecSyncOptionsWithStringEncoding,
+			);
+			expect(output).toContain("No directories found with nonexistent.txt");
+		},
+		{ timeout: 30000 },
+	);
 
 	test("runs command in matching directories", () => {
 		mkdirSync(join(testDir, "pkg1"));

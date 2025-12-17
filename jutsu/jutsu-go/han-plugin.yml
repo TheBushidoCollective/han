@@ -8,7 +8,7 @@ hooks:
       - "**/*.tmpl"
       - "go.mod"
       - "go.sum"
-  vet:
+  lint:
     command: "go vet ./..."
     dirs_with:
       - "go.mod"
