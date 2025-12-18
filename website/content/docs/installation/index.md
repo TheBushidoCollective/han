@@ -54,7 +54,7 @@ This method:
 For users of the Claude CLI:
 
 ```bash
-claude plugin add bushido@han
+claude plugin install bushido@han
 ```
 
 This integrates Han with the Claude CLI ecosystem and provides the same benefits as the Claude Code installation method.
