@@ -20,6 +20,8 @@ describe("shouldReexec", () => {
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd();
 		process.chdir(testDir);
+		// Isolate from user's global config by setting HOME to test dir
+		process.env.HOME = testDir;
 	});
 
 	afterEach(() => {

@@ -421,6 +421,8 @@ describe("CLI integration tests", () => {
 					env: {
 						...process.env,
 						CLAUDE_PLUGIN_ROOT: "/plugin/root",
+						// Isolate from user's global config to prevent re-exec
+						HOME: testDir,
 					},
 				},
 			);
