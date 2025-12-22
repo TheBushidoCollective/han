@@ -60,13 +60,10 @@ export function registerMemoryCommand(program: Command): void {
 				});
 
 				process.exit(0);
-			} catch (error: unknown) {
-				// Silent failure for capture - don't disrupt the session
-				console.error(
-					"Error capturing observation:",
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(0); // Exit 0 to not block hooks
+			} catch {
+				// Silent failure - don't disrupt the session or log errors
+				// This is called frequently from PostToolUse hook
+				process.exit(0);
 			}
 		});
 
