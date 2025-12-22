@@ -112,9 +112,11 @@ export interface TranscriptSearchResult {
 
 /**
  * Get the Claude projects directory
+ * Uses process.env.HOME for testability
  */
 export function getClaudeProjectsDir(): string {
-	return join(homedir(), ".claude", "projects");
+	const home = process.env.HOME || homedir();
+	return join(home, ".claude", "projects");
 }
 
 /**

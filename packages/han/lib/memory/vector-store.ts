@@ -239,5 +239,13 @@ export async function getVectorStore(_dbPath?: string): Promise<VectorStore> {
 	return vectorStoreInstance;
 }
 
+/**
+ * Reset the singleton instance (for testing only)
+ * @internal
+ */
+export function _resetVectorStoreInstance(): void {
+	vectorStoreInstance = null;
+}
+
 // Legacy export for backwards compatibility
 export const createLanceVectorStore = createNativeVectorStore;

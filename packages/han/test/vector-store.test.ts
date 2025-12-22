@@ -121,12 +121,20 @@ describe("vector store", () => {
 		});
 
 		test("getVectorStore returns singleton", async () => {
-			const { getVectorStore } = await import("../lib/memory/vector-store.ts");
+			const { getVectorStore, _resetVectorStoreInstance } = await import(
+				"../lib/memory/vector-store.ts"
+			);
+
+			// Reset singleton state before testing
+			_resetVectorStoreInstance();
 
 			const store1 = await getVectorStore();
 			const store2 = await getVectorStore();
 
 			expect(store1).toBe(store2);
+
+			// Clean up
+			_resetVectorStoreInstance();
 		});
 	});
 
