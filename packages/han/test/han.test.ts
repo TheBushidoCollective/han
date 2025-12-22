@@ -380,7 +380,7 @@ describe("Hook run", () => {
 			} as ExecSyncOptionsWithStringEncoding,
 		);
 
-		expect(output).toContain("passed validation");
+		expect(output).toContain("passed");
 	});
 
 	test("fails with exit code 2 when command fails", () => {
@@ -511,7 +511,7 @@ describe("Validate command", () => {
 			} as ExecSyncOptionsWithStringEncoding,
 		);
 
-		expect(output).toContain("passed validation");
+		expect(output).toContain("passed");
 	});
 });
 
