@@ -423,6 +423,8 @@ describe("CLI integration tests", () => {
 						CLAUDE_PLUGIN_ROOT: "/plugin/root",
 						// Isolate from user's global config to prevent re-exec
 						HOME: testDir,
+						CLAUDE_CONFIG_DIR: undefined,
+						CLAUDE_PROJECT_DIR: undefined,
 					},
 				},
 			);

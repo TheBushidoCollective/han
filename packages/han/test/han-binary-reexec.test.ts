@@ -20,8 +20,11 @@ describe("shouldReexec", () => {
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd();
 		process.chdir(testDir);
-		// Isolate from user's global config by setting HOME to test dir
+		// Isolate from user's global config
 		process.env.HOME = testDir;
+		// Also clear config dir overrides that take precedence
+		delete process.env.CLAUDE_CONFIG_DIR;
+		delete process.env.CLAUDE_PROJECT_DIR;
 	});
 
 	afterEach(() => {
