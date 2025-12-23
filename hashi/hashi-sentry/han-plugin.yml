@@ -3,19 +3,3 @@
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
-
-# Memory provider for team memory extraction from Sentry
-# Convention: provider name = plugin name, script = memory-provider.ts
-memory:
-  allowed_tools:
-    - mcp__plugin_hashi-sentry_sentry__list_issues
-    - mcp__plugin_hashi-sentry_sentry__get_issue
-    - mcp__plugin_hashi-sentry_sentry__list_events
-  system_prompt: |
-    Extract observations from Sentry error reports and issues. For each item, capture:
-    - timestamp: when the error first/last occurred
-    - summary: error message and stack trace highlights
-    - frequency: how often this error occurs
-    - status: issue state (unresolved, resolved, ignored)
-    - type: 'error', 'issue', or 'event'
-    Focus on patterns and recurring issues. Return as JSON array of observations.

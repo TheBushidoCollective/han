@@ -14,7 +14,8 @@
       "**/*.json",
       "!**/.next",
       "!**/node_modules",
-      "!**/dist"
+      "!**/dist",
+      "!**/__generated__"
     ],
     "ignoreUnknown": true
   },
