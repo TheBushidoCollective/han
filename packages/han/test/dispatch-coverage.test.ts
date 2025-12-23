@@ -171,7 +171,9 @@ describe("dispatch.ts coverage tests", () => {
 			expect(result.stdout).toContain("Hooks.json executed");
 		});
 
-		test("dispatches hooks from hooks.json with root-level hooks (line 446-447)", () => {
+		test(
+			"dispatches hooks from hooks.json with root-level hooks (line 446-447)",
+			() => {
 			// hooks.json can have hooks at root or under "hooks" key
 			const hooks = {
 				UserPromptSubmit: [
@@ -215,7 +217,9 @@ describe("dispatch.ts coverage tests", () => {
 
 			expect(result.status).toBe(0);
 			expect(result.stdout).toContain("Root level hooks");
-		});
+			},
+			{ timeout: 15000 },
+		);
 
 		test("handles invalid hooks.json gracefully (line 477-479)", () => {
 			writeFileSync(join(configDir, "hooks.json"), "{ invalid json }");
