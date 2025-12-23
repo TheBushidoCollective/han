@@ -3,19 +3,3 @@
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
-
-# Memory provider for team memory extraction from Linear
-# Convention: provider name = plugin name, script = memory-provider.ts
-memory:
-  allowed_tools:
-    - mcp__plugin_hashi-linear_linear__list_issues
-    - mcp__plugin_hashi-linear_linear__get_issue
-    - mcp__plugin_hashi-linear_linear__list_projects
-  system_prompt: |
-    Extract observations from Linear issues and projects. For each item, capture:
-    - author: Linear user who created/updated
-    - timestamp: when created/updated/completed
-    - summary: issue title and description highlights
-    - status: issue state (backlog, in_progress, done, etc.)
-    - type: 'issue', 'project', or 'comment'
-    Return as JSON array of observations.

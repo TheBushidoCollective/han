@@ -174,49 +174,49 @@ describe("dispatch.ts coverage tests", () => {
 		test(
 			"dispatches hooks from hooks.json with root-level hooks (line 446-447)",
 			() => {
-			// hooks.json can have hooks at root or under "hooks" key
-			const hooks = {
-				UserPromptSubmit: [
+				// hooks.json can have hooks at root or under "hooks" key
+				const hooks = {
+					UserPromptSubmit: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command: "echo 'Root level hooks'",
+								},
+							],
+						},
+					],
+				};
+
+				writeFileSync(
+					join(configDir, "hooks.json"),
+					JSON.stringify(hooks, null, 2),
+				);
+
+				const result = spawnSync(
+					"bun",
+					[
+						"run",
+						join(packageRoot, "lib/main.ts"),
+						"hook",
+						"dispatch",
+						"UserPromptSubmit",
+						"--all",
+					],
 					{
-						hooks: [
-							{
-								type: "command",
-								command: "echo 'Root level hooks'",
-							},
-						],
+						encoding: "utf-8",
+						timeout: 15000,
+						cwd: projectDir,
+						env: {
+							...process.env,
+							CLAUDE_CONFIG_DIR: configDir,
+							HOME: testDir,
+						},
 					},
-				],
-			};
+				);
 
-			writeFileSync(
-				join(configDir, "hooks.json"),
-				JSON.stringify(hooks, null, 2),
-			);
-
-			const result = spawnSync(
-				"bun",
-				[
-					"run",
-					join(packageRoot, "lib/main.ts"),
-					"hook",
-					"dispatch",
-					"UserPromptSubmit",
-					"--all",
-				],
-				{
-					encoding: "utf-8",
-					timeout: 15000,
-					cwd: projectDir,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: configDir,
-						HOME: testDir,
-					},
-				},
-			);
-
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("Root level hooks");
+				expect(result.status).toBe(0);
+				expect(result.stdout).toContain("Root level hooks");
 			},
 			{ timeout: 15000 },
 		);

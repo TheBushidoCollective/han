@@ -141,14 +141,24 @@ export async function searchFts(
 		return [];
 	}
 
-	const results = await nativeModule.ftsSearch(dbPath, tableName, query, limit);
+	try {
+		const results = await nativeModule.ftsSearch(
+			dbPath,
+			tableName,
+			query,
+			limit,
+		);
 
-	return results.map((r) => ({
-		id: r.id,
-		content: r.content,
-		metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
-		score: r.score,
-	}));
+		return results.map((r) => ({
+			id: r.id,
+			content: r.content,
+			metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+			score: r.score,
+		}));
+	} catch {
+		// Database may be corrupted or incompatible - return empty results
+		return [];
+	}
 }
 
 /**
