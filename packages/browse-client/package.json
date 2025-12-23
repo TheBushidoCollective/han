@@ -1,0 +1,50 @@
+{
+  "name": "@thebushidocollective/browse-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Han Dashboard - Browse Claude Code sessions, metrics, and settings",
+  "type": "module",
+  "scripts": {
+    "dev": "relay-compiler --watch & vite",
+    "build": "relay-compiler && vite build",
+    "preview": "vite preview",
+    "relay": "relay-compiler",
+    "relay:watch": "relay-compiler --watch",
+    "schema:pull": "cd ../han && bun run schema:export > ../browse-client/schema.graphql",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
+  "dependencies": {
+    "anser": "^2.3.5",
+    "graphql": "^16.9.0",
+    "graphql-ws": "^5.16.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-relay": "^19.0.0",
+    "react-router-dom": "^7.1.1",
+    "recyclerlistview": "^4.2.3",
+    "relay-runtime": "^19.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.7",
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/react-relay": "^16.0.0",
+    "@types/relay-runtime": "^17.0.0",
+    "@vitejs/plugin-react": "^4.5.1",
+    "babel-plugin-relay": "^19.0.0",
+    "relay-compiler": "^19.0.0",
+    "typescript": "5.9.3",
+    "vite": "^6.3.5",
+    "vite-plugin-pages": "^0.32.4"
+  }
+}

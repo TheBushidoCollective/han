@@ -1,0 +1,21 @@
+{
+  "plugins": ["atomic-design"],
+  "rules": {
+    "atomic-design/hierarchical-import": [
+      "error",
+      {
+        "levels": [
+          "=helpers",
+          "quarks",
+          "atoms",
+          "molecules",
+          "=organisms",
+          "templates",
+          "pages"
+        ],
+        "excludes": ["node_modules"],
+        "module": "loose"
+      }
+    ]
+  }
+}

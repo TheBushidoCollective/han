@@ -15,12 +15,11 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
-
-import * as checkpointModule from "../lib/checkpoint.ts";
 import * as captureModule from "../lib/commands/checkpoint/capture.ts";
 import * as cleanModule from "../lib/commands/checkpoint/clean.ts";
 import { registerCheckpointCommands } from "../lib/commands/checkpoint/index.ts";
 import * as listModule from "../lib/commands/checkpoint/list.ts";
+import * as checkpointModule from "../lib/checkpoint.ts";
 
 // Store original environment and methods
 const originalEnv = { ...process.env };

@@ -1,0 +1,15 @@
+hooks:
+  lint:
+    command: "npx -p eslint -p eslint-plugin-atomic-design eslint --config \"${CLAUDE_PLUGIN_ROOT}/.eslintrc.json\" --ext .jsx,.tsx ."
+    dirs_with:
+      - "package.json"
+    if_changed:
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/quarks/**"
+      - "**/atoms/**"
+      - "**/molecules/**"
+      - "**/organisms/**"
+      - "**/templates/**"
+      - "**/pages/**"
+    tip: "Ensure component imports follow Atomic Design hierarchy: quarks <- atoms <- molecules <- organisms <- templates <- pages"

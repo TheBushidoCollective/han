@@ -7,6 +7,11 @@
  *
  * The hook (memory-confidence.md) guides Claude on WHEN to use memory.
  * The router just needs to search effectively when called.
+ *
+ * Note: Team memory queries may be slow on first run as they initialize
+ * vector stores. The tests use extended timeouts to accommodate this.
+ * In test environments without a git remote, team memory returns
+ * low confidence results gracefully.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -253,18 +258,14 @@ describe("Memory Router", () => {
 		});
 
 		describe("routing (all questions search all layers)", () => {
-			test(
-				"all questions search all layers",
-				async () => {
-					const result = await queryMemory({
-						question: "what was I working on recently?",
-					});
-					// All questions now go through searchAllLayers
-					expect(result.layersSearched).toBeDefined();
-					expect(result.layersSearched?.length).toBeGreaterThan(0);
-				},
-				{ timeout: 15000 },
-			);
+			test("all questions search all layers", async () => {
+				const result = await queryMemory({
+					question: "what was I working on recently?",
+				});
+				// All questions now go through searchAllLayers
+				expect(result.layersSearched).toBeDefined();
+				expect(result.layersSearched?.length).toBeGreaterThan(0);
+			});
 
 			test(
 				"who questions search all layers",
@@ -275,7 +276,7 @@ describe("Memory Router", () => {
 					expect(result.layersSearched).toBeDefined();
 					expect(result.layersSearched?.length).toBeGreaterThan(0);
 				},
-				{ timeout: 15000 },
+				{ timeout: 10000 },
 			);
 
 			test(
@@ -286,7 +287,7 @@ describe("Memory Router", () => {
 					});
 					expect(result.layersSearched).toBeDefined();
 				},
-				{ timeout: 15000 },
+				{ timeout: 10000 },
 			);
 
 			test(
@@ -297,7 +298,7 @@ describe("Memory Router", () => {
 					});
 					expect(result.layersSearched).toBeDefined();
 				},
-				{ timeout: 15000 },
+				{ timeout: 10000 },
 			);
 		});
 

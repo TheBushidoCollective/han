@@ -1,0 +1,70 @@
+# hashi-playwright-mcp plugin configuration
+# This plugin provides Playwright browser automation via MCP server
+
+# MCP server definition (managed by Han, not exposed to Claude Code)
+mcp:
+  name: playwright
+  description: Playwright browser automation for testing and UI interaction
+  command: npx
+  args:
+    - "-y"
+    - "@playwright/mcp@latest"
+  env: {}
+  capabilities:
+    - category: Testing/Automation
+      summary: Browser automation, screenshots, page interaction
+      examples:
+        - Navigate to a URL and take a screenshot
+        - Fill out a form and submit it
+        - Debug a failing UI test
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Agent configuration
+# These agents handle Playwright operations and return concise summaries
+# to prevent verbose output from polluting the main orchestrator's context
+agents:
+  test-generator:
+    description: |
+      Generate Playwright test cases from requirements, user flows, and specifications.
+      Delegates all browser interaction to this agent to keep verbose output contained.
+    when_to_use:
+      - Creating new test suites from scratch
+      - Converting manual test cases to automated tests
+      - Generating tests from user stories or specifications
+      - Building regression test coverage
+    returns: Concise summary of tests generated with file paths and test names
+
+  ui-debugger:
+    description: |
+      Debug UI issues using Playwright inspection and browser automation tools.
+      Delegates all browser interaction to this agent to keep verbose output contained.
+    when_to_use:
+      - Investigating failing tests
+      - Debugging flaky tests
+      - Troubleshooting selector problems
+      - Analyzing element visibility issues
+      - Inspecting page state
+    returns: Concise summary of findings with root cause and recommended fix
+
+# IMPORTANT: Main orchestrator should NEVER call Playwright MCP tools directly
+# Always delegate to test-generator or ui-debugger agents
+orchestrator_guidance: |
+  DO NOT call Playwright MCP tools (browser_*, playwright_*) directly from the main
+  orchestrator context. Playwright tools return extremely verbose output including:
+  - Full page snapshots (thousands of lines)
+  - DOM trees
+  - Network request/response logs
+  - Console output
+
+  This will fill your context window and degrade performance.
+
+  INSTEAD: Delegate to specialized agents:
+  - test-generator: For creating/updating Playwright tests
+  - ui-debugger: For investigating UI issues or test failures
+
+  These agents are designed to:
+  1. Use Playwright tools freely within their context
+  2. Process verbose output internally
+  3. Return only concise, actionable summaries
