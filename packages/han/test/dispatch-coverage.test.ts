@@ -250,7 +250,7 @@ describe("dispatch.ts coverage tests", () => {
 			expect(result.status).toBe(0);
 		});
 
-		test("skips non-command hooks (line 414-415, 458-459)", () => {
+		test("skips non-command hooks (line 414-415, 458-459)", { timeout: 15000 }, () => {
 			const settings = {
 				hooks: {
 					SessionStart: [

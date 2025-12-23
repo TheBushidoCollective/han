@@ -18,6 +18,10 @@ describe("memory indexer", () => {
 		// Save original env
 		originalHome = process.env.HOME;
 		originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
+
+		// Isolate tests from user's real config
+		process.env.HOME = testDir;
+		process.env.CLAUDE_CONFIG_DIR = join(testDir, ".claude");
 	});
 
 	afterEach(() => {
