@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
 
+### Fixed
+
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
+### Other
+
+- Merge pull request #23 from TheBushidoCollective/refactor/remove-prompt-hooks ([ce59ff80](../../commit/ce59ff80))
+
+## [1.1.7] - 2025-12-23
+
+### Added
+
+- configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
+
 ### Changed
 
 - remove all prompt hooks ([01227fef](../../commit/01227fef))

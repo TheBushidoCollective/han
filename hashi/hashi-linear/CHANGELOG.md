@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.2] - 2025-12-23
 
+### Fixed
+
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
+### Other
+
+- Merge pull request #23 from TheBushidoCollective/refactor/remove-prompt-hooks ([ce59ff80](../../commit/ce59ff80))
+
+## [1.2.2] - 2025-12-23
+
 ### Changed
 
 - remove all prompt hooks ([01227fef](../../commit/01227fef))
