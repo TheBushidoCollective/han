@@ -1,6 +1,6 @@
 {
   "name": "hashi-blueprints",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "MCP server for managing technical blueprint documentation. Use search_blueprints before creating, read_blueprint before modifying, write_blueprint after implementation changes. Includes skills and hooks for quality enforcement.",
   "author": {
     "name": "The Bushido Collective",
@@ -21,7 +21,10 @@
   "mcpServers": {
     "blueprints": {
       "command": "han",
-      "args": ["mcp", "blueprints"],
+      "args": [
+        "mcp",
+        "blueprints"
+      ],
       "env": {}
     }
   }
