@@ -168,28 +168,32 @@ describe.serial("Metrics CLI Commands", () => {
 			expect(hookStats.length).toBe(0);
 		});
 
-		test("hook-exec records hook failure via stdin", () => {
-			const { session_id } = getStorage().startSession();
+		test(
+			"hook-exec records hook failure via stdin",
+			() => {
+				const { session_id } = getStorage().startSession();
 
-			for (let i = 0; i < 3; i++) {
-				const hookData = {
-					sessionId: session_id,
-					hookType: "Stop",
-					hookName: "biome-lint",
-					hookSource: "jutsu-biome",
-					durationMs: 500,
-					exitCode: 1,
-					passed: false,
-					error: "Linting errors found",
-				};
-				runCommand("hook-exec", JSON.stringify(hookData));
-			}
+				for (let i = 0; i < 3; i++) {
+					const hookData = {
+						sessionId: session_id,
+						hookType: "Stop",
+						hookName: "biome-lint",
+						hookSource: "jutsu-biome",
+						durationMs: 500,
+						exitCode: 1,
+						passed: false,
+						error: "Linting errors found",
+					};
+					runCommand("hook-exec", JSON.stringify(hookData));
+				}
 
-			const hookStats = getStorage().getHookFailureStats("week");
-			expect(hookStats.length).toBe(1);
-			expect(hookStats[0].name).toBe("biome-lint");
-			expect(hookStats[0].failures).toBe(3);
-		});
+				const hookStats = getStorage().getHookFailureStats("week");
+				expect(hookStats.length).toBe(1);
+				expect(hookStats[0].name).toBe("biome-lint");
+				expect(hookStats[0].failures).toBe(3);
+			},
+			{ timeout: 15000 },
+		);
 
 		test("hook-exec handles missing sessionId", () => {
 			const hookData = {

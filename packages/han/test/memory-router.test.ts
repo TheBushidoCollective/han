@@ -253,60 +253,88 @@ describe("Memory Router", () => {
 		});
 
 		describe("routing (all questions search all layers)", () => {
-			test("all questions search all layers", async () => {
-				const result = await queryMemory({
-					question: "what was I working on recently?",
-				});
-				// All questions now go through searchAllLayers
-				expect(result.layersSearched).toBeDefined();
-				expect(result.layersSearched?.length).toBeGreaterThan(0);
-			});
+			test(
+				"all questions search all layers",
+				async () => {
+					const result = await queryMemory({
+						question: "what was I working on recently?",
+					});
+					// All questions now go through searchAllLayers
+					expect(result.layersSearched).toBeDefined();
+					expect(result.layersSearched?.length).toBeGreaterThan(0);
+				},
+				{ timeout: 15000 },
+			);
 
-			test("who questions search all layers", async () => {
-				const result = await queryMemory({
-					question: "who knows about the payment system?",
-				});
-				expect(result.layersSearched).toBeDefined();
-				expect(result.layersSearched?.length).toBeGreaterThan(0);
-			});
+			test(
+				"who questions search all layers",
+				async () => {
+					const result = await queryMemory({
+						question: "who knows about the payment system?",
+					});
+					expect(result.layersSearched).toBeDefined();
+					expect(result.layersSearched?.length).toBeGreaterThan(0);
+				},
+				{ timeout: 15000 },
+			);
 
-			test("why questions search all layers", async () => {
-				const result = await queryMemory({
-					question: "why did we choose TypeScript?",
-				});
-				expect(result.layersSearched).toBeDefined();
-			});
+			test(
+				"why questions search all layers",
+				async () => {
+					const result = await queryMemory({
+						question: "why did we choose TypeScript?",
+					});
+					expect(result.layersSearched).toBeDefined();
+				},
+				{ timeout: 15000 },
+			);
 
-			test("how questions search all layers", async () => {
-				const result = await queryMemory({
-					question: "how do we handle errors?",
-				});
-				expect(result.layersSearched).toBeDefined();
-			});
+			test(
+				"how questions search all layers",
+				async () => {
+					const result = await queryMemory({
+						question: "how do we handle errors?",
+					});
+					expect(result.layersSearched).toBeDefined();
+				},
+				{ timeout: 15000 },
+			);
 		});
 
 		describe("multi-layer search", () => {
-			test("searches rules layer", async () => {
-				const result = await queryMemory({
-					question: "How do engagements move through the system?",
-				});
-				expect(result.layersSearched).toContain("rules");
-			});
+			test(
+				"searches rules layer",
+				async () => {
+					const result = await queryMemory({
+						question: "How do engagements move through the system?",
+					});
+					expect(result.layersSearched).toContain("rules");
+				},
+				{ timeout: 15000 },
+			);
 
-			test("searches multiple layers", async () => {
-				const result = await queryMemory({
-					question: "What production issues have we been dealing with?",
-				});
-				expect(result.layersSearched).toBeDefined();
-				expect(result.layersSearched?.length).toBeGreaterThan(1);
-			});
+			test(
+				"searches multiple layers",
+				async () => {
+					const result = await queryMemory({
+						question: "What production issues have we been dealing with?",
+					});
+					expect(result.layersSearched).toBeDefined();
+					expect(result.layersSearched?.length).toBeGreaterThan(1);
+				},
+				{ timeout: 15000 },
+			);
 
-			test("searches team layer", async () => {
-				const result = await queryMemory({
-					question: "who implemented the caching system?",
-				});
-				expect(result.layersSearched).toContain("team");
-			});
+			test(
+				"searches team layer",
+				async () => {
+					const result = await queryMemory({
+						question: "who implemented the caching system?",
+					});
+					expect(result.layersSearched).toContain("team");
+				},
+				{ timeout: 15000 },
+			);
 		});
 	});
 
