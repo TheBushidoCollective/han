@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2025-12-24
+
+### Added
+
+- configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
+
+### Fixed
+
+- restore memory configs in hashi plugins ([1a4c3a43](../../commit/1a4c3a43))
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+
+### Other
+
+- Merge pull request #24 from TheBushidoCollective/refactor/remove-prompt-hooks ([4284b64e](../../commit/4284b64e))
+
 ## [1.4.3] - 2025-12-23
 
 ### Added
