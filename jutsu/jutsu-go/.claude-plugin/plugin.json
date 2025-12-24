@@ -9,9 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": [
-    "go",
-    "golang",
-    "concurrency"
-  ]
+  "keywords": ["go", "golang", "concurrency"]
 }
