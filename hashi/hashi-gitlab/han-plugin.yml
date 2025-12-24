@@ -3,3 +3,19 @@
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Memory provider for team memory extraction from GitLab
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-gitlab_gitlab__list_merge_requests
+    - mcp__plugin_hashi-gitlab_gitlab__get_merge_request
+    - mcp__plugin_hashi-gitlab_gitlab__list_issues
+  system_prompt: |
+    Extract observations from GitLab merge requests and issues. For each item, capture:
+    - author: GitLab username
+    - timestamp: when created/merged
+    - summary: title and key points from description
+    - files: list of files changed (for MRs)
+    - type: 'mr', 'review', or 'issue'
+    Return as JSON array of observations.
