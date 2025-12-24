@@ -1,25 +1,23 @@
 ---
 title: "Memory System"
-description: "Han's five-layer memory system provides full historical context - from instant rules to complete conversation history, with automatic pattern promotion."
+description: "Han's memory system provides full historical context - from instant rules to complete conversation history, with automatic pattern promotion."
 ---
 
-Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with five layers of context and automatic pattern promotion.
+Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with persistent context and automatic pattern promotion.
 
-## Five Layers of Memory
+## Memory Layers
 
 | Layer | Source | Speed | Contains |
 |-------|--------|-------|----------|
-| **1. Rules** | `.claude/rules/` | Instant | Conventions, patterns |
-| **2. Summaries** | Session end | Fast | Work done, decisions |
-| **3. Observations** | Tool usage | Fast | Files touched, commands |
-| **4. Transcripts** | Conversations | Moderate | Full discussion history |
-| **5. Team Memory** | Git + integrations | Varies | Commits, PRs, expertise |
+| **Rules** | `.claude/rules/` | Instant | Conventions, patterns |
+| **Transcripts** | Conversations | Fast | Full discussion history |
+| **Team Memory** | Git + integrations | Varies | Commits, PRs, expertise |
 
-All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) and semantic search for fast retrieval.
+All layers are searchable via the `memory` MCP tool. Transcripts and team memory are indexed using full-text search (BM25) for fast retrieval.
 
 ---
 
-## Layer 1: Rules - The Learn Tool
+## Rules - The Learn Tool
 
 Han lets Claude **teach itself** about your project by writing to `.claude/rules/`.
 
@@ -195,67 +193,21 @@ auto_learn({ action: "promote" })
 
 ---
 
-## Layer 2-3: Session Memory
+## Conversation Memory
 
-Han automatically captures what happens during sessions via the PostToolUse hook.
+Han searches your Claude Code conversation history and extracts context from past sessions.
 
-### Session Lifecycle
+### What's Captured
 
-Sessions are long-lived and don't have explicit start/end triggers. The `session_id` comes from Claude Code and flows implicitly through PostToolUse events.
-
-```
-PostToolUse fired → han memory capture → observations stored
-                                              ↓
-                         ~/.claude/han/memory/sessions/{session_id}.jsonl
-```
-
-### Observations (Layer 3)
-
-Raw tool usage logs captured continuously:
-
-- Every file read/edited
-- Commands executed
-- Timestamps for everything
-- Full context trail
+- **Transcripts**: Full conversation history from `~/.claude/projects/`
+- **Summaries**: AI-generated summaries of work sessions
+- **Cross-worktree**: Context from peer worktrees sharing the same git remote
 
 Query with: `memory({ question: "what was I working on?" })`
 
-### Summaries (Layer 2)
-
-Summaries can be generated on-demand from observations:
-
-- Work completed and in-progress
-- Decisions made with rationale
-- Key files touched
-
-CLI access:
-
-```bash
-# Generate summary from observations (optional)
-han memory session-end --session-id <id>
-```
-
 ---
 
-## Layer 4: Transcript Search
-
-Han searches your full Claude Code conversation history stored at `~/.claude/projects/`.
-
-This recovers context that was previously lost:
-
-- "What did we discuss about authentication?"
-- "Why did we choose JWT over sessions?"
-- Full reasoning, not just summaries
-
-### Cross-Worktree Support
-
-Working in multiple worktrees? Han finds context from peer worktrees sharing the same git remote. Context follows the repository, not just the directory.
-
-Query with: `memory({ question: "what did we discuss about X?" })`
-
----
-
-## Layer 5: Team Memory
+## Team Memory
 
 Team memory goes beyond personal sessions to research institutional knowledge from multiple sources.
 
@@ -313,7 +265,7 @@ Query with: `memory({ question: "who knows about payments?" })`
 
 ## Indexing
 
-All layers (except rules) are indexed for fast search using BM25 full-text search and semantic embeddings.
+Transcripts and team memory are indexed for fast search using BM25 full-text search.
 
 ### CLI Commands
 
@@ -323,12 +275,7 @@ han index run
 
 # Index specific layer
 han index run --layer transcripts
-han index run --layer observations
-han index run --layer summaries
 han index run --layer team
-
-# Index specific session
-han index run --session <session-id>
 
 # Search indexed content
 han index search "authentication"
@@ -338,9 +285,9 @@ han index search "error handling" --layer team --limit 20
 han index status
 ```
 
-### Automatic Indexing
+### Manual Indexing
 
-Indexing happens automatically at session end. Manual indexing is optional but useful for:
+Indexing is useful for:
 
 - Initial setup after installing Han
 - Troubleshooting search issues
@@ -350,17 +297,17 @@ Indexing happens automatically at session end. Manual indexing is optional but u
 
 ## Unified Query Interface
 
-The `memory` MCP tool routes questions to appropriate layers automatically:
+The `memory` MCP tool routes questions to appropriate sources automatically:
 
 | Question Type | Routes To |
 |--------------|-----------|
-| "What was I working on?" | Personal sessions (Layer 2-3) |
-| "Continue where I left off" | Recent session context |
-| "Who knows about X?" | Team memory research (Layer 5) |
-| "Why did we choose Y?" | Transcripts + team (Layer 4-5) |
-| "How do we handle Z?" | Rules + conventions (Layer 1) |
+| "What was I working on?" | Recent transcripts |
+| "Continue where I left off" | Session context |
+| "Who knows about X?" | Team memory research |
+| "Why did we choose Y?" | Transcripts + team memory |
+| "How do we handle Z?" | Rules + conventions |
 
-You don't think about layers - you just ask questions.
+You don't think about sources - you just ask questions.
 
 ---
 
@@ -370,9 +317,6 @@ You don't think about layers - you just ask questions.
 ~/.claude/
   han/
     memory/
-      personal/
-        sessions/           # Layer 3: Raw observations (JSONL)
-        summaries/          # Layer 2: AI summaries (YAML)
       index/
         fts.db              # Full-text search index
       projects/
@@ -380,10 +324,10 @@ You don't think about layers - you just ask questions.
           meta.yaml         # Team memory metadata
 
   projects/
-    {project-slug}/         # Layer 4: Claude transcripts (JSONL)
+    {project-slug}/         # Claude transcripts (JSONL)
 
 .claude/                    # In project repo (git-tracked)
-  rules/                    # Layer 1: Permanent rules
+  rules/                    # Permanent rules
 ```
 
 ---
