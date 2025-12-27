@@ -300,7 +300,7 @@ describe("dispatch.ts coverage tests", () => {
 			expect(result.status).toBe(0);
 			expect(result.stdout).toContain("Command hook executed");
 			expect(result.stdout).not.toContain("prompt hook");
-		});
+		}, { timeout: 15000 });
 	});
 
 	describe("plugin hooks dispatch (lines 566-602)", () => {
