@@ -5,7 +5,7 @@
  * Uses PageLoader for query preloading with @defer and pagination.
  */
 
-import type React from 'react';
+import React, { Component } from 'react';
 import { graphql } from 'react-relay';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box } from '@/components/atoms/Box.tsx';
@@ -17,28 +17,79 @@ import { PageLoader } from '@/components/helpers';
 import type { SessionDetailPageQuery as SessionDetailPageQueryType } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { SessionDetailContent } from './SessionDetailContent.tsx';
 
+// Error boundary to catch and display errors
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box style={{ padding: '2rem', color: 'red' }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {this.state.error?.message}
+          </pre>
+          <pre
+            style={{
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: '12px',
+              marginTop: '1rem',
+            }}
+          >
+            {this.state.error?.stack}
+          </pre>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /**
- * Main query - loads core session info immediately
+ * Main query - uses node(id:) pattern with global ID
+ * Global ID format: Session:{sessionId}
  * Expensive fields and messages are loaded via fragments
  */
 export const SessionDetailPageQuery = graphql`
-  query SessionDetailPageQuery($id: String!) {
-    session(id: $id) {
-      id
-      sessionId
-      date
-      projectName
-      projectPath
-      projectId
-      worktreeName
-      summary
-      messageCount
-      startedAt
-      updatedAt
-      gitBranch
-      version
-      ...SessionMessages_session @arguments(last: 50)
-      ...SessionExpensiveFields_session @defer
+  query SessionDetailPageQuery($id: ID!) {
+    node(id: $id) {
+      ... on Session {
+        id
+        sessionId
+        date
+        projectName
+        projectPath
+        projectId
+        worktreeName
+        summary
+        messageCount
+        startedAt
+        updatedAt
+        gitBranch
+        version
+        ...SessionMessages_session
+        ...SessionExpensiveFields_session @defer
+      }
     }
   }
 `;
@@ -51,7 +102,10 @@ export default function SessionDetailPage(): React.ReactElement {
   const params = useParams<{ projectId?: string; id: string }>();
   const sessionId = params.id;
 
-  if (!sessionId) {
+  // Build global ID for node query
+  const globalId = sessionId ? `Session:${sessionId}` : null;
+
+  if (!sessionId || !globalId) {
     return (
       <Box className="page session-detail-page">
         <header className="page-header">
@@ -73,14 +127,16 @@ export default function SessionDetailPage(): React.ReactElement {
   }
 
   return (
-    <PageLoader<SessionDetailPageQueryType>
-      query={SessionDetailPageQuery}
-      variables={{ id: sessionId }}
-      loadingMessage="Loading session..."
-    >
-      {(queryRef) => (
-        <SessionDetailContent queryRef={queryRef} sessionId={sessionId} />
-      )}
-    </PageLoader>
+    <ErrorBoundary>
+      <PageLoader<SessionDetailPageQueryType>
+        query={SessionDetailPageQuery}
+        variables={{ id: globalId }}
+        loadingMessage="Loading session..."
+      >
+        {(queryRef) => (
+          <SessionDetailContent queryRef={queryRef} sessionId={sessionId} />
+        )}
+      </PageLoader>
+    </ErrorBoundary>
   );
 }

@@ -47,11 +47,19 @@ const SessionMessagesFragment = graphql`
       @connection(key: "SessionMessages_messages") {
       edges {
         node {
+          __typename
           id
-          type
-          content
           timestamp
-          isToolOnly
+          ... on UserMessage {
+            content
+          }
+          ... on AssistantMessage {
+            content
+            isToolOnly
+          }
+          ... on SummaryMessage {
+            content
+          }
         }
         cursor
       }
@@ -76,13 +84,29 @@ const SessionMessagesSubscriptionDef = graphql`
   }
 `;
 
-// Message type for internal use
-interface Message {
+// Simplified message type for list rendering
+interface SimpleMessage {
   id: string;
-  type: string | null | undefined;
-  content: string | null | undefined;
-  timestamp: string | null | undefined;
-  isToolOnly: boolean | null | undefined;
+  type: 'USER' | 'ASSISTANT' | 'SUMMARY';
+  content: string | null;
+  timestamp: string | null;
+  isToolOnly: boolean;
+}
+
+// Helper to map GraphQL __typename to message type
+function mapTypenameToType(
+  typename: string
+): 'USER' | 'ASSISTANT' | 'SUMMARY' {
+  switch (typename) {
+    case 'UserMessage':
+      return 'USER';
+    case 'AssistantMessage':
+      return 'ASSISTANT';
+    case 'SummaryMessage':
+      return 'SUMMARY';
+    default:
+      return 'USER';
+  }
 }
 
 interface SessionMessagesProps {
@@ -132,18 +156,18 @@ export function SessionMessages({
 
   useSubscription<SessionMessagesSubscription>(subscriptionConfig);
 
-  const messages: Message[] = useMemo(() => {
+  const messages: SimpleMessage[] = useMemo(() => {
     const edges = data?.messages?.edges ?? [];
     return edges
       .map((edge) => edge?.node)
-      .filter((n) => n !== null && n !== undefined)
+      .filter((n): n is NonNullable<typeof n> => n !== null && n !== undefined)
       .map((n) => ({
         id: n.id ?? '',
-        type: n.type,
-        content: n.content,
-        timestamp: n.timestamp,
-        isToolOnly: n.isToolOnly,
-      })) as Message[];
+        type: mapTypenameToType(n.__typename),
+        content: 'content' in n ? (n.content ?? null) : null,
+        timestamp: n.timestamp ?? null,
+        isToolOnly: 'isToolOnly' in n ? (n.isToolOnly ?? false) : false,
+      }));
   }, [data?.messages?.edges]);
 
   const filteredMessages = useMemo(() => {

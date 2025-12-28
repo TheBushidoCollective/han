@@ -56,6 +56,9 @@ export function SessionDetailContent({
     queryRef
   );
 
+  // Cast node to session type (node query returns union type)
+  const session = data.node;
+
   // Subscription config for live updates - watches for new messages in this session
   const subscriptionConfig = useMemo<
     GraphQLSubscriptionConfig<SessionDetailContentSubscription>
@@ -84,8 +87,6 @@ export function SessionDetailContent({
   );
 
   useSubscription<SessionDetailContentSubscription>(subscriptionConfig);
-
-  const session = data.session;
 
   const handleBack = () => {
     // Navigate back to project sessions if projectId available, else global sessions
@@ -194,7 +195,7 @@ export function SessionDetailContent({
             color="muted"
             title={session.sessionId ?? ''}
           >
-            ID: {session.sessionId?.slice(0, 8)}...
+            ID: {session.sessionId}
           </Text>
           {session.worktreeName && (
             <Text className="worktree-compact" size="xs" color="muted">
