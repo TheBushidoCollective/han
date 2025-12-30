@@ -1,22 +1,23 @@
 ---
 name: coordinator-data-layer
-summary: Single-coordinator pattern for indexing JSONL transcripts to SurrealKV database
+summary: Single-coordinator pattern for indexing JSONL transcripts to SQLite database
 ---
 
 # Coordinator Data Layer
 
-Single-coordinator pattern ensuring exactly one process indexes Claude Code JSONL transcripts to the unified SurrealKV database.
+Single-coordinator pattern ensuring exactly one process indexes Claude Code JSONL transcripts to the unified SQLite database.
 
 ## Problem Statement
 
 Multiple Han instances (MCP servers, browse commands) may run simultaneously. Without coordination:
+
 - Multiple processes could index the same files causing duplicate data
 - Race conditions between readers and writers
 - Wasted resources on redundant indexing
 
 ## Solution: Single Coordinator Pattern
 
-One process becomes the "coordinator" and handles all JSONL → SurrealKV indexing. Other instances are read-only consumers of the database.
+One process becomes the "coordinator" and handles all JSONL → SQLite indexing. Other instances are read-only consumers of the database.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -39,23 +40,24 @@ One process becomes the "coordinator" and handles all JSONL → SurrealKV indexi
 │  Responsibilities:                                               │
 │  ├── Watch JSONL files for changes                              │
 │  ├── Parse new lines incrementally                              │
-│  ├── Index to SurrealKV (upserts)                               │
+│  ├── Index to SQLite (upserts)                                  │
 │  └── Update heartbeat periodically                               │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SurrealKV Database                            │
+│                      SQLite Database                             │
 │                                                                  │
-│  ~/.claude/han/data/surrealkv/                                   │
+│  ~/.claude/han/han.db                                            │
 │                                                                  │
 │  Tables:                                                         │
-│  ├── repo      (git repositories)                               │
-│  ├── project   (worktrees/paths within repos)                   │
-│  ├── session   (Claude Code sessions)                           │
-│  ├── message   (individual messages with line_number)           │
-│  └── ...other tables (tasks, hook_cache, etc.)                  │
+│  ├── repos     (git repositories)                               │
+│  ├── projects  (worktrees/paths within repos)                   │
+│  ├── sessions  (Claude Code sessions)                           │
+│  ├── messages  (individual messages with line_number)           │
+│  ├── tasks     (metrics tracking)                               │
+│  └── {table}_fts / {table}_vec  (FTS5 and vector indices)       │
 └─────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -64,7 +66,7 @@ One process becomes the "coordinator" and handles all JSONL → SurrealKV indexi
 │                                                                  │
 │  [MCP Server]  [Browse UI]  [Hooks]                             │
 │                                                                  │
-│  All read from SurrealKV via db interface                        │
+│  All read from SQLite via db interface                           │
 │  Never access JSONL files directly                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -111,6 +113,7 @@ One process becomes the "coordinator" and handles all JSONL → SurrealKV indexi
 ### Race Condition Handling
 
 If a coordinator's PID gets overwritten (race condition):
+
 1. Coordinator detects lock file has different PID
 2. Immediately stops indexing
 3. Becomes a reader instead
@@ -140,6 +143,7 @@ Session: abc-123
 ### Message Upserts
 
 All message indexing uses upserts keyed by `(session_id, line_number)`:
+
 - Safe to re-index partial files
 - Idempotent operations
 - No duplicate messages
@@ -147,17 +151,22 @@ All message indexing uses upserts keyed by `(session_id, line_number)`:
 ### Schema
 
 ```sql
--- Message table with line-based indexing
-DEFINE TABLE message SCHEMAFULL;
-DEFINE FIELD session_id ON message TYPE string;
-DEFINE FIELD message_id ON message TYPE string;
-DEFINE FIELD message_type ON message TYPE string;
-DEFINE FIELD line_number ON message TYPE int;
--- ... other fields
+-- Message table with line-based indexing (SQLite)
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  message_type TEXT NOT NULL,
+  line_number INTEGER NOT NULL,
+  role TEXT,
+  content TEXT,
+  raw_json TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Unique constraint prevents duplicates
-DEFINE INDEX idx_message_line ON message
-  FIELDS session_id, line_number UNIQUE;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_session_line
+  ON messages(session_id, line_number);
 ```
 
 ## API Separation
@@ -225,13 +234,16 @@ The first process to acquire the lock becomes coordinator. Order doesn't matter 
 
 ### Database Corruption
 
-SurrealKV is append-only with built-in recovery:
-- Automatic transaction replay on startup
-- No manual recovery needed
+SQLite with WAL mode provides robust recovery:
+
+- WAL (Write-Ahead Logging) for crash safety
+- Automatic journal recovery on startup
+- PRAGMA integrity_check for validation
 
 ### Missed File Events
 
 Full scan on coordinator startup catches up:
+
 1. Scan all project directories
 2. Compare file mtime vs database `updated_at`
 3. Re-index sessions with stale data
@@ -249,7 +261,7 @@ coordinator:
 ## Implementation Files
 
 - `han-native/src/coordinator.rs` - PID lock mechanism
-- `han-native/src/indexer.rs` - JSONL → SurrealKV indexing
+- `han-native/src/indexer.rs` - JSONL → SQLite indexing
 - `han-native/src/watcher.rs` - File change detection
 - `han-native/src/crud.rs` - Database operations
 - `han/lib/db/index.ts` - TypeScript API

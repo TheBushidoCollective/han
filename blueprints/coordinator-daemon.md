@@ -20,7 +20,7 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │  ┌──────────────┐  ┌────────┴───────┐  ┌──────────────────┐   │
-│  │ File Watcher │  │   SurrealKV    │  │     PubSub       │   │
+│  │ File Watcher │  │     SQLite     │  │     PubSub       │   │
 │  │ (JSONL→DB)   │  │   (Database)   │  │  (Subscriptions) │   │
 │  └──────────────┘  └────────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -56,19 +56,22 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 **Location:** `packages/han/lib/commands/coordinator/`
 
 **Responsibilities:**
+
 - GraphQL server (queries, mutations, subscriptions)
-- SurrealKV database management
+- SQLite database management (WAL mode)
 - JSONL file watching and indexing
 - PubSub for real-time subscription events
 - Single source of truth for all data
 
 **Lifecycle:**
+
 - Lazily started by first client (browse, MCP, hooks)
 - Runs as detached daemon process
 - PID file at `~/.claude/han/coordinator.pid`
 - Stays running until explicitly stopped or system restart
 
 **CLI Commands:**
+
 ```bash
 han coordinator start   # Start daemon (if not running)
 han coordinator stop    # Stop daemon gracefully
@@ -80,12 +83,14 @@ han coordinator status  # Check if running, show PID
 **Location:** `packages/han/lib/commands/browse/`
 
 **Responsibilities:**
+
 - Serve static frontend files
 - Dev mode: Vite with HMR
 - Prod mode: Simple Bun static server
 - Ensure coordinator is running on startup
 
 **No longer responsible for:**
+
 - GraphQL handling (moved to coordinator)
 - WebSocket proxying (frontend connects directly)
 - PubSub (moved to coordinator)
@@ -95,6 +100,7 @@ han coordinator status  # Check if running, show PID
 **Location:** `packages/browse-client/`
 
 **Configuration:**
+
 ```typescript
 // Direct connection to coordinator
 const GRAPHQL_HTTP = 'http://localhost:41957/graphql';
@@ -104,6 +110,7 @@ const GRAPHQL_WS = 'ws://localhost:41957/graphql';
 ### MCP Server / Hooks
 
 **GraphQL Client:**
+
 - Use `graphql-request` + GraphQL Code Generator
 - Type-safe operations generated from schema
 - Connect to `http://localhost:41957/graphql`
@@ -137,6 +144,7 @@ const GRAPHQL_WS = 'ws://localhost:41957/graphql';
 ```
 
 **Helper function:**
+
 ```typescript
 export async function ensureCoordinator(): Promise<void> {
   // Try to connect
@@ -159,6 +167,7 @@ export async function ensureCoordinator(): Promise<void> {
 The existing Pothos schema moves to coordinator. Key additions:
 
 ### Mutations (for MCP/hooks)
+
 ```graphql
 type Mutation {
   # Task/Metrics
@@ -177,6 +186,7 @@ type Mutation {
 ```
 
 ### Subscriptions (existing)
+
 ```graphql
 type Subscription {
   sessionUpdated(sessionId: ID!): SessionUpdatedPayload!
@@ -209,6 +219,7 @@ packages/han/lib/graphql/
 ## CORS Configuration
 
 Coordinator allows requests from browse origin:
+
 ```typescript
 cors: {
   origin: ['http://localhost:41956'],
@@ -280,6 +291,7 @@ Eliminate the need for local UI serving by hosting the dashboard and using a cle
 ### Implementation Steps
 
 1. **Infrastructure Setup:**
+
    ```
    dashboard.han.guru  → Vercel/Cloudflare (static hosting)
    coordinator.han.guru → 127.0.0.1 (DNS A record)
@@ -292,6 +304,7 @@ Eliminate the need for local UI serving by hosting the dashboard and using a cle
    - Returns PEM bundle: `{ cert: string, key: string, expires: Date }`
 
 3. **Coordinator HTTPS:**
+
    ```typescript
    // On startup
    const { cert, key } = await fetchCertificate();
@@ -304,6 +317,7 @@ Eliminate the need for local UI serving by hosting the dashboard and using a cle
    ```
 
 4. **Frontend Configuration:**
+
    ```typescript
    // In production (hosted dashboard)
    const GRAPHQL_ENDPOINT = 'https://coordinator.han.guru:41957/graphql';
