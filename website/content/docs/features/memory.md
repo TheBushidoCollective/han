@@ -7,13 +7,13 @@ Every codebase has quirks that aren't in the README. Claude figures these out, t
 
 ## Five Layers of Memory
 
-| Layer | Source | Speed | Contains |
-|-------|--------|-------|----------|
-| **1. Rules** | `.claude/rules/` | Instant | Conventions, patterns |
-| **2. Summaries** | Session end | Fast | Work done, decisions |
-| **3. Observations** | Tool usage | Fast | Files touched, commands |
-| **4. Transcripts** | Conversations | Moderate | Full discussion history |
-| **5. Team Memory** | Git + integrations | Varies | Commits, PRs, expertise |
+| Layer               | Source             | Speed    | Contains                |
+| ------------------- | ------------------ | -------- | ----------------------- |
+| **1. Rules**        | `.claude/rules/`   | Instant  | Conventions, patterns   |
+| **2. Summaries**    | Session end        | Fast     | Work done, decisions    |
+| **3. Observations** | Tool usage         | Fast     | Files touched, commands |
+| **4. Transcripts**  | Conversations      | Moderate | Full discussion history |
+| **5. Team Memory**  | Git + integrations | Varies   | Commits, PRs, expertise |
 
 All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) and semantic search for fast retrieval.
 
@@ -50,12 +50,12 @@ So Han lets Claude learn freely and informs you what was captured.
 
 ### MCP Tools
 
-| Tool | Purpose |
-|------|---------|
-| `learn` | Write a learning to `.claude/rules/<domain>.md` |
-| `memory_list` | List existing rule domains |
-| `memory_read` | Read a domain's content (avoid duplicates) |
-| `auto_learn` | Check status and trigger pattern promotion |
+| Tool          | Purpose                                         |
+| ------------- | ----------------------------------------------- |
+| `learn`       | Write a learning to `.claude/rules/<domain>.md` |
+| `memory_list` | List existing rule domains                      |
+| `memory_read` | Read a domain's content (avoid duplicates)      |
+| `auto_learn`  | Check status and trigger pattern promotion      |
 
 ### The `learn` Tool
 
@@ -93,7 +93,7 @@ Creates `.claude/rules/api-validation.md` with YAML frontmatter:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules
@@ -152,24 +152,24 @@ Beyond manual learning, Han automatically promotes patterns to rules when they'r
 
 ### Promotion Criteria
 
-| Criteria | Threshold |
-|----------|-----------|
-| Minimum occurrences | 3 |
-| Confidence score | ≥ 0.8 |
+| Criteria                 | Threshold       |
+| ------------------------ | --------------- |
+| Minimum occurrences      | 3               |
+| Confidence score         | ≥ 0.8           |
 | Multiple authors (bonus) | +0.1 confidence |
 
 ### Domain Detection
 
 Patterns are automatically classified into domains based on keywords:
 
-| Domain | Keywords |
-|--------|----------|
-| testing | test, spec, mock, fixture, assert |
-| api | endpoint, route, handler, request |
-| auth | auth, login, session, token, jwt |
-| database | db, query, migration, schema |
-| error | error, exception, catch, throw |
-| commands | command, cli, script, npm, bun |
+| Domain   | Keywords                          |
+| -------- | --------------------------------- |
+| testing  | test, spec, mock, fixture, assert |
+| api      | endpoint, route, handler, request |
+| auth     | auth, login, session, token, jwt  |
+| database | db, query, migration, schema      |
+| error    | error, exception, catch, throw    |
+| commands | command, cli, script, npm, bun    |
 
 ### The `auto_learn` Tool
 
@@ -261,12 +261,12 @@ Team memory goes beyond personal sessions to research institutional knowledge fr
 
 ### Knowledge Sources
 
-| Source | What It Provides |
-|--------|-----------------|
+| Source          | What It Provides                 |
+| --------------- | -------------------------------- |
 | **Git history** | Commits, diffs, who changed what |
-| **GitHub** | PRs, reviews, issue discussions |
-| **Linear** | Issue context, project decisions |
-| **Jira** | Ticket history, sprint context |
+| **GitHub**      | PRs, reviews, issue discussions  |
+| **Linear**      | Issue context, project decisions |
+| **Jira**        | Ticket history, sprint context   |
 
 ### Research Engine
 
@@ -352,13 +352,13 @@ Indexing happens automatically at session end. Manual indexing is optional but u
 
 The `memory` MCP tool routes questions to appropriate layers automatically:
 
-| Question Type | Routes To |
-|--------------|-----------|
-| "What was I working on?" | Personal sessions (Layer 2-3) |
-| "Continue where I left off" | Recent session context |
-| "Who knows about X?" | Team memory research (Layer 5) |
-| "Why did we choose Y?" | Transcripts + team (Layer 4-5) |
-| "How do we handle Z?" | Rules + conventions (Layer 1) |
+| Question Type               | Routes To                      |
+| --------------------------- | ------------------------------ |
+| "What was I working on?"    | Personal sessions (Layer 2-3)  |
+| "Continue where I left off" | Recent session context         |
+| "Who knows about X?"        | Team memory research (Layer 5) |
+| "Why did we choose Y?"      | Transcripts + team (Layer 4-5) |
+| "How do we handle Z?"       | Rules + conventions (Layer 1)  |
 
 You don't think about layers - you just ask questions.
 

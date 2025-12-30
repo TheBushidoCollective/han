@@ -67,6 +67,73 @@ Main Session (session_abc):
 
 When Subagent 1 finishes, `SubagentStop` hooks only validate its changes. Subagent 2's work is isolated.
 
+## Transcript Filtering (v2.3.0)
+
+Checkpoints solve isolation for subagents within a session. But what about **multiple sessions** in the same working tree?
+
+### The Multi-Session Problem
+
+```text
+Session A: Modifies src/auth.ts, introduces lint error
+Session B: Modifies src/utils.ts, runs Stop hook
+
+Without transcript filtering:
+└─ Session B's hook sees auth.ts changed (vs B's checkpoint)
+└─ Session B tries to fix auth.ts
+└─ Session A also tries to fix auth.ts
+└─ Edit conflict!
+```
+
+### The Solution: Transcript-Based Scoping
+
+Each session maintains a transcript of file operations. Stop hooks use this to filter:
+
+```text
+Session A: src/auth.ts in transcript → validate auth.ts only
+Session B: src/utils.ts in transcript → validate utils.ts only
+```
+
+No conflicts. Each session handles only its own changes.
+
+### How It Works
+
+1. Claude Code records all Write/Edit operations in session transcripts
+2. At `Stop`, Han extracts modified files from the transcript
+3. Files are intersected with the hook's `if_changed` patterns
+4. Hook runs only on files THIS session actually modified
+
+### File-Targeted Commands
+
+For commands that support file arguments, use `${HAN_FILES}` to pass only session-modified files:
+
+```yaml
+plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        command: npx biome check --write ${HAN_FILES}
+```
+
+This ensures Session B doesn't see (or fail on) Session A's lint errors.
+
+When `cache=false` or transcript filtering is disabled, `${HAN_FILES}` is replaced with `.` to run on all files. Use `han hook run --cache=false` to force full validation.
+
+### Configuration
+
+Transcript filtering is enabled by default when checkpoints are enabled:
+
+```yaml
+hooks:
+  checkpoints: true        # Enables checkpoints (default: true)
+  transcript_filter: true  # Enables transcript filtering (default: true)
+```
+
+The `transcript_filter` option requires `checkpoints: true`. Disabling checkpoints automatically disables transcript filtering.
+
+### Fallback Behavior
+
+If a transcript can't be found or parsed, the hook runs normally (full checkpoint-based filtering). This ensures hooks never silently skip validation.
+
 ## Configuration
 
 Checkpoints are enabled by default. All settings default to `true` as of v2.0.0.

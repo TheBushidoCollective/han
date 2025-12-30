@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import yaml from "yaml";
 import { getCategoryIcon } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
@@ -60,11 +61,19 @@ export interface CommandMetadata {
 	content: string;
 }
 
+export interface MCPCapability {
+	category: string;
+	summary: string;
+	examples?: string[];
+}
+
 export interface MCPServerMetadata {
 	name: string;
+	description?: string;
 	command: string;
 	args: string[];
 	env?: Record<string, string>;
+	capabilities?: MCPCapability[];
 }
 
 interface Hook {
@@ -519,11 +528,42 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 	return commands.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Parse MCP servers from plugin.json
+// Parse MCP servers from han-plugin.yml (preferred) or plugin.json (fallback)
 function getPluginMCPServers(pluginPath: string): MCPServerMetadata[] {
 	const mcpServers: MCPServerMetadata[] = [];
 
 	try {
+		// First, try to read from han-plugin.yml (new format)
+		const hanPluginPath = path.join(pluginPath, "han-plugin.yml");
+		if (fs.existsSync(hanPluginPath)) {
+			const hanPluginContent = fs.readFileSync(hanPluginPath, "utf-8");
+			const hanPlugin = yaml.parse(hanPluginContent) as {
+				mcp?: {
+					name: string;
+					description?: string;
+					command: string;
+					args?: string[];
+					env?: Record<string, string>;
+					capabilities?: MCPCapability[];
+				};
+			};
+
+			if (hanPlugin?.mcp) {
+				const mcp = hanPlugin.mcp;
+				mcpServers.push({
+					name: mcp.name,
+					description: mcp.description,
+					command: mcp.command,
+					args: mcp.args || [],
+					env: mcp.env,
+					capabilities: mcp.capabilities,
+				});
+				// If we found MCP in han-plugin.yml, return it
+				return mcpServers;
+			}
+		}
+
+		// Fallback to plugin.json (old format)
 		const pluginJsonPath = path.join(
 			pluginPath,
 			".claude-plugin",

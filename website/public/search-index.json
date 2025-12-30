@@ -13,7 +13,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-absinthe-graphql",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -70,7 +71,8 @@
     "path": "/plugins/hashi/hashi-agent-sop",
     "components": [
       "skill",
-      "command"
+      "command",
+      "mcp"
     ]
   },
   {
@@ -181,6 +183,24 @@
     "path": "/plugins/do/do-architecture",
     "components": [
       "agent"
+    ]
+  },
+  {
+    "id": "jutsu-atomic-design",
+    "name": "jutsu-atomic-design",
+    "description": "Validation and quality enforcement for Atomic Design methodology in component-based projects.",
+    "category": "jutsu",
+    "tags": [
+      "atomic-design",
+      "components",
+      "design-system",
+      "atoms",
+      "molecules",
+      "organisms"
+    ],
+    "path": "/plugins/jutsu/jutsu-atomic-design",
+    "components": [
+      "skill"
     ]
   },
   {
@@ -391,7 +411,8 @@
     "path": "/plugins/hashi/hashi-clickup",
     "components": [
       "command",
-      "hook"
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -467,7 +488,7 @@
   {
     "id": "core",
     "name": "core",
-    "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 + DeepWiki documentation, project memory learning, and universal programming principles.",
+    "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics + Context7/DeepWiki proxying), project memory learning, and universal programming principles.",
     "category": "core",
     "tags": [
       "infrastructure",
@@ -659,10 +680,16 @@
     "name": "jutsu-ecto",
     "description": "Ecto skills for database interactions in Elixir",
     "category": "jutsu",
-    "tags": [],
+    "tags": [
+      "ecto",
+      "elixir",
+      "database",
+      "orm"
+    ],
     "path": "/plugins/jutsu/jutsu-ecto",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -814,7 +841,8 @@
     ],
     "path": "/plugins/hashi/hashi-figma",
     "components": [
-      "command"
+      "command",
+      "mcp"
     ]
   },
   {
@@ -908,22 +936,21 @@
   {
     "id": "hashi-github",
     "name": "hashi-github",
-    "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
+    "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
     "category": "hashi",
     "tags": [
-      "mcp",
       "github",
       "git",
       "repository",
       "issues",
       "pull-requests",
       "actions",
-      "code-search",
-      "server"
+      "code-search"
     ],
     "path": "/plugins/hashi/hashi-github",
     "components": [
-      "command"
+      "command",
+      "mcp"
     ]
   },
   {
@@ -943,7 +970,8 @@
     ],
     "path": "/plugins/hashi/hashi-gitlab",
     "components": [
-      "command"
+      "command",
+      "mcp"
     ]
   },
   {
@@ -982,6 +1010,29 @@
     "components": [
       "skill",
       "hook"
+    ]
+  },
+  {
+    "id": "jutsu-gluestack",
+    "name": "jutsu-gluestack",
+    "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, and theming skills. Includes MCP server for component discovery and source code retrieval.",
+    "category": "jutsu",
+    "tags": [
+      "gluestack",
+      "gluestack-ui",
+      "react",
+      "react-native",
+      "nativewind",
+      "tailwind",
+      "ui-components",
+      "accessibility",
+      "mcp"
+    ],
+    "path": "/plugins/jutsu/jutsu-gluestack",
+    "components": [
+      "skill",
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -1151,7 +1202,8 @@
     "path": "/plugins/hashi/hashi-jira",
     "components": [
       "command",
-      "hook"
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -1254,7 +1306,8 @@
     "path": "/plugins/hashi/hashi-linear",
     "components": [
       "command",
-      "hook"
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -1270,7 +1323,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-lua",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -1561,10 +1615,16 @@
     "name": "jutsu-phoenix",
     "description": "Phoenix Framework skills for building web applications",
     "category": "jutsu",
-    "tags": [],
+    "tags": [
+      "phoenix",
+      "elixir",
+      "web",
+      "framework"
+    ],
     "path": "/plugins/jutsu/jutsu-phoenix",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -1611,24 +1671,48 @@
     ],
     "path": "/plugins/jutsu/jutsu-playwright",
     "components": [
-      "skill"
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-playwright-bdd",
+    "name": "jutsu-playwright-bdd",
+    "description": "Validation and quality enforcement for Playwright BDD projects with Gherkin feature files and step definitions.",
+    "category": "jutsu",
+    "tags": [
+      "playwright-bdd",
+      "bdd",
+      "gherkin",
+      "cucumber",
+      "testing",
+      "playwright",
+      "validation"
+    ],
+    "path": "/plugins/jutsu/jutsu-playwright-bdd",
+    "components": [
+      "skill",
+      "hook"
     ]
   },
   {
     "id": "hashi-playwright-mcp",
     "name": "hashi-playwright-mcp",
-    "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
+    "description": "Playwright browser automation via MCP. Includes test-generator and ui-debugger agents that return concise summaries instead of verbose Playwright output. IMPORTANT: Always delegate to these agents instead of calling Playwright tools directly.",
     "category": "hashi",
     "tags": [
       "mcp",
       "playwright",
       "testing",
       "automation",
-      "server"
+      "server",
+      "agents",
+      "subagent"
     ],
     "path": "/plugins/hashi/hashi-playwright-mcp",
     "components": [
-      "agent"
+      "agent",
+      "mcp"
     ]
   },
   {
@@ -1859,7 +1943,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-relay",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -2038,7 +2123,8 @@
     ],
     "path": "/plugins/hashi/hashi-sentry",
     "components": [
-      "command"
+      "command",
+      "mcp"
     ]
   },
   {

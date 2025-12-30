@@ -106,20 +106,6 @@ Execute shell commands:
 }
 ```
 
-### Prompt Hooks
-
-Inject context or guidance for Claude:
-
-```json
-{
-  "type": "prompt",
-  "prompt": "Review all changes for security vulnerabilities...",
-  "timeout": 300
-}
-```
-
-Prompt hooks are powerful for review workflows and quality gates.
-
 ## Smart Behaviors
 
 Han hooks are intelligent by default (as of v2.0.0):
@@ -148,7 +134,51 @@ Only validate your work:
 - Agent hooks filter to agent changes
 - Pre-existing issues are out of scope
 
-All three are enabled by default. Disable with `--no-cache`, `--no-fail-fast`, or `--no-checkpoints`.
+### Transcript Filtering
+
+**NEW in v2.3.0**: Session-scoped hooks that prevent cross-session conflicts.
+
+When multiple Claude Code sessions work in the same directory:
+
+- Each session tracks which files IT modified via its transcript
+- Stop hooks only run on files THIS session actually touched
+- Other sessions' changes are ignored, preventing edit conflicts
+
+```text
+Session A: modifies src/auth.ts
+Session B: modifies src/utils.ts
+
+Session A's Stop hook: validates src/auth.ts only
+Session B's Stop hook: validates src/utils.ts only
+```
+
+This eliminates the common problem where two sessions try to fix the same linting error simultaneously.
+
+#### File-Targeted Commands with `${HAN_FILES}`
+
+For commands that support file arguments, use the `${HAN_FILES}` template to run only on session-modified files:
+
+```yaml
+plugins:
+  jutsu-biome:
+    hooks:
+      lint:
+        command: npx biome check --write ${HAN_FILES}
+        if_changed:
+          - "**/*.ts"
+          - "**/*.tsx"
+```
+
+When transcript filtering is active:
+
+- `${HAN_FILES}` is replaced with the session's modified files that match `if_changed` patterns
+- If no files match, `${HAN_FILES}` is replaced with `.` (fallback to full directory)
+- Commands without `${HAN_FILES}` run unchanged (backward compatible)
+- When `cache=false` or transcript filter is disabled, `${HAN_FILES}` is replaced with `.` to run on all files
+
+This prevents the scenario where Session A's lint error causes Session B's hook to also fail.
+
+All four smart behaviors are enabled by default. Disable with `--no-cache`, `--no-fail-fast`, `--no-checkpoints`, or configure `transcript_filter: false`.
 
 ## Configuration
 
