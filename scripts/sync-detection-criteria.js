@@ -109,7 +109,7 @@ function syncDetectionCriteria() {
   }
 
   // Write back marketplace.json with proper formatting
-  writeFileSync(marketplacePath, JSON.stringify(marketplace, null, 2) + '\n');
+  writeFileSync(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`);
 
   console.log(`\nSummary:`);
   console.log(`  Updated: ${updated}`);

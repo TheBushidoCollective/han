@@ -5,6 +5,7 @@ When working on non-trivial tasks (implementation, fixes, refactoring, research)
 ## Starting Tasks
 
 Use `mcp__plugin_core_han__start_task` when beginning work on:
+
 - New feature implementations
 - Bug fixes
 - Code refactoring
@@ -33,6 +34,7 @@ mcp__plugin_core_han__complete_task({
 ## When NOT to Track
 
 Skip tracking for:
+
 - Simple questions/explanations
 - Single-line changes
 - Trivial fixes (typos, formatting)
@@ -41,5 +43,6 @@ Skip tracking for:
 ## Important
 
 The metrics tools are SEPARATE from the TodoWrite tool:
+
 - **TodoWrite**: Shows task progress UI to the user
 - **start_task/complete_task**: Records metrics for analysis in the Browse UI
