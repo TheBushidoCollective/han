@@ -7,7 +7,7 @@ import {
 	formatValidationErrors,
 	validatePluginConfig,
 	validateUserConfig,
-} from "../lib/config-validator.ts";
+} from "../lib/config/index.ts";
 
 describe("Config Validator", () => {
 	describe("validatePluginConfig", () => {

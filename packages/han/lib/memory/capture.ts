@@ -4,8 +4,12 @@
  * This module provides the captureToolUse function which is called after
  * every tool use during a Claude Code session. It extracts relevant information
  * and stores it as a RawObservation using the memory storage layer.
+ *
+ * It also records file changes to the session_file_changes table for smart
+ * hook dispatch (skipping validation when no files were modified).
  */
 
+import { sessionFileChanges } from "../db/index.ts";
 import { isMemoryEnabled } from "../han-settings.ts";
 import { generateId } from "./paths.ts";
 import { getMemoryStore } from "./storage.ts";
@@ -186,20 +190,71 @@ function extractFilesModified(
 }
 
 /**
+ * Determine the action type for a file change
+ */
+function getFileChangeAction(
+	toolName: string,
+	_input: Record<string, unknown>,
+): "created" | "modified" | "deleted" {
+	// Write tool creates or overwrites files
+	if (toolName === "Write") {
+		return "created";
+	}
+	// Edit tool modifies existing files
+	return "modified";
+}
+
+/**
+ * Record file changes to the session_file_changes table.
+ * This is used by smart dispatch to skip validation hooks when no files were modified.
+ * Runs independently of the memory system.
+ */
+async function recordFileChangesToDb(event: ToolUseEvent): Promise<void> {
+	// Only track Edit and Write tools
+	if (event.tool_name !== "Edit" && event.tool_name !== "Write") {
+		return;
+	}
+
+	const filePath = event.tool_input?.file_path;
+	if (!filePath || typeof filePath !== "string") {
+		return;
+	}
+
+	try {
+		await sessionFileChanges.record({
+			sessionId: event.session_id,
+			filePath: filePath,
+			action: getFileChangeAction(event.tool_name, event.tool_input),
+			toolName: event.tool_name,
+		});
+	} catch {
+		// Silently fail - don't block tool execution on file tracking failures
+		// This can fail if the session doesn't exist in the DB yet
+	}
+}
+
+/**
  * Capture tool use event and store as observation
  *
  * This is the main entry point called by the PostToolUse hook.
  * It extracts relevant information from the tool event and stores
  * it using the memory storage layer.
+ *
+ * Also records file changes to the database for smart hook dispatch,
+ * regardless of whether memory is enabled.
  */
 export async function captureToolUse(event: ToolUseEvent): Promise<void> {
-	// Skip if memory is disabled
-	if (!isMemoryEnabled()) {
+	// Skip if no session ID (shouldn't happen in practice)
+	if (!event.session_id) {
 		return;
 	}
 
-	// Skip if no session ID (shouldn't happen in practice)
-	if (!event.session_id) {
+	// Always record file changes to DB for smart dispatch
+	// This runs independently of the memory system
+	await recordFileChangesToDb(event);
+
+	// Skip memory observation if memory is disabled
+	if (!isMemoryEnabled()) {
 		return;
 	}
 

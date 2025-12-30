@@ -224,7 +224,8 @@ describe("Memory Storage", () => {
 
 	describe("Team Memory", () => {
 		test("indexes and searches observations", async () => {
-			const gitRemote = "git@github.com:test/search-repo.git";
+			const gitRemote = `git@github.com:test/search-repo-${generateId()}.git`;
+			cleanupGitRemote(gitRemote);
 			const store = createMemoryStore();
 
 			const observations: IndexedObservation[] = [

@@ -7,7 +7,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 describe("verify.ts functional tests with mocking", () => {
-	const testDir = `/tmp/test-hook-verify-functional-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: typeof process.env;
 	let originalExit: typeof process.exit;
 	let originalLog: typeof console.log;
@@ -17,6 +17,9 @@ describe("verify.ts functional tests with mocking", () => {
 	const errorMessages: string[] = [];
 
 	beforeEach(() => {
+		// Generate unique directory per test to avoid race conditions
+		testDir = `/tmp/test-hook-verify-functional-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 		// Save originals
 		originalEnv = { ...process.env };
 		originalExit = process.exit;
@@ -38,19 +41,17 @@ describe("verify.ts functional tests with mocking", () => {
 		process.exit = mock((code?: number) => {
 			_exitCode = code ?? 0;
 			throw new Error(`process.exit(${code})`);
-		});
+		}) as never;
 
 		// Mock console to capture output
 		logMessages.length = 0;
 		errorMessages.length = 0;
-		// biome-ignore lint/suspicious/noExplicitAny: mock needs to accept any console arguments
-		console.log = mock((...args: any[]) => {
+		console.log = mock((...args: unknown[]) => {
 			logMessages.push(args.join(" "));
-		});
-		// biome-ignore lint/suspicious/noExplicitAny: mock needs to accept any console arguments
-		console.error = mock((...args: any[]) => {
+		}) as never;
+		console.error = mock((...args: unknown[]) => {
 			errorMessages.push(args.join(" "));
-		});
+		}) as never;
 	});
 
 	afterEach(() => {
@@ -60,7 +61,9 @@ describe("verify.ts functional tests with mocking", () => {
 		console.log = originalLog;
 		console.error = originalError;
 
-		rmSync(testDir, { recursive: true, force: true });
+		if (testDir) {
+			rmSync(testDir, { recursive: true, force: true });
+		}
 	});
 
 	describe("environment variable handling", () => {
@@ -72,23 +75,26 @@ describe("verify.ts functional tests with mocking", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
-			// Create a mock command
+			// Create a mock command that captures the action function
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					// Execute the action
-					try {
-						fn("Stop");
-					} catch (_error) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
-			// biome-ignore lint/suspicious/noExplicitAny: mock command object for testing
-			registerHookVerify(mockCommand as any);
+			registerHookVerify(mockCommand as never);
+
+			// Execute the action asynchronously
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_error) {
+				// Catch process.exit throw
+			}
 
 			// The action should have been called
 			expect(mockCommand.action).toHaveBeenCalled();
@@ -101,21 +107,25 @@ describe("verify.ts functional tests with mocking", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_error) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
-			// biome-ignore lint/suspicious/noExplicitAny: mock command object for testing
-			registerHookVerify(mockCommand as any);
+			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_error) {
+				// Catch process.exit throw
+			}
+
 			expect(mockCommand.action).toHaveBeenCalled();
 		});
 	});

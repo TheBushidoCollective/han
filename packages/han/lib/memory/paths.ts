@@ -24,6 +24,16 @@ export function setMemoryRoot(path: string | null): void {
 }
 
 /**
+ * Get Claude config directory, respecting CLAUDE_CONFIG_DIR env var
+ */
+function getClaudeConfigDir(): string {
+	if (process.env.CLAUDE_CONFIG_DIR) {
+		return process.env.CLAUDE_CONFIG_DIR;
+	}
+	return join(homedir(), ".claude");
+}
+
+/**
  * Get root directory for all Han memory data
  * Computed lazily to support test environment overrides
  */
@@ -31,12 +41,12 @@ export function getMemoryRoot(): string {
 	if (memoryRootOverride) {
 		return memoryRootOverride;
 	}
-	return join(homedir(), ".claude", "han", "memory");
+	return join(getClaudeConfigDir(), "han", "memory");
 }
 
 /**
  * @deprecated Use getMemoryRoot() instead - this constant is computed at import time
- * and doesn't respect runtime HOME changes (for testing)
+ * and doesn't respect runtime CLAUDE_CONFIG_DIR changes (for testing)
  */
 export const HAN_MEMORY_ROOT = join(homedir(), ".claude", "han", "memory");
 
@@ -182,4 +192,67 @@ export function getSessionFilePath(sessionId: string): string {
 export function getSummaryFilePath(sessionId: string): string {
 	const date = new Date().toISOString().split("T")[0];
 	return join(getSummariesPath(), `${date}-${sessionId}.yaml`);
+}
+
+/**
+ * Get Claude Code projects directory
+ * This is where Claude Code stores session transcripts
+ */
+export function getClaudeProjectsDir(): string {
+	return join(getClaudeConfigDir(), "projects");
+}
+
+/**
+ * Convert a filesystem path to Claude Code's project slug format
+ *
+ * @example
+ * pathToSlug("/Volumes/dev/src/github.com/foo/bar") // "-Volumes-dev-src-github-com-foo-bar"
+ */
+export function pathToSlug(fsPath: string): string {
+	// Replace path separators with dashes, removing leading slashes
+	return fsPath.replace(/^\//, "-").replace(/\//g, "-");
+}
+
+/**
+ * Get the path to a project's Claude Code directory
+ */
+export function getClaudeProjectPath(projectPath: string): string {
+	const slug = pathToSlug(projectPath);
+	return join(getClaudeProjectsDir(), slug);
+}
+
+/**
+ * Get the Han events file path for a session
+ * When projectPath is provided, stores in the Claude project directory.
+ * Otherwise stores in personal sessions directory with date prefix.
+ *
+ * @example
+ * // With project path (stores in project directory):
+ * getHanEventsFilePath("/path/to/project", "abc123")
+ * // ~/.claude/projects/-path-to-project/abc123-han.jsonl
+ *
+ * // Without project path (stores in sessions directory):
+ * getHanEventsFilePath("abc123")
+ * // ~/.claude/han/memory/personal/sessions/2025-01-15-abc123-han.jsonl
+ */
+export function getHanEventsFilePath(sessionId: string): string;
+export function getHanEventsFilePath(
+	projectPath: string,
+	sessionId: string,
+): string;
+export function getHanEventsFilePath(
+	projectPathOrSessionId: string,
+	sessionId?: string,
+): string {
+	if (sessionId === undefined) {
+		// Single argument: sessionId only, use sessions directory
+		const date = new Date().toISOString().split("T")[0];
+		return join(
+			getSessionsPath(),
+			`${date}-${projectPathOrSessionId}-han.jsonl`,
+		);
+	}
+	// Two arguments: projectPath and sessionId, use project directory
+	const projectDir = getClaudeProjectPath(projectPathOrSessionId);
+	return join(projectDir, `${sessionId}-han.jsonl`);
 }

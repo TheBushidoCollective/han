@@ -10,15 +10,17 @@ export function createReferenceCommand(): Command {
 			"Path to the file to reference (relative to plugin root)",
 		)
 		.option(
-			"--must-read-first <reason>",
-			"Mark file as required reading with given reason",
+			"--must-read-first <reason...>",
+			"Mark file as required reading with given reason (supports multi-word)",
 		)
-		.action((file: string, options: { mustReadFirst?: string }) => {
+		.action((file: string, options: { mustReadFirst?: string[] }) => {
 			// Get the plugin root from environment variable set by hook dispatcher
 			const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || "";
 
 			if (options.mustReadFirst) {
-				const output = `<must-read-first reason="${options.mustReadFirst}">${pluginRoot}/${file}</must-read-first>`;
+				// Join variadic args back into a single reason string
+				const reason = options.mustReadFirst.join(" ");
+				const output = `<must-read-first reason="${reason}">${pluginRoot}/${file}</must-read-first>`;
 				console.log(output);
 				// TODO: Track metrics for must-read-first references
 			} else {

@@ -12,6 +12,22 @@ import { findDirectoriesWithMarkers } from "./hook-cache.ts";
 import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
+ * Hook dependency declaration
+ * Allows a hook to depend on another plugin's hook to run first
+ */
+export interface HookDependency {
+	/** The plugin name that provides the dependency hook */
+	plugin: string;
+	/** The hook name within the dependency plugin */
+	hook: string;
+	/**
+	 * If true, skip this dependency if the plugin is not installed.
+	 * If false (default), fail with an error if the plugin is missing.
+	 */
+	optional?: boolean;
+}
+
+/**
  * Plugin hook configuration (from han-plugin.yml)
  */
 export interface PluginHookDefinition {
@@ -42,6 +58,22 @@ export interface PluginHookDefinition {
 	 * Example: "Use the `jutsu_biome_lint` MCP tool before marking complete."
 	 */
 	tip?: string;
+	/**
+	 * Dependencies on other plugin hooks.
+	 * These hooks will be run (or waited on) before this hook executes.
+	 * Dependencies must be within the same hook type (Stop→Stop, etc.)
+	 */
+	dependsOn?: HookDependency[];
+}
+
+/**
+ * YAML hook dependency with snake_case keys
+ * (from han-plugin.yml)
+ */
+interface YamlHookDependency {
+	plugin: string;
+	hook: string;
+	optional?: boolean;
 }
 
 /**
@@ -56,6 +88,7 @@ interface YamlPluginHookDefinition {
 	if_changed?: string[];
 	idle_timeout?: number;
 	tip?: string;
+	depends_on?: YamlHookDependency[];
 }
 
 /**
@@ -69,6 +102,30 @@ export interface PluginMemoryConfig {
 	allowed_tools?: string[];
 	/** System prompt for the memory extraction agent */
 	system_prompt?: string;
+	/** Memory-only MCP servers (not exposed to Claude Code) */
+	mcp_servers?: Record<string, PluginMcpConfig>;
+}
+
+/**
+ * MCP server configuration from plugin
+ */
+export interface PluginMcpConfig {
+	/** MCP server name */
+	name?: string;
+	/** Description of the MCP server */
+	description?: string;
+	/** Command to run the MCP server */
+	command: string;
+	/** Command arguments */
+	args?: string[];
+	/** Environment variables */
+	env?: Record<string, string>;
+	/** Capabilities exposed by this server */
+	capabilities?: Array<{
+		category?: string;
+		summary?: string;
+		examples?: string[];
+	}>;
 }
 
 /**
@@ -81,6 +138,7 @@ interface YamlPluginConfig {
 	keywords?: string[];
 	hooks: Record<string, YamlPluginHookDefinition>;
 	memory?: PluginMemoryConfig;
+	mcp_servers?: Record<string, PluginMcpConfig>;
 }
 
 /**
@@ -99,6 +157,7 @@ function convertYamlHook(
 			idleTimeout: yamlHook.idle_timeout,
 		}),
 		...(yamlHook.tip && { tip: yamlHook.tip }),
+		...(yamlHook.depends_on && { dependsOn: yamlHook.depends_on }),
 	};
 }
 
@@ -113,12 +172,14 @@ function convertYamlPluginConfig(yamlConfig: YamlPluginConfig): PluginConfig {
 	return {
 		hooks,
 		...(yamlConfig.memory && { memory: yamlConfig.memory }),
+		...(yamlConfig.mcp_servers && { mcp_servers: yamlConfig.mcp_servers }),
 	};
 }
 
 export interface PluginConfig {
 	hooks: Record<string, PluginHookDefinition>;
 	memory?: PluginMemoryConfig;
+	mcp_servers?: Record<string, PluginMcpConfig>;
 }
 
 /**
@@ -137,6 +198,11 @@ export interface UserHookOverride {
 	 * Set to 0 or false to disable idle timeout checking.
 	 */
 	idle_timeout?: number | false;
+	/**
+	 * Script to run once before all directory iterations.
+	 * Useful for generating files that the hook depends on.
+	 */
+	before_all?: string;
 }
 
 export interface UserConfig {

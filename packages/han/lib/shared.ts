@@ -15,6 +15,14 @@ import { getMarketplacePlugins } from "./marketplace-cache.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Check if debug mode is enabled via HAN_DEBUG environment variable
+ */
+export function isDebugMode(): boolean {
+	const debug = process.env.HAN_DEBUG;
+	return debug === "1" || debug === "true";
+}
+
 export const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
 
 export type MarketplaceSource =
@@ -271,6 +279,29 @@ export function detectHanScopes(): InstallScope[] {
 	}
 
 	return scopes;
+}
+
+/**
+ * Determine the effective installation scope for a project.
+ * Returns the existing project-level scope if Han is already installed there,
+ * or null if user needs to choose (Han only in user scope or not installed).
+ *
+ * Priority: local > project (local is highest precedence as it's gitignored)
+ */
+export function getEffectiveProjectScope(): InstallScope | null {
+	const hanScopes = detectHanScopes();
+
+	// Local takes priority over project (higher precedence, gitignored)
+	if (hanScopes.includes("local")) {
+		return "local";
+	}
+
+	if (hanScopes.includes("project")) {
+		return "project";
+	}
+
+	// Han is only in user scope or not installed - need to prompt user
+	return null;
 }
 
 /**

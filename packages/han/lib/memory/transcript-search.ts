@@ -82,6 +82,19 @@ export interface TranscriptMessage {
 }
 
 /**
+ * Native Claude summary from transcript (Layer 2)
+ * These are auto-generated when context window compression occurs.
+ */
+export interface NativeSummary {
+	sessionId: string;
+	projectSlug: string;
+	messageId: string;
+	timestamp: string;
+	content: string;
+	isContextWindowCompression: boolean;
+}
+
+/**
  * Search options for transcript search
  */
 export interface TranscriptSearchOptions {
@@ -367,6 +380,150 @@ export function parseTranscript(
 	}
 
 	return messages;
+}
+
+/**
+ * Parse native summaries from a transcript file (Layer 2)
+ * Extracts 'summary' type messages from Claude transcripts.
+ */
+export function parseSummaries(filePath: string): NativeSummary[] {
+	if (!existsSync(filePath)) {
+		return [];
+	}
+
+	const summaries: NativeSummary[] = [];
+	const projectSlug = basename(dirname(filePath));
+	const content = readFileSync(filePath, "utf-8");
+	const lines = content.split("\n").filter((line) => line.trim());
+
+	for (const line of lines) {
+		try {
+			const entry = JSON.parse(line) as TranscriptEntry;
+
+			// Only process summary messages
+			if (entry.type !== "summary") {
+				continue;
+			}
+
+			// Extract content from summary message
+			const summaryContent =
+				typeof entry.message?.content === "string" ? entry.message.content : "";
+
+			if (!summaryContent.trim()) {
+				continue;
+			}
+
+			const sessionId = entry.sessionId || basename(filePath, ".jsonl");
+
+			summaries.push({
+				sessionId,
+				projectSlug,
+				messageId: entry.uuid || `summary-${Date.now()}`,
+				timestamp: entry.timestamp || "",
+				content: summaryContent,
+				isContextWindowCompression: true, // All native summaries are from context compression
+			});
+		} catch {
+			// Skip invalid JSON lines
+		}
+	}
+
+	return summaries;
+}
+
+/**
+ * Convert a NativeSummary to an IndexDocument for FTS
+ */
+function summaryToIndexDocument(summary: NativeSummary): IndexDocument {
+	return {
+		id: `summary:${summary.sessionId}:${summary.messageId}`,
+		content: summary.content,
+		metadata: JSON.stringify({
+			sessionId: summary.sessionId,
+			projectSlug: summary.projectSlug,
+			messageId: summary.messageId,
+			timestamp: summary.timestamp,
+			isContextWindowCompression: summary.isContextWindowCompression,
+			layer: "summaries",
+		}),
+	};
+}
+
+/**
+ * Index native summaries from transcripts for a specific project
+ */
+export async function indexNativeSummaries(
+	projectSlug?: string,
+): Promise<number> {
+	const transcriptFiles = findAllTranscriptFiles();
+
+	// Filter to specific project if provided
+	const slugsToIndex = projectSlug
+		? [projectSlug]
+		: Array.from(transcriptFiles.keys());
+
+	const tableName = getTableName("summaries");
+	await initTable(tableName);
+
+	let totalIndexed = 0;
+
+	for (const slug of slugsToIndex) {
+		const files = transcriptFiles.get(slug);
+		if (!files) continue;
+
+		const documents: IndexDocument[] = [];
+
+		for (const file of files) {
+			const summaries = parseSummaries(file);
+			for (const summary of summaries) {
+				documents.push(summaryToIndexDocument(summary));
+			}
+		}
+
+		if (documents.length > 0) {
+			const count = await indexDocuments(tableName, documents);
+			totalIndexed += count;
+		}
+	}
+
+	return totalIndexed;
+}
+
+/**
+ * Search native summaries using FTS
+ */
+export async function searchNativeSummaries(
+	query: string,
+	options: { projectSlug?: string; limit?: number } = {},
+): Promise<
+	Array<{
+		sessionId: string;
+		projectSlug: string;
+		content: string;
+		timestamp: string;
+		score: number;
+		layer: "summaries";
+	}>
+> {
+	const { limit = 10 } = options;
+	const tableName = getTableName("summaries");
+
+	const results = await searchFts(tableName, query, limit);
+
+	return results.map((result) => {
+		const meta = result.metadata || {};
+		return {
+			sessionId: meta.sessionId as string,
+			projectSlug: meta.projectSlug as string,
+			content:
+				result.content.length > 500
+					? `${result.content.slice(0, 500)}...`
+					: result.content,
+			timestamp: meta.timestamp as string,
+			score: result.score,
+			layer: "summaries" as const,
+		};
+	});
 }
 
 /**

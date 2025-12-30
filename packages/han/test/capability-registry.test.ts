@@ -739,7 +739,7 @@ describe("plugin.json mcpServers fallback", () => {
 		// This is expected in some test environments where plugin paths differ
 	});
 
-	test("prefers han-plugin.yml mcp over plugin.json mcpServers", () => {
+	test("prefers han-plugin.yml mcp_servers over plugin.json mcpServers", () => {
 		// Create a marketplace directory structure
 		const marketplaceRoot = join(
 			testDir,
@@ -767,13 +767,14 @@ describe("plugin.json mcpServers fallback", () => {
 			}),
 		);
 
-		// Write han-plugin.yml with mcp section (should take priority)
+		// Write han-plugin.yml with mcp_servers section (should take priority)
 		writeFileSync(
 			join(pluginDir, "han-plugin.yml"),
-			`mcp:
-  name: han-yml-server
-  command: preferred
-  args: ["-p"]
+			`mcp_servers:
+  han-yml-server:
+    name: han-yml-server
+    command: preferred
+    args: ["-p"]
 hooks: {}
 `,
 		);

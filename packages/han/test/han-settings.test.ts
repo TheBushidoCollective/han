@@ -20,7 +20,7 @@ import {
 	isMemoryEnabled,
 	isMetricsEnabled,
 	loadHanConfigFile,
-} from "../lib/han-settings.ts";
+} from "../lib/config/index.ts";
 
 // Store original environment
 const originalEnv = { ...process.env };

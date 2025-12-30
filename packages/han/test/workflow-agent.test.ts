@@ -7,6 +7,8 @@ import {
 	buildAllowedTools,
 	buildMcpServers,
 	generateAgentPrompt,
+	type WorkflowOptions,
+	type WorkflowResult,
 } from "../lib/commands/mcp/workflow-agent.ts";
 
 // Helper to create test BackendCapability
@@ -192,6 +194,82 @@ describe("workflow-agent", () => {
 			const patterns = buildAllowedTools(backends);
 
 			expect(patterns).toContain("mcp__my-server__*");
+		});
+	});
+
+	describe("WorkflowOptions interface", () => {
+		it("should support sessionId for workflow continuity", () => {
+			const options: WorkflowOptions = {
+				sessionId: "test-session-123",
+			};
+
+			expect(options.sessionId).toBe("test-session-123");
+		});
+
+		it("should support fork option for creating new session from existing", () => {
+			const options: WorkflowOptions = {
+				sessionId: "main-session-456",
+				fork: true,
+			};
+
+			expect(options.sessionId).toBe("main-session-456");
+			expect(options.fork).toBe(true);
+		});
+
+		it("should allow all options together", () => {
+			const options: WorkflowOptions = {
+				maxTurns: 10,
+				model: "sonnet",
+				streamProgress: true,
+				onProgress: () => {},
+				sessionId: "workflow-session",
+				fork: false,
+			};
+
+			expect(options.maxTurns).toBe(10);
+			expect(options.model).toBe("sonnet");
+			expect(options.sessionId).toBe("workflow-session");
+			expect(options.fork).toBe(false);
+		});
+	});
+
+	describe("WorkflowResult interface", () => {
+		it("should include sessionId for workflow continuity", () => {
+			const result: WorkflowResult = {
+				success: true,
+				summary: "Workflow completed",
+				backendsUsed: ["github"],
+				toolsInvoked: ["mcp__github__create_pr"],
+				sessionId: "result-session-789",
+			};
+
+			expect(result.sessionId).toBe("result-session-789");
+		});
+
+		it("should allow sessionId to be undefined", () => {
+			const result: WorkflowResult = {
+				success: true,
+				summary: "Workflow completed",
+				backendsUsed: [],
+				toolsInvoked: [],
+			};
+
+			expect(result.sessionId).toBeUndefined();
+		});
+
+		it("should include sessionId even on failure", () => {
+			const result: WorkflowResult = {
+				success: false,
+				summary: "Workflow failed",
+				backendsUsed: ["github"],
+				toolsInvoked: [],
+				error: "Connection failed",
+				sessionId: "failed-session-abc",
+			};
+
+			expect(result.success).toBe(false);
+			expect(result.sessionId).toBe("failed-session-abc");
+			expect(result.error).toBe("Connection failed");
 		});
 	});
 });

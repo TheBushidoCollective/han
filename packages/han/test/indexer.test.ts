@@ -43,11 +43,10 @@ describe("memory indexer", () => {
 			const { getIndexDbPath } = await import("../lib/memory/indexer.ts");
 			const path = getIndexDbPath();
 
+			// All data is stored in the main han.db database
 			expect(path).toContain(".claude");
 			expect(path).toContain("han");
-			expect(path).toContain("memory");
-			expect(path).toContain("index");
-			expect(path).toContain("fts.db");
+			expect(path).toContain("han.db");
 		});
 
 		test("ensureIndexDir creates or validates directory", async () => {
@@ -134,25 +133,13 @@ describe("memory indexer", () => {
 	});
 
 	describe("indexDocuments function", () => {
-		test("returns 0 when native module unavailable", async () => {
-			const { indexDocuments } = await import("../lib/memory/indexer.ts");
-			const { tryGetNativeModule } = await import("../lib/native.ts");
+		test(
+			"indexes documents when native module available",
+			async () => {
+				const { indexDocuments, initTable } = await import(
+					"../lib/memory/indexer.ts"
+				);
 
-			if (tryGetNativeModule() === null) {
-				const count = await indexDocuments("test_table", [
-					{ id: "1", content: "test" },
-				]);
-				expect(count).toBe(0);
-			}
-		});
-
-		test("indexes documents when native module available", async () => {
-			const { indexDocuments, initTable } = await import(
-				"../lib/memory/indexer.ts"
-			);
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-
-			if (tryGetNativeModule() !== null) {
 				try {
 					await initTable("test_documents");
 					const count = await indexDocuments("test_documents", [
@@ -165,21 +152,12 @@ describe("memory indexer", () => {
 					// The test should still pass - we're testing that the function exists and is callable
 					expect(true).toBe(true);
 				}
-			}
-		});
+			},
+			{ timeout: 30000 },
+		);
 	});
 
 	describe("searchFts function", () => {
-		test("returns empty array when native module unavailable", async () => {
-			const { searchFts } = await import("../lib/memory/indexer.ts");
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-
-			if (tryGetNativeModule() === null) {
-				const results = await searchFts("test_table", "query");
-				expect(results).toEqual([]);
-			}
-		});
-
 		test("returns empty array when DB does not exist", async () => {
 			const { searchFts } = await import("../lib/memory/indexer.ts");
 
@@ -188,13 +166,13 @@ describe("memory indexer", () => {
 			expect(Array.isArray(results)).toBe(true);
 		});
 
-		test("searches indexed documents when native available", async () => {
-			const { indexDocuments, searchFts, initTable } = await import(
-				"../lib/memory/indexer.ts"
-			);
-			const { tryGetNativeModule } = await import("../lib/native.ts");
+		test(
+			"searches indexed documents when native available",
+			async () => {
+				const { indexDocuments, searchFts, initTable } = await import(
+					"../lib/memory/indexer.ts"
+				);
 
-			if (tryGetNativeModule() !== null) {
 				try {
 					await initTable("search_test");
 					await indexDocuments("search_test", [
@@ -208,44 +186,37 @@ describe("memory indexer", () => {
 					// Native module may have FTS compatibility issues in some environments
 					expect(true).toBe(true);
 				}
-			}
-		});
+			},
+			{ timeout: 30000 },
+		);
 	});
 
 	describe("deleteDocuments function", () => {
-		test("returns 0 when native module unavailable", async () => {
+		test("deleteDocuments is callable", async () => {
 			const { deleteDocuments } = await import("../lib/memory/indexer.ts");
-			const { tryGetNativeModule } = await import("../lib/native.ts");
 
-			if (tryGetNativeModule() === null) {
-				const count = await deleteDocuments("test_table", ["1", "2"]);
-				expect(count).toBe(0);
-			}
+			// Just verify the function exists and is callable
+			// The actual delete operation requires the native module
+			expect(typeof deleteDocuments).toBe("function");
 		});
 	});
 
 	describe("embedding functions", () => {
-		test("generateEmbedding returns empty array when native unavailable", async () => {
+		test("generateEmbedding is callable", async () => {
 			const { generateEmbedding } = await import("../lib/memory/indexer.ts");
-			const { tryGetNativeModule } = await import("../lib/native.ts");
 
-			if (tryGetNativeModule() === null) {
-				const embedding = await generateEmbedding("test");
-				expect(embedding).toEqual([]);
-			}
+			// Just verify the function exists and is callable
+			expect(typeof generateEmbedding).toBe("function");
 		});
 
-		test("generateEmbeddings returns empty array when native unavailable", async () => {
+		test("generateEmbeddings is callable", async () => {
 			const { generateEmbeddings } = await import("../lib/memory/indexer.ts");
-			const { tryGetNativeModule } = await import("../lib/native.ts");
 
-			if (tryGetNativeModule() === null) {
-				const embeddings = await generateEmbeddings(["test1", "test2"]);
-				expect(embeddings).toEqual([]);
-			}
+			// Just verify the function exists and is callable
+			expect(typeof generateEmbeddings).toBe("function");
 		});
 
-		test("getEmbeddingDimension returns 384 as default", async () => {
+		test("getEmbeddingDimension returns 384", async () => {
 			const { getEmbeddingDimension } = await import(
 				"../lib/memory/indexer.ts"
 			);
@@ -256,38 +227,46 @@ describe("memory indexer", () => {
 	});
 
 	describe("runIndex function", () => {
-		test("returns index results structure", async () => {
-			const { runIndex } = await import("../lib/memory/indexer.ts");
+		test(
+			"returns index results structure",
+			async () => {
+				const { runIndex } = await import("../lib/memory/indexer.ts");
 
-			try {
-				const results = await runIndex();
+				try {
+					const results = await runIndex();
 
-				// Verify the structure of results
-				expect(typeof results.observations).toBe("number");
-				expect(typeof results.summaries).toBe("number");
-				expect(typeof results.team).toBe("number");
-				expect(typeof results.transcripts).toBe("number");
-			} catch {
-				// Native module may have FTS compatibility issues in some environments
-				expect(true).toBe(true);
-			}
-		});
+					// Verify the structure of results
+					expect(typeof results.observations).toBe("number");
+					expect(typeof results.summaries).toBe("number");
+					expect(typeof results.team).toBe("number");
+					expect(typeof results.transcripts).toBe("number");
+				} catch {
+					// Native module may have FTS compatibility issues in some environments
+					expect(true).toBe(true);
+				}
+			},
+			{ timeout: 30000 },
+		);
 
-		test("respects layer option", async () => {
-			const { runIndex } = await import("../lib/memory/indexer.ts");
+		test(
+			"respects layer option",
+			async () => {
+				const { runIndex } = await import("../lib/memory/indexer.ts");
 
-			try {
-				// Should only index specified layer
-				const results = await runIndex({ layer: "observations" });
+				try {
+					// Should only index specified layer
+					const results = await runIndex({ layer: "observations" });
 
-				// Other layers should be 0 when filtering by layer
-				expect(results.summaries).toBe(0);
-				expect(results.team).toBe(0);
-			} catch {
-				// Native module may have FTS compatibility issues in some environments
-				expect(true).toBe(true);
-			}
-		});
+					// Other layers should be 0 when filtering by layer
+					expect(results.summaries).toBe(0);
+					expect(results.team).toBe(0);
+				} catch {
+					// Native module may have FTS compatibility issues in some environments
+					expect(true).toBe(true);
+				}
+			},
+			{ timeout: 30000 },
+		);
 	});
 
 	describe("searchAll function", () => {

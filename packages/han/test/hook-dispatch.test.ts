@@ -7,11 +7,14 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 describe("hook dispatch.ts helper functions", () => {
-	const testDir = `/tmp/test-hook-dispatch-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: typeof process.env;
 	let originalCwd: () => string;
 
 	beforeEach(() => {
+		// Generate unique test directory per test
+		testDir = `/tmp/test-hook-dispatch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 		// Save original environment
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd;

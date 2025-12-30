@@ -452,3 +452,99 @@ export async function withSlot<T>(
 		releaseSlot(manager, slotIndex);
 	}
 }
+
+/**
+ * Check if a specific plugin:hook is currently running in any slot.
+ * Used for dependency coordination - if the dependency hook is already running,
+ * we should wait for it rather than spawn another instance.
+ */
+export function isHookRunning(
+	manager: LockManager,
+	pluginName: string,
+	hookName: string,
+): boolean {
+	try {
+		if (!existsSync(manager.lockDir)) {
+			return false;
+		}
+
+		for (let i = 0; i < manager.parallelism; i++) {
+			const slotPath = join(manager.lockDir, `slot-${i}.lock`);
+			const slot = readSlotFile(slotPath);
+
+			if (slot && !isSlotStale(slot)) {
+				// Check if this slot matches the plugin:hook we're looking for
+				if (slot.pluginName === pluginName && slot.hookName === hookName) {
+					debugLog(
+						`isHookRunning: found ${pluginName}:${hookName} running in slot-${i} (pid ${slot.pid})`,
+					);
+					return true;
+				}
+			}
+		}
+
+		return false;
+	} catch (e) {
+		debugLog(`isHookRunning error: ${(e as Error).message}`);
+		return false;
+	}
+}
+
+/**
+ * Wait for a specific plugin:hook to complete.
+ * Polls the lock files until the hook is no longer running or timeout is reached.
+ *
+ * @param manager - The lock manager for this session
+ * @param pluginName - The plugin name to wait for
+ * @param hookName - The hook name to wait for
+ * @param timeout - Maximum time to wait in milliseconds (default: 5 minutes)
+ * @returns true if the hook completed, false if timeout was reached
+ */
+export async function waitForHook(
+	manager: LockManager,
+	pluginName: string,
+	hookName: string,
+	timeout = 300000, // 5 minutes default
+): Promise<boolean> {
+	const startTime = Date.now();
+	let attempt = 0;
+
+	debugLog(
+		`waitForHook: waiting for ${pluginName}:${hookName} (timeout: ${timeout}ms)`,
+	);
+
+	while (true) {
+		// Check if hook is still running
+		if (!isHookRunning(manager, pluginName, hookName)) {
+			debugLog(`waitForHook: ${pluginName}:${hookName} is no longer running`);
+			return true; // Hook completed
+		}
+
+		// Check timeout
+		const elapsed = Date.now() - startTime;
+		if (elapsed > timeout) {
+			debugLog(
+				`waitForHook: timeout waiting for ${pluginName}:${hookName} after ${Math.round(elapsed / 1000)}s`,
+			);
+			return false; // Timeout reached
+		}
+
+		// Wait with exponential backoff (100ms, 200ms, 400ms, ... up to 2s)
+		const backoff = Math.min(100 * 2 ** attempt, 2000);
+		attempt++;
+
+		debugLog(
+			`waitForHook: ${pluginName}:${hookName} still running, waiting ${backoff}ms (attempt ${attempt})`,
+		);
+
+		await sleep(backoff);
+	}
+}
+
+/**
+ * Get the lock manager session ID.
+ * Useful for coordinating between processes.
+ */
+export function getSessionIdFromManager(manager: LockManager): string {
+	return manager.sessionId;
+}

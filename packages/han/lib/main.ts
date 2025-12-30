@@ -15,11 +15,13 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
+import { browse } from "./commands/browse/index.ts";
 import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
 import {
 	handleGetCompletions,
 	registerCompletionCommand,
 } from "./commands/completion/index.ts";
+import { registerCoordinatorCommands } from "./commands/coordinator/index.ts";
 import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerIndexCommand } from "./commands/index/index.ts";
@@ -210,6 +212,33 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerAliasCommands(program);
 	registerCompletionCommand(program);
 	registerDoctorCommand(program);
+
+	// Register browse command
+	program
+		.command("browse")
+		.description("Start the Han system browser dashboard")
+		.option("-p, --port <port>", "Port to run the server on", "41956")
+		.option("--no-open", "Don't automatically open the browser")
+		.action(async (opts) => {
+			try {
+				await browse({
+					port: parseInt(opts.port, 10),
+					autoOpen: opts.open !== false,
+				});
+			} catch (error: unknown) {
+				const message = `Error starting browse server: ${error instanceof Error ? error.message : error}`;
+				if (!options.suppressOutput) {
+					console.error(message);
+				}
+				if (!options.exitOverride) {
+					process.exit(1);
+				}
+				throw error;
+			}
+		});
+
+	// Register coordinator commands (includes launchd management on macOS)
+	registerCoordinatorCommands(program);
 
 	// Register top-level explain command
 	program

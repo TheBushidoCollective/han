@@ -1128,6 +1128,77 @@ export class JsonlMetricsStorage {
 	}
 
 	/**
+	 * Get all tasks for a specific session
+	 */
+	getTasksForSession(sessionId: string): Task[] {
+		const taskMap = new Map<string, Task>();
+
+		// Iterate through all events (no period filter - we want all time)
+		this.forEachEventForPeriod(undefined, (event) => {
+			if (event.type === "task_start") {
+				const e = event as TaskStartEvent;
+				if (e.session_id === sessionId) {
+					taskMap.set(e.task_id, {
+						id: e.task_id,
+						session_id: e.session_id,
+						description: e.description,
+						type: e.task_type as Task["type"],
+						complexity: e.complexity as Task["complexity"],
+						started_at: e.timestamp,
+						status: "active",
+					});
+				}
+			} else if (event.type === "task_complete") {
+				const e = event as TaskCompleteEvent;
+				const task = taskMap.get(e.task_id);
+				if (task) {
+					task.completed_at = e.timestamp;
+					task.status = "completed";
+					task.outcome = e.outcome as TaskOutcome;
+					task.confidence = e.confidence;
+					task.duration_seconds = e.duration_seconds;
+					task.files_modified = e.files_modified
+						? JSON.stringify(e.files_modified)
+						: undefined;
+					task.tests_added = e.tests_added;
+					task.notes = e.notes;
+				}
+			} else if (event.type === "task_fail") {
+				const e = event as TaskFailEvent;
+				const task = taskMap.get(e.task_id);
+				if (task) {
+					task.completed_at = e.timestamp;
+					task.status = "failed";
+					task.outcome = "failure";
+					task.confidence = e.confidence;
+					task.duration_seconds = e.duration_seconds;
+					task.failure_reason = e.reason;
+					task.attempted_solutions = e.attempted_solutions
+						? JSON.stringify(e.attempted_solutions)
+						: undefined;
+					task.notes = e.notes;
+				}
+			}
+		});
+
+		// Convert to array and sort by started_at descending
+		const tasks = Array.from(taskMap.values());
+		tasks.sort(
+			(a, b) =>
+				new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+		);
+		return tasks;
+	}
+
+	/**
+	 * Get active (in-progress) tasks for a specific session
+	 */
+	getActiveTasksForSession(sessionId: string): Task[] {
+		const tasks = this.getTasksForSession(sessionId);
+		return tasks.filter((task) => task.status === "active");
+	}
+
+	/**
 	 * Close storage (no-op for JSONL, but maintains interface compatibility)
 	 */
 	close(): void {

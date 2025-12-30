@@ -41,10 +41,10 @@ mock.module("../lib/marketplace-cache.ts", () => ({
 }));
 
 // Must import listPlugins AFTER setting up mocks
-import { listPlugins } from "../lib/plugin-list.ts";
+import { listPlugins } from "../lib/plugins/index.ts";
 
 describe("plugin-list.ts", () => {
-	const testDir = `/tmp/test-plugin-list-${Date.now()}`;
+	let testDir: string;
 	let consoleLogSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let logs: string[] = [];
@@ -53,6 +53,9 @@ describe("plugin-list.ts", () => {
 	let originalCwd: () => string;
 
 	beforeEach(() => {
+		// Generate unique directory per test to avoid race conditions
+		testDir = `/tmp/test-plugin-list-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 		// Save original environment and cwd
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd;
@@ -83,7 +86,9 @@ describe("plugin-list.ts", () => {
 		process.env = originalEnv;
 		process.cwd = originalCwd;
 
-		rmSync(testDir, { recursive: true, force: true });
+		if (testDir) {
+			rmSync(testDir, { recursive: true, force: true });
+		}
 	});
 
 	describe("listPlugins", () => {

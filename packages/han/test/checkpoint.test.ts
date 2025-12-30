@@ -8,6 +8,7 @@ import {
 	mkdirSync,
 	realpathSync,
 	rmSync,
+	utimesSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,9 +19,12 @@ import {
 	cleanupOldCheckpoints,
 	getCheckpointDir,
 	getCheckpointPath,
+	getProjectSlug,
+	getProjectsBaseDir,
 	hasChangedSinceCheckpoint,
+	listCheckpoints,
 	loadCheckpoint,
-} from "../lib/checkpoint.ts";
+} from "../lib/hooks/index.ts";
 
 // Store original environment
 const originalEnv = { ...process.env };
@@ -74,36 +78,58 @@ describe("checkpoint.ts", () => {
 		teardown();
 	});
 
+	describe("getProjectSlug", () => {
+		test("derives slug from directory path", () => {
+			const result = getProjectSlug("/Users/john/projects/my-app");
+			expect(result).toBe("Users-john-projects-my-app");
+		});
+
+		test("removes leading slash and replaces slashes with dashes", () => {
+			const result = getProjectSlug("/home/dev/work/api-service");
+			expect(result).toBe("home-dev-work-api-service");
+		});
+
+		test("uses CLAUDE_PROJECT_DIR when no path provided", () => {
+			const result = getProjectSlug();
+			// Should use projectDir which was set in setup()
+			expect(result).toContain("project");
+		});
+	});
+
+	describe("getProjectsBaseDir", () => {
+		test("returns ~/.claude/projects/", () => {
+			const result = getProjectsBaseDir();
+			expect(result).toMatch(/\.claude\/projects$/);
+		});
+	});
+
 	describe("getCheckpointDir", () => {
 		test("returns correct checkpoint directory path", () => {
 			const result = getCheckpointDir();
-			expect(result).toContain("/projects/");
-			expect(result).toContain("/han/checkpoints");
+			expect(result).toContain("/.claude/projects/");
 		});
 
 		test("path includes project slug", () => {
 			const result = getCheckpointDir();
-			// Should contain the slugified project path
-			expect(result).toMatch(/projects\/.*\/han\/checkpoints$/);
+			// Should contain the project path under projects/
+			expect(result).toMatch(/\.claude\/projects\/.+$/);
 		});
 	});
 
 	describe("getCheckpointPath", () => {
 		test("returns correct path for session checkpoint", () => {
 			const result = getCheckpointPath("session", "session-123");
-			expect(result).toContain("checkpoints");
-			expect(result).toContain("session_session-123.json");
+			expect(result).toContain("/session-123/checkpoint.json");
 		});
 
 		test("returns correct path for agent checkpoint", () => {
 			const result = getCheckpointPath("agent", "agent-456");
-			expect(result).toContain("checkpoints");
-			expect(result).toContain("agent_agent-456.json");
+			expect(result).toContain("/agent-agent-456/checkpoint.json");
 		});
 
 		test("sanitizes checkpoint ID", () => {
 			const result = getCheckpointPath("session", "id/with/slashes");
-			expect(result).toContain("session_id_with_slashes.json");
+			expect(result).toContain("/id_with_slashes/checkpoint.json");
 		});
 	});
 
@@ -366,17 +392,26 @@ describe("checkpoint.ts", () => {
 	});
 
 	describe("cleanupOldCheckpoints", () => {
-		test("removes checkpoints older than maxAge", async () => {
+		test("removes checkpoints older than maxAge", () => {
 			// Create old checkpoint
 			writeFileSync(join(projectDir, "file.ts"), "content");
 			captureCheckpoint("session", "old-checkpoint", ["**/*.ts"]);
 
-			// Wait a bit then create new checkpoint
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// Explicitly set old checkpoint to have old mtime (1 second ago)
+			const oldTime = new Date(Date.now() - 1000);
+			utimesSync(
+				getCheckpointPath("session", "old-checkpoint"),
+				oldTime,
+				oldTime,
+			);
+
+			// Create new checkpoint (will have current mtime)
 			captureCheckpoint("session", "new-checkpoint", ["**/*.ts"]);
 
-			// Cleanup checkpoints older than 50ms
-			const removed = cleanupOldCheckpoints(50);
+			// Cleanup checkpoints older than 500ms
+			// old-checkpoint is 1s old (should be removed)
+			// new-checkpoint is ~0ms old (should be kept)
+			const removed = cleanupOldCheckpoints(500);
 
 			expect(removed).toBe(1);
 			expect(loadCheckpoint("session", "old-checkpoint")).toBeNull();
@@ -394,7 +429,7 @@ describe("checkpoint.ts", () => {
 			expect(loadCheckpoint("session", "recent")).not.toBeNull();
 		});
 
-		test("returns count of removed checkpoints", async () => {
+		test("returns count of removed checkpoints", () => {
 			writeFileSync(join(projectDir, "file.ts"), "content");
 
 			// Create multiple old checkpoints
@@ -402,10 +437,14 @@ describe("checkpoint.ts", () => {
 			captureCheckpoint("session", "old-2", ["**/*.ts"]);
 			captureCheckpoint("agent", "old-3", ["**/*.ts"]);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// Explicitly set all checkpoints to have old mtime (1 second ago)
+			const oldTime = new Date(Date.now() - 1000);
+			utimesSync(getCheckpointPath("session", "old-1"), oldTime, oldTime);
+			utimesSync(getCheckpointPath("session", "old-2"), oldTime, oldTime);
+			utimesSync(getCheckpointPath("agent", "old-3"), oldTime, oldTime);
 
-			// Cleanup
-			const removed = cleanupOldCheckpoints(50);
+			// Cleanup checkpoints older than 500ms
+			const removed = cleanupOldCheckpoints(500);
 
 			expect(removed).toBe(3);
 		});
@@ -435,27 +474,100 @@ describe("checkpoint.ts", () => {
 			expect(loadCheckpoint("session", "keep-2")).not.toBeNull();
 		});
 
-		test("handles both session and agent checkpoints", async () => {
+		test("handles both session and agent checkpoints", () => {
 			writeFileSync(join(projectDir, "file.ts"), "content");
 
 			// Create old checkpoints of both types
 			captureCheckpoint("session", "old-session", ["**/*.ts"]);
 			captureCheckpoint("agent", "old-agent", ["**/*.ts"]);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// Explicitly set old checkpoints to have old mtime (1 second ago)
+			const oldTime = new Date(Date.now() - 1000);
+			utimesSync(getCheckpointPath("session", "old-session"), oldTime, oldTime);
+			utimesSync(getCheckpointPath("agent", "old-agent"), oldTime, oldTime);
 
-			// Create new ones
+			// Create new ones (they will have current mtime)
 			captureCheckpoint("session", "new-session", ["**/*.ts"]);
 			captureCheckpoint("agent", "new-agent", ["**/*.ts"]);
 
-			// Cleanup old ones
-			const removed = cleanupOldCheckpoints(50);
+			// Cleanup old ones (500ms threshold - old files are 1s old, new files are ~0ms old)
+			const removed = cleanupOldCheckpoints(500);
 
 			expect(removed).toBe(2);
 			expect(loadCheckpoint("session", "old-session")).toBeNull();
 			expect(loadCheckpoint("agent", "old-agent")).toBeNull();
 			expect(loadCheckpoint("session", "new-session")).not.toBeNull();
 			expect(loadCheckpoint("agent", "new-agent")).not.toBeNull();
+		});
+	});
+
+	describe("listCheckpoints", () => {
+		test("returns empty array when no checkpoints exist", () => {
+			const result = listCheckpoints();
+			expect(result).toEqual([]);
+		});
+
+		test("lists all checkpoints in directory", () => {
+			writeFileSync(join(projectDir, "file.ts"), "content");
+
+			captureCheckpoint("session", "session-1", ["**/*.ts"]);
+			captureCheckpoint("session", "session-2", ["**/*.ts"]);
+			captureCheckpoint("agent", "agent-1", ["**/*.ts"]);
+
+			const result = listCheckpoints();
+
+			expect(result.length).toBe(3);
+			expect(result.map((c) => c.id).sort()).toEqual([
+				"agent-1",
+				"session-1",
+				"session-2",
+			]);
+		});
+
+		test("includes correct metadata for session checkpoints", () => {
+			writeFileSync(join(projectDir, "file1.ts"), "content1");
+			writeFileSync(join(projectDir, "file2.ts"), "content2");
+
+			captureCheckpoint("session", "metadata-test", ["**/*.ts"]);
+
+			const result = listCheckpoints();
+
+			expect(result.length).toBe(1);
+			expect(result[0].type).toBe("session");
+			expect(result[0].id).toBe("metadata-test");
+			expect(result[0].fileCount).toBe(2);
+			expect(result[0].createdAt).toBeDefined();
+			expect(result[0].path).toContain("checkpoint.json");
+		});
+
+		test("includes correct metadata for agent checkpoints", () => {
+			writeFileSync(join(projectDir, "file.ts"), "content");
+
+			captureCheckpoint("agent", "agent-test", ["**/*.ts"]);
+
+			const result = listCheckpoints();
+
+			expect(result.length).toBe(1);
+			expect(result[0].type).toBe("agent");
+			expect(result[0].id).toBe("agent-test");
+			expect(result[0].path).toContain("agent-agent-test");
+		});
+
+		test("sorts checkpoints by creation time, newest first", async () => {
+			writeFileSync(join(projectDir, "file.ts"), "content");
+
+			captureCheckpoint("session", "oldest", ["**/*.ts"]);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			captureCheckpoint("session", "middle", ["**/*.ts"]);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			captureCheckpoint("session", "newest", ["**/*.ts"]);
+
+			const result = listCheckpoints();
+
+			expect(result.length).toBe(3);
+			expect(result[0].id).toBe("newest");
+			expect(result[1].id).toBe("middle");
+			expect(result[2].id).toBe("oldest");
 		});
 	});
 

@@ -15,11 +15,12 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
+import * as legacyCheckpointModule from "../lib/checkpoint.ts";
 import * as captureModule from "../lib/commands/checkpoint/capture.ts";
 import * as cleanModule from "../lib/commands/checkpoint/clean.ts";
 import { registerCheckpointCommands } from "../lib/commands/checkpoint/index.ts";
 import * as listModule from "../lib/commands/checkpoint/list.ts";
-import * as checkpointModule from "../lib/checkpoint.ts";
+import * as hooksCheckpointModule from "../lib/hooks/checkpoint.ts";
 
 // Store original environment and methods
 const originalEnv = { ...process.env };
@@ -106,12 +107,13 @@ describe("checkpoint CLI commands", () => {
 	});
 
 	describe("captureCheckpointCommand", () => {
-		test("calls captureCheckpoint with correct parameters", async () => {
-			const spy1 = spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(
-				true,
-			);
+		test("calls captureCheckpointAsync with correct parameters", async () => {
+			const spy1 = spyOn(
+				hooksCheckpointModule,
+				"captureCheckpointAsync",
+			).mockResolvedValue([]);
 			const spy2 = spyOn(
-				checkpointModule,
+				hooksCheckpointModule,
 				"collectIfChangedPatterns",
 			).mockReturnValue(["**/*.ts"]);
 
@@ -121,17 +123,17 @@ describe("checkpoint CLI commands", () => {
 			});
 
 			expect(spy2).toHaveBeenCalledTimes(1);
-			expect(spy1).toHaveBeenCalledWith("session", "test-session-123", [
-				"**/*.ts",
-			]);
+			// Session checkpoints use the ID directly
+			expect(spy1).toHaveBeenCalledWith("test-session-123", ["**/*.ts"]);
 		});
 
-		test("handles agent type checkpoint", async () => {
-			const spy1 = spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(
-				true,
-			);
+		test("handles agent type checkpoint with agent- prefix", async () => {
+			const spy1 = spyOn(
+				hooksCheckpointModule,
+				"captureCheckpointAsync",
+			).mockResolvedValue([]);
 			const _spy2 = spyOn(
-				checkpointModule,
+				hooksCheckpointModule,
 				"collectIfChangedPatterns",
 			).mockReturnValue(["**/*.js"]);
 
@@ -140,31 +142,41 @@ describe("checkpoint CLI commands", () => {
 				id: "agent-456",
 			});
 
-			expect(spy1).toHaveBeenCalledWith("agent", "agent-456", ["**/*.js"]);
+			// Agent checkpoints are prefixed with "agent-"
+			expect(spy1).toHaveBeenCalledWith("agent-agent-456", ["**/*.js"]);
 		});
 
-		test("throws error when captureCheckpoint fails", async () => {
-			spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(false);
-			spyOn(checkpointModule, "collectIfChangedPatterns").mockReturnValue([
+		test("warns when no files captured but patterns exist", async () => {
+			const originalWarn = console.warn;
+			const warnings: string[] = [];
+			console.warn = (...args: unknown[]) => {
+				warnings.push(args.join(" "));
+			};
+
+			spyOn(hooksCheckpointModule, "captureCheckpointAsync").mockResolvedValue(
+				[],
+			);
+			spyOn(hooksCheckpointModule, "collectIfChangedPatterns").mockReturnValue([
 				"**/*.ts",
 			]);
 
-			await expect(
-				captureModule.captureCheckpointCommand({
-					type: "session",
-					id: "failing-session",
-				}),
-			).rejects.toThrow(
-				"Failed to capture session checkpoint for failing-session",
-			);
+			await captureModule.captureCheckpointCommand({
+				type: "session",
+				id: "empty-session",
+			});
+
+			expect(warnings.join("\n")).toContain("No files captured");
+
+			console.warn = originalWarn;
 		});
 
 		test("includes collected patterns in checkpoint", async () => {
 			const patterns = ["**/*.ts", "**/*.tsx", "**/*.js"];
-			const spy = spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(
-				true,
-			);
-			spyOn(checkpointModule, "collectIfChangedPatterns").mockReturnValue(
+			const spy = spyOn(
+				hooksCheckpointModule,
+				"captureCheckpointAsync",
+			).mockResolvedValue([]);
+			spyOn(hooksCheckpointModule, "collectIfChangedPatterns").mockReturnValue(
 				patterns,
 			);
 
@@ -173,14 +185,14 @@ describe("checkpoint CLI commands", () => {
 				id: "multi-pattern",
 			});
 
-			expect(spy).toHaveBeenCalledWith("session", "multi-pattern", patterns);
+			expect(spy).toHaveBeenCalledWith("multi-pattern", patterns);
 		});
 	});
 
 	describe("cleanCheckpoints", () => {
 		test("calls cleanupOldCheckpoints with correct maxAge in milliseconds", async () => {
 			const spy = spyOn(
-				checkpointModule,
+				legacyCheckpointModule,
 				"cleanupOldCheckpoints",
 			).mockReturnValue(5);
 
@@ -192,7 +204,7 @@ describe("checkpoint CLI commands", () => {
 
 		test("converts fractional hours correctly", async () => {
 			const spy = spyOn(
-				checkpointModule,
+				legacyCheckpointModule,
 				"cleanupOldCheckpoints",
 			).mockReturnValue(2);
 
@@ -203,7 +215,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("logs correct message for singular checkpoint", async () => {
-			spyOn(checkpointModule, "cleanupOldCheckpoints").mockReturnValue(1);
+			spyOn(legacyCheckpointModule, "cleanupOldCheckpoints").mockReturnValue(1);
 
 			await cleanModule.cleanCheckpoints({ maxAge: "48" });
 
@@ -213,7 +225,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("logs correct message for multiple checkpoints", async () => {
-			spyOn(checkpointModule, "cleanupOldCheckpoints").mockReturnValue(7);
+			spyOn(legacyCheckpointModule, "cleanupOldCheckpoints").mockReturnValue(7);
 
 			await cleanModule.cleanCheckpoints({ maxAge: "12" });
 
@@ -247,7 +259,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("handles cleanup returning zero checkpoints", async () => {
-			spyOn(checkpointModule, "cleanupOldCheckpoints").mockReturnValue(0);
+			spyOn(legacyCheckpointModule, "cleanupOldCheckpoints").mockReturnValue(0);
 
 			await cleanModule.cleanCheckpoints({ maxAge: "24" });
 
@@ -267,7 +279,7 @@ describe("checkpoint CLI commands", () => {
 
 		test("displays message when no checkpoint files exist", async () => {
 			// Create directory but no files
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			await listModule.listCheckpoints();
@@ -277,7 +289,7 @@ describe("checkpoint CLI commands", () => {
 
 		test("displays session checkpoints with correct formatting", async () => {
 			// Create test checkpoint files
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			const checkpoint = {
@@ -302,7 +314,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("displays agent checkpoints with correct formatting", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			const checkpoint = {
@@ -327,7 +339,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("displays both session and agent checkpoints", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			const sessionCheckpoint = {
@@ -362,7 +374,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("sorts checkpoints by created_at (newest first)", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			const older = {
@@ -399,7 +411,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("handles corrupted checkpoint files gracefully", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			// Create corrupted file
@@ -430,7 +442,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("formats large file counts with locale separators", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			const files: Record<string, string> = {};
@@ -458,7 +470,7 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("ignores non-JSON files in checkpoint directory", async () => {
-			const checkpointDir = checkpointModule.getCheckpointDir();
+			const checkpointDir = legacyCheckpointModule.getCheckpointDir();
 			mkdirSync(checkpointDir, { recursive: true });
 
 			// Create non-JSON file
@@ -615,8 +627,10 @@ describe("checkpoint CLI commands", () => {
 		});
 
 		test("capture command exits with error when checkpoint fails", async () => {
-			spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(false);
-			spyOn(checkpointModule, "collectIfChangedPatterns").mockReturnValue([
+			spyOn(hooksCheckpointModule, "captureCheckpointAsync").mockRejectedValue(
+				new Error("Database error"),
+			);
+			spyOn(hooksCheckpointModule, "collectIfChangedPatterns").mockReturnValue([
 				"**/*.ts",
 			]);
 
@@ -647,8 +661,10 @@ describe("checkpoint CLI commands", () => {
 		test("capture command fails silently in non-verbose mode", async () => {
 			delete process.env.HAN_VERBOSE;
 
-			spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(false);
-			spyOn(checkpointModule, "collectIfChangedPatterns").mockReturnValue([
+			spyOn(hooksCheckpointModule, "captureCheckpointAsync").mockRejectedValue(
+				new Error("Database error"),
+			);
+			spyOn(hooksCheckpointModule, "collectIfChangedPatterns").mockReturnValue([
 				"**/*.ts",
 			]);
 
@@ -681,8 +697,10 @@ describe("checkpoint CLI commands", () => {
 		test("capture command logs errors in verbose mode", async () => {
 			process.env.HAN_VERBOSE = "1";
 
-			spyOn(checkpointModule, "captureCheckpoint").mockReturnValue(false);
-			spyOn(checkpointModule, "collectIfChangedPatterns").mockReturnValue([
+			spyOn(hooksCheckpointModule, "captureCheckpointAsync").mockRejectedValue(
+				new Error("Database error"),
+			);
+			spyOn(hooksCheckpointModule, "collectIfChangedPatterns").mockReturnValue([
 				"**/*.ts",
 			]);
 

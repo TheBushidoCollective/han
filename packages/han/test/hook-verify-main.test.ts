@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { verifyHooks } from "../lib/commands/hook/verify.ts";
 
 describe("verifyHooks function", () => {
-	const testDir = `/tmp/test-verify-hooks-main-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: typeof process.env;
 	let originalCwd: () => string;
 	let originalLog: typeof console.log;
@@ -19,6 +19,9 @@ describe("verifyHooks function", () => {
 	let exitCode: number | null = null;
 
 	beforeEach(() => {
+		// Generate unique test directory per test
+		testDir = `/tmp/test-verify-hooks-main-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd;
 		originalLog = console.log;
@@ -64,11 +67,11 @@ describe("verifyHooks function", () => {
 	});
 
 	describe("environment variable handling", () => {
-		test("exits early when HAN_DISABLE_HOOKS=true", () => {
+		test("exits early when HAN_DISABLE_HOOKS=true", async () => {
 			process.env.HAN_DISABLE_HOOKS = "true";
 
 			try {
-				verifyHooks("Stop");
+				await verifyHooks("Stop");
 			} catch (_e) {
 				// Catch process.exit throw
 			}
@@ -76,11 +79,11 @@ describe("verifyHooks function", () => {
 			expect(exitCode).toBe(0);
 		});
 
-		test("exits early when HAN_DISABLE_HOOKS=1", () => {
+		test("exits early when HAN_DISABLE_HOOKS=1", async () => {
 			process.env.HAN_DISABLE_HOOKS = "1";
 
 			try {
-				verifyHooks("Stop");
+				await verifyHooks("Stop");
 			} catch (_e) {
 				// Catch process.exit throw
 			}
@@ -88,7 +91,7 @@ describe("verifyHooks function", () => {
 			expect(exitCode).toBe(0);
 		});
 
-		test("does not exit early when HAN_DISABLE_HOOKS=false", () => {
+		test("does not exit early when HAN_DISABLE_HOOKS=false", async () => {
 			process.env.HAN_DISABLE_HOOKS = "false";
 
 			// Create settings
@@ -99,14 +102,14 @@ describe("verifyHooks function", () => {
 				JSON.stringify({ enabledPlugins: {} }),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			expect(result).toBe(0);
 			expect(exitCode).toBeNull();
 		});
 	});
 
 	describe("no plugins configured", () => {
-		test("returns 0 when no plugins are enabled", () => {
+		test("returns 0 when no plugins are enabled", async () => {
 			const settingsDir = join(testDir, ".claude");
 			mkdirSync(settingsDir, { recursive: true });
 			writeFileSync(
@@ -114,7 +117,7 @@ describe("verifyHooks function", () => {
 				JSON.stringify({ enabledPlugins: {} }),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			expect(result).toBe(0);
 			expect(
 				logMessages.some((msg) => msg.includes("No") && msg.includes("hooks")),
@@ -123,7 +126,7 @@ describe("verifyHooks function", () => {
 	});
 
 	describe("with configured plugins", () => {
-		test("returns 0 when plugin has no hooks for the specified type", () => {
+		test("returns 0 when plugin has no hooks for the specified type", async () => {
 			// Create plugin with hooks for different type
 			const marketplaceRoot = join(
 				testDir,
@@ -166,14 +169,14 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop"); // Asking for Stop hooks
+			const result = await verifyHooks("Stop"); // Asking for Stop hooks
 			expect(result).toBe(0);
 			expect(
 				logMessages.some((msg) => msg.includes("No") && msg.includes("hooks")),
 			).toBe(true);
 		});
 
-		test("returns 0 when plugin has hooks.json with no hooks field", () => {
+		test("returns 0 when plugin has hooks.json with no hooks field", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -204,11 +207,11 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			expect(result).toBe(0);
 		});
 
-		test("skips prompt type hooks (only verifies command hooks)", () => {
+		test("skips prompt type hooks (only verifies command hooks)", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -251,14 +254,14 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			expect(result).toBe(0);
 			expect(
 				logMessages.some((msg) => msg.includes("No") && msg.includes("hooks")),
 			).toBe(true);
 		});
 
-		test("skips command hooks without command field", () => {
+		test("skips command hooks without command field", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -301,11 +304,11 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			expect(result).toBe(0);
 		});
 
-		test("skips hooks with unparseable commands", () => {
+		test("skips hooks with unparseable commands", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -348,12 +351,12 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// Should report all cached since no valid hooks to verify
 			expect(result).toBe(0);
 		});
 
-		test("returns 1 when target plugin not found", () => {
+		test("returns 1 when target plugin not found", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -396,7 +399,7 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// May return 0 or 1 depending on whether getHookConfigs finds configs
 			// The important thing is we tested the code path
 			expect(result).toBeGreaterThanOrEqual(0);
@@ -409,7 +412,7 @@ describe("verifyHooks function", () => {
 			expect(hasErrorOrStale).toBe(true);
 		});
 
-		test("returns 0 when all hooks are cached", () => {
+		test("returns 0 when all hooks are cached", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -458,12 +461,12 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// Will check cache - may report stale or cached depending on cache state
 			expect(result).toBeGreaterThanOrEqual(0);
 		});
 
-		test("handles multiple hook groups", () => {
+		test("handles multiple hook groups", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -520,12 +523,12 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// Should process both hooks
 			expect(result).toBeGreaterThanOrEqual(0);
 		});
 
-		test("handles multiple hooks in one group", () => {
+		test("handles multiple hooks in one group", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -578,14 +581,14 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// Should process both hooks
 			expect(result).toBeGreaterThanOrEqual(0);
 		});
 	});
 
 	describe("with files changed", () => {
-		test("returns 1 when ifChanged patterns detect changes", () => {
+		test("returns 1 when ifChanged patterns detect changes", async () => {
 			const marketplaceRoot = join(
 				testDir,
 				"config",
@@ -638,7 +641,7 @@ describe("verifyHooks function", () => {
 				}),
 			);
 
-			const result = verifyHooks("Stop");
+			const result = await verifyHooks("Stop");
 			// May or may not detect changes depending on cache state
 			expect(result).toBeGreaterThanOrEqual(0);
 			// The important thing is we tested the code path through checkForChanges

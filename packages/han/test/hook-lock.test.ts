@@ -25,7 +25,7 @@ import {
 	releaseSlot,
 	signalFailure,
 	withSlot,
-} from "../lib/hook-lock.ts";
+} from "../lib/hooks/index.ts";
 
 // Store original environment
 const originalEnv = { ...process.env };

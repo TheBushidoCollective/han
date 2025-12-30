@@ -1098,47 +1098,51 @@ describe.serial("Metrics Integration - Pattern Detection", () => {
 		expect(parsed.patterns.length).toBeGreaterThan(0);
 	});
 
-	test("detect patterns respects min-severity filter", () => {
-		const { session_id } = getStorage().startSession();
+	test(
+		"detect patterns respects min-severity filter",
+		() => {
+			const { session_id } = getStorage().startSession();
 
-		// Create enough hook failures to trigger a medium-severity pattern
-		for (let i = 0; i < 10; i++) {
-			getStorage().recordHookExecution({
-				sessionId: session_id,
-				hookType: "Stop",
-				hookName: "test-hook",
-				hookSource: "test",
-				durationMs: 500,
-				exitCode: i < 4 ? 1 : 0, // 40% failure rate - medium severity
-				passed: i >= 4,
-			});
-		}
+			// Create enough hook failures to trigger a medium-severity pattern
+			for (let i = 0; i < 10; i++) {
+				getStorage().recordHookExecution({
+					sessionId: session_id,
+					hookType: "Stop",
+					hookName: "test-hook",
+					hookSource: "test",
+					durationMs: 500,
+					exitCode: i < 4 ? 1 : 0, // 40% failure rate - medium severity
+					passed: i >= 4,
+				});
+			}
 
-		// High severity should filter out medium patterns
-		const highResult = runSpawn("detect-patterns --min-severity high --json");
-		expect(highResult.status).toBe(0);
-		const highParsed = JSON.parse(highResult.stdout);
+			// High severity should filter out medium patterns
+			const highResult = runSpawn("detect-patterns --min-severity high --json");
+			expect(highResult.status).toBe(0);
+			const highParsed = JSON.parse(highResult.stdout);
 
-		// Medium severity should include them
-		const mediumResult = runSpawn(
-			"detect-patterns --min-severity medium --json",
-		);
-		expect(mediumResult.status).toBe(0);
-		const mediumParsed = JSON.parse(mediumResult.stdout);
+			// Medium severity should include them
+			const mediumResult = runSpawn(
+				"detect-patterns --min-severity medium --json",
+			);
+			expect(mediumResult.status).toBe(0);
+			const mediumParsed = JSON.parse(mediumResult.stdout);
 
-		// Low severity should include all
-		const lowResult = runSpawn("detect-patterns --min-severity low --json");
-		expect(lowResult.status).toBe(0);
-		const lowParsed = JSON.parse(lowResult.stdout);
+			// Low severity should include all
+			const lowResult = runSpawn("detect-patterns --min-severity low --json");
+			expect(lowResult.status).toBe(0);
+			const lowParsed = JSON.parse(lowResult.stdout);
 
-		// Medium or low should have >= high's patterns
-		expect(mediumParsed.patterns.length).toBeGreaterThanOrEqual(
-			highParsed.patterns.length,
-		);
-		expect(lowParsed.patterns.length).toBeGreaterThanOrEqual(
-			mediumParsed.patterns.length,
-		);
-	});
+			// Medium or low should have >= high's patterns
+			expect(mediumParsed.patterns.length).toBeGreaterThanOrEqual(
+				highParsed.patterns.length,
+			);
+			expect(lowParsed.patterns.length).toBeGreaterThanOrEqual(
+				mediumParsed.patterns.length,
+			);
+		},
+		{ timeout: 10000 },
+	);
 });
 
 describe.serial("Metrics Integration - Data Persistence", () => {

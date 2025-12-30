@@ -1,39 +1,39 @@
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { hasChangedSinceCheckpoint, loadCheckpoint } from "./checkpoint.ts";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 } from "./claude-settings.ts";
+import { getEventLogger } from "./events/logger.ts";
 import {
+	getPluginHookSettings,
 	isCacheEnabled,
 	isCheckpointsEnabled,
 	isFailFastEnabled,
 } from "./han-settings.ts";
 import {
-	checkForChanges,
-	findDirectoriesWithMarkers,
-	trackFiles,
-} from "./hook-cache.ts";
-import { getHookConfigs, type ResolvedHookConfig } from "./hook-config.ts";
+	getHookConfigs,
+	getHookDefinition,
+	type ResolvedHookConfig,
+} from "./hook-config.ts";
 import {
 	checkFailureSignal,
 	clearFailureSignal,
 	createLockManager,
+	isHookRunning,
 	signalFailure,
+	waitForHook,
 	withSlot,
 } from "./hook-lock.ts";
-import { getPluginNameFromRoot } from "./shared.ts";
-
-/**
- * Check if debug mode is enabled via HAN_DEBUG environment variable
- */
-export function isDebugMode(): boolean {
-	const debug = process.env.HAN_DEBUG;
-	return debug === "1" || debug === "true";
-}
+import { hasChangedSinceCheckpointAsync } from "./hooks/checkpoint.ts";
+import {
+	checkForChangesAsync,
+	findDirectoriesWithMarkers,
+	trackFilesAsync,
+} from "./hooks/hook-cache.ts";
+import { getPluginNameFromRoot, isDebugMode } from "./shared.ts";
 
 /**
  * Get the han temp directory for output files
@@ -585,6 +585,11 @@ export interface RunConfiguredHookOptions {
 	 * Required when checkpointType is set
 	 */
 	checkpointId?: string;
+	/**
+	 * Skip dependency checks. Useful for recheck/retry scenarios
+	 * when dependencies have already been satisfied.
+	 */
+	skipDeps?: boolean;
 }
 
 /**
@@ -648,8 +653,15 @@ export function buildMcpToolInstruction(
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { pluginName, hookName, only, verbose, checkpointType, checkpointId } =
-		options;
+	const {
+		pluginName,
+		hookName,
+		only,
+		verbose,
+		checkpointType,
+		checkpointId,
+		skipDeps,
+	} = options;
 
 	// Settings resolution priority (highest to lowest):
 	// 1. Environment variable (HAN_NO_X=1 forces false)
@@ -716,6 +728,88 @@ export async function runConfiguredHook(
 		}
 	}
 
+	// Handle dependencies (unless --skip-deps is set)
+	if (!skipDeps) {
+		const hookDef = getHookDefinition(pluginRoot, hookName);
+		if (hookDef?.dependsOn && hookDef.dependsOn.length > 0) {
+			const lockManager = createLockManager();
+			const { plugins } = getMergedPluginsAndMarketplaces();
+
+			for (const dep of hookDef.dependsOn) {
+				// Check if dependency plugin is installed
+				const isDepInstalled = plugins.has(dep.plugin);
+
+				if (!isDepInstalled) {
+					if (dep.optional) {
+						if (verbose) {
+							console.log(
+								`[${pluginName}/${hookName}] Skipping optional dependency: ${dep.plugin}/${dep.hook} (not installed)`,
+							);
+						}
+						continue;
+					}
+					// Required dependency is missing
+					console.error(
+						`Error: Required dependency plugin "${dep.plugin}" is not installed.\n\n` +
+							`The hook "${pluginName}/${hookName}" requires "${dep.plugin}/${dep.hook}" to run first.\n` +
+							`Install the dependency plugin with: han plugin install ${dep.plugin}`,
+					);
+					process.exit(1);
+				}
+
+				// Check if dependency hook is already running
+				if (isHookRunning(lockManager, dep.plugin, dep.hook)) {
+					if (verbose) {
+						console.log(
+							`[${pluginName}/${hookName}] Waiting for dependency: ${dep.plugin}/${dep.hook} (already running)`,
+						);
+					}
+					const completed = await waitForHook(
+						lockManager,
+						dep.plugin,
+						dep.hook,
+					);
+					if (!completed) {
+						console.error(
+							`Error: Timeout waiting for dependency hook "${dep.plugin}/${dep.hook}" to complete.\n`,
+						);
+						process.exit(1);
+					}
+				} else {
+					// Dependency is not running - spawn it and wait
+					if (verbose) {
+						console.log(
+							`[${pluginName}/${hookName}] Running dependency: ${dep.plugin}/${dep.hook}`,
+						);
+					}
+
+					// Run the dependency hook synchronously
+					const result = spawnSync(
+						"han",
+						["hook", "run", dep.plugin, dep.hook, "--skip-deps"],
+						{
+							stdio: verbose ? "inherit" : "pipe",
+							shell: true,
+							env: {
+								...process.env,
+								// Don't inherit CLAUDE_PLUGIN_ROOT since we're running a different plugin
+								CLAUDE_PLUGIN_ROOT: "",
+							},
+						},
+					);
+
+					if (result.status !== 0) {
+						console.error(
+							`Error: Dependency hook "${dep.plugin}/${dep.hook}" failed.\n` +
+								`Fix the dependency first, then retry.`,
+						);
+						process.exit(2);
+					}
+				}
+			}
+		}
+	}
+
 	// Get all configs
 	let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
 
@@ -735,6 +829,35 @@ export async function runConfiguredHook(
 					`The --only flag requires a directory that matches one of the hook's target directories.`,
 			);
 			process.exit(1);
+		}
+	}
+
+	// Execute before_all script if configured (runs once before all directory iterations)
+	const hookSettings = getPluginHookSettings(pluginName, hookName);
+	if (hookSettings?.before_all) {
+		if (verbose) {
+			console.log(`\n[${pluginName}/${hookName}] Running before_all script:`);
+			console.log(`  $ ${hookSettings.before_all}\n`);
+		}
+		try {
+			execSync(hookSettings.before_all, {
+				encoding: "utf-8",
+				timeout: 60000, // 60 second timeout
+				stdio: verbose ? "inherit" : ["pipe", "pipe", "pipe"],
+				shell: "/bin/bash",
+				cwd: projectRoot,
+				env: {
+					...process.env,
+					CLAUDE_PROJECT_DIR: projectRoot,
+					CLAUDE_PLUGIN_ROOT: pluginRoot,
+				},
+			});
+		} catch (error: unknown) {
+			const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+			console.error(
+				`\n❌ before_all script failed for ${pluginName}/${hookName}:\n${stderr}`,
+			);
+			process.exit(2);
 		}
 	}
 
@@ -762,7 +885,7 @@ export async function runConfiguredHook(
 				config.directory,
 				projectRoot,
 			);
-			const hasChanges = checkForChanges(
+			const hasChanges = await checkForChangesAsync(
 				pluginName,
 				cacheKey,
 				config.directory,
@@ -775,32 +898,29 @@ export async function runConfiguredHook(
 				continue;
 			}
 
-			// NEW: Also check checkpoint if available
+			// NEW: Also check checkpoint if available (uses DB-backed storage)
 			if (hasChanges && checkpointType && checkpointId && checkpointsEnabled) {
-				const checkpoint = loadCheckpoint(checkpointType, checkpointId);
-				if (checkpoint) {
-					const changedSinceCheckpoint = hasChangedSinceCheckpoint(
-						checkpoint,
-						config.directory,
-						config.ifChanged,
-					);
-					if (!changedSinceCheckpoint) {
-						// File changed since last hook run, but NOT since checkpoint
-						// Skip this hook
-						if (verbose) {
-							const relativePath =
-								config.directory === projectRoot
-									? "."
-									: config.directory.replace(`${projectRoot}/`, "");
-							console.log(
-								`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
-							);
-						}
-						checkpointSkippedCount++;
-						continue;
+				const changedSinceCheckpoint = await hasChangedSinceCheckpointAsync(
+					checkpointId,
+					config.ifChanged,
+					config.directory,
+				);
+				if (!changedSinceCheckpoint) {
+					// File changed since last hook run, but NOT since checkpoint
+					// Skip this hook
+					if (verbose) {
+						const relativePath =
+							config.directory === projectRoot
+								? "."
+								: config.directory.replace(`${projectRoot}/`, "");
+						console.log(
+							`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
+						);
 					}
+					checkpointSkippedCount++;
+					continue;
 				}
-				// If no checkpoint, fall through to run hook (graceful degradation)
+				// If hasChangedSinceCheckpointAsync returns true (or fails), run hook
 			}
 		}
 
@@ -882,6 +1002,16 @@ export async function runConfiguredHook(
 			console.log(`  $ ${config.command}\n`);
 		}
 
+		// Log hook run event (start)
+		const eventLogger = getEventLogger();
+		if (isDebugMode()) {
+			console.error(
+				`[validate] eventLogger=${eventLogger ? "exists" : "null"}, about to log hook_run`,
+			);
+		}
+		eventLogger?.logHookRun(pluginName, hookName, relativePath, false);
+		const hookStartTime = Date.now();
+
 		// Acquire slot, run command, release slot (per directory)
 		const result = await withSlot(hookName, pluginName, async () => {
 			return runCommand({
@@ -893,6 +1023,20 @@ export async function runConfiguredHook(
 				pluginRoot,
 			});
 		});
+
+		// Log hook result event (end)
+		const hookDuration = Date.now() - hookStartTime;
+		eventLogger?.logHookResult(
+			pluginName,
+			hookName,
+			relativePath,
+			false, // cached
+			hookDuration,
+			result.success ? 0 : 1, // exit code
+			result.success,
+			result.output,
+			result.success ? undefined : "Hook failed",
+		);
 
 		if (!result.success) {
 			failures.push({
@@ -964,7 +1108,7 @@ export async function runConfiguredHook(
 					config.directory,
 					projectRoot,
 				);
-				trackFiles(
+				await trackFilesAsync(
 					pluginName,
 					cacheKey,
 					config.directory,

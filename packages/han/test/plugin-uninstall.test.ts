@@ -10,7 +10,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { uninstallPlugin, uninstallPlugins } from "../lib/plugin-uninstall.ts";
+import { uninstallPlugin, uninstallPlugins } from "../lib/plugins/index.ts";
 
 describe("plugin-uninstall.ts", () => {
 	const testDir = `/tmp/test-plugin-uninstall-${Date.now()}`;

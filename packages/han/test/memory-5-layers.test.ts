@@ -620,24 +620,20 @@ describe("Layer 4: Transcripts (conversation history)", () => {
 			});
 			expect(results).toBeDefined();
 			expect(Array.isArray(results)).toBe(true);
-		});
+		}, 15000);
 
-		test(
-			"should return empty array for no matches",
-			() => {
-				// Use a query with random UUID suffix to ensure it never matches real data
-				// This test was previously failing because the query string appeared in
-				// test failure summaries that got captured in actual transcripts
-				const randomQuery = `NOMATCH_GIBBERISH_${crypto.randomUUID().replace(/-/g, "")}`;
-				const results = searchTranscriptsText({
-					query: randomQuery,
-					limit: 10,
-					scope: "all",
-				});
-				expect(results).toEqual([]);
-			},
-			{ timeout: 15000 },
-		);
+		test("should return empty array for no matches", () => {
+			// Use a query with random UUID suffix to ensure it never matches real data
+			// This test was previously failing because the query string appeared in
+			// test failure summaries that got captured in actual transcripts
+			const randomQuery = `NOMATCH_GIBBERISH_${crypto.randomUUID().replace(/-/g, "")}`;
+			const results = searchTranscriptsText({
+				query: randomQuery,
+				limit: 10,
+				scope: "all",
+			});
+			expect(results).toEqual([]);
+		}, 15000);
 	});
 });
 

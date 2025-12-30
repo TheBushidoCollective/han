@@ -15,8 +15,8 @@ import {
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
-} from "../lib/hook-config.ts";
-import { getPluginNameFromRoot } from "../lib/shared.ts";
+} from "../lib/hooks/index.ts";
+import { getPluginNameFromRoot } from "../lib/shared/index.ts";
 
 let testDir: string;
 let pluginDir: string;

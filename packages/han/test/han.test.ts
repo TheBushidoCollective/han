@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parsePluginRecommendations } from "../lib/shared.ts";
+import { parsePluginRecommendations } from "../lib/shared/index.ts";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -66,36 +66,63 @@ interface ExecError extends Error {
 	stdout?: Buffer | string;
 }
 
+// Binary tests need longer timeout due to startup time and potential native extension rebuilds (~27s)
+const BINARY_TIMEOUT = 45000;
+
 // ============================================
 // Basic CLI tests
 // ============================================
 
 describe("Basic CLI", () => {
-	test("shows version", () => {
-		const output = execSync(`${binCommand} --version`, { encoding: "utf8" });
-		// Version output now starts with "han X.X.X" and includes binary info
-		expect(/^han \d+\.\d+\.\d+/.test(output.trim())).toBe(true);
-	});
+	test(
+		"shows version",
+		() => {
+			const output = execSync(`${binCommand} --version`, {
+				encoding: "utf8",
+				timeout: 30000,
+			});
+			// Version output now starts with "han X.X.X" and includes binary info
+			expect(/^han \d+\.\d+\.\d+/.test(output.trim())).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("shows help when no command provided", () => {
-		const output = execSync(`${binCommand} --help`, { encoding: "utf8" });
-		expect(output).toContain("Usage:");
-		expect(output).toContain("han");
-	});
+	test(
+		"shows help when no command provided",
+		() => {
+			const output = execSync(`${binCommand} --help`, {
+				encoding: "utf8",
+				timeout: 30000,
+			});
+			expect(output).toContain("Usage:");
+			expect(output).toContain("han");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("shows plugin command help", () => {
-		const output = execSync(`${binCommand} plugin --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("install");
-		expect(output).toContain("uninstall");
-	});
+	test(
+		"shows plugin command help",
+		() => {
+			const output = execSync(`${binCommand} plugin --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("install");
+			expect(output).toContain("uninstall");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("shows hook command help", () => {
-		const output = execSync(`${binCommand} hook --help`, { encoding: "utf8" });
-		expect(output).toContain("run");
-		expect(output).toContain("test");
-	});
+	test(
+		"shows hook command help",
+		() => {
+			const output = execSync(`${binCommand} hook --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("run");
+			expect(output).toContain("test");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -113,30 +140,38 @@ describe("HAN_DISABLE_HOOKS", () => {
 		teardown(testDir);
 	});
 
-	test("causes hook run to exit 0 silently", () => {
-		mkdirSync(join(testDir, "pkg1"));
-		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+	test(
+		"causes hook run to exit 0 silently",
+		() => {
+			mkdirSync(join(testDir, "pkg1"));
+			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
 
-		const output = execSync(
-			`${binCommand} hook run --dirs-with package.json -- echo should-not-run`,
-			{
-				cwd: testDir,
+			const output = execSync(
+				`${binCommand} hook run --dirs-with package.json -- echo should-not-run`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					env: { ...process.env, HAN_DISABLE_HOOKS: "1" },
+				} as ExecSyncOptionsWithStringEncoding,
+			);
+
+			expect(output.trim()).toBe("");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"causes hook dispatch to exit 0 silently",
+		() => {
+			const output = execSync(`${binCommand} hook dispatch Stop`, {
 				encoding: "utf8",
 				env: { ...process.env, HAN_DISABLE_HOOKS: "1" },
-			} as ExecSyncOptionsWithStringEncoding,
-		);
+			});
 
-		expect(output.trim()).toBe("");
-	});
-
-	test("causes hook dispatch to exit 0 silently", () => {
-		const output = execSync(`${binCommand} hook dispatch Stop`, {
-			encoding: "utf8",
-			env: { ...process.env, HAN_DISABLE_HOOKS: "1" },
-		});
-
-		expect(output.trim()).toBe("");
-	});
+			expect(output.trim()).toBe("");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -161,161 +196,153 @@ describe("Hook verify", () => {
 		teardown(testDir);
 	});
 
-	test("exits 0 when all hooks are cached", () => {
-		const YAML = require("yaml");
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
+	test(
+		"exits 0 when all hooks are cached",
+		() => {
+			const YAML = require("yaml");
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
 
-		const claudeDir = join(projectDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
+			const claudeDir = join(projectDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		const marketplaceDir = join(testDir, "marketplace");
-		const pluginDir = join(marketplaceDir, "jutsu", "no-cache-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					build: {
-						command: "echo no-cache-test",
-					},
-				},
-			}),
-		);
-
-		const hooksDir = join(pluginDir, "hooks");
-		mkdirSync(hooksDir, { recursive: true });
-		writeFileSync(
-			join(hooksDir, "hooks.json"),
-			JSON.stringify({
-				hooks: {
-					Stop: [
-						{
-							hooks: [
-								{
-									type: "command",
-									command: "han hook run no-cache-plugin build",
-								},
-							],
+			const marketplaceDir = join(testDir, "marketplace");
+			const pluginDir = join(marketplaceDir, "jutsu", "no-cache-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						build: {
+							command: "echo no-cache-test",
 						},
-					],
-				},
-			}),
-		);
-
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					"test-marketplace": {
-						source: { source: "directory", path: marketplaceDir },
 					},
-				},
-				enabledPlugins: {
-					"no-cache-plugin@test-marketplace": true,
-				},
-			}),
-		);
+				}),
+			);
 
-		process.env.CLAUDE_PROJECT_DIR = projectDir;
-
-		const output = execSync(`${binCommand} hook verify Stop`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		} as ExecSyncOptionsWithStringEncoding);
-
-		expect(
-			output.includes("hooks are cached") ||
-				output.includes("✅") ||
-				output.includes("0"),
-		).toBe(true);
-	});
-
-	test("exits non-zero when hooks are stale", () => {
-		const YAML = require("yaml");
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-		writeFileSync(join(projectDir, "package.json"), "{}");
-		writeFileSync(join(projectDir, "app.ts"), "// TypeScript code");
-
-		const claudeDir = join(projectDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
-
-		const marketplaceDir = join(testDir, "marketplace");
-		const pluginDir = join(marketplaceDir, "jutsu", "stale-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					check: {
-						dirs_with: ["package.json"],
-						command: "echo verify-test",
-						if_changed: ["**/*.ts"],
+			const hooksDir = join(pluginDir, "hooks");
+			mkdirSync(hooksDir, { recursive: true });
+			writeFileSync(
+				join(hooksDir, "hooks.json"),
+				JSON.stringify({
+					hooks: {
+						Stop: [
+							{
+								hooks: [
+									{
+										type: "command",
+										command: "han hook run no-cache-plugin build",
+									},
+								],
+							},
+						],
 					},
-				},
-			}),
-		);
+				}),
+			);
 
-		const hooksDir = join(pluginDir, "hooks");
-		mkdirSync(hooksDir, { recursive: true });
-		writeFileSync(
-			join(hooksDir, "hooks.json"),
-			JSON.stringify({
-				hooks: {
-					Stop: [
-						{
-							hooks: [
-								{
-									type: "command",
-									command: "han hook run stale-plugin check --cached",
-								},
-							],
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						"test-marketplace": {
+							source: { source: "directory", path: marketplaceDir },
 						},
-					],
-				},
-			}),
-		);
-
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					"test-marketplace": {
-						source: { source: "directory", path: marketplaceDir },
 					},
+					enabledPlugins: {
+						"no-cache-plugin@test-marketplace": true,
+					},
+				}),
+			);
+
+			process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+			const output = execSync(`${binCommand} hook verify Stop`, {
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_PROJECT_DIR: projectDir,
 				},
-				enabledPlugins: {
-					"stale-plugin@test-marketplace": true,
-				},
-			}),
-		);
+			} as ExecSyncOptionsWithStringEncoding);
 
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+			expect(
+				output.includes("hooks are cached") ||
+					output.includes("✅") ||
+					output.includes("0"),
+			).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-		process.env.CLAUDE_PROJECT_DIR = projectDir;
+	test(
+		"exits non-zero when hooks are stale",
+		() => {
+			const YAML = require("yaml");
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+			writeFileSync(join(projectDir, "package.json"), "{}");
+			writeFileSync(join(projectDir, "app.ts"), "// TypeScript code");
 
-		execSync(`${binCommand} hook run stale-plugin check --cached`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: "pipe",
-			env: {
-				...process.env,
-				CLAUDE_PROJECT_DIR: projectDir,
-				CLAUDE_PLUGIN_ROOT: undefined,
-			},
-		});
+			const claudeDir = join(projectDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		writeFileSync(join(projectDir, "app.ts"), "// Modified TypeScript code");
+			const marketplaceDir = join(testDir, "marketplace");
+			const pluginDir = join(marketplaceDir, "jutsu", "stale-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						check: {
+							dirs_with: ["package.json"],
+							command: "echo verify-test",
+							if_changed: ["**/*.ts"],
+						},
+					},
+				}),
+			);
 
-		expect(() => {
-			execSync(`${binCommand} hook verify Stop`, {
+			const hooksDir = join(pluginDir, "hooks");
+			mkdirSync(hooksDir, { recursive: true });
+			writeFileSync(
+				join(hooksDir, "hooks.json"),
+				JSON.stringify({
+					hooks: {
+						Stop: [
+							{
+								hooks: [
+									{
+										type: "command",
+										command: "han hook run stale-plugin check --cached",
+									},
+								],
+							},
+						],
+					},
+				}),
+			);
+
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						"test-marketplace": {
+							source: { source: "directory", path: marketplaceDir },
+						},
+					},
+					enabledPlugins: {
+						"stale-plugin@test-marketplace": true,
+					},
+				}),
+			);
+
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+			process.env.CLAUDE_PROJECT_DIR = projectDir;
+
+			execSync(`${binCommand} hook run stale-plugin check --cached`, {
 				cwd: projectDir,
 				encoding: "utf8",
 				stdio: "pipe",
@@ -325,8 +352,24 @@ describe("Hook verify", () => {
 					CLAUDE_PLUGIN_ROOT: undefined,
 				},
 			});
-		}).toThrow();
-	});
+
+			writeFileSync(join(projectDir, "app.ts"), "// Modified TypeScript code");
+
+			expect(() => {
+				execSync(`${binCommand} hook verify Stop`, {
+					cwd: projectDir,
+					encoding: "utf8",
+					stdio: "pipe",
+					env: {
+						...process.env,
+						CLAUDE_PROJECT_DIR: projectDir,
+						CLAUDE_PLUGIN_ROOT: undefined,
+					},
+				});
+			}).toThrow();
+		},
+		{ timeout: BINARY_TIMEOUT * 2 },
+	);
 });
 
 // ============================================
@@ -344,11 +387,15 @@ describe("Hook run", () => {
 		teardown(testDir);
 	});
 
-	test("shows error when no plugin name or hook name", () => {
-		expect(() => {
-			execSync(`${binCommand} hook run`, { encoding: "utf8", stdio: "pipe" });
-		}).toThrow();
-	});
+	test(
+		"shows error when no plugin name or hook name",
+		() => {
+			expect(() => {
+				execSync(`${binCommand} hook run`, { encoding: "utf8", stdio: "pipe" });
+			}).toThrow();
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
 	test(
 		"passes when no directories match filter",
@@ -359,125 +406,145 @@ describe("Hook run", () => {
 			);
 			expect(output).toContain("No directories found with nonexistent.txt");
 		},
-		{ timeout: 30000 },
+		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test("runs command in matching directories", () => {
-		mkdirSync(join(testDir, "pkg1"));
-		mkdirSync(join(testDir, "pkg2"));
-		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
-		writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
+	test(
+		"runs command in matching directories",
+		() => {
+			mkdirSync(join(testDir, "pkg1"));
+			mkdirSync(join(testDir, "pkg2"));
+			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+			writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
 
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
-		const output = execSync(
-			`${binCommand} hook run --dirs-with package.json -- echo success`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "pipe"],
-			} as ExecSyncOptionsWithStringEncoding,
-		);
-
-		expect(output).toContain("passed");
-	});
-
-	test("fails with exit code 2 when command fails", () => {
-		mkdirSync(join(testDir, "pkg1"));
-		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
-
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
-
-		let exitCode: number | undefined;
-		try {
-			execSync(`${binCommand} hook run --dirs-with package.json -- exit 1`, {
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			});
-		} catch (error) {
-			const execError = error as ExecError;
-			exitCode = execError.status || execError.code;
-		}
-
-		expect(exitCode).toBe(2);
-	});
-
-	test("stops on first failure with --fail-fast", () => {
-		mkdirSync(join(testDir, "pkg1"));
-		mkdirSync(join(testDir, "pkg2"));
-		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
-		writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
-
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
-
-		let exitCode: number | undefined;
-		try {
-			execSync(
-				`${binCommand} hook run --fail-fast --dirs-with package.json -- exit 1`,
-				{ cwd: testDir, encoding: "utf8", stdio: "pipe" },
+			const output = execSync(
+				`${binCommand} hook run --dirs-with package.json -- echo success`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+				} as ExecSyncOptionsWithStringEncoding,
 			);
-		} catch (error) {
-			const execError = error as ExecError;
-			exitCode = execError.status || execError.code;
-		}
 
-		expect(exitCode).toBe(2);
-	});
+			expect(output).toContain("passed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("respects --test-dir flag to filter directories", () => {
-		mkdirSync(join(testDir, "with-marker"));
-		mkdirSync(join(testDir, "without-marker"));
-		writeFileSync(join(testDir, "with-marker", "package.json"), "{}");
-		writeFileSync(join(testDir, "without-marker", "package.json"), "{}");
-		writeFileSync(join(testDir, "with-marker", "marker.txt"), "marker");
+	test(
+		"fails with exit code 2 when command fails",
+		() => {
+			mkdirSync(join(testDir, "pkg1"));
+			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
 
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
-		const output = execSync(
-			`${binCommand} hook run --dirs-with package.json --test-dir "test -f marker.txt" -- echo found`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "pipe"],
-				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
-			} as ExecSyncOptionsWithStringEncoding,
-		);
+			let exitCode: number | undefined;
+			try {
+				execSync(`${binCommand} hook run --dirs-with package.json -- exit 1`, {
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				});
+			} catch (error) {
+				const execError = error as ExecError;
+				exitCode = execError.status || execError.code;
+			}
 
-		expect(output).toContain("1 directory passed");
-	});
+			expect(exitCode).toBe(2);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("respects .gitignore in subdirectories", () => {
-		mkdirSync(join(testDir, "project"));
-		mkdirSync(join(testDir, "project", "deps"));
-		mkdirSync(join(testDir, "project", "deps", "lib"));
-		writeFileSync(join(testDir, "project", "package.json"), "{}");
-		writeFileSync(
-			join(testDir, "project", "deps", "lib", "package.json"),
-			"{}",
-		);
-		writeFileSync(join(testDir, "project", ".gitignore"), "deps/");
+	test(
+		"stops on first failure with --fail-fast",
+		() => {
+			mkdirSync(join(testDir, "pkg1"));
+			mkdirSync(join(testDir, "pkg2"));
+			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+			writeFileSync(join(testDir, "pkg2", "package.json"), "{}");
 
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
-		const output = execSync(
-			`${binCommand} hook run --dirs-with package.json -- echo found`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "pipe"],
-				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
-			} as ExecSyncOptionsWithStringEncoding,
-		);
+			let exitCode: number | undefined;
+			try {
+				execSync(
+					`${binCommand} hook run --fail-fast --dirs-with package.json -- exit 1`,
+					{ cwd: testDir, encoding: "utf8", stdio: "pipe" },
+				);
+			} catch (error) {
+				const execError = error as ExecError;
+				exitCode = execError.status || execError.code;
+			}
 
-		// Should only find 1 directory (project/), not deps/lib/ (gitignored)
-		expect(output).toMatch(/1 director(y|ies) passed validation/);
-	});
+			expect(exitCode).toBe(2);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"respects --test-dir flag to filter directories",
+		() => {
+			mkdirSync(join(testDir, "with-marker"));
+			mkdirSync(join(testDir, "without-marker"));
+			writeFileSync(join(testDir, "with-marker", "package.json"), "{}");
+			writeFileSync(join(testDir, "without-marker", "package.json"), "{}");
+			writeFileSync(join(testDir, "with-marker", "marker.txt"), "marker");
+
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+			const output = execSync(
+				`${binCommand} hook run --dirs-with package.json --test-dir "test -f marker.txt" -- echo found`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+					env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
+				} as ExecSyncOptionsWithStringEncoding,
+			);
+
+			expect(output).toContain("✅ All 1 directory passed validation");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"respects .gitignore in subdirectories",
+		() => {
+			mkdirSync(join(testDir, "project"));
+			mkdirSync(join(testDir, "project", "deps"));
+			mkdirSync(join(testDir, "project", "deps", "lib"));
+			writeFileSync(join(testDir, "project", "package.json"), "{}");
+			writeFileSync(
+				join(testDir, "project", "deps", "lib", "package.json"),
+				"{}",
+			);
+			writeFileSync(join(testDir, "project", ".gitignore"), "deps/");
+
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
+
+			const output = execSync(
+				`${binCommand} hook run --dirs-with package.json -- echo found`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+					env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
+				} as ExecSyncOptionsWithStringEncoding,
+			);
+
+			// Should only find 1 directory (project/), not deps/lib/ (gitignored)
+			expect(output).toContain("✅ All 1 directory passed validation");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -495,24 +562,28 @@ describe("Validate command", () => {
 		teardown(testDir);
 	});
 
-	test("works as alias for hook run", () => {
-		mkdirSync(join(testDir, "pkg1"));
-		writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
+	test(
+		"works as alias for hook run",
+		() => {
+			mkdirSync(join(testDir, "pkg1"));
+			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
 
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
-		const output = execSync(
-			`${binCommand} validate --dirs-with package.json -- echo success`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "pipe"],
-			} as ExecSyncOptionsWithStringEncoding,
-		);
+			const output = execSync(
+				`${binCommand} validate --dirs-with package.json -- echo success`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+				} as ExecSyncOptionsWithStringEncoding,
+			);
 
-		expect(output).toContain("passed");
-	});
+			expect(output).toContain("passed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -530,51 +601,59 @@ describe("Hook test command", () => {
 		teardown(testDir);
 	});
 
-	test("shows help", () => {
-		const output = execSync(`${binCommand} hook test --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("Validate hook configurations");
-	});
+	test(
+		"shows help",
+		() => {
+			const output = execSync(`${binCommand} hook test --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("Validate hook configurations");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("validates hooks in installed plugins", () => {
-		const claudeDir = join(testDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
+	test(
+		"validates hooks in installed plugins",
+		() => {
+			const claudeDir = join(testDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify(
-				{
-					extraKnownMarketplaces: {
-						han: {
-							source: {
-								source: "github",
-								repo: "thebushidocollective/hashi",
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify(
+					{
+						extraKnownMarketplaces: {
+							han: {
+								source: {
+									source: "github",
+									repo: "thebushidocollective/hashi",
+								},
 							},
 						},
+						enabledPlugins: {},
 					},
-					enabledPlugins: {},
+					null,
+					2,
+				),
+			);
+
+			const output = execSync(`${binCommand} hook test`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_CONFIG_DIR: testDir,
+					CLAUDE_PROJECT_DIR: testDir,
 				},
-				null,
-				2,
-			),
-		);
+			});
 
-		const output = execSync(`${binCommand} hook test`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_CONFIG_DIR: testDir,
-				CLAUDE_PROJECT_DIR: testDir,
-			},
-		});
-
-		expect(
-			output.includes("No plugins installed") || output.includes("No hooks"),
-		).toBe(true);
-	});
+			expect(
+				output.includes("No plugins installed") || output.includes("No hooks"),
+			).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -678,144 +757,167 @@ describe("Plugin install/uninstall", () => {
 		return claudeDir;
 	}
 
-	test("install adds plugin to settings", () => {
-		const claudeDir = setupClaudeDir(testDir);
-		const settingsPath = join(claudeDir, "settings.json");
+	test(
+		"install adds plugin to settings",
+		() => {
+			const claudeDir = setupClaudeDir(testDir);
+			const settingsPath = join(claudeDir, "settings.json");
 
-		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+			writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(`${binCommand} plugin install jutsu-typescript --scope project`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: "pipe",
-		});
-
-		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-
-		expect(settings.extraKnownMarketplaces?.han).toBeDefined();
-		expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
-	});
-
-	test("uninstall removes plugin from settings", () => {
-		const claudeDir = setupClaudeDir(testDir);
-		const settingsPath = join(claudeDir, "settings.json");
-
-		writeFileSync(
-			settingsPath,
-			JSON.stringify(
+			execSync(
+				`${binCommand} plugin install jutsu-typescript --scope project`,
 				{
-					extraKnownMarketplaces: {
-						han: {
-							source: {
-								source: "github",
-								repo: "thebushidocollective/hashi",
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				},
+			);
+
+			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+
+			expect(settings.extraKnownMarketplaces?.han).toBeDefined();
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"uninstall removes plugin from settings",
+		() => {
+			const claudeDir = setupClaudeDir(testDir);
+			const settingsPath = join(claudeDir, "settings.json");
+
+			writeFileSync(
+				settingsPath,
+				JSON.stringify(
+					{
+						extraKnownMarketplaces: {
+							han: {
+								source: {
+									source: "github",
+									repo: "thebushidocollective/hashi",
+								},
 							},
 						},
-					},
-					enabledPlugins: {
-						"jutsu-typescript@han": true,
-					},
-				},
-				null,
-				2,
-			),
-		);
-
-		execSync(
-			`${binCommand} plugin uninstall jutsu-typescript --scope project`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			},
-		);
-
-		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-
-		expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBeUndefined();
-	});
-
-	test("install is idempotent", () => {
-		const claudeDir = setupClaudeDir(testDir);
-		const settingsPath = join(claudeDir, "settings.json");
-
-		writeFileSync(
-			settingsPath,
-			JSON.stringify(
-				{
-					extraKnownMarketplaces: {
-						han: {
-							source: {
-								source: "github",
-								repo: "thebushidocollective/hashi",
-							},
+						enabledPlugins: {
+							"jutsu-typescript@han": true,
 						},
 					},
-					enabledPlugins: {
-						"jutsu-typescript@han": true,
-					},
+					null,
+					2,
+				),
+			);
+
+			execSync(
+				`${binCommand} plugin uninstall jutsu-typescript --scope project`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
 				},
-				null,
-				2,
-			),
-		);
+			);
 
-		const output = execSync(
-			`${binCommand} plugin install jutsu-typescript --scope project`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			},
-		);
+			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
-		expect(output.toLowerCase()).toContain("already installed");
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBeUndefined();
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-		const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter((k) =>
-			k.includes("jutsu-typescript"),
-		);
-		expect(pluginKeys.length).toBe(1);
-	});
+	test(
+		"install is idempotent",
+		() => {
+			const claudeDir = setupClaudeDir(testDir);
+			const settingsPath = join(claudeDir, "settings.json");
 
-	test("uninstall handles non-existent plugin gracefully", () => {
-		const claudeDir = setupClaudeDir(testDir);
-		const settingsPath = join(claudeDir, "settings.json");
+			writeFileSync(
+				settingsPath,
+				JSON.stringify(
+					{
+						extraKnownMarketplaces: {
+							han: {
+								source: {
+									source: "github",
+									repo: "thebushidocollective/hashi",
+								},
+							},
+						},
+						enabledPlugins: {
+							"jutsu-typescript@han": true,
+						},
+					},
+					null,
+					2,
+				),
+			);
 
-		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+			const output = execSync(
+				`${binCommand} plugin install jutsu-typescript --scope project`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				},
+			);
 
-		const output = execSync(
-			`${binCommand} plugin uninstall non-existent-plugin --scope project`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			},
-		);
+			expect(output.toLowerCase()).toContain("already installed");
 
-		expect(output.toLowerCase()).toContain("not installed");
-	});
+			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+			const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
+				(k) => k.includes("jutsu-typescript"),
+			);
+			expect(pluginKeys.length).toBe(1);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("install multiple plugins at once", () => {
-		const claudeDir = setupClaudeDir(testDir);
-		const settingsPath = join(claudeDir, "settings.json");
+	test(
+		"uninstall handles non-existent plugin gracefully",
+		() => {
+			const claudeDir = setupClaudeDir(testDir);
+			const settingsPath = join(claudeDir, "settings.json");
 
-		writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+			writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-		execSync(
-			`${binCommand} plugin install jutsu-typescript jutsu-react --scope project`,
-			{
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			},
-		);
+			const output = execSync(
+				`${binCommand} plugin uninstall non-existent-plugin --scope project`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				},
+			);
 
-		const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+			expect(output.toLowerCase()).toContain("not installed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-		expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
-		expect(settings.enabledPlugins?.["jutsu-react@han"]).toBe(true);
-	});
+	test(
+		"install multiple plugins at once",
+		() => {
+			const claudeDir = setupClaudeDir(testDir);
+			const settingsPath = join(claudeDir, "settings.json");
+
+			writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+
+			execSync(
+				`${binCommand} plugin install jutsu-typescript jutsu-react --scope project`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				},
+			);
+
+			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
+			expect(settings.enabledPlugins?.["jutsu-react@han"]).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -833,38 +935,46 @@ describe("Hook run without --dirs-with", () => {
 		teardown(testDir);
 	});
 
-	test("runs in current directory when no --dirs-with specified", () => {
-		writeFileSync(join(testDir, "marker.txt"), "test");
+	test(
+		"runs in current directory when no --dirs-with specified",
+		() => {
+			writeFileSync(join(testDir, "marker.txt"), "test");
 
-		// Initialize git repo so hook execution works
-		execSync("git init", { cwd: testDir, stdio: "pipe" });
-		execSync("git add .", { cwd: testDir, stdio: "pipe" });
+			// Initialize git repo so hook execution works
+			execSync("git init", { cwd: testDir, stdio: "pipe" });
+			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
-		expect(() => {
-			execSync(`${binCommand} hook run -- cat marker.txt`, {
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "pipe"],
-				env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
-			} as ExecSyncOptionsWithStringEncoding);
-		}).not.toThrow();
-	});
+			expect(() => {
+				execSync(`${binCommand} hook run -- cat marker.txt`, {
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+					env: { ...process.env, CLAUDE_PROJECT_DIR: testDir },
+				} as ExecSyncOptionsWithStringEncoding);
+			}).not.toThrow();
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("fails in current directory when command fails and no --dirs-with", () => {
-		let exitCode: number | undefined;
-		try {
-			execSync(`${binCommand} hook run -- exit 1`, {
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-			});
-		} catch (error) {
-			const execError = error as ExecError;
-			exitCode = execError.status || execError.code;
-		}
+	test(
+		"fails in current directory when command fails and no --dirs-with",
+		() => {
+			let exitCode: number | undefined;
+			try {
+				execSync(`${binCommand} hook run -- exit 1`, {
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				});
+			} catch (error) {
+				const execError = error as ExecError;
+				exitCode = execError.status || execError.code;
+			}
 
-		expect(exitCode).toBe(2);
-	});
+			expect(exitCode).toBe(2);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // Continue in next message due to length...
@@ -883,124 +993,69 @@ describe("Hook config (han-plugin.yml)", () => {
 		teardown(testDir);
 	});
 
-	test("shows error when plugin not found and CLAUDE_PLUGIN_ROOT not set", () => {
-		expect(() => {
-			execSync(`${binCommand} hook run test-plugin test`, {
-				cwd: testDir,
-				encoding: "utf8",
-				stdio: "pipe",
-				env: { ...process.env, CLAUDE_PLUGIN_ROOT: undefined },
-			});
-		}).toThrow();
-	});
+	test(
+		"shows error when plugin not found and CLAUDE_PLUGIN_ROOT not set",
+		() => {
+			expect(() => {
+				execSync(`${binCommand} hook run test-plugin test`, {
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+					env: { ...process.env, CLAUDE_PLUGIN_ROOT: undefined },
+				});
+			}).toThrow();
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("auto-discovers plugin from settings when CLAUDE_PLUGIN_ROOT not set", () => {
-		const YAML = require("yaml");
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-		writeFileSync(join(projectDir, "package.json"), "{}");
+	test(
+		"auto-discovers plugin from settings when CLAUDE_PLUGIN_ROOT not set",
+		() => {
+			const YAML = require("yaml");
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+			writeFileSync(join(projectDir, "package.json"), "{}");
 
-		const claudeDir = join(projectDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
+			const claudeDir = join(projectDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		const marketplaceDir = join(testDir, "marketplace");
-		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-test");
-		mkdirSync(pluginDir, { recursive: true });
+			const marketplaceDir = join(testDir, "marketplace");
+			const pluginDir = join(marketplaceDir, "jutsu", "jutsu-test");
+			mkdirSync(pluginDir, { recursive: true });
 
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: {
-						dirs_with: ["package.json"],
-						command: "echo discovered-plugin-success",
-					},
-				},
-			}),
-		);
-
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					"test-marketplace": {
-						source: {
-							source: "directory",
-							path: marketplaceDir,
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: {
+							dirs_with: ["package.json"],
+							command: "echo discovered-plugin-success",
 						},
 					},
-				},
-				enabledPlugins: {
-					"jutsu-test@test-marketplace": true,
-				},
-			}),
-		);
+				}),
+			);
 
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
-
-		const output = execSync(`${binCommand} hook run jutsu-test test`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_PLUGIN_ROOT: undefined,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		} as ExecSyncOptionsWithStringEncoding);
-
-		expect(output).toContain("passed");
-	});
-
-	test("shows discovered plugin root in verbose mode", () => {
-		const YAML = require("yaml");
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-		writeFileSync(join(projectDir, "package.json"), "{}");
-
-		const claudeDir = join(projectDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
-
-		const marketplaceDir = join(testDir, "marketplace");
-		const pluginDir = join(marketplaceDir, "jutsu", "jutsu-verbose-test");
-		mkdirSync(pluginDir, { recursive: true });
-
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: {
-						dirs_with: ["package.json"],
-						command: "echo verbose-test-success",
-					},
-				},
-			}),
-		);
-
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					"test-marketplace": {
-						source: {
-							source: "directory",
-							path: marketplaceDir,
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						"test-marketplace": {
+							source: {
+								source: "directory",
+								path: marketplaceDir,
+							},
 						},
 					},
-				},
-				enabledPlugins: {
-					"jutsu-verbose-test@test-marketplace": true,
-				},
-			}),
-		);
+					enabledPlugins: {
+						"jutsu-test@test-marketplace": true,
+					},
+				}),
+			);
 
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
 
-		const output = execSync(
-			`${binCommand} hook run jutsu-verbose-test test --verbose`,
-			{
+			const output = execSync(`${binCommand} hook run jutsu-test test`, {
 				cwd: projectDir,
 				encoding: "utf8",
 				stdio: ["pipe", "pipe", "pipe"],
@@ -1009,140 +1064,280 @@ describe("Hook config (han-plugin.yml)", () => {
 					CLAUDE_PLUGIN_ROOT: undefined,
 					CLAUDE_PROJECT_DIR: projectDir,
 				},
-			} as ExecSyncOptionsWithStringEncoding,
-		);
+			} as ExecSyncOptionsWithStringEncoding);
 
-		expect(output).toContain("Discovered plugin root");
-		expect(output).toContain("jutsu-verbose-test");
-	});
+			expect(output).toContain("passed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("loads han-plugin.yml and runs command", () => {
-		const YAML = require("yaml");
-		const pluginDir = join(testDir, "test-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: {
-						dirs_with: ["package.json"],
-						command: "echo hook-success",
+	test(
+		"shows discovered plugin root in verbose mode",
+		() => {
+			const YAML = require("yaml");
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+			writeFileSync(join(projectDir, "package.json"), "{}");
+
+			const claudeDir = join(projectDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
+
+			const marketplaceDir = join(testDir, "marketplace");
+			const pluginDir = join(marketplaceDir, "jutsu", "jutsu-verbose-test");
+			mkdirSync(pluginDir, { recursive: true });
+
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: {
+							dirs_with: ["package.json"],
+							command: "echo verbose-test-success",
+						},
 					},
-				},
-			}),
-		);
+				}),
+			);
 
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-		writeFileSync(join(projectDir, "package.json"), "{}");
-
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
-
-		const output = execSync(`${binCommand} hook run test-plugin test`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_PLUGIN_ROOT: pluginDir,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		} as ExecSyncOptionsWithStringEncoding);
-
-		expect(output).toContain("passed");
-	});
-
-	test("runs in current directory when dirsWith is empty", () => {
-		const YAML = require("yaml");
-		const pluginDir = join(testDir, "test-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					lint: {
-						command: "echo no-dirs-with-success",
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						"test-marketplace": {
+							source: {
+								source: "directory",
+								path: marketplaceDir,
+							},
+						},
 					},
-				},
-			}),
-		);
-
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-
-		const output = execSync(`${binCommand} hook run test-plugin lint`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_PLUGIN_ROOT: pluginDir,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		} as ExecSyncOptionsWithStringEncoding);
-
-		expect(output).toContain("passed");
-	});
-
-	test("reports when hook not found in config", () => {
-		const YAML = require("yaml");
-		const pluginDir = join(testDir, "test-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: { command: "echo test" },
-				},
-			}),
-		);
-
-		const projectDir = join(testDir, "project");
-		mkdirSync(projectDir, { recursive: true });
-
-		const output = execSync(`${binCommand} hook run test-plugin nonexistent`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_PLUGIN_ROOT: pluginDir,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		} as ExecSyncOptionsWithStringEncoding);
-
-		expect(
-			output.includes("No directories found") || output.includes("nonexistent"),
-		).toBe(true);
-	});
-
-	test("with --fail-fast stops on first failure", () => {
-		const YAML = require("yaml");
-		const pluginDir = join(testDir, "test-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: {
-						dirs_with: ["marker.txt"],
-						command: "exit 1",
+					enabledPlugins: {
+						"jutsu-verbose-test@test-marketplace": true,
 					},
+				}),
+			);
+
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+			const output = execSync(
+				`${binCommand} hook run jutsu-verbose-test test --verbose`,
+				{
+					cwd: projectDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+					env: {
+						...process.env,
+						CLAUDE_PLUGIN_ROOT: undefined,
+						CLAUDE_PROJECT_DIR: projectDir,
+					},
+				} as ExecSyncOptionsWithStringEncoding,
+			);
+
+			expect(output).toContain("Discovered plugin root");
+			expect(output).toContain("jutsu-verbose-test");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"loads han-plugin.yml and runs command",
+		() => {
+			const YAML = require("yaml");
+			const pluginDir = join(testDir, "test-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: {
+							dirs_with: ["package.json"],
+							command: "echo hook-success",
+						},
+					},
+				}),
+			);
+
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+			writeFileSync(join(projectDir, "package.json"), "{}");
+
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+			const output = execSync(`${binCommand} hook run test-plugin test`, {
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_PLUGIN_ROOT: pluginDir,
+					CLAUDE_PROJECT_DIR: projectDir,
 				},
-			}),
-		);
+			} as ExecSyncOptionsWithStringEncoding);
 
-		const projectDir = join(testDir, "project");
-		mkdirSync(join(projectDir, "pkg1"), { recursive: true });
-		mkdirSync(join(projectDir, "pkg2"), { recursive: true });
-		writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
-		writeFileSync(join(projectDir, "pkg2", "marker.txt"), "");
+			expect(output).toContain("passed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+	test(
+		"runs in current directory when dirsWith is empty",
+		() => {
+			const YAML = require("yaml");
+			const pluginDir = join(testDir, "test-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						lint: {
+							command: "echo no-dirs-with-success",
+						},
+					},
+				}),
+			);
 
-		expect(() => {
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+
+			const output = execSync(`${binCommand} hook run test-plugin lint`, {
+				cwd: projectDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_PLUGIN_ROOT: pluginDir,
+					CLAUDE_PROJECT_DIR: projectDir,
+				},
+			} as ExecSyncOptionsWithStringEncoding);
+
+			expect(output).toContain("passed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"reports when hook not found in config",
+		() => {
+			const YAML = require("yaml");
+			const pluginDir = join(testDir, "test-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: { command: "echo test" },
+					},
+				}),
+			);
+
+			const projectDir = join(testDir, "project");
+			mkdirSync(projectDir, { recursive: true });
+
+			const output = execSync(
+				`${binCommand} hook run test-plugin nonexistent`,
+				{
+					cwd: projectDir,
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "pipe"],
+					env: {
+						...process.env,
+						CLAUDE_PLUGIN_ROOT: pluginDir,
+						CLAUDE_PROJECT_DIR: projectDir,
+					},
+				} as ExecSyncOptionsWithStringEncoding,
+			);
+
+			expect(
+				output.includes("No directories found") ||
+					output.includes("nonexistent"),
+			).toBe(true);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"with --fail-fast stops on first failure",
+		() => {
+			const YAML = require("yaml");
+			const pluginDir = join(testDir, "test-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: {
+							dirs_with: ["marker.txt"],
+							command: "exit 1",
+						},
+					},
+				}),
+			);
+
+			const projectDir = join(testDir, "project");
+			mkdirSync(join(projectDir, "pkg1"), { recursive: true });
+			mkdirSync(join(projectDir, "pkg2"), { recursive: true });
+			writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
+			writeFileSync(join(projectDir, "pkg2", "marker.txt"), "");
+
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+			expect(() => {
+				execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
+					cwd: projectDir,
+					encoding: "utf8",
+					stdio: "pipe",
+					env: {
+						...process.env,
+						CLAUDE_PLUGIN_ROOT: pluginDir,
+						CLAUDE_PROJECT_DIR: projectDir,
+					},
+				});
+			}).toThrow();
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"--fail-fast clears stale failure signals from previous runs",
+		() => {
+			const YAML = require("yaml");
+			const pluginDir = join(testDir, "test-plugin");
+			mkdirSync(pluginDir, { recursive: true });
+			writeFileSync(
+				join(pluginDir, "han-plugin.yml"),
+				YAML.stringify({
+					hooks: {
+						test: {
+							dirs_with: ["marker.txt"],
+							command: "echo success",
+						},
+					},
+				}),
+			);
+
+			const projectDir = join(testDir, "project");
+			mkdirSync(join(projectDir, "pkg1"), { recursive: true });
+			writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
+
+			execSync("git init", { cwd: projectDir, stdio: "pipe" });
+			execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+
+			const sessionId = "test-stale-sentinel-cleanup";
+			const sentinelDir = join(tmpdir(), "han-hooks", sessionId);
+			mkdirSync(sentinelDir, { recursive: true });
+			const sentinelPath = join(sentinelDir, "failure.sentinel");
+			writeFileSync(
+				sentinelPath,
+				JSON.stringify({
+					pluginName: "stale-plugin",
+					hookName: "stale-hook",
+					timestamp: Date.now() - 10000,
+				}),
+			);
+
+			expect(existsSync(sentinelPath)).toBe(true);
+
 			execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
 				cwd: projectDir,
 				encoding: "utf8",
@@ -1151,63 +1346,14 @@ describe("Hook config (han-plugin.yml)", () => {
 					...process.env,
 					CLAUDE_PLUGIN_ROOT: pluginDir,
 					CLAUDE_PROJECT_DIR: projectDir,
+					HAN_SESSION_ID: sessionId,
 				},
 			});
-		}).toThrow();
-	});
 
-	test("--fail-fast clears stale failure signals from previous runs", () => {
-		const YAML = require("yaml");
-		const pluginDir = join(testDir, "test-plugin");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "han-plugin.yml"),
-			YAML.stringify({
-				hooks: {
-					test: {
-						dirs_with: ["marker.txt"],
-						command: "echo success",
-					},
-				},
-			}),
-		);
-
-		const projectDir = join(testDir, "project");
-		mkdirSync(join(projectDir, "pkg1"), { recursive: true });
-		writeFileSync(join(projectDir, "pkg1", "marker.txt"), "");
-
-		execSync("git init", { cwd: projectDir, stdio: "pipe" });
-		execSync("git add .", { cwd: projectDir, stdio: "pipe" });
-
-		const sessionId = "test-stale-sentinel-cleanup";
-		const sentinelDir = join(tmpdir(), "han-hooks", sessionId);
-		mkdirSync(sentinelDir, { recursive: true });
-		const sentinelPath = join(sentinelDir, "failure.sentinel");
-		writeFileSync(
-			sentinelPath,
-			JSON.stringify({
-				pluginName: "stale-plugin",
-				hookName: "stale-hook",
-				timestamp: Date.now() - 10000,
-			}),
-		);
-
-		expect(existsSync(sentinelPath)).toBe(true);
-
-		execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
-			cwd: projectDir,
-			encoding: "utf8",
-			stdio: "pipe",
-			env: {
-				...process.env,
-				CLAUDE_PLUGIN_ROOT: pluginDir,
-				CLAUDE_PROJECT_DIR: projectDir,
-				HAN_SESSION_ID: sessionId,
-			},
-		});
-
-		expect(existsSync(sentinelPath)).toBe(false);
-	});
+			expect(existsSync(sentinelPath)).toBe(false);
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -1225,67 +1371,79 @@ describe("Plugin list command", () => {
 		teardown(testDir);
 	});
 
-	test("shows help", () => {
-		const output = execSync(`${binCommand} plugin list --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("List installed plugins");
-	});
+	test(
+		"shows help",
+		() => {
+			const output = execSync(`${binCommand} plugin list --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("List installed plugins");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("lists installed plugins", () => {
-		const claudeDir = join(testDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
+	test(
+		"lists installed plugins",
+		() => {
+			const claudeDir = join(testDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					han: {
-						source: {
-							source: "github",
-							repo: "thebushidocollective/han",
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						han: {
+							source: {
+								source: "github",
+								repo: "thebushidocollective/han",
+							},
 						},
 					},
+					enabledPlugins: {
+						"bushido@han": true,
+						"jutsu-typescript@han": true,
+					},
+				}),
+			);
+
+			const output = execSync(`${binCommand} plugin list`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_CONFIG_DIR: testDir,
 				},
-				enabledPlugins: {
-					"bushido@han": true,
-					"jutsu-typescript@han": true,
+			});
+
+			expect(output).toContain("bushido");
+			expect(output).toContain("jutsu-typescript");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
+
+	test(
+		"shows no plugins when none installed",
+		() => {
+			const claudeDir = join(testDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
+
+			writeFileSync(join(claudeDir, "settings.json"), JSON.stringify({}));
+
+			const output = execSync(`${binCommand} plugin list`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_CONFIG_DIR: testDir,
 				},
-			}),
-		);
+			});
 
-		const output = execSync(`${binCommand} plugin list`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_CONFIG_DIR: testDir,
-			},
-		});
-
-		expect(output).toContain("bushido");
-		expect(output).toContain("jutsu-typescript");
-	});
-
-	test("shows no plugins when none installed", () => {
-		const claudeDir = join(testDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
-
-		writeFileSync(join(claudeDir, "settings.json"), JSON.stringify({}));
-
-		const output = execSync(`${binCommand} plugin list`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_CONFIG_DIR: testDir,
-			},
-		});
-
-		expect(output).toContain("No plugins installed");
-	});
+			expect(output).toContain("No plugins installed");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -1303,46 +1461,54 @@ describe("Explain command", () => {
 		teardown(testDir);
 	});
 
-	test("shows help", () => {
-		const output = execSync(`${binCommand} explain --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("Han configuration");
-	});
+	test(
+		"shows help",
+		() => {
+			const output = execSync(`${binCommand} explain --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("Han configuration");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 
-	test("shows configuration when plugins installed", () => {
-		const claudeDir = join(testDir, ".claude");
-		mkdirSync(claudeDir, { recursive: true });
+	test(
+		"shows configuration when plugins installed",
+		() => {
+			const claudeDir = join(testDir, ".claude");
+			mkdirSync(claudeDir, { recursive: true });
 
-		writeFileSync(
-			join(claudeDir, "settings.json"),
-			JSON.stringify({
-				extraKnownMarketplaces: {
-					han: {
-						source: {
-							source: "github",
-							repo: "thebushidocollective/han",
+			writeFileSync(
+				join(claudeDir, "settings.json"),
+				JSON.stringify({
+					extraKnownMarketplaces: {
+						han: {
+							source: {
+								source: "github",
+								repo: "thebushidocollective/han",
+							},
 						},
 					},
-				},
-				enabledPlugins: {
-					"bushido@han": true,
-				},
-			}),
-		);
+					enabledPlugins: {
+						"bushido@han": true,
+					},
+				}),
+			);
 
-		const output = execSync(`${binCommand} explain`, {
-			cwd: testDir,
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-			env: {
-				...process.env,
-				CLAUDE_CONFIG_DIR: testDir,
-			},
-		});
+			const output = execSync(`${binCommand} explain`, {
+				cwd: testDir,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+				env: {
+					...process.env,
+					CLAUDE_CONFIG_DIR: testDir,
+				},
+			});
 
-		expect(output.toLowerCase()).toContain("han configuration");
-	});
+			expect(output.toLowerCase()).toContain("han configuration");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -1350,12 +1516,16 @@ describe("Explain command", () => {
 // ============================================
 
 describe("Summary command", () => {
-	test("shows help", () => {
-		const output = execSync(`${binCommand} summary --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("summary");
-	});
+	test(
+		"shows help",
+		() => {
+			const output = execSync(`${binCommand} summary --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("summary");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // ============================================
@@ -1363,12 +1533,16 @@ describe("Summary command", () => {
 // ============================================
 
 describe("Gaps command", () => {
-	test("shows help", () => {
-		const output = execSync(`${binCommand} gaps --help`, {
-			encoding: "utf8",
-		});
-		expect(output).toContain("gaps");
-	});
+	test(
+		"shows help",
+		() => {
+			const output = execSync(`${binCommand} gaps --help`, {
+				encoding: "utf8",
+			});
+			expect(output).toContain("gaps");
+		},
+		{ timeout: BINARY_TIMEOUT },
+	);
 });
 
 // TODO: Complete migration of remaining tests (14 tests):

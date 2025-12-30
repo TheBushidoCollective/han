@@ -1,5 +1,62 @@
+import { fstatSync, readFileSync } from "node:fs";
 import type { Command } from "commander";
+import { initEventLogger } from "../../events/logger.ts";
+import { isDebugMode } from "../../shared.ts";
 import { runConfiguredHook, validate } from "../../validate.ts";
+
+/**
+ * Check if stdin has data available
+ * Returns true for pipes/FIFOs (which is how Claude Code passes context)
+ */
+function hasStdinData(): boolean {
+	try {
+		// In a TTY, stdin is interactive - never try to read
+		if (process.stdin.isTTY) {
+			return false;
+		}
+		// Check what type of stdin we have
+		const stat = fstatSync(0);
+		// Files are safe to read
+		if (stat.isFile()) {
+			return true;
+		}
+		// Pipes/FIFOs are how Claude Code passes hook context
+		// readFileSync will block until EOF, which is fine for our use case
+		if (stat.isFIFO()) {
+			return true;
+		}
+		// For anything else, check if data is already buffered
+		return process.stdin.readable && process.stdin.readableLength > 0;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Read and parse stdin to extract session_id for event logging
+ * This is called once at startup since stdin is only readable once
+ */
+let stdinPayload: { session_id?: string } | null = null;
+let stdinRead = false;
+function getStdinPayload(): { session_id?: string } | null {
+	if (!stdinRead) {
+		stdinRead = true;
+		try {
+			// Only read if stdin has data available (prevents blocking)
+			if (!hasStdinData()) {
+				if (isDebugMode()) {
+					console.error("[han hook run] No stdin data available");
+				}
+				return null;
+			}
+			const raw = readFileSync(0, "utf-8");
+			stdinPayload = raw ? JSON.parse(raw) : null;
+		} catch {
+			stdinPayload = null;
+		}
+	}
+	return stdinPayload;
+}
 
 export function registerHookRun(hookCommand: Command): void {
 	// Supports two formats:
@@ -45,6 +102,10 @@ export function registerHookRun(hookCommand: Command): void {
 			"Checkpoint type to filter against (session or agent)",
 		)
 		.option("--checkpoint-id <id>", "Checkpoint ID to filter against")
+		.option(
+			"--skip-deps",
+			"Skip dependency checks (for recheck/retry scenarios)",
+		)
 		.allowUnknownOption()
 		.action(
 			async (
@@ -59,6 +120,7 @@ export function registerHookRun(hookCommand: Command): void {
 					verbose?: boolean;
 					checkpointType?: string;
 					checkpointId?: string;
+					skipDeps?: boolean;
 				},
 			) => {
 				// Allow global disable of all hooks via environment variable
@@ -67,6 +129,24 @@ export function registerHookRun(hookCommand: Command): void {
 					process.env.HAN_DISABLE_HOOKS === "1"
 				) {
 					process.exit(0);
+				}
+
+				// Initialize event logger for this session
+				// Session ID comes from stdin (piped from Claude or dispatch)
+				const payload = getStdinPayload();
+				const sessionId = payload?.session_id;
+				if (isDebugMode()) {
+					console.error(
+						`[han hook run] stdin payload: ${JSON.stringify(payload)}`,
+					);
+					console.error(`[han hook run] session_id: ${sessionId || "(none)"}`);
+				}
+				if (sessionId) {
+					initEventLogger(sessionId);
+				} else if (isDebugMode()) {
+					console.error(
+						"[han hook run] No session_id in stdin, event logging disabled",
+					);
 				}
 
 				const separatorIndex = process.argv.indexOf("--");
@@ -167,6 +247,7 @@ export function registerHookRun(hookCommand: Command): void {
 						verbose,
 						checkpointType,
 						checkpointId,
+						skipDeps: options.skipDeps,
 					});
 				}
 			},

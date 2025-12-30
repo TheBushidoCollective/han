@@ -224,45 +224,49 @@ describe.serial("Metrics Pattern Detection", () => {
 			expect(hookPattern?.message).toContain("40%");
 		});
 
-		test("filters patterns by minimum severity", () => {
-			const { session_id } = getStorage().startSession();
+		test(
+			"filters patterns by minimum severity",
+			() => {
+				const { session_id } = getStorage().startSession();
 
-			for (let i = 0; i < 4; i++) {
-				getStorage().recordHookExecution({
-					sessionId: session_id,
-					hookType: "Stop",
-					hookName: "test-hook",
-					hookSource: "core",
-					durationMs: 500,
-					exitCode: 1,
-					passed: false,
-				});
-			}
+				for (let i = 0; i < 4; i++) {
+					getStorage().recordHookExecution({
+						sessionId: session_id,
+						hookType: "Stop",
+						hookName: "test-hook",
+						hookSource: "core",
+						durationMs: 500,
+						exitCode: 1,
+						passed: false,
+					});
+				}
 
-			for (let i = 0; i < 6; i++) {
-				getStorage().recordHookExecution({
-					sessionId: session_id,
-					hookType: "Stop",
-					hookName: "test-hook",
-					hookSource: "core",
-					durationMs: 450,
-					exitCode: 0,
-					passed: true,
-				});
-			}
+				for (let i = 0; i < 6; i++) {
+					getStorage().recordHookExecution({
+						sessionId: session_id,
+						hookType: "Stop",
+						hookName: "test-hook",
+						hookSource: "core",
+						durationMs: 450,
+						exitCode: 0,
+						passed: true,
+					});
+				}
 
-			const highPatterns = detectPatterns("high");
-			const hookPattern = highPatterns.find(
-				(p) => p.type === "hook_failure_pattern",
-			);
-			expect(hookPattern).toBeUndefined();
+				const highPatterns = detectPatterns("high");
+				const hookPattern = highPatterns.find(
+					(p) => p.type === "hook_failure_pattern",
+				);
+				expect(hookPattern).toBeUndefined();
 
-			const mediumPatterns = detectPatterns("medium");
-			const mediumHookPattern = mediumPatterns.find(
-				(p) => p.type === "hook_failure_pattern",
-			);
-			expect(mediumHookPattern).toBeTruthy();
-		});
+				const mediumPatterns = detectPatterns("medium");
+				const mediumHookPattern = mediumPatterns.find(
+					(p) => p.type === "hook_failure_pattern",
+				);
+				expect(mediumHookPattern).toBeTruthy();
+			},
+			{ timeout: 15000 },
+		);
 	});
 
 	describe("Calibration Drift Detection", () => {

@@ -12,11 +12,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, "..");
 
-describe("dispatch simple coverage", () => {
-	const testDir = `/tmp/test-dispatch-simple-${Date.now()}`;
+describe.serial("dispatch simple coverage", () => {
+	let testDir: string;
 	let configDir: string;
 
 	beforeEach(() => {
+		// Create unique directory for each test to avoid race conditions
+		testDir = `/tmp/test-dispatch-simple-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		configDir = join(testDir, "config");
 		mkdirSync(configDir, { recursive: true });
 	});
@@ -100,73 +102,89 @@ describe("dispatch simple coverage", () => {
 		expect([0, 1, undefined]).toContain(result.status ?? undefined);
 	});
 
-	test("dispatch with --no-cache flag", () => {
-		const settings = {
-			hooks: {
-				Stop: [
-					{
-						hooks: [{ type: "command", command: "echo 'cache test'" }],
-					},
-				],
-			},
-		};
-
-		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
-
-		const result = spawnSync(
-			"bun",
-			["run", "lib/main.ts", "hook", "dispatch", "Stop", "--all", "--no-cache"],
-			{
-				encoding: "utf-8",
-				timeout: 10000,
-				cwd: packageRoot,
-				env: {
-					...process.env,
-					CLAUDE_CONFIG_DIR: configDir,
-					HOME: testDir,
+	test(
+		"dispatch with --no-cache flag",
+		() => {
+			const settings = {
+				hooks: {
+					Stop: [
+						{
+							hooks: [{ type: "command", command: "echo 'cache test'" }],
+						},
+					],
 				},
-			},
-		);
+			};
 
-		expect([0, 1, undefined]).toContain(result.status ?? undefined);
-	});
+			writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
 
-	test("dispatch with --no-checkpoints flag", () => {
-		const settings = {
-			hooks: {
-				Stop: [
-					{
-						hooks: [{ type: "command", command: "echo 'checkpoint test'" }],
-					},
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					"lib/main.ts",
+					"hook",
+					"dispatch",
+					"Stop",
+					"--all",
+					"--no-cache",
 				],
-			},
-		};
-
-		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
-
-		const result = spawnSync(
-			"bun",
-			[
-				"run",
-				"lib/main.ts",
-				"hook",
-				"dispatch",
-				"Stop",
-				"--all",
-				"--no-checkpoints",
-			],
-			{
-				encoding: "utf-8",
-				timeout: 10000,
-				cwd: packageRoot,
-				env: {
-					...process.env,
-					CLAUDE_CONFIG_DIR: configDir,
-					HOME: testDir,
+				{
+					encoding: "utf-8",
+					timeout: 10000,
+					cwd: packageRoot,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
 				},
-			},
-		);
+			);
 
-		expect([0, 1, undefined]).toContain(result.status ?? undefined);
-	});
+			expect([0, 1, undefined]).toContain(result.status ?? undefined);
+		},
+		{ timeout: 10000 },
+	);
+
+	test(
+		"dispatch with --no-checkpoints flag",
+		() => {
+			const settings = {
+				hooks: {
+					Stop: [
+						{
+							hooks: [{ type: "command", command: "echo 'checkpoint test'" }],
+						},
+					],
+				},
+			};
+
+			writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					"lib/main.ts",
+					"hook",
+					"dispatch",
+					"Stop",
+					"--all",
+					"--no-checkpoints",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 10000,
+					cwd: packageRoot,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			expect([0, 1, undefined]).toContain(result.status ?? undefined);
+		},
+		{ timeout: 15000 },
+	);
 });

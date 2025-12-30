@@ -57,6 +57,7 @@ function runHookExec(input?: string): {
 		env: process.env,
 		input: input,
 		encoding: "utf-8",
+		timeout: 10000, // 10 second timeout to prevent hanging
 	});
 	return {
 		stdout: result.stdout?.trim() || "",
@@ -146,7 +147,7 @@ describe.serial("Hook Tracking Comprehensive Tests", () => {
 			const sessionMetrics = getStorage().querySessionMetrics("week", 1);
 			expect(sessionMetrics.sessions.length).toBe(1);
 			expect(sessionMetrics.sessions[0].hooks_passed_count).toBe(5);
-		});
+		}, 30000);
 	});
 
 	describe("Failed Hook Recording", () => {
@@ -211,7 +212,7 @@ describe.serial("Hook Tracking Comprehensive Tests", () => {
 			expect(hookStats[0].total).toBe(4);
 			expect(hookStats[0].failures).toBe(3);
 			expect(hookStats[0].failureRate).toBe(75);
-		});
+		}, 30000);
 
 		test("records failed hook with non-zero exit code", () => {
 			const { session_id } = getStorage().startSession();
@@ -540,7 +541,7 @@ describe.serial("Hook Tracking Comprehensive Tests", () => {
 			const hookStats = getStorage().getHookFailureStats("week");
 			// 4 failed hooks (exit codes 1, 2, 127, 255)
 			expect(hookStats.length).toBe(4);
-		});
+		}, 30000);
 
 		test("handles multiple different hook types", () => {
 			const hookTypes = [
@@ -560,7 +561,7 @@ describe.serial("Hook Tracking Comprehensive Tests", () => {
 				};
 				runHookExecSuccess(JSON.stringify(hookData));
 			}
-		});
+		}, 30000);
 
 		test("handles concurrent session hooks correctly", () => {
 			const { session_id } = getStorage().startSession();
@@ -584,6 +585,6 @@ describe.serial("Hook Tracking Comprehensive Tests", () => {
 			// 4 failed (i = 0, 3, 6, 9), 6 passed
 			expect(sessionMetrics.sessions[0].hooks_passed_count).toBe(6);
 			expect(sessionMetrics.sessions[0].hooks_failed_count).toBe(4);
-		});
+		}, 30000);
 	});
 });

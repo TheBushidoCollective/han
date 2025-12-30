@@ -8,107 +8,72 @@ import { describe, expect, test } from "bun:test";
 
 describe("native module loader", () => {
 	describe("getNativeModule", () => {
-		test("returns native module when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+		test(
+			"returns native module when available",
+			async () => {
+				const { getNativeModule } = await import("../lib/native.ts");
+				const nativeModule = getNativeModule();
 
-			// Either returns a module or null (depending on environment)
-			expect(nativeModule === null || typeof nativeModule === "object").toBe(
-				true,
-			);
-		});
+				// Returns a module object
+				expect(typeof nativeModule).toBe("object");
+				expect(nativeModule).not.toBeNull();
+			},
+			{ timeout: 15000 },
+		);
 
-		test("tryGetNativeModule returns null gracefully when module unavailable", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const result = tryGetNativeModule();
+		test("getNativeModule returns the same instance on multiple calls", async () => {
+			const { getNativeModule } = await import("../lib/native.ts");
 
-			// Should not throw, returns either module or null
-			expect(result === null || typeof result === "object").toBe(true);
-		});
+			const first = getNativeModule();
+			const second = getNativeModule();
 
-		test("getNativeModule throws when module unavailable", async () => {
-			// We can only test this if the module is actually unavailable
-			// In test environment, the module should be available
-			const { getNativeModule, tryGetNativeModule } = await import(
-				"../lib/native.ts"
-			);
-
-			const nativeModule = tryGetNativeModule();
-			if (nativeModule === null) {
-				// Module is unavailable, getNativeModule should throw
-				expect(() => getNativeModule()).toThrow("Failed to load native module");
-			} else {
-				// Module is available, getNativeModule should return it
-				expect(getNativeModule()).toBe(nativeModule);
-			}
-		});
-
-		test("caches module after first load", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-
-			const first = tryGetNativeModule();
-			const second = tryGetNativeModule();
-
-			// Should return same reference
+			// Should return same reference (cached)
 			expect(first).toBe(second);
 		});
 	});
 
 	describe("native module functions", () => {
 		test("computeFileHash returns string when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+			const { getNativeModule } = await import("../lib/native.ts");
+			const nativeModule = getNativeModule();
 
-			if (nativeModule) {
-				const hash = nativeModule.computeFileHash(__filename);
-				expect(typeof hash).toBe("string");
-				expect(hash.length).toBeGreaterThan(0);
-			}
+			const hash = nativeModule.computeFileHash(__filename);
+			expect(typeof hash).toBe("string");
+			expect(hash.length).toBeGreaterThan(0);
 		});
 
 		test("findFilesWithGlob returns array when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+			const { getNativeModule } = await import("../lib/native.ts");
+			const nativeModule = getNativeModule();
 
-			if (nativeModule) {
-				const files = nativeModule.findFilesWithGlob(process.cwd(), ["*.ts"]);
-				expect(Array.isArray(files)).toBe(true);
-			}
+			const files = nativeModule.findFilesWithGlob(process.cwd(), ["*.ts"]);
+			expect(Array.isArray(files)).toBe(true);
 		});
 
 		test("buildManifest returns object when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+			const { getNativeModule } = await import("../lib/native.ts");
+			const nativeModule = getNativeModule();
 
-			if (nativeModule) {
-				const manifest = nativeModule.buildManifest(
-					[__filename],
-					process.cwd(),
-				);
-				expect(typeof manifest).toBe("object");
-			}
+			const manifest = nativeModule.buildManifest([__filename], process.cwd());
+			expect(typeof manifest).toBe("object");
 		});
 
 		test("hasChanges returns boolean when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+			const { getNativeModule } = await import("../lib/native.ts");
+			const nativeModule = getNativeModule();
 
-			if (nativeModule) {
-				const changed = nativeModule.hasChanges(process.cwd(), ["*.ts"], {});
-				expect(typeof changed).toBe("boolean");
-			}
+			const changed = nativeModule.hasChanges(process.cwd(), ["*.ts"], {});
+			expect(typeof changed).toBe("boolean");
 		});
 
 		test("findDirectoriesWithMarkers returns array when available", async () => {
-			const { tryGetNativeModule } = await import("../lib/native.ts");
-			const nativeModule = tryGetNativeModule();
+			const { getNativeModule } = await import("../lib/native.ts");
+			const nativeModule = getNativeModule();
 
-			if (nativeModule) {
-				const dirs = nativeModule.findDirectoriesWithMarkers(process.cwd(), [
-					"package.json",
-				]);
-				expect(Array.isArray(dirs)).toBe(true);
-			}
+			const dirs = nativeModule.findDirectoriesWithMarkers(process.cwd(), [
+				"package.json",
+			]);
+			expect(Array.isArray(dirs)).toBe(true);
 		});
 	});
 
@@ -158,10 +123,9 @@ describe("native module loader", () => {
 });
 
 describe("native module type exports", () => {
-	test("getNativeModule and tryGetNativeModule are exported", async () => {
+	test("getNativeModule is exported", async () => {
 		// This is a compile-time check - if it fails, TypeScript will error
 		const native = await import("../lib/native.ts");
 		expect(native.getNativeModule).toBeDefined();
-		expect(native.tryGetNativeModule).toBeDefined();
 	});
 });

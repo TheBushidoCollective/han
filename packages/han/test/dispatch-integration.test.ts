@@ -11,11 +11,14 @@ import {
 } from "../lib/commands/hook/dispatch.ts";
 
 describe("dispatch.ts integration tests", () => {
-	const testDir = `/tmp/test-dispatch-integration-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: typeof process.env;
 	let originalCwd: string;
 
 	beforeEach(() => {
+		// Generate unique test directory per test
+		testDir = `/tmp/test-dispatch-integration-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 		// Save original state
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd();
