@@ -1,144 +1,16 @@
-//! Core schema definitions for Han's unified data store
+//! Core schema types for Han's unified data store
 //!
-//! This module defines the SurrealDB schema for:
+//! This module defines the data structures for:
 //! - Repos (git repositories)
 //! - Projects (worktrees/subdirs within repos)
 //! - Sessions (Claude Code sessions)
+//! - Messages (JSONL entries)
 //! - Tasks (metrics tracking)
 //! - Hook cache
 //! - Marketplace cache
 
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
-use surrealdb::engine::local::Db;
-use surrealdb::Surreal;
-
-// ============================================================================
-// Schema Initialization
-// ============================================================================
-
-/// Initialize the core schema tables and indexes
-pub async fn init_schema(db: &Surreal<Db>) -> napi::Result<()> {
-    db.query(SCHEMA_SQL)
-        .await
-        .map_err(|e| napi::Error::from_reason(format!("Failed to initialize schema: {}", e)))?;
-    Ok(())
-}
-
-/// Core schema SQL
-const SCHEMA_SQL: &str = r#"
--- ============================================================================
--- Repos (git repositories, identified by remote URL)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS repo SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS remote ON repo TYPE string;
-DEFINE FIELD IF NOT EXISTS name ON repo TYPE string;
-DEFINE FIELD IF NOT EXISTS default_branch ON repo TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS created_at ON repo TYPE datetime DEFAULT time::now();
-DEFINE FIELD IF NOT EXISTS updated_at ON repo TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS idx_repo_remote ON repo FIELDS remote UNIQUE;
-
--- ============================================================================
--- Projects (worktrees, subdirs within a repo)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS project SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repo ON project TYPE option<record<repo>>;
-DEFINE FIELD IF NOT EXISTS slug ON project TYPE string;
-DEFINE FIELD IF NOT EXISTS path ON project TYPE string;
-DEFINE FIELD IF NOT EXISTS relative_path ON project TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS name ON project TYPE string;
-DEFINE FIELD IF NOT EXISTS is_worktree ON project TYPE bool DEFAULT false;
-DEFINE FIELD IF NOT EXISTS created_at ON project TYPE datetime DEFAULT time::now();
-DEFINE FIELD IF NOT EXISTS updated_at ON project TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS idx_project_slug ON project FIELDS slug UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_project_path ON project FIELDS path;
-DEFINE INDEX IF NOT EXISTS idx_project_repo ON project FIELDS repo;
-
--- ============================================================================
--- Sessions (Claude Code sessions)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS session SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS project ON session TYPE option<record<project>>;
-DEFINE FIELD IF NOT EXISTS session_id ON session TYPE string;
-DEFINE FIELD IF NOT EXISTS started_at ON session TYPE datetime DEFAULT time::now();
-DEFINE FIELD IF NOT EXISTS ended_at ON session TYPE option<datetime>;
-DEFINE FIELD IF NOT EXISTS status ON session TYPE string DEFAULT 'active';
-DEFINE FIELD IF NOT EXISTS transcript_path ON session TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS updated_at ON session TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS idx_session_id ON session FIELDS session_id UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_session_project ON session FIELDS project;
-DEFINE INDEX IF NOT EXISTS idx_session_status ON session FIELDS status;
-
--- ============================================================================
--- Messages (individual JSONL entries from sessions)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS message SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS session ON message TYPE record<session>;
-DEFINE FIELD IF NOT EXISTS message_id ON message TYPE string;
-DEFINE FIELD IF NOT EXISTS message_type ON message TYPE string;
-DEFINE FIELD IF NOT EXISTS role ON message TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS content ON message TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS tool_name ON message TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS tool_input ON message TYPE option<object>;
-DEFINE FIELD IF NOT EXISTS tool_result ON message TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS timestamp ON message TYPE datetime;
-DEFINE FIELD IF NOT EXISTS line_number ON message TYPE int;
-DEFINE FIELD IF NOT EXISTS indexed_at ON message TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS idx_message_id ON message FIELDS message_id UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_message_session ON message FIELDS session;
-DEFINE INDEX IF NOT EXISTS idx_message_type ON message FIELDS message_type;
-DEFINE INDEX IF NOT EXISTS idx_message_timestamp ON message FIELDS timestamp;
--- Full-text search on message content
-DEFINE ANALYZER IF NOT EXISTS message_analyzer TOKENIZERS class FILTERS lowercase, snowball(english);
-DEFINE INDEX IF NOT EXISTS idx_message_content_fts ON message FIELDS content SEARCH ANALYZER message_analyzer BM25;
-
--- ============================================================================
--- Tasks (metrics tracking)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS task SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS session ON task TYPE option<record<session>>;
-DEFINE FIELD IF NOT EXISTS task_id ON task TYPE string;
-DEFINE FIELD IF NOT EXISTS description ON task TYPE string;
-DEFINE FIELD IF NOT EXISTS task_type ON task TYPE string;
-DEFINE FIELD IF NOT EXISTS outcome ON task TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS confidence ON task TYPE option<float>;
-DEFINE FIELD IF NOT EXISTS notes ON task TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS files_modified ON task TYPE option<array<string>>;
-DEFINE FIELD IF NOT EXISTS tests_added ON task TYPE option<int>;
-DEFINE FIELD IF NOT EXISTS started_at ON task TYPE datetime DEFAULT time::now();
-DEFINE FIELD IF NOT EXISTS completed_at ON task TYPE option<datetime>;
-DEFINE INDEX IF NOT EXISTS idx_task_id ON task FIELDS task_id UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_task_session ON task FIELDS session;
-DEFINE INDEX IF NOT EXISTS idx_task_type ON task FIELDS task_type;
-DEFINE INDEX IF NOT EXISTS idx_task_outcome ON task FIELDS outcome;
-
--- ============================================================================
--- Hook Cache (project-scoped caching for hook results)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS hook_cache SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS project ON hook_cache TYPE option<record<project>>;
-DEFINE FIELD IF NOT EXISTS cache_key ON hook_cache TYPE string;
-DEFINE FIELD IF NOT EXISTS file_hash ON hook_cache TYPE string;
-DEFINE FIELD IF NOT EXISTS result ON hook_cache TYPE object;
-DEFINE FIELD IF NOT EXISTS cached_at ON hook_cache TYPE datetime DEFAULT time::now();
-DEFINE FIELD IF NOT EXISTS expires_at ON hook_cache TYPE option<datetime>;
-DEFINE INDEX IF NOT EXISTS idx_hook_cache_key ON hook_cache FIELDS cache_key UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_hook_cache_project ON hook_cache FIELDS project;
-
--- ============================================================================
--- Marketplace Cache (plugin metadata cache)
--- ============================================================================
-DEFINE TABLE IF NOT EXISTS marketplace_plugin SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS plugin_id ON marketplace_plugin TYPE string;
-DEFINE FIELD IF NOT EXISTS name ON marketplace_plugin TYPE string;
-DEFINE FIELD IF NOT EXISTS description ON marketplace_plugin TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS version ON marketplace_plugin TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS category ON marketplace_plugin TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS metadata ON marketplace_plugin TYPE option<object>;
-DEFINE FIELD IF NOT EXISTS fetched_at ON marketplace_plugin TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS idx_marketplace_plugin_id ON marketplace_plugin FIELDS plugin_id UNIQUE;
-DEFINE INDEX IF NOT EXISTS idx_marketplace_category ON marketplace_plugin FIELDS category;
-"#;
 
 // ============================================================================
 // Data Structures - Repos
@@ -194,46 +66,63 @@ pub struct ProjectInput {
 
 // ============================================================================
 // Data Structures - Sessions
+// id IS the session UUID from JSONL - timestamps derived from messages
 // ============================================================================
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Session {
-    pub id: Option<String>,
+    pub id: String,  // This IS the session UUID from JSONL
     pub project_id: Option<String>,
-    pub session_id: String,
-    pub started_at: Option<String>,
-    pub ended_at: Option<String>,
     pub status: String,
     pub transcript_path: Option<String>,
-    pub updated_at: Option<String>,
+    pub last_indexed_line: Option<i32>,
 }
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionInput {
+    pub id: String,  // The session UUID from JSONL filename
     pub project_id: Option<String>,
-    pub session_id: String,
     pub status: Option<String>,
     pub transcript_path: Option<String>,
 }
 
 // ============================================================================
+// Data Structures - Session Files
+// Tracks JSONL files belonging to sessions (main, agent, han_events)
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionFile {
+    pub id: String,
+    pub session_id: String,
+    pub file_type: String,  // 'main', 'agent', 'han_events'
+    pub file_path: String,
+    pub agent_id: Option<String>,  // For agent files, the 8-char agent ID
+    pub last_indexed_line: Option<i32>,
+    pub last_indexed_at: Option<String>,
+    pub created_at: Option<String>,
+}
+
+// ============================================================================
 // Data Structures - Messages
+// id IS the message UUID from JSONL - no separate message_id
 // ============================================================================
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
-    pub id: Option<String>,
+    pub id: String,  // This IS the message UUID from JSONL
     pub session_id: String,
-    pub message_id: String,
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
     pub tool_name: Option<String>,
     pub tool_input: Option<String>, // JSON string
     pub tool_result: Option<String>,
+    pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
     pub indexed_at: Option<String>,
@@ -242,14 +131,15 @@ pub struct Message {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessageInput {
+    pub id: String,  // The message UUID from JSONL
     pub session_id: String,
-    pub message_id: String,
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
     pub tool_name: Option<String>,
     pub tool_input: Option<String>, // JSON string
     pub tool_result: Option<String>,
+    pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
 }
@@ -375,9 +265,156 @@ pub struct MarketplacePluginInput {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TaskMetrics {
     pub total_tasks: i64,
+    pub completed_tasks: i64,
     pub successful_tasks: i64,
     pub partial_tasks: i64,
     pub failed_tasks: i64,
-    pub avg_confidence: f64,
-    pub tasks_by_type: String, // JSON object
+    pub success_rate: f64,
+    pub average_confidence: Option<f64>,
+    pub average_duration_seconds: Option<f64>,
+    pub calibration_score: Option<f64>,
+    pub by_type: Option<String>,    // JSON object
+    pub by_outcome: Option<String>, // JSON object
+}
+
+// ============================================================================
+// Data Structures - Hook Executions
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookExecution {
+    pub id: Option<String>,
+    pub session_id: Option<String>,
+    pub task_id: Option<String>,
+    pub hook_type: String,
+    pub hook_name: String,
+    pub hook_source: Option<String>,
+    pub duration_ms: i64,
+    pub exit_code: i32,
+    pub passed: bool,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub executed_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookExecutionInput {
+    pub session_id: Option<String>,
+    pub task_id: Option<String>,
+    pub hook_type: String,
+    pub hook_name: String,
+    pub hook_source: Option<String>,
+    pub duration_ms: i64,
+    pub exit_code: i32,
+    pub passed: bool,
+    pub output: Option<String>,
+    pub error: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookStats {
+    pub total_executions: i64,
+    pub total_passed: i64,
+    pub total_failed: i64,
+    pub pass_rate: f64,
+    pub unique_hooks: i64,
+    pub by_hook_type: Option<String>, // JSON object
+}
+
+// ============================================================================
+// Data Structures - Frustration Events
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FrustrationEvent {
+    pub id: Option<String>,
+    pub session_id: Option<String>,
+    pub task_id: Option<String>,
+    pub frustration_level: String, // 'low', 'moderate', 'high'
+    pub frustration_score: f64,
+    pub user_message: String,
+    pub detected_signals: Option<String>, // JSON array
+    pub context: Option<String>,
+    pub recorded_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FrustrationEventInput {
+    pub session_id: Option<String>,
+    pub task_id: Option<String>,
+    pub frustration_level: String,
+    pub frustration_score: f64,
+    pub user_message: String,
+    pub detected_signals: Option<Vec<String>>,
+    pub context: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FrustrationMetrics {
+    pub total_frustrations: i64,
+    pub significant_frustrations: i64, // moderate + high only
+    pub frustration_rate: f64,
+    pub significant_frustration_rate: f64,
+    pub weighted_score: f64,
+    pub by_level: Option<String>, // JSON object { low, moderate, high }
+}
+
+// ============================================================================
+// Data Structures - Checkpoints
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Checkpoint {
+    pub id: Option<String>,
+    pub session_id: String,
+    pub project_path: String,
+    pub file_path: String,
+    pub file_hash: String,
+    pub blob_path: String,
+    pub created_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CheckpointInput {
+    pub session_id: String,
+    pub project_path: String,
+    pub file_path: String,
+    pub file_hash: String,
+    pub blob_path: String,
+}
+
+// ============================================================================
+// Data Structures - Session File Changes
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionFileChange {
+    pub id: Option<String>,
+    pub session_id: String,
+    pub file_path: String,
+    pub action: String, // 'created', 'modified', 'deleted'
+    pub file_hash_before: Option<String>,
+    pub file_hash_after: Option<String>,
+    pub tool_name: Option<String>,
+    pub recorded_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionFileChangeInput {
+    pub session_id: String,
+    pub file_path: String,
+    pub action: String,
+    pub file_hash_before: Option<String>,
+    pub file_hash_after: Option<String>,
+    pub tool_name: Option<String>,
 }

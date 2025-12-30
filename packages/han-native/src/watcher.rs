@@ -1,21 +1,76 @@
 //! File watcher module for monitoring Claude Code session JSONL files
 //!
 //! This module provides file system watching capabilities using the notify crate.
-//! It monitors `~/.claude/projects/` for JSONL file changes and emits events
-//! that can be processed by the coordinator.
+//! It monitors `~/.claude/projects/` for JSONL file changes and automatically
+//! triggers re-indexing to keep the database in sync with the filesystem.
 
+use crate::indexer;
+use crate::indexer::IndexResult;
 use napi::bindgen_prelude::*;
+use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi_derive::napi;
 use notify::{
     event::{CreateKind, ModifyKind, RemoveKind},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
+
+/// Thread-safe callback for notifying JavaScript of new index results
+type IndexCallback = ThreadsafeFunction<IndexResult, ErrorStrategy::Fatal>;
+
+/// Queue of recently indexed results for TypeScript to poll
+static RESULT_QUEUE: std::sync::OnceLock<std::sync::Mutex<VecDeque<IndexResult>>> =
+    std::sync::OnceLock::new();
+
+/// Global callback for event-driven notifications
+static INDEX_CALLBACK: std::sync::OnceLock<std::sync::Mutex<Option<IndexCallback>>> =
+    std::sync::OnceLock::new();
+
+fn get_result_queue() -> &'static std::sync::Mutex<VecDeque<IndexResult>> {
+    RESULT_QUEUE.get_or_init(|| std::sync::Mutex::new(VecDeque::new()))
+}
+
+fn get_callback_holder() -> &'static std::sync::Mutex<Option<IndexCallback>> {
+    INDEX_CALLBACK.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// Push an index result - calls callback if registered, otherwise queues for polling
+fn push_result(result: IndexResult) {
+    // Try to call the callback first (instant notification)
+    if let Ok(guard) = get_callback_holder().lock() {
+        if let Some(callback) = guard.as_ref() {
+            // Clone result for callback since we may also queue it
+            callback.call(result.clone(), ThreadsafeFunctionCallMode::NonBlocking);
+            return; // Callback handles it, no need to queue
+        }
+    }
+
+    // Fallback to queue-based polling
+    if let Ok(mut queue) = get_result_queue().lock() {
+        // Limit queue size to prevent unbounded growth
+        const MAX_QUEUE_SIZE: usize = 1000;
+        while queue.len() >= MAX_QUEUE_SIZE {
+            queue.pop_front();
+        }
+        queue.push_back(result);
+    }
+}
+
+/// Get all pending index results and clear the queue
+/// TypeScript calls this periodically to get results and publish subscription events
+#[napi]
+pub fn poll_index_results() -> Result<Vec<IndexResult>> {
+    let queue = get_result_queue();
+    let mut guard = queue.lock().map_err(|e| {
+        napi::Error::from_reason(format!("Failed to acquire result queue lock: {}", e))
+    })?;
+    let results: Vec<IndexResult> = guard.drain(..).collect();
+    Ok(results)
+}
 
 /// Event type for file changes
 #[derive(Debug)]
@@ -115,6 +170,7 @@ fn convert_event(event: &Event) -> Option<FileEvent> {
 struct WatcherHandle {
     _watcher: RecommendedWatcher,
     running: Arc<AtomicBool>,
+    _thread: std::thread::JoinHandle<()>,
 }
 
 /// Global watcher state (only one watcher can be active)
@@ -126,10 +182,9 @@ fn get_watcher_state() -> &'static std::sync::Mutex<Option<WatcherHandle>> {
 }
 
 /// Start watching the Claude projects directory for JSONL changes
-/// Returns a channel receiver for file events
-pub async fn start_file_watcher(
-    watch_path: Option<String>,
-) -> Result<bool> {
+/// Returns true if watcher was started, false if already running
+#[napi]
+pub fn start_file_watcher(watch_path: Option<String>) -> Result<bool> {
     let state = get_watcher_state();
     let mut guard = state.lock().map_err(|e| {
         napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e))
@@ -161,14 +216,15 @@ pub async fn start_file_watcher(
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = running.clone();
 
-    // Create the watcher
-    let (tx, mut rx) = mpsc::channel::<Event>(1000);
+    // Create a channel for events
+    let (tx, rx) = std::sync::mpsc::channel::<Event>();
 
+    // Create the watcher with a synchronous callback
     let watcher = RecommendedWatcher::new(
         move |res: notify::Result<Event>| {
             if let Ok(event) = res {
                 // Send events through the channel (non-blocking)
-                let _ = tx.try_send(event);
+                let _ = tx.send(event);
             }
         },
         Config::default()
@@ -177,17 +233,22 @@ pub async fn start_file_watcher(
     )
     .map_err(|e| napi::Error::from_reason(format!("Failed to create watcher: {}", e)))?;
 
-    // Start watching in a background task
-    let path_clone = path.clone();
-    tokio::spawn(async move {
-        // Process events as they come in
+    // Start watching the path
+    let mut watcher = watcher;
+    watcher
+        .watch(&path, RecursiveMode::Recursive)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to watch path: {}", e)))?;
+
+    // Spawn a dedicated thread for processing events
+    let thread = std::thread::spawn(move || {
         let mut seen_paths: HashSet<String> = HashSet::new();
         let debounce_duration = Duration::from_millis(100);
         let mut last_event_time = std::time::Instant::now();
 
         while running_clone.load(Ordering::Relaxed) {
-            match tokio::time::timeout(Duration::from_secs(1), rx.recv()).await {
-                Ok(Some(event)) => {
+            // Use recv_timeout to allow checking the running flag periodically
+            match rx.recv_timeout(Duration::from_secs(1)) {
+                Ok(event) => {
                     if let Some(file_event) = convert_event(&event) {
                         let now = std::time::Instant::now();
                         // Simple debouncing: skip if we've seen this path recently
@@ -197,46 +258,56 @@ pub async fn start_file_watcher(
                             seen_paths.insert(file_event.path.clone());
                             last_event_time = now;
 
-                            // Log the event (will be replaced with actual processing)
-                            tracing::info!(
-                                "File event: {:?} - {} (session: {:?}, project: {:?})",
-                                file_event.event_type,
-                                file_event.path,
-                                file_event.session_id,
-                                file_event.project_path
-                            );
+                            // Process the file event by triggering indexing
+                            let event_type = file_event.event_type.clone();
+                            let path = file_event.path.clone();
+                            let session_id = file_event.session_id.clone();
+                            let project_path = file_event.project_path.clone();
+
+                            // Run indexing synchronously - errors are logged but don't stop the watcher
+                            match indexer::handle_file_event(event_type, path.clone(), session_id, project_path) {
+                                Ok(Some(result)) => {
+                                    // Push result to queue for TypeScript to poll
+                                    push_result(result);
+                                }
+                                Ok(None) => {
+                                    // No result (e.g., file removed)
+                                }
+                                Err(e) => {
+                                    eprintln!("[watcher] Failed to index {}: {}", path, e);
+                                }
+                            }
                         }
                     }
                 }
-                Ok(None) => break, // Channel closed
-                Err(_) => {
-                    // Timeout - clear seen paths periodically
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Timeout - clear seen paths periodically to allow re-processing
                     seen_paths.clear();
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    break;
                 }
             }
         }
-
-        tracing::info!("File watcher stopped for {:?}", path_clone);
     });
-
-    // Actually start watching the path
-    // Note: We need to do this after spawning the task to avoid race conditions
-    let mut watcher = watcher;
-    watcher
-        .watch(&path, RecursiveMode::Recursive)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to watch path: {}", e)))?;
 
     *guard = Some(WatcherHandle {
         _watcher: watcher,
         running,
+        _thread: thread,
     });
 
-    tracing::info!("Started file watcher for {:?}", path);
     Ok(true)
 }
 
 /// Stop the file watcher
+#[napi]
 pub fn stop_file_watcher() -> Result<bool> {
+    // Clear the callback first
+    if let Ok(mut callback_guard) = get_callback_holder().lock() {
+        *callback_guard = None;
+    }
+
     let state = get_watcher_state();
     let mut guard = state.lock().map_err(|e| {
         napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e))
@@ -244,14 +315,43 @@ pub fn stop_file_watcher() -> Result<bool> {
 
     if let Some(handle) = guard.take() {
         handle.running.store(false, Ordering::Relaxed);
-        tracing::info!("Stopped file watcher");
         Ok(true)
     } else {
         Ok(false) // Not running
     }
 }
 
+/// Register a callback to be called when new index results are ready
+/// This enables event-driven updates instead of polling
+/// The callback receives IndexResult objects directly
+#[napi(ts_args_type = "callback: (result: IndexResult) => void")]
+pub fn set_index_callback(callback: JsFunction) -> Result<()> {
+    let tsfn: IndexCallback = callback.create_threadsafe_function(0, |ctx| {
+        Ok(vec![ctx.value])
+    })?;
+
+    let holder = get_callback_holder();
+    let mut guard = holder.lock().map_err(|e| {
+        napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e))
+    })?;
+    *guard = Some(tsfn);
+
+    Ok(())
+}
+
+/// Clear the index callback (revert to polling mode)
+#[napi]
+pub fn clear_index_callback() -> Result<()> {
+    let holder = get_callback_holder();
+    let mut guard = holder.lock().map_err(|e| {
+        napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e))
+    })?;
+    *guard = None;
+    Ok(())
+}
+
 /// Check if the file watcher is running
+#[napi]
 pub fn is_watcher_running() -> Result<bool> {
     let state = get_watcher_state();
     let guard = state.lock().map_err(|e| {
@@ -261,6 +361,7 @@ pub fn is_watcher_running() -> Result<bool> {
 }
 
 /// Get the default watch path (~/.claude/projects)
+#[napi]
 pub fn get_default_watch_path() -> Result<String> {
     let home = dirs::home_dir().ok_or_else(|| {
         napi::Error::from_reason("Could not determine home directory".to_string())

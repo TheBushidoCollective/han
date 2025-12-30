@@ -1,18 +1,38 @@
 //! Session indexer - populates database from JSONL files
 //!
-//! This module is the bridge between JSONL files (Claude Code transcripts) and
-//! the SurrealKV database. It runs in the coordinator process and incrementally
-//! indexes session data.
+//! This module is the bridge between JSONL files (Claude Code transcripts and
+//! Han events) and the SQLite database. It runs in the coordinator process
+//! and incrementally indexes session data.
+//!
+//! Files processed:
+//! - `{session-id}.jsonl` - Claude Code transcript messages
+//! - `{session-id}-han.jsonl` - Han events (hooks, MCP calls, memory ops)
+//!
+//! Han events are stored in the messages table with message_type='han_event'
+//! and interleaved with Claude messages based on timestamp.
+//!
+//! IMPORTANT: All database access MUST go through the coordinator.
 
 use crate::crud;
-use crate::db;
 use crate::jsonl::{jsonl_read_page, JsonlLine};
-use crate::schema::{MessageInput, ProjectInput, SessionInput};
+use crate::schema::{MessageInput, ProjectInput, RepoInput, SessionInput};
+use crate::sentiment;
+use crate::task_timeline::{build_task_timeline, TaskTimeline};
 use crate::watcher::FileEventType;
+use chrono::{DateTime, Duration, Utc};
 use napi_derive::napi;
 use serde_json::Value;
 use std::path::Path;
+use std::process::Command;
+use std::sync::OnceLock;
 use uuid::Uuid;
+
+// Lazy-loaded task timeline - built once per process from SQLite
+static TASK_TIMELINE: OnceLock<TaskTimeline> = OnceLock::new();
+
+fn get_task_timeline() -> &'static TaskTimeline {
+    TASK_TIMELINE.get_or_init(build_task_timeline)
+}
 
 // ============================================================================
 // Types
@@ -38,11 +58,13 @@ pub struct IndexResult {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MessageType {
     Summary,
-    Human,
+    User,
     Assistant,
     ToolUse,
     ToolResult,
     System,
+    FileHistorySnapshot,
+    HanEvent,
     Unknown,
 }
 
@@ -50,11 +72,13 @@ impl MessageType {
     fn from_str(s: &str) -> Self {
         match s {
             "summary" => MessageType::Summary,
-            "human" => MessageType::Human,
+            "user" => MessageType::User,
             "assistant" => MessageType::Assistant,
             "tool_use" => MessageType::ToolUse,
             "tool_result" => MessageType::ToolResult,
             "system" => MessageType::System,
+            "file-history-snapshot" => MessageType::FileHistorySnapshot,
+            "han_event" => MessageType::HanEvent,
             _ => MessageType::Unknown,
         }
     }
@@ -62,11 +86,13 @@ impl MessageType {
     fn as_str(&self) -> &'static str {
         match self {
             MessageType::Summary => "summary",
-            MessageType::Human => "human",
+            MessageType::User => "user",
             MessageType::Assistant => "assistant",
             MessageType::ToolUse => "tool_use",
             MessageType::ToolResult => "tool_result",
             MessageType::System => "system",
+            MessageType::FileHistorySnapshot => "file-history-snapshot",
+            MessageType::HanEvent => "han_event",
             MessageType::Unknown => "unknown",
         }
     }
@@ -81,6 +107,7 @@ struct ParsedMessage {
     tool_name: Option<String>,
     tool_input: Option<String>,
     tool_result: Option<String>,
+    raw_json: String,
     timestamp: String,
     uuid: String,
 }
@@ -89,19 +116,57 @@ struct ParsedMessage {
 // JSONL Parsing
 // ============================================================================
 
-/// Parse a single JSONL line into a message
-fn parse_jsonl_line(line: &JsonlLine) -> Option<ParsedMessage> {
+/// Intermediate parsed line before timestamp resolution
+#[derive(Debug, Clone)]
+struct IntermediateParsedLine {
+    line_number: i32,
+    json: Value,
+    raw_content: String,
+    message_type: MessageType,
+    uuid: String,
+    /// Direct timestamp from the message, if available
+    direct_timestamp: Option<String>,
+    /// For summary messages, the leafUuid to look up
+    leaf_uuid: Option<String>,
+}
+
+/// Extract timestamp from a message based on its type
+/// Returns None if no timestamp can be determined (message should be skipped)
+fn extract_timestamp(
+    parsed: &IntermediateParsedLine,
+    uuid_to_timestamp: &std::collections::HashMap<String, String>,
+) -> Option<String> {
+    // First try direct timestamp at root level
+    if let Some(ts) = &parsed.direct_timestamp {
+        return Some(ts.clone());
+    }
+
+    match parsed.message_type {
+        // file-history-snapshot: use snapshot.timestamp
+        MessageType::FileHistorySnapshot => {
+            parsed.json
+                .get("snapshot")
+                .and_then(|s| s.get("timestamp"))
+                .and_then(|t| t.as_str())
+                .map(|s| s.to_string())
+        }
+        // summary: look up leafUuid's timestamp
+        MessageType::Summary => {
+            parsed.leaf_uuid.as_ref().and_then(|leaf_id| {
+                uuid_to_timestamp.get(leaf_id).cloned()
+            })
+        }
+        // Other types must have a direct timestamp or be skipped
+        _ => None,
+    }
+}
+
+/// Parse a single JSONL line into an intermediate representation
+fn parse_jsonl_line_intermediate(line: &JsonlLine) -> Option<IntermediateParsedLine> {
     let json: Value = serde_json::from_str(&line.content).ok()?;
 
     let msg_type = json.get("type")?.as_str()?;
     let message_type = MessageType::from_str(msg_type);
-
-    // Get timestamp (required)
-    let timestamp = json
-        .get("timestamp")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
     // Get or generate UUID
     let uuid = json
@@ -110,14 +175,48 @@ fn parse_jsonl_line(line: &JsonlLine) -> Option<ParsedMessage> {
         .map(|s| s.to_string())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
+    // Get direct timestamp if available at root level
+    let direct_timestamp = json
+        .get("timestamp")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    // Get leafUuid for summary messages
+    let leaf_uuid = json
+        .get("leafUuid")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    Some(IntermediateParsedLine {
+        line_number: line.line_number as i32,
+        json,
+        raw_content: line.content.clone(),
+        message_type,
+        uuid,
+        direct_timestamp,
+        leaf_uuid,
+    })
+}
+
+/// Convert intermediate parsed line to final ParsedMessage
+fn finalize_parsed_message(
+    parsed: IntermediateParsedLine,
+    uuid_to_timestamp: &std::collections::HashMap<String, String>,
+) -> Option<ParsedMessage> {
+    // Resolve timestamp - if we can't determine it, skip the message
+    let timestamp = extract_timestamp(&parsed, uuid_to_timestamp)?;
+
+    let json = &parsed.json;
+    let message_type = parsed.message_type;
+
     // Extract role-based content
     let (role, content) = match message_type {
-        MessageType::Human => {
-            let content = extract_message_content(&json);
-            (Some("human".to_string()), content)
+        MessageType::User => {
+            let content = extract_message_content(json);
+            (Some("user".to_string()), content)
         }
         MessageType::Assistant => {
-            let content = extract_message_content(&json);
+            let content = extract_message_content(json);
             (Some("assistant".to_string()), content)
         }
         MessageType::Summary => {
@@ -128,8 +227,12 @@ fn parse_jsonl_line(line: &JsonlLine) -> Option<ParsedMessage> {
             (None, summary)
         }
         MessageType::System => {
-            let content = extract_message_content(&json);
+            let content = extract_message_content(json);
             (Some("system".to_string()), content)
+        }
+        MessageType::FileHistorySnapshot => {
+            // File history snapshots are metadata, no role/content needed
+            (None, None)
         }
         _ => (None, None),
     };
@@ -166,37 +269,78 @@ fn parse_jsonl_line(line: &JsonlLine) -> Option<ParsedMessage> {
         tool_name,
         tool_input,
         tool_result,
+        raw_json: parsed.raw_content,
         timestamp,
-        uuid,
+        uuid: parsed.uuid,
     })
 }
 
 /// Extract message content from various JSON structures
 fn extract_message_content(json: &Value) -> Option<String> {
-    // Try "message" field first (Claude Code format)
+    // Claude Code format: message.content holds the actual content
     if let Some(msg) = json.get("message") {
-        if let Some(s) = msg.as_str() {
-            return Some(s.to_string());
-        }
-        // Could be an array of content blocks
-        if let Some(arr) = msg.as_array() {
-            let text_parts: Vec<String> = arr
-                .iter()
-                .filter_map(|item| {
-                    if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                        Some(text.to_string())
-                    } else {
+        // message.content can be a string or array of content blocks
+        if let Some(content) = msg.get("content") {
+            if let Some(s) = content.as_str() {
+                return Some(s.to_string());
+            }
+            // Array of content blocks (Claude API format)
+            if let Some(arr) = content.as_array() {
+                let text_parts: Vec<String> = arr
+                    .iter()
+                    .filter_map(|item| {
+                        let item_type = item.get("type").and_then(|t| t.as_str());
+
+                        // Handle text blocks
+                        if item_type == Some("text") {
+                            return item.get("text").and_then(|t| t.as_str()).map(|s| s.to_string());
+                        }
+
+                        // Handle thinking blocks (Claude extended thinking)
+                        if item_type == Some("thinking") {
+                            return item.get("thinking").and_then(|t| t.as_str()).map(|s| s.to_string());
+                        }
+
+                        // Handle tool_use blocks (extract tool name for context)
+                        if item_type == Some("tool_use") {
+                            let tool_name = item.get("name").and_then(|n| n.as_str()).unwrap_or("unknown");
+                            return Some(format!("[Tool: {}]", tool_name));
+                        }
+
+                        // Handle tool_result blocks with text content
+                        if item_type == Some("tool_result") {
+                            if let Some(inner) = item.get("content") {
+                                if let Some(s) = inner.as_str() {
+                                    return Some(s.to_string());
+                                }
+                                if let Some(inner_arr) = inner.as_array() {
+                                    let inner_text: Vec<String> = inner_arr
+                                        .iter()
+                                        .filter_map(|i| {
+                                            if i.get("type").and_then(|t| t.as_str()) == Some("text") {
+                                                i.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .collect();
+                                    if !inner_text.is_empty() {
+                                        return Some(inner_text.join("\n"));
+                                    }
+                                }
+                            }
+                        }
                         None
-                    }
-                })
-                .collect();
-            if !text_parts.is_empty() {
-                return Some(text_parts.join("\n"));
+                    })
+                    .collect();
+                if !text_parts.is_empty() {
+                    return Some(text_parts.join("\n"));
+                }
             }
         }
     }
 
-    // Try "content" field
+    // Fallback: Try root "content" field
     if let Some(content) = json.get("content") {
         if let Some(s) = content.as_str() {
             return Some(s.to_string());
@@ -205,8 +349,8 @@ fn extract_message_content(json: &Value) -> Option<String> {
             let text_parts: Vec<String> = arr
                 .iter()
                 .filter_map(|item| {
-                    if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                        Some(text.to_string())
+                    if item.get("type").and_then(|t| t.as_str()) == Some("text") {
+                        item.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
                     } else {
                         None
                     }
@@ -221,20 +365,86 @@ fn extract_message_content(json: &Value) -> Option<String> {
     None
 }
 
-/// Extract session ID from JSONL file path
-/// Format: `{uuid}.jsonl` or `{uuid}_messages.jsonl`
-fn extract_session_id(file_path: &Path) -> Option<String> {
-    let filename = file_path.file_stem()?.to_str()?;
-    let session_id = if filename.ends_with("_messages") {
-        filename.strip_suffix("_messages")?
+/// File type classification for JSONL files
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionFileType {
+    /// Main session file: {uuid}.jsonl
+    Main { session_id: String },
+    /// Agent file: agent-{id}.jsonl
+    Agent { agent_id: String },
+    /// Han events file: {uuid}-han.jsonl
+    HanEvents { session_id: String },
+    /// Unknown format
+    Unknown,
+}
+
+/// Classify a JSONL file and extract relevant IDs
+fn classify_file(file_path: &Path) -> SessionFileType {
+    let filename = match file_path.file_stem().and_then(|s| s.to_str()) {
+        Some(f) => f,
+        None => return SessionFileType::Unknown,
+    };
+
+    // Check for agent file: agent-{id}.jsonl
+    if let Some(agent_id) = filename.strip_prefix("agent-") {
+        if !agent_id.is_empty() && agent_id.len() <= 16 {
+            return SessionFileType::Agent {
+                agent_id: agent_id.to_string(),
+            };
+        }
+    }
+
+    // Check for han events file: {uuid}-han.jsonl
+    if let Some(session_id) = filename.strip_suffix("-han") {
+        if is_valid_uuid(session_id) {
+            return SessionFileType::HanEvents {
+                session_id: session_id.to_string(),
+            };
+        }
+    }
+
+    // Check for main session file: {uuid}.jsonl or {uuid}_messages.jsonl
+    let session_id = if let Some(stripped) = filename.strip_suffix("_messages") {
+        stripped
     } else {
         filename
     };
-    // Validate it looks like a UUID
-    if session_id.len() >= 32 && session_id.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
-        Some(session_id.to_string())
-    } else {
-        None
+
+    if is_valid_uuid(session_id) {
+        return SessionFileType::Main {
+            session_id: session_id.to_string(),
+        };
+    }
+
+    SessionFileType::Unknown
+}
+
+/// Check if a string looks like a UUID
+fn is_valid_uuid(s: &str) -> bool {
+    s.len() >= 32 && s.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+}
+
+/// Extract session ID from agent file by reading the first line
+fn extract_session_id_from_agent_file(file_path: &Path) -> Option<String> {
+    use std::io::{BufRead, BufReader};
+
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = BufReader::new(file);
+    let first_line = reader.lines().next()?.ok()?;
+
+    // Parse JSON to get sessionId
+    let json: serde_json::Value = serde_json::from_str(&first_line).ok()?;
+    json.get("sessionId")?.as_str().map(|s| s.to_string())
+}
+
+/// Extract session ID from JSONL file path
+/// Format: `{uuid}.jsonl`, `{uuid}_messages.jsonl`, or `{uuid}-han.jsonl`
+fn extract_session_id(file_path: &Path) -> Option<String> {
+    match classify_file(file_path) {
+        SessionFileType::Main { session_id } => Some(session_id),
+        SessionFileType::HanEvents { session_id } => Some(session_id),
+        SessionFileType::Agent { .. } => extract_session_id_from_agent_file(file_path),
+        SessionFileType::Unknown => None,
     }
 }
 
@@ -255,19 +465,286 @@ fn extract_project_slug(file_path: &Path) -> Option<String> {
 }
 
 /// Decode project path from slug
-/// Slug format: `Volumes-dev-src-github-com-user-project`
+/// Slug format: `-Volumes-dev-src-github-com-user-project` (leading dash)
 fn decode_project_path(slug: &str) -> String {
-    // Replace dashes with slashes and prepend /
-    format!("/{}", slug.replace('-', "/"))
+    // The slug already starts with a dash representing the root /
+    // So just replace dashes with slashes
+    slug.replace('-', "/")
+}
+
+/// Detect git repository info from a project path
+/// Returns (remote_url, repo_name, default_branch) if in a git repo
+fn detect_git_repo(project_path: &str) -> Option<(String, String, Option<String>)> {
+    let path = Path::new(project_path);
+    if !path.exists() {
+        return None;
+    }
+
+    // Get remote URL
+    let remote_output = Command::new("git")
+        .arg("-C")
+        .arg(project_path)
+        .arg("remote")
+        .arg("get-url")
+        .arg("origin")
+        .output()
+        .ok()?;
+
+    if !remote_output.status.success() {
+        return None;
+    }
+
+    let remote = String::from_utf8_lossy(&remote_output.stdout)
+        .trim()
+        .to_string();
+    if remote.is_empty() {
+        return None;
+    }
+
+    // Extract repo name from remote URL
+    // Handles: https://github.com/user/repo.git, git@github.com:user/repo.git
+    let name = remote
+        .rsplit('/')
+        .next()
+        .or_else(|| remote.rsplit(':').next())
+        .map(|s| s.trim_end_matches(".git"))
+        .unwrap_or("unknown")
+        .to_string();
+
+    // Get default branch
+    let branch_output = Command::new("git")
+        .arg("-C")
+        .arg(project_path)
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .output()
+        .ok();
+
+    let default_branch = branch_output
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+
+    Some((remote, name, default_branch))
 }
 
 // ============================================================================
-// Indexing Functions
+// Han Events Parsing
+// ============================================================================
+
+/// Parsed Han event from JSONL
+#[derive(Debug, Clone)]
+struct ParsedHanEvent {
+    id: String,
+    event_type: String,
+    timestamp: String,
+    data: Value,
+    raw_json: String,
+}
+
+/// Parse a Han event JSONL line
+fn parse_han_event_line(line: &JsonlLine) -> Option<ParsedHanEvent> {
+    let json: Value = serde_json::from_str(&line.content).ok()?;
+
+    let id = json.get("id")?.as_str()?.to_string();
+    let event_type = json.get("type")?.as_str()?.to_string();
+    let timestamp = json.get("timestamp")?.as_str()?.to_string();
+    let data = json.get("data").cloned().unwrap_or(Value::Null);
+
+    Some(ParsedHanEvent {
+        id,
+        event_type,
+        timestamp,
+        data,
+        raw_json: line.content.clone(),
+    })
+}
+
+/// Get the corresponding Han events file path for a session file
+/// Han events are stored at ~/.claude/han/memory/personal/sessions/{date}-{sessionId}-han.jsonl
+/// We need to search for files matching *-{sessionId}-han.jsonl since we don't know the date
+fn get_han_events_path(session_file: &Path) -> Option<std::path::PathBuf> {
+    let session_id = extract_session_id(session_file)?;
+
+    // First, check the same directory (for backwards compatibility / project-scoped events)
+    let parent = session_file.parent()?;
+    let local_han_file = parent.join(format!("{}-han.jsonl", session_id));
+    if local_han_file.exists() {
+        return Some(local_han_file);
+    }
+
+    // Check the han memory sessions directory
+    // Respects CLAUDE_CONFIG_DIR if set
+    let config_dir = std::env::var("CLAUDE_CONFIG_DIR")
+        .ok()
+        .map(std::path::PathBuf::from)
+        .or_else(|| dirs::home_dir().map(|h| h.join(".claude")))?;
+
+    let sessions_dir = config_dir.join("han").join("memory").join("personal").join("sessions");
+
+    if !sessions_dir.exists() {
+        return None;
+    }
+
+    // Search for files matching *-{sessionId}-han.jsonl
+    let pattern = format!("-{}-han.jsonl", session_id);
+
+    let entries = std::fs::read_dir(&sessions_dir).ok()?;
+    for entry in entries.flatten() {
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+        if file_name_str.ends_with(&pattern) {
+            return Some(entry.path());
+        }
+    }
+
+    None
+}
+
+/// Read all Han events from the -han.jsonl file
+fn read_han_events(han_file: &Path) -> Vec<ParsedHanEvent> {
+    let mut events = Vec::new();
+    let mut offset = 0u32;
+    let batch_size = 1000u32;
+
+    loop {
+        let result = match jsonl_read_page(han_file.to_string_lossy().to_string(), offset, batch_size) {
+            Ok(r) => r,
+            Err(_) => break,
+        };
+
+        if result.lines.is_empty() {
+            break;
+        }
+
+        for line in &result.lines {
+            if let Some(event) = parse_han_event_line(line) {
+                events.push(event);
+            }
+        }
+
+        offset = result.next_offset;
+
+        if !result.has_more {
+            break;
+        }
+    }
+
+    events
+}
+
+/// Convert a Han event to a MessageInput
+fn han_event_to_message_input(
+    event: ParsedHanEvent,
+    session_id: &str,
+    line_number: i32,
+) -> MessageInput {
+    // Content is the full event data as JSON
+    let content = serde_json::to_string(&event.data).ok();
+
+    // Tool name is the event type (hook_start, mcp_tool_call, etc.)
+    let tool_name = Some(event.event_type.clone());
+
+    MessageInput {
+        id: event.id,
+        session_id: session_id.to_string(),
+        message_type: "han_event".to_string(),
+        role: None, // Han events don't have a role
+        content,
+        tool_name, // Subtype of event
+        tool_input: None,
+        tool_result: None,
+        raw_json: Some(event.raw_json),
+        timestamp: event.timestamp,
+        line_number,
+    }
+}
+
+// ============================================================================
+// Sentiment Analysis During Indexing
+// ============================================================================
+
+/// Generate a sentiment analysis event for a user message
+/// Returns None if sentiment analysis produces no meaningful result
+fn generate_sentiment_event(
+    message_id: &str,
+    message_content: &str,
+    message_timestamp: &str,
+    session_id: &str,
+    line_number: i32,
+) -> Option<MessageInput> {
+    // Analyze sentiment
+    let result = sentiment::analyze_sentiment(message_content)?;
+
+    // Create event ID
+    let event_id = format!("evt_{}", Uuid::new_v4().to_string().replace('-', "")[..12].to_string());
+
+    // Create timestamp just after the message (add 1 millisecond)
+    let event_timestamp = if let Ok(parsed) = DateTime::parse_from_rfc3339(message_timestamp) {
+        let new_time = parsed.with_timezone(&Utc) + Duration::milliseconds(1);
+        new_time.to_rfc3339()
+    } else {
+        // Fallback to current time if parsing fails
+        Utc::now().to_rfc3339()
+    };
+
+    // Look up active task at message timestamp from SQLite
+    let task_id = DateTime::parse_from_rfc3339(message_timestamp)
+        .ok()
+        .and_then(|ts| get_task_timeline().find_active_task(&ts.with_timezone(&Utc)).map(String::from));
+
+    // Build event data
+    let mut data = serde_json::json!({
+        "message_id": message_id,
+        "sentiment_score": result.sentiment_score,
+        "sentiment_level": result.sentiment_level.as_str(),
+        "signals": result.signals,
+    });
+
+    // Add optional frustration fields
+    if let Some(score) = result.frustration_score {
+        data["frustration_score"] = serde_json::json!(score);
+    }
+    if let Some(level) = result.frustration_level {
+        data["frustration_level"] = serde_json::json!(level.as_str());
+    }
+
+    // Add task_id if found
+    if let Some(ref tid) = task_id {
+        data["task_id"] = serde_json::json!(tid);
+    }
+
+    // Build raw JSON for the event
+    let raw_event = serde_json::json!({
+        "id": event_id,
+        "type": "sentiment_analysis",
+        "timestamp": event_timestamp,
+        "data": data,
+    });
+
+    Some(MessageInput {
+        id: event_id,
+        session_id: session_id.to_string(),
+        message_type: "han_event".to_string(),
+        role: None,
+        content: Some(serde_json::to_string(&data).unwrap_or_default()),
+        tool_name: Some("sentiment_analysis".to_string()),
+        tool_input: None,
+        tool_result: None,
+        raw_json: Some(serde_json::to_string(&raw_event).unwrap_or_default()),
+        timestamp: event_timestamp,
+        line_number: line_number + 500_000, // Offset between Claude messages and Han events
+    })
+}
+
+// ============================================================================
+// Indexing Functions (Synchronous SQLite)
 // ============================================================================
 
 /// Index a single JSONL file incrementally
-/// Only processes lines after the last indexed line
-pub async fn index_session_file(db_path: String, file_path: String) -> napi::Result<IndexResult> {
+/// Also reads the corresponding -han.jsonl file and merges events by timestamp
+/// Task association for sentiment events is automatically loaded from SQLite
+pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     let path = Path::new(&file_path);
 
     // Extract session ID
@@ -295,56 +772,49 @@ pub async fn index_session_file(db_path: String, file_path: String) -> napi::Res
             .map(|s| s.to_string())
             .unwrap_or_else(|| slug.clone());
 
-        // Ensure project exists
-        let guard = db::get_db_guard(&db_path).await?;
-        let db = guard.as_ref().ok_or_else(|| {
-            napi::Error::from_reason("Database not initialized".to_string())
-        })?;
+        // Try to detect and create git repo
+        let repo_id = if let Some((remote, repo_name, default_branch)) = detect_git_repo(&decoded_path) {
+            let repo = crud::upsert_repo(RepoInput {
+                remote,
+                name: repo_name,
+                default_branch,
+            })?;
+            repo.id
+        } else {
+            None
+        };
 
-        let project = crud::upsert_project(
-            db,
-            ProjectInput {
-                repo_id: None,
-                slug: slug.clone(),
-                path: decoded_path,
-                relative_path: None,
-                name: project_name,
-                is_worktree: Some(false),
-            },
-        )
-        .await?;
+        // Ensure project exists
+        let project = crud::upsert_project(ProjectInput {
+            repo_id,
+            slug: slug.clone(),
+            path: decoded_path,
+            relative_path: None,
+            name: project_name,
+            is_worktree: Some(false),
+        })?;
 
         project.id
     } else {
         None
     };
 
-    // Get database connection
-    let guard = db::get_db_guard(&db_path).await?;
-    let db = guard.as_ref().ok_or_else(|| {
-        napi::Error::from_reason("Database not initialized".to_string())
-    })?;
-
     // Check if session exists and get last indexed line
-    let existing_session = crud::get_session(db, &session_id).await?;
+    let existing_session = crud::get_session(&session_id)?;
     let is_new_session = existing_session.is_none();
     let last_line = if is_new_session {
         0
     } else {
-        crud::get_last_indexed_line(db, &session_id).await?
+        crud::get_last_indexed_line(&session_id)?
     };
 
-    // Upsert session
-    crud::upsert_session(
-        db,
-        SessionInput {
-            project_id: project_id.clone(),
-            session_id: session_id.clone(),
-            status: Some("active".to_string()),
-            transcript_path: Some(file_path.clone()),
-        },
-    )
-    .await?;
+    // Upsert session (id IS the session UUID from filename)
+    crud::upsert_session(SessionInput {
+        id: session_id.clone(),
+        project_id: project_id.clone(),
+        status: Some("active".to_string()),
+        transcript_path: Some(file_path.clone()),
+    })?;
 
     // Read new lines from JSONL file
     let start_line = if last_line > 0 {
@@ -353,12 +823,17 @@ pub async fn index_session_file(db_path: String, file_path: String) -> napi::Res
         0
     };
 
-    // Read in batches
-    let batch_size = 1000u32;
-    let mut total_indexed = 0u32;
-    let mut offset = start_line;
-    let mut messages_batch: Vec<MessageInput> = Vec::new();
+    // Two-pass approach:
+    // Pass 1: Read all lines, parse into intermediate form, build uuid->timestamp map
+    // Pass 2: Finalize messages using the timestamp map for lookups (summary messages need this)
 
+    let batch_size = 1000u32;
+    let mut offset = start_line;
+    let mut intermediate_lines: Vec<IntermediateParsedLine> = Vec::new();
+    let mut uuid_to_timestamp: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut max_line = last_line;
+
+    // Pass 1: Read and parse all lines, build timestamp map
     loop {
         let result = jsonl_read_page(file_path.clone(), offset, batch_size)?;
 
@@ -367,28 +842,26 @@ pub async fn index_session_file(db_path: String, file_path: String) -> napi::Res
         }
 
         for line in &result.lines {
-            if let Some(parsed) = parse_jsonl_line(line) {
-                messages_batch.push(MessageInput {
-                    session_id: session_id.clone(),
-                    message_id: parsed.uuid,
-                    message_type: parsed.message_type.as_str().to_string(),
-                    role: parsed.role,
-                    content: parsed.content,
-                    tool_name: parsed.tool_name,
-                    tool_input: parsed.tool_input,
-                    tool_result: parsed.tool_result,
-                    timestamp: parsed.timestamp,
-                    line_number: line.line_number as i32,
-                });
+            if let Some(parsed) = parse_jsonl_line_intermediate(line) {
+                // Build uuid->timestamp map from messages with direct timestamps
+                if let Some(ref ts) = parsed.direct_timestamp {
+                    uuid_to_timestamp.insert(parsed.uuid.clone(), ts.clone());
+                }
+                // Also check for file-history-snapshot nested timestamps
+                if parsed.message_type == MessageType::FileHistorySnapshot {
+                    if let Some(ts) = parsed.json
+                        .get("snapshot")
+                        .and_then(|s| s.get("timestamp"))
+                        .and_then(|t| t.as_str())
+                    {
+                        uuid_to_timestamp.insert(parsed.uuid.clone(), ts.to_string());
+                    }
+                }
+                if line.line_number as i32 > max_line {
+                    max_line = line.line_number as i32;
+                }
+                intermediate_lines.push(parsed);
             }
-        }
-
-        // Insert batch every 100 messages
-        if messages_batch.len() >= 100 {
-            let count =
-                crud::insert_messages_batch(db, &session_id, std::mem::take(&mut messages_batch))
-                    .await?;
-            total_indexed += count;
         }
 
         offset = result.next_offset;
@@ -398,14 +871,102 @@ pub async fn index_session_file(db_path: String, file_path: String) -> napi::Res
         }
     }
 
-    // Insert remaining messages
+    // Pass 2: Finalize messages and insert in batches
+    // Also generate sentiment analysis events for user messages
+    let mut total_indexed = 0u32;
+    let mut messages_batch: Vec<MessageInput> = Vec::new();
+
+    for parsed in intermediate_lines {
+        let line_number = parsed.line_number;
+        if let Some(finalized) = finalize_parsed_message(parsed, &uuid_to_timestamp) {
+            // Check if this is a user message for sentiment analysis
+            let is_user_message = finalized.message_type == MessageType::User;
+            let message_content = finalized.content.clone();
+            let message_id = finalized.uuid.clone();
+            let message_timestamp = finalized.timestamp.clone();
+
+            messages_batch.push(MessageInput {
+                id: finalized.uuid,  // id IS the message UUID from JSONL
+                session_id: session_id.clone(),
+                message_type: finalized.message_type.as_str().to_string(),
+                role: finalized.role,
+                content: finalized.content,
+                tool_name: finalized.tool_name,
+                tool_input: finalized.tool_input,
+                tool_result: finalized.tool_result,
+                raw_json: Some(finalized.raw_json),
+                timestamp: finalized.timestamp,
+                line_number,
+            });
+
+            // Generate sentiment analysis event for user messages
+            if is_user_message {
+                if let Some(content) = &message_content {
+                    if let Some(sentiment_event) = generate_sentiment_event(
+                        &message_id,
+                        content,
+                        &message_timestamp,
+                        &session_id,
+                        line_number,
+                    ) {
+                        messages_batch.push(sentiment_event);
+                    }
+                }
+            }
+        }
+
+        // Insert batch every 100 messages
+        if messages_batch.len() >= 100 {
+            let count = crud::insert_messages_batch(&session_id, std::mem::take(&mut messages_batch))?;
+            total_indexed += count;
+        }
+    }
+
+    // Insert remaining Claude messages
     if !messages_batch.is_empty() {
-        let count = crud::insert_messages_batch(db, &session_id, messages_batch).await?;
+        let count = crud::insert_messages_batch(&session_id, std::mem::take(&mut messages_batch))?;
         total_indexed += count;
     }
 
+    // =========================================================================
+    // Han Events: Read and insert from -han.jsonl file
+    // =========================================================================
+    // Han events use line numbers offset by 1,000,000 to ensure they don't
+    // collide with Claude message line numbers. The UI should sort by timestamp.
+
+    if let Some(han_file) = get_han_events_path(path) {
+        let han_events = read_han_events(&han_file);
+
+        // Line numbers for Han events are offset to avoid collision
+        // The actual sorting should use timestamp in the UI
+        const HAN_LINE_OFFSET: i32 = 1_000_000;
+
+        for (idx, event) in han_events.into_iter().enumerate() {
+            let line_number = HAN_LINE_OFFSET + (idx as i32);
+            let message_input = han_event_to_message_input(event, &session_id, line_number);
+            messages_batch.push(message_input);
+
+            // Insert batch every 100 events
+            if messages_batch.len() >= 100 {
+                let count = crud::insert_messages_batch(&session_id, std::mem::take(&mut messages_batch))?;
+                total_indexed += count;
+            }
+        }
+
+        // Insert remaining Han events
+        if !messages_batch.is_empty() {
+            let count = crud::insert_messages_batch(&session_id, messages_batch)?;
+            total_indexed += count;
+        }
+    }
+
+    // Update last indexed line
+    if max_line > last_line {
+        crud::update_last_indexed_line(&session_id, max_line)?;
+    }
+
     // Get total message count
-    let total_messages = crud::get_message_count(db, &session_id).await?;
+    let total_messages = crud::get_message_count(&session_id)?;
 
     Ok(IndexResult {
         session_id,
@@ -416,27 +977,128 @@ pub async fn index_session_file(db_path: String, file_path: String) -> napi::Res
     })
 }
 
+/// Register a file in the session_files table
+/// Returns (session_id, file_type) if successful
+fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, String)>> {
+    let file_path_str = file_path.to_string_lossy().to_string();
+
+    match classify_file(file_path) {
+        SessionFileType::Main { session_id } => {
+            // Create session if needed
+            let project_slug = extract_project_slug(file_path);
+            let project_id = project_slug.as_ref().and_then(|slug| {
+                crud::get_project_by_slug(slug).ok().flatten().and_then(|p| p.id)
+            });
+
+            crud::upsert_session(crate::schema::SessionInput {
+                id: session_id.clone(),
+                project_id,
+                status: Some("active".to_string()),
+                transcript_path: Some(file_path_str.clone()),
+            })?;
+
+            // Register the file
+            crud::upsert_session_file(&session_id, "main", &file_path_str, None)?;
+            Ok(Some((session_id, "main".to_string())))
+        }
+        SessionFileType::Agent { agent_id } => {
+            // Get session ID from file content
+            if let Some(session_id) = extract_session_id_from_agent_file(file_path) {
+                // Ensure session exists
+                if crud::get_session(&session_id)?.is_none() {
+                    // Session doesn't exist yet - create a placeholder
+                    let project_slug = extract_project_slug(file_path);
+                    let project_id = project_slug.as_ref().and_then(|slug| {
+                        crud::get_project_by_slug(slug).ok().flatten().and_then(|p| p.id)
+                    });
+
+                    crud::upsert_session(crate::schema::SessionInput {
+                        id: session_id.clone(),
+                        project_id,
+                        status: Some("active".to_string()),
+                        transcript_path: None,
+                    })?;
+                }
+
+                // Register the agent file
+                crud::upsert_session_file(&session_id, "agent", &file_path_str, Some(&agent_id))?;
+                Ok(Some((session_id, "agent".to_string())))
+            } else {
+                // Can't determine session ID - skip this file
+                tracing::warn!("Could not extract session ID from agent file: {}", file_path_str);
+                Ok(None)
+            }
+        }
+        SessionFileType::HanEvents { session_id } => {
+            // Only register if session exists
+            if crud::get_session(&session_id)?.is_some() {
+                crud::upsert_session_file(&session_id, "han_events", &file_path_str, None)?;
+                Ok(Some((session_id, "han_events".to_string())))
+            } else {
+                // Session doesn't exist yet - skip
+                Ok(None)
+            }
+        }
+        SessionFileType::Unknown => Ok(None),
+    }
+}
+
 /// Index all JSONL files in a project directory
-pub async fn index_project_directory(db_path: String, project_dir: String) -> napi::Result<Vec<IndexResult>> {
+/// Phase 1: Register all files in session_files table
+/// Phase 2: Index messages from each file
+pub fn index_project_directory(project_dir: String) -> napi::Result<Vec<IndexResult>> {
     let dir = Path::new(&project_dir);
 
     if !dir.exists() || !dir.is_dir() {
         return Ok(Vec::new());
     }
 
-    let mut results = Vec::new();
-
-    // List all JSONL files
+    // Collect all JSONL files
     let entries = std::fs::read_dir(dir).map_err(|e| {
         napi::Error::from_reason(format!("Failed to read directory: {}", e))
     })?;
 
+    let mut main_files: Vec<std::path::PathBuf> = Vec::new();
+    let mut agent_files: Vec<std::path::PathBuf> = Vec::new();
+    let mut han_files: Vec<std::path::PathBuf> = Vec::new();
+
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-            let result = index_session_file(db_path.clone(), path.to_string_lossy().to_string()).await?;
-            results.push(result);
+            match classify_file(&path) {
+                SessionFileType::Main { .. } => main_files.push(path),
+                SessionFileType::Agent { .. } => agent_files.push(path),
+                SessionFileType::HanEvents { .. } => han_files.push(path),
+                SessionFileType::Unknown => {} // Skip unknown files
+            }
         }
+    }
+
+    // Phase 1: Register files in order (main first, then agents, then han events)
+    // This ensures sessions exist before agents/han files try to link to them
+    for path in &main_files {
+        let _ = register_session_file(path);
+    }
+    for path in &agent_files {
+        let _ = register_session_file(path);
+    }
+    for path in &han_files {
+        let _ = register_session_file(path);
+    }
+
+    // Phase 2: Index all files
+    let mut results = Vec::new();
+
+    // Index main session files (including their han events)
+    for path in &main_files {
+        let result = index_session_file(path.to_string_lossy().to_string())?;
+        results.push(result);
+    }
+
+    // Index agent files
+    for path in &agent_files {
+        let result = index_session_file(path.to_string_lossy().to_string())?;
+        results.push(result);
     }
 
     Ok(results)
@@ -444,27 +1106,43 @@ pub async fn index_project_directory(db_path: String, project_dir: String) -> na
 
 /// Handle a file event from the watcher
 /// This is called by the coordinator when JSONL files change
-pub async fn handle_file_event(
-    db_path: String,
+pub fn handle_file_event(
     event_type: FileEventType,
     file_path: String,
     session_id: Option<String>,
     _project_path: Option<String>,
 ) -> napi::Result<Option<IndexResult>> {
+    let path = Path::new(&file_path);
+    let filename = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+
     match event_type {
         FileEventType::Created | FileEventType::Modified => {
-            // Index the file
-            let result = index_session_file(db_path, file_path).await?;
+            // If this is a Han events file, find and index the main session file
+            if filename.ends_with("-han") {
+                // Get the main session file path by removing -han suffix
+                let session_id = extract_session_id(path);
+                if let Some(sid) = session_id {
+                    let parent = path.parent();
+                    if let Some(dir) = parent {
+                        let main_file = dir.join(format!("{}.jsonl", sid));
+                        if main_file.exists() {
+                            let result = index_session_file(main_file.to_string_lossy().to_string())?;
+                            return Ok(Some(result));
+                        }
+                    }
+                }
+                // Main file doesn't exist yet, skip
+                return Ok(None);
+            }
+
+            // Index the main session file (which also processes Han events)
+            let result = index_session_file(file_path)?;
             Ok(Some(result))
         }
         FileEventType::Removed => {
             // Optionally mark session as ended
             if let Some(sid) = session_id {
-                let guard = db::get_db_guard(&db_path).await?;
-                let db = guard.as_ref().ok_or_else(|| {
-                    napi::Error::from_reason("Database not initialized".to_string())
-                })?;
-                crud::end_session(db, &sid).await?;
+                crud::end_session(&sid)?;
             }
             Ok(None)
         }
@@ -473,7 +1151,7 @@ pub async fn handle_file_event(
 
 /// Perform a full scan and index of all Claude Code sessions
 /// This should be called on startup to ensure the database is in sync
-pub async fn full_scan_and_index(db_path: String) -> napi::Result<Vec<IndexResult>> {
+pub fn full_scan_and_index() -> napi::Result<Vec<IndexResult>> {
     // Get the default watch path (~/.claude/projects)
     let home = dirs::home_dir().ok_or_else(|| {
         napi::Error::from_reason("Could not determine home directory".to_string())
@@ -495,7 +1173,7 @@ pub async fn full_scan_and_index(db_path: String) -> napi::Result<Vec<IndexResul
         let path = entry.path();
         if path.is_dir() {
             // Index all JSONL files in this project directory
-            let project_results = index_project_directory(db_path.clone(), path.to_string_lossy().to_string()).await?;
+            let project_results = index_project_directory(path.to_string_lossy().to_string())?;
             results.extend(project_results);
         }
     }
@@ -542,17 +1220,64 @@ mod tests {
 
     #[test]
     fn test_decode_project_path() {
+        // Slugs have a leading dash that represents the root /
         assert_eq!(
-            decode_project_path("Volumes-dev-src-github-com-user-project"),
+            decode_project_path("-Volumes-dev-src-github-com-user-project"),
             "/Volumes/dev/src/github/com/user/project"
         );
     }
 
     #[test]
     fn test_message_type_parsing() {
-        assert_eq!(MessageType::from_str("human"), MessageType::Human);
+        assert_eq!(MessageType::from_str("user"), MessageType::User);
         assert_eq!(MessageType::from_str("assistant"), MessageType::Assistant);
         assert_eq!(MessageType::from_str("tool_use"), MessageType::ToolUse);
+        assert_eq!(MessageType::from_str("file-history-snapshot"), MessageType::FileHistorySnapshot);
+        assert_eq!(MessageType::from_str("han_event"), MessageType::HanEvent);
         assert_eq!(MessageType::from_str("unknown_type"), MessageType::Unknown);
+    }
+
+    #[test]
+    fn test_extract_session_id_han_file() {
+        // Test Han events file extraction
+        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678-han.jsonl");
+        assert_eq!(
+            extract_session_id(path),
+            Some("abc12345-1234-5678-9abc-def012345678".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_han_event_line() {
+        let line = JsonlLine {
+            line_number: 1,
+            byte_offset: 0,
+            content: r#"{"id":"evt_abc123","type":"hook_run","timestamp":"2024-01-01T00:00:00Z","data":{"plugin":"test","hook":"lint"}}"#.to_string(),
+        };
+
+        let parsed = parse_han_event_line(&line).unwrap();
+        assert_eq!(parsed.id, "evt_abc123");
+        assert_eq!(parsed.event_type, "hook_run");
+        assert_eq!(parsed.timestamp, "2024-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_han_event_to_message_input() {
+        let event = ParsedHanEvent {
+            id: "evt_abc123".to_string(),
+            event_type: "hook_result".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            data: serde_json::json!({"plugin": "jutsu-biome", "hook": "lint", "exit_code": 0, "success": true}),
+            raw_json: r#"{"id":"evt_abc123","type":"hook_result","timestamp":"2024-01-01T00:00:00Z"}"#.to_string(),
+        };
+
+        let msg = han_event_to_message_input(event, "session-123", 1000001);
+
+        assert_eq!(msg.id, "evt_abc123");
+        assert_eq!(msg.session_id, "session-123");
+        assert_eq!(msg.message_type, "han_event");
+        assert_eq!(msg.tool_name, Some("hook_result".to_string()));
+        assert_eq!(msg.line_number, 1000001);
+        assert!(msg.role.is_none());
     }
 }
