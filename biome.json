@@ -16,7 +16,8 @@
       "!**/out",
       "!**/node_modules",
       "!**/dist",
-      "!**/.browse-out"
+      "!**/.browse-out",
+      "!**/__generated__"
     ],
     "ignoreUnknown": true
   },

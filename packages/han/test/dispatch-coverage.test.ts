@@ -13,17 +13,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, "..");
 
-// Counter for unique test directories
-let testCounter = 0;
-
 describe("dispatch.ts coverage tests", () => {
-	let testDir: string;
+	const testDir = `/tmp/test-dispatch-coverage-${Date.now()}`;
 	let configDir: string;
 	let projectDir: string;
 
 	beforeEach(() => {
-		testCounter++;
-		testDir = `/tmp/test-dispatch-coverage-${Date.now()}-${testCounter}`;
 		configDir = join(testDir, "config");
 		projectDir = join(testDir, "project");
 
@@ -32,11 +27,7 @@ describe("dispatch.ts coverage tests", () => {
 	});
 
 	afterEach(() => {
-		try {
-			rmSync(testDir, { recursive: true, force: true });
-		} catch {
-			// Ignore cleanup errors
-		}
+		rmSync(testDir, { recursive: true, force: true });
 	});
 
 	describe("HAN_DISABLE_HOOKS early exit", () => {
@@ -227,97 +218,89 @@ describe("dispatch.ts coverage tests", () => {
 				expect(result.status).toBe(0);
 				expect(result.stdout).toContain("Root level hooks");
 			},
-			{ timeout: 10000 },
-		);
-
-		test(
-			"handles invalid hooks.json gracefully (line 477-479)",
-			() => {
-				writeFileSync(join(configDir, "hooks.json"), "{ invalid json }");
-
-				const result = spawnSync(
-					"bun",
-					[
-						"run",
-						join(packageRoot, "lib/main.ts"),
-						"hook",
-						"dispatch",
-						"SessionStart",
-						"--all",
-					],
-					{
-						encoding: "utf-8",
-						timeout: 10000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
-						},
-					},
-				);
-
-				// Should not crash, just skip the invalid file
-				expect(result.status).toBe(0);
-			},
 			{ timeout: 15000 },
 		);
 
-		test(
-			"skips non-command hooks (line 414-415, 458-459)",
-			() => {
-				const settings = {
-					hooks: {
-						SessionStart: [
-							{
-								hooks: [
-									{
-										type: "prompt",
-										prompt: "This is a prompt hook, should be skipped",
-									},
-									{
-										type: "command",
-										command: "echo 'Command hook executed'",
-									},
-								],
-							},
-						],
+		test("handles invalid hooks.json gracefully (line 477-479)", () => {
+			writeFileSync(join(configDir, "hooks.json"), "{ invalid json }");
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					join(packageRoot, "lib/main.ts"),
+					"hook",
+					"dispatch",
+					"SessionStart",
+					"--all",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 10000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
 					},
-				};
+				},
+			);
 
-				writeFileSync(
-					join(configDir, "settings.json"),
-					JSON.stringify(settings, null, 2),
-				);
+			// Should not crash, just skip the invalid file
+			expect(result.status).toBe(0);
+		});
 
-				const result = spawnSync(
-					"bun",
-					[
-						"run",
-						join(packageRoot, "lib/main.ts"),
-						"hook",
-						"dispatch",
-						"SessionStart",
-						"--all",
-					],
-					{
-						encoding: "utf-8",
-						timeout: 15000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
+		test("skips non-command hooks (line 414-415, 458-459)", () => {
+			const settings = {
+				hooks: {
+					SessionStart: [
+						{
+							hooks: [
+								{
+									type: "prompt",
+									prompt: "This is a prompt hook, should be skipped",
+								},
+								{
+									type: "command",
+									command: "echo 'Command hook executed'",
+								},
+							],
 						},
-					},
-				);
+					],
+				},
+			};
 
-				expect(result.status).toBe(0);
-				expect(result.stdout).toContain("Command hook executed");
-				expect(result.stdout).not.toContain("prompt hook");
-			},
-			{ timeout: 20000 },
-		);
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					join(packageRoot, "lib/main.ts"),
+					"hook",
+					"dispatch",
+					"SessionStart",
+					"--all",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 15000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("Command hook executed");
+			expect(result.stdout).not.toContain("prompt hook");
+		}, { timeout: 15000 });
 	});
 
 	describe("plugin hooks dispatch (lines 566-602)", () => {
@@ -441,182 +424,170 @@ describe("dispatch.ts coverage tests", () => {
 			expect(result.status).toBe(0);
 		});
 
-		test(
-			"derives hook name from command (line 585)",
-			() => {
-				mkdirSync(join(projectDir, ".claude-plugin"), { recursive: true });
-				writeFileSync(
-					join(projectDir, ".claude-plugin", "marketplace.json"),
-					JSON.stringify({ name: "test" }),
-				);
+		test("derives hook name from command (line 585)", () => {
+			mkdirSync(join(projectDir, ".claude-plugin"), { recursive: true });
+			writeFileSync(
+				join(projectDir, ".claude-plugin", "marketplace.json"),
+				JSON.stringify({ name: "test" }),
+			);
 
-				const pluginPath = join(projectDir, "jutsu", "jutsu-named");
-				const hooksDir = join(pluginPath, "hooks");
-				mkdirSync(hooksDir, { recursive: true });
+			const pluginPath = join(projectDir, "jutsu", "jutsu-named");
+			const hooksDir = join(pluginPath, "hooks");
+			mkdirSync(hooksDir, { recursive: true });
 
-				const hooksConfig = {
-					hooks: {
-						Stop: [
-							{
-								hooks: [
-									{
-										type: "command",
-										command: "cat hooks/custom-hook-name.md",
-									},
-								],
-							},
-						],
-					},
-				};
-
-				writeFileSync(
-					join(hooksDir, "hooks.json"),
-					JSON.stringify(hooksConfig, null, 2),
-				);
-
-				// Create the hook file so command doesn't fail
-				writeFileSync(join(hooksDir, "custom-hook-name.md"), "Hook content");
-
-				const settings = {
-					mcpServers: {},
-					enabledPlugins: {
-						"jutsu-named@test": true,
-					},
-				};
-
-				writeFileSync(
-					join(configDir, "settings.json"),
-					JSON.stringify(settings, null, 2),
-				);
-
-				const result = spawnSync(
-					"bun",
-					["run", join(packageRoot, "lib/main.ts"), "hook", "dispatch", "Stop"],
-					{
-						encoding: "utf-8",
-						timeout: 15000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
+			const hooksConfig = {
+				hooks: {
+					Stop: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command: "cat hooks/custom-hook-name.md",
+								},
+							],
 						},
-					},
-				);
+					],
+				},
+			};
 
-				expect([0, undefined]).toContain(result.status ?? undefined);
-			},
-			{ timeout: 20000 },
-		);
+			writeFileSync(
+				join(hooksDir, "hooks.json"),
+				JSON.stringify(hooksConfig, null, 2),
+			);
+
+			// Create the hook file so command doesn't fail
+			writeFileSync(join(hooksDir, "custom-hook-name.md"), "Hook content");
+
+			const settings = {
+				mcpServers: {},
+				enabledPlugins: {
+					"jutsu-named@test": true,
+				},
+			};
+
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
+
+			const result = spawnSync(
+				"bun",
+				["run", join(packageRoot, "lib/main.ts"), "hook", "dispatch", "Stop"],
+				{
+					encoding: "utf-8",
+					timeout: 15000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			expect([0, undefined]).toContain(result.status ?? undefined);
+		});
 	});
 
 	describe("command execution (lines 237-343)", () => {
-		test(
-			"executes command and returns output (line 276-302)",
-			() => {
-				const settings = {
-					hooks: {
-						SessionStart: [
-							{
-								hooks: [
-									{
-										type: "command",
-										command: "echo 'Command output'",
-									},
-								],
-							},
-						],
-					},
-				};
-
-				writeFileSync(
-					join(configDir, "settings.json"),
-					JSON.stringify(settings, null, 2),
-				);
-
-				const result = spawnSync(
-					"bun",
-					[
-						"run",
-						join(packageRoot, "lib/main.ts"),
-						"hook",
-						"dispatch",
-						"SessionStart",
-						"--all",
-					],
-					{
-						encoding: "utf-8",
-						timeout: 15000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
+		test("executes command and returns output (line 276-302)", () => {
+			const settings = {
+				hooks: {
+					SessionStart: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command: "echo 'Command output'",
+								},
+							],
 						},
-					},
-				);
-
-				expect(result.status).toBe(0);
-				expect(result.stdout).toContain("Command output");
-			},
-			{ timeout: 20000 },
-		);
-
-		test(
-			"handles command failure gracefully (line 322-344)",
-			() => {
-				const settings = {
-					hooks: {
-						Stop: [
-							{
-								hooks: [
-									{
-										type: "command",
-										command: "exit 1",
-									},
-									{
-										type: "command",
-										command: "echo 'After failure'",
-									},
-								],
-							},
-						],
-					},
-				};
-
-				writeFileSync(
-					join(configDir, "settings.json"),
-					JSON.stringify(settings, null, 2),
-				);
-
-				const result = spawnSync(
-					"bun",
-					[
-						"run",
-						join(packageRoot, "lib/main.ts"),
-						"hook",
-						"dispatch",
-						"Stop",
-						"--all",
 					],
-					{
-						encoding: "utf-8",
-						timeout: 15000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
-						},
-					},
-				);
+				},
+			};
 
-				// Should continue after failure
-				expect(result.status).toBe(0);
-				expect(result.stdout).toContain("After failure");
-			},
-			{ timeout: 20000 },
-		);
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					join(packageRoot, "lib/main.ts"),
+					"hook",
+					"dispatch",
+					"SessionStart",
+					"--all",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 15000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("Command output");
+		});
+
+		test("handles command failure gracefully (line 322-344)", () => {
+			const settings = {
+				hooks: {
+					Stop: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command: "exit 1",
+								},
+								{
+									type: "command",
+									command: "echo 'After failure'",
+								},
+							],
+						},
+					],
+				},
+			};
+
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					join(packageRoot, "lib/main.ts"),
+					"hook",
+					"dispatch",
+					"Stop",
+					"--all",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 15000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			// Should continue after failure
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("After failure");
+		});
 
 		test("replaces CLAUDE_PLUGIN_ROOT in command (line 250-253)", () => {
 			mkdirSync(join(projectDir, ".claude-plugin"), { recursive: true });
@@ -791,63 +762,59 @@ describe("dispatch.ts coverage tests", () => {
 	});
 
 	describe("output aggregation (lines 604-607)", () => {
-		test(
-			"aggregates multiple hook outputs with double newline",
-			() => {
-				const settings = {
-					hooks: {
-						SessionStart: [
-							{
-								hooks: [
-									{
-										type: "command",
-										command: "echo 'First hook'",
-									},
-									{
-										type: "command",
-										command: "echo 'Second hook'",
-									},
-								],
-							},
-						],
-					},
-				};
-
-				writeFileSync(
-					join(configDir, "settings.json"),
-					JSON.stringify(settings, null, 2),
-				);
-
-				const result = spawnSync(
-					"bun",
-					[
-						"run",
-						join(packageRoot, "lib/main.ts"),
-						"hook",
-						"dispatch",
-						"SessionStart",
-						"--all",
-					],
-					{
-						encoding: "utf-8",
-						timeout: 15000,
-						cwd: projectDir,
-						env: {
-							...process.env,
-							CLAUDE_CONFIG_DIR: configDir,
-							HOME: testDir,
+		test("aggregates multiple hook outputs with double newline", () => {
+			const settings = {
+				hooks: {
+					SessionStart: [
+						{
+							hooks: [
+								{
+									type: "command",
+									command: "echo 'First hook'",
+								},
+								{
+									type: "command",
+									command: "echo 'Second hook'",
+								},
+							],
 						},
-					},
-				);
+					],
+				},
+			};
 
-				expect(result.status).toBe(0);
-				expect(result.stdout).toContain("First hook");
-				expect(result.stdout).toContain("Second hook");
-				// Outputs should be separated by double newline
-				expect(result.stdout).toContain("\n\n");
-			},
-			{ timeout: 20000 },
-		);
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify(settings, null, 2),
+			);
+
+			const result = spawnSync(
+				"bun",
+				[
+					"run",
+					join(packageRoot, "lib/main.ts"),
+					"hook",
+					"dispatch",
+					"SessionStart",
+					"--all",
+				],
+				{
+					encoding: "utf-8",
+					timeout: 15000,
+					cwd: projectDir,
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("First hook");
+			expect(result.stdout).toContain("Second hook");
+			// Outputs should be separated by double newline
+			expect(result.stdout).toContain("\n\n");
+		});
 	});
 
 	describe("empty execution scenarios", () => {

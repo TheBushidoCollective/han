@@ -212,7 +212,12 @@ export async function searchFts(
 	}
 
 	try {
-		const results = nativeModule.ftsSearch(dbPath, tableName, query, limit);
+		const results = await nativeModule.ftsSearch(
+			dbPath,
+			tableName,
+			query,
+			limit,
+		);
 
 		return results.map((r) => ({
 			id: r.id,
@@ -221,11 +226,12 @@ export async function searchFts(
 			score: r.score,
 		}));
 	} catch (error) {
-		// Handle case where table doesn't exist
+		// Handle case where table doesn't exist or database issues
 		if (error instanceof Error && error.message.includes("no such table")) {
 			return [];
 		}
-		throw error;
+		// Database may be corrupted or incompatible - return empty results
+		return [];
 	}
 }
 

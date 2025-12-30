@@ -92,6 +92,15 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han memory capture",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SubagentStart": [

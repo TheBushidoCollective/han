@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2025-12-23
+
+### Added
+
+- add bash output capture instruction ([a99c803f](../../commit/a99c803f))
+
+### Fixed
+
+- cross-compile Windows builds from Linux too ([7d72ab5d](../../commit/7d72ab5d))
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
+### Other
+
+- add comprehensive tests for critical untested systems ([23b61742](../../commit/23b61742))
+- fix duplicate word in Discord link ([b7f9790c](../../commit/b7f9790c))
+
 ## [1.7.0] - 2025-12-23
 
 ### Added
