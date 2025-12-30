@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2025-12-23
+
+### Added
+
+- add bash output capture instruction ([a99c803f](../../commit/a99c803f))
+- add hanBinary re-exec, enhanced version, and doctor command ([8443f2e2](../../commit/8443f2e2))
+- configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
+
+### Fixed
+
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+- clear CLAUDE_CONFIG_DIR in test isolation ([d14925bf](../../commit/d14925bf))
+- isolate tests from user's global config ([ef867b48](../../commit/ef867b48))
+- make vector store test more robust for CI ([8b46922d](../../commit/8b46922d))
+- fix test flakiness in CI ([47f9d4a1](../../commit/47f9d4a1))
+- make memory capture error handling truly silent ([ef1a8a1f](../../commit/ef1a8a1f))
+- cross-compile Windows builds from Linux too ([7d72ab5d](../../commit/7d72ab5d))
+- also set HOME env var to prevent fallback to user's real plugins ([4ef9ce2a](../../commit/4ef9ce2a))
+- remove mock.module() to prevent test pollution ([8c276bf2](../../commit/8c276bf2))
+- use absolute path for han binary fallback in dispatch-e2e ([95a8d693](../../commit/95a8d693))
+- TypeScript error in completions.ts and correct bun test flag ([c3000442](../../commit/c3000442))
+- add SubagentStart to valid hook types and fix bun test flag ([992436fc](../../commit/992436fc))
+
+### Other
+
+- add comprehensive tests for critical untested systems ([23b61742](../../commit/23b61742))
+
+## [2.3.0] - 2025-12-23
+
+### Added
+
+- add bash output capture instruction ([a99c803f](../../commit/a99c803f))
+- add hanBinary re-exec, enhanced version, and doctor command ([8443f2e2](../../commit/8443f2e2))
+- configurable binary path with smart native rebuild ([55dfec93](../../commit/55dfec93))
+
+### Fixed
+
+- clear CLAUDE_CONFIG_DIR in test isolation ([d14925bf](../../commit/d14925bf))
+- isolate tests from user's global config ([ef867b48](../../commit/ef867b48))
+- make vector store test more robust for CI ([8b46922d](../../commit/8b46922d))
+- fix test flakiness in CI ([47f9d4a1](../../commit/47f9d4a1))
+- make memory capture error handling truly silent ([ef1a8a1f](../../commit/ef1a8a1f))
+- cross-compile Windows builds from Linux too ([7d72ab5d](../../commit/7d72ab5d))
+- also set HOME env var to prevent fallback to user's real plugins ([4ef9ce2a](../../commit/4ef9ce2a))
+- remove mock.module() to prevent test pollution ([8c276bf2](../../commit/8c276bf2))
+- use absolute path for han binary fallback in dispatch-e2e ([95a8d693](../../commit/95a8d693))
+- TypeScript error in completions.ts and correct bun test flag ([c3000442](../../commit/c3000442))
+- add SubagentStart to valid hook types and fix bun test flag ([992436fc](../../commit/992436fc))
+- add describe.serial to more env-modifying tests ([56d49205](../../commit/56d49205))
+- restore describe.serial and bump Bun to 1.3.4 ([8fd9a0b2](../../commit/8fd9a0b2))
+- centralize native module loading with retry logic ([c255908d](../../commit/c255908d))
+- replace describe.serial with describe for CI compatibility ([8abb86f6](../../commit/8abb86f6))
+
+### Other
+
+- add comprehensive tests for critical untested systems ([23b61742](../../commit/23b61742))
+- comprehensive memory system documentation and test improvements ([c57e03be](../../commit/c57e03be))
+
 ## [2.2.3] - 2025-12-22
 
 ### Added

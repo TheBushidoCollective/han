@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-12-24
+
+### Fixed
+
+- restore memory configs in hashi plugins ([1a4c3a43](../../commit/1a4c3a43))
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
+### Other
+
+- Merge pull request #24 from TheBushidoCollective/refactor/remove-prompt-hooks ([4284b64e](../../commit/4284b64e))
+- Merge pull request #23 from TheBushidoCollective/refactor/remove-prompt-hooks ([ce59ff80](../../commit/ce59ff80))
+
+## [1.2.2] - 2025-12-23
+
+### Fixed
+
+- address test failures from prompt hook removal ([dcf0e0c3](../../commit/dcf0e0c3))
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
+### Other
+
+- Merge pull request #23 from TheBushidoCollective/refactor/remove-prompt-hooks ([ce59ff80](../../commit/ce59ff80))
+
+## [1.2.2] - 2025-12-23
+
+### Changed
+
+- remove all prompt hooks ([01227fef](../../commit/01227fef))
+
 ## [1.2.1] - 2025-12-15
 
 ### Other
