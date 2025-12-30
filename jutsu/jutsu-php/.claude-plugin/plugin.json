@@ -9,5 +9,14 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["php", "composer", "security", "web"]
+  "keywords": ["php", "composer", "security", "web"],
+  "lspServers": {
+    "intelephense": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".php": "php"
+      }
+    }
+  }
 }

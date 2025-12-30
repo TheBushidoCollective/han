@@ -17,12 +17,5 @@
     "implementation-docs",
     "architecture",
     "server"
-  ],
-  "mcpServers": {
-    "blueprints": {
-      "command": "han",
-      "args": ["mcp", "blueprints"],
-      "env": {}
-    }
-  }
+  ]
 }

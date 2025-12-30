@@ -9,5 +9,21 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["angular", "rxjs", "signals"]
+  "keywords": ["angular", "rxjs", "signals"],
+  "lspServers": {
+    "angular": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/angular-lsp-entrypoint.sh",
+      "args": [
+        "--stdio",
+        "--tsProbeLocations",
+        "node_modules",
+        "--ngProbeLocations",
+        "node_modules"
+      ],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".html": "html"
+      }
+    }
+  }
 }

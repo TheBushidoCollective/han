@@ -9,5 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["java", "streams", "concurrency"]
+  "keywords": ["java", "streams", "concurrency"],
+  "lspServers": {
+    "jdtls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".java": "java"
+      },
+      "startupTimeout": 120000
+    }
+  }
 }

@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "shfmt -d ."
+    command: "shfmt -d ${HAN_FILES}"
     dirs_with:
       - ".shfmt.toml"
       - "shfmt.toml"

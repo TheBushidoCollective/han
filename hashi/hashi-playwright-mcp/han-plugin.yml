@@ -2,21 +2,22 @@
 # This plugin provides Playwright browser automation via MCP server
 
 # MCP server definition (managed by Han, not exposed to Claude Code)
-mcp:
-  name: playwright
-  description: Playwright browser automation for testing and UI interaction
-  command: npx
-  args:
-    - "-y"
-    - "@playwright/mcp@latest"
-  env: {}
-  capabilities:
-    - category: Testing/Automation
-      summary: Browser automation, screenshots, page interaction
-      examples:
-        - Navigate to a URL and take a screenshot
-        - Fill out a form and submit it
-        - Debug a failing UI test
+mcp_servers:
+  playwright:
+    name: playwright
+    description: Playwright browser automation for testing and UI interaction
+    command: npx
+    args:
+      - "-y"
+      - "@playwright/mcp@latest"
+    env: {}
+    capabilities:
+      - category: Testing/Automation
+        summary: Browser automation, screenshots, page interaction
+        examples:
+          - Navigate to a URL and take a screenshot
+          - Fill out a form and submit it
+          - Debug a failing UI test
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

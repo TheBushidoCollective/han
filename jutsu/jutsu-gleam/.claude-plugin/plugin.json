@@ -9,5 +9,14 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["gleam", "beam", "functional", "erlang"]
+  "keywords": ["gleam", "beam", "functional", "erlang"],
+  "lspServers": {
+    "gleam": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["lsp"],
+      "extensionToLanguage": {
+        ".gleam": "gleam"
+      }
+    }
+  }
 }

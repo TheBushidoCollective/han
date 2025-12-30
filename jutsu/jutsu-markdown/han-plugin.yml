@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "npx -y markdownlint-cli --fix . --ignore node_modules"
+    command: "npx -y markdownlint-cli --fix --ignore node_modules ${HAN_FILES}"
     dirs_with:
       - "'.markdownlint.*'"
     if_changed:

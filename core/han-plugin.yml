@@ -1,0 +1,38 @@
+# core plugin configuration
+# The main Han MCP server is defined in plugin.json (must be visible to Claude Code)
+# context7 and deepwiki are exposed through Han's tool proxying
+
+# MCP servers - used by MCP orchestrator AND available to memory system
+mcp_servers:
+  context7:
+    name: context7
+    description: Fetch up-to-date documentation and code examples for any library
+    command: npx
+    args: ["-y", "@upstash/context7-mcp"]
+    expose: true
+  deepwiki:
+    name: deepwiki
+    description: Access DeepWiki for GitHub repository documentation
+    type: http
+    url: https://mcp.deepwiki.com/mcp
+    expose: true
+  memory-dal:
+    name: memory-dal
+    description: Han internal memory database with FTS and vector search
+    command: han
+    args: ["mcp", "memory"]
+
+# No additional hooks - core hooks are in hooks/hooks.json
+hooks: {}
+
+# Memory provider config - defines which tools the Memory Agent can use
+memory:
+  allowed_tools:
+    - mcp__memory-dal__memory_search_fts
+    - mcp__memory-dal__memory_search_vector
+    - mcp__memory-dal__memory_search_hybrid
+    - mcp__memory-dal__memory_list_layers
+  system_prompt: |
+    Search the internal Han memory database for relevant information.
+    Use memory_search_hybrid for best results (combines keyword + semantic search).
+    The database contains indexed transcripts, summaries, and team memory.

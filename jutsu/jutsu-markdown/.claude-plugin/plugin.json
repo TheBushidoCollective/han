@@ -15,5 +15,15 @@
     "documentation",
     "linting",
     "formatting"
-  ]
+  ],
+  "lspServers": {
+    "markdown": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".md": "markdown",
+        ".mdx": "markdown"
+      }
+    }
+  }
 }

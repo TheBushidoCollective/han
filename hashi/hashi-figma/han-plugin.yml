@@ -1,6 +1,21 @@
 # hashi-figma plugin configuration
 # This plugin provides Figma integration via MCP server
 
+# MCP server definition (managed by Han, not exposed to Claude Code)
+mcp_servers:
+  figma-desktop:
+    name: figma-desktop
+    description: Figma design-to-code workflows via desktop app
+    type: http
+    url: http://127.0.0.1:3845/mcp
+    capabilities:
+      - category: Design
+        summary: Design file access, component extraction, design system integration
+        examples:
+          - List Figma files in a project
+          - Get design components and styles
+          - Read design comments and feedback
+
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
 

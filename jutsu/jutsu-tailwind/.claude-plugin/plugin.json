@@ -17,5 +17,18 @@
     "styling",
     "validation",
     "quality"
-  ]
+  ],
+  "lspServers": {
+    "tailwindcss": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".css": "css",
+        ".html": "html",
+        ".jsx": "javascriptreact",
+        ".tsx": "typescriptreact",
+        ".vue": "vue"
+      }
+    }
+  }
 }

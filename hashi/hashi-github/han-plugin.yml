@@ -1,21 +1,47 @@
 # hashi-github plugin configuration
 # This plugin provides GitHub integration via MCP server
 
+# MCP server definition (managed by Han, not exposed to Claude Code)
+mcp_servers:
+  github:
+    name: github
+    description: GitHub integration for repository management, issues, PRs, and code search
+    command: sh
+    args:
+      - -c
+      - GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
+    env: {}
+    capabilities:
+      - category: Git/GitHub
+        summary: Create branches, commits, PRs, manage issues, code search
+        examples:
+          - Create a PR with the current changes
+          - Search for issues mentioning authentication
+          - List open pull requests in this repo
+          - Create a new issue for the bug
+
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
 
 # Memory provider for team memory extraction
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
+  # MCP server for memory-only use (spawned by Memory Agent)
+  mcp_servers:
+    github:
+      name: github
+      command: sh
+      args:
+        - -c
+        - GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
   allowed_tools:
-    - mcp__plugin_hashi-github_github__list_pull_requests
-    - mcp__plugin_hashi-github_github__pull_request_read
-    - mcp__plugin_hashi-github_github__list_issues
+    - mcp__github__list_pull_requests
+    - mcp__github__get_pull_request
+    - mcp__github__list_issues
+    - mcp__github__get_issue
+    - mcp__github__search_issues
   system_prompt: |
-    Extract observations from GitHub PRs and issues. For each item, capture:
-    - author: GitHub username
-    - timestamp: when created/merged
-    - summary: title and key points from description
-    - files: list of files changed (for PRs)
-    - type: 'pr', 'review', or 'issue'
-    Return as JSON array of observations.
+    Search GitHub for PRs and issues relevant to the query.
+    Use search_issues to find issues by keywords.
+    Use list_pull_requests and list_issues to get recent activity.
+    Return relevant findings with author, title, and key details.

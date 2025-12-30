@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "bundle exec rubocop"
+    command: "bundle exec rubocop ${HAN_FILES}"
     dirs_with:
       - "Gemfile"
     dir_test: "grep -qE '^\\s*gem.*rubocop' Gemfile"

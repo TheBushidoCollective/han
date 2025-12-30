@@ -1,0 +1,40 @@
+# hashi-reddit plugin configuration
+# This plugin provides Reddit integration via MCP server
+
+# MCP server definition (managed by Han, accessed dynamically via han_workflow)
+mcp_servers:
+  reddit:
+    name: reddit
+    description: Reddit content fetching for frontpage, subreddits, posts, and comments
+    command: uvx
+    args:
+      - mcp-server-reddit
+    env: {}
+    capabilities:
+      - category: Social Media/Content
+        summary: Fetch Reddit posts, subreddit info, and comments
+        examples:
+          - Get hot posts from r/ClaudeAI
+          - Research what the programming subreddit is discussing
+          - Find top posts about a topic this week
+          - Read comments on a specific post
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction from Reddit
+# Convention: provider name = plugin name
+memory:
+  allowed_tools:
+    - mcp__reddit__get_frontpage_posts
+    - mcp__reddit__get_subreddit_info
+    - mcp__reddit__get_subreddit_hot_posts
+    - mcp__reddit__get_subreddit_top_posts
+    - mcp__reddit__get_post_content
+    - mcp__reddit__get_post_comments
+  system_prompt: |
+    Search Reddit for posts and discussions relevant to the query.
+    Use get_subreddit_hot_posts to find current discussions.
+    Use get_subreddit_top_posts with time filters for popular content.
+    Use get_post_comments to understand community sentiment.
+    Return relevant findings with post titles, subreddits, and key insights.

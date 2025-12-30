@@ -9,5 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["graphql", "api", "schema"]
+  "keywords": ["graphql", "api", "schema"],
+  "lspServers": {
+    "graphql": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["server", "-m", "stream"],
+      "extensionToLanguage": {
+        ".graphql": "graphql",
+        ".gql": "graphql"
+      }
+    }
+  }
 }

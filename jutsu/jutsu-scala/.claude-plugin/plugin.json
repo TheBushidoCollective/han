@@ -9,5 +9,16 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["scala", "functional", "jvm", "type-system"]
+  "keywords": ["scala", "functional", "jvm", "type-system"],
+  "lspServers": {
+    "metals": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".scala": "scala",
+        ".sc": "scala",
+        ".sbt": "sbt"
+      }
+    }
+  }
 }

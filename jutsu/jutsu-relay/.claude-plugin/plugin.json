@@ -9,5 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["relay", "graphql", "react", "fragments"]
+  "keywords": ["relay", "graphql", "react", "fragments"],
+  "lspServers": {
+    "relay": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".graphql": "graphql",
+        ".gql": "graphql"
+      }
+    }
+  }
 }
