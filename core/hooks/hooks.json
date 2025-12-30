@@ -6,6 +6,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "han hook session-id"
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/install-han-binary.sh\""
           },
           {
@@ -19,32 +23,22 @@
           {
             "type": "command",
             "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/metrics-tracking.md\""
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "# Review Task Alignment\n\nYou are evaluating whether Claude's work aligns with the user's original request.\n\n## Context\n\n$ARGUMENTS\n\n## Review Checklist\n\n1. **Original Intent**: Does the most recent work align with the user's initial request or the established goal?\n\n2. **Scope Adherence**: Have we stayed within the original scope, or have we drifted into tangential work?\n\n3. **User Expectations**: Does the current state match what the user asked for in their most recent prompt?\n\n4. **Completion Status**: If the original task is incomplete, acknowledge what remains to be done.\n\n## Decision Criteria\n\n**Approve** if work aligns with original request\n**Block** if work has significantly drifted from user's intent\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"your explanation\", \"systemMessage\": \"✓ Task alignment verified\" or \"⚠️ Task drift detected\"}",
-            "timeout": 300
           },
           {
-            "type": "prompt",
-            "prompt": "# Professional Honesty Verification\n\nYou are evaluating whether Claude followed professional honesty principles in this conversation.\n\n## Context\n\n$ARGUMENTS\n\n## Step 1: Meta-Check - Did You Read Required Files?\n\n**CRITICAL QUESTION: Were you asked to read files via <must-read-first> tags in system-reminder blocks?**\n\nCheck your context for system-reminder tags containing:\n- `<must-read-first reason=\"epistemic rigor and professional honesty\">...professional-honesty.md</must-read-first>`\n- Any other `<must-read-first>` tags\n\n**If you saw these tags but did NOT actually read the files before responding:**\n- Return `{\"decision\": \"block\", \"reason\": \"Failed to read required files before responding\"}`\n\n**If you saw these tags and DID read them, proceed to Step 2.**\n\n## Step 2: Analyze Your Response\n\nReview your most recent response. Check for violations:\n\n**HIGH CONFIDENCE VIOLATIONS - Auto-block:**\n\n- Used forbidden phrases without verification evidence:\n  - \"You're absolutely right\"\n  - \"That's correct\" \n  - \"Indeed\"\n  - \"Exactly\"\n  - \"That makes sense\"\n- Accepted user claims about code/bugs/performance without verification\n- Started implementation based on unverified user description\n- No tool usage (Read/Grep/Bash) before agreeing with verifiable claims\n\n**ACCEPTABLE - Approve:**\n\n- Said \"Let me verify/check/investigate...\" before proceeding\n- Used Read/Grep/Bash to verify claims\n- Asked clarifying questions instead of assuming\n- No verifiable claims were made (preferences, new features, conversation)\n\n## Step 3: Respond with JSON\n\n**If you violated ANY principle:**\n\n{\"decision\": \"block\", \"reason\": \"Brief explanation of violation\", \"systemMessage\": \"⚠️ Professional honesty violation detected\"}\n\n**If you followed all principles:**\n\n{\"decision\": \"approve\", \"reason\": \"Read required files and followed all professional honesty principles\", \"systemMessage\": \"✓ Professional honesty verified\"}\n\n**CRITICAL: Be honest. If you didn't read required files OR didn't verify user claims, you MUST return decision: \"block\".**",
-            "timeout": 300
+            "type": "command",
+            "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
           },
           {
-            "type": "prompt",
-            "prompt": "# Detect Spinning Wheels\n\nYou are detecting if Claude is stuck in a loop, making things worse instead of better.\n\n## Context\n\n$ARGUMENTS\n\n## Analysis\n\nCheck if Claude is:\n1. Repeatedly attempting the same fix (3+ times)\n2. Making things worse instead of better\n3. Stuck in a loop without progress\n4. Same error appearing despite multiple \"fixes\"\n\n## Decision Criteria\n\n**Use continue:false (Hard Stop) if confidence ≥90% Claude is stuck:**\n\nPatterns:\n- Same failure 3+ times\n- Introduced new bugs while fixing original\n- No meaningful progress in 3+ attempts\n- User intervention clearly needed\n\nResponse: {\"decision\": \"block\", \"reason\": \"Stuck in loop: [pattern]\", \"continue\": false, \"stopReason\": \"I'm stuck on this issue and need your input\", \"systemMessage\": \"🔄 Loop detected: Multiple failed attempts\"}\n\n**Use decision:block if confidence 70-89% might be stuck:**\n\nResponse: {\"decision\": \"block\", \"reason\": \"Repeated attempts without clear progress\", \"systemMessage\": \"⚠️ Multiple fix attempts detected\"}\n\n**Use decision:approve if making progress:**\n\nResponse: {\"decision\": \"approve\", \"reason\": \"Systematic problem-solving with progress\", \"systemMessage\": \"✓ Debugging approach verified\"}\n\n**Key Principle: Better to stop and ask than keep making things worse.**",
-            "timeout": 300
+            "type": "command",
+            "command": "han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\""
           },
           {
-            "type": "prompt",
-            "prompt": "# Capture Project Learnings\n\nYou are reviewing what Claude learned during this work session.\n\n## Context\n\n$ARGUMENTS\n\n## Analysis\n\nReview the conversation. Did Claude discover:\n\n1. **Undocumented conventions** (naming, patterns, structure)\n2. **Commands** that had to be figured out\n3. **Gotchas** or edge cases\n4. **Architecture insights** that took effort to understand\n\n## Check Current Documentation\n\nBefore recommending updates, check if CLAUDE.md exists and what it contains.\n\n## Decision Criteria\n\n**Block and capture if:**\n\n- Discovered 1+ learnings worth preserving\n- Learnings are reusable (not session-specific)\n- Not already documented in CLAUDE.md\n\nResponse: {\"decision\": \"block\", \"reason\": \"Learnings to capture: [brief list]\", \"systemMessage\": \"📝 Update CLAUDE.md or .claude/rules/ with: [specific learnings]\"}\n\n**Approve if:**\n\n- No significant new learnings\n- Learnings already documented\n- Learnings are session-specific, not reusable\n\nResponse: {\"decision\": \"approve\", \"reason\": \"No new reusable learnings\", \"systemMessage\": \"✓ No memory updates needed\"}\n\n**Key Principle: Build knowledge incrementally - capture what you learn.**",
-            "timeout": 300
+            "type": "command",
+            "command": "han hook reference hooks/bash-output-capture.md --must-read-first \"bash output capture best practices\""
+          },
+          {
+            "type": "command",
+            "command": "han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
           }
         ]
       }
@@ -54,15 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/current-datetime.sh\""
           },
           {
             "type": "command",
@@ -70,19 +56,15 @@
           },
           {
             "type": "command",
-            "command": "han hook reference hooks/bash-output-capture.md --must-read-first \"bash output capture best practices\""
-          },
-          {
-            "type": "command",
             "command": "han metrics detect-frustration"
           },
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/memory-learning.md\""
+            "command": "han hook reference hooks/memory-learning.md --must-read-first \"autonomous self-learning rules\""
           },
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/memory-confidence.md\""
+            "command": "han hook reference hooks/memory-confidence.md --must-read-first \"memory-augmented answers\""
           }
         ]
       }
@@ -98,6 +80,20 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tool_name": "Edit|Write"
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook record-file-change",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
     "SubagentStart": [
       {
         "hooks": [
@@ -105,28 +101,6 @@
             "type": "command",
             "command": "han checkpoint capture",
             "timeout": 30
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "# Subagent Task Review\n\nYou are evaluating whether this subagent completed its assigned task correctly.\n\n## Context\n\n$ARGUMENTS\n\n## Review Checklist\n\n1. **Task Completion**: Did the subagent complete the specific task it was delegated?\n\n2. **Quality**: Was the work done to an acceptable standard?\n\n3. **Scope**: Did the subagent stay within its assigned scope?\n\n## Decision Criteria\n\n**Approve** if the subagent completed its task correctly\n**Block** if the subagent failed or deviated significantly from the task\n\nRespond with JSON: {\"decision\": \"approve\" or \"block\", \"reason\": \"brief explanation\", \"systemMessage\": \"✓ Subagent task verified\" or \"⚠️ Subagent issue detected\"}",
-            "timeout": 120
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han memory capture",
-            "timeout": 5
           }
         ]
       }
