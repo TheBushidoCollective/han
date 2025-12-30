@@ -304,9 +304,12 @@ function formatToolContent(
                 variant="ghost"
                 size="sm"
                 className="file-link"
-                onClick={() =>
-                  onOpenModal(`File: ${filePath}`, filePath, 'file')
-                }
+                onClick={() => {
+                  if (!onOpenModal) {
+                    return;
+                  }
+                  onOpenModal(`File: ${filePath}`, filePath, 'file');
+                }}
               >
                 {filePath}
               </Button>
