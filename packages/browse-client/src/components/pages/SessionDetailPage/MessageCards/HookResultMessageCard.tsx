@@ -47,7 +47,7 @@ interface HookResultMessageCardProps {
 function getHookResultRoleInfo(success: boolean): MessageRoleInfo {
   return {
     label: 'Hook Result',
-    className: 'role-hook-result',
+    color: '#a371f7',
     icon: success ? '✅' : '❌',
   };
 }
@@ -97,7 +97,7 @@ export function HookResultMessageCard({
               <Text size="sm" color="muted">
                 Plugin:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.plugin ?? 'unknown'}
               </Text>
             </HStack>
@@ -106,7 +106,7 @@ export function HookResultMessageCard({
               <Text size="sm" color="muted">
                 Hook:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.hook ?? 'unknown'}
               </Text>
             </HStack>

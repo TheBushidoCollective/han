@@ -42,7 +42,7 @@ interface MemoryLearnMessageCardProps {
 function getMemoryLearnRoleInfo(): MessageRoleInfo {
   return {
     label: 'Memory Learn',
-    className: 'role-memory-learn',
+    color: '#3fb950',
     icon: '📝',
   };
 }
@@ -90,7 +90,7 @@ export function MemoryLearnMessageCard({
                 <Text size="sm" color="muted">
                   Domain:
                 </Text>
-                <Text size="sm" weight={500}>
+                <Text size="sm" weight="medium">
                   {data.domain}
                 </Text>
               </HStack>

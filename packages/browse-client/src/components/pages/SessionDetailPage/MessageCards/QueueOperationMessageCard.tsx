@@ -61,7 +61,7 @@ function getQueueOperationRoleInfo(operation: string | null): MessageRoleInfo {
   const opInfo = getOperationInfo(operation);
   return {
     label: 'Queue',
-    className: 'role-queue-operation',
+    color: '#d29922',
     icon: opInfo.icon,
   };
 }
@@ -110,7 +110,7 @@ export function QueueOperationMessageCard({
               <Text size="sm" color="muted">
                 Operation:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.operation ?? 'unknown'}
               </Text>
             </HStack>

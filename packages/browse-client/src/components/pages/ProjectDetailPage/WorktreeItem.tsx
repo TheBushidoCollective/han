@@ -6,11 +6,11 @@
 
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { Worktree } from './types.ts';
 
@@ -35,7 +35,7 @@ export function WorktreeItem({
     <Card hoverable onClick={handleClick} style={{ padding: theme.spacing.md }}>
       <HStack justify="space-between" align="center">
         <VStack gap="xs">
-          <Text weight={500}>{worktree.name}</Text>
+          <Text weight="medium">{worktree.name}</Text>
           <Text color="muted" size="xs">
             {worktree.path}
           </Text>

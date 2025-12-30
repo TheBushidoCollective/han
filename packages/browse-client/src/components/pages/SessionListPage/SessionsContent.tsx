@@ -9,13 +9,13 @@ import type React from 'react';
 import { useCallback, useMemo, useState, useTransition } from 'react';
 import type { PreloadedQuery } from 'react-relay';
 import { graphql, usePaginationFragment, usePreloadedQuery } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { SessionListItem } from '@/components/organisms/SessionListItem.tsx';
 import type { SessionListPageQuery } from './__generated__/SessionListPageQuery.graphql.ts';
@@ -125,7 +125,8 @@ export function SessionsContent({
       (edge) =>
         edge.node.projectName?.toLowerCase().includes(searchLower) ||
         edge.node.summary?.toLowerCase().includes(searchLower) ||
-        edge.node.gitBranch?.toLowerCase().includes(searchLower)
+        edge.node.gitBranch?.toLowerCase().includes(searchLower) ||
+        edge.node.sessionId?.toLowerCase().includes(searchLower)
     );
   }, [sortedEdges, filter]);
 

@@ -43,7 +43,7 @@ interface FileHistorySnapshotMessageCardProps {
 function getFileHistoryRoleInfo(): MessageRoleInfo {
   return {
     label: 'File Snapshot',
-    className: 'role-file-snapshot',
+    color: '#8b949e',
     icon: '📸',
   };
 }
@@ -111,7 +111,7 @@ export function FileHistorySnapshotMessageCard({
               <Text size="sm" color="muted">
                 Files tracked:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.fileCount}
               </Text>
             </HStack>

@@ -37,7 +37,7 @@ interface UnknownEventMessageCardProps {
 function getUnknownEventRoleInfo(): MessageRoleInfo {
   return {
     label: 'Unknown Event',
-    className: 'role-unknown-event',
+    color: '#f85149',
     icon: '❓',
   };
 }

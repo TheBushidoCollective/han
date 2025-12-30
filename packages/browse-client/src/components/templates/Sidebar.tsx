@@ -6,7 +6,8 @@
 
 import type React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Heading, HStack, Text, theme, VStack } from '../atoms/index.ts';
+import { colors, createStyles } from '../../theme.ts';
+import { Box, Heading, HStack, Text, VStack } from '../atoms/index.ts';
 import { NavItem } from '../organisms/index.ts';
 
 /**
@@ -41,6 +42,26 @@ const navItems: { id: string; path: string; label: string; icon: string }[] = [
   { id: 'settings', path: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
+const styles = createStyles({
+  sidebar: {
+    width: 220,
+    height: '100vh',
+    backgroundColor: colors.bg.secondary,
+    borderRight: `1px solid ${colors.border.default}`,
+    position: 'fixed' as const,
+    left: 0,
+    top: 0,
+    zIndex: 10,
+  },
+  header: {
+    borderBottom: `1px solid ${colors.border.default}`,
+  },
+  navContainer: {
+    flex: 1,
+    overflowY: 'auto' as const,
+  },
+});
+
 export function Sidebar(): React.ReactElement {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -54,25 +75,10 @@ export function Sidebar(): React.ReactElement {
   };
 
   return (
-    <Box
-      bg="secondary"
-      style={{
-        width: '220px',
-        height: '100vh',
-        borderRight: `1px solid ${theme.colors.border.default}`,
-        position: 'fixed',
-        left: 0,
-        top: 0,
-      }}
-      className="sidebar"
-    >
+    <Box style={styles.sidebar}>
       <VStack style={{ height: '100%' }}>
         {/* Header with logo */}
-        <Box
-          px="lg"
-          py="lg"
-          style={{ borderBottom: `1px solid ${theme.colors.border.subtle}` }}
-        >
+        <Box px="lg" py="lg" style={styles.header}>
           <HStack gap="sm" align="center">
             <Text size="xl">⛩️</Text>
             <Heading as="h1" size="md">
@@ -82,7 +88,7 @@ export function Sidebar(): React.ReactElement {
         </Box>
 
         {/* Navigation list */}
-        <Box px="sm" py="md" style={{ flex: 1, overflowY: 'auto' }}>
+        <Box px="sm" py="md" style={styles.navContainer}>
           <VStack gap="xs">
             {navItems.map((item) => (
               <NavItem

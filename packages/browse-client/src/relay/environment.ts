@@ -63,7 +63,11 @@ async function* parseMultipartResponse(
 
   const decoder = new TextDecoder();
   let buffer = '';
-  const delimiter = `--${boundary}`;
+  // Multipart boundaries must be preceded by CRLF (except the first one)
+  // The actual delimiter in the body is CRLF + "--" + boundary
+  const boundaryMarker = `--${boundary}`;
+  const crlfDelimiter = `\r\n${boundaryMarker}`;
+  const lfDelimiter = `\n${boundaryMarker}`;
 
   try {
     while (true) {
@@ -75,29 +79,50 @@ async function* parseMultipartResponse(
 
       buffer += decoder.decode(value, { stream: true });
 
-      // Process complete parts
-      let delimiterIndex: number = buffer.indexOf(delimiter);
-      while (delimiterIndex !== -1) {
-        const part = buffer.slice(0, delimiterIndex);
-        buffer = buffer.slice(delimiterIndex + delimiter.length);
-
-        // Skip the leading delimiter and check for end marker
-        if (buffer.startsWith('--')) {
-          // End of multipart
-          break;
-        }
-
-        // Skip CRLF after delimiter
+      // Find and skip the initial boundary marker at the start of the response
+      // The first boundary is NOT preceded by CRLF
+      if (buffer.startsWith(boundaryMarker)) {
+        buffer = buffer.slice(boundaryMarker.length);
+        // Skip trailing CRLF or LF after the initial boundary
         if (buffer.startsWith('\r\n')) {
           buffer = buffer.slice(2);
+        } else if (buffer.startsWith('\n')) {
+          buffer = buffer.slice(1);
         }
+      } else if (buffer.startsWith(`\r\n${boundaryMarker}`)) {
+        buffer = buffer.slice(2 + boundaryMarker.length);
+        if (buffer.startsWith('\r\n')) {
+          buffer = buffer.slice(2);
+        } else if (buffer.startsWith('\n')) {
+          buffer = buffer.slice(1);
+        }
+      }
 
-        // Parse the part if it has content
+      // Now process parts - look for CRLF+boundary or LF+boundary as delimiters
+      // This prevents matching "---" that appears inside JSON content
+      let delimiterIndex = buffer.indexOf(crlfDelimiter);
+      let delimiterLen = crlfDelimiter.length;
+      if (delimiterIndex === -1) {
+        delimiterIndex = buffer.indexOf(lfDelimiter);
+        delimiterLen = lfDelimiter.length;
+      }
+
+      while (delimiterIndex !== -1) {
+        // Extract the part (headers + body) before the delimiter
+        const part = buffer.slice(0, delimiterIndex);
+        buffer = buffer.slice(delimiterIndex + delimiterLen);
+
+        // Parse the part - find headers and body
         if (part.trim()) {
-          // Find the JSON body after headers (separated by double CRLF)
-          const bodyStart = part.indexOf('\r\n\r\n');
+          // Find the JSON body after headers (separated by double newline)
+          let bodyStart = part.indexOf('\r\n\r\n');
+          let headerSepLen = 4;
+          if (bodyStart === -1) {
+            bodyStart = part.indexOf('\n\n');
+            headerSepLen = 2;
+          }
           if (bodyStart !== -1) {
-            const jsonStr = part.slice(bodyStart + 4).trim();
+            const jsonStr = part.slice(bodyStart + headerSepLen).trim();
             if (jsonStr) {
               try {
                 const json = JSON.parse(jsonStr);
@@ -109,17 +134,41 @@ async function* parseMultipartResponse(
           }
         }
 
-        // Update index for next iteration
-        delimiterIndex = buffer.indexOf(delimiter);
+        // Check for end marker (--boundary--)
+        if (buffer.startsWith('--')) {
+          // End of multipart
+          break;
+        }
+
+        // Skip leading newline after delimiter if present
+        if (buffer.startsWith('\r\n')) {
+          buffer = buffer.slice(2);
+        } else if (buffer.startsWith('\n')) {
+          buffer = buffer.slice(1);
+        }
+
+        // Look for next delimiter
+        delimiterIndex = buffer.indexOf(crlfDelimiter);
+        delimiterLen = crlfDelimiter.length;
+        if (delimiterIndex === -1) {
+          delimiterIndex = buffer.indexOf(lfDelimiter);
+          delimiterLen = lfDelimiter.length;
+        }
       }
     }
 
-    // Process any remaining buffer
-    if (buffer.trim()) {
-      const bodyStart = buffer.indexOf('\r\n\r\n');
+    // Process any remaining buffer (last part before final boundary)
+    if (buffer.trim() && !buffer.trim().startsWith('--')) {
+      // Handle both \r\n\r\n and \n\n
+      let bodyStart = buffer.indexOf('\r\n\r\n');
+      let headerSepLen = 4;
+      if (bodyStart === -1) {
+        bodyStart = buffer.indexOf('\n\n');
+        headerSepLen = 2;
+      }
       if (bodyStart !== -1) {
-        const jsonStr = buffer.slice(bodyStart + 4).trim();
-        if (jsonStr && !jsonStr.startsWith('--')) {
+        const jsonStr = buffer.slice(bodyStart + headerSepLen).trim();
+        if (jsonStr) {
           try {
             const json = JSON.parse(jsonStr);
             yield json as GraphQLResponse;

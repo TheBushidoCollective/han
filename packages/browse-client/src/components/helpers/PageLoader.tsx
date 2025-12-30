@@ -14,9 +14,9 @@ import type {
   OperationType,
   VariablesOf,
 } from 'relay-runtime';
+import { theme } from '@/components/atoms';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 
 /**

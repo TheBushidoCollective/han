@@ -6,12 +6,12 @@
 
 import type React from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { MetricsContentQuery as MetricsContentQueryType } from './__generated__/MetricsContentQuery.graphql.ts';
 import { OutcomeBadge } from './OutcomeBadge.tsx';
@@ -154,7 +154,7 @@ export function MetricsContent({
               {tasksByType.map((item) => (
                 <HStack key={item.type} justify="space-between" align="center">
                   <TaskTypeBadge type={item.type ?? 'UNKNOWN'} />
-                  <Text weight={500}>{item.count ?? 0}</Text>
+                  <Text weight="medium">{item.count ?? 0}</Text>
                 </HStack>
               ))}
             </VStack>
@@ -174,7 +174,7 @@ export function MetricsContent({
                   align="center"
                 >
                   <OutcomeBadge outcome={item.outcome} />
-                  <Text weight={500}>{item.count ?? 0}</Text>
+                  <Text weight="medium">{item.count ?? 0}</Text>
                 </HStack>
               ))}
             </VStack>
@@ -198,7 +198,7 @@ export function MetricsContent({
             <thead>
               <tr
                 style={{
-                  backgroundColor: theme.colors.background.tertiary,
+                  backgroundColor: theme.colors.bg.tertiary,
                   textAlign: 'left',
                 }}
               >

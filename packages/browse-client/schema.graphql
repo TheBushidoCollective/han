@@ -9,6 +9,84 @@ directive @defer(
   label: String
 ) on FRAGMENT_SPREAD | INLINE_FRAGMENT
 
+"""Complete activity data for dashboard visualizations"""
+type ActivityData {
+  """Activity by day for heatmap (last 365 days)"""
+  dailyActivity: [DailyActivity!]
+
+  """
+  Daily token usage by model (from Claude Code stats, survives session cleanup)
+  """
+  dailyModelTokens: [DailyModelTokens!]
+
+  """Date of first session"""
+  firstSessionDate: String
+
+  """Activity by hour of day (0-23)"""
+  hourlyActivity: [HourlyActivity!]
+
+  """
+  Cumulative model usage (from Claude Code stats, survives session cleanup)
+  """
+  modelUsage: [ModelUsageStats!]
+
+  """Current consecutive days with activity"""
+  streakDays: Int
+
+  """Aggregate token usage statistics"""
+  tokenUsage: TokenUsageStats
+
+  """Total number of days with activity"""
+  totalActiveDays: Int
+
+  """Total messages from Claude Code stats (survives session cleanup)"""
+  totalMessages: Int
+
+  """Total sessions from Claude Code stats (survives session cleanup)"""
+  totalSessions: Int
+}
+
+"""An assistant (Claude) message in a session"""
+type AssistantMessage implements Message {
+  """Cached tokens used"""
+  cachedTokens: Int
+
+  """Assistant message text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Whether this message contains thinking blocks"""
+  hasThinking: Boolean
+
+  """Whether this message contains tool use blocks"""
+  hasToolUse: Boolean
+
+  """Message global ID"""
+  id: ID
+
+  """Input tokens used"""
+  inputTokens: Int
+
+  """Whether this message only contains tool calls"""
+  isToolOnly: Boolean
+
+  """Model used for this response"""
+  model: String
+
+  """Output tokens generated"""
+  outputTokens: Int
+  rawJson: String
+
+  """Number of thinking blocks in this message"""
+  thinkingCount: Int
+
+  """When the message was sent"""
+  timestamp: DateTime
+
+  """Number of tool use blocks in this message"""
+  toolUseCount: Int
+}
+
 """A cached hook run entry"""
 type CacheEntry {
   """Number of files tracked"""
@@ -145,6 +223,63 @@ enum Confidence {
   MEDIUM
 }
 
+"""A content block within a message"""
+interface ContentBlock {
+  """The type of this content block"""
+  type: ContentBlockType
+}
+
+"""Type of content block in a message"""
+enum ContentBlockType {
+  IMAGE
+  TEXT
+  THINKING
+  TOOL_RESULT
+  TOOL_USE
+}
+
+"""Activity metrics for a single day"""
+type DailyActivity {
+  """Total cached tokens used"""
+  cachedTokens: Int
+
+  """Date in YYYY-MM-DD format"""
+  date: String
+
+  """Number of files changed"""
+  filesChanged: Int
+
+  """Total input tokens used"""
+  inputTokens: Int
+
+  """Lines of code added"""
+  linesAdded: Int
+
+  """Lines of code removed"""
+  linesRemoved: Int
+
+  """Number of messages sent on this day"""
+  messageCount: Int
+
+  """Total output tokens generated"""
+  outputTokens: Int
+
+  """Number of sessions started on this day"""
+  sessionCount: Int
+}
+
+"""Daily token usage broken down by model"""
+type DailyModelTokens {
+  """Date in YYYY-MM-DD format"""
+  date: String
+
+  """Token usage per model for this day"""
+  models: [ModelTokenEntry!]
+
+  """Total tokens across all models for this day"""
+  totalTokens: Int
+}
+
 scalar DateTime
 
 """Type of action that occurred"""
@@ -152,6 +287,155 @@ enum EventAction {
   CREATED
   DELETED
   UPDATED
+}
+
+"""Exposed tool call (proxied from backend MCP server)"""
+type ExposedToolCallEvent implements HanEvent {
+  """Tool arguments as JSON string"""
+  arguments: String
+  eventType: String
+  id: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+
+  """Backend server name"""
+  server: String
+  timestamp: DateTime
+
+  """Tool name"""
+  tool: String
+}
+
+"""An exposed tool call event"""
+type ExposedToolCallMessage implements Message {
+  """Correlation ID to match with result"""
+  callId: String
+
+  """Message global ID"""
+  id: ID
+
+  """Tool input as JSON string"""
+  input: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+  rawJson: String
+
+  """
+  The result of this tool call (if available). Loaded via DataLoader from paired events.
+  """
+  result: ExposedToolResult
+
+  """When the tool was called"""
+  timestamp: DateTime
+
+  """Name of the exposed tool"""
+  tool: String
+}
+
+"""Exposed tool result (inline, not a separate event)"""
+type ExposedToolResult {
+  """Call ID for correlation"""
+  callId: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+
+  """Event ID"""
+  id: String
+
+  """Result as JSON string (if success)"""
+  result: String
+
+  """Whether call succeeded"""
+  success: Boolean
+
+  """When the result was recorded"""
+  timestamp: DateTime
+}
+
+"""Exposed tool result returned"""
+type ExposedToolResultEvent implements HanEvent {
+  """Call ID for correlation"""
+  callId: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+  eventType: String
+  id: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+
+  """Result as JSON string (if success)"""
+  result: String
+
+  """Backend server name"""
+  server: String
+
+  """Whether call succeeded"""
+  success: Boolean
+  timestamp: DateTime
+
+  """Tool name"""
+  tool: String
+}
+
+"""An exposed tool result event"""
+type ExposedToolResultMessage implements Message {
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message if tool failed"""
+  error: String
+
+  """Message global ID"""
+  id: ID
+
+  """Tool output"""
+  output: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+  rawJson: String
+
+  """Whether the tool call succeeded"""
+  success: Boolean
+
+  """When the tool result was received"""
+  timestamp: DateTime
+
+  """Name of the exposed tool"""
+  tool: String
+}
+
+"""A file history snapshot message tracking file state changes"""
+type FileHistorySnapshotMessage implements Message {
+  """Number of files tracked in this snapshot"""
+  fileCount: Int
+
+  """Message global ID"""
+  id: ID
+
+  """Whether this is an update to an existing snapshot"""
+  isSnapshotUpdate: Boolean
+
+  """ID of the message this snapshot is associated with"""
+  messageId: String
+  rawJson: String
+
+  """Timestamp of the actual snapshot data"""
+  snapshotTimestamp: DateTime
+
+  """When the snapshot was taken"""
+  timestamp: DateTime
 }
 
 """Summary of Han user configuration"""
@@ -176,6 +460,31 @@ type HanConfigSummary {
 
   """Number of plugins with custom configuration"""
   pluginConfigCount: Int
+}
+
+"""A Han event (hook execution, MCP call, memory operation)"""
+interface HanEvent {
+  """Event type discriminator (hook_run, mcp_tool_call, etc.)"""
+  eventType: String
+
+  """Unique event ID"""
+  id: String
+
+  """When the event occurred"""
+  timestamp: DateTime
+}
+
+"""Type of Han event"""
+enum HanEventType {
+  EXPOSED_TOOL_CALL
+  EXPOSED_TOOL_RESULT
+  HOOK_RESULT
+  HOOK_RUN
+  MCP_TOOL_CALL
+  MCP_TOOL_RESULT
+  MEMORY_LEARN
+  MEMORY_QUERY
+  SENTIMENT_ANALYSIS
 }
 
 """A single hook execution record"""
@@ -217,6 +526,145 @@ type HookExecution {
   timestamp: String
 }
 
+"""Hook execution result (inline, not a separate event)"""
+type HookResult {
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+
+  """Process exit code"""
+  exitCode: Int
+
+  """Event ID"""
+  id: String
+
+  """Hook output (if success)"""
+  output: String
+
+  """Whether hook succeeded"""
+  success: Boolean
+
+  """When the result was recorded"""
+  timestamp: DateTime
+}
+
+"""Hook execution result (success or failure)"""
+type HookResultEvent implements HanEvent {
+  """Whether result was cached"""
+  cached: Boolean
+
+  """Working directory"""
+  directory: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+  eventType: String
+
+  """Process exit code"""
+  exitCode: Int
+
+  """Hook name"""
+  hook: String
+  id: String
+
+  """Hook output (if success)"""
+  output: String
+
+  """Plugin name"""
+  plugin: String
+
+  """Whether hook succeeded"""
+  success: Boolean
+  timestamp: DateTime
+}
+
+"""A hook execution result event with success/failure status"""
+type HookResultMessage implements Message {
+  """Whether this result was from cache"""
+  cached: Boolean
+
+  """Directory context for the hook"""
+  directory: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message if hook failed"""
+  error: String
+
+  """Exit code from the hook process"""
+  exitCode: Int
+
+  """Name of the hook that was executed"""
+  hook: String
+
+  """Message global ID"""
+  id: ID
+
+  """Hook output content"""
+  output: String
+
+  """Plugin that owns the hook"""
+  plugin: String
+  rawJson: String
+
+  """Whether the hook succeeded"""
+  success: Boolean
+
+  """When the hook completed"""
+  timestamp: DateTime
+}
+
+"""Hook execution started"""
+type HookRunEvent implements HanEvent {
+  """Whether result was cached"""
+  cached: Boolean
+
+  """Working directory"""
+  directory: String
+  eventType: String
+
+  """Hook name"""
+  hook: String
+  id: String
+
+  """Plugin name"""
+  plugin: String
+
+  """
+  Hook result (if available). Loaded via DataLoader from the session's paired events.
+  """
+  result: HookResult
+  timestamp: DateTime
+}
+
+"""A hook execution start event"""
+type HookRunMessage implements Message {
+  """Whether this hook result was cached"""
+  cached: Boolean
+
+  """Directory context for the hook"""
+  directory: String
+
+  """Name of the hook being executed"""
+  hook: String
+
+  """Message global ID"""
+  id: ID
+
+  """Plugin that owns the hook"""
+  plugin: String
+  rawJson: String
+
+  """When the hook started execution"""
+  timestamp: DateTime
+}
+
 """Hook execution statistics"""
 type HookStats {
   """Statistics broken down by hook type"""
@@ -250,6 +698,43 @@ type HookTypeStat {
   total: Int
 }
 
+"""Activity metrics for an hour of the day"""
+type HourlyActivity {
+  """Hour of day (0-23)"""
+  hour: Int
+
+  """Number of messages sent in this hour"""
+  messageCount: Int
+
+  """Number of sessions started in this hour"""
+  sessionCount: Int
+}
+
+"""An image (base64 encoded or file path)"""
+type ImageBlock implements ContentBlock {
+  """Data URL for displaying the image"""
+  dataUrl: String
+
+  """MIME type of the image"""
+  mediaType: String
+  type: ContentBlockType
+}
+
+"""Result of indexing sessions"""
+type IndexingResult {
+  """Any errors encountered during indexing"""
+  errors: [String!]
+
+  """Number of sessions indexed"""
+  sessionsIndexed: Int
+
+  """Whether indexing completed successfully"""
+  success: Boolean
+
+  """Total messages indexed"""
+  totalMessages: Int
+}
+
 """An MCP server configuration"""
 type McpServer {
   """Number of command arguments"""
@@ -272,6 +757,181 @@ type McpServer {
 
   """URL for HTTP servers"""
   url: String
+}
+
+"""MCP tool call initiated"""
+type McpToolCallEvent implements HanEvent {
+  """Tool arguments as JSON string"""
+  arguments: String
+  eventType: String
+  id: String
+  timestamp: DateTime
+
+  """Tool name"""
+  tool: String
+}
+
+"""An MCP tool call event"""
+type McpToolCallMessage implements Message {
+  """Correlation ID to match with result"""
+  callId: String
+
+  """Message global ID"""
+  id: ID
+
+  """Tool input as JSON string"""
+  input: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+  rawJson: String
+
+  """
+  The result of this tool call (if available). Loaded via DataLoader from paired events.
+  """
+  result: McpToolResult
+
+  """MCP server handling the tool"""
+  server: String
+
+  """When the tool was called"""
+  timestamp: DateTime
+
+  """Name of the MCP tool being called"""
+  tool: String
+}
+
+"""MCP tool result (inline, not a separate event)"""
+type McpToolResult {
+  """Call ID for correlation"""
+  callId: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+
+  """Event ID"""
+  id: String
+
+  """Result as JSON string (if success)"""
+  result: String
+
+  """Whether call succeeded"""
+  success: Boolean
+
+  """When the result was recorded"""
+  timestamp: DateTime
+}
+
+"""MCP tool result returned"""
+type McpToolResultEvent implements HanEvent {
+  """Call ID for correlation"""
+  callId: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message (if failed)"""
+  error: String
+  eventType: String
+  id: String
+
+  """Result as JSON string (if success)"""
+  result: String
+
+  """Whether call succeeded"""
+  success: Boolean
+  timestamp: DateTime
+
+  """Tool name"""
+  tool: String
+}
+
+"""An MCP tool result event"""
+type McpToolResultMessage implements Message {
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message if tool failed"""
+  error: String
+
+  """Message global ID"""
+  id: ID
+
+  """Tool output"""
+  output: String
+
+  """Full prefixed tool name"""
+  prefixedName: String
+  rawJson: String
+
+  """MCP server that handled the tool"""
+  server: String
+
+  """Whether the tool call succeeded"""
+  success: Boolean
+
+  """When the tool result was received"""
+  timestamp: DateTime
+
+  """Name of the MCP tool"""
+  tool: String
+}
+
+"""Progress update from Memory Agent during search"""
+type MemoryAgentProgress {
+  """Progress message or content"""
+  content: String
+
+  """Memory layer being searched"""
+  layer: String
+
+  """Number of results found (if applicable)"""
+  resultCount: Int
+
+  """Unique ID for this memory query session"""
+  sessionId: String
+
+  """When this progress update occurred"""
+  timestamp: DateTime
+
+  """Type of progress update"""
+  type: MemoryAgentProgressType
+}
+
+"""Type of progress update from Memory Agent"""
+enum MemoryAgentProgressType {
+  COMPLETE
+  ERROR
+  FOUND
+  SEARCHING
+  SYNTHESIZING
+}
+
+"""Final result from Memory Agent query"""
+type MemoryAgentResult {
+  """Synthesized answer from memory"""
+  answer: String
+
+  """Citations supporting the answer"""
+  citations: [Citation!]
+
+  """Confidence in the answer"""
+  confidence: Confidence
+
+  """Error message if query failed"""
+  error: String
+
+  """Memory layers that were searched"""
+  searchedLayers: [MemoryLayer!]
+
+  """Unique ID for this memory query session"""
+  sessionId: String
+
+  """Whether the query succeeded"""
+  success: Boolean
 }
 
 """Event emitted when memory changes"""
@@ -307,13 +967,112 @@ enum MemoryLayer {
   TRANSCRIPTS
 }
 
+"""Memory learn operation"""
+type MemoryLearnEvent implements HanEvent {
+  """Learning domain"""
+  domain: String
+  eventType: String
+  id: String
+
+  """Scope (project or user)"""
+  scope: String
+
+  """Whether learn succeeded"""
+  success: Boolean
+  timestamp: DateTime
+}
+
+"""A memory learn event"""
+type MemoryLearnMessage implements Message {
+  """Whether content was appended vs replaced"""
+  append: Boolean
+
+  """Domain for the learned content"""
+  domain: String
+
+  """Message global ID"""
+  id: ID
+
+  """Path patterns if path-specific"""
+  paths: [String!]
+  rawJson: String
+
+  """Scope of the learning (e.g., 'project', 'user')"""
+  scope: String
+
+  """When the learning was captured"""
+  timestamp: DateTime
+}
+
 """Memory query interface"""
 type MemoryQuery {
-  """All project and user rules"""
+  """All project and user rules across registered projects"""
   rules: [Rule!]
 
-  """Search memory with a question"""
-  search(layers: [MemoryLayer!], query: String!): MemorySearchResult
+  """Search memory with a question (requires project context)"""
+  search(
+    layers: [MemoryLayer!]
+
+    """
+    Project filesystem path for plugin discovery. Required for context-aware search.
+    """
+    projectPath: String!
+    query: String!
+  ): MemorySearchResult
+}
+
+"""Memory query operation"""
+type MemoryQueryEvent implements HanEvent {
+  """Query duration in milliseconds"""
+  durationMs: Int
+  eventType: String
+  id: String
+
+  """Query question"""
+  question: String
+
+  """Memory route (personal, team, rules)"""
+  route: String
+
+  """Whether query succeeded"""
+  success: Boolean
+  timestamp: DateTime
+}
+
+"""A memory query event"""
+type MemoryQueryMessage implements Message {
+  """Query duration in milliseconds"""
+  durationMs: Int
+
+  """Message global ID"""
+  id: ID
+
+  """The question being asked"""
+  question: String
+  rawJson: String
+
+  """Number of results returned"""
+  resultCount: Int
+
+  """Memory route used (e.g., 'personal', 'team', 'project')"""
+  route: String
+
+  """When the memory was queried"""
+  timestamp: DateTime
+}
+
+"""Result of starting a memory query with streaming"""
+type MemoryQueryStartResult {
+  """Status message or error details"""
+  message: String
+
+  """
+  Session ID to use for subscribing to progress updates via memoryAgentProgress subscription
+  """
+  sessionId: String
+
+  """Whether the query was started successfully"""
+  success: Boolean
 }
 
 """Result from memory search"""
@@ -346,22 +1105,18 @@ enum MemorySource {
   TRANSCRIPTS
 }
 
-"""A message in a session"""
-type Message {
-  """Message text content"""
-  content: String
-
-  """Message ID"""
+"""
+Base interface for all message types in a session. Contains only shared fields - concrete types add their own specific fields.
+"""
+interface Message {
+  """Message global ID"""
   id: ID
 
-  """Whether this message only contains tool calls"""
-  isToolOnly: Boolean
+  """Original JSONL line content for debugging"""
+  rawJson: String
 
   """When the message was sent"""
   timestamp: DateTime
-
-  """Type of message"""
-  type: MessageType
 }
 
 """A paginated list of messages"""
@@ -383,13 +1138,6 @@ type MessageEdge {
 
   """The message at this edge"""
   node: Message
-}
-
-"""Type of message in a session"""
-enum MessageType {
-  ASSISTANT
-  SUMMARY
-  USER
 }
 
 """Aggregate metrics for a time period"""
@@ -435,9 +1183,61 @@ enum MetricsPeriod {
   WEEK
 }
 
+"""Token usage for a specific model"""
+type ModelTokenEntry {
+  """Human-readable model name (e.g., Opus 4.5)"""
+  displayName: String
+
+  """Model ID (e.g., claude-opus-4-5-20251101)"""
+  model: String
+
+  """Token count for this model"""
+  tokens: Int
+}
+
+"""Cumulative usage statistics for a model"""
+type ModelUsageStats {
+  """Total cache creation tokens"""
+  cacheCreationTokens: Int
+
+  """Total cache read tokens"""
+  cacheReadTokens: Int
+
+  """Human-readable model name"""
+  displayName: String
+
+  """Total input tokens"""
+  inputTokens: Int
+
+  """Model ID"""
+  model: String
+
+  """Total output tokens"""
+  outputTokens: Int
+
+  """Total tokens (input + output)"""
+  totalTokens: Int
+}
+
 type Mutation {
+  """Trigger full indexing of all Claude Code sessions from JSONL files"""
+  indexSessions: IndexingResult
+
   """Remove a plugin from settings"""
   removePlugin(marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
+
+  """
+  Start a memory query with streaming. Returns a session ID to subscribe to progress updates.
+  """
+  startMemoryQuery(
+    model: String
+
+    """
+    Project filesystem path for plugin discovery. Required for context-aware search.
+    """
+    projectPath: String!
+    question: String!
+  ): MemoryQueryStartResult
 
   """Enable or disable a plugin"""
   togglePlugin(enabled: Boolean!, marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
@@ -610,6 +1410,9 @@ type ProjectAddedPayload {
 }
 
 type Query {
+  """Activity data for dashboard visualizations"""
+  activity(days: Int = 365): ActivityData
+
   """Get an agent task by session ID and agent ID"""
   agentTask(agentId: String!, sessionId: String!): Session
 
@@ -630,6 +1433,8 @@ type Query {
 
   """Task metrics for a time period"""
   metrics(period: MetricsPeriod): MetricsData
+
+  """Fetch any node by its global ID"""
   node(id: ID!): Node
   nodes(ids: [ID!]!): [Node]!
 
@@ -680,6 +1485,22 @@ type Query {
 
   """Settings summary with all configuration locations"""
   settings(projectId: String): SettingsSummary
+}
+
+"""A queue state change operation"""
+type QueueOperationMessage implements Message {
+  """Message global ID"""
+  id: ID
+
+  """Type of queue operation (e.g., 'enqueue', 'dequeue', 'clear')"""
+  operation: String
+
+  """Session ID involved in the queue operation"""
+  queueSessionId: String
+  rawJson: String
+
+  """When the queue operation occurred"""
+  timestamp: DateTime
 }
 
 """A git repository containing projects and sessions"""
@@ -749,6 +1570,12 @@ type Rule {
   """Full path to the rule file"""
   path: String
 
+  """Project display name (null for user rules)"""
+  projectName: String
+
+  """Project root path (null for user rules)"""
+  projectPath: String
+
   """Whether this is a project or user rule"""
   scope: RuleScope
 
@@ -760,6 +1587,91 @@ type Rule {
 enum RuleScope {
   PROJECT
   USER
+}
+
+"""
+Sentiment analysis result for a user message (inline, not a separate event)
+"""
+type SentimentAnalysis {
+  """Frustration level if detected (low, moderate, high)"""
+  frustrationLevel: String
+
+  """Frustration score (0-10) if frustration detected"""
+  frustrationScore: Float
+
+  """Event ID"""
+  id: String
+
+  """Categorized sentiment level (positive, neutral, negative)"""
+  sentimentLevel: String
+
+  """Raw sentiment score (typically -5 to +5)"""
+  sentimentScore: Float
+
+  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
+  signals: [String!]
+
+  """Optional link to current task ID"""
+  taskId: String
+
+  """When the analysis occurred"""
+  timestamp: DateTime
+}
+
+"""Sentiment analysis of user message"""
+type SentimentAnalysisEvent implements HanEvent {
+  eventType: String
+
+  """Frustration level if detected (low, moderate, high)"""
+  frustrationLevel: String
+
+  """Frustration score (0-10) if frustration detected"""
+  frustrationScore: Float
+  id: String
+
+  """ID of the user message being analyzed"""
+  messageId: String
+
+  """Categorized sentiment level (positive, neutral, negative)"""
+  sentimentLevel: String
+
+  """Raw sentiment score (typically -5 to +5)"""
+  sentimentScore: Float
+
+  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
+  signals: [String!]
+
+  """Optional link to current task ID"""
+  taskId: String
+  timestamp: DateTime
+}
+
+"""A sentiment analysis event"""
+type SentimentAnalysisMessage implements Message {
+  """ID of the message that was analyzed"""
+  analyzedMessageId: String
+
+  """Frustration level if detected (low, moderate, high)"""
+  frustrationLevel: String
+
+  """Frustration score (0-10) if detected"""
+  frustrationScore: Float
+
+  """Message global ID"""
+  id: ID
+  rawJson: String
+
+  """Categorized sentiment level (positive, neutral, negative)"""
+  sentimentLevel: String
+
+  """Raw sentiment score (typically -5 to +5)"""
+  sentimentScore: Float
+
+  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
+  signals: [String!]
+
+  """When the analysis was performed"""
+  timestamp: DateTime
 }
 
 """A Claude Code session"""
@@ -793,6 +1705,8 @@ type Session implements Node {
 
   """Hook execution statistics for this session"""
   hookStats: HookStats
+
+  """Session global ID in format Session:{projectDir}:{sessionId}"""
   id: ID!
 
   """Number of messages in session"""
@@ -849,6 +1763,11 @@ type Session implements Node {
   """All todos from the most recent TodoWrite in this session"""
   todos: [Todo!]
 
+  """
+  All tool results from this session, for inline display under tool use blocks
+  """
+  toolResults: [ToolResultBlock!]
+
   """When the session was last updated (most recent message)"""
   updatedAt: DateTime
 
@@ -893,6 +1812,11 @@ type SessionEdge {
 type SessionMessageAddedPayload {
   """Index of the new message in the session"""
   messageIndex: Int
+
+  """
+  The new message edge for Relay @appendEdge directive. Returns null if message data is not available.
+  """
+  newMessageEdge: MessageEdge
 
   """ID of the session the message was added to"""
   sessionId: String
@@ -953,6 +1877,18 @@ type Subdir {
 }
 
 type Subscription {
+  """Subscribe to Memory Agent progress updates during a query"""
+  memoryAgentProgress(
+    """Memory Agent session ID to watch for progress updates"""
+    sessionId: String!
+  ): MemoryAgentProgress
+
+  """Subscribe to Memory Agent final result"""
+  memoryAgentResult(
+    """Memory Agent session ID to watch for final result"""
+    sessionId: String!
+  ): MemoryAgentResult
+
   """Subscribe to memory change events"""
   memoryUpdated: MemoryEvent
 
@@ -988,6 +1924,53 @@ type Subscription {
     """Session ID to watch for new messages"""
     sessionId: ID!
   ): SessionMessageAddedPayload
+
+  """Subscribe to tool result for a specific call ID"""
+  toolResultAdded(
+    """Call ID to watch for result"""
+    callId: String!
+  ): ToolResultAddedPayload
+}
+
+"""A context summary message in a session"""
+type SummaryMessage implements Message {
+  """Summary text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  Whether this is an auto-compaction summary (context was automatically condensed)
+  """
+  isCompactSummary: Boolean
+  rawJson: String
+
+  """When the summary was created"""
+  timestamp: DateTime
+}
+
+"""A system notification message with subtype and level"""
+type SystemMessage implements Message {
+  """System message content"""
+  content: String
+
+  """Message global ID"""
+  id: ID
+
+  """Whether this is a meta/internal system message"""
+  isMeta: Boolean
+
+  """Message severity level (e.g., 'info', 'warning', 'error')"""
+  level: String
+  rawJson: String
+
+  """System message subtype (e.g., 'init', 'error', 'warning')"""
+  subtype: String
+
+  """When the system message was sent"""
+  timestamp: DateTime
 }
 
 """A tracked task"""
@@ -1066,6 +2049,26 @@ type TaskTypeCount {
   type: TaskType
 }
 
+"""Regular text content"""
+type TextBlock implements ContentBlock {
+  """The text content"""
+  text: String
+  type: ContentBlockType
+}
+
+"""Claude's thinking/reasoning block (extended thinking)"""
+type ThinkingBlock implements ContentBlock {
+  """First ~200 chars for collapsed view"""
+  preview: String
+
+  """Cryptographic signature if present"""
+  signature: String
+
+  """Full thinking content"""
+  thinking: String
+  type: ContentBlockType
+}
+
 """A todo item from a Claude Code session"""
 type Todo {
   """Present continuous form shown during execution"""
@@ -1101,6 +2104,157 @@ enum TodoStatus {
   COMPLETED
   IN_PROGRESS
   PENDING
+}
+
+"""Aggregate token usage statistics"""
+type TokenUsageStats {
+  """Estimated cost in USD based on Claude pricing"""
+  estimatedCostUsd: Float
+
+  """Number of messages with token data"""
+  messageCount: Int
+
+  """Number of unique sessions"""
+  sessionCount: Int
+
+  """Total cached tokens used"""
+  totalCachedTokens: Int
+
+  """Total input tokens across all messages"""
+  totalInputTokens: Int
+
+  """Total output tokens generated"""
+  totalOutputTokens: Int
+
+  """Total tokens (input + output)"""
+  totalTokens: Int
+}
+
+"""Category of tool"""
+enum ToolCategory {
+  FILE
+  MCP
+  OTHER
+  SEARCH
+  SHELL
+  TASK
+  WEB
+}
+
+"""Payload for tool result added events"""
+type ToolResultAddedPayload {
+  """Call ID to correlate with the tool call message"""
+  callId: String
+
+  """Duration of the tool call in milliseconds"""
+  durationMs: Int
+
+  """ID of the session containing the tool call"""
+  sessionId: String
+
+  """Whether the tool call succeeded"""
+  success: Boolean
+
+  """Type of tool call (mcp or exposed)"""
+  type: String
+}
+
+"""Result returned from a tool execution"""
+type ToolResultBlock implements ContentBlock {
+  """Full result content"""
+  content: String
+
+  """Whether this result contains an image"""
+  hasImage: Boolean
+
+  """Whether this result is an error"""
+  isError: Boolean
+
+  """Whether content exceeds preview length"""
+  isLong: Boolean
+
+  """Preview of content (first 500 chars)"""
+  preview: String
+
+  """ID of the tool call this is a result for"""
+  toolCallId: String
+  type: ContentBlockType
+}
+
+"""A tool use request from Claude"""
+type ToolUseBlock implements ContentBlock {
+  """Category of tool (FILE, SEARCH, SHELL, etc.)"""
+  category: ToolCategory
+
+  """Color code for the tool"""
+  color: String
+
+  """Human-readable tool name"""
+  displayName: String
+
+  """Emoji icon for this tool"""
+  icon: String
+
+  """Tool input as JSON string"""
+  input: String
+
+  """Name of the tool being called"""
+  name: String
+
+  """Unique ID for this tool call"""
+  toolCallId: String
+  type: ContentBlockType
+}
+
+"""
+A fallback message type for unknown or future event types. Contains raw JSON for debugging.
+"""
+type UnknownEventMessage implements Message {
+  """The event subtype if han_event"""
+  eventType: String
+
+  """Message global ID"""
+  id: ID
+
+  """The original message type"""
+  messageType: String
+
+  """Raw JSON for debugging unknown types"""
+  rawJson: String
+
+  """When the event occurred"""
+  timestamp: DateTime
+}
+
+"""A user message in a session"""
+type UserMessage implements Message {
+  """Name of the slash command if isCommand is true"""
+  commandName: String
+
+  """User message text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """Whether this is a slash command"""
+  isCommand: Boolean
+
+  """Whether this message is an interrupt"""
+  isInterrupt: Boolean
+
+  """Whether this is a meta/system message"""
+  isMeta: Boolean
+  rawJson: String
+
+  """
+  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+  """
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the message was sent"""
+  timestamp: DateTime
 }
 
 """A git worktree within a project"""

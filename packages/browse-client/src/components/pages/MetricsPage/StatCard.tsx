@@ -23,7 +23,7 @@ export function StatCard({
   return (
     <Card>
       <VStack gap="xs">
-        <Text size="xl" weight={600}>
+        <Text size="xl" weight="semibold">
           {value}
         </Text>
         <Text size="sm" color="secondary">

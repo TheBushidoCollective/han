@@ -143,34 +143,70 @@ export function ToolUseBlock({
               </Text>
             </HStack>
             {oldString && newString && (
-              <Box className="diff-preview">
-                <VStack gap="xs">
-                  <Box className="diff-old">
-                    <Text size="xs" weight={600} style={{ color: '#f85149' }}>
-                      - Remove:
-                    </Text>
-                    <pre>
-                      <code>
-                        {oldString.length > 200
-                          ? `${oldString.slice(0, 200)}...`
-                          : oldString}
-                      </code>
-                    </pre>
-                  </Box>
-                  <Box className="diff-new">
-                    <Text size="xs" weight={600} style={{ color: '#3fb950' }}>
-                      + Add:
-                    </Text>
-                    <pre>
-                      <code>
-                        {newString.length > 200
-                          ? `${newString.slice(0, 200)}...`
-                          : newString}
-                      </code>
-                    </pre>
-                  </Box>
-                </VStack>
-              </Box>
+              <VStack gap="xs" align="stretch">
+                <div
+                  style={{
+                    backgroundColor: 'rgba(248, 81, 73, 0.15)',
+                    borderLeft: '3px solid #f85149',
+                    borderRadius: 4,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: '#f85149', marginBottom: 4 }}
+                  >
+                    - Remove:
+                  </Text>
+                  <pre
+                    style={{
+                      margin: 0,
+                      fontSize: '0.8rem',
+                      fontFamily: 'var(--font-mono)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <code>
+                      {oldString.length > 200
+                        ? `${oldString.slice(0, 200)}...`
+                        : oldString}
+                    </code>
+                  </pre>
+                </div>
+                <div
+                  style={{
+                    backgroundColor: 'rgba(63, 185, 80, 0.15)',
+                    borderLeft: '3px solid #3fb950',
+                    borderRadius: 4,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: '#3fb950', marginBottom: 4 }}
+                  >
+                    + Add:
+                  </Text>
+                  <pre
+                    style={{
+                      margin: 0,
+                      fontSize: '0.8rem',
+                      fontFamily: 'var(--font-mono)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <code>
+                      {newString.length > 200
+                        ? `${newString.slice(0, 200)}...`
+                        : newString}
+                    </code>
+                  </pre>
+                </div>
+              </VStack>
             )}
           </VStack>
         );
@@ -179,6 +215,9 @@ export function ToolUseBlock({
       case 'Bash': {
         const command = parsedInput.command as string;
         const description = parsedInput.description as string | undefined;
+        const isBackground = parsedInput.run_in_background as
+          | boolean
+          | undefined;
         return (
           <VStack gap="xs" align="stretch">
             {description && (
@@ -186,15 +225,90 @@ export function ToolUseBlock({
                 {description}
               </Text>
             )}
-            <pre className="bash-command">
-              <code
-                className="hljs language-bash"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
-                dangerouslySetInnerHTML={{
-                  __html: hljs.highlight(command, { language: 'bash' }).value,
+            {/* Terminal-style container */}
+            <div
+              style={{
+                backgroundColor: '#1a1b26',
+                borderRadius: 8,
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              {/* Terminal title bar */}
+              <div
+                style={{
+                  backgroundColor: '#24283b',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderBottom: '1px solid #414868',
                 }}
-              />
-            </pre>
+              >
+                {/* Traffic lights */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: '#ff5f57',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: '#febc2e',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: '#28c840',
+                    }}
+                  />
+                </div>
+                <span
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    fontSize: '0.75rem',
+                    color: '#565f89',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  bash {isBackground ? '(background)' : ''}
+                </span>
+              </div>
+              {/* Terminal content */}
+              <div style={{ padding: '12px 16px' }}>
+                <pre
+                  style={{
+                    margin: 0,
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5,
+                    color: '#c0caf5',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <span style={{ color: '#7aa2f7', marginRight: 8 }}>$</span>
+                  <code
+                    className="hljs language-bash"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
+                    dangerouslySetInnerHTML={{
+                      __html: hljs.highlight(command, { language: 'bash' })
+                        .value,
+                    }}
+                  />
+                </pre>
+              </div>
+            </div>
           </VStack>
         );
       }
@@ -284,7 +398,7 @@ export function ToolUseBlock({
                 </Text>
                 <Text
                   size="sm"
-                  weight={600}
+                  weight="semibold"
                   style={{ color: '#d29922', fontFamily: 'monospace' }}
                 >
                   {subagentType}
@@ -502,7 +616,7 @@ export function ToolUseBlock({
         <Text className="tool-icon" size="md">
           {icon}
         </Text>
-        <Text size="sm" weight={600} style={{ color }}>
+        <Text size="sm" weight="semibold" style={{ color }}>
           {displayName}
         </Text>
         {name.startsWith('mcp__') && (
@@ -511,7 +625,9 @@ export function ToolUseBlock({
           </Text>
         )}
       </HStack>
-      <Box className="tool-content">{renderToolContent()}</Box>
+      <Box className="tool-content" style={{ marginTop: 8 }}>
+        {renderToolContent()}
+      </Box>
       {renderResult()}
     </Box>
   );

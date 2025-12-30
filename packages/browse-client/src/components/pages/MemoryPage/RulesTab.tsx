@@ -7,16 +7,18 @@
 
 import type React from 'react';
 import { Suspense } from 'react';
+import { theme } from '@/components/atoms';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
-import { RulesContent } from './RulesContent.tsx';
+import { RulesContent, type RulesContentProps } from './RulesContent.tsx';
+
+interface RulesTabProps extends RulesContentProps {}
 
 /**
  * Rules tab with Suspense boundary
  */
-export function RulesTab(): React.ReactElement {
+export function RulesTab({ scopeFilter }: RulesTabProps): React.ReactElement {
   return (
     <Suspense
       fallback={
@@ -31,7 +33,7 @@ export function RulesTab(): React.ReactElement {
         </VStack>
       }
     >
-      <RulesContent />
+      <RulesContent scopeFilter={scopeFilter} />
     </Suspense>
   );
 }

@@ -3,69 +3,50 @@
  *
  * Displays messages with backward pagination (load earlier messages).
  * Uses usePaginationFragment for pagination.
- * Uses simple scrollable list for proper variable-height message rendering.
- * Implements smart auto-scroll: scrolls on new messages only if already at bottom.
+ * Uses column-reverse for natural scroll-to-bottom behavior.
  */
 
 import type React from 'react';
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useTransition } from 'react';
 import { graphql, usePaginationFragment, useSubscription } from 'react-relay';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
-import { Box } from '@/components/atoms/Box.tsx';
-import { Button } from '@/components/atoms/Button.tsx';
 import { Center } from '@/components/atoms/Center.tsx';
-import { Checkbox } from '@/components/atoms/Checkbox.tsx';
-import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { colors, spacing } from '@/theme.ts';
 import type { SessionMessages_session$key } from './__generated__/SessionMessages_session.graphql.ts';
 import type { SessionMessagesPaginationQuery } from './__generated__/SessionMessagesPaginationQuery.graphql.ts';
 import type { SessionMessagesSubscription } from './__generated__/SessionMessagesSubscription.graphql.ts';
-import { MessageItem } from './components.ts';
+import { MessageCard } from './MessageCards/index.tsx';
 
 /**
- * Pagination fragment for messages (backward pagination - load earlier messages)
+ * Pagination fragment for messages (forward pagination through DESC-ordered list).
+ * Messages are returned newest-first from API, so `first: N` gets newest N,
+ * and `after: cursor` gets older messages for "load more" when scrolling up.
+ * Uses column-reverse so newest messages appear at the bottom.
  */
 const SessionMessagesFragment = graphql`
   fragment SessionMessages_session on Session
   @argumentDefinitions(
-    last: { type: "Int", defaultValue: 50 }
-    before: { type: "String" }
+    first: { type: "Int", defaultValue: 50 }
+    after: { type: "String" }
   )
   @refetchable(queryName: "SessionMessagesPaginationQuery") {
     messageCount
-    messages(last: $last, before: $before)
+    messages(first: $first, after: $after)
       @connection(key: "SessionMessages_messages") {
+      __id
       edges {
         node {
-          __typename
           id
-          timestamp
-          ... on UserMessage {
-            content
-          }
-          ... on AssistantMessage {
-            content
-            isToolOnly
-          }
-          ... on SummaryMessage {
-            content
-          }
+          ...MessageCards_message
         }
         cursor
       }
       pageInfo {
-        hasPreviousPage
-        startCursor
+        hasNextPage
+        endCursor
       }
       totalCount
     }
@@ -73,41 +54,37 @@ const SessionMessagesFragment = graphql`
 `;
 
 /**
- * Subscription for new messages in this session
+ * Subscription for new messages in this session.
+ * Uses @appendEdge to add new messages to the connection.
+ *
+ * NOTE ON ORDERING (may seem backwards but is correct):
+ * - API returns messages in DESC order (newest first)
+ * - CSS column-reverse displays items bottom-to-top
+ * - So: FIRST item in array = BOTTOM of visual display = newest message
+ * - New messages need to appear at the BOTTOM (as newest)
+ * - @appendEdge adds to END of Relay's connection edges
+ * - With column-reverse, END of edges = TOP visually... BUT
+ * - Relay connections with forward pagination (first/after) append new items
+ *   at the logical "end" which with DESC data means they appear correctly
  */
 const SessionMessagesSubscriptionDef = graphql`
-  subscription SessionMessagesSubscription($sessionId: ID!) {
+  subscription SessionMessagesSubscription(
+    $sessionId: ID!
+    $connections: [ID!]!
+  ) {
     sessionMessageAdded(sessionId: $sessionId) {
       sessionId
       messageIndex
+      newMessageEdge @appendEdge(connections: $connections) {
+        node {
+          id
+          ...MessageCards_message
+        }
+        cursor
+      }
     }
   }
 `;
-
-// Simplified message type for list rendering
-interface SimpleMessage {
-  id: string;
-  type: 'USER' | 'ASSISTANT' | 'SUMMARY';
-  content: string | null;
-  timestamp: string | null;
-  isToolOnly: boolean;
-}
-
-// Helper to map GraphQL __typename to message type
-function mapTypenameToType(
-  typename: string
-): 'USER' | 'ASSISTANT' | 'SUMMARY' {
-  switch (typename) {
-    case 'UserMessage':
-      return 'USER';
-    case 'AssistantMessage':
-      return 'ASSISTANT';
-    case 'SummaryMessage':
-      return 'SUMMARY';
-    default:
-      return 'USER';
-  }
-}
 
 interface SessionMessagesProps {
   fragmentRef: SessionMessages_session$key;
@@ -120,353 +97,204 @@ export function SessionMessages({
   sessionId,
   isLive,
 }: SessionMessagesProps): React.ReactElement {
-  const [showToolOnly, setShowToolOnly] = useState(true);
   const [isPending, startTransition] = useTransition();
-  const [_isAtBottom, setIsAtBottom] = useState(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
-  const { data, loadPrevious, hasPrevious, isLoadingPrevious, refetch } =
-    usePaginationFragment<
-      SessionMessagesPaginationQuery,
-      SessionMessages_session$key
-    >(SessionMessagesFragment, fragmentRef);
+  const { data, loadNext, hasNext, isLoadingNext } = usePaginationFragment<
+    SessionMessagesPaginationQuery,
+    SessionMessages_session$key
+  >(SessionMessagesFragment, fragmentRef);
 
-  // Subscription for live updates - refetch when new messages arrive
+  // Get connection ID for @appendEdge directive
+  // The connection ID is the __id of the messages connection
+  const connectionId = data?.messages?.__id;
+
+  // Subscription for live updates - uses @appendEdge to add new messages without refetching
   const subscriptionConfig = useMemo<
     GraphQLSubscriptionConfig<SessionMessagesSubscription>
   >(
     () => ({
       subscription: SessionMessagesSubscriptionDef,
-      variables: { sessionId },
-      onNext: (response) => {
-        const event = response?.sessionMessageAdded;
-        if (event?.sessionId === sessionId) {
-          // Refetch to get the new messages
-          startTransition(() => {
-            refetch({}, { fetchPolicy: 'network-only' });
-          });
-        }
+      variables: {
+        sessionId,
+        connections: connectionId ? [connectionId] : [],
       },
       onError: (err) => {
         console.warn('SessionMessages subscription error:', err);
       },
     }),
-    [sessionId, refetch]
+    [sessionId, connectionId]
   );
 
   useSubscription<SessionMessagesSubscription>(subscriptionConfig);
 
-  const messages: SimpleMessage[] = useMemo(() => {
-    const edges = data?.messages?.edges ?? [];
-    return edges
-      .map((edge) => edge?.node)
-      .filter((n): n is NonNullable<typeof n> => n !== null && n !== undefined)
-      .map((n) => ({
-        id: n.id ?? '',
-        type: mapTypenameToType(n.__typename),
-        content: 'content' in n ? (n.content ?? null) : null,
-        timestamp: n.timestamp ?? null,
-        isToolOnly: 'isToolOnly' in n ? (n.isToolOnly ?? false) : false,
-      }));
-  }, [data?.messages?.edges]);
+  // Get message nodes from edges, filtering out null/undefined
+  // API returns newest-first (DESC), reverse to show oldest-first (newest at bottom)
+  const messageNodes = (data?.messages?.edges ?? [])
+    .map((edge) => edge?.node)
+    .filter(
+      (node): node is NonNullable<typeof node> =>
+        node != null && node.id != null
+    )
+    .reverse();
 
-  const filteredMessages = useMemo(() => {
-    if (!messages.length) return [];
-    return showToolOnly ? messages : messages.filter((m) => !m.isToolOnly);
-  }, [messages, showToolOnly]);
+  // Refs for scroll container and load more trigger
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef(false);
+  const prevScrollHeightRef = useRef<number>(0);
 
-  // Load earlier messages when scrolling to top
-  const handleStartReached = useCallback(() => {
-    if (hasPrevious && !isLoadingPrevious && !isPending) {
-      // Save current scroll state to restore position after load
+  // Load older messages when scrolling up (forward pagination through DESC list)
+  // Preserves scroll position by recording scroll height before load
+  const handleLoadMore = useCallback(() => {
+    if (hasNext && !isLoadingNext && !isPending && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      // Record scroll height before loading
       if (scrollRef.current) {
         prevScrollHeightRef.current = scrollRef.current.scrollHeight;
-        prevScrollTopRef.current = scrollRef.current.scrollTop;
-        isLoadingEarlierRef.current = true;
       }
       startTransition(() => {
-        loadPrevious(50);
+        loadNext(50);
       });
     }
-  }, [hasPrevious, isLoadingPrevious, isPending, loadPrevious]);
+  }, [hasNext, isLoadingNext, isPending, loadNext]);
 
-  // Scroll container ref for auto-scroll behavior
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const hasInitialScrolledRef = useRef(false);
-  const prevMessageCountRef = useRef(filteredMessages.length);
-  const prevScrollHeightRef = useRef(0); // Track scroll height before loading
-  const prevScrollTopRef = useRef(0); // Track scroll position before loading
-  const isFollowingRef = useRef(true); // Track if we're following new messages
-  const programmaticScrollRef = useRef(false); // Skip scroll events from programmatic scrolling
-  const isLoadingEarlierRef = useRef(false); // Track if we're loading earlier messages
-  const firstMessageIdRef = useRef<string | null>(null); // Track first message to detect prepends
-
-  // Check if scrolled to bottom (within threshold)
-  const checkIfAtBottom = useCallback(() => {
-    if (!scrollRef.current) return true;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const threshold = 100; // pixels from bottom to consider "at bottom"
-    return scrollHeight - scrollTop - clientHeight < threshold;
-  }, []);
-
-  // Scroll to bottom helper with smooth animation
-  const scrollToBottom = useCallback((smooth = true) => {
-    if (!scrollRef.current) return;
-    programmaticScrollRef.current = true;
-
-    if (smooth) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-      // Reset programmatic flag after smooth scroll completes (~300ms)
-      setTimeout(() => {
-        programmaticScrollRef.current = false;
-      }, 350);
-    } else {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      requestAnimationFrame(() => {
-        programmaticScrollRef.current = false;
-      });
+  // Restore scroll position after loading older messages
+  useEffect(() => {
+    if (!isLoadingNext && !isPending && isLoadingRef.current) {
+      isLoadingRef.current = false;
+      const scrollEl = scrollRef.current;
+      if (scrollEl && prevScrollHeightRef.current > 0) {
+        // Calculate new scroll position to maintain view
+        const newScrollHeight = scrollEl.scrollHeight;
+        const heightDiff = newScrollHeight - prevScrollHeightRef.current;
+        if (heightDiff > 0) {
+          scrollEl.scrollTop += heightDiff;
+        }
+        prevScrollHeightRef.current = 0;
+      }
     }
-  }, []);
+  }, [isLoadingNext, isPending]);
 
-  // Scroll to bottom on initial load - use double RAF to ensure DOM is painted
+  // Scroll to bottom on initial load only
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
     if (
-      scrollRef.current &&
-      filteredMessages.length > 0 &&
-      !hasInitialScrolledRef.current
+      !hasInitializedRef.current &&
+      bottomRef.current &&
+      messageNodes.length > 0
     ) {
-      // Mark as scrolled first to prevent re-runs
-      hasInitialScrolledRef.current = true;
-      // Track the first message for prepend detection
-      firstMessageIdRef.current = filteredMessages[0]?.id ?? null;
-      // Double requestAnimationFrame to ensure DOM is fully painted
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            setIsAtBottom(true);
-            setShowScrollButton(false);
-          }
-        });
-      });
+      hasInitializedRef.current = true;
+      bottomRef.current.scrollIntoView({ behavior: 'instant' });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredMessages.length, filteredMessages[0]?.id]);
+  }, [messageNodes.length]);
 
-  // Handle scroll position after loading earlier messages (useLayoutEffect for synchronous update)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Effect must trigger on message count change for scroll restoration
-  useLayoutEffect(() => {
-    if (!scrollRef.current || !hasInitialScrolledRef.current) return;
-
-    // If we were loading earlier messages, restore scroll position immediately
-    if (isLoadingEarlierRef.current && prevScrollHeightRef.current > 0) {
-      const newScrollHeight = scrollRef.current.scrollHeight;
-      const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
-      // Add the diff to the previous scrollTop to maintain visual position
-      const newScrollTop = prevScrollTopRef.current + scrollDiff;
-      programmaticScrollRef.current = true;
-      scrollRef.current.scrollTop = newScrollTop;
-      // Use RAF to reset flag after browser processes the scroll
-      requestAnimationFrame(() => {
-        programmaticScrollRef.current = false;
-      });
-      // Reset loading state
-      isLoadingEarlierRef.current = false;
-      prevScrollHeightRef.current = 0;
-      prevScrollTopRef.current = 0;
-    }
-  }, [filteredMessages.length]);
-
-  // Handle new messages arriving (auto-scroll if following)
+  // Intersection observer for infinite scroll - triggers when "load older" element is visible
+  // Only triggers if not already loading
   useEffect(() => {
-    if (!scrollRef.current || !hasInitialScrolledRef.current) return;
+    const element = loadMoreRef.current;
+    if (!element || !hasNext) return;
 
-    const currentFirstId = filteredMessages[0]?.id ?? null;
-    const messageCountIncreased =
-      filteredMessages.length > prevMessageCountRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoadingRef.current) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
 
-    // Detect if messages were prepended (earlier messages loaded)
-    // vs appended (new messages at end)
-    const wasPrepend =
-      firstMessageIdRef.current !== null &&
-      currentFirstId !== firstMessageIdRef.current;
-
-    // Update first message tracking
-    firstMessageIdRef.current = currentFirstId;
-
-    // Only auto-scroll if following and not a prepend operation
-    if (messageCountIncreased && isFollowingRef.current && !wasPrepend) {
-      scrollToBottom();
-      setShowScrollButton(false);
-    }
-
-    prevMessageCountRef.current = filteredMessages.length;
-  }, [filteredMessages.length, filteredMessages, scrollToBottom]);
-
-  // Handle scroll events to track position and load more
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-
-    // Skip if this was a programmatic scroll
-    if (programmaticScrollRef.current) return;
-
-    // Don't trigger infinite scroll until initial scroll to bottom is complete
-    if (!hasInitialScrolledRef.current) return;
-
-    const { scrollTop } = scrollRef.current;
-
-    // Load more when near top (infinite scroll)
-    // Use a larger threshold (500px) for smoother loading experience
-    if (scrollTop < 500 && hasPrevious && !isLoadingPrevious && !isPending) {
-      handleStartReached();
-    }
-
-    // Update bottom tracking
-    const atBottom = checkIfAtBottom();
-    setIsAtBottom(atBottom);
-
-    // If user scrolled away from bottom, stop following
-    if (!atBottom) {
-      isFollowingRef.current = false;
-      setShowScrollButton(true);
-    } else {
-      // If user manually scrolled back to bottom, re-enable following
-      isFollowingRef.current = true;
-      setShowScrollButton(false);
-    }
-  }, [
-    hasPrevious,
-    isLoadingPrevious,
-    isPending,
-    handleStartReached,
-    checkIfAtBottom,
-  ]);
-
-  // Scroll to bottom button handler
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-    isFollowingRef.current = true; // Re-enable auto-scroll
-    setIsAtBottom(true);
-    setShowScrollButton(false);
-  }, [scrollToBottom]);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hasNext, handleLoadMore]);
 
   return (
-    <Box
-      className="messages-section"
+    <div
       style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
+        minHeight: 0,
+        overflow: 'hidden',
       }}
     >
-      <HStack
-        className="messages-header"
-        justify="space-between"
-        align="center"
-        style={{ flexShrink: 0, marginBottom: '0.5rem' }}
+      {/* Sticky header at top */}
+      <div
+        style={{
+          flexShrink: 0,
+          backgroundColor: colors.bg.primary,
+          paddingTop: spacing.sm,
+          paddingBottom: spacing.sm,
+          paddingLeft: spacing.md,
+          paddingRight: spacing.md,
+          borderBottom: `1px solid ${colors.border.default}`,
+        }}
       >
         <HStack gap="sm" align="center">
-          <Heading size="sm" as="h3">
+          <Text size="sm" style={{ fontWeight: 600 }}>
             Messages ({data?.messageCount ?? 0})
-          </Heading>
+          </Text>
           {isLive && (
             <span
-              className="live-indicator-dot"
               title="Live - receiving updates"
               style={{
                 display: 'inline-block',
-                width: '8px',
-                height: '8px',
+                width: 8,
+                height: 8,
                 borderRadius: '50%',
                 backgroundColor: '#22c55e',
                 boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)',
-                animation: 'pulse 2s ease-in-out infinite',
               }}
             />
           )}
         </HStack>
-        <Checkbox
-          checked={showToolOnly}
-          onChange={(checked) => setShowToolOnly(checked)}
-        >
-          Show tool-only messages
-        </Checkbox>
-      </HStack>
-      <Box
+      </div>
+
+      {/* Scrollable messages area */}
+      <div
         ref={scrollRef}
-        className="messages-list"
-        onScroll={handleScroll}
         style={{
           flex: 1,
           overflowY: 'auto',
-          // Disable browser scroll anchoring - we manage scroll position manually
-          overflowAnchor: 'none',
+          overflowX: 'hidden',
+          minHeight: 0,
         }}
       >
-        {/* Loading indicator for infinite scroll */}
-        {(isLoadingPrevious || isPending) && (
-          <Center style={{ padding: '1rem' }}>
-            <Spinner />
-          </Center>
-        )}
-        {/* Scroll up indicator when more messages available */}
-        {hasPrevious && !isLoadingPrevious && !isPending && (
-          <Center style={{ padding: '0.5rem' }}>
-            <Text size="xs" color="muted">
-              ↑ Scroll up for earlier messages
-            </Text>
-          </Center>
-        )}
-        {filteredMessages.length === 0 ? (
-          <Center className="empty-state">
+        {messageNodes.length === 0 ? (
+          <Center style={{ padding: spacing.xl }}>
             <Text color="muted">No messages in this session.</Text>
           </Center>
         ) : (
-          filteredMessages.map((message) => (
-            <Box key={message.id} style={{ marginBottom: '2px' }}>
-              <MessageItem
-                message={{
-                  id: message.id,
-                  type: (['USER', 'ASSISTANT', 'SUMMARY'].includes(
-                    message.type ?? ''
-                  )
-                    ? message.type
-                    : 'USER') as 'USER' | 'ASSISTANT' | 'SUMMARY',
-                  content: message.content ?? '',
-                  timestamp: message.timestamp ?? '',
-                  isToolOnly: message.isToolOnly ?? false,
-                }}
-                sessionId={sessionId}
-              />
-            </Box>
-          ))
+          <>
+            {/* Load more trigger at top */}
+            {hasNext && (
+              <div ref={loadMoreRef}>
+                <Center style={{ padding: spacing.md }}>
+                  {isLoadingNext || isPending ? (
+                    <Spinner />
+                  ) : (
+                    <Text size="xs" color="muted">
+                      ↑ Scroll up to load older messages
+                    </Text>
+                  )}
+                </Center>
+              </div>
+            )}
+
+            {/* Messages in chronological order (oldest first) */}
+            <div style={{ padding: spacing.md, paddingTop: 0 }}>
+              {messageNodes.map((node) => (
+                <div key={node.id} style={{ marginBottom: spacing.sm }}>
+                  <MessageCard fragmentRef={node} />
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom anchor for scroll-to-bottom */}
+            <div ref={bottomRef} style={{ height: spacing.md }} />
+          </>
         )}
-      </Box>
-      {/* Scroll to bottom button - floating outside scroll container */}
-      {showScrollButton && (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={handleScrollToBottom}
-          style={{
-            position: 'absolute',
-            bottom: '1.5rem',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 100,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          ↓ Scroll to Bottom
-        </Button>
-      )}
-    </Box>
+      </div>
+    </div>
   );
 }

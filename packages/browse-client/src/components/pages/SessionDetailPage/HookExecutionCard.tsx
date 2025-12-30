@@ -57,13 +57,13 @@ export function HookExecutionCard({
             <Box className="hook-details">
               {hook.error && (
                 <Box className="hook-error">
-                  <Text weight={600}>Error:</Text>
+                  <Text weight="semibold">Error:</Text>
                   <pre>{hook.error}</pre>
                 </Box>
               )}
               {hook.output && (
                 <Box className="hook-output">
-                  <Text weight={600}>Output:</Text>
+                  <Text weight="semibold">Output:</Text>
                   <pre>{hook.output}</pre>
                 </Box>
               )}

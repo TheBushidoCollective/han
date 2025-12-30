@@ -64,7 +64,7 @@ function getSystemRoleInfo(level: string | null): MessageRoleInfo {
   const levelInfo = getLevelInfo(level);
   return {
     label: 'System',
-    className: 'role-system',
+    color: '#8b949e',
     icon: levelInfo.icon,
   };
 }

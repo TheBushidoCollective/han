@@ -9,6 +9,7 @@ import type React from 'react';
 import { Suspense, useState } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
 import { useParams } from 'react-router-dom';
+import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
@@ -16,7 +17,6 @@ import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { SettingsPageQuery as SettingsPageQueryType } from './__generated__/SettingsPageQuery.graphql.ts';
 import {

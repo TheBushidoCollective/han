@@ -34,7 +34,7 @@ export function ThinkingBlock({
         <Text className="thinking-icon" size="md">
           🧠
         </Text>
-        <Text size="sm" weight={600} color="muted">
+        <Text size="sm" weight="semibold" color="muted">
           Thinking
         </Text>
         {signature && (

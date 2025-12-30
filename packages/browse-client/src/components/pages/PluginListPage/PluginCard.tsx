@@ -39,7 +39,7 @@ export function PluginCard({
     >
       <VStack gap="md">
         <HStack justify="space-between" align="flex-start">
-          <Text weight={600} size="md">
+          <Text weight="semibold" size="md">
             {plugin.name}
           </Text>
           <HStack gap="xs">
@@ -54,6 +54,20 @@ export function PluginCard({
         <Text size="sm" color="muted">
           @{plugin.marketplace}
         </Text>
+        <HStack gap="sm">
+          <a
+            href={`https://han.guru/plugins/${plugin.category?.toLowerCase() || 'core'}/${plugin.name}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: '0.875rem',
+              color: 'var(--color-accent-primary)',
+              textDecoration: 'none',
+            }}
+          >
+            View on han.guru
+          </a>
+        </HStack>
         <HStack gap="sm">
           <Button
             size="sm"

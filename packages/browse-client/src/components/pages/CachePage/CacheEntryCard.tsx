@@ -50,12 +50,12 @@ export function CacheEntryCard({
     <Card>
       <VStack gap="sm">
         <HStack justify="space-between" align="center">
-          <Text weight={600}>{entry.pluginName ?? 'Unknown'}</Text>
+          <Text weight="semibold">{entry.pluginName ?? 'Unknown'}</Text>
           <Badge>{entry.hookName ?? 'unknown'}</Badge>
         </HStack>
         <HStack justify="space-between" align="center">
           <Text size="sm" color="secondary">
-            <Text weight={600} size="sm">
+            <Text weight="semibold" size="sm">
               {entry.fileCount ?? 0}
             </Text>{' '}
             tracked files

@@ -42,7 +42,7 @@ interface MemoryQueryMessageCardProps {
 function getMemoryQueryRoleInfo(): MessageRoleInfo {
   return {
     label: 'Memory Query',
-    className: 'role-memory-query',
+    color: '#58a6ff',
     icon: '🧠',
   };
 }

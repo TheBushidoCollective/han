@@ -22,7 +22,7 @@ export function StatusItem({
       <Text color="secondary" size="sm">
         {label}
       </Text>
-      <Text weight={500}>{value}</Text>
+      <Text weight="medium">{value}</Text>
     </HStack>
   );
 }

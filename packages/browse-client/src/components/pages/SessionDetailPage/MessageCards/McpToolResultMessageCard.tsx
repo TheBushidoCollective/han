@@ -45,7 +45,7 @@ interface McpToolResultMessageCardProps {
 function getMcpToolResultRoleInfo(success: boolean): MessageRoleInfo {
   return {
     label: 'MCP Tool Result',
-    className: 'role-mcp-tool-result',
+    color: '#8b949e',
     icon: success ? '✅' : '❌',
   };
 }
@@ -95,7 +95,7 @@ export function McpToolResultMessageCard({
               <Text size="sm" color="muted">
                 Tool:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.tool ?? data.prefixedName ?? 'unknown'}
               </Text>
             </HStack>

@@ -5,12 +5,12 @@
  */
 
 import type React from 'react';
+import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { McpServer } from './types.ts';
 
@@ -25,7 +25,7 @@ export function McpServerCard({
     <Card>
       <VStack gap="sm">
         <HStack justify="space-between" align="center">
-          <Text weight={600}>{server.name}</Text>
+          <Text weight="semibold">{server.name}</Text>
           <Badge variant={server.type === 'http' ? 'purple' : 'success'}>
             {server.type}
           </Badge>

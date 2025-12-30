@@ -49,7 +49,7 @@ function getSentimentRoleInfo(level: string): MessageRoleInfo {
   };
   return {
     label: 'Sentiment',
-    className: 'role-sentiment-analysis',
+    color: '#f778ba',
     icon: icons[level] ?? '📊',
   };
 }
@@ -121,7 +121,7 @@ export function SentimentAnalysisMessageCard({
               <Text size="sm" color="muted">
                 Score:
               </Text>
-              <Text size="sm" weight={500} style={{ color: sentimentColor }}>
+              <Text size="sm" weight="medium" style={{ color: sentimentColor }}>
                 {data.sentimentScore?.toFixed(2) ?? 'N/A'}
               </Text>
             </HStack>

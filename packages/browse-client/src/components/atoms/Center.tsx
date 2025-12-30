@@ -1,20 +1,26 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { type SpacingKey, spacing } from '../../theme.ts';
 
-interface CenterProps {
+export interface CenterProps {
   children?: ReactNode;
   style?: CSSProperties;
   className?: string;
+  p?: SpacingKey;
+  height?: CSSProperties['height'];
 }
 
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
-export function Center({ children, style, className }: CenterProps) {
-  const classes = cn('center-base', className);
+export function Center({ children, style, className, p, height }: CenterProps) {
+  const computedStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(p && { padding: spacing[p] }),
+    ...(height && { height }),
+    ...style,
+  };
 
   return (
-    <div className={classes} style={style}>
+    <div className={className} style={computedStyle}>
       {children}
     </div>
   );

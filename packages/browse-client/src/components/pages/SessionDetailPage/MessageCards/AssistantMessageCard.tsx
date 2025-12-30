@@ -87,7 +87,7 @@ interface AssistantMessageCardProps {
 
 const ASSISTANT_ROLE_INFO: MessageRoleInfo = {
   label: 'Claude',
-  className: 'role-claude',
+  color: '#3fb950', // success green
   icon: '🤖',
 };
 
@@ -252,7 +252,7 @@ export function AssistantMessageCard({
       {showRawJson ? (
         <RawJsonView rawJson={data.rawJson ?? null} />
       ) : (
-        <VStack className="message-content" gap="sm" align="stretch">
+        <VStack gap="md" align="stretch">
           {hasContentBlocks ? (
             contentBlocks.map((block, index) =>
               renderContentBlock(

@@ -26,7 +26,6 @@ import { marked } from 'marked';
 import type { CSSProperties, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { AnsiText, containsAnsi } from '@/components/atoms/AnsiText.tsx';
-import { Box } from '@/components/atoms/Box.tsx';
 
 // Register highlight.js languages
 hljs.registerLanguage('bash', bash);
@@ -48,8 +47,9 @@ hljs.registerLanguage('rust', rust);
 hljs.registerLanguage('plaintext', plaintext);
 
 // Configure marked for safe rendering with syntax highlighting
+// Note: breaks: false to avoid extra <br> tags in lists
 marked.setOptions({
-  breaks: true,
+  breaks: false,
   gfm: true,
 });
 
@@ -83,8 +83,123 @@ marked.use({ renderer });
 const markdownStyles: CSSProperties = {
   fontSize: '0.9rem',
   lineHeight: 1.6,
-  color: 'var(--text-primary, #e1e4e8)',
+  color: '#c9d1d9',
 };
+
+/**
+ * Scoped styles for markdown content (injected as style tag)
+ * These styles target elements inside the markdown container
+ */
+const scopedMarkdownCSS = `
+.markdown-content .markdown-body h1,
+.markdown-content .markdown-body h2,
+.markdown-content .markdown-body h3,
+.markdown-content .markdown-body h4,
+.markdown-content .markdown-body h5,
+.markdown-content .markdown-body h6 {
+  color: #f0f6fc;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+.markdown-content .markdown-body p {
+  margin: 0.5em 0;
+}
+.markdown-content .markdown-body ul,
+.markdown-content .markdown-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.markdown-content .markdown-body li {
+  margin: 0.25em 0;
+}
+.markdown-content .markdown-body a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+.markdown-content .markdown-body a:hover {
+  text-decoration: underline;
+}
+.markdown-content .markdown-body code {
+  background-color: #21262d;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+.markdown-content .markdown-body pre {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.markdown-content .markdown-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.markdown-content .markdown-body blockquote {
+  border-left: 3px solid #30363d;
+  padding-left: 12px;
+  margin: 0.5em 0;
+  color: #8b949e;
+}
+.markdown-content .terminal-output {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.markdown-content .plain-text {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.markdown-content .plain-text code {
+  background: none;
+  padding: 0;
+}
+.markdown-content .code-block {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.markdown-content .code-block code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+/* Highlight.js theme overrides */
+.markdown-content .hljs {
+  color: #c9d1d9;
+  background: transparent;
+}
+.markdown-content .hljs-keyword { color: #ff7b72; }
+.markdown-content .hljs-string { color: #a5d6ff; }
+.markdown-content .hljs-number { color: #79c0ff; }
+.markdown-content .hljs-comment { color: #8b949e; }
+.markdown-content .hljs-function { color: #d2a8ff; }
+.markdown-content .hljs-class { color: #ffa657; }
+.markdown-content .hljs-variable { color: #ffa657; }
+.markdown-content .hljs-attr { color: #79c0ff; }
+.markdown-content .hljs-built_in { color: #ffa657; }
+`;
 
 /**
  * Content type detection result
@@ -209,8 +324,8 @@ export function MarkdownContent({
         );
 
       case 'markdown': {
-        // Strip ANSI codes if present, then parse markdown
-        const cleanContent = stripAnsi(displayContent);
+        // Strip ANSI codes if present, then collapse all multiple newlines to single
+        const cleanContent = stripAnsi(displayContent).replace(/\n{2}/g, '\n');
         const html = marked.parse(cleanContent) as string;
 
         // Post-process to handle ANSI code blocks
@@ -244,15 +359,18 @@ export function MarkdownContent({
     `markdown-content ${contentType}-content ${className}`.trim();
 
   return (
-    <Box
-      className={combinedClassName}
-      style={{
-        ...markdownStyles,
-        ...style,
-      }}
-    >
-      {rendered}
-    </Box>
+    <>
+      <style>{scopedMarkdownCSS}</style>
+      <div
+        className={combinedClassName}
+        style={{
+          ...markdownStyles,
+          ...style,
+        }}
+      >
+        {rendered}
+      </div>
+    </>
   );
 }
 

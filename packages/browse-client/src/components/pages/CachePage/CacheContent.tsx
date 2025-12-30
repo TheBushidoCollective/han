@@ -7,13 +7,13 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { CacheContentQuery as CacheContentQueryType } from './__generated__/CacheContentQuery.graphql.ts';
 import { CacheEntryCard } from './CacheEntryCard.tsx';
@@ -162,14 +162,14 @@ export function CacheContent(): React.ReactElement {
       {/* Info hint */}
       <Card
         style={{
-          backgroundColor: theme.colors.background.tertiary,
+          backgroundColor: theme.colors.bg.tertiary,
         }}
       >
         <Text size="sm" color="secondary">
           The hook cache stores file hashes to skip unchanged hooks. Run{' '}
           <code
             style={{
-              backgroundColor: theme.colors.background.secondary,
+              backgroundColor: theme.colors.bg.secondary,
               padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
               borderRadius: theme.borderRadius.sm,
             }}

@@ -26,15 +26,13 @@ export function NavItem({
       style={{
         display: 'block',
         textDecoration: 'none',
-        borderRadius: theme.borderRadius.md,
-        backgroundColor: isActive
-          ? theme.colors.background.tertiary
-          : 'transparent',
+        borderRadius: theme.radii.md,
+        backgroundColor: isActive ? theme.colors.bg.tertiary : 'transparent',
         transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.backgroundColor = theme.colors.background.hover;
+          e.currentTarget.style.backgroundColor = theme.colors.bg.hover;
         }
       }}
       onMouseLeave={(e) => {

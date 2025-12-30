@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<1e571e363f087a8dacf575287011af39>>
+ * @generated SignedSource<<6cad4b33ce9603acd1e999229d1ccd21>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,6 +12,7 @@ import type { FragmentRefs, ReaderFragment } from 'relay-runtime';
 export type SummaryMessageCard_message$data = {
   readonly content: string | null | undefined;
   readonly id: string | null | undefined;
+  readonly isCompactSummary: boolean | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly timestamp: any | null | undefined;
   readonly ' $fragmentType': 'SummaryMessageCard_message';
@@ -55,11 +56,18 @@ const node: ReaderFragment = {
       name: 'content',
       storageKey: null,
     },
+    {
+      alias: null,
+      args: null,
+      kind: 'ScalarField',
+      name: 'isCompactSummary',
+      storageKey: null,
+    },
   ],
   type: 'SummaryMessage',
   abstractKey: null,
 };
 
-(node as any).hash = 'd35ce8e6e3d19be6c570f28517173ba2';
+(node as any).hash = '5132960e1a1edfe9e850514caeca68b7';
 
 export default node;

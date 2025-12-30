@@ -7,13 +7,13 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { RulesContentQuery as RulesContentQueryType } from './__generated__/RulesContentQuery.graphql.ts';
 
@@ -27,6 +27,8 @@ const RulesContentQueryDef = graphql`
         path
         content
         size
+        projectPath
+        projectName
       }
     }
   }
@@ -39,9 +41,18 @@ interface Rule {
   path: string;
   content: string;
   size: number;
+  projectPath: string | null;
+  projectName: string | null;
 }
 
-export function RulesContent(): React.ReactElement {
+export interface RulesContentProps {
+  /** Filter to only show rules of this scope ('USER' or 'PROJECT'). If not set, shows all. */
+  scopeFilter?: 'USER' | 'PROJECT';
+}
+
+export function RulesContent({
+  scopeFilter,
+}: RulesContentProps): React.ReactElement {
   const [selectedRule, setSelectedRule] = useState<Rule | null>(null);
   const [filter, setFilter] = useState('');
 
@@ -61,21 +72,56 @@ export function RulesContent(): React.ReactElement {
         path: r.path ?? '',
         content: r.content ?? '',
         size: r.size ?? 0,
+        projectPath: r.projectPath ?? null,
+        projectName: r.projectName ?? null,
       }));
   }, [data.memory?.rules]);
 
   const filteredRules = useMemo(() => {
-    if (!filter) return rules;
-    const searchLower = filter.toLowerCase();
-    return rules.filter(
-      (r) =>
-        r.domain.toLowerCase().includes(searchLower) ||
-        r.content.toLowerCase().includes(searchLower)
-    );
-  }, [rules, filter]);
+    let result = rules;
 
-  const projectRules = filteredRules.filter((r) => r.scope === 'PROJECT');
-  const userRules = filteredRules.filter((r) => r.scope === 'USER');
+    // Apply scope filter if provided
+    if (scopeFilter) {
+      result = result.filter((r) => r.scope === scopeFilter);
+    }
+
+    // Apply text search filter
+    if (filter) {
+      const searchLower = filter.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.domain.toLowerCase().includes(searchLower) ||
+          r.content.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return result;
+  }, [rules, filter, scopeFilter]);
+
+  // Only split into project/user if no scopeFilter is set (showing all)
+  const projectRules = scopeFilter
+    ? scopeFilter === 'PROJECT'
+      ? filteredRules
+      : []
+    : filteredRules.filter((r) => r.scope === 'PROJECT');
+  const userRules = scopeFilter
+    ? scopeFilter === 'USER'
+      ? filteredRules
+      : []
+    : filteredRules.filter((r) => r.scope === 'USER');
+
+  // Group project rules by project name
+  const projectRulesGrouped = useMemo(() => {
+    const groups: Record<string, Rule[]> = {};
+    for (const rule of projectRules) {
+      const key = rule.projectName || 'Unknown Project';
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(rule);
+    }
+    return groups;
+  }, [projectRules]);
 
   return (
     <VStack gap="lg">
@@ -97,34 +143,37 @@ export function RulesContent(): React.ReactElement {
             flexShrink: 0,
           }}
         >
-          {projectRules.length > 0 && (
-            <VStack gap="sm">
-              <Heading size="sm" as="h4">
-                Project Rules
-              </Heading>
-              {projectRules.map((rule) => (
-                <Card
-                  key={rule.id}
-                  hoverable
-                  onClick={() => setSelectedRule(rule)}
-                  style={{
-                    ...(selectedRule?.id === rule.id && {
-                      borderColor: theme.colors.accent.primary,
-                    }),
-                  }}
-                >
-                  <HStack justify="space-between" align="center">
-                    <Text size="sm" weight={500}>
-                      {rule.domain}
-                    </Text>
-                    <Text size="xs" color="muted">
-                      {Math.round(rule.size / 1024)}KB
-                    </Text>
-                  </HStack>
-                </Card>
-              ))}
-            </VStack>
-          )}
+          {Object.keys(projectRulesGrouped).length > 0 &&
+            Object.entries(projectRulesGrouped).map(
+              ([projectName, projectGroupRules]) => (
+                <VStack gap="sm" key={projectName}>
+                  <Heading size="sm" as="h4">
+                    {projectName}
+                  </Heading>
+                  {projectGroupRules.map((rule) => (
+                    <Card
+                      key={rule.id}
+                      hoverable
+                      onClick={() => setSelectedRule(rule)}
+                      style={{
+                        ...(selectedRule?.id === rule.id && {
+                          borderColor: theme.colors.accent.primary,
+                        }),
+                      }}
+                    >
+                      <HStack justify="space-between" align="center">
+                        <Text size="sm" weight="medium">
+                          {rule.domain}
+                        </Text>
+                        <Text size="xs" color="muted">
+                          {Math.round(rule.size / 1024)}KB
+                        </Text>
+                      </HStack>
+                    </Card>
+                  ))}
+                </VStack>
+              )
+            )}
 
           {userRules.length > 0 && (
             <VStack gap="sm">
@@ -143,7 +192,7 @@ export function RulesContent(): React.ReactElement {
                   }}
                 >
                   <HStack justify="space-between" align="center">
-                    <Text size="sm" weight={500}>
+                    <Text size="sm" weight="medium">
                       {rule.domain}
                     </Text>
                     <Text size="xs" color="muted">
@@ -171,9 +220,16 @@ export function RulesContent(): React.ReactElement {
           {selectedRule ? (
             <VStack gap="md">
               <VStack gap="xs">
-                <Heading size="sm" as="h3">
-                  {selectedRule.domain}
-                </Heading>
+                <HStack gap="sm" align="center">
+                  <Heading size="sm" as="h3">
+                    {selectedRule.domain}
+                  </Heading>
+                  {selectedRule.projectName && (
+                    <Text size="xs" color="muted">
+                      ({selectedRule.projectName})
+                    </Text>
+                  )}
+                </HStack>
                 <Text size="xs" color="muted">
                   {selectedRule.path}
                 </Text>

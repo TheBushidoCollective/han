@@ -8,6 +8,7 @@
 import type React from 'react';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { graphql, useLazyLoadQuery, useMutation } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
@@ -16,7 +17,6 @@ import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { PluginListPageQuery as PluginListPageQueryType } from './__generated__/PluginListPageQuery.graphql.ts';
 import type { PluginListPageRemoveMutation } from './__generated__/PluginListPageRemoveMutation.graphql.ts';
@@ -89,10 +89,22 @@ const PluginListPageRemoveMutationDef = graphql`
   }
 `;
 
+interface PluginsContentProps {
+  /**
+   * Filter to only show plugins of certain scopes.
+   * - 'user': Only show USER scope plugins (for global /plugins page)
+   * - 'project': Only show PROJECT and LOCAL scope plugins (for project plugins page)
+   * - undefined: Show all plugins
+   */
+  scopeMode?: 'user' | 'project';
+}
+
 /**
  * Inner plugins content component that uses Relay hooks
  */
-function PluginsContent(): React.ReactElement {
+function PluginsContent({
+  scopeMode,
+}: PluginsContentProps): React.ReactElement {
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -216,9 +228,19 @@ function PluginsContent(): React.ReactElement {
   };
   const pluginCategories = data.pluginCategories ?? [];
 
-  // Filter plugins
+  // Filter plugins by scopeMode first
   let filteredPlugins = [...plugins];
 
+  // Apply scopeMode filter (restricts which scopes are visible)
+  if (scopeMode === 'user') {
+    filteredPlugins = filteredPlugins.filter((p) => p.scope === 'USER');
+  } else if (scopeMode === 'project') {
+    filteredPlugins = filteredPlugins.filter(
+      (p) => p.scope === 'PROJECT' || p.scope === 'LOCAL'
+    );
+  }
+
+  // Apply user-selected filter
   if (filter !== 'all') {
     if (['USER', 'PROJECT', 'LOCAL'].includes(filter)) {
       filteredPlugins = filteredPlugins.filter((p) => p.scope === filter);
@@ -251,7 +273,7 @@ function PluginsContent(): React.ReactElement {
               toast.type === 'success'
                 ? theme.colors.accent.success
                 : theme.colors.accent.danger,
-            color: theme.colors.background.primary,
+            color: theme.colors.bg.primary,
             zIndex: 1000,
             fontSize: theme.fontSize.sm,
           }}
@@ -263,15 +285,20 @@ function PluginsContent(): React.ReactElement {
       {/* Header */}
       <HStack justify="space-between" align="center">
         <HStack gap="md" align="center">
-          <Heading>Plugins</Heading>
+          <Heading>
+            {scopeMode === 'user'
+              ? 'User Plugins'
+              : scopeMode === 'project'
+                ? 'Project Plugins'
+                : 'Plugins'}
+          </Heading>
           <Text color="secondary" size="sm">
-            {pluginStats.totalPlugins ?? 0} installed |{' '}
-            {pluginStats.enabledPlugins ?? 0} enabled
+            {filteredPlugins.length} plugins
           </Text>
         </HStack>
       </HStack>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - show relevant stats based on scopeMode */}
       <Box
         style={{
           display: 'grid',
@@ -279,12 +306,21 @@ function PluginsContent(): React.ReactElement {
           gap: theme.spacing.md,
         }}
       >
-        <StatCard label="User Scope" value={pluginStats.userPlugins ?? 0} />
-        <StatCard
-          label="Project Scope"
-          value={pluginStats.projectPlugins ?? 0}
-        />
-        <StatCard label="Local Scope" value={pluginStats.localPlugins ?? 0} />
+        {(!scopeMode || scopeMode === 'user') && (
+          <StatCard label="User Scope" value={pluginStats.userPlugins ?? 0} />
+        )}
+        {(!scopeMode || scopeMode === 'project') && (
+          <>
+            <StatCard
+              label="Project Scope"
+              value={pluginStats.projectPlugins ?? 0}
+            />
+            <StatCard
+              label="Local Scope"
+              value={pluginStats.localPlugins ?? 0}
+            />
+          </>
+        )}
         {pluginCategories.map((cat) => (
           <StatCard
             key={cat.category}
@@ -310,27 +346,34 @@ function PluginsContent(): React.ReactElement {
           >
             All
           </Button>
-          <Button
-            size="sm"
-            active={filter === 'USER'}
-            onClick={() => setFilter('USER')}
-          >
-            User
-          </Button>
-          <Button
-            size="sm"
-            active={filter === 'PROJECT'}
-            onClick={() => setFilter('PROJECT')}
-          >
-            Project
-          </Button>
-          <Button
-            size="sm"
-            active={filter === 'LOCAL'}
-            onClick={() => setFilter('LOCAL')}
-          >
-            Local
-          </Button>
+          {/* Only show scope filter buttons for scopes available in this mode */}
+          {(!scopeMode || scopeMode === 'user') && (
+            <Button
+              size="sm"
+              active={filter === 'USER'}
+              onClick={() => setFilter('USER')}
+            >
+              User
+            </Button>
+          )}
+          {(!scopeMode || scopeMode === 'project') && (
+            <>
+              <Button
+                size="sm"
+                active={filter === 'PROJECT'}
+                onClick={() => setFilter('PROJECT')}
+              >
+                Project
+              </Button>
+              <Button
+                size="sm"
+                active={filter === 'LOCAL'}
+                onClick={() => setFilter('LOCAL')}
+              >
+                Local
+              </Button>
+            </>
+          )}
         </HStack>
       </HStack>
 
@@ -376,7 +419,7 @@ function PluginsContent(): React.ReactElement {
       {/* Install hint */}
       <Card
         style={{
-          backgroundColor: theme.colors.background.tertiary,
+          backgroundColor: theme.colors.bg.tertiary,
         }}
       >
         <VStack gap="sm">
@@ -384,7 +427,7 @@ function PluginsContent(): React.ReactElement {
             To install plugins, use:{' '}
             <code
               style={{
-                backgroundColor: theme.colors.background.secondary,
+                backgroundColor: theme.colors.bg.secondary,
                 padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
                 borderRadius: theme.borderRadius.sm,
               }}
@@ -396,7 +439,7 @@ function PluginsContent(): React.ReactElement {
             Or auto-detect for your project:{' '}
             <code
               style={{
-                backgroundColor: theme.colors.background.secondary,
+                backgroundColor: theme.colors.bg.secondary,
                 padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
                 borderRadius: theme.borderRadius.sm,
               }}
@@ -410,10 +453,22 @@ function PluginsContent(): React.ReactElement {
   );
 }
 
+export interface PluginListPageProps {
+  /**
+   * Filter mode for plugins.
+   * - 'user': Only show USER scope plugins (for global /plugins page)
+   * - 'project': Only show PROJECT and LOCAL scope plugins (for project plugins page)
+   * - undefined: Show all plugins
+   */
+  scopeMode?: 'user' | 'project';
+}
+
 /**
  * Plugin list page component with Suspense boundary
  */
-export default function PluginListPage(): React.ReactElement {
+export default function PluginListPage({
+  scopeMode,
+}: PluginListPageProps): React.ReactElement {
   return (
     <VStack gap="lg" style={{ padding: theme.spacing.xl }}>
       <Suspense
@@ -429,7 +484,7 @@ export default function PluginListPage(): React.ReactElement {
           </VStack>
         }
       >
-        <PluginsContent />
+        <PluginsContent scopeMode={scopeMode} />
       </Suspense>
     </VStack>
   );

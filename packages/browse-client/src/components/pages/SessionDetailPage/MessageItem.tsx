@@ -19,8 +19,19 @@ import { Link } from '@/components/atoms/Link.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
-import type { Message } from './types.ts';
 import { formatDate } from './utils.ts';
+
+/**
+ * Simplified message type for list rendering
+ * Only includes fields actually used by MessageItem
+ */
+export interface MessageItemMessage {
+  id: string;
+  type: 'USER' | 'ASSISTANT' | 'SUMMARY';
+  content: string | null;
+  timestamp: string | null;
+  isToolOnly: boolean;
+}
 
 // Register bash language for syntax highlighting (used in tool content)
 hljs.registerLanguage('bash', bash);
@@ -220,7 +231,7 @@ function formatToolContent(
             >
               <Text className="tool-icon">{meta.icon}</Text>
               <Text
-                weight={600}
+                weight="semibold"
                 className="tool-name"
                 style={{ color: meta.color }}
               >
@@ -254,7 +265,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -282,7 +293,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -322,7 +333,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -349,7 +360,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -375,7 +386,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -407,7 +418,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -436,7 +447,7 @@ function formatToolContent(
           >
             <Text className="tool-icon">{meta.icon}</Text>
             <Text
-              weight={600}
+              weight="semibold"
               className="tool-name"
               style={{ color: meta.color }}
             >
@@ -482,7 +493,7 @@ function formatToolContent(
             <HStack gap="xs" align="center">
               <Text className="tool-icon">{meta.icon}</Text>
               <Text
-                weight={600}
+                weight="semibold"
                 className="tool-name"
                 style={{ color: meta.color }}
               >
@@ -515,7 +526,7 @@ function formatToolContent(
         <HStack key={i} className="tool-line" gap="xs" align="baseline">
           <Text className="tool-icon">{meta.icon}</Text>
           <Text
-            weight={600}
+            weight="semibold"
             className="tool-name"
             style={{ color: meta.color }}
           >
@@ -527,7 +538,7 @@ function formatToolContent(
     } else if (line.trim()) {
       elements.push(
         <Box key={i} className="tool-line">
-          <Text weight={600} className="tool-name">
+          <Text weight="semibold" className="tool-name">
             {line}
           </Text>
         </Box>
@@ -540,7 +551,7 @@ function formatToolContent(
 }
 
 interface MessageItemProps {
-  message: Message;
+  message: MessageItemMessage;
   sessionId: string;
 }
 
@@ -565,7 +576,7 @@ export function MessageItem({
         <Text
           className={`message-role ${isUser ? 'role-user' : isSummary ? 'role-summary' : 'role-claude'}`}
           size="sm"
-          weight={600}
+          weight="semibold"
         >
           {isUser ? 'User' : isSummary ? 'Summary' : 'Claude'}
         </Text>

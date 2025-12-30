@@ -1,31 +1,56 @@
 import {
-  type CSSProperties,
   forwardRef,
   type KeyboardEvent,
   type ReactNode,
   type UIEvent,
 } from 'react';
-
-type SpacingKey = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-type BackgroundKey = 'primary' | 'secondary' | 'tertiary' | 'hover';
-type BorderRadiusKey = 'sm' | 'md' | 'lg' | 'xl';
+import { View, type ViewStyle } from 'react-native-web';
+import {
+  type BackgroundKey,
+  colors,
+  type RadiusKey,
+  radii,
+  type SpacingKey,
+  StyleSheet,
+  spacing,
+} from '../../theme.ts';
 
 export interface BoxProps {
   children?: ReactNode;
-  style?: CSSProperties;
+  style?: ViewStyle;
   className?: string;
+  id?: string;
   bg?: BackgroundKey;
   p?: SpacingKey;
   px?: SpacingKey;
   py?: SpacingKey;
+  pt?: SpacingKey;
+  pb?: SpacingKey;
+  pl?: SpacingKey;
+  pr?: SpacingKey;
   m?: SpacingKey;
-  borderRadius?: BorderRadiusKey;
+  mx?: SpacingKey;
+  my?: SpacingKey;
+  mt?: SpacingKey;
+  mb?: SpacingKey;
+  ml?: SpacingKey;
+  mr?: SpacingKey;
+  borderRadius?: RadiusKey;
+  border?: boolean;
+  flex?: ViewStyle['flex'];
+  display?: ViewStyle['display'];
+  position?: ViewStyle['position'];
+  overflow?: ViewStyle['overflow'];
+  overflowY?: 'auto' | 'scroll' | 'hidden' | 'visible';
+  overflowX?: 'auto' | 'scroll' | 'hidden' | 'visible';
+  width?: ViewStyle['width'];
+  height?: ViewStyle['height'];
+  minWidth?: ViewStyle['minWidth'];
+  minHeight?: ViewStyle['minHeight'];
+  maxWidth?: ViewStyle['maxWidth'];
+  maxHeight?: ViewStyle['maxHeight'];
   onClick?: () => void;
   onScroll?: (e: UIEvent<HTMLDivElement>) => void;
-}
-
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
 }
 
 export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
@@ -33,26 +58,75 @@ export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
     children,
     style,
     className,
+    id,
     bg,
     p,
     px,
     py,
+    pt,
+    pb,
+    pl,
+    pr,
     m,
+    mx,
+    my,
+    mt,
+    mb,
+    ml,
+    mr,
     borderRadius,
+    border,
+    flex,
+    display,
+    position,
+    overflow,
+    overflowY,
+    overflowX,
+    width,
+    height,
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
     onClick,
     onScroll,
   },
   ref
 ) {
-  const classes = cn(
-    bg && `bg-${bg}`,
-    p && `p-${p}`,
-    px && `px-${px}`,
-    py && `py-${py}`,
-    m && `m-${m}`,
-    borderRadius && `rounded-${borderRadius}`,
-    onClick && 'cursor-pointer focus-ring',
-    className
+  const computedStyle = StyleSheet.flatten(
+    [
+      bg && { backgroundColor: colors.bg[bg] },
+      p && { padding: spacing[p] },
+      px && { paddingHorizontal: spacing[px] },
+      py && { paddingVertical: spacing[py] },
+      pt && { paddingTop: spacing[pt] },
+      pb && { paddingBottom: spacing[pb] },
+      pl && { paddingLeft: spacing[pl] },
+      pr && { paddingRight: spacing[pr] },
+      m && { margin: spacing[m] },
+      mx && { marginHorizontal: spacing[mx] },
+      my && { marginVertical: spacing[my] },
+      mt && { marginTop: spacing[mt] },
+      mb && { marginBottom: spacing[mb] },
+      ml && { marginLeft: spacing[ml] },
+      mr && { marginRight: spacing[mr] },
+      borderRadius && { borderRadius: radii[borderRadius] },
+      border && { borderWidth: 1, borderColor: colors.border.default },
+      flex !== undefined && { flex },
+      display && { display },
+      position && { position },
+      overflow && { overflow },
+      overflowY && { overflowY },
+      overflowX && { overflowX },
+      width !== undefined && { width },
+      height !== undefined && { height },
+      minWidth !== undefined && { minWidth },
+      minHeight !== undefined && { minHeight },
+      maxWidth !== undefined && { maxWidth },
+      maxHeight !== undefined && { maxHeight },
+      onClick && { cursor: 'pointer' },
+      style,
+    ].filter(Boolean) as ViewStyle[]
   );
 
   const handleKeyDown = onClick
@@ -65,11 +139,11 @@ export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
     : undefined;
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: Box is a generic container that optionally supports click handlers
-    <div
+    <View
       ref={ref}
-      className={classes || undefined}
-      style={style}
+      id={id}
+      className={className}
+      style={computedStyle}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       onScroll={onScroll}
@@ -77,6 +151,6 @@ export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
       tabIndex={onClick ? 0 : undefined}
     >
       {children}
-    </div>
+    </View>
   );
 });

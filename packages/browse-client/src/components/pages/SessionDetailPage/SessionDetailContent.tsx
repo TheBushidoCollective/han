@@ -17,12 +17,11 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { VStack } from '@/components/atoms/VStack.tsx';
+import { colors, fonts, spacing } from '@/theme.ts';
 import type { SessionDetailContentSubscription } from './__generated__/SessionDetailContentSubscription.graphql.ts';
 import type { SessionDetailPageQuery } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { formatDuration } from './components.ts';
 import { SessionDetailPageQuery as SessionDetailPageQueryDef } from './index.tsx';
-import { SessionExpensiveFields } from './SessionExpensiveFields.tsx';
 import { SessionMessages } from './SessionMessages.tsx';
 
 /**
@@ -99,19 +98,20 @@ export function SessionDetailContent({
 
   if (!session) {
     return (
-      <Box className="page session-detail-page">
-        <header className="page-header">
-          <HStack className="header-left">
-            <Button
-              variant="secondary"
-              className="back-btn"
-              onClick={handleBack}
-            >
-              Back to Sessions
-            </Button>
-          </HStack>
-        </header>
-        <Center className="empty-state">
+      <Box
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          padding: spacing.lg,
+        }}
+      >
+        <HStack style={{ marginBottom: spacing.md }}>
+          <Button variant="secondary" onClick={handleBack}>
+            Back to Sessions
+          </Button>
+        </HStack>
+        <Center style={{ flex: 1 }}>
           <Text color="muted">Session not found.</Text>
         </Center>
       </Box>
@@ -119,115 +119,72 @@ export function SessionDetailContent({
   }
 
   return (
-    <Box className="page session-detail-page">
-      <Box className="sticky-header-section">
-        <header className="page-header">
-          <HStack
-            className="header-left"
-            gap="md"
-            align="center"
-            style={{ flexWrap: 'wrap' }}
-          >
-            <Heading size="md">{session.projectName}</Heading>
-            <Text className="header-meta-sep" color="muted">
+    <Box
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Fixed header - not in scroll area */}
+      <Box
+        style={{
+          flexShrink: 0,
+          backgroundColor: colors.bg.primary,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.sm,
+          paddingLeft: spacing.md,
+          paddingRight: spacing.md,
+          borderBottom: `1px solid ${colors.border.default}`,
+        }}
+      >
+        <HStack
+          justify="space-between"
+          align="center"
+          style={{ marginBottom: spacing.xs }}
+        >
+          <HStack gap="sm" align="center" style={{ flexWrap: 'wrap', flex: 1 }}>
+            <Heading size="sm">{session.projectName}</Heading>
+            <Text color="muted" size="sm">
               |
             </Text>
             <Text
-              className="session-meta-inline mono"
-              size="sm"
+              size="xs"
               color="muted"
+              style={{ fontFamily: fonts.mono }}
               title={session.projectPath ?? ''}
             >
-              {(session.projectPath?.length ?? 0) > 40
-                ? `...${session.projectPath?.slice(-37)}`
+              {(session.projectPath?.length ?? 0) > 50
+                ? `...${session.projectPath?.slice(-47)}`
                 : session.projectPath}
             </Text>
-            <Text className="header-meta-sep" color="muted">
+            <Text color="muted" size="sm">
               |
             </Text>
-            <Text className="session-meta-inline" size="sm" color="muted">
+            <Text size="xs" color="muted">
               {formatDuration(session.startedAt, session.updatedAt)}
             </Text>
-            <Text className="header-meta-sep" color="muted">
+            <Text color="muted" size="sm">
               |
             </Text>
-            <Text className="session-meta-inline" size="sm" color="muted">
+            <Text size="xs" color="muted">
               {session.messageCount} msgs
             </Text>
-            {session.gitBranch && (
-              <>
-                <Text className="header-meta-sep" color="muted">
-                  |
-                </Text>
-                <Text
-                  className="session-meta-inline mono"
-                  size="sm"
-                  color="muted"
-                >
-                  {session.gitBranch}
-                </Text>
-              </>
-            )}
-            {session.version && (
-              <>
-                <Text className="header-meta-sep" color="muted">
-                  |
-                </Text>
-                <Text className="session-meta-inline" size="sm" color="muted">
-                  v{session.version}
-                </Text>
-              </>
-            )}
           </HStack>
-          <Button variant="secondary" className="back-btn" onClick={handleBack}>
+          <Button variant="secondary" size="sm" onClick={handleBack}>
             Back to Sessions
           </Button>
-        </header>
-
-        <HStack
-          className="session-info-compact"
-          gap="lg"
-          style={{ flexWrap: 'wrap', padding: '0.5rem 0' }}
-        >
-          <Text
-            className="session-id-compact mono"
-            size="xs"
-            color="muted"
-            title={session.sessionId ?? ''}
-          >
-            ID: {session.sessionId}
-          </Text>
-          {session.worktreeName && (
-            <Text className="worktree-compact" size="xs" color="muted">
-              Worktree: {session.worktreeName}
-            </Text>
-          )}
-          <Text className="date-compact" size="xs" color="muted">
-            {session.date}
-          </Text>
         </HStack>
       </Box>
 
-      {session.summary && (
-        <Box className="session-summary-card">
-          <Heading size="sm" as="h3">
-            Summary
-          </Heading>
-          <Text>{session.summary}</Text>
-        </Box>
-      )}
-
-      {/* Expensive fields loaded via @defer */}
-      <SessionExpensiveFields fragmentRef={session} />
-
-      {/* Messages with pagination */}
-      <VStack className="messages-section" gap="md" align="stretch">
-        <SessionMessages
-          fragmentRef={session}
-          sessionId={sessionId}
-          isLive={isLive}
-        />
-      </VStack>
+      {/* Messages scroll area - takes remaining space, scrollbar at edge */}
+      <SessionMessages
+        fragmentRef={session}
+        sessionId={sessionId}
+        isLive={isLive}
+      />
     </Box>
   );
 }

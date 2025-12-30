@@ -32,7 +32,7 @@ export function ImageBlock({
         <Text className="image-icon" size="md">
           🖼️
         </Text>
-        <Text size="sm" weight={600}>
+        <Text size="sm" weight="semibold">
           Image
         </Text>
         <Text size="xs" color="muted">

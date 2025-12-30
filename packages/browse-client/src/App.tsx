@@ -8,6 +8,7 @@ import {
   useMemoryUpdates,
 } from '@/hooks/useSubscription';
 import { RelayProvider } from '@/relay';
+import { colors, createStyles, fonts } from '@/theme';
 import routes from '~react-pages';
 
 function formatMemoryEvent(event: MemoryUpdateEvent): string {
@@ -29,6 +30,34 @@ function formatMemoryEvent(event: MemoryUpdateEvent): string {
 
   return `${type} ${action}`;
 }
+
+const styles = createStyles({
+  app: {
+    display: 'flex',
+    minHeight: '100vh',
+    backgroundColor: colors.bg.primary,
+    color: colors.text.primary,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 1.5,
+  },
+  mainContent: {
+    flex: 1,
+    marginLeft: 220, // Account for fixed sidebar
+    height: '100vh',
+    overflowY: 'auto' as const,
+    overflowX: 'hidden' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+  },
+  loading: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    color: colors.text.muted,
+  },
+});
 
 export function App() {
   const [toasts, setToasts] = useState<ToastType[]>([]);
@@ -81,10 +110,12 @@ export function App() {
 
   return (
     <RelayProvider>
-      <div className="app">
+      <div style={styles.app}>
         <Sidebar />
-        <main className="main-content">
-          <Suspense fallback={<div>Loading...</div>}>{routeElement}</Suspense>
+        <main style={styles.mainContent}>
+          <Suspense fallback={<div style={styles.loading}>Loading...</div>}>
+            {routeElement}
+          </Suspense>
         </main>
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </div>

@@ -5,20 +5,21 @@
  * self-contained components that can't be broken down further.
  */
 
+// Re-export theme from root
+export * from '../../theme.ts';
+export { AnsiText, type AnsiTextProps, containsAnsi } from './AnsiText.tsx';
 export { Badge } from './Badge.tsx';
-export { Box } from './Box.tsx';
-export { Button } from './Button.tsx';
+export { Box, type BoxProps } from './Box.tsx';
+export { Button, type ButtonProps } from './Button.tsx';
 export { Card } from './Card.tsx';
-export { Center } from './Center.tsx';
+export { Center, type CenterProps } from './Center.tsx';
 export { Checkbox } from './Checkbox.tsx';
 export { Divider } from './Divider.tsx';
 export { Heading } from './Heading.tsx';
-export { HStack } from './HStack.tsx';
+export { HStack, type HStackProps } from './HStack.tsx';
 export { Input } from './Input.tsx';
-export { Link } from './Link.tsx';
+export { Link, type LinkProps } from './Link.tsx';
 export { Skeleton } from './Skeleton.tsx';
 export { Spinner } from './Spinner.tsx';
-export { Text } from './Text.tsx';
-export type { Theme } from './theme.ts';
-export { theme } from './theme.ts';
-export { VStack } from './VStack.tsx';
+export { Text, type TextProps } from './Text.tsx';
+export { VStack, type VStackProps } from './VStack.tsx';

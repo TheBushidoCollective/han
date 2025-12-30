@@ -1,17 +1,40 @@
 import type { CSSProperties } from 'react';
+import { colors } from '../../theme.ts';
 
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   style?: CSSProperties;
-  className?: string;
 }
 
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+const sizes = {
+  sm: 16,
+  md: 24,
+  lg: 32,
+};
 
-export function Spinner({ size = 'md', style, className }: SpinnerProps) {
-  const classes = cn('spinner-base', `spinner-${size}`, className);
+export function Spinner({ size = 'md', style }: SpinnerProps) {
+  const dimension = sizes[size];
 
-  return <div className={classes} style={style} />;
+  const computedStyle: CSSProperties = {
+    width: dimension,
+    height: dimension,
+    border: `2px solid ${colors.border.default}`,
+    borderTopColor: colors.primary,
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    ...style,
+  };
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <div style={computedStyle} />
+    </>
+  );
 }

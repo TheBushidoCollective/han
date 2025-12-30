@@ -5,18 +5,19 @@
   "description": "Han Dashboard - Browse Claude Code sessions, metrics, and settings",
   "type": "module",
   "scripts": {
-    "dev": "relay-compiler --watch & vite",
-    "build": "relay-compiler && vite build",
-    "preview": "vite preview",
+    "dev": "relay-compiler --watch & bun run build/dev.ts",
+    "build": "relay-compiler && bun run build/build.ts",
+    "preview": "bun run build && cd out && bunx serve",
     "relay": "relay-compiler",
     "relay:watch": "relay-compiler --watch",
     "schema:pull": "cd ../han && bun run schema:export > ../browse-client/schema.graphql",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed",
+    "bdd:generate": "bddgen",
+    "test": "npm run bdd:generate && playwright test",
+    "test:ui": "npm run bdd:generate && playwright test --ui",
+    "test:headed": "npm run bdd:generate && playwright test --headed",
     "test:report": "playwright show-report"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "marked": "^17.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-native-web": "^0.21.2",
     "react-relay": "^19.0.0",
     "react-router-dom": "^7.1.1",
     "recyclerlistview": "^4.2.3",
@@ -35,16 +37,15 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.7",
     "@playwright/test": "^1.57.0",
+    "@types/bun": "latest",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/react-relay": "^16.0.0",
     "@types/relay-runtime": "^17.0.0",
-    "@vitejs/plugin-react": "^4.5.1",
-    "babel-plugin-relay": "^19.0.0",
+    "@types/react-native-web": "0.19.2",
+    "playwright-bdd": "^8.4.2",
     "relay-compiler": "^19.0.0",
-    "typescript": "5.9.3",
-    "vite": "^6.3.5",
-    "vite-plugin-pages": "^0.32.4"
+    "typescript": "5.9.3"
   }
 }

@@ -1,33 +1,49 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { Text as RNText, type TextStyle } from 'react-native-web';
+import {
+  colors,
+  type FontSizeKey,
+  type FontWeightKey,
+  fontSizes,
+  fonts,
+  fontWeights,
+  StyleSheet,
+} from '../../theme.ts';
 
-type FontSizeKey = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-type TextColorKey = 'primary' | 'secondary' | 'muted';
+type TextColorKey =
+  | 'primary'
+  | 'secondary'
+  | 'muted'
+  | 'heading'
+  | 'accent'
+  | 'success'
+  | 'warning'
+  | 'danger';
 
 export interface TextProps {
   children?: ReactNode;
-  style?: CSSProperties;
+  style?: TextStyle;
   className?: string;
   size?: FontSizeKey;
   color?: TextColorKey;
-  weight?: CSSProperties['fontWeight'];
+  weight?: FontWeightKey | number;
   truncate?: boolean;
   title?: string;
+  mono?: boolean;
+  italic?: boolean;
+  lineHeight?: TextStyle['lineHeight'];
+  numberOfLines?: number;
 }
 
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
-// Map font weight to class names
-const weightMap: Record<string | number, string> = {
-  400: 'font-normal',
-  normal: 'font-normal',
-  500: 'font-medium',
-  medium: 'font-medium',
-  600: 'font-semibold',
-  semibold: 'font-semibold',
-  700: 'font-bold',
-  bold: 'font-bold',
+const colorMap: Record<TextColorKey, string> = {
+  primary: colors.text.primary,
+  secondary: colors.text.secondary,
+  muted: colors.text.muted,
+  heading: colors.text.heading,
+  accent: colors.text.accent,
+  success: colors.success,
+  warning: colors.warning,
+  danger: colors.danger,
 };
 
 export function Text({
@@ -39,18 +55,39 @@ export function Text({
   weight,
   truncate,
   title,
+  mono,
+  italic,
+  lineHeight,
+  numberOfLines,
 }: TextProps) {
-  const classes = cn(
-    `text-${size}`,
-    `text-${color}`,
-    weight && weightMap[weight],
-    truncate && 'truncate',
-    className
+  // Handle both string keys and numeric weights
+  const resolvedWeight =
+    weight !== undefined
+      ? typeof weight === 'number'
+        ? String(weight)
+        : fontWeights[weight]
+      : undefined;
+
+  const computedStyle = StyleSheet.flatten(
+    [
+      { fontSize: fontSizes[size], color: colorMap[color] },
+      resolvedWeight && { fontWeight: resolvedWeight },
+      mono && { fontFamily: fonts.mono },
+      italic && { fontStyle: 'italic' },
+      lineHeight && { lineHeight },
+      style,
+    ].filter(Boolean) as TextStyle[]
   );
 
   return (
-    <span className={classes} style={style} title={title}>
+    <RNText
+      style={computedStyle}
+      className={className}
+      title={title}
+      numberOfLines={truncate ? 1 : numberOfLines}
+      ellipsizeMode={truncate ? 'tail' : undefined}
+    >
       {children}
-    </span>
+    </RNText>
   );
 }

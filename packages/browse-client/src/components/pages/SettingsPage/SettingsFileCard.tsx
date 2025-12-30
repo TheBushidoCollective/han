@@ -5,13 +5,13 @@
  */
 
 import type React from 'react';
+import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { StatusIndicator } from './StatusIndicator.tsx';
 import type { SettingsFile } from './types.ts';

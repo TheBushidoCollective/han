@@ -99,19 +99,19 @@ function getUserRoleInfo(
   commandName: string | null
 ): MessageRoleInfo {
   if (isMeta) {
-    return { label: 'System', className: 'role-system', icon: '⚙️' };
+    return { label: 'System', color: '#8b949e', icon: '⚙️' };
   }
   if (isCommand) {
     return {
       label: commandName ? `/${commandName}` : 'Command',
-      className: 'role-command',
+      color: '#d29922', // warning orange
       icon: '⚡',
     };
   }
   if (isInterrupt) {
-    return { label: 'Interrupt', className: 'role-interrupt', icon: '⏸️' };
+    return { label: 'Interrupt', color: '#f85149', icon: '⏸️' };
   }
-  return { label: 'User', className: 'role-user', icon: '👤' };
+  return { label: 'User', color: '#58a6ff', icon: '👤' };
 }
 
 /**

@@ -6,10 +6,10 @@
 
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { theme } from '@/components/atoms';
 import { Card } from '@/components/atoms/Card.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 
 interface NavCardProps {
@@ -35,7 +35,7 @@ export function NavCard({
       <HStack gap="md" align="center">
         <Text size="xl">{icon}</Text>
         <VStack gap="xs">
-          <Text weight={600}>{title}</Text>
+          <Text weight="semibold">{title}</Text>
           <Text color="muted" size="sm">
             {description}
           </Text>

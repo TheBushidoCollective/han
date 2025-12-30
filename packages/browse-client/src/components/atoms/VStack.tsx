@@ -1,42 +1,28 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { View, type ViewStyle } from 'react-native-web';
+import { type SpacingKey, StyleSheet, spacing } from '../../theme.ts';
 
-type SpacingKey = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-
-interface VStackProps {
+export interface VStackProps {
   children?: ReactNode;
-  style?: CSSProperties;
+  style?: ViewStyle;
   className?: string;
   gap?: SpacingKey;
-  align?: CSSProperties['alignItems'];
-  justify?: CSSProperties['justifyContent'];
+  align?: ViewStyle['alignItems'];
+  justify?: ViewStyle['justifyContent'];
+  flex?: ViewStyle['flex'];
+  width?: ViewStyle['width'];
+  height?: ViewStyle['height'];
+  p?: SpacingKey;
+  px?: SpacingKey;
+  py?: SpacingKey;
 }
 
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
-// Map CSS align values to class names
-const alignMap: Record<string, string> = {
-  'flex-start': 'items-start',
-  start: 'items-start',
-  'flex-end': 'items-end',
-  end: 'items-end',
-  center: 'items-center',
-  stretch: 'items-stretch',
-  baseline: 'items-baseline',
-};
-
-// Map CSS justify values to class names
-const justifyMap: Record<string, string> = {
-  'flex-start': 'justify-start',
-  start: 'justify-start',
-  'flex-end': 'justify-end',
-  end: 'justify-end',
-  center: 'justify-center',
-  'space-between': 'justify-between',
-  'space-around': 'justify-around',
-  'space-evenly': 'justify-evenly',
-};
+const baseStyle = StyleSheet.create({
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+});
 
 export function VStack({
   children,
@@ -45,18 +31,32 @@ export function VStack({
   gap,
   align,
   justify,
+  flex,
+  width,
+  height,
+  p,
+  px,
+  py,
 }: VStackProps) {
-  const classes = cn(
-    'flex flex-col',
-    gap && `gap-${gap}`,
-    align && alignMap[align as string],
-    justify && justifyMap[justify as string],
-    className
+  const computedStyle = StyleSheet.flatten(
+    [
+      baseStyle.container,
+      gap && { gap: spacing[gap] },
+      align && { alignItems: align },
+      justify && { justifyContent: justify },
+      flex !== undefined && { flex },
+      width !== undefined && { width },
+      height !== undefined && { height },
+      p && { padding: spacing[p] },
+      px && { paddingHorizontal: spacing[px] },
+      py && { paddingVertical: spacing[py] },
+      style,
+    ].filter(Boolean) as ViewStyle[]
   );
 
   return (
-    <div className={classes} style={style}>
+    <View className={className} style={computedStyle}>
       {children}
-    </div>
+    </View>
   );
 }

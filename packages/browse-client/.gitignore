@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+.dev-out/
+
+# Playwright
+playwright-report/
+test-results/
+
+# BDD generated files
+.features-gen/
+tests/**/*.feature.spec.js
+tests/**/*.feature.spec.js.map
+
+# Environment
+.env
+.env.local
+
+# OS files
+.DS_Store
+.browse-out

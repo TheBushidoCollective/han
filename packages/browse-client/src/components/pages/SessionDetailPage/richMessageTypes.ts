@@ -353,7 +353,7 @@ export const TOOL_CATEGORIES: Record<
   },
   TodoWrite: {
     category: 'task',
-    icon: '☑️',
+    icon: '✏️',
     displayName: 'Todo List',
     color: '#22c55e',
   },

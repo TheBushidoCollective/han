@@ -5,9 +5,9 @@
  */
 
 import type React from 'react';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 
 interface TabButtonProps {
   active: boolean;

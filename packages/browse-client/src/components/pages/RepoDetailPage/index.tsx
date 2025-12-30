@@ -11,13 +11,13 @@ import type React from 'react';
 import { Suspense } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
 import { useNavigate, useParams } from 'react-router-dom';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { formatRelativeTime } from '../Shared/utils.ts';
 import type { RepoDetailPageQuery as RepoDetailPageQueryType } from './__generated__/RepoDetailPageQuery.graphql.ts';
@@ -56,7 +56,7 @@ function NavCard({
       onClick={() => navigate(href)}
       style={{
         padding: theme.spacing.lg,
-        backgroundColor: theme.colors.background.secondary,
+        backgroundColor: theme.colors.bg.secondary,
         borderRadius: theme.borderRadius.lg,
         border: `1px solid ${theme.colors.border.default}`,
         cursor: 'pointer',
@@ -65,7 +65,7 @@ function NavCard({
       <HStack gap="md" align="center">
         <Text style={{ fontSize: '24px' }}>{icon}</Text>
         <VStack gap="xs">
-          <Text weight={600}>{title}</Text>
+          <Text weight="semibold">{title}</Text>
           <Text size="sm" color="muted">
             {description}
           </Text>
@@ -89,14 +89,14 @@ function StatCard({
     <Box
       style={{
         padding: theme.spacing.lg,
-        backgroundColor: theme.colors.background.secondary,
+        backgroundColor: theme.colors.bg.secondary,
         borderRadius: theme.borderRadius.lg,
         border: `1px solid ${theme.colors.border.default}`,
         textAlign: 'center',
       }}
     >
       <VStack gap="xs" align="center">
-        <Text size="xl" weight={600}>
+        <Text size="xl" weight="semibold">
           {value}
         </Text>
         <Text size="sm" color="muted">
@@ -145,7 +145,7 @@ function RepoDetailContent({ repoId }: { repoId: string }): React.ReactElement {
               Repos
             </Button>
             <Text color="muted">/</Text>
-            <Text weight={600}>{repo.name}</Text>
+            <Text weight="semibold">{repo.name}</Text>
           </HStack>
           <Text size="sm" color="muted">
             {repo.path}
@@ -200,6 +200,12 @@ function RepoDetailContent({ repoId }: { repoId: string }): React.ReactElement {
             description="Cached hooks and files for this repository"
             icon="💾"
             href={`/repos/${repo.repoId}/cache`}
+          />
+          <NavCard
+            title="Plugins"
+            description="Project and local scope plugins"
+            icon="🔌"
+            href={`/repos/${repo.repoId}/plugins`}
           />
           <NavCard
             title="Settings"

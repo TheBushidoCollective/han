@@ -9,13 +9,13 @@ import type React from 'react';
 import { Suspense } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
 import { useNavigate, useParams } from 'react-router-dom';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { formatRelativeTime } from '../Shared/utils.ts';
 import type { ProjectDetailPageQuery as ProjectDetailPageQueryType } from './__generated__/ProjectDetailPageQuery.graphql.ts';
@@ -98,7 +98,7 @@ function RepoDetailContent({
               Projects
             </Button>
             <Text color="muted">/</Text>
-            <Text weight={600}>{project.name}</Text>
+            <Text weight="semibold">{project.name}</Text>
           </HStack>
         </VStack>
         <HStack gap="sm">

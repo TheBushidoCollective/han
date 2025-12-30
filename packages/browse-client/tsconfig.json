@@ -14,10 +14,11 @@
     "jsx": "react-jsx",
     "incremental": true,
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "build/**/*.ts"],
   "exclude": ["node_modules", "out"]
 }

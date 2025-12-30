@@ -44,7 +44,7 @@ interface ExposedToolResultMessageCardProps {
 function getExposedToolResultRoleInfo(success: boolean): MessageRoleInfo {
   return {
     label: 'Exposed Tool Result',
-    className: 'role-exposed-tool-result',
+    color: '#3fb950',
     icon: success ? '✅' : '❌',
   };
 }
@@ -93,7 +93,7 @@ export function ExposedToolResultMessageCard({
               <Text size="sm" color="muted">
                 Tool:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.tool ?? data.prefixedName ?? 'unknown'}
               </Text>
             </HStack>

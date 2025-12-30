@@ -1,17 +1,11 @@
 import type { CSSProperties } from 'react';
-
-type BorderRadiusKey = 'sm' | 'md' | 'lg' | 'xl';
+import { colors, type RadiusKey, radii } from '../../theme.ts';
 
 interface SkeletonProps {
   width?: string | number;
   height?: string | number;
-  borderRadius?: BorderRadiusKey;
+  borderRadius?: RadiusKey;
   style?: CSSProperties;
-  className?: string;
-}
-
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
 }
 
 export function Skeleton({
@@ -19,22 +13,27 @@ export function Skeleton({
   height = 20,
   borderRadius = 'md',
   style,
-  className,
 }: SkeletonProps) {
-  const classes = cn(
-    'bg-tertiary animate-pulse',
-    `rounded-${borderRadius}`,
-    className
-  );
+  const computedStyle: CSSProperties = {
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: radii[borderRadius],
+    width,
+    height,
+    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+    ...style,
+  };
 
   return (
-    <div
-      className={classes}
-      style={{
-        width,
-        height,
-        ...style,
-      }}
-    />
+    <>
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}
+      </style>
+      <div style={computedStyle} />
+    </>
   );
 }

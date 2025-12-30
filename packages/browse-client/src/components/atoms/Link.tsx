@@ -1,16 +1,18 @@
-import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import {
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+  useState,
+} from 'react';
+import { colors } from '../../theme.ts';
 
-interface LinkProps {
+export interface LinkProps {
   children?: ReactNode;
   href?: string;
   style?: CSSProperties;
   className?: string;
   external?: boolean;
   onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
-}
-
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
 }
 
 export function Link({
@@ -21,7 +23,15 @@ export function Link({
   external,
   onClick,
 }: LinkProps) {
-  const classes = cn('link-base', className);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const computedStyle: CSSProperties = {
+    color: colors.primary,
+    textDecoration: isHovered ? 'underline' : 'none',
+    cursor: 'pointer',
+    transition: 'color 0.15s',
+    ...style,
+  };
 
   // When no href is provided, use a button-styled anchor for onClick-only behavior
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -34,9 +44,11 @@ export function Link({
   return (
     <a
       href={href || '#'}
-      className={classes}
-      style={{ cursor: 'pointer', ...style }}
+      className={className}
+      style={computedStyle}
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       target={external ? '_blank' : undefined}
       rel={external ? 'noopener noreferrer' : undefined}
     >

@@ -9,7 +9,7 @@
 import type { CSSProperties, MouseEvent } from 'react';
 import { useMemo } from 'react';
 import { graphql, useFragment, useSubscription } from 'react-relay';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
 import { Badge, HStack, Text, theme, VStack } from '../atoms/index.ts';
 import { formatRepoUrl } from '../pages/RepoListPage/utils.ts';
@@ -112,7 +112,6 @@ export function SessionListItem({
   connectionId,
   style,
 }: SessionListItemProps) {
-  const navigate = useNavigate();
   const session = useFragment(SessionListItemFragment, sessionRef);
 
   // Subscribe to session updates and move to front of connection when updated
@@ -161,24 +160,16 @@ export function SessionListItem({
   // Only subscribe if we have a connectionId
   useSubscription(subscriptionConfig);
 
-  const handleClick = () => {
-    // Use session.name for session and projectSlug for project routing
-    // projectSlug is the folder-based encoded path matching Project.projectId
-    const sessionName = session.name;
-    const projectSlug = session.projectSlug;
-    if (projectSlug && sessionName) {
-      navigate(`/projects/${projectSlug}/sessions/${sessionName}`);
-    }
-    // Sessions only exist under projects, no fallback route
+  const handleMouseEnter = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.currentTarget.style.backgroundColor = theme.colors.bg.hover;
   };
 
-  const handleMouseEnter = (e: MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = theme.colors.background.hover;
+  const handleMouseLeave = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.currentTarget.style.backgroundColor = theme.colors.bg.primary;
   };
 
-  const handleMouseLeave = (e: MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = theme.colors.background.primary;
-  };
+  // Sessions are globally unique by UUID, so we can link directly
+  const sessionUrl = session.sessionId ? `/sessions/${session.sessionId}` : '#';
 
   // Calculate todo progress
   const total = session.todoCounts?.total ?? 0;
@@ -192,20 +183,21 @@ export function SessionListItem({
   const hasActiveTodo = session.currentTodo && !hasActiveTasks;
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
+    <Link
+      to={sessionUrl}
+      className="session-list-item"
       style={{
         display: 'block',
         width: '100%',
         textAlign: 'left',
+        textDecoration: 'none',
         padding: theme.spacing.md,
-        borderBottom: `1px solid ${theme.colors.border.subtle}`,
+        borderBottom: `1px solid ${theme.colors.border.default}`,
         borderTop: 'none',
         borderLeft: 'none',
         borderRight: 'none',
         cursor: 'pointer',
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: theme.colors.bg.primary,
         transition: 'background-color 0.15s',
         color: 'inherit',
         font: 'inherit',
@@ -217,7 +209,7 @@ export function SessionListItem({
       <HStack justify="space-between" align="center">
         <VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
           <HStack gap="sm" align="center">
-            <Text size="md" weight={500} truncate>
+            <Text size="md" weight="medium" truncate>
               {session.projectName}
             </Text>
             {session.worktreeName && (
@@ -259,6 +251,15 @@ export function SessionListItem({
             </Text>
           )}
           <HStack gap="sm" align="center">
+            {session.sessionId && (
+              <Text
+                size="xs"
+                color="muted"
+                style={{ fontFamily: 'monospace', opacity: 0.7 }}
+              >
+                {session.sessionId}
+              </Text>
+            )}
             <Badge variant="default">{session.messageCount} msgs</Badge>
             {todoProgress !== null && (
               <Badge variant={todoProgress === 100 ? 'success' : 'default'}>
@@ -275,6 +276,6 @@ export function SessionListItem({
           {formatDate(session.updatedAt ?? session.startedAt)}
         </Text>
       </HStack>
-    </button>
+    </Link>
   );
 }

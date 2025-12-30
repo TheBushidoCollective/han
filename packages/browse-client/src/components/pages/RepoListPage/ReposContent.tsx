@@ -9,13 +9,13 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import type { PreloadedQuery } from 'react-relay';
 import { usePreloadedQuery } from 'react-relay';
+import { theme } from '@/components/atoms';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { RepoListPageQuery as RepoListPageQueryType } from './__generated__/RepoListPageQuery.graphql.ts';
 import { RepoCard, type SortOption } from './components.ts';
@@ -151,7 +151,7 @@ export function ReposContent({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               style={{
-                backgroundColor: theme.colors.background.tertiary,
+                backgroundColor: theme.colors.bg.tertiary,
                 border: `1px solid ${theme.colors.border.default}`,
                 borderRadius: theme.borderRadius.md,
                 color: theme.colors.text.primary,

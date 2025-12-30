@@ -16,7 +16,7 @@ interface StatItemProps {
 export function StatItem({ value, label }: StatItemProps): React.ReactElement {
   return (
     <VStack gap="xs" align="center">
-      <Text size="lg" weight={600}>
+      <Text size="lg" weight="semibold">
         {value}
       </Text>
       <Text size="xs" color="muted">

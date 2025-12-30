@@ -42,7 +42,7 @@ interface HookRunMessageCardProps {
 function getHookRunRoleInfo(): MessageRoleInfo {
   return {
     label: 'Hook Run',
-    className: 'role-hook-run',
+    color: '#a371f7',
     icon: '🎣',
   };
 }
@@ -86,7 +86,7 @@ export function HookRunMessageCard({
               <Text size="sm" color="muted">
                 Plugin:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.plugin ?? 'unknown'}
               </Text>
             </HStack>
@@ -95,7 +95,7 @@ export function HookRunMessageCard({
               <Text size="sm" color="muted">
                 Hook:
               </Text>
-              <Text size="sm" weight={500}>
+              <Text size="sm" weight="medium">
                 {data.hook ?? 'unknown'}
               </Text>
             </HStack>

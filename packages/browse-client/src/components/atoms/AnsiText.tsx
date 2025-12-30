@@ -2,7 +2,7 @@
  * AnsiText Component
  *
  * Renders ANSI escape sequences as styled text using span elements.
- * Compatible with React Native Web (uses inline styles, no HTML-specific tags).
+ * Uses inline styles only.
  */
 
 import Anser from 'anser';

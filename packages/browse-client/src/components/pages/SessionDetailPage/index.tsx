@@ -14,6 +14,7 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { PageLoader } from '@/components/helpers';
+import { spacing } from '@/theme.ts';
 import type { SessionDetailPageQuery as SessionDetailPageQueryType } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { SessionDetailContent } from './SessionDetailContent.tsx';
 
@@ -107,19 +108,20 @@ export default function SessionDetailPage(): React.ReactElement {
 
   if (!sessionId || !globalId) {
     return (
-      <Box className="page session-detail-page">
-        <header className="page-header">
-          <HStack className="header-left">
-            <Button
-              variant="secondary"
-              className="back-btn"
-              onClick={() => navigate('/sessions')}
-            >
-              Back to Sessions
-            </Button>
-          </HStack>
-        </header>
-        <Center className="empty-state">
+      <Box
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          padding: spacing.lg,
+        }}
+      >
+        <HStack style={{ marginBottom: spacing.md }}>
+          <Button variant="secondary" onClick={() => navigate('/sessions')}>
+            Back to Sessions
+          </Button>
+        </HStack>
+        <Center style={{ flex: 1 }}>
           <Text color="muted">No session ID provided.</Text>
         </Center>
       </Box>

@@ -5,12 +5,12 @@
  */
 
 import type React from 'react';
+import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Link } from '@/components/atoms/Link.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { theme } from '@/components/atoms/theme.ts';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { Plugin } from './types.ts';
 import { categoryIcons, getPluginUrl, scopeLabels } from './utils.ts';
@@ -35,7 +35,7 @@ export function PluginItem({ plugin }: PluginItemProps): React.ReactElement {
           <HStack gap="sm" align="center">
             <Text size="lg">{categoryIcons[plugin.category] || '📦'}</Text>
             <VStack gap="xs">
-              <Text weight={500}>{plugin.name}</Text>
+              <Text weight="medium">{plugin.name}</Text>
               <Text color="muted" size="xs">
                 {scopeLabels[plugin.scope] || plugin.scope} •{' '}
                 {plugin.marketplace}

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<4f27a9a7aafca9c3f7751a02bc63b9d1>>
+ * @generated SignedSource<<d36ef82d5147e03b99a3b0481bb17c9e>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,16 +14,14 @@ export type SessionMessages_session$data = {
   readonly messageCount: number | null | undefined;
   readonly messages:
     | {
+        readonly __id: string;
         readonly edges:
           | ReadonlyArray<{
               readonly cursor: string | null | undefined;
               readonly node:
                 | {
-                    readonly __typename: string;
-                    readonly content?: string | null | undefined;
                     readonly id: string | null | undefined;
-                    readonly isToolOnly?: boolean | null | undefined;
-                    readonly timestamp: any | null | undefined;
+                    readonly ' $fragmentSpreads': FragmentRefs<'MessageCards_message'>;
                   }
                 | null
                 | undefined;
@@ -32,8 +30,8 @@ export type SessionMessages_session$data = {
           | undefined;
         readonly pageInfo:
           | {
-              readonly hasPreviousPage: boolean | null | undefined;
-              readonly startCursor: string | null | undefined;
+              readonly endCursor: string | null | undefined;
+              readonly hasNextPage: boolean | null | undefined;
             }
           | null
           | undefined;
@@ -58,45 +56,37 @@ const node: ReaderFragment = (() => {
       kind: 'ScalarField',
       name: 'id',
       storageKey: null,
-    },
-    v2 = {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'content',
-      storageKey: null,
-    },
-    v3 = [v2 /*: any*/];
+    };
   return {
     argumentDefinitions: [
       {
         defaultValue: null,
         kind: 'LocalArgument',
-        name: 'before',
+        name: 'after',
       },
       {
         defaultValue: 50,
         kind: 'LocalArgument',
-        name: 'last',
+        name: 'first',
       },
     ],
     kind: 'Fragment',
     metadata: {
       connection: [
         {
-          count: 'last',
-          cursor: 'before',
-          direction: 'backward',
+          count: 'first',
+          cursor: 'after',
+          direction: 'forward',
           path: v0 /*: any*/,
         },
       ],
       refetch: {
         connection: {
-          forward: null,
-          backward: {
-            count: 'last',
-            cursor: 'before',
+          forward: {
+            count: 'first',
+            cursor: 'after',
           },
+          backward: null,
           path: v0 /*: any*/,
         },
         fragmentPathInResult: ['node'],
@@ -140,47 +130,18 @@ const node: ReaderFragment = (() => {
                 name: 'node',
                 plural: false,
                 selections: [
+                  v1 /*: any*/,
+                  {
+                    args: null,
+                    kind: 'FragmentSpread',
+                    name: 'MessageCards_message',
+                  },
                   {
                     alias: null,
                     args: null,
                     kind: 'ScalarField',
                     name: '__typename',
                     storageKey: null,
-                  },
-                  v1 /*: any*/,
-                  {
-                    alias: null,
-                    args: null,
-                    kind: 'ScalarField',
-                    name: 'timestamp',
-                    storageKey: null,
-                  },
-                  {
-                    kind: 'InlineFragment',
-                    selections: v3 /*: any*/,
-                    type: 'UserMessage',
-                    abstractKey: null,
-                  },
-                  {
-                    kind: 'InlineFragment',
-                    selections: [
-                      v2 /*: any*/,
-                      {
-                        alias: null,
-                        args: null,
-                        kind: 'ScalarField',
-                        name: 'isToolOnly',
-                        storageKey: null,
-                      },
-                    ],
-                    type: 'AssistantMessage',
-                    abstractKey: null,
-                  },
-                  {
-                    kind: 'InlineFragment',
-                    selections: v3 /*: any*/,
-                    type: 'SummaryMessage',
-                    abstractKey: null,
                   },
                 ],
                 storageKey: null,
@@ -207,14 +168,14 @@ const node: ReaderFragment = (() => {
                 alias: null,
                 args: null,
                 kind: 'ScalarField',
-                name: 'hasPreviousPage',
+                name: 'hasNextPage',
                 storageKey: null,
               },
               {
                 alias: null,
                 args: null,
                 kind: 'ScalarField',
-                name: 'startCursor',
+                name: 'endCursor',
                 storageKey: null,
               },
             ],
@@ -227,6 +188,18 @@ const node: ReaderFragment = (() => {
             name: 'totalCount',
             storageKey: null,
           },
+          {
+            kind: 'ClientExtension',
+            selections: [
+              {
+                alias: null,
+                args: null,
+                kind: 'ScalarField',
+                name: '__id',
+                storageKey: null,
+              },
+            ],
+          },
         ],
         storageKey: null,
       },
@@ -237,6 +210,6 @@ const node: ReaderFragment = (() => {
   };
 })();
 
-(node as any).hash = 'a2b0f3588d7c50b569b6747d455d214a';
+(node as any).hash = 'a87d6cb6cebcef2b26a964d4de500ed8';
 
 export default node;

@@ -1,25 +1,35 @@
 import type { CSSProperties } from 'react';
+import { colors, spacing } from '../../theme.ts';
 
 interface DividerProps {
   style?: CSSProperties;
-  className?: string;
   orientation?: 'horizontal' | 'vertical';
-}
-
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ');
+  my?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export function Divider({
   style,
-  className,
   orientation = 'horizontal',
+  my,
 }: DividerProps) {
-  const classes = cn(
-    'divider-base',
-    orientation === 'vertical' ? 'divider-vertical' : 'divider-horizontal',
-    className
-  );
+  const isVertical = orientation === 'vertical';
 
-  return <hr className={classes} style={style} />;
+  const computedStyle: CSSProperties = {
+    border: 'none',
+    backgroundColor: colors.border.default,
+    ...(isVertical
+      ? {
+          width: 1,
+          height: '100%',
+          margin: 0,
+        }
+      : {
+          height: 1,
+          width: '100%',
+          margin: my ? `${spacing[my]}px 0` : 0,
+        }),
+    ...style,
+  };
+
+  return <hr style={computedStyle} />;
 }

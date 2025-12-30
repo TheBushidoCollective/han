@@ -4,12 +4,19 @@
  * Renders context summary messages with minimal UI.
  * Summary messages contain summarized context and don't have
  * tool use or thinking blocks.
+ *
+ * Compact summaries (auto-compaction) are displayed with a collapsed view.
  */
 
 import type React from 'react';
+import { useState } from 'react';
 import { graphql, useFragment } from 'react-relay';
+import { Badge } from '@/components/atoms/Badge.tsx';
+import { HStack } from '@/components/atoms/HStack.tsx';
+import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
+import { colors, spacing } from '@/theme.ts';
 import type { SummaryMessageCard_message$key } from './__generated__/SummaryMessageCard_message.graphql.ts';
 import {
   MessageHeader,
@@ -25,6 +32,7 @@ const SummaryMessageCardFragment = graphql`
     timestamp
     rawJson
     content
+    isCompactSummary
   }
 `;
 
@@ -34,8 +42,14 @@ interface SummaryMessageCardProps {
 
 const SUMMARY_ROLE_INFO: MessageRoleInfo = {
   label: 'Summary',
-  className: 'role-summary',
+  color: '#a371f7',
   icon: '📝',
+};
+
+const COMPACT_SUMMARY_ROLE_INFO: MessageRoleInfo = {
+  label: 'Auto-compacted',
+  color: '#8b949e',
+  icon: '📦',
 };
 
 export function SummaryMessageCard({
@@ -43,20 +57,74 @@ export function SummaryMessageCard({
 }: SummaryMessageCardProps): React.ReactElement {
   const data = useFragment(SummaryMessageCardFragment, fragmentRef);
   const { showRawJson, toggleRawJson } = useRawJsonToggle();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const isCompact = data.isCompactSummary ?? false;
+  const roleInfo = isCompact ? COMPACT_SUMMARY_ROLE_INFO : SUMMARY_ROLE_INFO;
+
+  // For compact summaries, show a collapsed view by default
+  if (isCompact && !isExpanded && !showRawJson) {
+    return (
+      <button
+        type="button"
+        style={{
+          padding: spacing.sm,
+          paddingLeft: spacing.md,
+          paddingRight: spacing.md,
+          backgroundColor: colors.bg.tertiary,
+          borderRadius: 6,
+          border: `1px solid ${colors.border.subtle}`,
+          cursor: 'pointer',
+          opacity: 0.8,
+          width: '100%',
+          textAlign: 'left',
+          font: 'inherit',
+        }}
+        onClick={() => setIsExpanded(true)}
+      >
+        <HStack gap="sm" align="center">
+          <Text size="sm" color="muted">
+            📦
+          </Text>
+          <Text size="sm" color="muted">
+            Context auto-compacted
+          </Text>
+          <Badge variant="default">Click to expand</Badge>
+        </HStack>
+      </button>
+    );
+  }
 
   return (
     <MessageWrapper type="summary" showRawJson={showRawJson}>
       <MessageHeader
-        roleInfo={SUMMARY_ROLE_INFO}
+        roleInfo={roleInfo}
         timestamp={data.timestamp}
         showRawJson={showRawJson}
         onToggleRawJson={toggleRawJson}
+        badges={
+          isCompact && isExpanded ? (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              style={{
+                cursor: 'pointer',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                font: 'inherit',
+              }}
+            >
+              <Badge variant="default">Collapse</Badge>
+            </button>
+          ) : undefined
+        }
       />
 
       {showRawJson ? (
         <RawJsonView rawJson={data.rawJson ?? null} />
       ) : (
-        <VStack className="message-content" gap="sm" align="stretch">
+        <VStack gap="sm" align="stretch">
           <MarkdownContent>{data.content ?? ''}</MarkdownContent>
         </VStack>
       )}

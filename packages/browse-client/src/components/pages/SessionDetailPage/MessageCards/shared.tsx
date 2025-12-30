@@ -8,17 +8,17 @@
 import type React from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/atoms/Badge.tsx';
-import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { colors, createStyles, fonts, radii, spacing } from '@/theme.ts';
 
 /**
  * Message role display info
  */
 export interface MessageRoleInfo {
   label: string;
-  className: string;
+  color: string;
   icon: string;
 }
 
@@ -51,6 +51,44 @@ export function formatRawJson(rawJson: string | null): string {
   }
 }
 
+const styles = createStyles({
+  messageHeader: {
+    marginBottom: spacing.md,
+  },
+  rawJsonContent: {
+    backgroundColor: colors.bg.primary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    overflow: 'auto' as const,
+    whiteSpace: 'pre-wrap' as const,
+    wordBreak: 'break-word' as const,
+    color: colors.text.primary,
+    margin: 0,
+  },
+});
+
+const messageTypeStyles: Record<string, React.CSSProperties> = {
+  user: {
+    backgroundColor: colors.bg.tertiary,
+    borderLeft: `3px solid ${colors.primary}`,
+  },
+  assistant: {
+    backgroundColor: colors.bg.secondary,
+    borderLeft: `3px solid ${colors.success}`,
+  },
+  summary: {
+    backgroundColor: colors.bg.secondary,
+    borderLeft: `3px solid ${colors.purple}`,
+  },
+  han_event: {
+    backgroundColor: colors.bg.secondary,
+    borderLeft: `3px solid ${colors.warning}`,
+  },
+};
+
 interface MessageHeaderProps {
   roleInfo: MessageRoleInfo;
   timestamp: string;
@@ -70,21 +108,21 @@ export function MessageHeader({
   onToggleRawJson,
 }: MessageHeaderProps): React.ReactElement {
   return (
-    <HStack className="message-header" gap="md" align="center">
+    <HStack style={styles.messageHeader} gap="md" align="center">
       <Text size="sm">{roleInfo.icon}</Text>
       <Text
-        className={`message-role ${roleInfo.className}`}
         size="sm"
-        weight={600}
+        weight="semibold"
+        style={roleInfo.color ? { color: roleInfo.color } : undefined}
       >
         {roleInfo.label}
       </Text>
-      <Text className="message-time" size="sm" color="muted">
+      <Text size="sm" color="muted">
         {formatTimestamp(timestamp)}
       </Text>
 
       {/* Message metadata badges */}
-      <HStack gap="xs" style={{ marginLeft: 'auto' }}>
+      <HStack gap="xs" align="center" style={{ marginLeft: 'auto' }}>
         {badges}
         {showRawJson && <Badge variant="info">RAW</Badge>}
         <span title={showRawJson ? 'Show formatted' : 'Show raw JSON'}>
@@ -110,20 +148,22 @@ interface MessageWrapperProps {
 }
 
 /**
- * Shared message wrapper component with appropriate styling
+ * Shared message wrapper component with card styling
  */
 export function MessageWrapper({
   type,
   isToolOnly = false,
-  showRawJson = false,
   children,
 }: MessageWrapperProps): React.ReactElement {
+  const baseStyle: React.CSSProperties = {
+    padding: spacing.md,
+    borderRadius: radii.md,
+    border: `1px solid ${colors.border.subtle}`,
+    ...(isToolOnly && { opacity: 0.9 }),
+  };
+
   return (
-    <Box
-      className={`message message-${type} ${isToolOnly ? 'message-tool-only' : ''} ${showRawJson ? 'message-raw' : ''}`}
-    >
-      {children}
-    </Box>
+    <div style={{ ...baseStyle, ...messageTypeStyles[type] }}>{children}</div>
   );
 }
 
@@ -136,7 +176,7 @@ interface RawJsonViewProps {
  */
 export function RawJsonView({ rawJson }: RawJsonViewProps): React.ReactElement {
   return (
-    <pre className="raw-json-content">
+    <pre style={styles.rawJsonContent}>
       <code>{formatRawJson(rawJson)}</code>
     </pre>
   );
