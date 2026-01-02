@@ -1,6 +1,6 @@
 ---
 name: hook-system
-summary: Complete hook lifecycle from definition to execution with checkpoint-based filtering
+summary: Complete hook lifecycle from definition to execution with checkpoint filtering and cross-plugin dependencies
 ---
 
 # Hook System
@@ -127,6 +127,10 @@ hooks:
     dir_test: "test -f package.json"
     if_changed:
       - "**/*.ts"
+    depends_on:
+      - plugin: jutsu-biome
+        hook: lint
+        optional: true
 ```
 
 **Properties:**
@@ -137,6 +141,7 @@ hooks:
 - `if_changed` (optional) - Glob patterns for cache-based execution
 - `idle_timeout` (optional) - Max idle time before timeout (ms)
 - `description` (optional) - Human-readable description
+- `depends_on` (optional) - Array of hook dependencies (see [Hook Dependencies](#hook-dependencies))
 
 ### Plugin Hook Definition (han-config.json - Legacy)
 
@@ -149,7 +154,10 @@ The JSON format uses camelCase keys:
       "command": "npx -y biome check --write",
       "dirsWith": ["biome.json"],
       "ifChanged": ["**/*.{js,ts}"],
-      "idleTimeout": 5000
+      "idleTimeout": 5000,
+      "dependsOn": [
+        { "plugin": "other-plugin", "hook": "prepare", "optional": true }
+      ]
     }
   }
 }
@@ -206,6 +214,92 @@ plugin-name:
     idle_timeout: 60000
 ```
 
+## Hook Dependencies
+
+Hooks can declare dependencies on other plugin hooks. When a hook with dependencies runs, it waits for (or triggers) its dependencies first.
+
+### Schema
+
+```yaml
+# han-plugin.yml
+hooks:
+  test:
+    command: "npx playwright test"
+    dirs_with: ["playwright.config.ts"]
+    depends_on:
+      - plugin: jutsu-playwright-bdd
+        hook: generate
+        optional: true  # Don't fail if plugin not installed
+```
+
+**Properties:**
+
+- `plugin` (required) - Name of the dependency plugin
+- `hook` (required) - Hook name within that plugin
+- `optional` (default: false) - If true, skip silently when plugin not installed
+
+### Behavior
+
+1. **Required dependency not installed**: Execution fails with error
+2. **Optional dependency not installed**: Dependency skipped, hook proceeds
+3. **Dependency already running**: Wait for it to complete (no duplicate execution)
+4. **Dependency not running**: Spawn and wait for it to complete
+
+### Coordination
+
+Dependencies use the lock system (`lib/hooks/hook-lock.ts`) to coordinate:
+
+```typescript
+// Check if a hook is currently running
+isHookRunning(manager: LockManager, pluginName: string, hookName: string): boolean
+
+// Wait for a hook to complete (polls lock file)
+waitForHook(manager: LockManager, pluginName: string, hookName: string, timeout?: number): Promise<boolean>
+```
+
+**Lock naming**: `<session-id>/<plugin-name>/<hook-name>/<directory-hash>`
+
+### Skip Dependencies Flag
+
+For recheck scenarios where a hook failed and is being retried, use `--skip-deps`:
+
+```bash
+han hook run jutsu-playwright test --skip-deps
+```
+
+This prevents re-running dependencies that already completed successfully.
+
+### Constraints
+
+- **Same hookType only**: Dependencies must be within the same Claude Code event (Stop→Stop, SessionStart→SessionStart, etc.)
+- **No circular dependencies**: Self-referential or cyclic dependencies will error
+- **Cross-directory**: Dependencies resolve across all matching directories
+
+### Example: Playwright with BDD
+
+```yaml
+# jutsu-playwright-bdd/han-plugin.yml
+hooks:
+  generate:
+    command: "npx bddgen"
+    dirs_with: ["playwright.config.ts"]
+    if_changed: ["**/*.feature", "**/steps/**/*.ts"]
+
+# jutsu-playwright/han-plugin.yml
+hooks:
+  test:
+    command: "npx playwright test"
+    dirs_with: ["playwright.config.ts"]
+    depends_on:
+      - plugin: jutsu-playwright-bdd
+        hook: generate
+        optional: true
+```
+
+**Result:**
+- If jutsu-playwright-bdd installed: runs `bddgen` first, then `playwright test`
+- If not installed: just runs `playwright test`
+
 ## API / Interface
 
 ### hooks.json Format
@@ -220,16 +314,6 @@ plugin-name:
             "type": "command",
             "command": "han hook run plugin-name hook-name",
             "timeout": 120
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Remember to follow best practices..."
           }
         ]
       }
@@ -259,6 +343,7 @@ Execute a plugin hook in matching directories.
 - `--verbose` - Show detailed output
 - `--checkpoint-type <type>` - Checkpoint type (session or agent)
 - `--checkpoint-id <id>` - Checkpoint ID for filtering
+- `--skip-deps` - Skip dependency resolution (for retry scenarios)
 
 #### `han hook dispatch <hookType>`
 
@@ -370,7 +455,7 @@ bun run convert-config -- --all
 - `lib/han-settings.ts` - han.yml settings loading with full precedence
 - `lib/hook-config.ts` - Configuration loading (YAML and JSON)
 - `lib/hook-cache.ts` - Cache management
-- `lib/hook-lock.ts` - Parallelism control
+- `lib/hooks/hook-lock.ts` - Parallelism control and dependency coordination
 - `scripts/convert-plugin-config.ts` - JSON to YAML conversion
 - `scripts/lint-plugin-config-sync.ts` - Sync verification
 - `bushido/hooks/pre-push-check.sh` - Pre-push verification script

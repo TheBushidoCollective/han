@@ -1,0 +1,364 @@
+/**
+ * Coordinator GraphQL Server
+ *
+ * Sets up the GraphQL server with WebSocket subscriptions.
+ * This is the central server that all clients connect to.
+ */
+
+import { createServer, type Server } from "node:http";
+import { parse } from "node:url";
+import { makeServer } from "graphql-ws";
+import { createYoga } from "graphql-yoga";
+import { WebSocketServer } from "ws";
+import {
+	coordinator,
+	type IndexResult,
+	initDb,
+	messages,
+	watcher,
+} from "../../db/index.ts";
+import { createLoaders } from "../browse/graphql/loaders.ts";
+import {
+	type MessageEdgeData,
+	publishSessionAdded,
+	publishSessionMessageAdded,
+	publishSessionUpdated,
+} from "../browse/graphql/pubsub.ts";
+import { schema } from "../browse/graphql/schema.ts";
+import { COORDINATOR_PORT, type CoordinatorOptions } from "./types.ts";
+
+/**
+ * Server state
+ */
+interface ServerState {
+	httpServer: Server | null;
+	wss: WebSocketServer | null;
+	startedAt: Date | null;
+	heartbeatInterval: NodeJS.Timeout | null;
+}
+
+const state: ServerState = {
+	httpServer: null,
+	wss: null,
+	startedAt: null,
+	heartbeatInterval: null,
+};
+
+/**
+ * Handle indexed data from the watcher
+ * Publishes events to GraphQL subscriptions for real-time updates
+ */
+async function onDataIndexed(result: IndexResult): Promise<void> {
+	if (result.error) {
+		return;
+	}
+
+	// Publish session events
+	if (result.isNewSession) {
+		publishSessionAdded(result.sessionId, null);
+	}
+
+	// Always publish session updated for any change
+	publishSessionUpdated(result.sessionId);
+
+	// Publish message added events for new messages
+	if (result.messagesIndexed > 0) {
+		// Fetch the newly indexed messages to include in the subscription payload
+		try {
+			const newMessages = await messages.list({
+				sessionId: result.sessionId,
+				limit: result.messagesIndexed,
+				offset: Math.max(0, result.totalMessages - result.messagesIndexed),
+			});
+
+			// Publish each message with edge data for @appendEdge
+			for (let i = 0; i < newMessages.length; i++) {
+				const msg = newMessages[i];
+				const messageIndex = result.totalMessages - result.messagesIndexed + i;
+
+				const edgeData: MessageEdgeData = {
+					node: {
+						id: msg.id,
+						timestamp: msg.timestamp,
+						type: msg.messageType,
+						rawJson: msg.rawJson ?? "{}",
+						projectDir: "", // Project dir is on session, not message
+						sessionId: result.sessionId,
+						lineNumber: msg.lineNumber,
+					},
+					cursor: Buffer.from(`cursor:${messageIndex}`).toString("base64"),
+				};
+
+				publishSessionMessageAdded(result.sessionId, messageIndex, edgeData);
+			}
+		} catch (error) {
+			console.error(
+				`[coordinator] Failed to fetch messages for subscription:`,
+				error,
+			);
+			publishSessionMessageAdded(result.sessionId, -1, null);
+		}
+	}
+}
+
+/**
+ * Start the coordinator server
+ */
+export async function startServer(
+	options: CoordinatorOptions = {},
+): Promise<void> {
+	const port = options.port ?? COORDINATOR_PORT;
+
+	if (state.httpServer) {
+		console.log("[coordinator] Server already running");
+		return;
+	}
+
+	// Initialize database
+	await initDb();
+	console.log("[coordinator] Database initialized");
+
+	// Acquire coordinator lock
+	const acquired = coordinator.tryAcquire();
+	if (!acquired) {
+		throw new Error(
+			"Failed to acquire coordinator lock - another instance may be running",
+		);
+	}
+	console.log("[coordinator] Acquired coordinator lock");
+
+	// Start heartbeat
+	const heartbeatMs = coordinator.getHeartbeatInterval() * 1000;
+	state.heartbeatInterval = setInterval(() => {
+		if (!coordinator.updateHeartbeat()) {
+			console.error("[coordinator] Failed to update heartbeat");
+		}
+	}, heartbeatMs);
+
+	// Create GraphQL Yoga handler with DataLoader context
+	const yoga = createYoga({
+		schema,
+		graphqlEndpoint: "/graphql",
+		graphiql: true,
+		cors: {
+			origin: "*",
+			methods: ["GET", "POST", "OPTIONS"],
+		},
+		context: ({ request }) => ({
+			request,
+			loaders: createLoaders(),
+		}),
+	});
+
+	// Create WebSocket server for subscriptions
+	const wsServer = makeServer({ schema });
+
+	// Create HTTP server
+	const httpServer = createServer(async (req, res) => {
+		const pathname = parse(req.url || "/").pathname || "/";
+
+		// Health endpoint
+		if (pathname === "/health") {
+			const uptime = state.startedAt
+				? Math.floor((Date.now() - state.startedAt.getTime()) / 1000)
+				: 0;
+
+			res.setHeader("Content-Type", "application/json");
+			res.end(
+				JSON.stringify({
+					status: "ok",
+					pid: process.pid,
+					uptime,
+					version: process.env.HAN_VERSION || "dev",
+				}),
+			);
+			return;
+		}
+
+		// GraphQL endpoint
+		if (pathname === "/graphql") {
+			try {
+				const webRequest = await nodeToWebRequest(req);
+				const webResponse = await yoga.fetch(webRequest);
+				await sendWebResponse(res, webResponse);
+			} catch (error) {
+				console.error("[coordinator] GraphQL error:", error);
+				res.statusCode = 500;
+				res.end("Internal Server Error");
+			}
+			return;
+		}
+
+		// 404 for other routes
+		res.statusCode = 404;
+		res.end("Not Found");
+	});
+
+	// WebSocket handling
+	const wss = new WebSocketServer({ noServer: true });
+
+	httpServer.on("upgrade", (request, socket, head) => {
+		const pathname = parse(request.url || "/").pathname;
+
+		if (pathname === "/graphql") {
+			wss.handleUpgrade(request, socket, head, (ws) => {
+				const closed = wsServer.opened(
+					{
+						protocol: ws.protocol,
+						send: (data) => ws.send(data),
+						close: (code, reason) => ws.close(code, reason),
+						onMessage: (cb) => {
+							ws.on("message", (data) => {
+								cb(data.toString());
+							});
+						},
+					},
+					{ socket: ws, request },
+				);
+
+				ws.on("close", () => {
+					closed();
+				});
+			});
+		}
+	});
+
+	state.httpServer = httpServer;
+	state.wss = wss;
+	state.startedAt = new Date();
+
+	// Start listening
+	await new Promise<void>((resolve) => {
+		httpServer.listen(port, "127.0.0.1", () => {
+			console.log(
+				`[coordinator] GraphQL server listening on http://127.0.0.1:${port}/graphql`,
+			);
+			resolve();
+		});
+	});
+
+	// Start file watcher first to handle incremental updates
+	console.log("[coordinator] Starting file watcher...");
+	const watchPath = watcher.getDefaultPath();
+	const watchStarted = await watcher.start(watchPath);
+
+	if (watchStarted) {
+		console.log(`[coordinator] Watching ${watchPath}`);
+
+		// Register callback for instant event-driven updates
+		// This is called directly from Rust when new messages are indexed
+		watcher.setCallback((result) => {
+			// Fire and forget - don't block the watcher callback
+			void onDataIndexed(result);
+		});
+		console.log("[coordinator] Event-driven updates enabled");
+	} else {
+		console.error("[coordinator] Failed to start file watcher");
+	}
+
+	// Skip initial index to keep server responsive during startup
+	// Sessions are indexed incrementally via file watcher
+	// A full reindex can be triggered with: han index run --all
+	console.log(
+		"[coordinator] Ready (run 'han index run --all' to index existing sessions)",
+	);
+}
+
+/**
+ * Stop the coordinator server
+ */
+export function stopServer(): void {
+	if (state.heartbeatInterval) {
+		clearInterval(state.heartbeatInterval);
+		state.heartbeatInterval = null;
+	}
+
+	// Callback is cleared automatically by watcher.stop()
+	watcher.stop();
+	coordinator.release();
+
+	if (state.wss) {
+		state.wss.close();
+		state.wss = null;
+	}
+
+	if (state.httpServer) {
+		state.httpServer.close();
+		state.httpServer = null;
+	}
+
+	state.startedAt = null;
+	console.log("[coordinator] Server stopped");
+}
+
+/**
+ * Get server uptime in seconds
+ */
+export function getUptime(): number {
+	if (!state.startedAt) return 0;
+	return Math.floor((Date.now() - state.startedAt.getTime()) / 1000);
+}
+
+/**
+ * Convert Node.js request to Web API Request
+ */
+async function nodeToWebRequest(
+	req: import("node:http").IncomingMessage,
+): Promise<Request> {
+	const protocol = "http";
+	const host = req.headers.host || "127.0.0.1";
+	const url = `${protocol}://${host}${req.url}`;
+
+	const headers = new Headers();
+	for (const [key, value] of Object.entries(req.headers)) {
+		if (value) {
+			if (Array.isArray(value)) {
+				for (const v of value) {
+					headers.append(key, v);
+				}
+			} else {
+				headers.set(key, value);
+			}
+		}
+	}
+
+	let body: BodyInit | null = null;
+	if (req.method !== "GET" && req.method !== "HEAD") {
+		const chunks: Buffer[] = [];
+		for await (const chunk of req) {
+			chunks.push(Buffer.from(chunk));
+		}
+		body = Buffer.concat(chunks);
+	}
+
+	return new Request(url, {
+		method: req.method,
+		headers,
+		body,
+	});
+}
+
+/**
+ * Send Web API Response through Node.js response
+ */
+async function sendWebResponse(
+	res: import("node:http").ServerResponse,
+	webResponse: Response,
+): Promise<void> {
+	res.statusCode = webResponse.status;
+	res.statusMessage = webResponse.statusText;
+
+	webResponse.headers.forEach((value, key) => {
+		res.setHeader(key, value);
+	});
+
+	if (webResponse.body) {
+		const reader = webResponse.body.getReader();
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			res.write(value);
+		}
+	}
+	res.end();
+}

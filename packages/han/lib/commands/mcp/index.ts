@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { startBlueprintsMcpServer } from "./blueprints.ts";
+import { startDalMcpServer } from "./dal.ts";
 import { startMcpServer } from "./server.ts";
 
 export function registerMcpCommands(program: Command): void {
@@ -26,5 +27,18 @@ export function registerMcpCommands(program: Command): void {
 		)
 		.action(async () => {
 			await startBlueprintsMcpServer();
+		});
+
+	// Add memory DAL subcommand (for Memory Agent)
+	mcpCommand
+		.command("memory")
+		.description(
+			"Start the Memory Data Access Layer MCP server.\n" +
+				"Provides read-only search tools (FTS, Vector, Hybrid) for the Memory Agent.\n\n" +
+				"This command is used by the Memory Agent via Agent SDK.\n" +
+				"It uses stdio for JSON-RPC communication.",
+		)
+		.action(async () => {
+			await startDalMcpServer();
 		});
 }

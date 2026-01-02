@@ -1,5 +1,11 @@
 import { createInterface } from "node:readline";
+import { getOrCreateEventLogger } from "../../events/logger.ts";
 import { isMemoryEnabled } from "../../han-settings.ts";
+import {
+	formatMemoryAgentResult,
+	type MemoryQueryParams,
+	queryMemoryAgent,
+} from "../../memory/memory-agent.ts";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 import type {
 	CompleteTaskParams,
@@ -11,12 +17,14 @@ import type {
 import { recordTaskCompletion } from "../../telemetry/index.ts";
 import { cleanCheckpoints } from "../checkpoint/clean.ts";
 import { listCheckpoints } from "../checkpoint/list.ts";
+import { type BackendPool, createBackendPool } from "./backend-pool.ts";
+import { getExposedMcpServers } from "./capability-registry.ts";
 import { captureMemory, type LearnParams } from "./memory.ts";
 import {
-	formatMemoryResult,
-	type MemoryParams,
-	queryMemory,
-} from "./memory-router.ts";
+	getOrchestrator,
+	getOrchestratorConfig,
+	type Orchestrator,
+} from "./orchestrator.ts";
 import {
 	discoverPluginTools,
 	executePluginTool,
@@ -175,6 +183,71 @@ const CHECKPOINT_TOOLS: McpTool[] = [
 						"Maximum age in hours (default: 24). Checkpoints older than this will be removed.",
 				},
 			},
+		},
+	},
+];
+
+// Workflow async tools definition (status, cancel, list)
+const WORKFLOW_ASYNC_TOOLS: McpTool[] = [
+	{
+		name: "han_workflow_status",
+		description:
+			"Check the status of an async workflow. Returns progress, partial results, and whether to check again. Use this to poll for updates on workflows started with async=true.",
+		annotations: {
+			title: "Workflow Status",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				workflow_id: {
+					type: "string",
+					description:
+						"The workflow ID returned from han_workflow with async=true",
+				},
+			},
+			required: ["workflow_id"],
+		},
+	},
+	{
+		name: "han_workflow_cancel",
+		description:
+			"Cancel a running async workflow. Returns success if the workflow was cancelled.",
+		annotations: {
+			title: "Cancel Workflow",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				workflow_id: {
+					type: "string",
+					description: "The workflow ID to cancel",
+				},
+			},
+			required: ["workflow_id"],
+		},
+	},
+	{
+		name: "han_workflow_list",
+		description:
+			"List all active (running or pending) workflows. Useful for debugging or monitoring multiple concurrent workflows.",
+		annotations: {
+			title: "List Workflows",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {},
 		},
 	},
 ];
@@ -446,12 +519,129 @@ const LEARN_TOOLS: McpTool[] = [
 	},
 ];
 
-function handleToolsList(): unknown {
+// Lazy-load orchestrator for han_workflow tool
+let orchestratorInstance: Orchestrator | null = null;
+let orchestratorInitPromise: Promise<Orchestrator> | null = null;
+
+async function getOrchestratorInstance(): Promise<Orchestrator> {
+	if (orchestratorInstance) {
+		return orchestratorInstance;
+	}
+	if (!orchestratorInitPromise) {
+		orchestratorInitPromise = getOrchestrator().then((orch) => {
+			orchestratorInstance = orch;
+			return orch;
+		});
+	}
+	return orchestratorInitPromise;
+}
+
+// Lazy-load backend pool for exposed MCP servers
+let exposedBackendPool: BackendPool | null = null;
+
+function getExposedBackendPool(): BackendPool {
+	if (!exposedBackendPool) {
+		exposedBackendPool = createBackendPool();
+		const exposedServers = getExposedMcpServers();
+		for (const server of exposedServers) {
+			exposedBackendPool.registerBackend({
+				id: server.serverName,
+				type: server.type === "http" ? "http" : "stdio",
+				command: server.command,
+				args: server.args,
+				url: server.url,
+				env: server.env,
+			});
+		}
+	}
+	return exposedBackendPool;
+}
+
+// Interface to map prefixed tool names back to server/original name
+interface ExposedToolMapping {
+	serverId: string;
+	originalName: string;
+}
+
+// Cache for exposed tools (avoids re-fetching on every tools/list)
+let exposedToolMappings: Map<string, ExposedToolMapping> | null = null;
+let exposedToolsCache: McpTool[] | null = null;
+
+/**
+ * Get tools from all exposed MCP servers with prefixed names
+ * Example: context7 server's "resolve-library-id" becomes "context7_resolve-library-id"
+ */
+async function getExposedTools(): Promise<{
+	tools: McpTool[];
+	mappings: Map<string, ExposedToolMapping>;
+}> {
+	// Return cached if available
+	if (exposedToolsCache && exposedToolMappings) {
+		return { tools: exposedToolsCache, mappings: exposedToolMappings };
+	}
+
+	const exposedServers = getExposedMcpServers();
+	if (exposedServers.length === 0) {
+		exposedToolMappings = new Map();
+		exposedToolsCache = [];
+		return { tools: [], mappings: new Map() };
+	}
+
+	const pool = getExposedBackendPool();
+	const allTools: McpTool[] = [];
+	const mappings = new Map<string, ExposedToolMapping>();
+
+	for (const server of exposedServers) {
+		try {
+			const tools = await pool.getTools(server.serverName);
+			for (const tool of tools) {
+				// Prefix tool name with server name
+				const prefixedName = `${server.serverName}_${tool.name}`;
+				allTools.push({
+					...tool,
+					name: prefixedName,
+					description: `[${server.serverName}] ${tool.description}`,
+				});
+				mappings.set(prefixedName, {
+					serverId: server.serverName,
+					originalName: tool.name,
+				});
+			}
+		} catch (error) {
+			// Log error but continue with other servers
+			console.error(
+				`Failed to get tools from ${server.serverName}:`,
+				error instanceof Error ? error.message : String(error),
+			);
+		}
+	}
+
+	exposedToolMappings = mappings;
+	exposedToolsCache = allTools;
+	return { tools: allTools, mappings };
+}
+
+async function handleToolsList(): Promise<unknown> {
 	const hookTools = formatToolsForMcp(discoverTools());
 	const memoryEnabled = isMemoryEnabled();
+	const orchestratorConfig = getOrchestratorConfig();
+
+	// Get exposed tools from backend MCP servers
+	const { tools: exposedTools } = await getExposedTools();
+
+	// Get orchestrator workflow tools if enabled
+	const orchestratorTools: McpTool[] = [];
+	if (orchestratorConfig.enabled && orchestratorConfig.workflow.enabled) {
+		const orchestrator = await getOrchestratorInstance();
+		orchestratorTools.push(orchestrator.getWorkflowTool());
+		// Also add async workflow tools (status, cancel, list)
+		orchestratorTools.push(...WORKFLOW_ASYNC_TOOLS);
+	}
 
 	const allTools = [
 		...hookTools,
+		...exposedTools,
+		...orchestratorTools,
 		...CHECKPOINT_TOOLS,
 		...METRICS_TOOLS,
 		// Only include memory tools if memory is enabled
@@ -469,6 +659,125 @@ async function handleToolsCall(params: {
 	arguments?: Record<string, unknown>;
 }): Promise<unknown> {
 	const args = params.arguments || {};
+
+	// Check if this is an exposed tool (from backend MCP servers)
+	if (exposedToolMappings?.has(params.name)) {
+		const mapping = exposedToolMappings.get(params.name);
+		if (mapping) {
+			const eventLogger = getOrCreateEventLogger();
+			const startTime = Date.now();
+
+			// Log exposed tool call event
+			const callId = eventLogger?.logExposedToolCall(
+				mapping.serverId,
+				mapping.originalName,
+				params.name,
+				args,
+			);
+
+			try {
+				const pool = getExposedBackendPool();
+				const result = await pool.callTool(
+					mapping.serverId,
+					mapping.originalName,
+					args,
+				);
+
+				// Log exposed tool result event
+				const durationMs = Date.now() - startTime;
+				if (callId) {
+					eventLogger?.logExposedToolResult(
+						mapping.serverId,
+						mapping.originalName,
+						params.name,
+						callId,
+						true,
+						durationMs,
+						result,
+					);
+				}
+
+				return result;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+
+				// Log exposed tool error event
+				const durationMs = Date.now() - startTime;
+				if (callId) {
+					eventLogger?.logExposedToolResult(
+						mapping.serverId,
+						mapping.originalName,
+						params.name,
+						callId,
+						false,
+						durationMs,
+						undefined,
+						message,
+					);
+				}
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Error calling ${params.name}: ${message}`,
+						},
+					],
+					isError: true,
+				};
+			}
+		}
+	}
+
+	// Check if this is a workflow tool (orchestrator)
+	const workflowTools = [
+		"han_workflow",
+		"han_workflow_status",
+		"han_workflow_cancel",
+		"han_workflow_list",
+	];
+	if (workflowTools.includes(params.name)) {
+		const orchestratorConfig = getOrchestratorConfig();
+		if (!orchestratorConfig.enabled || !orchestratorConfig.workflow.enabled) {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "Orchestrator workflow is disabled. Enable it in han.yml with: orchestrator:\n  enabled: true\n  workflow:\n    enabled: true",
+					},
+				],
+				isError: true,
+			};
+		}
+
+		try {
+			const orchestrator = await getOrchestratorInstance();
+
+			switch (params.name) {
+				case "han_workflow":
+					return await orchestrator.handleWorkflow(args);
+				case "han_workflow_status":
+					return orchestrator.handleWorkflowStatus(args);
+				case "han_workflow_cancel":
+					return orchestrator.handleWorkflowCancel(args);
+				case "han_workflow_list":
+					return orchestrator.handleWorkflowList();
+				default:
+					throw new Error(`Unknown workflow tool: ${params.name}`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
 
 	// Check if this is a checkpoint tool
 	const isCheckpointTool = CHECKPOINT_TOOLS.some((t) => t.name === params.name);
@@ -676,9 +985,33 @@ async function handleToolsCall(params: {
 		try {
 			switch (params.name) {
 				case "memory": {
-					const memoryParams = args as unknown as MemoryParams;
-					const result = await queryMemory(memoryParams);
-					const formatted = formatMemoryResult(result);
+					const memoryParams = args as unknown as MemoryQueryParams;
+					// Add projectPath from cwd for context-aware plugin discovery
+					memoryParams.projectPath = process.cwd();
+					const startTime = Date.now();
+					const result = await queryMemoryAgent(memoryParams);
+					const durationMs = Date.now() - startTime;
+
+					// Log memory query event - derive source from searched layers
+					const eventLogger = getOrCreateEventLogger();
+					const primarySource =
+						result.searchedLayers.length === 1
+							? (result.searchedLayers[0] as
+									| "personal"
+									| "team"
+									| "rules"
+									| undefined)
+							: result.searchedLayers.length > 1
+								? ("combined" as "personal" | "team" | "rules" | undefined)
+								: undefined;
+					eventLogger?.logMemoryQuery(
+						memoryParams.question,
+						primarySource,
+						result.success,
+						durationMs,
+					);
+
+					const formatted = formatMemoryAgentResult(result);
 					return {
 						content: [
 							{
@@ -730,6 +1063,15 @@ async function handleToolsCall(params: {
 		try {
 			const learnParams = args as unknown as LearnParams;
 			const result = captureMemory(learnParams);
+
+			// Log memory learn event
+			const eventLogger = getOrCreateEventLogger();
+			eventLogger?.logMemoryLearn(
+				learnParams.domain,
+				(learnParams.scope as "project" | "user") || "project",
+				result.success,
+			);
+
 			return {
 				content: [
 					{
@@ -839,7 +1181,7 @@ async function handleRequest(
 				result = {};
 				break;
 			case "tools/list":
-				result = handleToolsList();
+				result = await handleToolsList();
 				break;
 			case "tools/call":
 				result = await handleToolsCall(

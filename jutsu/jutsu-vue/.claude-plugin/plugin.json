@@ -9,5 +9,14 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["vue", "composition-api", "reactivity"]
+  "keywords": ["vue", "composition-api", "reactivity"],
+  "lspServers": {
+    "vue": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/vue-lsp-entrypoint.sh",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".vue": "vue"
+      }
+    }
+  }
 }

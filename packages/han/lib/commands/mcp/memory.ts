@@ -74,7 +74,7 @@ function generateFrontmatter(paths?: string[]): string {
 
 	const pathsJson = JSON.stringify(paths);
 	return `---
-globs: ${pathsJson}
+paths: ${pathsJson}
 ---
 
 `;

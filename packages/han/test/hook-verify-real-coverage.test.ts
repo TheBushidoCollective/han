@@ -86,20 +86,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			expect(exitCode).toBe(0);
 		});
@@ -119,20 +123,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			expect(exitCode).toBe(0);
 		});
@@ -153,20 +161,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should log "No Stop hooks found to verify"
 			expect(
@@ -234,20 +246,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should have found and verified the hook
 			expect(logMessages.length).toBeGreaterThan(0);
@@ -316,20 +332,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			expect(logMessages.length).toBeGreaterThan(0);
 		});
@@ -394,20 +414,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			expect(logMessages.length).toBeGreaterThan(0);
 		});
@@ -464,20 +488,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should report error about stale hooks or plugin not found, or complete successfully
 			// The important thing is we exercised the code path
@@ -518,20 +546,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should report no hooks found
 			expect(
@@ -571,20 +603,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should not crash, should report no hooks found
 			expect(logMessages.length).toBeGreaterThan(0);
@@ -641,20 +677,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should report no command hooks found (prompts are ignored)
 			expect(
@@ -713,20 +753,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should skip unparseable commands and report all cached or no hooks found
 			const hasExpectedMessage =
@@ -754,20 +798,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should not crash
 			expect(logMessages.length).toBeGreaterThan(0);
@@ -834,20 +882,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			expect(logMessages.length).toBeGreaterThan(0);
 		});
@@ -872,20 +924,24 @@ describe("verify.ts real code execution for coverage", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_e) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
 			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_e) {
+				// Catch process.exit throw
+			}
 
 			// Should not crash, should report no hooks
 			expect(logMessages.some((msg) => msg.includes("No"))).toBe(true);

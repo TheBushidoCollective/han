@@ -11,6 +11,11 @@ export interface HookOverride {
 	command?: string;
 	if_changed?: string[];
 	idle_timeout?: number | false;
+	/**
+	 * Script to run once before all directory iterations.
+	 * Useful for generating files that the hook depends on.
+	 */
+	before_all?: string;
 }
 
 /**

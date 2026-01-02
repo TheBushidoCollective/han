@@ -9,5 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["erlang", "beam", "otp", "distributed", "concurrent"]
+  "keywords": ["erlang", "beam", "otp", "distributed", "concurrent"],
+  "lspServers": {
+    "erlang_ls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".erl": "erlang",
+        ".hrl": "erlang"
+      }
+    }
+  }
 }

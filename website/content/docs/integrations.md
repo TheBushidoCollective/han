@@ -144,7 +144,42 @@ Track file changes since last hook run for intelligent caching.
 
 ## External MCP Servers (Hashi Plugins)
 
-Han's "hashi" (bridge) plugins connect Claude to external services via MCP. Each hashi plugin is an MCP server that provides tools for interacting with a specific service.
+Han's "hashi" (bridge) plugins connect Claude to external services via MCP. Each hashi plugin provides tools for interacting with a specific service, with Han managing how those tools are exposed to Claude Code.
+
+### Dual-Mode Architecture
+
+Han uses a **dual-mode architecture** for hashi plugins that optimizes context usage:
+
+| Mode | When Active | Behavior |
+|------|-------------|----------|
+| **Orchestrator** (default) | `orchestrator.enabled: true` | Han manages all tools centrally. Hashi MCP servers return no tools—Han's orchestrator exposes a unified workflow interface. |
+| **Direct** | `orchestrator.enabled: false` | Each hashi plugin proxies directly to its MCP server, exposing all tools individually. |
+
+**Why this matters:**
+
+- **Orchestrator mode** reduces context overhead by exposing ~5 tools instead of 50+ from multiple backends
+- **Direct mode** gives you full access to individual MCP tools when needed
+- Switch between modes via `han.yml` configuration
+
+### How It Works
+
+When you install a hashi plugin, it registers an MCP server that routes through Han:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "han",
+      "args": ["mcp", "hashi-github", "github"]
+    }
+  }
+}
+```
+
+Han then decides what to expose based on orchestrator configuration:
+
+- **Orchestrator enabled**: Returns a stub MCP with no tools. Han's main MCP server provides a `han_workflow` tool that can invoke any backend capability.
+- **Orchestrator disabled**: Proxies to the actual MCP server (e.g., GitHub's official MCP), exposing all its tools directly.
 
 ### Available Hashi Plugins
 
@@ -166,20 +201,35 @@ Install a hashi plugin to add its MCP server:
 han plugin install hashi-github
 ```
 
-This adds the MCP server to your Claude Code configuration:
+This adds the MCP server to your Claude Code configuration, routing through Han:
 
 ```json
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
+      "command": "han",
+      "args": ["mcp", "hashi-github", "github"]
     }
   }
 }
+```
+
+### Configuring the Orchestrator
+
+Control orchestrator behavior in `han.yml`:
+
+```yaml
+# Enable orchestrator (default) - Han manages all tools
+orchestrator:
+  enabled: true
+  workflow:
+    enabled: true
+    max_steps: 20
+    timeout: 300
+
+# Or disable to use direct MCP access
+orchestrator:
+  enabled: false
 ```
 
 ### How MCP Tools Appear in Claude Code

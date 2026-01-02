@@ -6,8 +6,7 @@ import {
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
 } from "../../claude-settings.ts";
-import { checkForChanges } from "../../hook-cache.ts";
-import { getHookConfigs } from "../../hook-config.ts";
+import { checkForChangesAsync, getHookConfigs } from "../../hooks/index.ts";
 
 /**
  * Hook definition from hooks.json
@@ -165,7 +164,7 @@ export function parseHookCommand(
  * Verify that all hooks of a specific type have been run and are cached
  * @internal - Exported for testing
  */
-export function verifyHooks(hookType: string): number {
+export async function verifyHooks(hookType: string): Promise<number> {
 	// Allow global disable of all hooks via environment variable
 	if (
 		process.env.HAN_DISABLE_HOOKS === "true" ||
@@ -232,8 +231,8 @@ export function verifyHooks(hookType: string): number {
 					// Check each config (directory) for cache status
 					for (const config of configs) {
 						if (config.ifChanged && config.ifChanged.length > 0) {
-							// Check if cache is stale
-							const hasChanges = checkForChanges(
+							// Check if cache is stale (now uses database-backed storage)
+							const hasChanges = await checkForChangesAsync(
 								targetPlugin,
 								targetHook,
 								config.directory,
@@ -281,8 +280,8 @@ export function registerHookVerify(hookCommand: Command): void {
 				"Exits 0 if all hooks are cached, non-zero if any hooks need to be run.\n\n" +
 				"Example: han hook verify Stop",
 		)
-		.action((hookType: string) => {
-			const exitCode = verifyHooks(hookType);
+		.action(async (hookType: string) => {
+			const exitCode = await verifyHooks(hookType);
 			process.exit(exitCode);
 		});
 }

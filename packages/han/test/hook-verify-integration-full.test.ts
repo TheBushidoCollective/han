@@ -40,19 +40,17 @@ describe("verify.ts full integration tests", () => {
 		process.exit = mock((code?: number) => {
 			_exitCode = code ?? 0;
 			throw new Error(`process.exit(${code})`);
-		});
+		}) as never;
 
 		// Mock console
 		logMessages.length = 0;
 		errorMessages.length = 0;
-		// biome-ignore lint/suspicious/noExplicitAny: mock needs to accept any console arguments
-		console.log = mock((...args: any[]) => {
+		console.log = mock((...args: unknown[]) => {
 			logMessages.push(args.join(" "));
-		});
-		// biome-ignore lint/suspicious/noExplicitAny: mock needs to accept any console arguments
-		console.error = mock((...args: any[]) => {
+		}) as never;
+		console.error = mock((...args: unknown[]) => {
 			errorMessages.push(args.join(" "));
-		});
+		}) as never;
 
 		// Mock cwd to return our test directory
 		process.cwd = mock(() => testDir);
@@ -83,21 +81,24 @@ describe("verify.ts full integration tests", () => {
 				"../lib/commands/hook/verify.ts"
 			);
 
+			let actionFn: ((hookType: string) => Promise<void>) | null = null;
 			const mockCommand = {
 				command: mock(() => mockCommand),
 				description: mock(() => mockCommand),
-				action: mock((fn: (hookType: string) => void) => {
-					try {
-						fn("Stop");
-					} catch (_error) {
-						// Catch process.exit throw
-					}
+				action: mock((fn: (hookType: string) => Promise<void>) => {
+					actionFn = fn;
 					return mockCommand;
 				}),
 			};
 
-			// biome-ignore lint/suspicious/noExplicitAny: mock command object for testing
-			registerHookVerify(mockCommand as any);
+			registerHookVerify(mockCommand as never);
+
+			try {
+				// biome-ignore lint/style/noNonNullAssertion: actionFn is set by mock callback
+				await actionFn!("Stop");
+			} catch (_error) {
+				// Catch process.exit throw
+			}
 
 			// Should log that no hooks were found
 			expect(

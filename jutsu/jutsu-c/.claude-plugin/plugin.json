@@ -9,5 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["c", "systems-programming", "memory-management"]
+  "keywords": ["c", "systems-programming", "memory-management"],
+  "lspServers": {
+    "clangd": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--background-index"],
+      "extensionToLanguage": {
+        ".c": "c",
+        ".h": "c"
+      }
+    }
+  }
 }

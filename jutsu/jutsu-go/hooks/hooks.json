@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/install-lsp.sh\"",
+            "timeout": 180
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

@@ -1,11 +1,13 @@
 import {
-	captureCheckpoint,
+	captureCheckpointAsync,
 	collectIfChangedPatterns,
-} from "../../checkpoint.ts";
+} from "../../hooks/checkpoint.ts";
 
 /**
  * Capture a checkpoint for a session or agent
  * This is called from hook dispatch in a background process
+ *
+ * Uses DB-backed storage for checkpoints.
  */
 export async function captureCheckpointCommand(options: {
 	type: "session" | "agent";
@@ -16,10 +18,16 @@ export async function captureCheckpointCommand(options: {
 	// Collect patterns from all enabled plugins
 	const patterns = collectIfChangedPatterns();
 
-	// Capture the checkpoint
-	const success = captureCheckpoint(type, id, patterns);
+	// Build checkpoint ID (prefix with "agent-" for agent checkpoints)
+	const checkpointId = type === "agent" ? `agent-${id}` : id;
 
-	if (!success) {
-		throw new Error(`Failed to capture ${type} checkpoint for ${id}`);
+	// Capture the checkpoint using DB storage
+	const results = await captureCheckpointAsync(checkpointId, patterns);
+
+	if (results.length === 0 && patterns.length > 0) {
+		// Only error if we expected files but captured none
+		console.warn(
+			`Warning: No files captured for ${type} checkpoint ${id} (patterns: ${patterns.join(", ")})`,
+		);
 	}
 }

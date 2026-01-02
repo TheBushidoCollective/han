@@ -11,3 +11,7 @@ hooks:
       - "playwright.config.*"
       - "e2e/**/*"
       - "tests/**/*"
+    depends_on:
+      - plugin: jutsu-playwright-bdd
+        hook: generate
+        optional: true

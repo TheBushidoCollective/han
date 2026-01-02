@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -53,6 +54,21 @@ export function getClaudeConfigDir(): string {
 }
 
 /**
+ * Get git root directory for the current working directory
+ */
+export function getGitRoot(): string | null {
+	try {
+		const result = execSync("git rev-parse --show-toplevel", {
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		return result.trim();
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Get project directory (current working directory)
  */
 export function getProjectDir(): string {
@@ -75,11 +91,17 @@ export function readSettingsFile(path: string): ClaudeSettings | null {
 
 /**
  * Get all settings file paths in order of precedence (lowest to highest)
+ * @param projectPath - Optional explicit project path (overrides cwd-based detection)
  */
-export function getSettingsPaths(): { scope: SettingsScope; path: string }[] {
+export function getSettingsPaths(
+	projectPath?: string,
+): { scope: SettingsScope; path: string }[] {
 	const paths: { scope: SettingsScope; path: string }[] = [];
 	const configDir = getClaudeConfigDir();
-	const projectDir = getProjectDir();
+
+	// Use explicit projectPath if provided, otherwise fall back to cwd-based detection
+	const projectDir = projectPath || getProjectDir();
+	const gitRoot = projectPath ? null : getGitRoot(); // Skip git root if explicit path provided
 
 	// 1. User settings (lowest priority)
 	if (configDir) {
@@ -89,19 +111,33 @@ export function getSettingsPaths(): { scope: SettingsScope; path: string }[] {
 		});
 	}
 
-	// 2. Project settings (team-shared)
+	// 2. Git root project settings (if different from projectDir)
+	// This handles running from subdirectories like packages/han
+	// Skip if explicit projectPath was provided (caller knows the exact path)
+	if (gitRoot && gitRoot !== projectDir) {
+		paths.push({
+			scope: "project",
+			path: join(gitRoot, ".claude", "settings.json"),
+		});
+		paths.push({
+			scope: "local",
+			path: join(gitRoot, ".claude", "settings.local.json"),
+		});
+	}
+
+	// 3. Project settings (team-shared)
 	paths.push({
 		scope: "project",
 		path: join(projectDir, ".claude", "settings.json"),
 	});
 
-	// 3. Local settings (personal project-specific)
+	// 4. Local settings (personal project-specific)
 	paths.push({
 		scope: "local",
 		path: join(projectDir, ".claude", "settings.local.json"),
 	});
 
-	// 4. Enterprise managed settings (highest priority, cannot be overridden)
+	// 5. Enterprise managed settings (highest priority, cannot be overridden)
 	if (configDir) {
 		paths.push({
 			scope: "enterprise",
@@ -162,9 +198,10 @@ function mergeMarketplaces(
  * 3. Local settings (.claude/settings.local.json)
  * 4. Enterprise settings (managed-settings.json) - highest priority
  *
+ * @param projectPath - Optional explicit project path for settings lookup
  * @see https://code.claude.com/docs/en/settings
  */
-export function getMergedPluginsAndMarketplaces(): {
+export function getMergedPluginsAndMarketplaces(projectPath?: string): {
 	plugins: Map<string, string>;
 	marketplaces: Map<string, MarketplaceConfig>;
 } {
@@ -172,7 +209,7 @@ export function getMergedPluginsAndMarketplaces(): {
 	const marketplaces = new Map<string, MarketplaceConfig>();
 
 	// Process settings in order of precedence (lowest to highest)
-	for (const { path } of getSettingsPaths()) {
+	for (const { path } of getSettingsPaths(projectPath)) {
 		const settings = readSettingsFile(path);
 		if (settings) {
 			mergeMarketplaces(marketplaces, settings);

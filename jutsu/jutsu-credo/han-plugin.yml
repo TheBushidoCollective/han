@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "mix credo"
+    command: "mix credo ${HAN_FILES}"
     dirs_with:
       - "mix.exs"
     dir_test: "grep -qE ':credo' mix.exs"

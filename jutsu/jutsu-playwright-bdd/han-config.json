@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "generate": {
+      "command": "npx bddgen",
+      "dirsWith": ["playwright.config.ts", "playwright.config.js"],
+      "ifChanged": [
+        "**/*.feature",
+        "**/steps/**/*.ts",
+        "**/steps/**/*.js",
+        "playwright.config.*"
+      ]
+    }
+  }
+}

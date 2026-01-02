@@ -12,7 +12,7 @@ import {
 	generateToolDescription,
 	resolvePathToAbsolute,
 } from "../lib/commands/mcp/tools.ts";
-import type { PluginConfig } from "../lib/hook-config.ts";
+import type { PluginConfig } from "../lib/hooks/index.ts";
 
 describe("mcp/tools.ts helper functions", () => {
 	describe("resolvePathToAbsolute", () => {

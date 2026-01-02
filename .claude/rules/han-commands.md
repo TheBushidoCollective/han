@@ -1,5 +1,5 @@
 ---
-globs: ["packages/han/**/*.ts"]
+paths: ["packages/han/**/*.ts"]
 ---
 
 # Han CLI Development Rules

@@ -20,7 +20,7 @@ do/do-{discipline-name}/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
 ├── agents/
 │   └── {agent-name}.md     # Agent definition
-├── han-config.json          # Han hook configurations (optional, at plugin root)
+├── han-plugin.yml           # Han configurations (at plugin root)
 ├── hooks/
 │   └── hooks.json           # Claude Code hooks (optional)
 ├── skills/
@@ -33,7 +33,7 @@ do/do-{discipline-name}/
 
 - Only `plugin.json` goes inside `.claude-plugin/`
 - `hooks.json` goes in the `hooks/` directory
-- `han-config.json` stays at the plugin root (NOT in hooks/)
+- `han-plugin.yml` stays at the plugin root (NOT in hooks/)
 
 ## Step 1: Create plugin.json
 
@@ -61,7 +61,54 @@ Create `.claude-plugin/plugin.json`:
 }
 ```
 
-## Step 2: Create Agent Definitions
+## Step 2: Create han-plugin.yml
+
+Create `han-plugin.yml` at the plugin root:
+
+```yaml
+# do-{discipline-name} plugin configuration
+# This plugin provides specialized agents for {discipline area}
+
+# No hooks for agent-focused plugins (unless needed)
+hooks: {}
+
+# No MCP server (unless this dō provides one)
+mcp: null
+
+# Memory provider (optional - if agents should contribute to team memory)
+memory: null
+```
+
+### Example han-plugin.yml with Hooks
+
+If your dō includes validation or quality enforcement:
+
+```yaml
+# do-claude-plugin-development plugin configuration
+
+hooks:
+  lint:
+    command: "${CLAUDE_PLUGIN_ROOT}/hooks/lint.sh"
+    dirsWith:
+      - ".claude-plugin/plugin.json"
+    ifChanged:
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.md"
+
+  config-sync:
+    command: "cd packages/han && bun run lint:config-sync"
+    dirsWith:
+      - "packages/han/package.json"
+    ifChanged:
+      - "**/.claude-plugin/plugin.json"
+      - "**/han-plugin.yml"
+
+mcp: null
+memory: null
+```
+
+## Step 3: Create Agent Definitions
 
 For each specialized role in your discipline, create an agent markdown file.
 
@@ -215,7 +262,7 @@ Summon this agent when you need:
 - **cyan**: Data, analytics, integration
 - **magenta**: Creative, experimental, research
 
-## Step 3: Create Skills (Optional)
+## Step 4: Create Skills (Optional)
 
 Dō plugins can include supporting skills that agents can invoke:
 
@@ -265,7 +312,7 @@ allowed-tools:
 - **{agent-name}**: {How this skill relates to the agent}
 ```
 
-## Step 4: Write README.md
+## Step 5: Write README.md
 
 Create a comprehensive README:
 
@@ -310,7 +357,7 @@ This dō provides the following agents:
 Install via the Han marketplace:
 
 \`\`\`bash
-han plugin install {plugin-name}
+han plugin install do-{discipline-name}
 \`\`\`
 
 Or install manually:
@@ -373,18 +420,21 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 MIT License - See [LICENSE](../../LICENSE) for details.
 ```
 
-## Step 5: Register in Marketplace
+## Step 6: Register in Marketplace
 
 Add your plugin to `.claude-plugin/marketplace.json`:
 
 ```json
 {
-  "plugins": {
-    "do-{discipline-name}": {
-      "source": "directory",
-      "path": "./do/do-{discipline-name}"
-    }
-  }
+  "name": "do-{discipline-name}",
+  "description": "Specialized agents for {discipline area} including {key responsibilities}.",
+  "source": "./do/do-{discipline-name}",
+  "category": "Discipline",
+  "keywords": [
+    "{discipline}",
+    "{specialty}",
+    "agent"
+  ]
 }
 ```
 
@@ -492,7 +542,7 @@ Reference these examples:
 1. Install locally:
 
    ```bash
-   claude plugin install /path/to/do-{discipline}@local
+   han plugin install /path/to/do-{discipline}
    ```
 
 2. Invoke agents in various scenarios:

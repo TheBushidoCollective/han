@@ -1,8 +1,14 @@
 /**/node_modules/
 /**/.next/packages/han-native/bun.lock
+client-bundle.generated.ts
 
 # Native modules are built in CI
 packages/han-native/*.node
 
 # Local config overrides (personal settings, not team-shared)
 *.local.*
+.playwright-mcp
+playwright-report
+.features-gen
+test-results
+out

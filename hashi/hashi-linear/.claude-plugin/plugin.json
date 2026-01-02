@@ -17,11 +17,5 @@
     "acceptance-criteria",
     "validation",
     "workflow"
-  ],
-  "mcpServers": {
-    "linear": {
-      "type": "http",
-      "url": "https://mcp.linear.app/mcp"
-    }
-  }
+  ]
 }

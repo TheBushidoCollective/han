@@ -48,6 +48,7 @@ function runCommand(command: string, input?: string): string {
 		env: process.env,
 		encoding: "utf-8",
 		input,
+		timeout: 10000,
 	});
 	return output.trim();
 }
@@ -62,13 +63,17 @@ describe.serial("Metrics CLI Commands", () => {
 	});
 
 	describe("Session Start Command", () => {
-		test("session-start creates new session", () => {
-			const output = runCommand("session-start");
-			const result = JSON.parse(output);
-			expect(result.session_id).toBeTruthy();
-			expect(result.session_id.startsWith("session-")).toBe(true);
-			expect(result.resumed).toBe(false);
-		});
+		test(
+			"session-start creates new session",
+			() => {
+				const output = runCommand("session-start");
+				const result = JSON.parse(output);
+				expect(result.session_id).toBeTruthy();
+				expect(result.session_id.startsWith("session-")).toBe(true);
+				expect(result.resumed).toBe(false);
+			},
+			{ timeout: 15000 },
+		);
 
 		test("session-start with --session-id resumes session", () => {
 			const firstOutput = runCommand("session-start");

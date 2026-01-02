@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "shards install && ameba"
+    command: "shards install && ameba ${HAN_FILES}"
     dirs_with:
       - "shard.yml"
     dir_test: "grep -qE 'ameba' shard.yml"

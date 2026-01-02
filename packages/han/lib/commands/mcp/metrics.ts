@@ -58,9 +58,19 @@ function getStorage(): JsonlMetricsStorage {
 }
 
 /**
+ * Reset the storage singleton - useful for testing
+ */
+export function resetMetricsStorage(): void {
+	if (storage) {
+		storage.close();
+		storage = null;
+	}
+}
+
+/**
  * Define all metrics tools
  */
-const METRICS_TOOLS: McpTool[] = [
+export const METRICS_TOOLS: McpTool[] = [
 	{
 		name: "start_task",
 		description:
@@ -319,7 +329,7 @@ function handleInitialize(): unknown {
 	};
 }
 
-function handleToolsList(): unknown {
+export function handleToolsList(): unknown {
 	// Return empty tools list if metrics disabled
 	if (!isMetricsEnabled()) {
 		return { tools: [] };
@@ -329,7 +339,7 @@ function handleToolsList(): unknown {
 	};
 }
 
-async function handleToolsCall(params: {
+export async function handleToolsCall(params: {
 	name: string;
 	arguments?: Record<string, unknown>;
 }): Promise<unknown> {

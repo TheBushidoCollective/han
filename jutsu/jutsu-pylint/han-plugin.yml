@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "pylint ."
+    command: "pylint ${HAN_FILES}"
     dirs_with:
       - "pyproject.toml"
     dir_test: "grep -qE '^pylint[^a-zA-Z]|\"pylint\"' pyproject.toml"

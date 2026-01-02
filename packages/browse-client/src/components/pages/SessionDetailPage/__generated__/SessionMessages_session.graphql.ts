@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<31db3573ee6db9edc5a822f05bba2200>>
+ * @generated SignedSource<<d36ef82d5147e03b99a3b0481bb17c9e>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -8,215 +8,208 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ReaderFragment } from 'relay-runtime';
-export type MessageType = "ASSISTANT" | "SUMMARY" | "USER" | "%future added value";
-import { FragmentRefs } from "relay-runtime";
+import type { FragmentRefs, ReaderFragment } from 'relay-runtime';
 export type SessionMessages_session$data = {
   readonly id: string;
   readonly messageCount: number | null | undefined;
-  readonly messages: {
-    readonly edges: ReadonlyArray<{
-      readonly cursor: string | null | undefined;
-      readonly node: {
-        readonly content: string | null | undefined;
-        readonly id: string | null | undefined;
-        readonly isToolOnly: boolean | null | undefined;
-        readonly timestamp: any | null | undefined;
-        readonly type: MessageType | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
-    readonly pageInfo: {
-      readonly hasPreviousPage: boolean | null | undefined;
-      readonly startCursor: string | null | undefined;
-    } | null | undefined;
-    readonly totalCount: number | null | undefined;
-  } | null | undefined;
-  readonly " $fragmentType": "SessionMessages_session";
+  readonly messages:
+    | {
+        readonly __id: string;
+        readonly edges:
+          | ReadonlyArray<{
+              readonly cursor: string | null | undefined;
+              readonly node:
+                | {
+                    readonly id: string | null | undefined;
+                    readonly ' $fragmentSpreads': FragmentRefs<'MessageCards_message'>;
+                  }
+                | null
+                | undefined;
+            }>
+          | null
+          | undefined;
+        readonly pageInfo:
+          | {
+              readonly endCursor: string | null | undefined;
+              readonly hasNextPage: boolean | null | undefined;
+            }
+          | null
+          | undefined;
+        readonly totalCount: number | null | undefined;
+      }
+    | null
+    | undefined;
+  readonly ' $fragmentType': 'SessionMessages_session';
 };
 export type SessionMessages_session$key = {
-  readonly " $data"?: SessionMessages_session$data;
-  readonly " $fragmentSpreads": FragmentRefs<"SessionMessages_session">;
+  readonly ' $data'?: SessionMessages_session$data;
+  readonly ' $fragmentSpreads': FragmentRefs<'SessionMessages_session'>;
 };
 
 import SessionMessagesPaginationQuery_graphql from './SessionMessagesPaginationQuery.graphql';
 
-const node: ReaderFragment = (function(){
-var v0 = [
-  "messages"
-],
-v1 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "id",
-  "storageKey": null
-};
-return {
-  "argumentDefinitions": [
-    {
-      "defaultValue": null,
-      "kind": "LocalArgument",
-      "name": "before"
-    },
-    {
-      "defaultValue": 50,
-      "kind": "LocalArgument",
-      "name": "last"
-    }
-  ],
-  "kind": "Fragment",
-  "metadata": {
-    "connection": [
+const node: ReaderFragment = (() => {
+  var v0 = ['messages'],
+    v1 = {
+      alias: null,
+      args: null,
+      kind: 'ScalarField',
+      name: 'id',
+      storageKey: null,
+    };
+  return {
+    argumentDefinitions: [
       {
-        "count": "last",
-        "cursor": "before",
-        "direction": "backward",
-        "path": (v0/*: any*/)
-      }
-    ],
-    "refetch": {
-      "connection": {
-        "forward": null,
-        "backward": {
-          "count": "last",
-          "cursor": "before"
-        },
-        "path": (v0/*: any*/)
+        defaultValue: null,
+        kind: 'LocalArgument',
+        name: 'after',
       },
-      "fragmentPathInResult": [
-        "node"
-      ],
-      "operation": SessionMessagesPaginationQuery_graphql,
-      "identifierInfo": {
-        "identifierField": "id",
-        "identifierQueryVariableName": "id"
-      }
-    }
-  },
-  "name": "SessionMessages_session",
-  "selections": [
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "messageCount",
-      "storageKey": null
-    },
-    {
-      "alias": "messages",
-      "args": null,
-      "concreteType": "MessageConnection",
-      "kind": "LinkedField",
-      "name": "__SessionMessages_messages_connection",
-      "plural": false,
-      "selections": [
+      {
+        defaultValue: 50,
+        kind: 'LocalArgument',
+        name: 'first',
+      },
+    ],
+    kind: 'Fragment',
+    metadata: {
+      connection: [
         {
-          "alias": null,
-          "args": null,
-          "concreteType": "MessageEdge",
-          "kind": "LinkedField",
-          "name": "edges",
-          "plural": true,
-          "selections": [
-            {
-              "alias": null,
-              "args": null,
-              "concreteType": "Message",
-              "kind": "LinkedField",
-              "name": "node",
-              "plural": false,
-              "selections": [
-                (v1/*: any*/),
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "type",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "content",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "timestamp",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "isToolOnly",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "__typename",
-                  "storageKey": null
-                }
-              ],
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "cursor",
-              "storageKey": null
-            }
-          ],
-          "storageKey": null
+          count: 'first',
+          cursor: 'after',
+          direction: 'forward',
+          path: v0 /*: any*/,
         },
-        {
-          "alias": null,
-          "args": null,
-          "concreteType": "PageInfo",
-          "kind": "LinkedField",
-          "name": "pageInfo",
-          "plural": false,
-          "selections": [
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "hasPreviousPage",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "startCursor",
-              "storageKey": null
-            }
-          ],
-          "storageKey": null
-        },
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "totalCount",
-          "storageKey": null
-        }
       ],
-      "storageKey": null
+      refetch: {
+        connection: {
+          forward: {
+            count: 'first',
+            cursor: 'after',
+          },
+          backward: null,
+          path: v0 /*: any*/,
+        },
+        fragmentPathInResult: ['node'],
+        operation: SessionMessagesPaginationQuery_graphql,
+        identifierInfo: {
+          identifierField: 'id',
+          identifierQueryVariableName: 'id',
+        },
+      },
     },
-    (v1/*: any*/)
-  ],
-  "type": "Session",
-  "abstractKey": null
-};
+    name: 'SessionMessages_session',
+    selections: [
+      {
+        alias: null,
+        args: null,
+        kind: 'ScalarField',
+        name: 'messageCount',
+        storageKey: null,
+      },
+      {
+        alias: 'messages',
+        args: null,
+        concreteType: 'MessageConnection',
+        kind: 'LinkedField',
+        name: '__SessionMessages_messages_connection',
+        plural: false,
+        selections: [
+          {
+            alias: null,
+            args: null,
+            concreteType: 'MessageEdge',
+            kind: 'LinkedField',
+            name: 'edges',
+            plural: true,
+            selections: [
+              {
+                alias: null,
+                args: null,
+                concreteType: null,
+                kind: 'LinkedField',
+                name: 'node',
+                plural: false,
+                selections: [
+                  v1 /*: any*/,
+                  {
+                    args: null,
+                    kind: 'FragmentSpread',
+                    name: 'MessageCards_message',
+                  },
+                  {
+                    alias: null,
+                    args: null,
+                    kind: 'ScalarField',
+                    name: '__typename',
+                    storageKey: null,
+                  },
+                ],
+                storageKey: null,
+              },
+              {
+                alias: null,
+                args: null,
+                kind: 'ScalarField',
+                name: 'cursor',
+                storageKey: null,
+              },
+            ],
+            storageKey: null,
+          },
+          {
+            alias: null,
+            args: null,
+            concreteType: 'PageInfo',
+            kind: 'LinkedField',
+            name: 'pageInfo',
+            plural: false,
+            selections: [
+              {
+                alias: null,
+                args: null,
+                kind: 'ScalarField',
+                name: 'hasNextPage',
+                storageKey: null,
+              },
+              {
+                alias: null,
+                args: null,
+                kind: 'ScalarField',
+                name: 'endCursor',
+                storageKey: null,
+              },
+            ],
+            storageKey: null,
+          },
+          {
+            alias: null,
+            args: null,
+            kind: 'ScalarField',
+            name: 'totalCount',
+            storageKey: null,
+          },
+          {
+            kind: 'ClientExtension',
+            selections: [
+              {
+                alias: null,
+                args: null,
+                kind: 'ScalarField',
+                name: '__id',
+                storageKey: null,
+              },
+            ],
+          },
+        ],
+        storageKey: null,
+      },
+      v1 /*: any*/,
+    ],
+    type: 'Session',
+    abstractKey: null,
+  };
 })();
 
-(node as any).hash = "0903560c1a23320426825dcd7016236e";
+(node as any).hash = 'a87d6cb6cebcef2b26a964d4de500ed8';
 
 export default node;

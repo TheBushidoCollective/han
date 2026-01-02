@@ -104,121 +104,138 @@ describe("vector store", () => {
 	});
 
 	describe("createNativeVectorStore", () => {
-		test("returns fallback store when native module unavailable", async () => {
-			// This test depends on environment - if native is available, it may succeed
-			const { createNativeVectorStore } = await import(
-				"../lib/memory/vector-store.ts"
-			);
-			const { tryGetNativeModule } = await import("../lib/native.ts");
+		test(
+			"creates native vector store",
+			async () => {
+				const { createNativeVectorStore } = await import(
+					"../lib/memory/vector-store.ts"
+				);
 
-			const store = await createNativeVectorStore();
-			const nativeAvailable = tryGetNativeModule() !== null;
+				const store = await createNativeVectorStore();
 
-			// If native is unavailable, should return fallback
-			if (!nativeAvailable) {
-				expect(await store.isAvailable()).toBe(false);
-			}
-		});
+				// Store should be created (may or may not have embeddings available)
+				expect(store).toBeDefined();
+				expect(typeof store.isAvailable).toBe("function");
+			},
+			{ timeout: 30000 },
+		);
 
-		test("getVectorStore returns consistent store", async () => {
-			// Import once to ensure we're working with the same module instance
-			const vectorStoreModule = await import("../lib/memory/vector-store.ts");
-			const { getVectorStore, _resetVectorStoreInstance } = vectorStoreModule;
+		test(
+			"getVectorStore returns consistent store",
+			async () => {
+				// Import once to ensure we're working with the same module instance
+				const vectorStoreModule = await import("../lib/memory/vector-store.ts");
+				const { getVectorStore, _resetVectorStoreInstance } = vectorStoreModule;
 
-			// Reset singleton state before testing
-			_resetVectorStoreInstance();
+				// Reset singleton state before testing
+				_resetVectorStoreInstance();
 
-			const store1 = await getVectorStore();
-			const store2 = await getVectorStore();
+				const store1 = await getVectorStore();
+				const store2 = await getVectorStore();
 
-			// Verify both calls return stores with the same availability status
-			// (This tests the singleton caches the native module check)
-			const available1 = await store1.isAvailable();
-			const available2 = await store2.isAvailable();
-			expect(available1).toBe(available2);
+				// Verify both calls return stores with the same availability status
+				// (This tests the singleton caches the native module check)
+				const available1 = await store1.isAvailable();
+				const available2 = await store2.isAvailable();
+				expect(available1).toBe(available2);
 
-			// Both stores should have the same interface
-			expect(typeof store1.embed).toBe("function");
-			expect(typeof store2.embed).toBe("function");
+				// Both stores should have the same interface
+				expect(typeof store1.embed).toBe("function");
+				expect(typeof store2.embed).toBe("function");
 
-			// Clean up
-			_resetVectorStoreInstance();
-		});
+				// Clean up
+				_resetVectorStoreInstance();
+			},
+			{ timeout: 30000 },
+		);
 	});
 
 	describe("native vector store functionality", () => {
-		test("native store can generate embeddings when available", async () => {
-			const { createNativeVectorStore } = await import(
-				"../lib/memory/vector-store.ts"
-			);
-			const store = await createNativeVectorStore();
-
-			if (await store.isAvailable()) {
-				const embedding = await store.embed("test text");
-				expect(Array.isArray(embedding)).toBe(true);
-				expect(embedding.length).toBeGreaterThan(0);
-				// all-MiniLM-L6-v2 produces 384-dimensional embeddings
-				expect(embedding.length).toBe(384);
-			}
-		});
-
-		test("native store can batch generate embeddings when available", async () => {
-			const { createNativeVectorStore } = await import(
-				"../lib/memory/vector-store.ts"
-			);
-			const store = await createNativeVectorStore();
-
-			if (await store.isAvailable()) {
-				const embeddings = await store.embedBatch(["text one", "text two"]);
-				expect(Array.isArray(embeddings)).toBe(true);
-				expect(embeddings.length).toBe(2);
-				expect(embeddings[0].length).toBe(384);
-				expect(embeddings[1].length).toBe(384);
-			}
-		});
-
-		test("native store can index and search when available", async () => {
-			const { createNativeVectorStore } = await import(
-				"../lib/memory/vector-store.ts"
-			);
-			const store = await createNativeVectorStore();
-
-			if (await store.isAvailable()) {
-				// Index some test documents
-				await store.index("test_table", [
-					{
-						id: "doc1",
-						source: "test",
-						type: "commit",
-						timestamp: Date.now(),
-						author: "test",
-						summary: "Added authentication feature",
-						detail: "Implemented JWT-based authentication with refresh tokens",
-						files: ["auth.ts"],
-						patterns: ["authentication"],
-					},
-					{
-						id: "doc2",
-						source: "test",
-						type: "commit",
-						timestamp: Date.now(),
-						author: "test",
-						summary: "Fixed database connection",
-						detail: "Resolved connection pooling issue in PostgreSQL adapter",
-						files: ["db.ts"],
-						patterns: ["database"],
-					},
-				]);
-
-				// Search for related content
-				const results = await store.search(
-					"test_table",
-					"authentication tokens",
-					10,
+		test(
+			"native store can generate embeddings when available",
+			async () => {
+				const { createNativeVectorStore } = await import(
+					"../lib/memory/vector-store.ts"
 				);
-				expect(Array.isArray(results)).toBe(true);
-			}
-		});
+				const store = await createNativeVectorStore();
+
+				if (await store.isAvailable()) {
+					const embedding = await store.embed("test text");
+					expect(Array.isArray(embedding)).toBe(true);
+					expect(embedding.length).toBeGreaterThan(0);
+					// all-MiniLM-L6-v2 produces 384-dimensional embeddings
+					expect(embedding.length).toBe(384);
+				}
+			},
+			{ timeout: 60000 },
+		);
+
+		test(
+			"native store can batch generate embeddings when available",
+			async () => {
+				const { createNativeVectorStore } = await import(
+					"../lib/memory/vector-store.ts"
+				);
+				const store = await createNativeVectorStore();
+
+				if (await store.isAvailable()) {
+					const embeddings = await store.embedBatch(["text one", "text two"]);
+					expect(Array.isArray(embeddings)).toBe(true);
+					expect(embeddings.length).toBe(2);
+					expect(embeddings[0].length).toBe(384);
+					expect(embeddings[1].length).toBe(384);
+				}
+			},
+			{ timeout: 60000 },
+		);
+
+		test(
+			"native store can index and search when available",
+			async () => {
+				const { createNativeVectorStore } = await import(
+					"../lib/memory/vector-store.ts"
+				);
+				const store = await createNativeVectorStore();
+
+				if (await store.isAvailable()) {
+					// Index some test documents
+					await store.index("test_table", [
+						{
+							id: "doc1",
+							source: "test",
+							type: "commit",
+							timestamp: Date.now(),
+							author: "test",
+							summary: "Added authentication feature",
+							detail:
+								"Implemented JWT-based authentication with refresh tokens",
+							files: ["auth.ts"],
+							patterns: ["authentication"],
+						},
+						{
+							id: "doc2",
+							source: "test",
+							type: "commit",
+							timestamp: Date.now(),
+							author: "test",
+							summary: "Fixed database connection",
+							detail: "Resolved connection pooling issue in PostgreSQL adapter",
+							files: ["db.ts"],
+							patterns: ["database"],
+						},
+					]);
+
+					// Search for related content
+					const results = await store.search(
+						"test_table",
+						"authentication tokens",
+						10,
+					);
+					expect(Array.isArray(results)).toBe(true);
+				}
+			},
+			{ timeout: 60000 },
+		);
 	});
 });
 

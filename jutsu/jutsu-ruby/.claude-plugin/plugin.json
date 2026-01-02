@@ -9,5 +9,16 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop"]
+  "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop"],
+  "lspServers": {
+    "solargraph": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["stdio"],
+      "extensionToLanguage": {
+        ".rb": "ruby",
+        ".rake": "ruby",
+        ".gemspec": "ruby"
+      }
+    }
+  }
 }

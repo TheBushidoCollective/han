@@ -16,13 +16,11 @@ import {
 	findFilesWithGlob,
 	getCacheDir,
 	getCacheFilePath,
-	getClaudeConfigDir,
 	getProjectRoot,
-	getProjectSlug,
 	loadCacheManifest,
 	saveCacheManifest,
 	trackFiles,
-} from "../lib/hook-cache.ts";
+} from "../lib/hooks/index.ts";
 
 // Store original environment
 const originalEnv = { ...process.env };
@@ -64,38 +62,6 @@ describe("hook-cache.ts", () => {
 		teardown();
 	});
 
-	describe("getClaudeConfigDir", () => {
-		test("returns CLAUDE_CONFIG_DIR when set", () => {
-			process.env.CLAUDE_CONFIG_DIR = "/custom/config";
-			const result = getClaudeConfigDir();
-			expect(result).toBe("/custom/config");
-		});
-
-		test("returns ~/.claude when CLAUDE_CONFIG_DIR not set", () => {
-			delete process.env.CLAUDE_CONFIG_DIR;
-			process.env.HOME = "/home/testuser";
-			const result = getClaudeConfigDir();
-			expect(result).toBe("/home/testuser/.claude");
-		});
-
-		test("uses USERPROFILE on Windows", () => {
-			delete process.env.CLAUDE_CONFIG_DIR;
-			delete process.env.HOME;
-			process.env.USERPROFILE = "C:\\Users\\test";
-			const result = getClaudeConfigDir();
-			expect(result).toBe("C:\\Users\\test/.claude");
-		});
-
-		test("throws when no home dir found", () => {
-			delete process.env.CLAUDE_CONFIG_DIR;
-			delete process.env.HOME;
-			delete process.env.USERPROFILE;
-			expect(() => getClaudeConfigDir()).toThrow(
-				"Could not determine home directory",
-			);
-		});
-	});
-
 	describe("getProjectRoot", () => {
 		test("returns CLAUDE_PROJECT_DIR when set", () => {
 			process.env.CLAUDE_PROJECT_DIR = "/custom/project";
@@ -110,28 +76,11 @@ describe("hook-cache.ts", () => {
 		});
 	});
 
-	describe("getProjectSlug", () => {
-		test("converts path to slug format", () => {
-			const result = getProjectSlug("/Users/test/project");
-			expect(result).toBe("-Users-test-project");
-		});
-
-		test("handles dots in path", () => {
-			const result = getProjectSlug("/Users/test.user/project.name");
-			expect(result).toBe("-Users-test-user-project-name");
-		});
-
-		test("handles empty string", () => {
-			const result = getProjectSlug("");
-			expect(result).toBe("");
-		});
-	});
-
 	describe("getCacheDir", () => {
 		test("returns correct cache directory path", () => {
 			const result = getCacheDir();
-			expect(result).toContain("/projects/");
-			expect(result).toContain("/han");
+			expect(result).toContain("/repos/");
+			expect(result).toContain("/cache");
 		});
 	});
 

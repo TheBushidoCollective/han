@@ -98,7 +98,7 @@ describe("MCP Memory Tools", () => {
 
 			const fileContent = readFileSync(result.path, "utf-8");
 			expect(fileContent).toContain("---");
-			expect(fileContent).toContain("globs:");
+			expect(fileContent).toContain("paths:");
 			expect(fileContent).toContain("src/api/**/*.ts");
 		});
 
@@ -251,7 +251,7 @@ describe("MCP Memory Tools", () => {
 
 			const result = readMemoryFile("read-frontmatter");
 			expect(result).toContain("---");
-			expect(result).toContain("globs:");
+			expect(result).toContain("paths:");
 		});
 	});
 

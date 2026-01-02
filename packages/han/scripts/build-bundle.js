@@ -39,7 +39,7 @@ const version = packageJson.version;
 
 // Read the detect-plugins prompt
 const detectPluginsPrompt = readFileSync(
-	join(__dirname, "..", "lib", "detect-plugins-prompt.md"),
+	join(__dirname, "..", "lib", "analyze", "detect-plugins-prompt.md"),
 	"utf-8",
 );
 
@@ -109,6 +109,7 @@ export const DETECT_PLUGINS_PROMPT = ${JSON.stringify(detectPluginsPrompt)};
 );
 
 // Compile using bun build --compile
+// Externalize heavy dependencies that are only needed at runtime for specific commands
 const proc = Bun.spawn(
 	[
 		"bun",
@@ -116,6 +117,24 @@ const proc = Bun.spawn(
 		"--compile",
 		"--minify",
 		`--target=${target}`,
+		// Externalize Next.js and its ecosystem (only used by browse command)
+		"--external",
+		"next",
+		"--external",
+		"react-server-dom-webpack",
+		"--external",
+		"react-server-dom-turbopack",
+		"--external",
+		"critters",
+		"--external",
+		"webpack",
+		"--external",
+		"sass",
+		// Externalize vite and its native dependencies (used by browse command)
+		"--external",
+		"vite",
+		"--external",
+		"lightningcss",
 		join(__dirname, "..", "lib", "main.ts"),
 		"--outfile",
 		outfile,

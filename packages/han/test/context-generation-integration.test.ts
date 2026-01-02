@@ -9,13 +9,15 @@ import { join } from "node:path";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
 describe.serial("context-generation integration", () => {
-	const testDir = `/tmp/test-context-gen-integration-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: string | undefined;
 
 	const getMetricsDir = () =>
 		join(testDir, "config", "han", "metrics", "jsonldb");
 
 	beforeEach(() => {
+		// Create unique directory for each test to avoid race conditions and stale data
+		testDir = `/tmp/test-context-gen-integration-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		originalEnv = process.env.CLAUDE_CONFIG_DIR;
 		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
 		mkdirSync(getMetricsDir(), {

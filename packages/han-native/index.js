@@ -324,6 +324,31 @@ if (!nativeBinding) {
 }
 
 const {
+  cleanupLegacyDatabase,
+  hasLegacyDatabase,
+  jsonlCountLines,
+  jsonlStats,
+  jsonlReadPage,
+  jsonlReadReverse,
+  jsonlBuildIndex,
+  jsonlSaveIndex,
+  jsonlLoadIndex,
+  jsonlReadIndexed,
+  jsonlStream,
+  jsonlFilter,
+  jsonlFilterTimeRange,
+  extractFileOperations,
+  extractFileOperationsBatch,
+  listSessionFiles,
+  listJsonlFiles,
+  pollIndexResults,
+  FileEventType,
+  startFileWatcher,
+  stopFileWatcher,
+  setIndexCallback,
+  clearIndexCallback,
+  isWatcherRunning,
+  getDefaultWatchPath,
   computeFileHash,
   computeFileHashesParallel,
   findFilesWithGlob,
@@ -342,8 +367,86 @@ const {
   generateEmbeddings,
   generateEmbedding,
   getEmbeddingDimension,
+  upsertRepo,
+  getRepoByRemote,
+  listRepos,
+  upsertProject,
+  getProjectBySlug,
+  getProjectByPath,
+  listProjects,
+  upsertSession,
+  endSession,
+  getSession,
+  listSessions,
+  resetAllSessionsForReindex,
+  insertMessagesBatch,
+  getMessage,
+  listSessionMessages,
+  getMessageCount,
+  getMessageCountsBatch,
+  getLastIndexedLine,
+  getSessionTimestampsBatch,
+  searchMessages,
+  createTask,
+  completeTask,
+  failTask,
+  getTask,
+  queryTaskMetrics,
+  setHookCache,
+  getHookCache,
+  invalidateHookCache,
+  cleanupExpiredCache,
+  upsertMarketplacePlugin,
+  getMarketplacePlugin,
+  listMarketplacePlugins,
+  recordHookExecution,
+  queryHookStats,
+  recordFrustration,
+  queryFrustrationMetrics,
+  createCheckpoint,
+  getCheckpoint,
+  listCheckpoints,
+  recordFileChange,
+  getSessionFileChanges,
+  hasSessionChanges,
+  tryAcquireCoordinatorLock,
+  releaseCoordinatorLock,
+  updateCoordinatorHeartbeat,
+  getCoordinatorStatus,
+  isCoordinator,
+  getHeartbeatInterval,
+  getStaleLockTimeout,
+  indexSessionFile,
+  indexProjectDirectory,
+  handleFileEvent,
+  fullScanAndIndex,
 } = nativeBinding;
 
+module.exports.cleanupLegacyDatabase = cleanupLegacyDatabase;
+module.exports.hasLegacyDatabase = hasLegacyDatabase;
+module.exports.jsonlCountLines = jsonlCountLines;
+module.exports.jsonlStats = jsonlStats;
+module.exports.jsonlReadPage = jsonlReadPage;
+module.exports.jsonlReadReverse = jsonlReadReverse;
+module.exports.jsonlBuildIndex = jsonlBuildIndex;
+module.exports.jsonlSaveIndex = jsonlSaveIndex;
+module.exports.jsonlLoadIndex = jsonlLoadIndex;
+module.exports.jsonlReadIndexed = jsonlReadIndexed;
+module.exports.jsonlStream = jsonlStream;
+module.exports.jsonlFilter = jsonlFilter;
+module.exports.jsonlFilterTimeRange = jsonlFilterTimeRange;
+module.exports.extractFileOperations = extractFileOperations;
+module.exports.extractFileOperationsBatch = extractFileOperationsBatch;
+module.exports.listSessionFiles = listSessionFiles;
+module.exports.listJsonlFiles = listJsonlFiles;
+module.exports.pollIndexResults = pollIndexResults;
+module.exports.FileEventType = FileEventType;
+module.exports.startFileWatcher = startFileWatcher;
+module.exports.stopFileWatcher = stopFileWatcher;
+module.exports.setIndexCallback = setIndexCallback;
+module.exports.clearIndexCallback = clearIndexCallback;
+module.exports.isWatcherRunning = isWatcherRunning;
+module.exports.getDefaultWatchPath = getDefaultWatchPath;
 module.exports.computeFileHash = computeFileHash;
 module.exports.computeFileHashesParallel = computeFileHashesParallel;
 module.exports.findFilesWithGlob = findFilesWithGlob;
@@ -362,3 +465,56 @@ module.exports.embeddingEnsureAvailable = embeddingEnsureAvailable;
 module.exports.generateEmbeddings = generateEmbeddings;
 module.exports.generateEmbedding = generateEmbedding;
 module.exports.getEmbeddingDimension = getEmbeddingDimension;
+module.exports.upsertRepo = upsertRepo;
+module.exports.getRepoByRemote = getRepoByRemote;
+module.exports.listRepos = listRepos;
+module.exports.upsertProject = upsertProject;
+module.exports.getProjectBySlug = getProjectBySlug;
+module.exports.getProjectByPath = getProjectByPath;
+module.exports.listProjects = listProjects;
+module.exports.upsertSession = upsertSession;
+module.exports.endSession = endSession;
+module.exports.getSession = getSession;
+module.exports.listSessions = listSessions;
+module.exports.resetAllSessionsForReindex = resetAllSessionsForReindex;
+module.exports.insertMessagesBatch = insertMessagesBatch;
+module.exports.getMessage = getMessage;
+module.exports.listSessionMessages = listSessionMessages;
+module.exports.getMessageCount = getMessageCount;
+module.exports.getMessageCountsBatch = getMessageCountsBatch;
+module.exports.getLastIndexedLine = getLastIndexedLine;
+module.exports.getSessionTimestampsBatch = getSessionTimestampsBatch;
+module.exports.searchMessages = searchMessages;
+module.exports.createTask = createTask;
+module.exports.completeTask = completeTask;
+module.exports.failTask = failTask;
+module.exports.getTask = getTask;
+module.exports.queryTaskMetrics = queryTaskMetrics;
+module.exports.setHookCache = setHookCache;
+module.exports.getHookCache = getHookCache;
+module.exports.invalidateHookCache = invalidateHookCache;
+module.exports.cleanupExpiredCache = cleanupExpiredCache;
+module.exports.upsertMarketplacePlugin = upsertMarketplacePlugin;
+module.exports.getMarketplacePlugin = getMarketplacePlugin;
+module.exports.listMarketplacePlugins = listMarketplacePlugins;
+module.exports.recordHookExecution = recordHookExecution;
+module.exports.queryHookStats = queryHookStats;
+module.exports.recordFrustration = recordFrustration;
+module.exports.queryFrustrationMetrics = queryFrustrationMetrics;
+module.exports.createCheckpoint = createCheckpoint;
+module.exports.getCheckpoint = getCheckpoint;
+module.exports.listCheckpoints = listCheckpoints;
+module.exports.recordFileChange = recordFileChange;
+module.exports.getSessionFileChanges = getSessionFileChanges;
+module.exports.hasSessionChanges = hasSessionChanges;
+module.exports.tryAcquireCoordinatorLock = tryAcquireCoordinatorLock;
+module.exports.releaseCoordinatorLock = releaseCoordinatorLock;
+module.exports.updateCoordinatorHeartbeat = updateCoordinatorHeartbeat;
+module.exports.getCoordinatorStatus = getCoordinatorStatus;
+module.exports.isCoordinator = isCoordinator;
+module.exports.getHeartbeatInterval = getHeartbeatInterval;
+module.exports.getStaleLockTimeout = getStaleLockTimeout;
+module.exports.indexSessionFile = indexSessionFile;
+module.exports.indexProjectDirectory = indexProjectDirectory;
+module.exports.handleFileEvent = handleFileEvent;
+module.exports.fullScanAndIndex = fullScanAndIndex;

@@ -9,5 +9,14 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["lua", "scripting", "embedded", "gaming"]
+  "keywords": ["lua", "scripting", "embedded", "gaming"],
+  "lspServers": {
+    "lua-language-server": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".lua": "lua"
+      }
+    }
+  }
 }

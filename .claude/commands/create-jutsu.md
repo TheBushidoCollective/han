@@ -18,7 +18,7 @@ Create the following directory structure:
 jutsu/jutsu-{name}/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
-├── han-config.json          # Han hook configurations (at plugin root)
+├── han-plugin.yml           # Han hook configurations (at plugin root)
 ├── hooks/
 │   └── hooks.json           # Claude Code hooks
 ├── skills/
@@ -31,7 +31,7 @@ jutsu/jutsu-{name}/
 
 - Only `plugin.json` goes inside `.claude-plugin/`
 - `hooks.json` goes in the `hooks/` directory
-- `han-config.json` stays at the plugin root (NOT in hooks/)
+- `han-plugin.yml` stays at the plugin root (NOT in hooks/)
 
 ## Step 1: Create plugin.json
 
@@ -59,20 +59,28 @@ Create `.claude-plugin/plugin.json`:
 }
 ```
 
-## Step 2: Create han-config.json
+## Step 2: Create han-plugin.yml
 
-Create `han-config.json` at the plugin root with hook definitions:
+Create `han-plugin.yml` at the plugin root with hook definitions:
 
-```json
-{
-  "hooks": {
-    "{hook-name}": {
-      "command": "{validation-command}",
-      "dirsWith": ["{marker-file}"],
-      "ifChanged": ["{glob-patterns}"]
-    }
-  }
-}
+```yaml
+# jutsu-{technology-name} plugin configuration
+# This plugin provides validation hooks for {Technology Name} projects
+
+# Hook definitions (managed by Han orchestrator)
+hooks:
+  {hook-name}:
+    command: "{validation-command}"
+    dirsWith:
+      - "{marker-file}"
+    ifChanged:
+      - "{glob-patterns}"
+
+# No MCP server for jutsu plugins (they use hooks, not MCP)
+mcp: null
+
+# Memory provider (optional)
+memory: null
 ```
 
 ### Hook Configuration Guide
@@ -82,6 +90,60 @@ Create `han-config.json` at the plugin root with hook definitions:
 - **command**: The validation command to run (e.g., "npm run lint", "cargo check")
 - **dirsWith**: Array of marker files to detect relevant directories (e.g., ["package.json"])
 - **ifChanged**: Array of glob patterns to watch for changes (optional, enables caching)
+
+### Example han-plugin.yml
+
+```yaml
+# jutsu-typescript plugin configuration
+# This plugin provides TypeScript validation hooks
+
+hooks:
+  typecheck:
+    command: "npx -y --package typescript tsc --noEmit"
+    dirsWith:
+      - tsconfig.json
+    ifChanged:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "tsconfig.json"
+
+mcp: null
+memory: null
+```
+
+### Multi-Hook Example
+
+```yaml
+# jutsu-rust plugin configuration
+
+hooks:
+  check:
+    command: "cargo check"
+    dirsWith:
+      - Cargo.toml
+    ifChanged:
+      - "**/*.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+  clippy:
+    command: "cargo clippy -- -D warnings"
+    dirsWith:
+      - Cargo.toml
+    ifChanged:
+      - "**/*.rs"
+
+  test:
+    command: "cargo test"
+    dirsWith:
+      - Cargo.toml
+    ifChanged:
+      - "**/*.rs"
+      - "Cargo.toml"
+
+mcp: null
+memory: null
+```
 
 ## Step 3: Create hooks.json
 
@@ -135,25 +197,6 @@ Create `hooks/hooks.json` to register the hook with Claude Code events:
 - **RSpec**: `bundle exec rspec`
 - **Cargo**: `cargo check && cargo clippy`
 - **Go**: `go vet ./... && go test ./...`
-
-### Example han-config.json
-
-```json
-{
-  "hooks": {
-    "lint": {
-      "command": "npm run lint",
-      "dirsWith": ["package.json"],
-      "ifChanged": ["**/*.{js,jsx,ts,tsx}"]
-    },
-    "test": {
-      "command": "npm test",
-      "dirsWith": ["package.json"],
-      "ifChanged": ["**/*.{js,jsx,ts,tsx}", "**/*.test.{js,jsx,ts,tsx}"]
-    }
-  }
-}
-```
 
 ## Step 4: Create Skills
 
@@ -257,7 +300,7 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 \`\`\`bash
-han plugin install {plugin-name}
+han plugin install jutsu-{technology-name}
 \`\`\`
 
 Or install manually:
@@ -295,12 +338,16 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ```json
 {
-  "plugins": {
-    "jutsu-{technology-name}": {
-      "source": "directory",
-      "path": "./jutsu/jutsu-{technology-name}"
-    }
-  }
+  "name": "jutsu-{technology-name}",
+  "description": "Validation and quality enforcement for {Technology Name} projects.",
+  "source": "./jutsu/jutsu-{technology-name}",
+  "category": "Technique",
+  "keywords": [
+    "{technology}",
+    "validation",
+    "quality",
+    "enforcement"
+  ]
 }
 ```
 
@@ -331,7 +378,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 1. Install locally:
 
    ```bash
-   claude plugin install /path/to/jutsu-{name}@local
+   han plugin install /path/to/jutsu-{name}
    ```
 
 2. Test validation hooks:

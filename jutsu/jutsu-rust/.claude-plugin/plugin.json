@@ -9,5 +9,14 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "MIT",
-  "keywords": ["rust", "ownership", "async"]
+  "keywords": ["rust", "ownership", "async"],
+  "lspServers": {
+    "rust-analyzer": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".rs": "rust"
+      }
+    }
+  }
 }
