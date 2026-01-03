@@ -1,6 +1,6 @@
 hooks:
   typecheck:
-    command: "npx -y --package typescript tsc"
+    command: "npx -y --package typescript tsc --noEmit"
     dirs_with:
       - "tsconfig.json"
     if_changed:
