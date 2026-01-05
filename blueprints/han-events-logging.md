@@ -187,11 +187,13 @@ Each line in the `-han.jsonl` file:
 ## Storage Strategy: Unified Messages Table
 
 Han events are stored in the existing `messages` table rather than a separate table. This ensures:
+
 - Consistent line numbering for pagination
 - Single timeline query without UNION
 - Simpler schema
 
 For han_event messages:
+
 - `message_type`: `'han_event'`
 - `role`: `NULL`
 - `content`: JSON string with full event data

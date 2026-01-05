@@ -9,7 +9,7 @@ Configuration validation, schema enforcement, and quality checks for plugins and
 
 ## Overview
 
-The validation system ensures that plugin configurations (han-config.json) and user overrides (han-config.yml) adhere to expected schemas and contain valid data. It provides clear error messages to help users fix configuration issues before runtime.
+The validation system ensures that plugin configurations (han-plugin.yml) and user overrides (han-config.yml) adhere to expected schemas and contain valid data. It provides clear error messages to help users fix configuration issues before runtime.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ The validation system ensures that plugin configurations (han-config.json) and u
 ```
 ┌─────────────────────────────────┐
 │   Plugin Config Validation      │
-│   (han-config.json schema)      │
+│   (han-plugin.yml schema)       │
 └───────────┬─────────────────────┘
             │
 ┌───────────┴─────────────────────┐
@@ -60,7 +60,7 @@ function validatePluginConfig(config: unknown): ValidationResult;
 function validateUserConfig(config: unknown): ValidationResult;
 ```
 
-### Plugin Config Schema (han-config.json)
+### Plugin Config Schema (han-plugin.yml)
 
 ```typescript
 interface HanConfig {
@@ -69,10 +69,10 @@ interface HanConfig {
 
 interface HookDefinition {
   command: string;              // Required: shell command
-  dirsWith?: string[];          // Optional: marker files
-  dirTest?: string;             // Optional: custom directory filter
-  ifChanged?: string[];         // Optional: glob patterns
-  idleTimeout?: number;         // Optional: timeout in milliseconds
+  dirs_with?: string[];         // Optional: marker files
+  dir_test?: string;            // Optional: custom directory filter
+  if_changed?: string[];        // Optional: glob patterns
+  idle_timeout?: number;        // Optional: timeout in milliseconds
 }
 ```
 
@@ -84,42 +84,37 @@ interface HookDefinition {
 
 2. **Type Checks**:
    - `command` must be string
-   - `dirsWith` must be string array
-   - `dirTest` must be string
-   - `ifChanged` must be string array
-   - `idleTimeout` must be number
+   - `dirs_with` must be string array
+   - `dir_test` must be string
+   - `if_changed` must be string array
+   - `idle_timeout` must be number
 
 3. **Value Constraints**:
    - `command` must be non-empty
-   - `idleTimeout` must be positive integer
+   - `idle_timeout` must be positive integer
    - Arrays must not be empty if present
 
 **Example Valid Config**:
 
-```json
-{
-  "hooks": {
-    "lint": {
-      "command": "npm run lint",
-      "dirsWith": ["package.json"],
-      "ifChanged": ["**/*.{ts,tsx,js,jsx}"],
-      "idleTimeout": 5000
-    }
-  }
-}
+```yaml
+hooks:
+  lint:
+    command: npm run lint
+    dirs_with:
+      - package.json
+    if_changed:
+      - "**/*.{ts,tsx,js,jsx}"
+    idle_timeout: 5000
 ```
 
 **Example Invalid Config**:
 
-```json
-{
-  "hooks": {
-    "lint": {
-      // Missing required "command" field
-      "dirsWith": ["package.json"]
-    }
-  }
-}
+```yaml
+hooks:
+  lint:
+    # Missing required "command" field
+    dirs_with:
+      - package.json
 ```
 
 **Validation Error**:
@@ -149,15 +144,15 @@ interface PluginOverride {
 interface HookOverride {
   enabled?: boolean;            // Enable/disable specific hook
   command?: string;             // Override command
-  ifChanged?: string[];         // Add/override patterns
-  idleTimeout?: number;         // Override timeout
+  if_changed?: string[];        // Add/override patterns
+  idle_timeout?: number;        // Override timeout
 }
 ```
 
 **Validation Rules**:
 
 1. **Plugin Name** must match installed plugin
-2. **Hook Name** must exist in plugin's han-config.json
+2. **Hook Name** must exist in plugin's han-plugin.yml
 3. **Override Fields** must match allowed override types
 4. **Type Checks** same as plugin config
 
@@ -172,7 +167,7 @@ plugins:
         enabled: false
       typecheck:
         command: "npx -y --package typescript tsc --strict"
-        idleTimeout: 10000
+        idle_timeout: 10000
 ```
 
 **Example Invalid User Config**:
@@ -205,8 +200,8 @@ plugins:
 
 **Process**:
 
-1. Read `han-config.json` from plugin directory
-2. Parse JSON
+1. Read `han-plugin.yml` from plugin directory
+2. Parse YAML
 3. Validate against schema
 4. If invalid, log errors and skip plugin
 5. If valid, proceed to merge with user config
@@ -215,11 +210,11 @@ plugins:
 
 ```typescript
 try {
-  const config = JSON.parse(fs.readFileSync('han-config.json'));
+  const config = YAML.parse(fs.readFileSync('han-plugin.yml', 'utf8'));
   const result = validatePluginConfig(config);
 
   if (!result.valid) {
-    console.error(`Invalid han-config.json in ${pluginName}:`);
+    console.error(`Invalid han-plugin.yml in ${pluginName}:`);
     result.errors.forEach(err => {
       console.error(`  ${err.path}: ${err.message}`);
     });
@@ -228,7 +223,7 @@ try {
 
   return config;
 } catch (error) {
-  console.error(`Failed to load han-config.json: ${error.message}`);
+  console.error(`Failed to load han-plugin.yml: ${error.message}`);
   return null;
 }
 ```
@@ -271,10 +266,10 @@ function mergeConfigs(pluginConfig: HanConfig, userOverrides: UserConfig): HanCo
     merged.hooks[hookName] = {
       ...merged.hooks[hookName],
       ...(hookOverride.command && { command: hookOverride.command }),
-      ...(hookOverride.ifChanged && {
-        ifChanged: [...merged.hooks[hookName].ifChanged || [], ...hookOverride.ifChanged]
+      ...(hookOverride.if_changed && {
+        if_changed: [...merged.hooks[hookName].if_changed || [], ...hookOverride.if_changed]
       }),
-      ...(hookOverride.idleTimeout && { idleTimeout: hookOverride.idleTimeout })
+      ...(hookOverride.idle_timeout && { idle_timeout: hookOverride.idle_timeout })
     };
   }
 
@@ -289,7 +284,7 @@ function mergeConfigs(pluginConfig: HanConfig, userOverrides: UserConfig): HanCo
 **Checks**:
 
 1. Command is executable (exists in PATH)
-2. Directory markers exist if `dirsWith` specified
+2. Directory markers exist if `dirs_with` specified
 3. Glob patterns are valid syntax
 4. Timeout is reasonable (not too short)
 
@@ -309,13 +304,13 @@ async function validateBeforeExecution(hook: HookDefinition): Promise<Validation
   }
 
   // Validate glob patterns
-  if (hook.ifChanged) {
-    for (const pattern of hook.ifChanged) {
+  if (hook.if_changed) {
+    for (const pattern of hook.if_changed) {
       try {
         micromatch.makeRe(pattern);
       } catch (err) {
         errors.push({
-          path: 'ifChanged',
+          path: 'if_changed',
           message: `Invalid glob pattern: '${pattern}'`
         });
       }
@@ -341,7 +336,7 @@ uvx claudelint . --strict
 
 **Checks**:
 
-- All `han-config.json` files are valid JSON
+- All `han-plugin.yml` files are valid YAML
 - All required fields present
 - No unknown fields
 - Type correctness
@@ -355,14 +350,14 @@ uvx claudelint . --strict
 **Output**:
 
 ```
-Validating jutsu-typescript/han-config.json...
-  ✓ Valid JSON
+Validating jutsu-typescript/han-plugin.yml...
+  ✓ Valid YAML
   ✓ Required fields present
   ✓ Type checks passed
   ✓ Value constraints satisfied
 
-Validating jutsu-biome/han-config.json...
-  ✗ Invalid: hooks.format.idleTimeout must be a number
+Validating jutsu-biome/han-plugin.yml...
+  ✗ Invalid: hooks.format.idle_timeout must be a number
   ✗ Invalid: hooks.lint.command is required
 
 Validation failed: 2 errors found
@@ -383,13 +378,13 @@ Validation failed: 2 errors found
 ```
 ❌ hooks.lint.command: Required field 'command' is missing
    Add a "command" field with the validation command to run.
-   Example: "command": "npm run lint"
+   Example: command: npm run lint
 
-❌ hooks.typecheck.idleTimeout: Expected number, got string
-   Change "idleTimeout": "5000" to "idleTimeout": 5000
+❌ hooks.typecheck.idle_timeout: Expected number, got string
+   Change idle_timeout: "5000" to idle_timeout: 5000
 
-❌ hooks.unknown.dirsWith: Array must not be empty
-   Provide at least one marker file, e.g., "dirsWith": ["package.json"]
+❌ hooks.unknown.dirs_with: Array must not be empty
+   Provide at least one marker file, e.g., dirs_with: [package.json]
 
 ❌ plugins.nonexistent-plugin: Plugin 'nonexistent-plugin' is not installed
    Check installed plugins with: han plugin list
@@ -407,12 +402,12 @@ HAN_DEBUG=1 han hook run plugin-name hook-name
 **Output**:
 
 ```
-[DEBUG] Loading han-config.json from jutsu-typescript/
+[DEBUG] Loading han-plugin.yml from jutsu-typescript/
 [DEBUG] Validating plugin config...
 [DEBUG] ✓ Root object is valid
 [DEBUG] ✓ hooks object exists
 [DEBUG] ✓ Hook 'lint' has required 'command'
-[DEBUG] ✓ Hook 'lint' has valid 'dirsWith' array
+[DEBUG] ✓ Hook 'lint' has valid 'dirs_with' array
 [DEBUG] ✓ Hook 'typecheck' has required 'command'
 [DEBUG] Validation passed
 ```
@@ -434,7 +429,7 @@ HAN_DEBUG=1 han hook run plugin-name hook-name
 
 ### Schemas
 
-- `packages/han/schemas/han-config.schema.json` - JSON schema (if formalized)
+- `packages/han/schemas/han-plugin.schema.json` - YAML schema (if formalized)
 
 ## Related Systems
 

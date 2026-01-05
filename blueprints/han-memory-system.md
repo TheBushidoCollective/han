@@ -48,6 +48,7 @@ Coordinator sees new JSONL lines
 ```
 
 **Implementation:**
+
 1. Modify `indexDocuments()` in `indexer.ts` to also call vector indexing
 2. Batch embeddings generation for efficiency (up to 32 docs at once)
 3. Use the same document content for both FTS and vector
@@ -159,6 +160,7 @@ When a memory query is initiated (from Browse UI or han MCP), the Memory Agent s
 ```
 
 The experience is identical whether initiated from:
+
 - **Browse UI**: Memory search page with live streaming panel
 - **han MCP**: memory() tool returns session_id for streaming
 
@@ -197,6 +199,7 @@ The Memory Agent uses the Claude Agent SDK with **restricted tool access** - it 
 ```
 
 This unified discovery mechanism means:
+
 - No hardcoded MCP servers in the Memory Agent code
 - New providers are added by installing plugins, not modifying agent code
 - Each plugin declares its own MCP config and allowed tools
@@ -208,6 +211,7 @@ Memory providers are discovered from installed Han plugins that have BOTH an `mc
 **han-plugin.yml Structure:**
 
 MCP servers can be defined in two places:
+
 - `mcp_servers` (root) - shared with MCP orchestrator AND memory system
 - `memory.mcp_servers` - memory-only MCP servers (not exposed to Claude Code)
 
@@ -308,6 +312,7 @@ const agent = query({
 ```
 
 **What's Allowed** (dynamically from discovered plugins):
+
 - `mcp__memory-dal__memory_search_fts` (from core)
 - `mcp__memory-dal__memory_search_hybrid` (from core)
 - `mcp__blueprints__search_blueprints` (from hashi-blueprints)
@@ -315,6 +320,7 @@ const agent = query({
 - Any tool listed in `memory.allowed_tools` of discovered plugins
 
 **What's Blocked:**
+
 - `Bash` (no shell access)
 - `Read` / `Write` (no file access)
 - `Edit` (no file modification)
@@ -731,7 +737,6 @@ Patterns are classified into domains based on keywords:
 
 | Hook | Event | File | Purpose |
 |------|-------|------|---------|
-| memory-capture | PostToolUse | `capture.ts` | Capture tool observations |
 | memory-summarize | Stop | `summarize.ts` | AI summarize session |
 | memory-context | SessionStart | `context-injection.ts` | Inject continuity context |
 

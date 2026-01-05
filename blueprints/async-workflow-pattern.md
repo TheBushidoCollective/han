@@ -61,6 +61,7 @@ interface TrackedWorkflow {
 ```
 
 Key functions:
+
 - `startAsyncWorkflow(intent, options)` - Start workflow in background, return ID
 - `getWorkflowStatus(workflowId)` - Get current progress and partial results
 - `cancelWorkflow(workflowId)` - Cancel a running workflow
@@ -78,6 +79,7 @@ Key functions:
 ### 3. Monitor Agent (`core/agents/workflow-monitor/AGENT.md`)
 
 A lightweight haiku-model agent that:
+
 1. Receives a `workflow_id` to monitor
 2. Polls `han_workflow_status` every 2-3 seconds
 3. Narrates progress in human-readable format
@@ -98,6 +100,7 @@ han_workflow({
 ```
 
 Response:
+
 ```
 **Workflow Started (Async)**
 
@@ -124,6 +127,7 @@ han_workflow_status({ workflow_id: "wf-1735530000-abc123" })
 ```
 
 Response:
+
 ```json
 {
   "workflow_id": "wf-1735530000-abc123",
@@ -155,18 +159,21 @@ interface WorkflowStatusResponse {
 ```
 
 The `check_again` field is the key signal:
+
 - `true` - Workflow still running, poll again
 - `false` - Workflow complete, read `final_result` or `error`
 
 ## Monitor Agent Output Format
 
 Progress updates:
+
 ```
 [Poll 1] Status: running | Progress: 0/5 | Message: Initializing...
 [Poll 2] Status: running | Progress: 2/5 | Message: Fetching posts...
 ```
 
 Completion:
+
 ```
 [COMPLETE] Workflow finished successfully.
 
@@ -190,6 +197,7 @@ Cleanup runs automatically every 60 seconds, removing completed workflows older 
 ### Why Haiku for Monitor Agent?
 
 The monitor agent is simple:
+
 1. Poll a tool
 2. Format output
 3. Repeat or return
