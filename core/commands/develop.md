@@ -1,12 +1,12 @@
 ---
-description: Comprehensive 7-phase workflow for developing new features with quality enforcement
+description: Comprehensive 8-phase workflow for developing new features with quality enforcement
 ---
 
 # Feature Development Workflow
 
 ## Name
 
-han-core:develop - Comprehensive 7-phase workflow for developing new features with quality enforcement
+han-core:develop - Comprehensive 8-phase workflow for developing new features with quality enforcement
 
 ## Synopsis
 
@@ -16,11 +16,11 @@ han-core:develop - Comprehensive 7-phase workflow for developing new features wi
 
 ## Description
 
-Comprehensive 7-phase workflow for developing new features with quality enforcement
+Comprehensive 8-phase workflow for developing new features with quality enforcement
 
 ## Implementation
 
-A comprehensive, structured 7-phase workflow for developing new features with quality enforcement and quality principles.
+A comprehensive, structured 8-phase workflow for developing new features with quality enforcement and quality principles.
 
 ## Overview
 
@@ -33,6 +33,7 @@ This command guides you through a systematic feature development process:
 5. **Implement** - Build with TDD and quality practices
 6. **Review** - Multi-agent quality review with confidence scoring
 7. **Validate** - Run all verification hooks and summarize
+8. **Document** - Write blog post announcing the feature
 
 ---
 
@@ -276,6 +277,69 @@ Options:
 
 ---
 
+## Phase 8: Document (Blog Post)
+
+### Write a blog post announcing the feature
+
+**Objective**: Share the new feature with the community and explain its value.
+
+**Blog post creation**:
+
+1. **Research context** (optional):
+   - Use `hashi-reddit` to find related community discussions
+   - Identify pain points the feature addresses
+   - Understand how users talk about this problem
+
+2. **Write the blog post**:
+
+   Location: `website/content/blog/{feature-slug}.md`
+
+   ```markdown
+   ---
+   title: "{Feature Name}: {Compelling subtitle}"
+   description: "{One-line description of what problem this solves}"
+   date: "{YYYY-MM-DD}"
+   author: "The Bushido Collective"
+   tags: ["{relevant}", "{tags}"]
+   category: "Feature"
+   ---
+
+   {Opening hook - what problem does this solve?}
+
+   ## The Problem
+
+   {Describe the pain point this feature addresses}
+
+   ## The Solution
+
+   {Explain how the feature works}
+
+   ### Key Capabilities
+
+   {List main features with examples}
+
+   ## Getting Started
+
+   {How to use the feature}
+
+   ## What's Next
+
+   {Future improvements or related features}
+   ```
+
+3. **Writing guidelines**:
+   - Technical but accessible
+   - 500-1000 words for feature announcements
+   - Include working code examples
+   - Be honest about limitations
+   - Make it actionable
+
+**IMPORTANT**: Every significant feature should have a blog post. This is not optional.
+
+**Output**: Published blog post in `website/content/blog/`.
+
+---
+
 ## Usage
 
 ### Basic usage
@@ -298,21 +362,23 @@ Then describe the feature you want to build.
 
 ### DO
 
-- ✅ Follow all 7 phases in order
+- ✅ Follow all 8 phases in order
 - ✅ Launch agents in parallel when independent
 - ✅ Use AskUserQuestion to resolve ambiguities
 - ✅ Apply confidence scoring to all reviews
 - ✅ Run TDD cycle for all new code
 - ✅ Pause for user input at decision points
+- ✅ Write a blog post for every significant feature
 
 ### DON'T
 
-- ❌ Skip phases (especially Explore and Review)
+- ❌ Skip phases (especially Explore, Review, and Document)
 - ❌ Start coding before design (Phases 1-4)
 - ❌ Implement without tests
 - ❌ Report low-confidence review findings
 - ❌ Make architectural decisions without user input
 - ❌ Commit without running validation hooks
+- ❌ Ship features without documentation
 
 ---
 
@@ -356,8 +422,13 @@ Phase 7: Validate
 - Types: ✅ Pass
 - Ready to commit
 
+Phase 8: Document
+- Blog post: website/content/blog/user-list-pagination.md
+- Title: "Pagination: Handling Large Data Sets Gracefully"
+- Tags: [api, pagination, performance]
+
 Summary: Added pagination to user list API
-Files: services/user.service.ts, tests/user.service.test.ts
+Files: services/user.service.ts, tests/user.service.test.ts, website/content/blog/user-list-pagination.md
 Testing: Run GET /api/users?page=1&limit=10
 ```
 
@@ -367,5 +438,6 @@ Testing: Run GET /api/users?page=1&limit=10
 
 - `/review` - Run multi-agent review only
 - `/commit` - Smart commit workflow
+- `/create-blog-post` - Research and write blog posts
 - `han-core:test-driven-development` - TDD skill
 - `han-core:code-reviewer` - Review skill

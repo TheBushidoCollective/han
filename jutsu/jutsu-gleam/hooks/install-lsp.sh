@@ -28,7 +28,7 @@ LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/gleam-lang/gleam/releas
 DOWNLOAD_URL="https://github.com/gleam-lang/gleam/releases/download/v${LATEST_VERSION}/gleam-v${LATEST_VERSION}-${PLATFORM}.tar.gz"
 
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 if command -v curl &>/dev/null; then
   curl -fsSL "$DOWNLOAD_URL" | tar xz -C "$TEMP_DIR"

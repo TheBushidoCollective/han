@@ -1,0 +1,20 @@
+{
+  "name": "jutsu-graphql-inspector",
+  "version": "1.0.0",
+  "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "FSL-1.1-ALv2",
+  "keywords": [
+    "graphql",
+    "graphql-inspector",
+    "schema",
+    "validation",
+    "breaking-changes",
+    "diff"
+  ]
+}

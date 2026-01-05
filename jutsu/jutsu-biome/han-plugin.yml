@@ -1,8 +1,7 @@
 hooks:
   lint:
-    command: "npx -y @biomejs/biome check --write --error-on-warnings ${HAN_FILES}"
+    command: "npx -y @biomejs/biome check --write --error-on-warnings"
     dirs_with:
       - "biome.json"
     if_changed:
       - "**/*.{js,jsx,ts,tsx,json,jsonc}"
-    tip: "Use the `jutsu_biome_lint` MCP tool before marking complete."

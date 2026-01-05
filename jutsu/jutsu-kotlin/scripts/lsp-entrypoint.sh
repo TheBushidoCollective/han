@@ -29,10 +29,10 @@ mkdir -p "$BIN_DIR"
 # Determine platform
 case "$(uname -s)" in
     Darwin|Linux)
-        ARCHIVE_EXT="zip"
+        # ARCHIVE_EXT would be "zip" on Windows/Darwin if needed
         ;;
     MINGW*|MSYS*|CYGWIN*)
-        ARCHIVE_EXT="zip"
+        # ARCHIVE_EXT would be "zip" on Windows/Darwin if needed
         ;;
     *)
         echo "Error: Unsupported platform" >&2

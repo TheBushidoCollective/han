@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "npx -y eslint ${HAN_FILES} --max-warnings 0"
+    command: "npx -y eslint . --max-warnings 0"
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"eslint\":' package.json"

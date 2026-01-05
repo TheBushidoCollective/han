@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "npx -y prettier --check ${HAN_FILES}"
+    command: "npx -y prettier --check ."
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"prettier\":' package.json"

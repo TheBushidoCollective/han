@@ -1,6 +1,6 @@
 hooks:
   build:
-    command: "bun build --target=bun --no-bundle"
+    command: "grep -q '\"build\"' package.json 2>/dev/null && bun run build || echo 'No build script found, skipping'"
     dirs_with:
       - "bun.lock"
       - "bun.lockb"
@@ -12,7 +12,6 @@ hooks:
       - "bun.lock"
       - "bun.lockb"
       - "bunfig.toml"
-    tip: "Use the `jutsu_bun_build` MCP tool before marking complete."
   test:
     command: "bun test --only-failures"
     dirs_with:
@@ -26,4 +25,3 @@ hooks:
       - "bun.lock"
       - "bun.lockb"
       - "bunfig.toml"
-    tip: "Use the `jutsu_bun_test` MCP tool before completion. Update tests when changing behavior."

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Safe wrapper for cp command
+# Blocks copying files to outside project directory or protected paths
+
+set -euo pipefail
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Get the real cp command
+REAL_CP="$(get_real_command cp)"
+if [[ -z "$REAL_CP" ]]; then
+    echo "Error: Could not find real cp command" >&2
+    exit 1
+fi
+
+# Parse arguments to find source and destination
+sources=()
+flags=()
+target=""
+
+for arg in "$@"; do
+    case "$arg" in
+        -*)
+            flags+=("$arg")
+            ;;
+        *)
+            sources+=("$arg")
+            ;;
+    esac
+done
+
+# Last argument is the target
+if [[ ${#sources[@]} -ge 2 ]]; then
+    target="${sources[-1]}"
+    unset 'sources[-1]'
+fi
+
+# Check target path (we allow reading from anywhere, but not writing outside project)
+if [[ -n "$target" ]]; then
+    # Block protected paths
+    if is_protected_path "$target"; then
+        safe_error "Cannot copy files to protected system directory: $target"
+    fi
+
+    # Block paths outside project (if CLAUDE_PROJECT_DIR is set)
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        if ! is_in_project "$target"; then
+            safe_error "Cannot copy files to outside project directory: $target (project: $CLAUDE_PROJECT_DIR)"
+        fi
+    fi
+fi
+
+# All checks passed - run real cp
+exec "$REAL_CP" "$@"

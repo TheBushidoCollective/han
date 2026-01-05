@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "lint": {
-      "command": "cargo clippy -- -D warnings",
-      "dirsWith": ["Cargo.toml"],
-      "ifChanged": ["**/*.rs", "Cargo.toml", "Cargo.lock"]
-    }
-  }
-}

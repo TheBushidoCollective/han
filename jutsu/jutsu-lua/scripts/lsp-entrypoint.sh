@@ -23,7 +23,7 @@ case "$(uname -s)-$(uname -m)" in
     Darwin-x86_64) PLATFORM="darwin-x64" ;;
     Linux-x86_64) PLATFORM="linux-x64" ;;
     Linux-aarch64) PLATFORM="linux-arm64" ;;
-    MINGW*|MSYS*|CYGWIN*) PLATFORM="win32-x64"; EXT=".exe" ;;
+    MINGW*|MSYS*|CYGWIN*) PLATFORM="win32-x64" ;;  # EXT=".exe" if needed
     *) echo "Unsupported platform: $(uname -s)-$(uname -m)" >&2; exit 1 ;;
 esac
 

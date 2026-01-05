@@ -31,7 +31,7 @@ INSTALL_DIR="${HOME}/.claude/lsp/lua-language-server"
 mkdir -p "$INSTALL_DIR"
 
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 if command -v curl &>/dev/null; then
   curl -fsSL "$DOWNLOAD_URL" | tar xz -C "$INSTALL_DIR"

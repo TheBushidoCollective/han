@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Safe wrapper for mv command
+# Blocks moving files to/from outside project directory or protected paths
+
+set -euo pipefail
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Get the real mv command
+REAL_MV="$(get_real_command mv)"
+if [[ -z "$REAL_MV" ]]; then
+    echo "Error: Could not find real mv command" >&2
+    exit 1
+fi
+
+# Parse arguments to find source and destination
+sources=()
+flags=()
+target=""
+
+for arg in "$@"; do
+    case "$arg" in
+        -*)
+            flags+=("$arg")
+            ;;
+        *)
+            sources+=("$arg")
+            ;;
+    esac
+done
+
+# Last argument is the target
+if [[ ${#sources[@]} -ge 2 ]]; then
+    target="${sources[-1]}"
+    unset 'sources[-1]'
+fi
+
+# Check source paths
+for src in "${sources[@]}"; do
+    # Block protected paths
+    if is_protected_path "$src"; then
+        safe_error "Cannot move files from protected system directory: $src"
+    fi
+
+    # Block paths outside project (if CLAUDE_PROJECT_DIR is set)
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        if ! is_in_project "$src"; then
+            safe_error "Cannot move files from outside project directory: $src (project: $CLAUDE_PROJECT_DIR)"
+        fi
+    fi
+done
+
+# Check target path
+if [[ -n "$target" ]]; then
+    # Block protected paths
+    if is_protected_path "$target"; then
+        safe_error "Cannot move files to protected system directory: $target"
+    fi
+
+    # Block paths outside project (if CLAUDE_PROJECT_DIR is set)
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        if ! is_in_project "$target"; then
+            safe_error "Cannot move files to outside project directory: $target (project: $CLAUDE_PROJECT_DIR)"
+        fi
+    fi
+fi
+
+# All checks passed - run real mv
+exec "$REAL_MV" "$@"

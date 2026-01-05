@@ -1,9 +1,8 @@
 hooks:
   lint:
-    command: "npx -y markdownlint-cli --fix --ignore node_modules ${HAN_FILES}"
+    command: "npx -y markdownlint-cli --fix . --ignore node_modules"
     dirs_with:
       - "'.markdownlint.*'"
     if_changed:
       - "**/*.md"
       - ".markdownlint.*"
-    tip: "Use the `jutsu_markdown_lint` MCP tool before completion."

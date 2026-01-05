@@ -119,6 +119,7 @@ Claude will use `notion-fetch` to get current content, then `notion-update-page`
 **Purpose**: Retrieve content from a specific page or database
 
 **Parameters**:
+
 - URL or page ID of the Notion resource
 
 **Returns**: Page content in AI-optimized Markdown format
@@ -128,6 +129,7 @@ Claude will use `notion-fetch` to get current content, then `notion-update-page`
 **Purpose**: Create new pages with specified content
 
 **Parameters**:
+
 - Parent location (page or database)
 - Page title and properties
 - Content in Markdown format
@@ -155,6 +157,7 @@ Claude will use `notion-fetch` to get current content, then `notion-update-page`
 ### Issue: Authorization Failed
 
 **Solution**: Clear any cached OAuth tokens and re-authorize:
+
 1. Disconnect the Notion integration in your Notion settings
 2. Restart Claude Code
 3. Re-authorize when prompted
