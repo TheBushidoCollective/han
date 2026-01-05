@@ -333,14 +333,15 @@ function executeCommandHook(
 	const pluginName = getPluginNameFromRoot(pluginRoot);
 	const eventLogger = getEventLogger();
 
-	// Log hook run event and capture UUID for correlation with result
-	// Done before try block so hookRunId is accessible in catch block
-	const hookRunId = eventLogger?.logHookRun(
-		pluginName,
-		hookName,
-		process.cwd(),
-		false,
-	);
+	// Check if this is a han hook command - those handle their own event logging
+	// and may be cached (skip execution), so we shouldn't log here
+	const isHanHookCommand = command.startsWith("han hook ");
+
+	// Log hook run event only for non-han-hook commands
+	// han hook commands log their own events and may skip due to caching
+	const hookRunId = isHanHookCommand
+		? undefined
+		: eventLogger?.logHookRun(pluginName, hookName, process.cwd(), false);
 
 	try {
 		// Replace ${CLAUDE_PLUGIN_ROOT} with the actual local plugin path
@@ -408,7 +409,7 @@ function executeCommandHook(
 		// Other commands: log as generic hook_result
 		const isBashOrCat =
 			command.startsWith("bash ") || command.startsWith("cat ");
-		const isHanHookCommand = command.startsWith("han hook ");
+		// isHanHookCommand already defined at function start
 
 		if (isBashOrCat) {
 			eventLogger?.logHookScript(
@@ -460,7 +461,7 @@ function executeCommandHook(
 		// Log appropriate event type based on command (failure case)
 		const isBashOrCat =
 			command.startsWith("bash ") || command.startsWith("cat ");
-		const isHanHookCommand = command.startsWith("han hook ");
+		// isHanHookCommand already defined at function start
 
 		if (isBashOrCat) {
 			eventLogger?.logHookScript(
