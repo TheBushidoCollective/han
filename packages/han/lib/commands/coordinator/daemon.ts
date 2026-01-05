@@ -300,16 +300,11 @@ async function runForeground(port: number): Promise<void> {
 			restartAttempts = 0;
 			currentDelay = RESTART_DELAY_MS;
 
-			// Keep process alive until shutdown or crash
-			await new Promise<void>((resolve) => {
-				// Check every 5s if server is still healthy
-				const healthCheck = setInterval(async () => {
-					if (shuttingDown) {
-						clearInterval(healthCheck);
-						resolve();
-					}
-				}, 5000);
-			});
+			// Keep process alive until shutdown signal
+			// Use a simple polling approach that properly exits
+			while (!shuttingDown) {
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+			}
 		} catch (error) {
 			if (shuttingDown) break;
 

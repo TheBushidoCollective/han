@@ -4,7 +4,6 @@
  * Represents a Claude Code session with messages.
  */
 
-import type { Task as TaskData } from "../../../../metrics/types.ts";
 import type { CheckpointSummary } from "../../api/checkpoints.ts";
 import {
 	getAgentTask,
@@ -15,6 +14,12 @@ import {
 	listSessionsAsync,
 	type SessionMessage,
 } from "../../api/sessions.ts";
+import type {
+	SessionFileChange as FileChangeData,
+	SessionFileValidation as FileValidationData,
+} from "../../db/index.ts";
+import { sessionFileChanges, sessionFileValidations } from "../../db/index.ts";
+import type { Task as TaskData } from "../../metrics/types.ts";
 import { builder } from "../builder.ts";
 import { registerNodeLoader } from "../node-registry.ts";
 import { CheckpointType } from "./checkpoint.ts";
@@ -91,6 +96,145 @@ import {
 } from "./todo.ts";
 
 // Note: getProjectById is imported dynamically at resolve time to avoid circular dependency
+
+/**
+ * MessageSearchResult type for searchMessages field
+ */
+export interface MessageSearchResultData {
+	messageId: string;
+	messageIndex: number;
+	preview: string;
+	matchContext: string;
+}
+
+export const MessageSearchResultType =
+	builder.objectRef<MessageSearchResultData>("MessageSearchResult");
+MessageSearchResultType.implement({
+	description: "A search result from searching session messages",
+	fields: (t) => ({
+		messageId: t.exposeString("messageId", {
+			description: "The message ID",
+		}),
+		messageIndex: t.exposeInt("messageIndex", {
+			description:
+				"The 0-based index of the message in the session (for jumping)",
+		}),
+		preview: t.exposeString("preview", {
+			description: "Preview text showing match context",
+		}),
+		matchContext: t.exposeString("matchContext", {
+			description: "The matched text with surrounding context",
+		}),
+	}),
+});
+
+/**
+ * FileChange action enum
+ */
+export const FileChangeActionEnum = builder.enumType("FileChangeAction", {
+	description: "The type of file change action",
+	values: {
+		CREATED: { value: "created", description: "File was created" },
+		MODIFIED: { value: "modified", description: "File was modified" },
+		DELETED: { value: "deleted", description: "File was deleted" },
+	},
+});
+
+/**
+ * FileValidation GraphQL type
+ * Represents a hook validation for a file
+ */
+export const FileValidationType =
+	builder.objectRef<FileValidationData>("FileValidation");
+FileValidationType.implement({
+	description: "A hook validation for a file",
+	fields: (t) => ({
+		id: t.exposeString("id", {
+			nullable: true,
+			description: "Unique identifier for this validation",
+		}),
+		pluginName: t.exposeString("pluginName", {
+			description: "Name of the plugin that validated the file",
+		}),
+		hookName: t.exposeString("hookName", {
+			description: "Name of the hook that validated the file",
+		}),
+		directory: t.exposeString("directory", {
+			description: "Directory context for the validation",
+		}),
+		validatedAt: t.field({
+			type: "DateTime",
+			nullable: true,
+			description: "When the file was validated",
+			resolve: (fv) => fv.validatedAt ?? null,
+		}),
+	}),
+});
+
+/**
+ * FileChange GraphQL type
+ * Represents a file that was changed during a session
+ */
+export const FileChangeType = builder.objectRef<FileChangeData>("FileChange");
+FileChangeType.implement({
+	description: "A file change that occurred during a session",
+	fields: (t) => ({
+		id: t.exposeString("id", {
+			nullable: true,
+			description: "Unique identifier for this file change",
+		}),
+		sessionId: t.exposeString("sessionId", {
+			description: "The session ID this change belongs to",
+		}),
+		filePath: t.exposeString("filePath", {
+			description: "Path to the changed file",
+		}),
+		action: t.field({
+			type: FileChangeActionEnum,
+			description: "The type of change (created, modified, deleted)",
+			resolve: (fc) => fc.action as "created" | "modified" | "deleted",
+		}),
+		fileHashBefore: t.exposeString("fileHashBefore", {
+			nullable: true,
+			description: "SHA256 hash of file before change (if available)",
+		}),
+		fileHashAfter: t.exposeString("fileHashAfter", {
+			nullable: true,
+			description: "SHA256 hash of file after change (if available)",
+		}),
+		toolName: t.exposeString("toolName", {
+			nullable: true,
+			description: "The tool that made the change (Edit, Write, Bash)",
+		}),
+		recordedAt: t.field({
+			type: "DateTime",
+			nullable: true,
+			description: "When the change was recorded",
+			resolve: (fc) => fc.recordedAt ?? null,
+		}),
+		validations: t.field({
+			type: [FileValidationType],
+			description: "Hook validations for this file",
+			resolve: async (fc): Promise<FileValidationData[]> => {
+				// Get all validations for the session
+				const allValidations = await sessionFileValidations.listAll(
+					fc.sessionId,
+				);
+				// Filter to validations for this specific file
+				return allValidations.filter((v) => v.filePath === fc.filePath);
+			},
+		}),
+		isValidated: t.boolean({
+			description: "Whether this file has been validated by any hook",
+			resolve: async (fc): Promise<boolean> => {
+				const allValidations = await sessionFileValidations.listAll(
+					fc.sessionId,
+				);
+				return allValidations.some((v) => v.filePath === fc.filePath);
+			},
+		}),
+	}),
+});
 
 // Ensure content block types are registered
 void ThinkingBlockType;
@@ -314,7 +458,53 @@ export const SessionType = SessionRef.implement({
 		summary: t.string({
 			nullable: true,
 			description: "First user message as summary",
-			resolve: (s) => ("summary" in s ? s.summary : null) ?? null,
+			resolve: async (s, _args, context) => {
+				try {
+					// Return existing summary if available
+					if ("summary" in s && s.summary) {
+						return s.summary;
+					}
+					// Otherwise, extract first user message as summary
+					let messages: SessionMessage[] = [];
+					if ("messages" in s && Array.isArray(s.messages)) {
+						messages = s.messages;
+					} else if (context?.loaders?.sessionMessagesLoader) {
+						messages = await context.loaders.sessionMessagesLoader.load(
+							s.sessionId,
+						);
+					} else {
+						// No loader available - can't fetch messages
+						return null;
+					}
+					// Find first user message
+					const firstUserMessage = messages.find((m) => m.type === "user");
+					if (firstUserMessage) {
+						// Extract text from content
+						let text = "";
+						if (typeof firstUserMessage.content === "string") {
+							text = firstUserMessage.content;
+						} else if (Array.isArray(firstUserMessage.content)) {
+							text = firstUserMessage.content
+								.filter(
+									(block): block is { type: string; text: string } =>
+										block.type === "text" && typeof block.text === "string",
+								)
+								.map((block) => block.text)
+								.join("\n");
+						}
+						// Truncate to reasonable length for summary
+						if (text.length > 200) {
+							return `${text.slice(0, 200)}...`;
+						}
+						return text || null;
+					}
+					return null;
+				} catch (error) {
+					// Log error but don't fail the entire query
+					console.error("[session.summary] Error extracting summary:", error);
+					return null;
+				}
+			},
 		}),
 		messageCount: t.int({
 			description: "Number of messages in session",
@@ -563,6 +753,96 @@ export const SessionType = SessionRef.implement({
 				return activeTasks.length > 0 ? activeTasks[0] : null;
 			},
 		}),
+		// File changes tracked during this session
+		fileChanges: t.field({
+			type: [FileChangeType],
+			description: "Files that were changed during this session",
+			resolve: async (session): Promise<FileChangeData[]> => {
+				return sessionFileChanges.list(session.sessionId);
+			},
+		}),
+		fileChangeCount: t.int({
+			description: "Number of file changes in this session",
+			resolve: async (session): Promise<number> => {
+				const changes = await sessionFileChanges.list(session.sessionId);
+				return changes.length;
+			},
+		}),
+		// Search messages across the entire session using FTS
+		searchMessages: t.field({
+			type: [MessageSearchResultType],
+			args: {
+				query: t.arg.string({
+					required: true,
+					description: "Search query to find in messages",
+				}),
+				limit: t.arg.int({
+					description: "Maximum number of results to return (default: 20)",
+				}),
+			},
+			description:
+				"Search all messages in this session using FTS and return matching results with indices",
+			resolve: async (session, args): Promise<MessageSearchResultData[]> => {
+				const query = args.query.trim();
+				if (!query) return [];
+
+				const limit = args.limit ?? 20;
+
+				// Import the FTS search function
+				const { searchMessages: searchMessagesDb } = await import(
+					"../../db/index.ts"
+				);
+
+				// Use FTS search - this queries SQLite directly
+				const matchedMessages = await searchMessagesDb({
+					query,
+					sessionId: session.sessionId,
+					limit,
+				});
+
+				// Convert to search results with message indices
+				// Messages from FTS are ordered by relevance/timestamp
+				const results: MessageSearchResultData[] = matchedMessages.map(
+					(msg, idx) => {
+						// Get text content for preview
+						const { text } = getMessageText(
+							msg.content as string | ContentBlock[] | undefined,
+						);
+
+						// Use content or messageType as preview
+						const preview = text.slice(0, 150) || msg.messageType || "Message";
+
+						// Build match context from content
+						const searchText = (text || "").toLowerCase();
+						const queryLower = query.toLowerCase();
+						const matchIndex = searchText.indexOf(queryLower);
+						let matchContext = preview;
+						if (matchIndex >= 0) {
+							const start = Math.max(0, matchIndex - 40);
+							const end = Math.min(
+								searchText.length,
+								matchIndex + queryLower.length + 80,
+							);
+							matchContext =
+								(start > 0 ? "..." : "") +
+								searchText.slice(start, end) +
+								(end < searchText.length ? "..." : "");
+						}
+
+						return {
+							messageId: msg.id || `msg-${idx}`,
+							// lineNumber from DB is the position in the session
+							// We use it directly as the index for jumping
+							messageIndex: msg.lineNumber ?? idx,
+							preview,
+							matchContext,
+						};
+					},
+				);
+
+				return results;
+			},
+		}),
 	}),
 });
 
@@ -607,6 +887,8 @@ export async function getSessionsConnection(
 		worktreeName?: string | null;
 	},
 ): Promise<SessionConnectionData> {
+	const startTime = Date.now();
+
 	// Build params for the underlying listSessions function
 	const params = new URLSearchParams();
 
@@ -622,18 +904,39 @@ export async function getSessionsConnection(
 	}
 
 	// Use async version that reads from database
+	const listStart = Date.now();
 	const result = await listSessionsAsync(params);
+	const listEnd = Date.now();
+	console.log(
+		`[getSessionsConnection] listSessionsAsync took ${listEnd - listStart}ms, returned ${result.data.length} sessions`,
+	);
+
 	// Filter out sessions with no messages
+	const filterStart = Date.now();
 	const sessions = result.data.filter((s) => s.messageCount > 0);
+	const filterEnd = Date.now();
+	console.log(
+		`[getSessionsConnection] Filtering took ${filterEnd - filterStart}ms, ${sessions.length} sessions with messages`,
+	);
 
 	// Apply cursor-based pagination
-	return applyConnectionArgs(sessions, args, (session) =>
+	const paginationStart = Date.now();
+	const connection = applyConnectionArgs(sessions, args, (session) =>
 		encodeCursor(
 			"session",
 			session.sessionId,
 			session.startedAt ? new Date(session.startedAt).getTime() : undefined,
 		),
 	);
+	const paginationEnd = Date.now();
+	console.log(
+		`[getSessionsConnection] Pagination took ${paginationEnd - paginationStart}ms`,
+	);
+
+	const totalTime = Date.now() - startTime;
+	console.log(`[getSessionsConnection] Total time: ${totalTime}ms`);
+
+	return connection;
 }
 
 // getMessagesConnection is now defined earlier as getMessagesConnectionInternal

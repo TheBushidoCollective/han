@@ -180,7 +180,6 @@ export const COMMANDS: Record<string, string[]> = {
 	],
 	plugin: ["install", "list", "uninstall", "search", "update"],
 	hook: ["run", "dispatch", "explain", "test", "verify", "reference"],
-	memory: ["session-end"],
 	metrics: [
 		"show",
 		"session-start",
@@ -190,7 +189,6 @@ export const COMMANDS: Record<string, string[]> = {
 		"session-context",
 		"memory-context",
 		"detect-patterns",
-		"detect-frustration",
 	],
 	checkpoint: ["capture", "list", "clean"],
 	index: ["run", "search", "status"],

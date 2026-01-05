@@ -50,10 +50,9 @@ export interface HanConfig {
 	ports?: PortConfig;
 	hooks?: {
 		enabled?: boolean; // Master switch (default: true)
-		checkpoints?: boolean; // Enable checkpoints (default: true)
+		checkpoints?: boolean; // Enable checkpoints for session-scoped filtering (default: true)
 		cache?: boolean; // Enable caching (default: true)
 		fail_fast?: boolean; // Stop on first failure (default: true)
-		transcript_filter?: boolean; // Session-scoped filtering (default: true when checkpoints enabled)
 	};
 	memory?: {
 		enabled?: boolean; // Enable memory system (default: true)
@@ -405,32 +404,6 @@ export function isFailFastEnabled(): boolean {
 	}
 
 	return config.hooks?.fail_fast !== false;
-}
-
-/**
- * Check if transcript-based session filtering is enabled (default: true when checkpoints enabled)
- *
- * When enabled, stop hooks only run on files modified by THIS session,
- * preventing conflicts when multiple sessions work in the same tree.
- *
- * Note: If hooks or checkpoints are disabled, transcript filtering is also disabled.
- */
-export function isTranscriptFilterEnabled(): boolean {
-	const config = getMergedHanConfig();
-
-	// If hooks are globally disabled, transcript filter doesn't apply
-	if (config.hooks?.enabled === false) {
-		return false;
-	}
-
-	// If checkpoints are disabled, transcript filter is also disabled
-	// (they work together for session-scoped filtering)
-	if (config.hooks?.checkpoints === false) {
-		return false;
-	}
-
-	// Explicit setting takes precedence, otherwise default to true
-	return config.hooks?.transcript_filter !== false;
 }
 
 /**

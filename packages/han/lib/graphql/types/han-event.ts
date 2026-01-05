@@ -10,7 +10,7 @@
  * parent events via DataLoader.
  */
 
-import { builder } from "../builder.ts";
+import { builder, encodeGlobalId } from "../builder.ts";
 import type {
 	ExposedResultEventData,
 	HookResultEventData,
@@ -285,15 +285,47 @@ export type HanEventData =
 // =============================================================================
 
 /**
+ * Map event type to GraphQL typename for global ID encoding
+ * Global ID format: {EventTypename}:{uuid}
+ */
+function getEventTypename(eventType: string): string {
+	switch (eventType) {
+		case "hook_run":
+			return "HookRunEvent";
+		case "hook_result":
+			return "HookResultEvent";
+		case "mcp_tool_call":
+			return "McpToolCallEvent";
+		case "mcp_tool_result":
+			return "McpToolResultEvent";
+		case "exposed_tool_call":
+			return "ExposedToolCallEvent";
+		case "exposed_tool_result":
+			return "ExposedToolResultEvent";
+		case "memory_query":
+			return "MemoryQueryEvent";
+		case "memory_learn":
+			return "MemoryLearnEvent";
+		case "sentiment_analysis":
+			return "SentimentAnalysisEvent";
+		default:
+			return "HanEvent";
+	}
+}
+
+/**
  * Base interface for all Han events
+ * Global ID format: {EventTypename}:{uuid}
  */
 export const HanEventInterface = builder
 	.interfaceRef<HanEventData>("HanEvent")
 	.implement({
 		description: "A Han event (hook execution, MCP call, memory operation)",
 		fields: (t) => ({
-			id: t.exposeString("id", {
-				description: "Unique event ID",
+			id: t.id({
+				description: "Global event ID in format {EventTypename}:{uuid}",
+				resolve: (event) =>
+					encodeGlobalId(getEventTypename(event.eventType), event.id),
 			}),
 			timestamp: t.field({
 				type: "DateTime",
@@ -342,7 +374,9 @@ export const HookRunEventType = builder
 		isTypeOf: (obj): obj is HookRunEventData =>
 			(obj as HanEventData).eventType === "hook_run",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("HookRunEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -391,7 +425,9 @@ export const HookResultEventType = builder
 		isTypeOf: (obj): obj is HookResultHanEventData =>
 			(obj as HanEventData).eventType === "hook_result",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("HookResultEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -450,7 +486,9 @@ export const McpToolCallEventType = builder
 		isTypeOf: (obj): obj is McpToolCallEventData =>
 			(obj as HanEventData).eventType === "mcp_tool_call",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("McpToolCallEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -477,7 +515,9 @@ export const McpToolResultEventType = builder
 		isTypeOf: (obj): obj is McpToolResultEventData =>
 			(obj as HanEventData).eventType === "mcp_tool_result",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("McpToolResultEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -525,7 +565,9 @@ export const ExposedToolCallEventType = builder
 		isTypeOf: (obj): obj is ExposedToolCallEventData =>
 			(obj as HanEventData).eventType === "exposed_tool_call",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("ExposedToolCallEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -560,7 +602,9 @@ export const ExposedToolResultEventType = builder
 		isTypeOf: (obj): obj is ExposedToolResultEventData =>
 			(obj as HanEventData).eventType === "exposed_tool_result",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("ExposedToolResultEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -616,7 +660,9 @@ export const MemoryQueryEventType = builder
 		isTypeOf: (obj): obj is MemoryQueryEventData =>
 			(obj as HanEventData).eventType === "memory_query",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("MemoryQueryEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -650,7 +696,9 @@ export const MemoryLearnEventType = builder
 		isTypeOf: (obj): obj is MemoryLearnEventData =>
 			(obj as HanEventData).eventType === "memory_learn",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("MemoryLearnEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,
@@ -683,7 +731,9 @@ export const SentimentAnalysisEventType = builder
 		isTypeOf: (obj): obj is SentimentAnalysisEventData =>
 			(obj as HanEventData).eventType === "sentiment_analysis",
 		fields: (t) => ({
-			id: t.exposeString("id"),
+			id: t.id({
+				resolve: (event) => encodeGlobalId("SentimentAnalysisEvent", event.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				resolve: (event) => event.timestamp,

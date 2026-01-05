@@ -1,9 +1,10 @@
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { getGitRemoteUrl } from "../../../han-native";
 import { getHookCache, setHookCache } from "../db/index.ts";
+import type { EventLogger } from "../events/logger.ts";
 import { getNativeModule } from "../native.ts";
 
 /**
@@ -26,16 +27,7 @@ export function getProjectRoot(): string {
  * Returns null if not in a git repo or no remote configured
  */
 function getGitRemote(cwd?: string): string | null {
-	try {
-		const result = execSync("git remote get-url origin", {
-			cwd: cwd || process.cwd(),
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		return result.trim() || null;
-	} catch {
-		return null;
-	}
+	return getGitRemoteUrl(cwd ?? process.cwd()) ?? null;
 }
 
 /**
@@ -53,22 +45,31 @@ function normalizeGitRemote(gitRemote: string): string {
 }
 
 /**
+ * Get the base claude config directory
+ * Respects CLAUDE_CONFIG_DIR environment variable for testing
+ */
+function getClaudeConfigDir(): string {
+	return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+
+/**
  * Get the cache directory for the current repo
- * Located at ~/.claude/han/repos/{normalized-git-remote}/cache/
+ * Located at {claude-config}/han/repos/{normalized-git-remote}/cache/
  * Falls back to path-based slug if not in a git repo
  */
 export function getCacheDir(): string {
 	const projectRoot = getProjectRoot();
 	const gitRemote = getGitRemote(projectRoot);
+	const configDir = getClaudeConfigDir();
 
 	if (gitRemote) {
 		const repoSlug = normalizeGitRemote(gitRemote);
-		return join(homedir(), ".claude", "han", "repos", repoSlug, "cache");
+		return join(configDir, "han", "repos", repoSlug, "cache");
 	}
 
 	// Fallback for non-git directories: use path-based slug
 	const pathSlug = projectRoot.replace(/[/.]/g, "-");
-	return join(homedir(), ".claude", "han", "repos", pathSlug, "cache");
+	return join(configDir, "han", "repos", pathSlug, "cache");
 }
 
 /**
@@ -315,6 +316,7 @@ export function checkForChanges(
  * @param rootDir - Project directory to track
  * @param patterns - Glob patterns for project files
  * @param pluginRoot - Optional plugin directory to also track
+ * @param options - Optional settings including logger for event logging
  */
 export async function trackFilesAsync(
 	pluginName: string,
@@ -322,6 +324,11 @@ export async function trackFilesAsync(
 	rootDir: string,
 	patterns: string[],
 	pluginRoot?: string,
+	options?: {
+		logger?: EventLogger;
+		directory?: string;
+		commandHash?: string;
+	},
 ): Promise<boolean> {
 	// Always include han-config.yml (can override command or disable hook)
 	const patternsWithConfig = [...patterns, "han-config.yml"];
@@ -334,6 +341,17 @@ export async function trackFilesAsync(
 		hookName,
 		manifest,
 	);
+
+	// Log validation cache event if logger is provided
+	if (options?.logger && options?.commandHash) {
+		options.logger.logHookValidationCache(
+			pluginName,
+			hookName,
+			options.directory ?? rootDir,
+			options.commandHash,
+			manifest,
+		);
+	}
 
 	// Track plugin files if pluginRoot provided
 	let pluginSaved = true;

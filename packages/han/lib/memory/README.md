@@ -17,83 +17,54 @@ A three-layer memory architecture for personal session continuity and team knowl
 │  Researched on-demand, cached in LanceDB                        │
 │  "Who knows X?" → Research until confident                      │
 ├─────────────────────────────────────────────────────────────────┤
-│  LAYER 1: Personal Memory (local sessions)                      │
+│  LAYER 1: Personal Memory (indexed sessions)                    │
 │  ─────────────────────────────────────                          │
-│  Session capture, AI summaries, continuity                      │
-│  "What was I working on?" → Check recent sessions               │
+│  Session transcripts indexed in SQLite with FTS5                │
+│  "What was I working on?" → Search session history              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Personal Memory (Layer 1)
 
-### Session Lifecycle
+### Session Indexing
 
-Sessions are long-lived and don't have explicit start/end hooks. Instead:
-
-1. **Capture (PostToolUse hook)**: Records tool usage as observations continuously
-2. **Query (on-demand)**: Search observations via the `memory` MCP tool
-
-The `session_id` comes from Claude Code and is passed implicitly with each PostToolUse event.
-
-### Observation Capture
-
-The PostToolUse hook captures tool usage automatically:
+Sessions are stored in Claude Code's native JSONL format and indexed by Han:
 
 ```
-PostToolUse fired → han memory capture (reads stdin) → captureToolUse()
-                                                            ↓
-                                        Appends to ~/.claude/han/memory/sessions/{session_id}.jsonl
+Claude Code writes → ~/.claude/projects/{project}/sessions/{session}.jsonl
+                                            ↓
+                         Han indexer parses JSONL into SQLite
+                                            ↓
+                      Messages, tool calls, file changes stored in DB
 ```
 
-Each observation includes:
+The indexer runs on-demand (when you run `han browse` or validation hooks) and:
 
-- Tool name and input/output summaries
-- Files read and modified
-- Timestamp
-
-### CLI Command
-
-```bash
-# Called automatically from PostToolUse hook
-# Reads event from stdin, extracts session_id, tool_name, tool_input, tool_result
-han memory capture
-```
-
-### Optional Summarization
-
-Summaries can be generated on-demand if needed:
-
-```bash
-han memory session-end --session-id abc123
-```
-
-This extracts patterns from observations:
-
-**Work Items**:
-
-- Groups related file modifications (e.g., component + styles + test)
-- Infers outcome from subsequent test results
-
-**In Progress**:
-
-- Identifies consecutive reads without corresponding edits
-
-**Decisions**:
-
-- Finds research (WebSearch, Read) followed by implementation (Write, Edit)
+- Parses session transcripts incrementally
+- Tracks file changes from Edit/Write tool uses
+- Indexes message content via FTS5 for full-text search
+- Records han events (sentiment analysis, hook results, etc.)
 
 ### Storage
 
-All personal memory stored in `~/.claude/han/memory/personal/`:
+All session data is stored in SQLite:
 
 ```
-~/.claude/han/memory/personal/
-  sessions/
-    2025-12-12-abc123.jsonl    # Raw observations (append-only)
-  summaries/
-    2025-12-12-abc123.yaml     # Session summary
-  .index/                       # Vector search index (future)
+~/.claude/han/han.db
+  ├── messages          # Session messages with FTS5 index
+  ├── session_file_changes  # Files modified per session
+  └── sessions          # Session metadata
 ```
+
+### Querying Sessions
+
+Use the Browse UI to search session history:
+
+```bash
+han browse
+```
+
+Or use the MCP tools for programmatic access.
 
 ## Testing
 
@@ -110,7 +81,6 @@ bun test test/memory*.test.ts
 
 ## Future Enhancements
 
-- AI-powered summarization (optional, using local models)
 - Semantic search with embeddings
 - Cross-session pattern detection
 - Automatic promotion to .claude/rules/

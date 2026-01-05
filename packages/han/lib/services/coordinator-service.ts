@@ -17,13 +17,24 @@ import {
 	initDb,
 	messages,
 	watcher,
-} from "../../db/index.ts";
+} from "../db/index.ts";
 import {
 	type MessageEdgeData,
 	publishSessionAdded,
 	publishSessionMessageAdded,
 	publishSessionUpdated,
-} from "./graphql/pubsub.ts";
+} from "../graphql/pubsub.ts";
+
+/**
+ * Event types that are paired with other messages (loaded as nested fields)
+ * These should NOT be published in the main message stream
+ */
+const PAIRED_EVENT_TYPES = new Set([
+	"sentiment_analysis",
+	"hook_result",
+	"mcp_tool_result",
+	"exposed_tool_result",
+]);
 
 /**
  * Coordinator service state
@@ -73,8 +84,17 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 			});
 
 			// Publish each message as a separate event with edge data for @appendEdge
+			// Filter out paired event types that are loaded as nested fields
 			for (let i = 0; i < newMessages.length; i++) {
 				const msg = newMessages[i];
+
+				// Skip paired event types - they're loaded as nested fields on other messages
+				if (msg.messageType === "han_event" && msg.toolName) {
+					if (PAIRED_EVENT_TYPES.has(msg.toolName)) {
+						continue;
+					}
+				}
+
 				const messageIndex = result.totalMessages - result.messagesIndexed + i;
 
 				// Build the edge data for Relay @appendEdge
@@ -188,6 +208,8 @@ async function startCoordinating(): Promise<void> {
 		console.log(`[coordinator] Watching ${watchPath} for changes`);
 		// Set up periodic check for new files (the native watcher handles events)
 		setupFileChangePolling();
+		// Set up periodic full scan to catch any missed sessions (macOS FSEvents can miss some events)
+		setupPeriodicFullScan();
 	} else {
 		console.error("[coordinator] Failed to start file watcher");
 	}
@@ -254,6 +276,37 @@ function setupFileChangePolling(): void {
 			// Silently ignore poll errors - not critical
 		}
 	}, 500);
+}
+
+/**
+ * Setup periodic full scan to catch any missed sessions
+ * macOS FSEvents can sometimes miss file creation events, especially
+ * when files are created atomically (via rename) or rapidly
+ */
+function setupPeriodicFullScan(): void {
+	// Run full scan every 30 seconds to catch missed sessions
+	const scanInterval = setInterval(async () => {
+		if (!state.isCoordinator || !state.isRunning) {
+			clearInterval(scanInterval);
+			return;
+		}
+
+		try {
+			const results = await indexer.fullScanAndIndex();
+			// Only publish events for newly discovered sessions
+			const newSessions = results.filter((r) => r.isNewSession);
+			if (newSessions.length > 0) {
+				console.log(
+					`[coordinator] Periodic scan found ${newSessions.length} new sessions`,
+				);
+				for (const result of newSessions) {
+					void onDataIndexed(result);
+				}
+			}
+		} catch (_error) {
+			// Silently ignore scan errors - not critical
+		}
+	}, 30000);
 }
 
 /**

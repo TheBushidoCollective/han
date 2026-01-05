@@ -10,7 +10,7 @@
 import {
 	type MemoryAgentResponse,
 	queryMemoryAgent,
-} from "../../../memory/memory-agent.ts";
+} from "../memory/memory-agent.ts";
 
 /**
  * Parameters for memory search (requires project context)

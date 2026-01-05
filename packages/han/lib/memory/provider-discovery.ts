@@ -507,12 +507,16 @@ export async function loadProviderScript(
 
 /**
  * Discover and load all available memory providers
+ * @param mcpClient - MCP client for calling tools
+ * @param availableTools - Set of available tool names
+ * @param projectPath - Optional project path for resolving relative marketplace paths
  */
 export async function loadAllProviders(
 	mcpClient: MCPClient,
 	availableTools: Set<string>,
+	projectPath?: string,
 ): Promise<LoadedProvider[]> {
-	const discovered = await discoverProviders();
+	const discovered = await discoverProviders(projectPath);
 	const loaded: LoadedProvider[] = [];
 
 	for (const provider of discovered) {

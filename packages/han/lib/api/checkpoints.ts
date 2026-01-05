@@ -10,7 +10,7 @@ import {
 	type CheckpointInfo,
 	listCheckpoints as listCheckpointsFromHooks,
 	loadCheckpoint,
-} from "../../../hooks/index.ts";
+} from "../hooks/index.ts";
 
 export interface CheckpointSummary {
 	id: string;

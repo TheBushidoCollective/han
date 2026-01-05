@@ -5,28 +5,19 @@ import { isDebugMode } from "../../shared.ts";
 import { runConfiguredHook, validate } from "../../validate.ts";
 
 /**
- * Check if stdin has data available
- * Returns true for pipes/FIFOs (which is how Claude Code passes context)
+ * Check if stdin has data available.
+ * Handles various stdin types: files, FIFOs, pipes, and sockets.
  */
 function hasStdinData(): boolean {
 	try {
-		// In a TTY, stdin is interactive - never try to read
+		// TTY means interactive terminal - no piped input
 		if (process.stdin.isTTY) {
 			return false;
 		}
-		// Check what type of stdin we have
 		const stat = fstatSync(0);
-		// Files are safe to read
-		if (stat.isFile()) {
-			return true;
-		}
-		// Pipes/FIFOs are how Claude Code passes hook context
-		// readFileSync will block until EOF, which is fine for our use case
-		if (stat.isFIFO()) {
-			return true;
-		}
-		// For anything else, check if data is already buffered
-		return process.stdin.readable && process.stdin.readableLength > 0;
+		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
+		// Socket is used when parent process passes data via execSync's input option
+		return stat.isFile() || stat.isFIFO() || stat.isSocket();
 	} catch {
 		return false;
 	}
@@ -142,7 +133,8 @@ export function registerHookRun(hookCommand: Command): void {
 					console.error(`[han hook run] session_id: ${sessionId || "(none)"}`);
 				}
 				if (sessionId) {
-					initEventLogger(sessionId);
+					// Events are stored alongside Claude transcripts in the project directory
+					initEventLogger(sessionId, {}, process.cwd());
 				} else if (isDebugMode()) {
 					console.error(
 						"[han hook run] No session_id in stdin, event logging disabled",

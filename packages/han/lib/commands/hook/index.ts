@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { registerHookDispatch } from "./dispatch.ts";
 import { registerHookExplain } from "./explain.tsx";
-import { registerRecordFileChange } from "./record-file-change.ts";
+import { registerHookOrchestrate } from "./orchestrate.ts";
 import { createReferenceCommand } from "./reference/index.ts";
 import { registerHookRun } from "./run.ts";
 import { registerSessionId } from "./session-id.ts";
@@ -16,7 +16,7 @@ export function registerHookCommands(program: Command): void {
 
 	registerHookDispatch(hookCommand);
 	registerHookExplain(hookCommand);
-	registerRecordFileChange(hookCommand);
+	registerHookOrchestrate(hookCommand);
 	registerHookRun(hookCommand);
 	registerSessionId(hookCommand);
 	registerHookTest(hookCommand);

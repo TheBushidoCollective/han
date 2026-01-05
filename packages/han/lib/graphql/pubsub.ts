@@ -5,7 +5,7 @@
  */
 
 import { basename } from "node:path";
-import type { MemoryEvent } from "../types.ts";
+import type { MemoryEvent } from "../commands/browse/types.ts";
 
 /**
  * Subscription topic names

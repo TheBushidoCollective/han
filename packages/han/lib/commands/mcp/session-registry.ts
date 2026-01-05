@@ -103,10 +103,10 @@ export class SessionRegistry {
 	 * Returns cached summary if transcript hasn't changed.
 	 * Otherwise recomputes from transcript.
 	 */
-	getSummary(
+	async getSummary(
 		sessionId: string,
 		options: TranscriptSummaryOptions = {},
-	): SessionSummary | null {
+	): Promise<SessionSummary | null> {
 		const state = this.sessions.get(sessionId);
 		if (!state) {
 			return null;
@@ -136,7 +136,10 @@ export class SessionRegistry {
 		}
 
 		// Recompute summary from transcript
-		const summary = summarizeTranscriptFile(state.transcriptPath, options);
+		const summary = await summarizeTranscriptFile(
+			state.transcriptPath,
+			options,
+		);
 
 		// Update cache
 		state.cachedSummary = summary;

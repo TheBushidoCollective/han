@@ -1,0 +1,1012 @@
+import { execSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Command } from "commander";
+import {
+	getClaudeConfigDir,
+	getMergedPluginsAndMarketplaces,
+	type MarketplaceConfig,
+} from "../../claude-settings.ts";
+import {
+	getEventLogger,
+	getOrCreateEventLogger,
+	initEventLogger,
+} from "../../events/logger.ts";
+import { getPluginHookSettings } from "../../han-settings.ts";
+import { findDirectoriesWithMarkers } from "../../hook-cache.ts";
+import {
+	hookMatchesEvent,
+	loadPluginConfig,
+	type PluginHookDefinition,
+} from "../../hook-config.ts";
+import {
+	checkForChangesAsync,
+	hasChangedSinceCheckpointAsync,
+	trackFilesAsync,
+} from "../../hooks/index.ts";
+import { isDebugMode } from "../../shared.ts";
+import { getCacheKeyForDirectory } from "../../validate.ts";
+
+/**
+ * Get the han binary invocation string.
+ * Uses the current process's execPath and script to ensure
+ * we invoke the same han binary for child processes.
+ */
+function getHanBinary(): string {
+	// process.execPath = runtime (bun/node)
+	// process.argv[1] = script path (e.g., /path/to/lib/main.ts)
+	const scriptPath = process.argv[1];
+	if (scriptPath) {
+		return `"${process.execPath}" "${scriptPath}"`;
+	}
+	// Fallback to 'han' from PATH if we can't determine the script
+	return "han";
+}
+
+/**
+ * Replace 'han ' prefix in commands with the actual binary invocation.
+ * This ensures inner han commands use the same version as the orchestrator.
+ */
+function resolveHanCommand(command: string): string {
+	const hanBinary = getHanBinary();
+	// Replace 'han ' at the start of the command
+	if (command.startsWith("han ")) {
+		return hanBinary + command.slice(3);
+	}
+	return command;
+}
+
+/**
+ * ANSI color codes for CLI output
+ */
+const colors = {
+	reset: "\x1b[0m",
+	dim: "\x1b[2m",
+	cyan: "\x1b[36m",
+	green: "\x1b[32m",
+	red: "\x1b[31m",
+	yellow: "\x1b[33m",
+	bold: "\x1b[1m",
+	magenta: "\x1b[35m",
+};
+
+/**
+ * Format duration in human-readable form
+ */
+function formatDuration(ms: number): string {
+	if (ms < 1000) {
+		return `${ms}ms`;
+	}
+	const seconds = ms / 1000;
+	if (seconds < 60) {
+		return `${seconds.toFixed(1)}s`;
+	}
+	const minutes = Math.floor(seconds / 60);
+	const remainingSeconds = seconds % 60;
+	return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+}
+
+/**
+ * Hook payload structure from Claude Code stdin
+ * These are the common fields that Claude Code sends with hook invocations.
+ */
+interface HookPayload {
+	// Common fields (always present from Claude Code)
+	session_id?: string;
+	transcript_path?: string;
+	cwd?: string;
+	permission_mode?: string;
+
+	// Event-specific fields
+	hook_event_name?: string;
+	agent_id?: string;
+	agent_type?: string;
+	tool_name?: string;
+}
+
+/**
+ * Generate a CLI payload when running orchestrate directly from command line.
+ * This mimics the payload structure that Claude Code would send.
+ */
+function generateCliPayload(
+	eventType: string,
+	projectRoot: string,
+): HookPayload {
+	const sessionId = `cli-${randomUUID()}`;
+
+	return {
+		session_id: sessionId,
+		transcript_path: "", // No transcript in CLI mode
+		cwd: projectRoot,
+		permission_mode: "default",
+		hook_event_name: eventType,
+	};
+}
+
+/**
+ * A discovered hook task ready for execution
+ */
+interface HookTask {
+	plugin: string;
+	pluginRoot: string;
+	hookName: string;
+	hookDef: PluginHookDefinition;
+	directories: string[];
+	dependsOn: Array<{ plugin: string; hook: string; optional?: boolean }>;
+}
+
+/**
+ * Result of executing a hook in a directory
+ */
+interface HookResult {
+	plugin: string;
+	hook: string;
+	directory: string;
+	success: boolean;
+	output?: string;
+	error?: string;
+	duration: number;
+	skipped?: boolean;
+	skipReason?: string;
+}
+
+/**
+ * Read stdin payload from Claude Code.
+ * Handles various stdin types: files, FIFOs, pipes, and sockets.
+ */
+function readStdinPayload(): HookPayload | null {
+	try {
+		// TTY means interactive terminal - no piped input
+		if (process.stdin.isTTY) {
+			return null;
+		}
+
+		const { fstatSync } = require("node:fs");
+		const stat = fstatSync(0);
+
+		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
+		if (!stat.isFile() && !stat.isFIFO() && !stat.isSocket()) {
+			return null;
+		}
+
+		// For files, check if there's content before reading
+		if (stat.isFile() && stat.size === 0) {
+			return null;
+		}
+
+		const stdin = readFileSync(0, "utf-8");
+		if (stdin.trim()) {
+			return JSON.parse(stdin) as HookPayload;
+		}
+	} catch {
+		// stdin not available
+	}
+	return null;
+}
+
+/**
+ * Find plugin directory in a marketplace
+ */
+function findPluginInMarketplace(
+	marketplaceRoot: string,
+	pluginName: string,
+): string | null {
+	const potentialPaths = [
+		join(marketplaceRoot, "jutsu", pluginName),
+		join(marketplaceRoot, "do", pluginName),
+		join(marketplaceRoot, "hashi", pluginName),
+		join(marketplaceRoot, "core"),
+		join(marketplaceRoot, pluginName),
+	];
+
+	for (const path of potentialPaths) {
+		if (existsSync(path)) {
+			return path;
+		}
+	}
+	return null;
+}
+
+/**
+ * Get plugin directory for a plugin
+ */
+function getPluginDir(
+	pluginName: string,
+	marketplace: string,
+	marketplaceConfig: MarketplaceConfig | undefined,
+): string | null {
+	// Check marketplace config for directory source
+	if (marketplaceConfig?.source?.source === "directory") {
+		const directoryPath = marketplaceConfig.source.path;
+		if (directoryPath) {
+			const absolutePath = directoryPath.startsWith("/")
+				? directoryPath
+				: join(process.cwd(), directoryPath);
+			const found = findPluginInMarketplace(absolutePath, pluginName);
+			if (found) return found;
+		}
+	}
+
+	// Check if we're in the marketplace repo (development)
+	const cwd = process.cwd();
+	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
+		const found = findPluginInMarketplace(cwd, pluginName);
+		if (found) return found;
+	}
+
+	// Fall back to default shared config path
+	const configDir = getClaudeConfigDir();
+	if (!configDir) return null;
+
+	const marketplaceRoot = join(
+		configDir,
+		"plugins",
+		"marketplaces",
+		marketplace,
+	);
+	if (!existsSync(marketplaceRoot)) return null;
+
+	return findPluginInMarketplace(marketplaceRoot, pluginName);
+}
+
+/**
+ * Discover all hook tasks for a given event type
+ */
+function discoverHookTasks(
+	eventType: string,
+	payload: HookPayload | null,
+	projectRoot: string,
+): HookTask[] {
+	const tasks: HookTask[] = [];
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
+
+	for (const [pluginName, marketplace] of plugins.entries()) {
+		const marketplaceConfig = marketplaces.get(marketplace);
+		const pluginRoot = getPluginDir(pluginName, marketplace, marketplaceConfig);
+
+		if (!pluginRoot) continue;
+
+		const config = loadPluginConfig(pluginRoot, false);
+		if (!config?.hooks) continue;
+
+		for (const [hookName, hookDef] of Object.entries(config.hooks)) {
+			// Check if this hook responds to this event type
+			if (!hookMatchesEvent(hookDef, eventType)) {
+				continue;
+			}
+
+			// For PreToolUse/PostToolUse, check tool filter
+			if (
+				(eventType === "PreToolUse" || eventType === "PostToolUse") &&
+				hookDef.toolFilter &&
+				hookDef.toolFilter.length > 0
+			) {
+				const toolName = payload?.tool_name;
+				if (!toolName || !hookDef.toolFilter.includes(toolName)) {
+					continue;
+				}
+			}
+
+			// Find directories for this hook
+			let directories: string[];
+			if (!hookDef.dirsWith || hookDef.dirsWith.length === 0) {
+				directories = [projectRoot];
+			} else {
+				directories = findDirectoriesWithMarkers(projectRoot, hookDef.dirsWith);
+
+				// Apply dirTest filter if specified
+				const dirTestCmd = hookDef.dirTest;
+				if (dirTestCmd) {
+					directories = directories.filter((dir) => {
+						try {
+							execSync(dirTestCmd, {
+								cwd: dir,
+								stdio: ["ignore", "ignore", "ignore"],
+								encoding: "utf8",
+								shell: "/bin/sh",
+							});
+							return true;
+						} catch {
+							return false;
+						}
+					});
+				}
+			}
+
+			if (directories.length === 0) continue;
+
+			tasks.push({
+				plugin: pluginName,
+				pluginRoot,
+				hookName,
+				hookDef,
+				directories,
+				dependsOn: hookDef.dependsOn || [],
+			});
+		}
+	}
+
+	return tasks;
+}
+
+/**
+ * Topological sort of hook tasks based on dependencies
+ * Returns batches that can be executed in parallel
+ */
+function resolveDependencies(tasks: HookTask[]): HookTask[][] {
+	const taskMap = new Map<string, HookTask>();
+	const inDegree = new Map<string, number>();
+	const graph = new Map<string, string[]>();
+
+	// Build task lookup and initialize in-degrees
+	for (const task of tasks) {
+		const key = `${task.plugin}/${task.hookName}`;
+		taskMap.set(key, task);
+		inDegree.set(key, 0);
+		graph.set(key, []);
+	}
+
+	// Build dependency graph
+	for (const task of tasks) {
+		const key = `${task.plugin}/${task.hookName}`;
+		for (const dep of task.dependsOn) {
+			const depKey = `${dep.plugin}/${dep.hook}`;
+
+			// Check if dependency exists
+			if (!taskMap.has(depKey)) {
+				if (dep.optional) {
+					continue; // Skip optional missing dependencies
+				}
+				console.error(
+					`Error: Hook ${key} depends on ${depKey}, but it's not available for this event type.`,
+				);
+				continue;
+			}
+
+			// Add edge: dep -> task (dep must run before task)
+			const edges = graph.get(depKey) || [];
+			edges.push(key);
+			graph.set(depKey, edges);
+
+			// Increment in-degree
+			inDegree.set(key, (inDegree.get(key) || 0) + 1);
+		}
+	}
+
+	// Kahn's algorithm for topological sort into batches
+	const batches: HookTask[][] = [];
+	const remaining = new Set(taskMap.keys());
+
+	while (remaining.size > 0) {
+		// Find all tasks with no remaining dependencies
+		const batch: HookTask[] = [];
+		const toRemove: string[] = [];
+
+		for (const key of remaining) {
+			if ((inDegree.get(key) || 0) === 0) {
+				const task = taskMap.get(key);
+				if (task) {
+					batch.push(task);
+					toRemove.push(key);
+				}
+			}
+		}
+
+		if (batch.length === 0) {
+			// Circular dependency detected
+			console.error("Error: Circular dependency detected in hooks:");
+			for (const key of remaining) {
+				console.error(`  - ${key}`);
+			}
+			break;
+		}
+
+		batches.push(batch);
+
+		// Remove processed tasks and update in-degrees
+		for (const key of toRemove) {
+			remaining.delete(key);
+			for (const dependent of graph.get(key) || []) {
+				inDegree.set(dependent, (inDegree.get(dependent) || 0) - 1);
+			}
+		}
+	}
+
+	return batches;
+}
+
+/**
+ * Execute a single hook in a directory
+ */
+async function executeHookInDirectory(
+	task: HookTask,
+	directory: string,
+	projectRoot: string,
+	payload: HookPayload,
+	options: {
+		cache: boolean;
+		checkpoints: boolean;
+		verbose: boolean;
+		cliMode: boolean;
+		sessionId: string;
+	},
+): Promise<HookResult> {
+	const startTime = Date.now();
+	const relativePath =
+		directory === projectRoot ? "." : directory.replace(`${projectRoot}/`, "");
+
+	// Helper for CLI mode verbose output
+	const cliLog = (message: string, color: keyof typeof colors = "reset") => {
+		if (options.cliMode) {
+			const time = new Date().toLocaleTimeString();
+			console.error(
+				`${colors.dim}[${time}]${colors.reset} ${colors[color]}${message}${colors.reset}`,
+			);
+		}
+	};
+
+	// Check user overrides for enabled state
+	const hookSettings = getPluginHookSettings(
+		task.plugin,
+		task.hookName,
+		directory,
+	);
+	if (hookSettings?.enabled === false) {
+		const duration = Date.now() - startTime;
+		// Log skipped hook
+		const logger = getOrCreateEventLogger();
+		logger?.logHookResult(
+			task.plugin,
+			task.hookName,
+			relativePath,
+			false,
+			duration,
+			0,
+			true,
+			"[skipped: disabled by user config]",
+		);
+		return {
+			plugin: task.plugin,
+			hook: task.hookName,
+			directory: relativePath,
+			success: true,
+			skipped: true,
+			skipReason: "disabled by user config",
+			duration,
+		};
+	}
+
+	// Check cache if enabled
+	if (
+		options.cache &&
+		task.hookDef.ifChanged &&
+		task.hookDef.ifChanged.length > 0
+	) {
+		const cacheKey = getCacheKeyForDirectory(
+			task.hookName,
+			directory,
+			projectRoot,
+		);
+		const hasChanges = await checkForChangesAsync(
+			task.plugin,
+			cacheKey,
+			directory,
+			task.hookDef.ifChanged,
+			task.pluginRoot,
+		);
+
+		if (!hasChanges) {
+			const duration = Date.now() - startTime;
+			// Log cached skip
+			const logger = getOrCreateEventLogger();
+			logger?.logHookResult(
+				task.plugin,
+				task.hookName,
+				relativePath,
+				true, // cached
+				duration,
+				0,
+				true,
+				"[skipped: no changes detected]",
+			);
+			return {
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				success: true,
+				skipped: true,
+				skipReason: "no changes detected",
+				duration,
+			};
+		}
+
+		// Check checkpoint if available
+		if (options.checkpoints && payload.session_id) {
+			const changedSinceCheckpoint = await hasChangedSinceCheckpointAsync(
+				payload.session_id,
+				task.hookDef.ifChanged,
+				directory,
+			);
+			if (!changedSinceCheckpoint) {
+				const duration = Date.now() - startTime;
+				// Log checkpoint skip
+				const logger = getOrCreateEventLogger();
+				logger?.logHookResult(
+					task.plugin,
+					task.hookName,
+					relativePath,
+					true, // cached via checkpoint
+					duration,
+					0,
+					true,
+					"[skipped: no changes since checkpoint]",
+				);
+				return {
+					plugin: task.plugin,
+					hook: task.hookName,
+					directory: relativePath,
+					success: true,
+					skipped: true,
+					skipReason: "no changes since checkpoint",
+					duration,
+				};
+			}
+		}
+	}
+
+	// Get resolved command (with user overrides)
+	// Also resolve 'han ' prefix to use the current binary for inner commands
+	const rawCommand = hookSettings?.command || task.hookDef.command;
+	const command = resolveHanCommand(rawCommand);
+
+	// Log hook_run event and capture UUID for correlation with result
+	const logger = getOrCreateEventLogger();
+	const hookRunId = logger?.logHookRun(
+		task.plugin,
+		task.hookName,
+		relativePath,
+		false,
+	);
+	cliLog(
+		`🪝 hook_run: ${task.plugin}/${task.hookName} in ${relativePath}`,
+		"cyan",
+	);
+
+	if (options.verbose) {
+		console.log(
+			`\n[${task.plugin}/${task.hookName}] Running in ${relativePath}:`,
+		);
+		console.log(`  $ ${command}\n`);
+	}
+
+	try {
+		// Serialize payload to pass via stdin to child process
+		const payloadJson = JSON.stringify(payload);
+
+		const output = execSync(command, {
+			cwd: directory,
+			encoding: "utf-8",
+			timeout: 300000, // 5 minute timeout
+			input: payloadJson, // Pass payload via stdin
+			shell: "/bin/bash",
+			env: {
+				...process.env,
+				CLAUDE_PLUGIN_ROOT: task.pluginRoot,
+				CLAUDE_PROJECT_DIR: projectRoot,
+				HAN_SESSION_ID: options.sessionId,
+			},
+		});
+
+		// Update cache on success
+		if (
+			options.cache &&
+			task.hookDef.ifChanged &&
+			task.hookDef.ifChanged.length > 0
+		) {
+			const cacheKey = getCacheKeyForDirectory(
+				task.hookName,
+				directory,
+				projectRoot,
+			);
+			const commandHash = createHash("sha256").update(command).digest("hex");
+			await trackFilesAsync(
+				task.plugin,
+				cacheKey,
+				directory,
+				task.hookDef.ifChanged,
+				task.pluginRoot,
+				{
+					logger: logger ?? undefined,
+					directory: relativePath,
+					commandHash,
+				},
+			);
+		}
+
+		const duration = Date.now() - startTime;
+
+		// Log hook_result event (success)
+		logger?.logHookResult(
+			task.plugin,
+			task.hookName,
+			relativePath,
+			false,
+			duration,
+			0,
+			true,
+			output.trim(),
+			undefined, // error
+			hookRunId, // correlate with hook_run
+		);
+		cliLog(
+			`✅ hook_result: ${task.plugin}/${task.hookName} passed in ${relativePath} (${formatDuration(duration)})`,
+			"green",
+		);
+
+		return {
+			plugin: task.plugin,
+			hook: task.hookName,
+			directory: relativePath,
+			success: true,
+			output: output.trim(),
+			duration,
+		};
+	} catch (error: unknown) {
+		const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+		const stdout = (error as { stdout?: Buffer })?.stdout?.toString() || "";
+		const exitCode = (error as { status?: number })?.status ?? 1;
+		const duration = Date.now() - startTime;
+
+		// Log hook_result event (failure)
+		logger?.logHookResult(
+			task.plugin,
+			task.hookName,
+			relativePath,
+			false,
+			duration,
+			exitCode,
+			false,
+			stdout.trim(),
+			stderr.trim(),
+			hookRunId, // correlate with hook_run
+		);
+		cliLog(
+			`❌ hook_result: ${task.plugin}/${task.hookName} failed in ${relativePath} (${formatDuration(duration)})`,
+			"red",
+		);
+
+		return {
+			plugin: task.plugin,
+			hook: task.hookName,
+			directory: relativePath,
+			success: false,
+			output: stdout.trim(),
+			error: stderr.trim(),
+			duration,
+		};
+	}
+}
+
+/**
+ * Main orchestration function
+ */
+async function orchestrate(
+	eventType: string,
+	options: {
+		cache: boolean;
+		checkpoints: boolean;
+		verbose: boolean;
+		failFast: boolean;
+	},
+): Promise<void> {
+	const projectRoot = process.cwd();
+
+	// Read stdin payload or generate CLI payload
+	const stdinPayload = readStdinPayload();
+	const cliMode = !stdinPayload;
+
+	// Use stdin payload or generate a CLI payload with proper structure
+	const payload: HookPayload =
+		stdinPayload || generateCliPayload(eventType, projectRoot);
+
+	// Validate event type matches payload (only for real stdin payloads)
+	if (
+		stdinPayload?.hook_event_name &&
+		stdinPayload.hook_event_name !== eventType
+	) {
+		console.error(
+			`Event mismatch: orchestrate called with "${eventType}" ` +
+				`but stdin contains "${stdinPayload.hook_event_name}"`,
+		);
+		process.exit(1);
+	}
+
+	// Session ID is always available (from stdin or generated CLI payload)
+	// Fallback to generating one if somehow missing (shouldn't happen)
+	const sessionId = payload.session_id || `cli-${randomUUID()}`;
+	initEventLogger(sessionId, {}, projectRoot);
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[orchestrate]${colors.reset} eventType=${colors.cyan}${eventType}${colors.reset} session_id=${colors.magenta}${sessionId || "(none)"}${colors.reset}`,
+		);
+	}
+
+	// Discover all hook tasks for this event
+	const tasks = discoverHookTasks(eventType, payload, projectRoot);
+
+	if (tasks.length === 0) {
+		if (cliMode) {
+			console.error(
+				`${colors.yellow}No hooks found for event type "${eventType}"${colors.reset}`,
+			);
+		}
+		return;
+	}
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[orchestrate]${colors.reset} Found ${colors.bold}${tasks.length}${colors.reset} hook tasks for ${colors.cyan}${eventType}${colors.reset}`,
+		);
+	}
+
+	// Resolve dependencies into execution batches
+	const batches = resolveDependencies(tasks);
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[orchestrate]${colors.reset} Resolved into ${colors.bold}${batches.length}${colors.reset} batches`,
+		);
+		for (let i = 0; i < batches.length; i++) {
+			const batchHooks = batches[i].map(
+				(t) => `${colors.cyan}${t.plugin}/${t.hookName}${colors.reset}`,
+			);
+			console.error(
+				`  ${colors.dim}Batch ${i + 1}:${colors.reset} ${batchHooks.join(", ")}`,
+			);
+		}
+	}
+
+	const allResults: HookResult[] = [];
+	const outputs: string[] = [];
+	let hasFailures = false;
+	let aborted = false; // Abort flag for fail-fast
+
+	// Execute batches sequentially, hooks within batch in parallel
+	for (const batch of batches) {
+		// Check abort flag before starting a batch
+		if (aborted) break;
+		// Run before_all for each hook in the batch (if configured)
+		for (const task of batch) {
+			const hookSettings = getPluginHookSettings(task.plugin, task.hookName);
+			if (hookSettings?.before_all) {
+				const beforeAllCmd = resolveHanCommand(hookSettings.before_all);
+				if (options.verbose) {
+					console.log(
+						`\n[${task.plugin}/${task.hookName}] Running before_all:`,
+					);
+					console.log(`  $ ${beforeAllCmd}\n`);
+				}
+				try {
+					execSync(beforeAllCmd, {
+						encoding: "utf-8",
+						timeout: 60000,
+						stdio: options.verbose ? "inherit" : ["pipe", "pipe", "pipe"],
+						shell: "/bin/bash",
+						cwd: projectRoot,
+						env: {
+							...process.env,
+							CLAUDE_PROJECT_DIR: projectRoot,
+							CLAUDE_PLUGIN_ROOT: task.pluginRoot,
+						},
+					});
+				} catch (error: unknown) {
+					const stderr =
+						(error as { stderr?: Buffer })?.stderr?.toString() || "";
+					console.error(
+						`\n❌ before_all failed for ${task.plugin}/${task.hookName}:\n${stderr}`,
+					);
+					hasFailures = true;
+				}
+			}
+		}
+
+		// Build list of all task/directory combinations for this batch
+		const pendingTasks: Array<{ task: HookTask; directory: string }> = [];
+		for (const task of batch) {
+			for (const directory of task.directories) {
+				pendingTasks.push({ task, directory });
+			}
+		}
+
+		// Execute tasks sequentially with fail-fast
+		const batchResults: HookResult[] = [];
+		let taskIndex = 0;
+
+		// Helper to schedule the next task if not aborted
+		const scheduleNext = (): Promise<HookResult> | null => {
+			if (aborted && options.failFast) return null;
+			if (taskIndex >= pendingTasks.length) return null;
+
+			const { task, directory } = pendingTasks[taskIndex++];
+			const relativePath =
+				directory === projectRoot
+					? "."
+					: directory.replace(`${projectRoot}/`, "");
+
+			const promise = (async (): Promise<HookResult> => {
+				// Double-check abort flag (may have changed while waiting for slot)
+				if (aborted && options.failFast) {
+					return {
+						plugin: task.plugin,
+						hook: task.hookName,
+						directory: relativePath,
+						success: true,
+						skipped: true,
+						skipReason: "aborted due to earlier failure",
+						duration: 0,
+					};
+				}
+
+				const result = await executeHookInDirectory(
+					task,
+					directory,
+					projectRoot,
+					payload,
+					{
+						...options,
+						cliMode,
+						sessionId,
+					},
+				);
+
+				// Set abort flag on failure
+				if (!result.success && !result.skipped && options.failFast) {
+					aborted = true;
+					if (isDebugMode()) {
+						console.error(
+							`${colors.red}[fail-fast]${colors.reset} Aborting due to failure in ${task.plugin}/${task.hookName}`,
+						);
+					}
+				}
+
+				return result;
+			})();
+
+			return promise;
+		};
+
+		// Execute tasks sequentially (execSync blocks, so no real parallelism anyway)
+		// This ensures fail-fast works correctly - no new tasks start after failure
+		while (taskIndex < pendingTasks.length && (!aborted || !options.failFast)) {
+			const p = scheduleNext();
+			if (!p) break;
+
+			const result = await p;
+			batchResults.push(result);
+		}
+
+		// Mark remaining tasks as skipped if aborted
+		while (taskIndex < pendingTasks.length) {
+			const { task, directory } = pendingTasks[taskIndex++];
+			const relativePath =
+				directory === projectRoot
+					? "."
+					: directory.replace(`${projectRoot}/`, "");
+			batchResults.push({
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				success: true,
+				skipped: true,
+				skipReason: "aborted due to earlier failure",
+				duration: 0,
+			});
+		}
+		allResults.push(...batchResults);
+
+		// Check for failures
+		const failures = batchResults.filter((r) => !r.success && !r.skipped);
+		if (failures.length > 0) {
+			hasFailures = true;
+
+			// Report failures
+			for (const failure of failures) {
+				console.error(
+					`\n❌ Hook \`${failure.plugin}/${failure.hook}\` failed in \`${failure.directory}\``,
+				);
+				// Include stdout if present (some tools output errors to stdout)
+				if (failure.output) {
+					console.error(failure.output);
+				}
+				// Include stderr if present
+				if (failure.error) {
+					console.error(failure.error);
+				}
+				// If neither, note that there was no output
+				if (!failure.output && !failure.error) {
+					console.error("(no output)");
+				}
+			}
+
+			// Fail fast: abort and stop executing remaining batches
+			if (options.failFast) {
+				aborted = true;
+				break;
+			}
+		}
+
+		// Collect successful outputs
+		for (const result of batchResults) {
+			if (result.success && result.output && !result.skipped) {
+				outputs.push(result.output);
+			}
+		}
+	}
+
+	// Log summary
+	const eventLogger = getEventLogger();
+	if (eventLogger) {
+		const successful = allResults.filter((r) => r.success && !r.skipped).length;
+		const skipped = allResults.filter((r) => r.skipped).length;
+		const failed = allResults.filter((r) => !r.success).length;
+
+		if (options.verbose) {
+			console.log(
+				`\nOrchestration complete: ${successful} passed, ${skipped} skipped, ${failed} failed`,
+			);
+		}
+
+		eventLogger.flush();
+	}
+
+	// Output aggregated results
+	if (outputs.length > 0) {
+		console.log(outputs.join("\n\n"));
+	}
+
+	if (hasFailures) {
+		process.exit(2);
+	}
+}
+
+/**
+ * Register the orchestrate command
+ */
+export function registerHookOrchestrate(hookCommand: Command): void {
+	hookCommand
+		.command("orchestrate <eventType>")
+		.description(
+			"Orchestrate all hooks for a given Claude Code event type.\n\n" +
+				"This is the central entry point for hook execution. It:\n" +
+				"  - Discovers all installed plugins and their hooks\n" +
+				"  - Filters hooks by event type (Stop, PreToolUse, etc.)\n" +
+				"  - Resolves dependencies between hooks\n" +
+				"  - Executes hooks with controlled parallelism\n\n" +
+				"Event types: Stop, SubagentStop, PreToolUse, PostToolUse,\n" +
+				"             SessionStart, UserPromptSubmit, SubagentStart",
+		)
+		.option("--no-cache", "Disable caching - force all hooks to run")
+		.option("--no-checkpoints", "Disable checkpoint filtering")
+		.option("--no-fail-fast", "Continue executing even after failures")
+		.option("-v, --verbose", "Show detailed execution output")
+		.action(
+			async (
+				eventType: string,
+				opts: {
+					cache?: boolean;
+					checkpoints?: boolean;
+					failFast?: boolean;
+					verbose?: boolean;
+				},
+			) => {
+				await orchestrate(eventType, {
+					cache: opts.cache !== false,
+					checkpoints: opts.checkpoints !== false,
+					failFast: opts.failFast !== false,
+					verbose: opts.verbose ?? false,
+				});
+			},
+		);
+}

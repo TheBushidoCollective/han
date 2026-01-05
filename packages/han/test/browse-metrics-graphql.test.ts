@@ -4,14 +4,25 @@
  * Tests the GraphQL layer that the browse UI uses to query metrics.
  * Ensures the metrics are correctly exposed via the GraphQL schema.
  */
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+// Mock native module BEFORE importing metrics.ts to prevent production database access
+// This ensures tests use JSONL storage only, avoiding interference from the real database
+mock.module("../lib/native.ts", () => ({
+	getNativeModule: () => {
+		throw new Error("Native module not available in test");
+	},
+	tryGetNativeModule: () => null,
+}));
+
+import { _resetDbState } from "../lib/db/index.ts";
 import {
 	getMetricsStorage,
 	queryMetrics,
-} from "../lib/commands/browse/graphql/types/metrics.ts";
+} from "../lib/graphql/types/metrics.ts";
 import { JsonlMetricsStorage } from "../lib/metrics/jsonl-storage.ts";
 
 // Store original environment
@@ -19,12 +30,16 @@ const originalEnv = { ...process.env };
 let testDir: string;
 
 function setup(): void {
+	// Reset db module cache to pick up the new CLAUDE_CONFIG_DIR
+	_resetDbState();
 	const random = Math.random().toString(36).substring(2, 9);
 	testDir = join(tmpdir(), `han-browse-metrics-test-${Date.now()}-${random}`);
 	process.env.CLAUDE_CONFIG_DIR = testDir;
 }
 
 function teardown(): void {
+	// Reset db module cache to prevent leaking to other tests
+	_resetDbState();
 	process.env = { ...originalEnv };
 
 	if (testDir) {

@@ -49,15 +49,15 @@ interface FileOperation {
  *
  * Pure function: same transcript file = same summary output
  */
-export function summarizeTranscriptFile(
+export async function summarizeTranscriptFile(
 	transcriptPath: string,
 	options: TranscriptSummaryOptions = {},
-): SessionSummary | null {
+): Promise<SessionSummary | null> {
 	if (!existsSync(transcriptPath)) {
 		return null;
 	}
 
-	const messages = parseTranscriptWithToolUse(transcriptPath, {
+	const messages = await parseTranscriptWithToolUse(transcriptPath, {
 		includeThinking: options.includeThinking,
 	});
 
@@ -128,12 +128,12 @@ export function summarizeTranscript(
  * Parse transcript with tool use extraction
  * Extends parseTranscript to also capture tool_use blocks
  */
-function parseTranscriptWithToolUse(
+async function parseTranscriptWithToolUse(
 	filePath: string,
 	options: { includeThinking?: boolean } = {},
-): TranscriptMessage[] {
+): Promise<TranscriptMessage[]> {
 	// Use the standard parseTranscript for basic message extraction
-	const messages = parseTranscript(filePath, options);
+	const messages = await parseTranscript(filePath, options);
 
 	// The standard parseTranscript already handles content blocks
 	// We just need to ensure we have the messages

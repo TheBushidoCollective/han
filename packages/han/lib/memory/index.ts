@@ -21,9 +21,6 @@
  * ```
  */
 
-// Capture (for PostToolUse hook)
-export type { ToolUseEvent } from "./capture.ts";
-export { captureToolUse } from "./capture.ts";
 // Context Injection (for SessionStart hook)
 export { injectSessionContext } from "./context-injection.ts";
 // Indexer (FTS + Vector hybrid search)

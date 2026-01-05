@@ -4,13 +4,13 @@
  * GET /api/transcripts/search?q=query - Search transcripts
  */
 
-import { getGitRemote } from "../../../memory/index.ts";
+import { getGitRemote } from "../memory/index.ts";
 import {
 	searchTranscripts as searchTranscriptsFts,
 	searchTranscriptsText,
 	type TranscriptSearchOptions,
 	type TranscriptSearchResult,
-} from "../../../memory/transcript-search.ts";
+} from "../memory/transcript-search.ts";
 
 /**
  * Transcript search response
@@ -79,7 +79,7 @@ export async function searchTranscripts(
 		return { results, usedFts: true };
 	} catch {
 		// Fall back to text-based search
-		const results = searchTranscriptsText(options);
+		const results = await searchTranscriptsText(options);
 		return { results, usedFts: false };
 	}
 }

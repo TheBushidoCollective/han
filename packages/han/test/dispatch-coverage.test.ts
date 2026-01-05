@@ -250,57 +250,61 @@ describe("dispatch.ts coverage tests", () => {
 			expect(result.status).toBe(0);
 		});
 
-		test("skips non-command hooks (line 414-415, 458-459)", () => {
-			const settings = {
-				hooks: {
-					SessionStart: [
-						{
-							hooks: [
-								{
-									type: "prompt",
-									prompt: "This is a prompt hook, should be skipped",
-								},
-								{
-									type: "command",
-									command: "echo 'Command hook executed'",
-								},
-							],
-						},
-					],
-				},
-			};
-
-			writeFileSync(
-				join(configDir, "settings.json"),
-				JSON.stringify(settings, null, 2),
-			);
-
-			const result = spawnSync(
-				"bun",
-				[
-					"run",
-					join(packageRoot, "lib/main.ts"),
-					"hook",
-					"dispatch",
-					"SessionStart",
-					"--all",
-				],
-				{
-					encoding: "utf-8",
-					timeout: 15000,
-					cwd: projectDir,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: configDir,
-						HOME: testDir,
+		test(
+			"skips non-command hooks (line 414-415, 458-459)",
+			() => {
+				const settings = {
+					hooks: {
+						SessionStart: [
+							{
+								hooks: [
+									{
+										type: "prompt",
+										prompt: "This is a prompt hook, should be skipped",
+									},
+									{
+										type: "command",
+										command: "echo 'Command hook executed'",
+									},
+								],
+							},
+						],
 					},
-				},
-			);
+				};
 
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("Command hook executed");
-			expect(result.stdout).not.toContain("prompt hook");
-		}, { timeout: 15000 });
+				writeFileSync(
+					join(configDir, "settings.json"),
+					JSON.stringify(settings, null, 2),
+				);
+
+				const result = spawnSync(
+					"bun",
+					[
+						"run",
+						join(packageRoot, "lib/main.ts"),
+						"hook",
+						"dispatch",
+						"SessionStart",
+						"--all",
+					],
+					{
+						encoding: "utf-8",
+						timeout: 15000,
+						cwd: projectDir,
+						env: {
+							...process.env,
+							CLAUDE_CONFIG_DIR: configDir,
+							HOME: testDir,
+						},
+					},
+				);
+
+				expect(result.status).toBe(0);
+				expect(result.stdout).toContain("Command hook executed");
+				expect(result.stdout).not.toContain("prompt hook");
+			},
+			{ timeout: 15000 },
+		);
 	});
 
 	describe("plugin hooks dispatch (lines 566-602)", () => {
@@ -597,8 +601,16 @@ describe("dispatch.ts coverage tests", () => {
 			);
 
 			const pluginPath = join(projectDir, "jutsu", "jutsu-root");
+			const pluginConfigDir = join(pluginPath, ".claude-plugin");
 			const hooksDir = join(pluginPath, "hooks");
+			mkdirSync(pluginConfigDir, { recursive: true });
 			mkdirSync(hooksDir, { recursive: true });
+
+			// Plugin needs plugin.json to be recognized
+			writeFileSync(
+				join(pluginConfigDir, "plugin.json"),
+				JSON.stringify({ name: "jutsu-root", description: "Test plugin" }),
+			);
 
 			const hooksConfig = {
 				hooks: {

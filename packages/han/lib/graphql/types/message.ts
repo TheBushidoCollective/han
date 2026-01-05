@@ -22,9 +22,13 @@
  * This enables proper __typename discrimination on the frontend.
  */
 
-import type { SessionMessage } from "../../api/sessions.ts";
+import {
+	getSessionMessagesPaginated,
+	type SessionMessage,
+} from "../../api/sessions.ts";
 import { builder } from "../builder.ts";
 import type { SentimentEventData } from "../loaders.ts";
+import { registerNodeLoader } from "../node-registry.ts";
 import {
 	type ContentBlockData,
 	ContentBlockInterface,
@@ -346,6 +350,18 @@ MessageInterface.implement({
 						return "HookRunMessage";
 					case "hook_result":
 						return "HookResultMessage";
+					case "hook_reference":
+						return "HookReferenceMessage";
+					case "hook_validation":
+						return "HookValidationMessage";
+					case "hook_script":
+						return "HookScriptMessage";
+					case "hook_datetime":
+						return "HookDatetimeMessage";
+					case "hook_file_change":
+						return "HookFileChangeMessage";
+					case "queue_operation":
+						return "QueueOperationMessage";
 					case "mcp_tool_call":
 						return "McpToolCallMessage";
 					case "mcp_tool_result":
@@ -360,6 +376,8 @@ MessageInterface.implement({
 						return "MemoryLearnMessage";
 					case "sentiment_analysis":
 						return "SentimentAnalysisMessage";
+					case "hook_validation_cache":
+						return "HookValidationCacheMessage";
 					default:
 						// Unknown han_event subtypes use UnknownEventMessage
 						return "UnknownEventMessage";
@@ -384,6 +402,73 @@ MessageInterface.implement({
 			nullable: true,
 			description: "Original JSONL line content for debugging",
 			resolve: (msg) => msg.rawJson || null,
+		}),
+		agentId: t.string({
+			nullable: true,
+			description:
+				"Agent ID if this message is from a subagent. NULL for main conversation.",
+			resolve: (msg) => msg.agentId ?? null,
+		}),
+		parentId: t.string({
+			nullable: true,
+			description:
+				"For result messages, references the call message ID (e.g., tool_result -> tool_use)",
+			resolve: (msg) => msg.parentId ?? null,
+		}),
+		searchText: t.string({
+			nullable: true,
+			description:
+				"Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.",
+			resolve: (msg) => {
+				// Get text content from message
+				const { text } = getMessageText(
+					msg.content as string | ContentBlock[] | undefined,
+				);
+
+				// Build searchable text from multiple sources
+				const parts: string[] = [];
+
+				// Add main text content
+				if (text) parts.push(text);
+
+				// Add message type
+				parts.push(msg.type);
+
+				// Add tool/event name for tool calls
+				if (msg.toolName) parts.push(msg.toolName);
+
+				// Parse rawJson for additional searchable fields
+				if (msg.rawJson) {
+					try {
+						const parsed = JSON.parse(msg.rawJson);
+
+						// Tool use blocks
+						if (Array.isArray(parsed.message?.content)) {
+							for (const block of parsed.message.content) {
+								if (block.type === "tool_use" && block.name) {
+									parts.push(block.name);
+								}
+							}
+						}
+
+						// MCP/exposed tool names
+						if (parsed.name) parts.push(parsed.name);
+						if (parsed.tool) parts.push(parsed.tool);
+						if (parsed.serverName) parts.push(parsed.serverName);
+
+						// Hook names
+						if (parsed.hookName) parts.push(parsed.hookName);
+						if (parsed.hookType) parts.push(parsed.hookType);
+
+						// File paths
+						if (parsed.filePath) parts.push(parsed.filePath);
+					} catch {
+						// Ignore parse errors
+					}
+				}
+
+				return parts.join(" ").toLowerCase() || null;
+			},
 		}),
 	}),
 });
@@ -471,9 +556,9 @@ export const UserMessageType = UserMessageRef.implement({
 				// Load paired events for this session
 				const pairedEvents =
 					await context.loaders.sessionPairedEventsLoader.load(msg.sessionId);
-				// Look up sentiment by this message's ID
-				const messageId = `Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`;
-				return pairedEvents.sentimentByMessageId.get(messageId) ?? null;
+				// Look up sentiment by this message's raw UUID (from han event data.message_id)
+				if (!msg.id) return null;
+				return pairedEvents.sentimentByMessageId.get(msg.id) ?? null;
 			},
 		}),
 	}),
@@ -566,17 +651,20 @@ export const AssistantMessageType = AssistantMessageRef.implement({
 			description: "Number of tool use blocks in this message",
 			resolve: (msg) => parseAssistantMetadata(msg.rawJson).toolUseCount,
 		}),
-		inputTokens: t.int({
+		inputTokens: t.field({
+			type: "BigInt",
 			nullable: true,
 			description: "Input tokens used",
 			resolve: (msg) => parseAssistantMetadata(msg.rawJson).inputTokens,
 		}),
-		outputTokens: t.int({
+		outputTokens: t.field({
+			type: "BigInt",
 			nullable: true,
 			description: "Output tokens generated",
 			resolve: (msg) => parseAssistantMetadata(msg.rawJson).outputTokens,
 		}),
-		cachedTokens: t.int({
+		cachedTokens: t.field({
+			type: "BigInt",
 			nullable: true,
 			description: "Cached tokens used",
 			resolve: (msg) => parseAssistantMetadata(msg.rawJson).cachedTokens,
@@ -1116,6 +1204,615 @@ export const HookResultMessageType = HookResultMessageRef.implement({
 			nullable: true,
 			description: "Error message if hook failed",
 			resolve: (msg) => parseHookResultMetadata(msg.rawJson).error,
+		}),
+	}),
+});
+
+// ============================================================================
+// HookReferenceMessage - file reference injection events
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook reference metadata
+ */
+interface HookReferenceMetadata {
+	plugin: string | null;
+	filePath: string | null;
+	reason: string | null;
+	success: boolean;
+	durationMs: number | null;
+}
+
+function parseHookReferenceMetadata(
+	rawJson: string | undefined,
+): HookReferenceMetadata {
+	const defaults: HookReferenceMetadata = {
+		plugin: null,
+		filePath: null,
+		reason: null,
+		success: false,
+		durationMs: null,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.plugin = data.plugin ?? null;
+		defaults.filePath = data.file_path ?? null;
+		defaults.reason = data.reason ?? null;
+		defaults.success = data.success ?? false;
+		defaults.durationMs = data.duration_ms ?? null;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookReferenceMessageRef = builder.objectRef<MessageWithSession>(
+	"HookReferenceMessage",
+);
+
+export const HookReferenceMessageType = HookReferenceMessageRef.implement({
+	description: "A hook reference injection event (must-read-first files)",
+	interfaces: [MessageInterface],
+	isTypeOf: (obj) =>
+		typeof obj === "object" &&
+		obj !== null &&
+		"type" in obj &&
+		(obj as MessageWithSession).type === "han_event" &&
+		(obj as MessageWithSession).toolName === "hook_reference",
+	fields: (t) => ({
+		id: t.id({
+			description: "Message global ID",
+			resolve: (msg) =>
+				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+		}),
+		timestamp: t.field({
+			type: "DateTime",
+			description: "When the reference was injected",
+			resolve: (msg) => msg.timestamp,
+		}),
+		rawJson: t.string({
+			nullable: true,
+			resolve: (msg) => msg.rawJson || null,
+		}),
+		plugin: t.string({
+			nullable: true,
+			description: "Plugin that injected the reference",
+			resolve: (msg) => parseHookReferenceMetadata(msg.rawJson).plugin,
+		}),
+		filePath: t.string({
+			nullable: true,
+			description: "Path to the referenced file",
+			resolve: (msg) => parseHookReferenceMetadata(msg.rawJson).filePath,
+		}),
+		reason: t.string({
+			nullable: true,
+			description: "Reason for must-read-first requirement",
+			resolve: (msg) => parseHookReferenceMetadata(msg.rawJson).reason,
+		}),
+		success: t.boolean({
+			description: "Whether the file was found and injected",
+			resolve: (msg) => parseHookReferenceMetadata(msg.rawJson).success,
+		}),
+		durationMs: t.int({
+			nullable: true,
+			description: "Duration in milliseconds",
+			resolve: (msg) => parseHookReferenceMetadata(msg.rawJson).durationMs,
+		}),
+	}),
+});
+
+// ============================================================================
+// HookValidationMessage - per-directory validation events
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook validation metadata
+ */
+interface HookValidationMetadata {
+	plugin: string | null;
+	hook: string | null;
+	directory: string | null;
+	cached: boolean;
+	durationMs: number | null;
+	exitCode: number | null;
+	success: boolean;
+	output: string | null;
+	error: string | null;
+}
+
+function parseHookValidationMetadata(
+	rawJson: string | undefined,
+): HookValidationMetadata {
+	const defaults: HookValidationMetadata = {
+		plugin: null,
+		hook: null,
+		directory: null,
+		cached: false,
+		durationMs: null,
+		exitCode: null,
+		success: false,
+		output: null,
+		error: null,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.plugin = data.plugin ?? null;
+		// Extract just the base hook name (e.g., "typecheck" from "typecheck_packages_browse-client")
+		const rawHook = data.hook ?? null;
+		if (rawHook && data.directory) {
+			// Remove directory suffix if present (e.g., "_packages_browse-client")
+			const dirSuffix = `_${(data.directory as string).replace(/\//g, "_")}`;
+			if (rawHook.endsWith(dirSuffix)) {
+				defaults.hook = rawHook.slice(0, -dirSuffix.length);
+			} else {
+				defaults.hook = rawHook;
+			}
+		} else {
+			defaults.hook = rawHook;
+		}
+		defaults.directory = data.directory ?? null;
+		defaults.cached = data.cached ?? false;
+		defaults.durationMs = data.duration_ms ?? null;
+		defaults.exitCode = data.exit_code ?? null;
+		defaults.success = data.success ?? false;
+		defaults.output = data.output ?? null;
+		defaults.error = data.error ?? null;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookValidationMessageRef = builder.objectRef<MessageWithSession>(
+	"HookValidationMessage",
+);
+
+export const HookValidationMessageType = HookValidationMessageRef.implement({
+	description: "A per-directory validation hook result event",
+	interfaces: [MessageInterface],
+	isTypeOf: (obj) =>
+		typeof obj === "object" &&
+		obj !== null &&
+		"type" in obj &&
+		(obj as MessageWithSession).type === "han_event" &&
+		(obj as MessageWithSession).toolName === "hook_validation",
+	fields: (t) => ({
+		id: t.id({
+			description: "Message global ID",
+			resolve: (msg) =>
+				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+		}),
+		timestamp: t.field({
+			type: "DateTime",
+			description: "When the validation completed",
+			resolve: (msg) => msg.timestamp,
+		}),
+		rawJson: t.string({
+			nullable: true,
+			resolve: (msg) => msg.rawJson || null,
+		}),
+		plugin: t.string({
+			nullable: true,
+			description: "Plugin running the validation",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).plugin,
+		}),
+		hook: t.string({
+			nullable: true,
+			description: "Validation hook name (e.g., lint, typecheck)",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).hook,
+		}),
+		directory: t.string({
+			nullable: true,
+			description: "Directory being validated",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).directory,
+		}),
+		cached: t.boolean({
+			description: "Whether result was from cache",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).cached,
+		}),
+		durationMs: t.int({
+			nullable: true,
+			description: "Execution duration in milliseconds",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).durationMs,
+		}),
+		exitCode: t.int({
+			nullable: true,
+			description: "Exit code from the validation",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).exitCode,
+		}),
+		success: t.boolean({
+			description: "Whether validation passed",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).success,
+		}),
+		output: t.string({
+			nullable: true,
+			description: "Validation output",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).output,
+		}),
+		error: t.string({
+			nullable: true,
+			description: "Error message if validation failed",
+			resolve: (msg) => parseHookValidationMetadata(msg.rawJson).error,
+		}),
+	}),
+});
+
+// ============================================================================
+// HookValidationCacheMessage - cached validation file hashes
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook validation cache metadata
+ */
+interface HookValidationCacheMetadata {
+	plugin: string | null;
+	hook: string | null;
+	directory: string | null;
+	fileCount: number;
+}
+
+function parseHookValidationCacheMetadata(
+	rawJson: string | undefined,
+): HookValidationCacheMetadata {
+	const defaults: HookValidationCacheMetadata = {
+		plugin: null,
+		hook: null,
+		directory: null,
+		fileCount: 0,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.plugin = data.plugin ?? null;
+		// Extract just the base hook name (e.g., "typecheck" from "typecheck_packages_browse-client")
+		const rawHook = data.hook ?? null;
+		if (rawHook && data.directory) {
+			// Remove directory suffix if present (e.g., "_packages_browse-client")
+			const dirSuffix = `_${data.directory.replace(/\//g, "_")}`;
+			if (rawHook.endsWith(dirSuffix)) {
+				defaults.hook = rawHook.slice(0, -dirSuffix.length);
+			} else {
+				defaults.hook = rawHook;
+			}
+		} else {
+			defaults.hook = rawHook;
+		}
+		defaults.directory = data.directory ?? null;
+		defaults.fileCount = Object.keys(data.files ?? {}).length;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookValidationCacheMessageRef = builder.objectRef<MessageWithSession>(
+	"HookValidationCacheMessage",
+);
+
+export const HookValidationCacheMessageType =
+	HookValidationCacheMessageRef.implement({
+		description: "A hook validation cache event with tracked file hashes",
+		interfaces: [MessageInterface],
+		isTypeOf: (obj) =>
+			typeof obj === "object" &&
+			obj !== null &&
+			"type" in obj &&
+			(obj as MessageWithSession).type === "han_event" &&
+			(obj as MessageWithSession).toolName === "hook_validation_cache",
+		fields: (t) => ({
+			id: t.id({
+				description: "Message global ID",
+				resolve: (msg) =>
+					`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+			}),
+			timestamp: t.field({
+				type: "DateTime",
+				description: "When the cache was written",
+				resolve: (msg) => msg.timestamp,
+			}),
+			rawJson: t.string({
+				nullable: true,
+				resolve: (msg) => msg.rawJson || null,
+			}),
+			plugin: t.string({
+				nullable: true,
+				description: "Plugin that ran the validation",
+				resolve: (msg) => parseHookValidationCacheMetadata(msg.rawJson).plugin,
+			}),
+			hook: t.string({
+				nullable: true,
+				description: "Validation hook name (e.g., typecheck, lint)",
+				resolve: (msg) => parseHookValidationCacheMetadata(msg.rawJson).hook,
+			}),
+			directory: t.string({
+				nullable: true,
+				description: "Directory that was validated",
+				resolve: (msg) =>
+					parseHookValidationCacheMetadata(msg.rawJson).directory,
+			}),
+			fileCount: t.int({
+				description: "Number of files tracked in cache",
+				resolve: (msg) =>
+					parseHookValidationCacheMetadata(msg.rawJson).fileCount,
+			}),
+		}),
+	});
+
+// ============================================================================
+// HookScriptMessage - generic bash/cat script execution events
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook script metadata
+ */
+interface HookScriptMetadata {
+	plugin: string | null;
+	command: string | null;
+	durationMs: number | null;
+	exitCode: number | null;
+	success: boolean;
+	output: string | null;
+}
+
+function parseHookScriptMetadata(
+	rawJson: string | undefined,
+): HookScriptMetadata {
+	const defaults: HookScriptMetadata = {
+		plugin: null,
+		command: null,
+		durationMs: null,
+		exitCode: null,
+		success: false,
+		output: null,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.plugin = data.plugin ?? null;
+		defaults.command = data.command ?? null;
+		defaults.durationMs = data.duration_ms ?? null;
+		defaults.exitCode = data.exit_code ?? null;
+		defaults.success = data.success ?? false;
+		defaults.output = data.output ?? null;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookScriptMessageRef =
+	builder.objectRef<MessageWithSession>("HookScriptMessage");
+
+export const HookScriptMessageType = HookScriptMessageRef.implement({
+	description: "A generic script execution event (bash/cat commands)",
+	interfaces: [MessageInterface],
+	isTypeOf: (obj) =>
+		typeof obj === "object" &&
+		obj !== null &&
+		"type" in obj &&
+		(obj as MessageWithSession).type === "han_event" &&
+		(obj as MessageWithSession).toolName === "hook_script",
+	fields: (t) => ({
+		id: t.id({
+			description: "Message global ID",
+			resolve: (msg) =>
+				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+		}),
+		timestamp: t.field({
+			type: "DateTime",
+			description: "When the script executed",
+			resolve: (msg) => msg.timestamp,
+		}),
+		rawJson: t.string({
+			nullable: true,
+			resolve: (msg) => msg.rawJson || null,
+		}),
+		plugin: t.string({
+			nullable: true,
+			description: "Plugin running the script",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).plugin,
+		}),
+		command: t.string({
+			nullable: true,
+			description: "The command that was executed",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).command,
+		}),
+		durationMs: t.int({
+			nullable: true,
+			description: "Execution duration in milliseconds",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).durationMs,
+		}),
+		exitCode: t.int({
+			nullable: true,
+			description: "Exit code from the script",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).exitCode,
+		}),
+		success: t.boolean({
+			description: "Whether the script succeeded",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).success,
+		}),
+		output: t.string({
+			nullable: true,
+			description: "Script output",
+			resolve: (msg) => parseHookScriptMetadata(msg.rawJson).output,
+		}),
+	}),
+});
+
+// ============================================================================
+// HookDatetimeMessage - datetime injection events
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook datetime metadata
+ */
+interface HookDatetimeMetadata {
+	plugin: string | null;
+	datetime: string | null;
+	durationMs: number | null;
+}
+
+function parseHookDatetimeMetadata(
+	rawJson: string | undefined,
+): HookDatetimeMetadata {
+	const defaults: HookDatetimeMetadata = {
+		plugin: null,
+		datetime: null,
+		durationMs: null,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.plugin = data.plugin ?? null;
+		defaults.datetime = data.datetime ?? null;
+		defaults.durationMs = data.duration_ms ?? null;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookDatetimeMessageRef = builder.objectRef<MessageWithSession>(
+	"HookDatetimeMessage",
+);
+
+export const HookDatetimeMessageType = HookDatetimeMessageRef.implement({
+	description: "A datetime injection event",
+	interfaces: [MessageInterface],
+	isTypeOf: (obj) =>
+		typeof obj === "object" &&
+		obj !== null &&
+		"type" in obj &&
+		(obj as MessageWithSession).type === "han_event" &&
+		(obj as MessageWithSession).toolName === "hook_datetime",
+	fields: (t) => ({
+		id: t.id({
+			description: "Message global ID",
+			resolve: (msg) =>
+				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+		}),
+		timestamp: t.field({
+			type: "DateTime",
+			description: "When the datetime was injected",
+			resolve: (msg) => msg.timestamp,
+		}),
+		rawJson: t.string({
+			nullable: true,
+			resolve: (msg) => msg.rawJson || null,
+		}),
+		plugin: t.string({
+			nullable: true,
+			description: "Plugin injecting the datetime",
+			resolve: (msg) => parseHookDatetimeMetadata(msg.rawJson).plugin,
+		}),
+		datetime: t.string({
+			nullable: true,
+			description: "The datetime string that was output",
+			resolve: (msg) => parseHookDatetimeMetadata(msg.rawJson).datetime,
+		}),
+		durationMs: t.int({
+			nullable: true,
+			description: "Duration in milliseconds",
+			resolve: (msg) => parseHookDatetimeMetadata(msg.rawJson).durationMs,
+		}),
+	}),
+});
+
+// ============================================================================
+// HookFileChangeMessage - file change recording events
+// ============================================================================
+
+/**
+ * Parse raw JSON to extract hook file change metadata
+ */
+interface HookFileChangeMetadata {
+	sessionId: string | null;
+	toolName: string | null;
+	filePath: string | null;
+}
+
+function parseHookFileChangeMetadata(
+	rawJson: string | undefined,
+): HookFileChangeMetadata {
+	const defaults: HookFileChangeMetadata = {
+		sessionId: null,
+		toolName: null,
+		filePath: null,
+	};
+
+	if (!rawJson) return defaults;
+
+	try {
+		const parsed = JSON.parse(rawJson);
+		const data = parsed.data ?? parsed;
+		defaults.sessionId = data.session_id ?? null;
+		defaults.toolName = data.tool_name ?? null;
+		defaults.filePath = data.file_path ?? null;
+		return defaults;
+	} catch {
+		return defaults;
+	}
+}
+
+const HookFileChangeMessageRef = builder.objectRef<MessageWithSession>(
+	"HookFileChangeMessage",
+);
+
+export const HookFileChangeMessageType = HookFileChangeMessageRef.implement({
+	description: "A file change recording event",
+	interfaces: [MessageInterface],
+	isTypeOf: (obj) =>
+		typeof obj === "object" &&
+		obj !== null &&
+		"type" in obj &&
+		(obj as MessageWithSession).type === "han_event" &&
+		(obj as MessageWithSession).toolName === "hook_file_change",
+	fields: (t) => ({
+		id: t.id({
+			description: "Message global ID",
+			resolve: (msg) =>
+				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+		}),
+		timestamp: t.field({
+			type: "DateTime",
+			description: "When the file change was recorded",
+			resolve: (msg) => msg.timestamp,
+		}),
+		rawJson: t.string({
+			nullable: true,
+			resolve: (msg) => msg.rawJson || null,
+		}),
+		recordedSessionId: t.string({
+			nullable: true,
+			description: "Session ID where the change occurred",
+			resolve: (msg) => parseHookFileChangeMetadata(msg.rawJson).sessionId,
+		}),
+		changeToolName: t.string({
+			nullable: true,
+			description: "Tool that made the change (Edit, Write)",
+			resolve: (msg) => parseHookFileChangeMetadata(msg.rawJson).toolName,
+		}),
+		filePath: t.string({
+			nullable: true,
+			description: "Path to the changed file",
+			resolve: (msg) => parseHookFileChangeMetadata(msg.rawJson).filePath,
 		}),
 	}),
 });
@@ -1884,6 +2581,15 @@ export const UnknownEventMessageType = UnknownEventMessageRef.implement({
 		if (knownTypes.includes(msg.type)) return false;
 		if (msg.type === "han_event") {
 			const knownEventTypes = [
+				"hook_run",
+				"hook_result",
+				"hook_reference",
+				"hook_validation",
+				"hook_validation_cache",
+				"hook_script",
+				"hook_datetime",
+				"hook_file_change",
+				"queue_operation",
 				"mcp_tool_call",
 				"mcp_tool_result",
 				"exposed_tool_call",
@@ -1988,3 +2694,76 @@ export const MessageConnectionType = builder
 			}),
 		}),
 	});
+
+// =============================================================================
+// Message Node Loader
+// =============================================================================
+
+/**
+ * Get a single message by its composite ID components
+ * Loads the session's messages and finds the one at the specified line number
+ *
+ * @param projectDir - Encoded project directory (e.g., "-Volumes-dev-src-...")
+ * @param sessionId - Session UUID
+ * @param lineNumber - Line number in the JSONL file (1-based)
+ * @returns The message with session context, or null if not found
+ */
+export async function getMessageByLineNumber(
+	projectDir: string,
+	sessionId: string,
+	lineNumber: number,
+): Promise<MessageWithSession | null> {
+	// Load messages for the session
+	// Line numbers are 1-based, offset is 0-based
+	// To get the message at lineNumber N, we need offset = N-1, limit = 1
+	const { messages } = await getSessionMessagesPaginated(
+		sessionId,
+		lineNumber - 1,
+		1,
+	);
+
+	if (messages.length === 0) {
+		return null;
+	}
+
+	const msg = messages[0];
+	return {
+		...msg,
+		projectDir,
+		sessionId,
+		lineNumber,
+	};
+}
+
+/**
+ * Register node loader for Message type
+ * ID format: projectDir:sessionId:lineNumber
+ */
+registerNodeLoader("Message", async (compositeId: string) => {
+	// Parse composite ID: "projectDir:sessionId:lineNumber"
+	// projectDir can contain colons (after decoding), so we need to parse carefully
+	// Format: {projectDir}:{sessionId}:{lineNumber}
+	// sessionId is a UUID (36 chars), lineNumber is an integer
+	// We can use the last two colons to split
+
+	const parts = compositeId.split(":");
+	if (parts.length < 3) {
+		console.warn(`Invalid Message ID format: ${compositeId}`);
+		return null;
+	}
+
+	// Last part is lineNumber
+	const lineNumberStr = parts[parts.length - 1];
+	// Second to last is sessionId (UUID)
+	const sessionId = parts[parts.length - 2];
+	// Everything before is projectDir
+	const projectDir = parts.slice(0, -2).join(":");
+
+	const lineNumber = Number.parseInt(lineNumberStr, 10);
+	if (Number.isNaN(lineNumber)) {
+		console.warn(`Invalid line number in Message ID: ${compositeId}`);
+		return null;
+	}
+
+	return getMessageByLineNumber(projectDir, sessionId, lineNumber);
+});

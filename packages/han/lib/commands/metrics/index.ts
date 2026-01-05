@@ -1,7 +1,6 @@
 import type { Command } from "commander";
 import { generateMemoryContext } from "../memory-context.ts";
 import { generateSessionContext } from "./context-generation.ts";
-import { detectFrustrationFromStdin } from "./detect-frustration.ts";
 import { recordHookExecution } from "./hook-tracking.ts";
 import { detectPatterns } from "./pattern-detection.ts";
 import {
@@ -189,23 +188,6 @@ export function registerMetricsCommand(program: Command): void {
 			} catch (error: unknown) {
 				console.error(
 					"Error detecting patterns:",
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(1);
-			}
-		});
-
-	// Frustration detection
-	metricsCommand
-		.command("detect-frustration")
-		.description("Detect user frustration from stdin hook event JSON")
-		.action(async () => {
-			try {
-				await detectFrustrationFromStdin();
-				process.exit(0);
-			} catch (error: unknown) {
-				console.error(
-					"Error detecting frustration:",
 					error instanceof Error ? error.message : error,
 				);
 				process.exit(1);

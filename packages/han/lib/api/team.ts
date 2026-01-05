@@ -4,8 +4,8 @@
  * GET /api/team/search?q=query - Search team memory
  */
 
-import { getGitRemote, getMemoryStore } from "../../../memory/index.ts";
-import type { SearchFilters, SearchResult } from "../../../memory/types.ts";
+import { getGitRemote, getMemoryStore } from "../memory/index.ts";
+import type { SearchFilters, SearchResult } from "../memory/types.ts";
 
 /**
  * Team search result with additional metadata

@@ -21,7 +21,9 @@
 
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getClaudeConfigDir } from "../config/index.ts";
+// Import directly from claude-settings to avoid circular dependency
+// (config/index.ts -> validation/index.ts -> db/index.ts)
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import { getNativeModule } from "../native.ts";
 
 // ============================================================================
@@ -29,9 +31,6 @@ import { getNativeModule } from "../native.ts";
 // ============================================================================
 
 export type {
-	// Checkpoints
-	Checkpoint,
-	CheckpointInput,
 	// Coordinator
 	CoordinatorStatus,
 	// Frustration tracking
@@ -48,9 +47,6 @@ export type {
 	HookExecutionInput,
 	HookStats,
 	LockInfo,
-	// Marketplace
-	MarketplacePlugin,
-	MarketplacePluginInput,
 	Message,
 	MessageBatch,
 	MessageInput,
@@ -63,6 +59,9 @@ export type {
 	// Session file changes
 	SessionFileChange,
 	SessionFileChangeInput,
+	// Session file validations
+	SessionFileValidation,
+	SessionFileValidationInput,
 	SessionInput,
 	// Session timestamps
 	SessionTimestamps,
@@ -81,6 +80,16 @@ export type {
 
 let _dbPath: string | null = null;
 let _initialized = false;
+
+/**
+ * Reset the cached database state
+ * TESTING ONLY - do not use in production code
+ * @internal
+ */
+export function _resetDbState(): void {
+	_dbPath = null;
+	_initialized = false;
+}
 
 /**
  * Get the SQLite database file path
@@ -451,10 +460,16 @@ export const messages = {
 
 	/**
 	 * List messages for a session with optional filters and pagination
+	 *
+	 * @param options.agentIdFilter - Filter by agent:
+	 *   - undefined/null: All messages (no agent filtering)
+	 *   - "": Main conversation only (messages with no agent_id)
+	 *   - "abc12345": Specific agent's messages only
 	 */
 	async list(options: {
 		sessionId: string;
 		messageType?: string;
+		agentIdFilter?: string | null;
 		limit?: number;
 		offset?: number;
 	}): Promise<import("../../../han-native").Message[]> {
@@ -464,6 +479,7 @@ export const messages = {
 			dbPath,
 			options.sessionId,
 			options.messageType ?? null,
+			options.agentIdFilter ?? null,
 			options.limit ?? null,
 			options.offset ?? null,
 		);
@@ -599,6 +615,7 @@ export const tasks = {
 
 // ============================================================================
 // Hook Cache Operations
+// Stores manifest of file hashes per plugin/hook combination
 // ============================================================================
 
 export const hookCache = {
@@ -614,7 +631,8 @@ export const hookCache = {
 	},
 
 	/**
-	 * Get a hook cache entry by key
+	 * Get a hook cache entry by cache_key
+	 * @param cacheKey - Composite key like "{pluginName}_{hookName}"
 	 */
 	async get(
 		cacheKey: string,
@@ -625,7 +643,8 @@ export const hookCache = {
 	},
 
 	/**
-	 * Invalidate a hook cache entry
+	 * Invalidate a hook cache entry by cache_key
+	 * @param cacheKey - Composite key like "{pluginName}_{hookName}"
 	 */
 	async invalidate(cacheKey: string): Promise<boolean> {
 		const dbPath = await ensureInitialized();
@@ -644,43 +663,8 @@ export const hookCache = {
 };
 
 // ============================================================================
-// Marketplace Cache Operations
+// NOTE: Marketplace Cache Operations removed - not used
 // ============================================================================
-
-export const marketplace = {
-	/**
-	 * Upsert a marketplace plugin entry
-	 */
-	async upsertPlugin(
-		input: import("../../../han-native").MarketplacePluginInput,
-	): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.upsertMarketplacePlugin(dbPath, input);
-	},
-
-	/**
-	 * Get a marketplace plugin by ID
-	 */
-	async getPlugin(
-		pluginId: string,
-	): Promise<import("../../../han-native").MarketplacePlugin | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getMarketplacePlugin(dbPath, pluginId);
-	},
-
-	/**
-	 * List marketplace plugins with optional category filter
-	 */
-	async listPlugins(
-		category?: string,
-	): Promise<import("../../../han-native").MarketplacePlugin[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listMarketplacePlugins(dbPath, category ?? null);
-	},
-};
 
 // ============================================================================
 // Hook Execution Operations
@@ -741,44 +725,8 @@ export const frustrations = {
 };
 
 // ============================================================================
-// Checkpoint Operations
+// NOTE: Checkpoint Operations removed - not used
 // ============================================================================
-
-export const checkpoints = {
-	/**
-	 * Create a checkpoint for a file
-	 */
-	async create(
-		input: import("../../../han-native").CheckpointInput,
-	): Promise<import("../../../han-native").Checkpoint> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.createCheckpoint(dbPath, input);
-	},
-
-	/**
-	 * Get a checkpoint by session and file path
-	 */
-	async get(
-		sessionId: string,
-		filePath: string,
-	): Promise<import("../../../han-native").Checkpoint | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getCheckpoint(dbPath, sessionId, filePath);
-	},
-
-	/**
-	 * List all checkpoints for a session
-	 */
-	async list(
-		sessionId: string,
-	): Promise<import("../../../han-native").Checkpoint[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listCheckpoints(dbPath, sessionId);
-	},
-};
 
 // ============================================================================
 // Session File Change Operations
@@ -817,6 +765,238 @@ export const sessionFileChanges = {
 		return native.hasSessionChanges(dbPath, sessionId);
 	},
 };
+
+// ============================================================================
+// Session File Validation Operations
+// ============================================================================
+
+export const sessionFileValidations = {
+	/**
+	 * Record a file validation (upserts based on session/file/plugin/hook/directory)
+	 * Call this after a successful hook run to track which files have been validated
+	 */
+	async record(
+		input: import("../../../han-native").SessionFileValidationInput,
+	): Promise<import("../../../han-native").SessionFileValidation> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.recordFileValidation(dbPath, input);
+	},
+
+	/**
+	 * Get a specific file validation
+	 */
+	async get(
+		sessionId: string,
+		filePath: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+	): Promise<import("../../../han-native").SessionFileValidation | null> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getFileValidation(
+			dbPath,
+			sessionId,
+			filePath,
+			pluginName,
+			hookName,
+			directory,
+		);
+	},
+
+	/**
+	 * Get all validations for a session and plugin/hook/directory combo
+	 */
+	async list(
+		sessionId: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+	): Promise<import("../../../han-native").SessionFileValidation[]> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getSessionValidations(
+			dbPath,
+			sessionId,
+			pluginName,
+			hookName,
+			directory,
+		);
+	},
+
+	/**
+	 * Check if files need validation (any changed since last validation or command changed)
+	 * Use this to skip re-running hooks when files haven't changed
+	 */
+	async needsValidation(
+		sessionId: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+		commandHash: string,
+	): Promise<boolean> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.needsValidation(
+			dbPath,
+			sessionId,
+			pluginName,
+			hookName,
+			directory,
+			commandHash,
+		);
+	},
+
+	/**
+	 * Get ALL validations for a session (not filtered by plugin/hook)
+	 * Useful for showing validation status across all hooks for file changes
+	 */
+	async listAll(
+		sessionId: string,
+	): Promise<import("../../../han-native").SessionFileValidation[]> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getAllSessionValidations(dbPath, sessionId);
+	},
+};
+
+// ============================================================================
+// Session Modified Files (replaces transcript-filter.ts)
+// ============================================================================
+
+/**
+ * Result of getting modified files from session_file_changes
+ * Mirrors TranscriptModifiedFiles interface for easy migration
+ */
+export interface SessionModifiedFiles {
+	/** Files that were created */
+	created: string[];
+	/** Files that were modified */
+	modified: string[];
+	/** Files that were deleted */
+	deleted: string[];
+	/** Combined set of all modified files (created + modified, excludes deleted) */
+	allModified: string[];
+	/** Session ID */
+	sessionId: string;
+	/** Whether query was successful */
+	success: boolean;
+}
+
+/**
+ * Get files modified by a session from session_file_changes table.
+ *
+ * This replaces getTranscriptModifiedFiles() - queries SQLite instead of parsing JSONL.
+ *
+ * @param sessionId - Session ID to query
+ * @returns Modified files grouped by action type
+ */
+export async function getSessionModifiedFiles(
+	sessionId: string,
+): Promise<SessionModifiedFiles> {
+	try {
+		const changes = await sessionFileChanges.list(sessionId);
+
+		const created: string[] = [];
+		const modified: string[] = [];
+		const deleted: string[] = [];
+
+		for (const change of changes) {
+			switch (change.action) {
+				case "created":
+					created.push(change.filePath);
+					break;
+				case "modified":
+					modified.push(change.filePath);
+					break;
+				case "deleted":
+					deleted.push(change.filePath);
+					break;
+			}
+		}
+
+		// allModified includes created and modified, but not deleted
+		const allModified = [...new Set([...created, ...modified])];
+
+		return {
+			created,
+			modified,
+			deleted,
+			allModified,
+			sessionId,
+			success: true,
+		};
+	} catch (_err) {
+		// Graceful fallback: query error, treat as no data
+		return {
+			created: [],
+			modified: [],
+			deleted: [],
+			allModified: [],
+			sessionId,
+			success: false,
+		};
+	}
+}
+
+/**
+ * Force-index the current session to ensure session_file_changes is up to date.
+ *
+ * Call this before checking session file changes to ensure SQLite has the latest data.
+ *
+ * @param sessionId - Session ID to index
+ * @param projectPath - Project path to find the transcript
+ */
+export async function ensureSessionIndexed(
+	sessionId: string,
+	projectPath: string,
+): Promise<void> {
+	const { join } = await import("node:path");
+	const { existsSync, readdirSync } = await import("node:fs");
+
+	// Find the transcript file for this session
+	const configDir = getClaudeConfigDir();
+	if (!configDir) return;
+
+	// Convert project path to slug (matches Claude Code's format)
+	const projectSlug = projectPath
+		.replace(/^\//, "")
+		.replace(/\//g, "-")
+		.replace(/\s+/g, "-");
+
+	const projectDir = join(configDir, "projects", projectSlug);
+
+	if (!existsSync(projectDir)) return;
+
+	// Find session file (main transcript)
+	const exactPath = join(projectDir, `${sessionId}.jsonl`);
+	let transcriptPath: string | null = null;
+
+	if (existsSync(exactPath)) {
+		transcriptPath = exactPath;
+	} else {
+		// Fall back to searching for partial match
+		try {
+			const files = readdirSync(projectDir).filter((f) => f.endsWith(".jsonl"));
+			const match = files.find((f) => f.includes(sessionId));
+			if (match) {
+				transcriptPath = join(projectDir, match);
+			}
+		} catch {
+			// Ignore read errors
+		}
+	}
+
+	if (!transcriptPath) return;
+
+	// Index the session file to ensure session_file_changes is current
+	try {
+		await indexer.indexSessionFile(transcriptPath);
+	} catch {
+		// Ignore indexing errors - best effort
+	}
+}
 
 // ============================================================================
 // FTS Operations
@@ -1108,6 +1288,7 @@ export async function getMessage(
 export async function listSessionMessages(options: {
 	sessionId: string;
 	messageType?: string;
+	agentIdFilter?: string | null;
 	limit?: number;
 	offset?: number;
 }): Promise<import("../../../han-native").Message[]> {
@@ -1184,24 +1365,7 @@ export async function cleanupExpiredCache(): Promise<number> {
 	return hookCache.cleanupExpired();
 }
 
-// Marketplace operations
-export async function upsertMarketplacePlugin(
-	input: import("../../../han-native").MarketplacePluginInput,
-): Promise<boolean> {
-	return marketplace.upsertPlugin(input);
-}
-
-export async function getMarketplacePlugin(
-	pluginId: string,
-): Promise<import("../../../han-native").MarketplacePlugin | null> {
-	return marketplace.getPlugin(pluginId);
-}
-
-export async function listMarketplacePlugins(
-	category?: string,
-): Promise<import("../../../han-native").MarketplacePlugin[]> {
-	return marketplace.listPlugins(category);
-}
+// NOTE: Marketplace operations removed - not used
 
 // Coordinator operations
 export function tryAcquireCoordinatorLock(): boolean {

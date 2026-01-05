@@ -502,7 +502,7 @@ interface ParsedHanEvent {
  * Convert logged event to IndexDocument
  * Handles the actual format written by EventLogger
  */
-function hanEventToDocument(
+function _hanEventToDocument(
 	event: ParsedHanEvent,
 	sessionId: string,
 ): IndexDocument {
@@ -546,59 +546,31 @@ function hanEventToDocument(
 
 /**
  * Index Han events from session files
- * Han events are stored at ~/.claude/han/memory/personal/sessions/{date}-{sessionId}-han.jsonl
- * (Same location as session observation files, with -han suffix)
+ *
+ * @deprecated This function is no longer needed. The Rust coordinator (han-native)
+ * automatically indexes Han events from JSONL files into the messages table with
+ * message_type='han_event'. Query using messages.list({ messageType: 'han_event' }).
+ *
+ * This function now returns 0 (no-op) since the Rust indexer handles all JSONL indexing.
+ *
+ * @param _projectSlug - Ignored, kept for API compatibility
  */
 export async function indexHanEvents(_projectSlug?: string): Promise<number> {
-	const sessionsDir = getSessionsPath();
-	if (!existsSync(sessionsDir)) {
-		return 0;
-	}
-
-	const tableName = getTableName("han_events");
-	await initTable(tableName);
-
-	const documents: IndexDocument[] = [];
-
-	// Find Han event files (*-han.jsonl) in the sessions directory
-	const files = readdirSync(sessionsDir).filter((f) =>
-		f.endsWith("-han.jsonl"),
-	);
-
-	for (const file of files) {
-		const filePath = join(sessionsDir, file);
-		try {
-			const content = readFileSync(filePath, "utf-8");
-			const lines = content.split("\n").filter((line) => line.trim());
-
-			for (const line of lines) {
-				try {
-					const event = JSON.parse(line) as ParsedHanEvent;
-					// Extract session ID from filename: {date}-{sessionId}-han.jsonl
-					const sessionId = file
-						.replace(/-han\.jsonl$/, "")
-						.split("-")
-						.slice(3)
-						.join("-");
-					documents.push(hanEventToDocument(event, sessionId));
-				} catch {
-					// Skip invalid lines
-				}
-			}
-		} catch {
-			// Skip files we can't read
-		}
-	}
-
-	if (documents.length === 0) {
-		return 0;
-	}
-
-	return indexDocuments(tableName, documents);
+	// No-op: The Rust coordinator (han-native/src/indexer.rs) already indexes
+	// Han events from *-han.jsonl files into the SQLite database.
+	// Query using: messages.list({ sessionId, messageType: 'han_event' })
+	return 0;
 }
 
 /**
  * Index personal session observations
+ *
+ * @deprecated This function reads JSONL files directly. In the future, Han's personal
+ * memory system should be migrated to use the Rust indexer. For now, this function
+ * remains as-is since it reads from a different location (~/.claude/han/personal/sessions)
+ * than the Claude Code transcripts indexed by the Rust coordinator.
+ *
+ * TODO: Migrate Han personal memory to Rust indexer for consistency.
  */
 export async function indexObservations(sessionId?: string): Promise<number> {
 	const sessionsPath = getSessionsPath();

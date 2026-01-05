@@ -102,15 +102,15 @@ function findAgentTranscript(
 /**
  * Extract modified files from a transcript file
  */
-function extractModifiedFilesFromTranscript(
+async function extractModifiedFilesFromTranscript(
 	transcriptPath: string,
-): TranscriptModifiedFiles {
+): Promise<TranscriptModifiedFiles> {
 	const native = getNativeModule();
 	const written = new Set<string>();
 	const edited = new Set<string>();
 
 	// Parse transcript messages
-	const messages = parseTranscript(transcriptPath);
+	const messages = await parseTranscript(transcriptPath);
 
 	for (const message of messages) {
 		if (message.type !== "assistant") continue;
@@ -150,11 +150,11 @@ function extractModifiedFilesFromTranscript(
  * @param projectPath - Project directory path
  * @returns Modified files or empty result with success=false on failure
  */
-export function getTranscriptModifiedFiles(
+export async function getTranscriptModifiedFiles(
 	type: "session" | "agent",
 	id: string,
 	projectPath: string,
-): TranscriptModifiedFiles {
+): Promise<TranscriptModifiedFiles> {
 	const cacheKey = `${type}:${id}`;
 
 	// Check cache first
@@ -182,7 +182,7 @@ export function getTranscriptModifiedFiles(
 	}
 
 	try {
-		const result = extractModifiedFilesFromTranscript(transcriptPath);
+		const result = await extractModifiedFilesFromTranscript(transcriptPath);
 		transcriptCache.set(cacheKey, result);
 		return result;
 	} catch {

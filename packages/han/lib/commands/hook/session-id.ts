@@ -10,19 +10,20 @@ interface SessionPayload {
 }
 
 /**
- * Check if stdin has data available
+ * Check if stdin has data available.
+ * Handles various stdin types: files, FIFOs, pipes, and sockets.
  */
 function hasStdinData(): boolean {
 	try {
+		// TTY means interactive terminal - no piped input
 		if (process.stdin.isTTY) {
 			return false;
 		}
 		const { fstatSync } = require("node:fs");
 		const stat = fstatSync(0);
-		if (stat.isFile() || stat.isFIFO()) {
-			return true;
-		}
-		return process.stdin.readable && process.stdin.readableLength > 0;
+		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
+		// Socket is used when parent process passes data via execSync's input option
+		return stat.isFile() || stat.isFIFO() || stat.isSocket();
 	} catch {
 		return false;
 	}

@@ -48,6 +48,10 @@ export const builder = new SchemaBuilder<{
 			Input: Date | string | number;
 			Output: Date | string | number;
 		};
+		BigInt: {
+			Input: bigint | number | string;
+			Output: bigint | number | string;
+		};
 	};
 }>({
 	plugins: [RelayPlugin],
@@ -104,6 +108,26 @@ builder.scalarType("DateTime", {
 			return new Date(value);
 		}
 		throw new Error("DateTime must be a string or number");
+	},
+});
+
+// Add BigInt scalar for large numbers (token counts can exceed 32-bit Int)
+builder.scalarType("BigInt", {
+	serialize: (value) => {
+		// Serialize as string to avoid JavaScript precision loss
+		return String(value);
+	},
+	parseValue: (value) => {
+		if (typeof value === "bigint") {
+			return value;
+		}
+		if (typeof value === "number") {
+			return BigInt(Math.floor(value));
+		}
+		if (typeof value === "string") {
+			return BigInt(value);
+		}
+		throw new Error("BigInt must be a bigint, number, or string");
 	},
 });
 

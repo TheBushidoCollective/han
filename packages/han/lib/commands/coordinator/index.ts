@@ -13,6 +13,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import type { Command } from "commander";
+import { isDevMode } from "../../shared.ts";
 import {
 	ensureCoordinator,
 	getLogFilePath,
@@ -39,20 +40,43 @@ export function registerCoordinatorCommands(program: Command): void {
 		.description("Start the coordinator daemon")
 		.option("-p, --port <port>", `Port number (default: ${defaultPort})`)
 		.option("--foreground", "Run in foreground (don't daemonize)")
-		.action(async (options: { port?: string; foreground?: boolean }) => {
-			try {
-				const port = options.port
-					? parseInt(options.port, 10)
-					: getCoordinatorPort();
-				await startDaemon({ port, foreground: options.foreground });
-			} catch (error: unknown) {
-				console.error(
-					"Error starting coordinator:",
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(1);
-			}
-		});
+		.option("--daemon", "Force daemon mode even in dev mode")
+		.action(
+			async (options: {
+				port?: string;
+				foreground?: boolean;
+				daemon?: boolean;
+			}) => {
+				try {
+					const port = options.port
+						? parseInt(options.port, 10)
+						: getCoordinatorPort();
+
+					// Auto-foreground in dev mode when run from CLI interactively
+					// Skip if --daemon flag is set or if being spawned by the daemon system
+					const isDaemonSpawn = process.env.HAN_COORDINATOR_DAEMON === "1";
+					const isInteractive = process.stdin.isTTY;
+					const autoForeground =
+						isDevMode() && isInteractive && !isDaemonSpawn && !options.daemon;
+
+					const foreground = options.foreground || autoForeground;
+
+					if (autoForeground && !options.foreground) {
+						console.log(
+							"[coordinator] Dev mode detected, running in foreground",
+						);
+					}
+
+					await startDaemon({ port, foreground });
+				} catch (error: unknown) {
+					console.error(
+						"Error starting coordinator:",
+						error instanceof Error ? error.message : error,
+					);
+					process.exit(1);
+				}
+			},
+		);
 
 	// Top-level stop-coordinator command
 	program

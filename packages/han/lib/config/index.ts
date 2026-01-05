@@ -61,7 +61,6 @@ export {
 	isHooksEnabled,
 	isMemoryEnabled,
 	isMetricsEnabled,
-	isTranscriptFilterEnabled,
 	loadHanConfigFile,
 	type PluginSettings,
 	type PortConfig,

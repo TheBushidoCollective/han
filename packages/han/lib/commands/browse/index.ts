@@ -9,12 +9,13 @@
  * for GraphQL queries and subscriptions.
  */
 
-import { spawn } from "node:child_process";
-import { existsSync, readFileSync, watch } from "node:fs";
+import { type ChildProcess, spawn } from "node:child_process";
+import { existsSync, readFileSync, watch, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { platform } from "node:os";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath, parse } from "node:url";
+import { isDevMode } from "../../shared.ts";
 import {
 	ensureCoordinator,
 	getBrowsePort,
@@ -83,21 +84,95 @@ function getBrowseClientDir(): string {
 }
 
 /**
- * Check if running in development mode
- *
- * Returns true (development) if:
- * - NODE_ENV is "development"
- * - Running from .ts/.tsx source files (not compiled)
- *
- * Returns false (production) if:
- * - NODE_ENV is "production"
+ * Get the han package directory (packages/han)
  */
-function detectDevMode(): boolean {
-	if (process.env.NODE_ENV === "production") return false;
-	if (process.env.NODE_ENV === "development") return true;
-	// Fall back to checking if running from source
-	const mainFile = Bun.main;
-	return mainFile.endsWith(".ts") || mainFile.endsWith(".tsx");
+function getHanPackageDir(): string {
+	// Navigate from packages/han/lib/commands/browse to packages/han
+	return join(__dirname, "..", "..", "..");
+}
+
+/**
+ * Regenerate schema.graphql from GraphQL type definitions
+ * Called when graphql/*.ts files change in dev mode
+ */
+async function regenerateSchema(clientDir: string): Promise<boolean> {
+	const hanDir = getHanPackageDir();
+	const schemaPath = join(clientDir, "schema.graphql");
+
+	try {
+		// Run the schema export script directly
+		const proc = Bun.spawn(["bun", "run", "schema:export"], {
+			cwd: hanDir,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+
+		const output = await new Response(proc.stdout).text();
+		const stderr = await new Response(proc.stderr).text();
+		await proc.exited;
+
+		if (proc.exitCode !== 0) {
+			console.error("[dev] Schema export failed:", stderr);
+			return false;
+		}
+
+		// Write the schema to the client directory
+		writeFileSync(schemaPath, output);
+		console.log("[dev] Regenerated schema.graphql");
+		return true;
+	} catch (error) {
+		console.error("[dev] Failed to regenerate schema:", error);
+		return false;
+	}
+}
+
+/**
+ * Start relay-compiler in watch mode
+ */
+function startRelayCompiler(clientDir: string): ChildProcess | null {
+	try {
+		const child = spawn("npx", ["relay-compiler", "--watch"], {
+			cwd: clientDir,
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env },
+		});
+
+		child.stdout?.on("data", (data: Buffer) => {
+			const output = data.toString().trim();
+			if (output) {
+				// Only log meaningful output, skip empty lines
+				for (const line of output.split("\n")) {
+					if (line.trim()) {
+						console.log(`[relay] ${line}`);
+					}
+				}
+			}
+		});
+
+		child.stderr?.on("data", (data: Buffer) => {
+			const output = data.toString().trim();
+			// Filter out noise but keep important errors
+			if (output && !output.includes("Watching for changes")) {
+				console.error(`[relay] ${output}`);
+			}
+		});
+
+		child.on("error", (err) => {
+			console.error("[relay] Failed to start:", err.message);
+		});
+
+		child.on("exit", (code) => {
+			if (code !== 0 && code !== null) {
+				console.error(`[relay] Exited with code ${code}`);
+			}
+		});
+
+		console.log("[dev] Started relay-compiler --watch");
+		return child;
+	} catch (error) {
+		console.error("[dev] Failed to start relay-compiler:", error);
+		return null;
+	}
 }
 
 /**
@@ -169,7 +244,11 @@ function getMimeType(filePath: string): string {
 export async function browse(options: BrowseOptions = {}): Promise<void> {
 	const { port = getBrowsePort(), autoOpen = true } = options;
 	const coordinatorPort = getCoordinatorPort();
-	const devMode = detectDevMode();
+	const devMode = isDevMode();
+
+	// Skip per-request coordinator checks in test environments
+	// The coordinator is verified at startup; per-request checks can timeout
+	const skipCoordinatorCheck = process.env.HAN_SKIP_COORDINATOR_CHECK === "1";
 
 	const clientDir = getBrowseClientDir();
 
@@ -210,55 +289,78 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 
 	// Build function - always uses Bun.build() with HTML entrypoint
 	async function buildBundle(): Promise<boolean> {
-		const pagesDir = join(clientDir, "src", "pages");
-		const { relayPlugin } = await import(
-			join(clientDir, "build", "relay-plugin.ts")
-		);
-		const { pagesPlugin } = await import(
-			join(clientDir, "build", "pages-plugin.ts")
-		);
-		const { rnwCompatPlugin } = await import(
-			join(clientDir, "build", "rnw-compat-plugin.ts")
-		);
+		try {
+			const pagesDir = join(clientDir, "src", "pages");
 
-		const result = await Bun.build({
-			entrypoints: [join(clientDir, "index.html")],
-			outdir: outDir,
-			target: "browser",
-			splitting: true,
-			minify: !devMode,
-			sourcemap: devMode ? "inline" : "none",
-			publicPath: "/",
-			plugins: [
-				rnwCompatPlugin(),
-				relayPlugin({ devMode }),
-				pagesPlugin({ pagesDir }),
-			],
-			define: {
-				"process.env.NODE_ENV": JSON.stringify(
-					devMode ? "development" : "production",
-				),
-			},
-			loader: {
-				".css": "css",
-				".svg": "file",
-				".png": "file",
-				".jpg": "file",
-				".jpeg": "file",
-				".gif": "file",
-				".woff": "file",
-				".woff2": "file",
-			},
-		});
-
-		if (!result.success) {
-			console.error("[bun] Build failed:");
-			for (const log of result.logs) {
-				console.error("  ", log.message);
+			// Verify client directory exists
+			if (!existsSync(clientDir)) {
+				console.error(`[bun] Client directory not found: ${clientDir}`);
+				return false;
 			}
+
+			const { relayPlugin } = await import(
+				join(clientDir, "build", "relay-plugin.ts")
+			);
+			const { pagesPlugin } = await import(
+				join(clientDir, "build", "pages-plugin.ts")
+			);
+			const { rnwCompatPlugin } = await import(
+				join(clientDir, "build", "rnw-compat-plugin.ts")
+			);
+
+			const result = await Bun.build({
+				entrypoints: [join(clientDir, "index.html")],
+				outdir: outDir,
+				root: clientDir, // Resolve modules from browse-client directory
+				target: "browser",
+				splitting: true,
+				minify: !devMode,
+				sourcemap: devMode ? "inline" : "none",
+				publicPath: "/",
+				plugins: [
+					rnwCompatPlugin(),
+					relayPlugin({ devMode }),
+					pagesPlugin({ pagesDir, clientRoot: clientDir }),
+				],
+				define: {
+					"process.env.NODE_ENV": JSON.stringify(
+						devMode ? "development" : "production",
+					),
+				},
+				loader: {
+					".css": "css",
+					".svg": "file",
+					".png": "file",
+					".jpg": "file",
+					".jpeg": "file",
+					".gif": "file",
+					".woff": "file",
+					".woff2": "file",
+				},
+			});
+
+			if (!result.success) {
+				console.error("[bun] Build failed:");
+				if (result.logs.length === 0) {
+					console.error("  No build logs available - check for syntax errors");
+				}
+				for (const log of result.logs) {
+					console.error("  ", log.level, log.message);
+					if (log.position) {
+						console.error(
+							"    at",
+							log.position.file,
+							`line ${log.position.line}:${log.position.column}`,
+						);
+					}
+				}
+				return false;
+			}
+			return true;
+		} catch (error) {
+			console.error("[bun] Build exception:", error);
 			return false;
 		}
-		return true;
 	}
 
 	// Build on startup
@@ -271,9 +373,47 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		`[bun] Built in ${(performance.now() - buildStart).toFixed(0)}ms`,
 	);
 
-	// Dev mode: watch for changes
-	if (devMode) {
+	// Track child processes for cleanup
+	let relayProcess: ChildProcess | null = null;
+
+	// Check if we're in a test environment - don't start dev watchers in tests
+	// HAN_NO_DEV_WATCHERS is set explicitly for test runs
+	const isTestEnvironment =
+		process.env.HAN_NO_DEV_WATCHERS === "1" ||
+		process.env.CI ||
+		process.env.PLAYWRIGHT_TEST_BASE_URL ||
+		process.env.TEST_WORKER_INDEX !== undefined;
+
+	// Dev mode: watch for changes and start supporting processes
+	// Skip in test environments to avoid interference with automated tests
+	if (devMode && isTestEnvironment) {
+		console.log("[dev] Skipping dev watchers in test environment");
+	} else if (devMode) {
 		const srcDir = join(clientDir, "src");
+		const hanDir = getHanPackageDir();
+		const graphqlDir = join(hanDir, "lib", "graphql");
+
+		// Start relay-compiler in watch mode
+		relayProcess = startRelayCompiler(clientDir);
+
+		// Watch GraphQL type definitions and regenerate schema on change
+		if (existsSync(graphqlDir)) {
+			let schemaTimeout: ReturnType<typeof setTimeout> | null = null;
+			watch(graphqlDir, { recursive: true }, (_event, filename) => {
+				if (!filename || !filename.endsWith(".ts")) return;
+				if (schemaTimeout) clearTimeout(schemaTimeout);
+				schemaTimeout = setTimeout(async () => {
+					console.log(
+						`\n[dev] GraphQL types changed (${filename}), regenerating schema...`,
+					);
+					await regenerateSchema(clientDir);
+					// Relay compiler in watch mode will pick up schema.graphql changes automatically
+				}, 200);
+			});
+			console.log("[dev] Watching GraphQL types for schema changes");
+		}
+
+		// Watch frontend source and rebuild
 		let buildTimeout: ReturnType<typeof setTimeout> | null = null;
 		watch(srcDir, { recursive: true }, (_event, filename) => {
 			if (!filename) return;
@@ -320,7 +460,11 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		}
 
 		// Check if coordinator is running for serving frontend
-		const coordRunning = await isCoordinatorRunning(coordinatorPort);
+		// Skip this check in test environments where coordinator is verified at startup
+		const coordRunning =
+			skipCoordinatorCheck ||
+			coordinatorRunning ||
+			(await isCoordinatorRunning(coordinatorPort));
 
 		// If coordinator is not running, show placeholder page
 		if (!coordRunning && !pathname.startsWith("/api/")) {
@@ -437,8 +581,37 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 	});
 
 	// Setup graceful shutdown
+	let isShuttingDown = false;
 	const shutdown = () => {
+		if (isShuttingDown) return; // Prevent multiple calls
+		isShuttingDown = true;
 		console.log("\nShutting down...");
+
+		// Kill relay-compiler if running
+		if (relayProcess) {
+			try {
+				relayProcess.kill("SIGTERM");
+				// Force kill after 2 seconds if still running
+				setTimeout(() => {
+					if (relayProcess && !relayProcess.killed) {
+						relayProcess.kill("SIGKILL");
+					}
+				}, 2000);
+			} catch {
+				// Process already dead
+			}
+		}
+
+		// Close live reload connections
+		for (const client of liveReloadClients) {
+			try {
+				client.end();
+			} catch {
+				// Ignore errors
+			}
+		}
+		liveReloadClients.clear();
+
 		server.close();
 		process.exit(0);
 	};
@@ -446,8 +619,15 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 	process.on("SIGINT", shutdown);
 	process.on("SIGTERM", shutdown);
 
-	// Keep the process running
-	await new Promise(() => {
-		// This promise never resolves - we wait for signals
+	// Also handle uncaught exceptions gracefully
+	process.on("uncaughtException", (error) => {
+		console.error("[browse] Uncaught exception:", error);
+		shutdown();
 	});
+
+	// Keep the process running using a simple polling approach
+	// This properly responds to shutdown signals
+	while (!isShuttingDown) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+	}
 }

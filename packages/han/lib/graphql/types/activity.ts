@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { listSessions, messages } from "../../../../db/index.ts";
+import { listSessions, messages } from "../../db/index.ts";
 import { builder } from "../builder.ts";
 
 // =============================================================================
@@ -111,14 +111,20 @@ export const DailyActivityType = DailyActivityRef.implement({
 		messageCount: t.exposeInt("messageCount", {
 			description: "Number of messages sent on this day",
 		}),
-		inputTokens: t.exposeInt("inputTokens", {
+		inputTokens: t.field({
+			type: "BigInt",
 			description: "Total input tokens used",
+			resolve: (data) => data.inputTokens,
 		}),
-		outputTokens: t.exposeInt("outputTokens", {
+		outputTokens: t.field({
+			type: "BigInt",
 			description: "Total output tokens generated",
+			resolve: (data) => data.outputTokens,
 		}),
-		cachedTokens: t.exposeInt("cachedTokens", {
+		cachedTokens: t.field({
+			type: "BigInt",
 			description: "Total cached tokens used",
+			resolve: (data) => data.cachedTokens,
 		}),
 		linesAdded: t.exposeInt("linesAdded", {
 			description: "Lines of code added",
@@ -155,17 +161,25 @@ const TokenUsageStatsRef =
 export const TokenUsageStatsType = TokenUsageStatsRef.implement({
 	description: "Aggregate token usage statistics",
 	fields: (t) => ({
-		totalInputTokens: t.exposeInt("totalInputTokens", {
+		totalInputTokens: t.field({
+			type: "BigInt",
 			description: "Total input tokens across all messages",
+			resolve: (data) => data.totalInputTokens,
 		}),
-		totalOutputTokens: t.exposeInt("totalOutputTokens", {
+		totalOutputTokens: t.field({
+			type: "BigInt",
 			description: "Total output tokens generated",
+			resolve: (data) => data.totalOutputTokens,
 		}),
-		totalCachedTokens: t.exposeInt("totalCachedTokens", {
+		totalCachedTokens: t.field({
+			type: "BigInt",
 			description: "Total cached tokens used",
+			resolve: (data) => data.totalCachedTokens,
 		}),
-		totalTokens: t.exposeInt("totalTokens", {
+		totalTokens: t.field({
+			type: "BigInt",
 			description: "Total tokens (input + output)",
+			resolve: (data) => data.totalTokens,
 		}),
 		estimatedCostUsd: t.exposeFloat("estimatedCostUsd", {
 			description: "Estimated cost in USD based on Claude pricing",
@@ -200,8 +214,10 @@ export const ModelTokenEntryType = ModelTokenEntryRef.implement({
 		displayName: t.exposeString("displayName", {
 			description: "Human-readable model name (e.g., Opus 4.5)",
 		}),
-		tokens: t.exposeInt("tokens", {
+		tokens: t.field({
+			type: "BigInt",
 			description: "Token count for this model",
+			resolve: (data) => data.tokens,
 		}),
 	}),
 });
@@ -229,8 +245,10 @@ export const DailyModelTokensType = DailyModelTokensRef.implement({
 			description: "Token usage per model for this day",
 			resolve: (data) => data.models,
 		}),
-		totalTokens: t.exposeInt("totalTokens", {
+		totalTokens: t.field({
+			type: "BigInt",
 			description: "Total tokens across all models for this day",
+			resolve: (data) => data.totalTokens,
 		}),
 	}),
 });
@@ -247,20 +265,30 @@ export const ModelUsageStatsType = ModelUsageStatsRef.implement({
 		displayName: t.exposeString("displayName", {
 			description: "Human-readable model name",
 		}),
-		inputTokens: t.exposeInt("inputTokens", {
+		inputTokens: t.field({
+			type: "BigInt",
 			description: "Total input tokens",
+			resolve: (data) => data.inputTokens,
 		}),
-		outputTokens: t.exposeInt("outputTokens", {
+		outputTokens: t.field({
+			type: "BigInt",
 			description: "Total output tokens",
+			resolve: (data) => data.outputTokens,
 		}),
-		cacheReadTokens: t.exposeInt("cacheReadTokens", {
+		cacheReadTokens: t.field({
+			type: "BigInt",
 			description: "Total cache read tokens",
+			resolve: (data) => data.cacheReadTokens,
 		}),
-		cacheCreationTokens: t.exposeInt("cacheCreationTokens", {
+		cacheCreationTokens: t.field({
+			type: "BigInt",
 			description: "Total cache creation tokens",
+			resolve: (data) => data.cacheCreationTokens,
 		}),
-		totalTokens: t.exposeInt("totalTokens", {
+		totalTokens: t.field({
+			type: "BigInt",
 			description: "Total tokens (input + output)",
+			resolve: (data) => data.totalTokens,
 		}),
 	}),
 });

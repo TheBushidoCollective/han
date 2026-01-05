@@ -1,6 +1,14 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
@@ -25,33 +33,95 @@ async function getSessionFileChanges() {
 
 import { getEventLogger, initEventLogger } from "../../events/logger.ts";
 import { getHanBinary, isCheckpointsEnabled } from "../../han-settings.ts";
-import { getPluginNameFromRoot } from "../../shared.ts";
+import { getClaudeProjectPath } from "../../memory/paths.ts";
+import { getPluginNameFromRoot, isDebugMode } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
 
 /**
- * Check if stdin has data available
- * Returns true for pipes/FIFOs (which is how Claude Code passes context)
+ * Get the han temp directory for stderr output files
+ */
+function getHanStderrDir(): string {
+	const dir = join(tmpdir(), "han-hook-stderr");
+	mkdirSync(dir, { recursive: true });
+	return dir;
+}
+
+/**
+ * Write stderr to a temp file and return the path
+ */
+function writeStderrToFile(
+	hookType: string,
+	hookName: string,
+	pluginName: string,
+	stderr: string,
+): string {
+	const timestamp = Date.now();
+	const sanitizedPlugin = pluginName.replace(/[^a-zA-Z0-9-]/g, "_");
+	const sanitizedHook = hookName.replace(/[^a-zA-Z0-9-]/g, "_");
+	const filename = `${hookType}_${sanitizedPlugin}_${sanitizedHook}_${timestamp}.txt`;
+	const filepath = join(getHanStderrDir(), filename);
+	writeFileSync(filepath, stderr, "utf-8");
+	return filepath;
+}
+
+/**
+ * Infer session ID from the most recently modified Claude transcript file.
+ * This is a fallback when session_id isn't available via stdin.
+ *
+ * Looks for .jsonl files (excluding -han.jsonl) in the Claude project directory
+ * for the current working directory, returns the session ID of the most recent one.
+ */
+function inferSessionIdFromTranscripts(): string | null {
+	try {
+		const projectDir = getClaudeProjectPath(process.cwd());
+		if (!existsSync(projectDir)) {
+			return null;
+		}
+
+		// Find all .jsonl files that aren't han events files
+		const files = readdirSync(projectDir)
+			.filter((f) => f.endsWith(".jsonl") && !f.endsWith("-han.jsonl"))
+			.map((f) => ({
+				name: f,
+				path: join(projectDir, f),
+				mtime: statSync(join(projectDir, f)).mtime.getTime(),
+			}))
+			.sort((a, b) => b.mtime - a.mtime); // Most recent first
+
+		if (files.length === 0) {
+			return null;
+		}
+
+		// Extract session ID from filename (format: {session-id}.jsonl)
+		const mostRecent = files[0];
+		const sessionId = basename(mostRecent.name, ".jsonl");
+
+		// Validate it looks like a session ID (UUID format or similar)
+		if (sessionId && sessionId.length >= 8) {
+			return sessionId;
+		}
+
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Check if stdin has data available.
+ * Handles various stdin types: files, FIFOs, pipes, and sockets.
  */
 function hasStdinData(): boolean {
 	try {
-		// In a TTY, stdin is interactive - never try to read
+		// TTY means interactive terminal - no piped input
 		if (process.stdin.isTTY) {
 			return false;
 		}
-		// Check what type of stdin we have
 		const { fstatSync } = require("node:fs");
 		const stat = fstatSync(0);
-		// Files are safe to read
-		if (stat.isFile()) {
-			return true;
-		}
-		// Pipes/FIFOs are how Claude Code passes hook context
-		// readFileSync will block until EOF, which is fine for our use case
-		if (stat.isFIFO()) {
-			return true;
-		}
-		// For anything else, check if data is already buffered
-		return process.stdin.readable && process.stdin.readableLength > 0;
+		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
+		// Socket is used when parent process passes data via execSync's input option
+		return stat.isFile() || stat.isFIFO() || stat.isSocket();
 	} catch {
 		return false;
 	}
@@ -263,6 +333,15 @@ function executeCommandHook(
 	const pluginName = getPluginNameFromRoot(pluginRoot);
 	const eventLogger = getEventLogger();
 
+	// Log hook run event and capture UUID for correlation with result
+	// Done before try block so hookRunId is accessible in catch block
+	const hookRunId = eventLogger?.logHookRun(
+		pluginName,
+		hookName,
+		process.cwd(),
+		false,
+	);
+
 	try {
 		// Replace ${CLAUDE_PLUGIN_ROOT} with the actual local plugin path
 		const resolvedCommand = command.replace(
@@ -290,9 +369,6 @@ function executeCommandHook(
 			checkpointType = "agent";
 			checkpointId = agentId;
 		}
-
-		// Log hook run event
-		eventLogger?.logHookRun(pluginName, hookName, process.cwd(), false);
 
 		const output = execSync(resolvedCommand, {
 			encoding: "utf-8",
@@ -326,17 +402,39 @@ function executeCommandHook(
 
 		const duration = Date.now() - startTime;
 
-		// Log hook result event (success)
-		eventLogger?.logHookResult(
-			pluginName,
-			hookName,
-			process.cwd(),
-			false,
-			duration,
-			0,
-			true, // success
-			output.trim(),
-		);
+		// Log appropriate event type based on command
+		// bash/cat scripts: log as hook_script
+		// han hook * commands: they log their own specific events (reference, validation, etc.)
+		// Other commands: log as generic hook_result
+		const isBashOrCat =
+			command.startsWith("bash ") || command.startsWith("cat ");
+		const isHanHookCommand = command.startsWith("han hook ");
+
+		if (isBashOrCat) {
+			eventLogger?.logHookScript(
+				pluginName,
+				command,
+				duration,
+				0,
+				true,
+				output.trim(),
+			);
+		} else if (!isHanHookCommand) {
+			// Only log generic result for non-han-hook commands
+			// (han hook commands log their own specific events)
+			eventLogger?.logHookResult(
+				pluginName,
+				hookName,
+				process.cwd(),
+				false,
+				duration,
+				0,
+				true, // success
+				output.trim(),
+				undefined, // error
+				hookRunId, // correlate with hook_run
+			);
+		}
 
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, true, duration, hookType);
@@ -359,18 +457,35 @@ function executeCommandHook(
 		const exitCode = (error as { status?: number })?.status || 1;
 		const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
 
-		// Log hook result event (failure)
-		eventLogger?.logHookResult(
-			pluginName,
-			hookName,
-			process.cwd(),
-			false,
-			duration,
-			exitCode,
-			false, // success
-			undefined, // output
-			stderr,
-		);
+		// Log appropriate event type based on command (failure case)
+		const isBashOrCat =
+			command.startsWith("bash ") || command.startsWith("cat ");
+		const isHanHookCommand = command.startsWith("han hook ");
+
+		if (isBashOrCat) {
+			eventLogger?.logHookScript(
+				pluginName,
+				command,
+				duration,
+				exitCode,
+				false,
+				stderr,
+			);
+		} else if (!isHanHookCommand) {
+			// Only log generic result for non-han-hook commands
+			eventLogger?.logHookResult(
+				pluginName,
+				hookName,
+				process.cwd(),
+				false,
+				duration,
+				exitCode,
+				false, // success
+				undefined, // output
+				stderr,
+				hookRunId, // correlate with hook_run
+			);
+		}
 
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, false, duration, hookType);
@@ -387,7 +502,19 @@ function executeCommandHook(
 			sessionId: getSessionIdFromStdin(),
 		});
 
-		// Command failed - silently skip errors for dispatch
+		// For Stop/SubagentStop hooks, write stderr to file and return link
+		// This prevents large error output from clogging the agent's context
+		if ((hookType === "Stop" || hookType === "SubagentStop") && stderr.trim()) {
+			const stderrFile = writeStderrToFile(
+				hookType,
+				hookName,
+				pluginName,
+				stderr,
+			);
+			return `❌ Hook \`${pluginName}/${hookName}\` failed. Output: ${stderrFile}`;
+		}
+
+		// Other hook types - silently skip errors for dispatch
 		// (we don't want to block the agent on hook failures)
 		return null;
 	}
@@ -581,9 +708,23 @@ async function dispatchHooks(
 	}
 
 	// Initialize event logger for this session
+	// Events are stored alongside Claude transcripts in the project directory
 	const payload = getStdinPayload();
-	if (payload?.session_id) {
-		initEventLogger(payload.session_id);
+	let sessionId = payload?.session_id;
+
+	// Fallback: infer session ID from most recent Claude transcript if not in stdin
+	if (!sessionId) {
+		sessionId = inferSessionIdFromTranscripts() ?? undefined;
+	}
+
+	if (isDebugMode()) {
+		console.error(
+			`[dispatch] hookType=${hookType} session_id=${sessionId || "(none)"} (from stdin: ${!!payload?.session_id})`,
+		);
+	}
+
+	if (sessionId) {
+		initEventLogger(sessionId, {}, process.cwd());
 	}
 
 	// Smart dispatch: Skip Stop hooks if no files were modified

@@ -8,16 +8,21 @@
  * The coordinator process indexes JSONL files into the database.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import {
+	getGitCommonDir,
+	getGitRemoteUrl,
+	getGitRoot,
+	gitWorktreeList,
+} from "../../../han-native";
 import {
 	messages as dbMessages,
 	projects as dbProjects,
 	sessions as dbSessions,
 	type Message,
-} from "../../../db/index.ts";
+} from "../db/index.ts";
 
 /**
  * Check if a path is within a system temp folder
@@ -44,6 +49,7 @@ function isTempFolderPath(path: string): boolean {
  * A message from a Claude Code session
  */
 export interface SessionMessage {
+	id?: string; // The message UUID from JSONL (for sentiment matching)
 	type: string;
 	role?: string;
 	content?: string | Array<{ type: string; text?: string }>;
@@ -55,6 +61,9 @@ export interface SessionMessage {
 	rawJson?: string;
 	// Han event specific fields
 	toolName?: string; // For han_event: contains event subtype (hook_start, etc.)
+	// Agent and parent tracking
+	agentId?: string; // NULL for main conversation, agent ID for agent messages
+	parentId?: string; // For result messages, references the call message id
 }
 
 /**
@@ -351,7 +360,7 @@ function resolvePath(path: string): string {
 }
 
 /**
- * Get all worktrees for a git repository using `git worktree list`
+ * Get all worktrees for a git repository using native gitoxide
  */
 function getWorktreesForRepo(
 	gitRoot: string,
@@ -363,45 +372,16 @@ function getWorktreesForRepo(
 	}
 
 	try {
-		const output = execSync("git worktree list --porcelain", {
-			cwd: gitRoot,
-			encoding: "utf-8",
-			timeout: 5000,
-		});
-
-		const worktrees: Array<{ path: string; branch: string }> = [];
-		let currentWorktree: { path?: string; branch?: string } = {};
-
-		for (const line of output.split("\n")) {
-			if (line.startsWith("worktree ")) {
-				// Resolve the path to handle symlinks
-				currentWorktree.path = resolvePath(line.slice(9));
-			} else if (line.startsWith("branch ")) {
-				currentWorktree.branch = line.slice(7).replace("refs/heads/", "");
-			} else if (line === "") {
-				// Empty line marks end of worktree entry
-				if (currentWorktree.path) {
-					worktrees.push({
-						path: currentWorktree.path,
-						branch: currentWorktree.branch || "detached",
-					});
-				}
-				currentWorktree = {};
-			}
-		}
-
-		// Handle last entry if no trailing newline
-		if (currentWorktree.path) {
-			worktrees.push({
-				path: currentWorktree.path,
-				branch: currentWorktree.branch || "detached",
-			});
-		}
+		const nativeWorktrees = gitWorktreeList(gitRoot);
+		const worktrees = nativeWorktrees.map((wt) => ({
+			path: resolvePath(wt.path),
+			branch: wt.head ?? "detached",
+		}));
 
 		worktreeListCache.set(gitRoot, worktrees);
 		return worktrees;
 	} catch {
-		// Git command failed - maybe not a git repo or git not available
+		// Git operation failed - maybe not a git repo
 		worktreeListCache.set(gitRoot, []);
 		return [];
 	}
@@ -410,7 +390,7 @@ function getWorktreesForRepo(
 /**
  * Find the git repository root for a given path
  * For worktrees, this returns the MAIN repository root, not the worktree path
- * Uses `git rev-parse --git-common-dir` to find the shared .git directory
+ * Uses native gitoxide for git operations
  * Returns null if not a git repository
  */
 function findGitRoot(projectPath: string): string | null {
@@ -429,45 +409,37 @@ function findGitRoot(projectPath: string): string | null {
 		return null;
 	}
 
-	try {
-		// Use git-common-dir to find the main repo's .git directory
-		// This works for both main repos and worktrees
-		const gitCommonDir = execSync("git rev-parse --git-common-dir", {
-			cwd: resolvedPath,
-			encoding: "utf-8",
-			timeout: 5000,
-			stdio: ["pipe", "pipe", "pipe"],
-		}).trim();
-
-		// The common dir is the .git directory of the main repo
-		// For main repo: returns ".git" (relative)
-		// For worktree: returns absolute path like "/path/to/main-repo/.git"
-		let mainRepoPath: string;
-
-		if (gitCommonDir === ".git") {
-			// This is the main repo, use show-toplevel
-			const gitRoot = execSync("git rev-parse --show-toplevel", {
-				cwd: resolvedPath,
-				encoding: "utf-8",
-				timeout: 5000,
-				stdio: ["pipe", "pipe", "pipe"],
-			}).trim();
-			mainRepoPath = gitRoot;
-		} else {
-			// This is a worktree - gitCommonDir is /path/to/main-repo/.git
-			// Remove the trailing /.git to get the main repo path
-			mainRepoPath = gitCommonDir.replace(/\/.git$/, "");
-		}
-
-		// Resolve the path to handle symlinks
-		const resolvedGitRoot = resolvePath(mainRepoPath);
-		gitRootCache.set(resolvedPath, resolvedGitRoot);
-		return resolvedGitRoot;
-	} catch {
-		// Not a git repository
+	// Use native gitoxide to find the main repo's .git directory
+	// This works for both main repos and worktrees
+	const gitCommonDir = getGitCommonDir(resolvedPath);
+	if (!gitCommonDir) {
 		gitRootCache.set(resolvedPath, null);
 		return null;
 	}
+
+	// The common dir is the .git directory of the main repo
+	// For main repo: returns ".git" (relative)
+	// For worktree: returns absolute path like "/path/to/main-repo/.git"
+	let mainRepoPath: string;
+
+	if (gitCommonDir === ".git" || gitCommonDir.endsWith("/.git")) {
+		// This is the main repo or the path ends with .git
+		const gitRoot = getGitRoot(resolvedPath);
+		if (!gitRoot) {
+			gitRootCache.set(resolvedPath, null);
+			return null;
+		}
+		mainRepoPath = gitRoot;
+	} else {
+		// gitCommonDir might be an absolute path to .git directory
+		// Remove the trailing /.git to get the main repo path
+		mainRepoPath = gitCommonDir.replace(/\/.git$/, "");
+	}
+
+	// Resolve the path to handle symlinks
+	const resolvedGitRoot = resolvePath(mainRepoPath);
+	gitRootCache.set(resolvedPath, resolvedGitRoot);
+	return resolvedGitRoot;
 }
 
 /**
@@ -475,16 +447,7 @@ function findGitRoot(projectPath: string): string | null {
  * Returns null if not in a git repo or no remote configured
  */
 function getGitRemote(cwd: string): string | null {
-	try {
-		const result = execSync("git remote get-url origin", {
-			cwd,
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		return result.trim() || null;
-	} catch {
-		return null;
-	}
+	return getGitRemoteUrl(cwd) ?? null;
 }
 
 /**
@@ -611,12 +574,20 @@ function getWorktreeInfo(projectPath: string): WorktreeInfoResult | undefined {
 /**
  * Get messages for a session from the database
  * The coordinator indexes JSONL files into the database
+ *
+ * @param sessionId - Session ID to fetch messages for
+ * @param agentIdFilter - Optional agent filter:
+ *   - undefined/null: All messages (no agent filtering)
+ *   - "": Main conversation only (messages with no agent_id)
+ *   - "abc12345": Specific agent's messages only
  */
 async function getSessionMessages(
 	sessionId: string,
+	agentIdFilter?: string | null,
 ): Promise<SessionMessage[]> {
-	const msgs = await dbMessages.list({ sessionId });
+	const msgs = await dbMessages.list({ sessionId, agentIdFilter });
 	return msgs.map((msg: Message) => ({
+		id: msg.id, // Message UUID for sentiment matching
 		type: msg.messageType,
 		role: msg.role ?? undefined,
 		content: msg.content ?? undefined,
@@ -627,6 +598,8 @@ async function getSessionMessages(
 		version: undefined,
 		rawJson: msg.rawJson ?? undefined,
 		toolName: msg.toolName ?? undefined, // Han event subtype
+		agentId: msg.agentId ?? undefined,
+		parentId: msg.parentId ?? undefined,
 	}));
 }
 
@@ -660,22 +633,32 @@ export async function getSessionMessageCount(
 
 /**
  * Get paginated messages for a session from the database
+ *
+ * @param sessionId - Session ID to fetch messages for
+ * @param offset - Pagination offset
+ * @param limit - Number of messages to return
+ * @param agentIdFilter - Optional agent filter:
+ *   - undefined/null: All messages (no agent filtering)
+ *   - "": Main conversation only (messages with no agent_id)
+ *   - "abc12345": Specific agent's messages only
  */
 export async function getSessionMessagesPaginated(
 	sessionId: string,
 	offset: number,
 	limit: number,
+	agentIdFilter?: string | null,
 ): Promise<{
 	messages: SessionMessage[];
 	totalCount: number;
 	hasMore: boolean;
 }> {
 	const [msgs, totalCount] = await Promise.all([
-		dbMessages.list({ sessionId, offset, limit }),
+		dbMessages.list({ sessionId, offset, limit, agentIdFilter }),
 		dbMessages.count(sessionId),
 	]);
 
 	const messages: SessionMessage[] = msgs.map((msg: Message) => ({
+		id: msg.id, // Message UUID for sentiment matching
 		type: msg.messageType,
 		role: msg.role ?? undefined,
 		content: msg.content ?? undefined,
@@ -686,6 +669,8 @@ export async function getSessionMessagesPaginated(
 		version: undefined,
 		rawJson: msg.rawJson ?? undefined,
 		toolName: msg.toolName ?? undefined, // Han event subtype
+		agentId: msg.agentId ?? undefined,
+		parentId: msg.parentId ?? undefined,
 	}));
 
 	return {
@@ -1257,6 +1242,7 @@ export function getProjectGroups(): ProjectGroup[] {
 export async function listSessionsAsync(
 	params: URLSearchParams,
 ): Promise<PaginatedResponse<SessionListItem>> {
+	const startTime = Date.now();
 	const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10));
 	const pageSize = Math.min(
 		100,
@@ -1267,6 +1253,7 @@ export async function listSessionsAsync(
 	// If projectIdFilter is a folder slug (starts with dash), look up the database project ID
 	let dbProjectId: string | undefined;
 	if (projectIdFilter) {
+		const slugStart = Date.now();
 		if (projectIdFilter.startsWith("-")) {
 			// This is a folder-based slug, look up the project by slug
 			const project = await dbProjects.getBySlug(projectIdFilter);
@@ -1275,22 +1262,35 @@ export async function listSessionsAsync(
 			// Assume it's already a database UUID
 			dbProjectId = projectIdFilter;
 		}
+		console.log(
+			`[listSessionsAsync] Slug lookup took ${Date.now() - slugStart}ms`,
+		);
 	}
 
 	// Query sessions from database
+	// Sessions are sorted by most recent message timestamp (descending) at the DB level
+	const dbListStart = Date.now();
 	const dbSessionList = await dbSessions.list({
 		projectId: dbProjectId,
-		limit: 1000, // Get more for filtering, then paginate
+		limit: 1000, // Reasonable limit - DB handles sorting
 	});
+	console.log(
+		`[listSessionsAsync] dbSessions.list took ${Date.now() - dbListStart}ms, returned ${dbSessionList.length} sessions`,
+	);
 
 	// Batch fetch message counts and timestamps for all sessions (fixes N+1 query problem)
 	const sessionIds = dbSessionList.map((s) => s.id);
+	const batchStart = Date.now();
 	const [messageCounts, timestamps] = await Promise.all([
 		dbMessages.countBatch(sessionIds),
 		dbMessages.timestampsBatch(sessionIds),
 	]);
+	console.log(
+		`[listSessionsAsync] Batch count/timestamp fetch took ${Date.now() - batchStart}ms for ${sessionIds.length} sessions`,
+	);
 
 	// Transform to SessionListItem format
+	const transformStart = Date.now();
 	const data: SessionListItem[] = [];
 
 	for (const session of dbSessionList) {
@@ -1332,19 +1332,19 @@ export async function listSessionsAsync(
 			version: undefined, // TODO: Store in database
 		});
 	}
+	console.log(
+		`[listSessionsAsync] Transform loop took ${Date.now() - transformStart}ms for ${data.length} items`,
+	);
 
-	// Sort by endedAt (most recent first)
-	data.sort((a, b) => {
-		const aTime = a.endedAt || a.startedAt || "";
-		const bTime = b.endedAt || b.startedAt || "";
-		return bTime.localeCompare(aTime);
-	});
+	// Data is already sorted by the database (most recent first)
 
 	// Apply pagination
 	const total = data.length;
 	const startIndex = (page - 1) * pageSize;
 	const endIndex = Math.min(startIndex + pageSize, total);
 	const pageData = data.slice(startIndex, endIndex);
+
+	console.log(`[listSessionsAsync] Total time: ${Date.now() - startTime}ms`);
 
 	return {
 		data: pageData,

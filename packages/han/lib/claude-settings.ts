@@ -1,6 +1,6 @@
-import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { getGitRoot as nativeGetGitRoot } from "../../han-native";
 
 /**
  * Marketplace source configuration
@@ -57,15 +57,7 @@ export function getClaudeConfigDir(): string {
  * Get git root directory for the current working directory
  */
 export function getGitRoot(): string | null {
-	try {
-		const result = execSync("git rev-parse --show-toplevel", {
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		return result.trim();
-	} catch {
-		return null;
-	}
+	return nativeGetGitRoot(process.cwd()) ?? null;
 }
 
 /**

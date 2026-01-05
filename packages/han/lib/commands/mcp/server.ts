@@ -1,5 +1,13 @@
 import { createInterface } from "node:readline";
-import { getOrCreateEventLogger } from "../../events/logger.ts";
+import {
+	getOrCreateEventLogger,
+	initEventLogger,
+} from "../../events/logger.ts";
+import type {
+	TaskComplexity,
+	TaskOutcome,
+	TaskType,
+} from "../../events/types.ts";
 import { isMemoryEnabled } from "../../han-settings.ts";
 import {
 	formatMemoryAgentResult,
@@ -268,6 +276,11 @@ const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				description: {
 					type: "string",
 					description: "Clear description of the task being performed",
@@ -283,7 +296,7 @@ const METRICS_TOOLS: McpTool[] = [
 					description: "Optional estimated complexity of the task",
 				},
 			},
-			required: ["description", "type"],
+			required: ["session_id", "description", "type"],
 		},
 	},
 	{
@@ -300,6 +313,11 @@ const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -313,7 +331,7 @@ const METRICS_TOOLS: McpTool[] = [
 					description: "Progress notes or observations",
 				},
 			},
-			required: ["task_id"],
+			required: ["session_id", "task_id"],
 		},
 	},
 	{
@@ -330,6 +348,11 @@ const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -360,7 +383,7 @@ const METRICS_TOOLS: McpTool[] = [
 					description: "Optional completion notes",
 				},
 			},
-			required: ["task_id", "outcome", "confidence"],
+			required: ["session_id", "task_id", "outcome", "confidence"],
 		},
 	},
 	{
@@ -377,6 +400,11 @@ const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -401,7 +429,7 @@ const METRICS_TOOLS: McpTool[] = [
 					description: "Optional additional notes",
 				},
 			},
-			required: ["task_id", "reason"],
+			required: ["session_id", "task_id", "reason"],
 		},
 	},
 	{
@@ -864,8 +892,33 @@ async function handleToolsCall(params: {
 		try {
 			switch (params.name) {
 				case "start_task": {
+					const sessionId = args.session_id as string;
+					if (!sessionId) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
+								},
+							],
+							isError: true,
+						};
+					}
+
 					const taskParams = args as unknown as StartTaskParams;
 					const result = getStorage().startTask(taskParams);
+
+					// Log Han event for task start (event-sourcing)
+					// Use initEventLogger with the provided session_id
+					const logger = initEventLogger(sessionId, {}, process.cwd());
+					logger.logTaskStart(
+						result.task_id,
+						taskParams.description,
+						taskParams.type as TaskType,
+						taskParams.estimated_complexity as TaskComplexity | undefined,
+					);
+					logger.flush();
+
 					return {
 						content: [
 							{
@@ -877,8 +930,31 @@ async function handleToolsCall(params: {
 				}
 
 				case "update_task": {
+					const sessionId = args.session_id as string;
+					if (!sessionId) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
+								},
+							],
+							isError: true,
+						};
+					}
+
 					const taskParams = args as unknown as UpdateTaskParams;
 					const result = getStorage().updateTask(taskParams);
+
+					// Log Han event for task update (event-sourcing)
+					const logger = initEventLogger(sessionId, {}, process.cwd());
+					logger.logTaskUpdate(
+						taskParams.task_id,
+						taskParams.status,
+						taskParams.notes,
+					);
+					logger.flush();
+
 					return {
 						content: [
 							{
@@ -890,8 +966,36 @@ async function handleToolsCall(params: {
 				}
 
 				case "complete_task": {
+					const sessionId = args.session_id as string;
+					if (!sessionId) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
+								},
+							],
+							isError: true,
+						};
+					}
+
 					const taskParams = args as unknown as CompleteTaskParams;
 					const result = getStorage().completeTask(taskParams);
+
+					// Log Han event for task complete (event-sourcing)
+					const logger = initEventLogger(sessionId, {}, process.cwd());
+					const durationSeconds =
+						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
+					logger.logTaskComplete(
+						taskParams.task_id,
+						taskParams.outcome as TaskOutcome,
+						taskParams.confidence,
+						durationSeconds,
+						taskParams.files_modified,
+						taskParams.tests_added,
+						taskParams.notes,
+					);
+					logger.flush();
 
 					// Record OTEL telemetry for task completion
 					recordTaskCompletion(
@@ -911,8 +1015,35 @@ async function handleToolsCall(params: {
 				}
 
 				case "fail_task": {
+					const sessionId = args.session_id as string;
+					if (!sessionId) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
+								},
+							],
+							isError: true,
+						};
+					}
+
 					const taskParams = args as unknown as FailTaskParams;
 					const result = getStorage().failTask(taskParams);
+
+					// Log Han event for task fail (event-sourcing)
+					const logger = initEventLogger(sessionId, {}, process.cwd());
+					const durationSeconds =
+						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
+					logger.logTaskFail(
+						taskParams.task_id,
+						taskParams.reason,
+						durationSeconds,
+						taskParams.confidence,
+						taskParams.attempted_solutions,
+						taskParams.notes,
+					);
+					logger.flush();
 
 					// Record OTEL telemetry for task failure
 					recordTaskCompletion(

@@ -14,11 +14,7 @@ import {
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
 } from "../config/claude-settings.ts";
-import {
-	type CheckpointInput,
-	type Checkpoint as DbCheckpoint,
-	checkpoints as dbCheckpoints,
-} from "../db/index.ts";
+// NOTE: Database-backed checkpoints removed - async functions now return defaults
 import {
 	buildManifest,
 	type CacheManifest,
@@ -323,176 +319,84 @@ export function readBlob(hash: string): Buffer | null {
 }
 
 // ============================================================================
-// Database-backed Checkpoint Functions (Async)
+// Database-backed Checkpoint Functions (DEPRECATED - database removed)
+// These functions now return safe defaults instead of using SQLite
 // ============================================================================
 
 /**
+ * Stub checkpoint record type for compatibility
+ * @deprecated Database-backed checkpoints have been removed
+ */
+interface StubCheckpoint {
+	id: string;
+	sessionId: string;
+	projectPath: string;
+	filePath: string;
+	fileHash: string;
+	blobPath: string;
+	createdAt: string;
+}
+
+/**
  * Capture a checkpoint of current file state (async, database-backed)
- * @param sessionId - Session UUID
- * @param patterns - Glob patterns to match files
- * @returns Array of created checkpoint records
+ * @deprecated Database-backed checkpoints removed - returns empty array
  */
 export async function captureCheckpointAsync(
-	sessionId: string,
-	patterns: string[],
-): Promise<DbCheckpoint[]> {
-	const projectRoot = getProjectRoot();
-	const results: DbCheckpoint[] = [];
-
-	try {
-		// Find files matching patterns
-		const files = findFilesWithGlob(projectRoot, patterns);
-
-		for (const filePath of files) {
-			// Store file content as blob
-			const absolutePath = join(projectRoot, filePath);
-			const blobResult = storeBlob(absolutePath);
-			if (!blobResult) {
-				continue;
-			}
-
-			// Create checkpoint record in database
-			const input: CheckpointInput = {
-				sessionId,
-				projectPath: projectRoot,
-				filePath,
-				fileHash: blobResult.hash,
-				blobPath: blobResult.blobPath,
-			};
-
-			const checkpoint = await dbCheckpoints.create(input);
-			results.push(checkpoint);
-		}
-
-		return results;
-	} catch {
-		return results;
-	}
+	_sessionId: string,
+	_patterns: string[],
+): Promise<StubCheckpoint[]> {
+	// Database-backed checkpoints removed - no-op
+	return [];
 }
 
 /**
  * Get a checkpoint for a specific file (async, database-backed)
- * @param sessionId - Session UUID
- * @param filePath - Relative file path
- * @returns Checkpoint record or null
+ * @deprecated Database-backed checkpoints removed - returns null
  */
 export async function getCheckpointAsync(
-	sessionId: string,
-	filePath: string,
-): Promise<DbCheckpoint | null> {
-	return dbCheckpoints.get(sessionId, filePath);
+	_sessionId: string,
+	_filePath: string,
+): Promise<StubCheckpoint | null> {
+	// Database-backed checkpoints removed - always return null
+	return null;
 }
 
 /**
  * List all checkpoints for a session (async, database-backed)
- * @param sessionId - Session UUID
- * @returns Array of checkpoint records
+ * @deprecated Database-backed checkpoints removed - returns empty array
  */
 export async function listCheckpointsAsync(
-	sessionId: string,
-): Promise<DbCheckpoint[]> {
-	return dbCheckpoints.list(sessionId);
+	_sessionId: string,
+): Promise<StubCheckpoint[]> {
+	// Database-backed checkpoints removed - always return empty
+	return [];
 }
 
 /**
  * Restore a file from checkpoint (async, database-backed)
- * @param sessionId - Session UUID
- * @param filePath - Relative file path to restore
- * @returns true if successful, false otherwise
+ * @deprecated Database-backed checkpoints removed - returns false
  */
 export async function restoreFromCheckpointAsync(
-	sessionId: string,
-	filePath: string,
+	_sessionId: string,
+	_filePath: string,
 ): Promise<boolean> {
-	try {
-		const checkpoint = await dbCheckpoints.get(sessionId, filePath);
-		if (!checkpoint) {
-			return false;
-		}
-
-		// Read blob content
-		const content = readBlob(checkpoint.fileHash);
-		if (!content) {
-			return false;
-		}
-
-		// Restore file
-		const projectRoot = getProjectRoot();
-		const absolutePath = join(projectRoot, filePath);
-		const dir = dirname(absolutePath);
-		if (!existsSync(dir)) {
-			mkdirSync(dir, { recursive: true });
-		}
-		writeFileSync(absolutePath, content);
-
-		return true;
-	} catch {
-		return false;
-	}
+	// Database-backed checkpoints removed - cannot restore
+	return false;
 }
 
 /**
  * Check if files have changed since checkpoint (async, database-backed)
- * @param sessionId - Session UUID
- * @param patterns - Glob patterns to check
- * @param directory - Optional directory to scope the check (defaults to project root)
- * @returns true if any files have changed
+ * @deprecated Database-backed checkpoints removed - always returns true
+ * This means hooks will always run (safe fallback)
  */
 export async function hasChangedSinceCheckpointAsync(
-	sessionId: string,
-	patterns: string[],
-	directory?: string,
+	_sessionId: string,
+	_patterns: string[],
+	_directory?: string,
 ): Promise<boolean> {
-	try {
-		const projectRoot = getProjectRoot();
-		const checkDir = directory || projectRoot;
-		const checkpoints = await dbCheckpoints.list(sessionId);
-
-		if (checkpoints.length === 0) {
-			// No checkpoints = always changed
-			return true;
-		}
-
-		// Calculate relative path from project root to directory
-		// If directory=/project/packages/core and projectRoot=/project
-		// then relativePath=packages/core
-		const relativePath = relative(projectRoot, checkDir);
-		const prefix = relativePath ? `${relativePath}/` : "";
-
-		// Build lookup map of file -> hash from checkpoints, filtering to directory
-		const checkpointHashes = new Map<string, string>();
-		for (const cp of checkpoints) {
-			if (relativePath === "" || cp.filePath.startsWith(prefix)) {
-				// Strip the prefix to get path relative to directory
-				const pathInDir =
-					relativePath === "" ? cp.filePath : cp.filePath.slice(prefix.length);
-				checkpointHashes.set(pathInDir, cp.fileHash);
-			}
-		}
-
-		// Find current files matching patterns in the specific directory
-		const currentFiles = findFilesWithGlob(checkDir, patterns);
-		const currentManifest = buildManifest(currentFiles, checkDir);
-
-		// Check for changes
-		for (const [path, hash] of Object.entries(currentManifest)) {
-			const checkpointHash = checkpointHashes.get(path);
-			if (checkpointHash !== hash) {
-				return true;
-			}
-		}
-
-		// Check for deleted files
-		for (const path of checkpointHashes.keys()) {
-			if (!(path in currentManifest)) {
-				return true;
-			}
-		}
-
-		return false;
-	} catch {
-		return true;
-	}
+	// Database-backed checkpoints removed - treat as always changed
+	// This ensures hooks run when they should (safe fallback)
+	return true;
 }
 
 // ============================================================================

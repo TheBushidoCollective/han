@@ -5,7 +5,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { type CacheManifest, getCacheDir } from "../../../hooks/index.ts";
+import { type CacheManifest, getCacheDir } from "../hooks/index.ts";
 
 export interface CacheEntry {
 	pluginName: string;

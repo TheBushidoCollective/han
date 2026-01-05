@@ -4,11 +4,10 @@
  * Represents task metrics and performance data from the metrics system.
  */
 
-import { JsonlMetricsStorage } from "../../../../metrics/jsonl-storage.ts";
-import type {
-	MetricsResult,
-	Task as TaskData,
-} from "../../../../metrics/types.ts";
+import { getDbPath } from "../../db/index.ts";
+import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
+import type { MetricsResult, Task as TaskData } from "../../metrics/types.ts";
+import { tryGetNativeModule } from "../../native.ts";
 import { builder } from "../builder.ts";
 
 /**
@@ -271,6 +270,7 @@ export function getMetricsStorage(): JsonlMetricsStorage {
 
 /**
  * Helper to query metrics
+ * Combines JSONL-based task metrics with native database frustration metrics
  */
 export function queryMetrics(period?: "DAY" | "WEEK" | "MONTH"): MetricsResult {
 	const storage = getMetricsStorage();
@@ -279,7 +279,38 @@ export function queryMetrics(period?: "DAY" | "WEEK" | "MONTH"): MetricsResult {
 		WEEK: "week" as const,
 		MONTH: "month" as const,
 	};
-	return storage.queryMetrics({
+	const jsonlResult = storage.queryMetrics({
 		period: period ? periodMap[period] : undefined,
 	});
+
+	// Try to get frustration metrics from native database
+	const native = tryGetNativeModule();
+	if (native) {
+		try {
+			const dbPath = getDbPath();
+			const nativePeriodMap = {
+				DAY: "day" as const,
+				WEEK: "week" as const,
+				MONTH: "month" as const,
+			};
+			const frustrationMetrics = native.queryFrustrationMetrics(
+				dbPath,
+				period ? nativePeriodMap[period] : undefined,
+				jsonlResult.total_tasks,
+			);
+			// Override JSONL frustration data with native database data
+			return {
+				...jsonlResult,
+				significant_frustrations: frustrationMetrics.significantFrustrations,
+				significant_frustration_rate:
+					frustrationMetrics.significantFrustrationRate,
+				total_frustrations: frustrationMetrics.totalFrustrations,
+				frustration_rate: frustrationMetrics.frustrationRate,
+			};
+		} catch {
+			// Fall back to JSONL data if native fails
+		}
+	}
+
+	return jsonlResult;
 }

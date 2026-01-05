@@ -2,7 +2,7 @@
  * Unit tests for transcript-filter.ts
  * Tests transcript-based session filtering for stop hooks
  */
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	existsSync,
 	mkdirSync,
@@ -23,7 +23,20 @@ import {
 	HAN_FILES_TEMPLATE,
 	hasSessionModifiedPatternFiles,
 } from "../lib/hooks/index.ts";
-import { pathToSlug } from "../lib/memory/transcript-search.ts";
+import {
+	pathToSlug,
+	type TranscriptMessage,
+} from "../lib/memory/transcript-search.ts";
+
+// Mock parseTranscript to avoid database dependency in tests
+// The actual implementation queries SQLite, but tests work with mock data
+const mockParseTranscript = mock(() =>
+	Promise.resolve([] as TranscriptMessage[]),
+);
+mock.module("../lib/memory/transcript-search.ts", () => ({
+	parseTranscript: mockParseTranscript,
+	pathToSlug,
+}));
 
 // Store original environment
 const originalEnv = { ...process.env };
@@ -48,6 +61,12 @@ function setup(): void {
 
 	// Clear any cached transcript data
 	clearTranscriptCache();
+
+	// Reset mock to default (empty array)
+	mockParseTranscript.mockReset();
+	mockParseTranscript.mockImplementation(() =>
+		Promise.resolve([] as TranscriptMessage[]),
+	);
 }
 
 function teardown(): void {
@@ -74,7 +93,10 @@ function teardown(): void {
 }
 
 /**
- * Create a mock transcript JSONL file with file operations
+ * Create a mock transcript file and set up the mock to return appropriate messages
+ *
+ * Creates an empty JSONL file so findSessionTranscript() finds it,
+ * then configures the mock to return messages with the specified operations.
  */
 function createMockTranscript(
 	projectPath: string,
@@ -88,23 +110,24 @@ function createMockTranscript(
 
 	const transcriptPath = join(projectTranscriptDir, `${sessionId}.jsonl`);
 
-	// Create transcript entries with file operations in the content
-	const lines: string[] = [];
+	// Create an empty file so findSessionTranscript() can find it
+	writeFileSync(transcriptPath, "");
+
+	// Build transcript messages that the native extractFileOperations will parse
+	const messages: TranscriptMessage[] = [];
 
 	// Add a user message first
-	lines.push(
-		JSON.stringify({
-			type: "user",
-			sessionId,
-			timestamp: new Date().toISOString(),
-			message: {
-				role: "user",
-				content: "Help me modify some files",
-			},
-		}),
-	);
+	messages.push({
+		sessionId,
+		projectSlug,
+		messageId: "user-1",
+		timestamp: new Date().toISOString(),
+		type: "user",
+		content: "Help me modify some files",
+	});
 
 	// Add assistant messages with file operations
+	// The native extractFileOperations looks for patterns like "Writing to X" and "Editing X"
 	for (const op of operations) {
 		let content = "";
 		switch (op.operation) {
@@ -119,20 +142,19 @@ function createMockTranscript(
 				break;
 		}
 
-		lines.push(
-			JSON.stringify({
-				type: "assistant",
-				sessionId,
-				timestamp: new Date().toISOString(),
-				message: {
-					role: "assistant",
-					content,
-				},
-			}),
-		);
+		messages.push({
+			sessionId,
+			projectSlug,
+			messageId: `assistant-${op.path}`,
+			timestamp: new Date().toISOString(),
+			type: "assistant",
+			content,
+		});
 	}
 
-	writeFileSync(transcriptPath, `${lines.join("\n")}\n`);
+	// Configure the mock to return these messages
+	mockParseTranscript.mockImplementation(() => Promise.resolve(messages));
+
 	return transcriptPath;
 }
 
@@ -146,8 +168,8 @@ describe("transcript-filter.ts", () => {
 	});
 
 	describe("getTranscriptModifiedFiles", () => {
-		test("returns success=false when transcript not found", () => {
-			const result = getTranscriptModifiedFiles(
+		test("returns success=false when transcript not found", async () => {
+			const result = await getTranscriptModifiedFiles(
 				"session",
 				"nonexistent-session-id",
 				projectDir,
@@ -157,13 +179,13 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toEqual([]);
 		});
 
-		test("extracts write operations from transcript", () => {
+		test("extracts write operations from transcript", async () => {
 			createMockTranscript(projectDir, "test-session-1", [
 				{ path: "src/main.ts", operation: "write" },
 				{ path: "src/utils.ts", operation: "write" },
 			]);
 
-			const result = getTranscriptModifiedFiles(
+			const result = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-1",
 				projectDir,
@@ -175,12 +197,12 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified.length).toBe(2);
 		});
 
-		test("extracts edit operations from transcript", () => {
+		test("extracts edit operations from transcript", async () => {
 			createMockTranscript(projectDir, "test-session-2", [
 				{ path: "src/config.ts", operation: "edit" },
 			]);
 
-			const result = getTranscriptModifiedFiles(
+			const result = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-2",
 				projectDir,
@@ -191,13 +213,13 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified.length).toBe(1);
 		});
 
-		test("ignores read operations", () => {
+		test("ignores read operations", async () => {
 			createMockTranscript(projectDir, "test-session-3", [
 				{ path: "src/read-only.ts", operation: "read" },
 				{ path: "src/modified.ts", operation: "edit" },
 			]);
 
-			const result = getTranscriptModifiedFiles(
+			const result = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-3",
 				projectDir,
@@ -208,13 +230,13 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toContain("src/modified.ts");
 		});
 
-		test("combines write and edit operations in allModified", () => {
+		test("combines write and edit operations in allModified", async () => {
 			createMockTranscript(projectDir, "test-session-4", [
 				{ path: "src/new-file.ts", operation: "write" },
 				{ path: "src/existing.ts", operation: "edit" },
 			]);
 
-			const result = getTranscriptModifiedFiles(
+			const result = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-4",
 				projectDir,
@@ -226,17 +248,17 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toContain("src/existing.ts");
 		});
 
-		test("caches results for same session", () => {
+		test("caches results for same session", async () => {
 			createMockTranscript(projectDir, "test-session-cache", [
 				{ path: "src/cached.ts", operation: "write" },
 			]);
 
-			const result1 = getTranscriptModifiedFiles(
+			const result1 = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-cache",
 				projectDir,
 			);
-			const result2 = getTranscriptModifiedFiles(
+			const result2 = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-cache",
 				projectDir,
@@ -245,7 +267,7 @@ describe("transcript-filter.ts", () => {
 			expect(result1).toBe(result2); // Same object reference (cached)
 		});
 
-		test("handles agent type transcripts", () => {
+		test("handles agent type transcripts", async () => {
 			// Create agent transcript with agent- prefix
 			const projectsDir = getProjectsBaseDir();
 			const projectSlug = pathToSlug(projectDir);
@@ -256,20 +278,24 @@ describe("transcript-filter.ts", () => {
 				projectTranscriptDir,
 				"agent-test-agent-id.jsonl",
 			);
-			writeFileSync(
-				agentTranscriptPath,
-				`${JSON.stringify({
-					type: "assistant",
-					sessionId: "test-agent-id",
-					timestamp: new Date().toISOString(),
-					message: {
-						role: "assistant",
+			// Create empty file so findAgentTranscript() finds it
+			writeFileSync(agentTranscriptPath, "");
+
+			// Configure mock to return messages with write operation
+			mockParseTranscript.mockImplementation(() =>
+				Promise.resolve([
+					{
+						sessionId: "test-agent-id",
+						projectSlug,
+						messageId: "assistant-1",
+						timestamp: new Date().toISOString(),
+						type: "assistant" as const,
 						content: "Writing to agent-file.ts",
 					},
-				})}\n`,
+				]),
 			);
 
-			const result = getTranscriptModifiedFiles(
+			const result = await getTranscriptModifiedFiles(
 				"agent",
 				"test-agent-id",
 				projectDir,
@@ -360,13 +386,13 @@ describe("transcript-filter.ts", () => {
 	});
 
 	describe("clearTranscriptCache", () => {
-		test("clears cached transcript data", () => {
+		test("clears cached transcript data", async () => {
 			createMockTranscript(projectDir, "test-session-clear", [
 				{ path: "src/file.ts", operation: "write" },
 			]);
 
 			// First call - populate cache
-			const result1 = getTranscriptModifiedFiles(
+			const result1 = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-clear",
 				projectDir,
@@ -376,7 +402,7 @@ describe("transcript-filter.ts", () => {
 			clearTranscriptCache();
 
 			// Second call - should not be same object (cache was cleared)
-			const result2 = getTranscriptModifiedFiles(
+			const result2 = await getTranscriptModifiedFiles(
 				"session",
 				"test-session-clear",
 				projectDir,

@@ -1,4 +1,6 @@
 import { Command } from "commander";
+import { getOrCreateEventLogger } from "../../../events/logger.ts";
+import { getPluginNameFromRoot } from "../../../shared.ts";
 
 export function createReferenceCommand(): Command {
 	const command = new Command("reference");
@@ -14,18 +16,40 @@ export function createReferenceCommand(): Command {
 			"Mark file as required reading with given reason (supports multi-word)",
 		)
 		.action((file: string, options: { mustReadFirst?: string[] }) => {
+			const startTime = Date.now();
 			// Get the plugin root from environment variable set by hook dispatcher
 			const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || "";
+			const pluginName = getPluginNameFromRoot(pluginRoot);
+			const filePath = `${pluginRoot}/${file}`;
 
 			if (options.mustReadFirst) {
 				// Join variadic args back into a single reason string
 				const reason = options.mustReadFirst.join(" ");
-				const output = `<must-read-first reason="${reason}">${pluginRoot}/${file}</must-read-first>`;
+				const output = `<must-read-first reason="${reason}">${filePath}</must-read-first>`;
 				console.log(output);
-				// TODO: Track metrics for must-read-first references
+
+				// Log hook reference event
+				const eventLogger = getOrCreateEventLogger();
+				eventLogger?.logHookReference(
+					pluginName,
+					filePath,
+					reason,
+					true,
+					Date.now() - startTime,
+				);
 			} else {
 				// Future: support other reference types
-				console.log(`${pluginRoot}/${file}`);
+				console.log(filePath);
+
+				// Log hook reference event (no reason)
+				const eventLogger = getOrCreateEventLogger();
+				eventLogger?.logHookReference(
+					pluginName,
+					filePath,
+					undefined,
+					true,
+					Date.now() - startTime,
+				);
 			}
 		});
 

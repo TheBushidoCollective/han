@@ -154,16 +154,20 @@ export const HookStatsType = HookStatsRef.implement({
 /**
  * Query helpers
  */
-export function queryHookExecutionsForSession(
+export async function queryHookExecutionsForSession(
 	sessionId: string,
-): HookExecution[] {
+): Promise<HookExecution[]> {
 	return getHookExecutionsForSession(sessionId);
 }
 
-export function queryRecentHookExecutions(limit?: number): HookExecution[] {
+export async function queryRecentHookExecutions(
+	limit?: number,
+): Promise<HookExecution[]> {
 	return getRecentHookExecutions(limit);
 }
 
-export function querySessionHookStats(sessionId: string): HookStatsData {
+export async function querySessionHookStats(
+	sessionId: string,
+): Promise<HookStatsData> {
 	return getSessionHookStats(sessionId);
 }

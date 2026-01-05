@@ -7,8 +7,8 @@
 
 import { makeServer } from "graphql-ws";
 import { createYoga } from "graphql-yoga";
-import { publishMemoryEvent } from "./graphql/pubsub.ts";
-import { schema } from "./graphql/schema.ts";
+import { publishMemoryEvent } from "../../graphql/pubsub.ts";
+import { schema } from "../../graphql/schema.ts";
 import type { BrowseServerResult, MemoryEvent, SSEClient } from "./types.ts";
 
 /**

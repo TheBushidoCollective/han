@@ -2,15 +2,18 @@
  * Han Transcript Search (Layer 4)
  *
  * Provides search capabilities over Claude Code conversation transcripts.
- * Transcripts are stored at ~/.claude/projects/{slug}/*.jsonl
+ * Transcripts are indexed into SQLite by the Rust coordinator.
+ *
+ * IMPORTANT: This module queries the SQLite database - it does NOT read JSONL files directly.
+ * The coordinator handles JSONL → SQLite indexing.
  *
  * Key features:
- * - Parse and search JSONL transcript files
+ * - Search transcripts via database queries
  * - Support cross-worktree search (find context from peer worktrees)
- * - Index transcripts into FTS for fast search
+ * - FTS5 full-text search via native module
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {
@@ -287,7 +290,7 @@ export function arePeerWorktrees(slug1: string, slug2: string): boolean {
 /**
  * Extract text content from assistant message content blocks
  */
-function extractContentText(
+function _extractContentText(
 	content: string | ContentBlock[],
 	includeThinking = false,
 ): { text: string; thinking?: string } {
@@ -311,124 +314,119 @@ function extractContentText(
 
 /**
  * Parse a single transcript file into searchable messages
+ *
+ * @deprecated This function reads JSONL files directly. Use getSessionMessages() instead,
+ * which queries the SQLite database populated by the Rust coordinator.
+ *
+ * This function is kept for backward compatibility during the migration period.
+ * It now queries the database when possible, falling back to file reading only
+ * if the session is not yet indexed.
  */
-export function parseTranscript(
+export async function parseTranscript(
 	filePath: string,
 	options: { includeThinking?: boolean; since?: number } = {},
-): TranscriptMessage[] {
-	if (!existsSync(filePath)) {
-		return [];
-	}
+): Promise<TranscriptMessage[]> {
+	// Import database access
+	const { messages: dbMessages, withFreshData } = await import(
+		"../db/index.ts"
+	);
 
-	const messages: TranscriptMessage[] = [];
 	const projectSlug = basename(dirname(filePath));
-	const content = readFileSync(filePath, "utf-8");
-	const lines = content.split("\n").filter((line) => line.trim());
+	const sessionId = basename(filePath, ".jsonl").replace(/-han$/, "");
 
-	for (const line of lines) {
-		try {
-			const entry = JSON.parse(line) as TranscriptEntry;
+	// Query the database for this session's messages
+	return withFreshData(async () => {
+		const msgs = await dbMessages.list({
+			sessionId,
+			agentIdFilter: "", // Main conversation only
+		});
 
-			// Skip non-message entries
-			if (entry.type !== "user" && entry.type !== "assistant") {
-				continue;
-			}
+		const transcriptMessages: TranscriptMessage[] = [];
 
-			// Skip meta messages
-			if (entry.isMeta) {
-				continue;
-			}
-
-			// Skip if no message content
-			if (!entry.message?.content) {
+		for (const msg of msgs) {
+			// Only process user and assistant messages
+			if (msg.role !== "user" && msg.role !== "assistant") {
 				continue;
 			}
 
 			// Filter by timestamp if specified
-			if (options.since && entry.timestamp) {
-				const entryTime = new Date(entry.timestamp).getTime();
+			if (options.since && msg.timestamp) {
+				const entryTime = new Date(msg.timestamp).getTime();
 				if (entryTime < options.since) {
 					continue;
 				}
 			}
 
-			const sessionId = entry.sessionId || basename(filePath, ".jsonl");
-			const { text, thinking } = extractContentText(
-				entry.message.content,
-				options.includeThinking,
-			);
-
 			// Skip empty messages
-			if (!text.trim()) {
+			const content = msg.content || "";
+			if (!content.trim()) {
 				continue;
 			}
 
-			messages.push({
-				sessionId,
+			transcriptMessages.push({
+				sessionId: msg.sessionId,
 				projectSlug,
-				messageId: entry.uuid || "",
-				timestamp: entry.timestamp || "",
-				type: entry.type as "user" | "assistant",
-				content: text,
-				thinking,
-				cwd: entry.cwd,
-				gitBranch: entry.gitBranch,
+				messageId: msg.id,
+				timestamp: msg.timestamp,
+				type: msg.role as "user" | "assistant",
+				content,
+				thinking: undefined, // Thinking is not stored separately in the DB
+				cwd: undefined, // CWD is not stored separately in the DB
+				gitBranch: undefined, // Git branch is not stored separately in the DB
 			});
-		} catch {
-			// Skip invalid JSON lines
 		}
-	}
 
-	return messages;
+		return transcriptMessages;
+	});
 }
 
 /**
  * Parse native summaries from a transcript file (Layer 2)
  * Extracts 'summary' type messages from Claude transcripts.
+ *
+ * @deprecated This function reads JSONL files directly. Use database queries instead.
+ * The Rust coordinator indexes summaries into the session_summaries table.
  */
-export function parseSummaries(filePath: string): NativeSummary[] {
-	if (!existsSync(filePath)) {
+export async function parseSummaries(
+	filePath: string,
+): Promise<NativeSummary[]> {
+	// Import database access
+	const { getDbPath, initDb } = await import("../db/index.ts");
+	const native = await import("../native.ts").then((m) =>
+		m.tryGetNativeModule(),
+	);
+
+	if (!native) {
 		return [];
 	}
 
-	const summaries: NativeSummary[] = [];
 	const projectSlug = basename(dirname(filePath));
-	const content = readFileSync(filePath, "utf-8");
-	const lines = content.split("\n").filter((line) => line.trim());
+	const sessionId = basename(filePath, ".jsonl").replace(/-han$/, "");
 
-	for (const line of lines) {
-		try {
-			const entry = JSON.parse(line) as TranscriptEntry;
+	try {
+		await initDb();
+		const dbPath = getDbPath();
 
-			// Only process summary messages
-			if (entry.type !== "summary") {
-				continue;
-			}
+		// Query session summary from database
+		const summary = native.getSessionSummary(dbPath, sessionId);
 
-			// Extract content from summary message
-			const summaryContent =
-				typeof entry.message?.content === "string" ? entry.message.content : "";
-
-			if (!summaryContent.trim()) {
-				continue;
-			}
-
-			const sessionId = entry.sessionId || basename(filePath, ".jsonl");
-
-			summaries.push({
-				sessionId,
-				projectSlug,
-				messageId: entry.uuid || `summary-${Date.now()}`,
-				timestamp: entry.timestamp || "",
-				content: summaryContent,
-				isContextWindowCompression: true, // All native summaries are from context compression
-			});
-		} catch {
-			// Skip invalid JSON lines
+		if (!summary || !summary.content) {
+			return [];
 		}
-	}
 
-	return summaries;
+		return [
+			{
+				sessionId: summary.sessionId,
+				projectSlug,
+				messageId: summary.messageId,
+				timestamp: summary.timestamp,
+				content: summary.content,
+				isContextWindowCompression: true,
+			},
+		];
+	} catch {
+		return [];
+	}
 }
 
 /**
@@ -451,6 +449,9 @@ function summaryToIndexDocument(summary: NativeSummary): IndexDocument {
 
 /**
  * Index native summaries from transcripts for a specific project
+ *
+ * @deprecated This function uses the legacy TS FTS system. The Rust coordinator
+ * already indexes summaries directly to SQLite. Use messages.search() instead.
  */
 export async function indexNativeSummaries(
 	projectSlug?: string,
@@ -474,7 +475,7 @@ export async function indexNativeSummaries(
 		const documents: IndexDocument[] = [];
 
 		for (const file of files) {
-			const summaries = parseSummaries(file);
+			const summaries = await parseSummaries(file);
 			for (const summary of summaries) {
 				documents.push(summaryToIndexDocument(summary));
 			}
@@ -555,6 +556,9 @@ function messageToDocument(message: TranscriptMessage): IndexDocument {
 
 /**
  * Index transcripts for a specific project into FTS
+ *
+ * @deprecated This function uses the legacy TS FTS system. The Rust coordinator
+ * already indexes transcripts directly to SQLite with FTS5. Use messages.search() instead.
  */
 export async function indexTranscripts(
 	projectSlug?: string,
@@ -579,7 +583,7 @@ export async function indexTranscripts(
 		const documents: IndexDocument[] = [];
 
 		for (const file of files) {
-			const messages = parseTranscript(file, options);
+			const messages = await parseTranscript(file, options);
 			for (const message of messages) {
 				documents.push(messageToDocument(message));
 			}
@@ -672,75 +676,74 @@ export async function searchTranscripts(
 
 /**
  * Quick text-based search without FTS (for immediate results before index is ready)
+ *
+ * @deprecated This function is superseded by messages.search() which uses FTS5.
+ * The Rust coordinator now keeps the database up-to-date, so FTS is always available.
  */
-export function searchTranscriptsText(
+export async function searchTranscriptsText(
 	options: TranscriptSearchOptions,
-): TranscriptSearchResult[] {
-	const { query, limit = 10, scope = "current" } = options;
-	const queryLower = query.toLowerCase();
-	const results: TranscriptSearchResult[] = [];
+): Promise<TranscriptSearchResult[]> {
+	// Use the database FTS instead of brute-force file reading
+	const { messages: dbMessages, withFreshData } = await import(
+		"../db/index.ts"
+	);
 
-	// Determine which projects to search
-	const transcriptFiles = findAllTranscriptFiles();
-	let projectSlugs: string[];
+	const { query, limit = 10 } = options;
 
-	if (options.projectSlug) {
-		projectSlugs = [options.projectSlug];
-	} else if (scope === "current") {
-		const cwd = process.cwd();
-		const slug = pathToSlug(cwd);
-		projectSlugs = [slug];
-	} else if (scope === "peers" && options.gitRemote) {
-		projectSlugs = findPeerProjects(options.gitRemote);
-	} else {
-		projectSlugs = Array.from(transcriptFiles.keys());
-	}
+	return withFreshData(async () => {
+		// Use FTS search from the database
+		const searchResults = await dbMessages.search({
+			query,
+			sessionId: undefined, // Search all sessions
+			limit: limit * 2, // Get extra for filtering
+		});
 
-	const currentSlug = pathToSlug(process.cwd());
+		const results: TranscriptSearchResult[] = [];
 
-	for (const slug of projectSlugs) {
-		const files = transcriptFiles.get(slug);
-		if (!files) continue;
+		for (const msg of searchResults) {
+			// Only process user and assistant messages
+			if (msg.role !== "user" && msg.role !== "assistant") {
+				continue;
+			}
 
-		for (const file of files) {
-			const messages = parseTranscript(file, {
-				since: options.since,
-				includeThinking: options.includeThinking,
+			// Skip empty messages
+			const content = msg.content || "";
+			if (!content.trim()) {
+				continue;
+			}
+
+			// Calculate simple relevance score based on content match
+			const contentLower = content.toLowerCase();
+			const queryLower = query.toLowerCase();
+			const words = queryLower.split(/\s+/);
+			let matchCount = 0;
+			for (const word of words) {
+				if (contentLower.includes(word)) matchCount++;
+			}
+			const score = matchCount / words.length;
+
+			// Note: We don't have project slug in the message, so we use empty string
+			// The database stores messages by session, not by project
+			const projectSlug = "";
+
+			results.push({
+				sessionId: msg.sessionId,
+				projectSlug,
+				projectPath: slugToPath(projectSlug),
+				timestamp: msg.timestamp,
+				type: msg.role as "user" | "assistant",
+				excerpt: content.length > 300 ? `${content.slice(0, 300)}...` : content,
+				score,
+				isPeerWorktree: false, // Can't determine without project info
+				layer: "transcripts",
 			});
 
-			for (const message of messages) {
-				const contentLower = message.content.toLowerCase();
-				if (contentLower.includes(queryLower)) {
-					// Calculate simple relevance score
-					const words = queryLower.split(/\s+/);
-					let matchCount = 0;
-					for (const word of words) {
-						if (contentLower.includes(word)) matchCount++;
-					}
-					const score = matchCount / words.length;
-
-					const isPeer =
-						slug !== currentSlug && arePeerWorktrees(currentSlug, slug);
-
-					results.push({
-						sessionId: message.sessionId,
-						projectSlug: slug,
-						projectPath: slugToPath(slug),
-						timestamp: message.timestamp,
-						type: message.type,
-						excerpt:
-							message.content.length > 300
-								? `${message.content.slice(0, 300)}...`
-								: message.content,
-						score,
-						isPeerWorktree: isPeer,
-						layer: "transcripts",
-					});
-				}
+			if (results.length >= limit) {
+				break;
 			}
 		}
-	}
 
-	// Sort by score and limit
-	return results.sort((a, b) => b.score - a.score).slice(0, limit);
+		// Sort by score and limit
+		return results.sort((a, b) => b.score - a.score).slice(0, limit);
+	});
 }

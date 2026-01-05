@@ -11,8 +11,8 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { summarizeTranscriptFile } from "../../../memory/transcript-summary.ts";
-import type { SessionSummary } from "../../../memory/types.ts";
+import { summarizeTranscriptFile } from "../memory/transcript-summary.ts";
+import type { SessionSummary } from "../memory/types.ts";
 
 /**
  * Paginated response wrapper
@@ -135,9 +135,11 @@ function getAllSessionFiles(): SessionFile[] {
  * Uses the transcript-summary module for rich summary extraction with
  * work_items, decisions, and in_progress tracking.
  */
-function toSessionSummary(sessionFile: SessionFile): SessionSummary | null {
+async function toSessionSummary(
+	sessionFile: SessionFile,
+): Promise<SessionSummary | null> {
 	// Use transcript-based summarization for rich summaries
-	const summary = summarizeTranscriptFile(sessionFile.filePath, {
+	const summary = await summarizeTranscriptFile(sessionFile.filePath, {
 		project: sessionFile.projectName,
 	});
 
@@ -163,9 +165,9 @@ function toSessionSummary(sessionFile: SessionFile): SessionSummary | null {
  *
  * Computes summaries on-demand from transcripts for the requested page.
  */
-export function listSummaries(
+export async function listSummaries(
 	params: URLSearchParams,
-): PaginatedResponse<SessionSummary> {
+): Promise<PaginatedResponse<SessionSummary>> {
 	const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10));
 	const pageSize = Math.min(
 		100,
@@ -182,9 +184,9 @@ export function listSummaries(
 	const pageSessions = allSessions.slice(startIndex, endIndex);
 
 	// Compute summaries on-demand for this page
-	const data = pageSessions
-		.map(toSessionSummary)
-		.filter((s): s is SessionSummary => s !== null);
+	const summaryPromises = pageSessions.map(toSessionSummary);
+	const summaries = await Promise.all(summaryPromises);
+	const data = summaries.filter((s): s is SessionSummary => s !== null);
 
 	return {
 		data,
@@ -200,7 +202,9 @@ export function listSummaries(
  *
  * Computes summary on-demand from the transcript.
  */
-export function getSummary(sessionId: string): SessionSummary | null {
+export async function getSummary(
+	sessionId: string,
+): Promise<SessionSummary | null> {
 	const allSessions = getAllSessionFiles();
 	const sessionFile = allSessions.find((s) => s.sessionId === sessionId);
 
@@ -232,7 +236,7 @@ export async function handleSummariesRequest(req: Request): Promise<Response> {
 		if (sessionIdMatch) {
 			// GET /api/summaries/:id
 			const sessionId = decodeURIComponent(sessionIdMatch[1]);
-			const summary = getSummary(sessionId);
+			const summary = await getSummary(sessionId);
 
 			if (!summary) {
 				return new Response(
@@ -250,7 +254,7 @@ export async function handleSummariesRequest(req: Request): Promise<Response> {
 		}
 
 		// GET /api/summaries
-		const result = listSummaries(url.searchParams);
+		const result = await listSummaries(url.searchParams);
 		return new Response(JSON.stringify(result), {
 			headers: { "Content-Type": "application/json" },
 		});

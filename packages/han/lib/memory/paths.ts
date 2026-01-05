@@ -5,10 +5,10 @@
  * All derived memory lives in ~/.claude/han/memory/, NOT in project repos.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { getGitRemoteUrl } from "../../../han-native";
 
 /**
  * Override for memory root (used in tests)
@@ -120,16 +120,7 @@ export function getProjectMetaPath(gitRemote: string): string {
  * Returns null if not in a git repo or no remote configured
  */
 export function getGitRemote(cwd?: string): string | null {
-	try {
-		const result = execSync("git remote get-url origin", {
-			cwd: cwd || process.cwd(),
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		return result.trim() || null;
-	} catch {
-		return null;
-	}
+	return getGitRemoteUrl(cwd ?? process.cwd()) ?? null;
 }
 
 /**
@@ -204,13 +195,14 @@ export function getClaudeProjectsDir(): string {
 
 /**
  * Convert a filesystem path to Claude Code's project slug format
+ * Claude Code replaces both `/` and `.` with `-`
  *
  * @example
  * pathToSlug("/Volumes/dev/src/github.com/foo/bar") // "-Volumes-dev-src-github-com-foo-bar"
  */
 export function pathToSlug(fsPath: string): string {
-	// Replace path separators with dashes, removing leading slashes
-	return fsPath.replace(/^\//, "-").replace(/\//g, "-");
+	// Replace path separators and dots with dashes, removing leading slashes
+	return fsPath.replace(/^\//, "-").replace(/[/.]/g, "-");
 }
 
 /**

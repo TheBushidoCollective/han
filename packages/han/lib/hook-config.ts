@@ -12,6 +12,24 @@ import { findDirectoriesWithMarkers } from "./hook-cache.ts";
 import { getPluginNameFromRoot } from "./shared.ts";
 
 /**
+ * Claude Code hook event types that can trigger han hooks
+ */
+export type HookEventType =
+	| "Stop"
+	| "SubagentStop"
+	| "PreToolUse"
+	| "PostToolUse"
+	| "SessionStart"
+	| "UserPromptSubmit"
+	| "SubagentStart";
+
+/**
+ * Default events for hooks that don't specify an event field.
+ * Most hooks are validation hooks that should run on both Stop and SubagentStop.
+ */
+export const DEFAULT_HOOK_EVENTS: HookEventType[] = ["Stop", "SubagentStop"];
+
+/**
  * Hook dependency declaration
  * Allows a hook to depend on another plugin's hook to run first
  */
@@ -31,6 +49,18 @@ export interface HookDependency {
  * Plugin hook configuration (from han-plugin.yml)
  */
 export interface PluginHookDefinition {
+	/**
+	 * Claude Code event(s) that trigger this hook.
+	 * Can be a single event or an array of events.
+	 * Default: ["Stop", "SubagentStop"] for backwards compatibility.
+	 */
+	event?: HookEventType | HookEventType[];
+	/**
+	 * For PreToolUse/PostToolUse hooks: filter by tool names.
+	 * Only run when the tool matches one of these names.
+	 * Example: ["Edit", "Write", "Bash"]
+	 */
+	toolFilter?: string[];
 	dirsWith?: string[];
 	dirTest?: string;
 	command: string;
@@ -67,20 +97,13 @@ export interface PluginHookDefinition {
 }
 
 /**
- * YAML hook dependency with snake_case keys
- * (from han-plugin.yml)
- */
-interface YamlHookDependency {
-	plugin: string;
-	hook: string;
-	optional?: boolean;
-}
-
-/**
- * YAML plugin hook definition with snake_case keys
- * (from han-plugin.yml)
+ * YAML plugin hook definition (from han-plugin.yml)
+ * Accepts both snake_case and camelCase - deepCamelCaseKeys normalizes all keys.
+ * Keep strict types for reading; writing is converted via deepCamelCaseKeys.
  */
 interface YamlPluginHookDefinition {
+	event?: HookEventType | HookEventType[];
+	tool_filter?: string[];
 	dirs_with?: string[];
 	dir_test?: string;
 	command: string;
@@ -88,7 +111,7 @@ interface YamlPluginHookDefinition {
 	if_changed?: string[];
 	idle_timeout?: number;
 	tip?: string;
-	depends_on?: YamlHookDependency[];
+	depends_on?: HookDependency[];
 }
 
 /**
@@ -142,23 +165,63 @@ interface YamlPluginConfig {
 }
 
 /**
- * Convert YAML snake_case hook definition to camelCase
+ * Convert snake_case string to camelCase
+ */
+function snakeToCamel(str: string): string {
+	return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Deeply convert all object keys from snake_case to camelCase.
+ * Handles nested objects and arrays.
+ */
+function deepCamelCaseKeys<T>(obj: unknown): T {
+	if (Array.isArray(obj)) {
+		return obj.map((item) => deepCamelCaseKeys(item)) as T;
+	}
+	if (obj !== null && typeof obj === "object") {
+		return Object.entries(obj).reduce(
+			(acc, [key, value]) => {
+				const camelKey = snakeToCamel(key);
+				acc[camelKey] = deepCamelCaseKeys(value);
+				return acc;
+			},
+			{} as Record<string, unknown>,
+		) as T;
+	}
+	return obj as T;
+}
+
+/**
+ * Convert YAML hook definition to internal format.
+ * Accepts both snake_case and camelCase for backwards compatibility.
  */
 function convertYamlHook(
 	yamlHook: YamlPluginHookDefinition,
 ): PluginHookDefinition {
-	return {
-		command: yamlHook.command,
-		...(yamlHook.dirs_with && { dirsWith: yamlHook.dirs_with }),
-		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),
-		...(yamlHook.description && { description: yamlHook.description }),
-		...(yamlHook.if_changed && { ifChanged: yamlHook.if_changed }),
-		...(yamlHook.idle_timeout !== undefined && {
-			idleTimeout: yamlHook.idle_timeout,
-		}),
-		...(yamlHook.tip && { tip: yamlHook.tip }),
-		...(yamlHook.depends_on && { dependsOn: yamlHook.depends_on }),
-	};
+	return deepCamelCaseKeys<PluginHookDefinition>(yamlHook);
+}
+
+/**
+ * Get the events that a hook responds to.
+ * Returns an array of event types, using defaults if not specified.
+ */
+export function getHookEvents(hook: PluginHookDefinition): HookEventType[] {
+	if (!hook.event) {
+		return DEFAULT_HOOK_EVENTS;
+	}
+	return Array.isArray(hook.event) ? hook.event : [hook.event];
+}
+
+/**
+ * Check if a hook matches a given event type.
+ */
+export function hookMatchesEvent(
+	hook: PluginHookDefinition,
+	eventType: string,
+): boolean {
+	const events = getHookEvents(hook);
+	return events.includes(eventType as HookEventType);
 }
 
 /**

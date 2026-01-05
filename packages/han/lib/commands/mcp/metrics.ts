@@ -1,4 +1,10 @@
 import { createInterface } from "node:readline";
+import { getOrCreateEventLogger } from "../../events/logger.ts";
+import type {
+	TaskComplexity,
+	TaskOutcome,
+	TaskType,
+} from "../../events/types.ts";
 import { isMetricsEnabled } from "../../han-settings.ts";
 import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
 import type {
@@ -363,6 +369,18 @@ export async function handleToolsCall(params: {
 			case "start_task": {
 				const taskParams = args as unknown as StartTaskParams;
 				const result = getStorage().startTask(taskParams);
+
+				// Log Han event for task start (event-sourcing)
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					logger.logTaskStart(
+						result.task_id,
+						taskParams.description,
+						taskParams.type as TaskType,
+						taskParams.estimated_complexity as TaskComplexity | undefined,
+					);
+				}
+
 				return {
 					content: [
 						{
@@ -376,6 +394,17 @@ export async function handleToolsCall(params: {
 			case "update_task": {
 				const taskParams = args as unknown as UpdateTaskParams;
 				const result = getStorage().updateTask(taskParams);
+
+				// Log Han event for task update (event-sourcing)
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					logger.logTaskUpdate(
+						taskParams.task_id,
+						taskParams.status,
+						taskParams.notes,
+					);
+				}
+
 				return {
 					content: [
 						{
@@ -389,6 +418,23 @@ export async function handleToolsCall(params: {
 			case "complete_task": {
 				const taskParams = args as unknown as CompleteTaskParams;
 				const result = getStorage().completeTask(taskParams);
+
+				// Log Han event for task complete (event-sourcing)
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					// Calculate duration from result if available
+					const durationSeconds =
+						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
+					logger.logTaskComplete(
+						taskParams.task_id,
+						taskParams.outcome as TaskOutcome,
+						taskParams.confidence,
+						durationSeconds,
+						taskParams.files_modified,
+						taskParams.tests_added,
+						taskParams.notes,
+					);
+				}
 
 				// Record OTEL telemetry for task completion
 				recordTaskCompletion(
@@ -410,6 +456,21 @@ export async function handleToolsCall(params: {
 			case "fail_task": {
 				const taskParams = args as unknown as FailTaskParams;
 				const result = getStorage().failTask(taskParams);
+
+				// Log Han event for task fail (event-sourcing)
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					const durationSeconds =
+						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
+					logger.logTaskFail(
+						taskParams.task_id,
+						taskParams.reason,
+						durationSeconds,
+						taskParams.confidence,
+						taskParams.attempted_solutions,
+						taskParams.notes,
+					);
+				}
 
 				// Record OTEL telemetry for task failure
 				recordTaskCompletion(

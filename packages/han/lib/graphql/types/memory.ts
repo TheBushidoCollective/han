@@ -4,7 +4,7 @@
  * Represents memory search functionality across all layers.
  */
 
-import { queryMemoryAgent } from "../../../../memory/memory-agent.ts";
+import { queryMemoryAgent } from "../../memory/memory-agent.ts";
 import { builder } from "../builder.ts";
 import { getAllRules, RuleType } from "./rule.ts";
 

@@ -8,7 +8,7 @@
 import {
 	publishMemoryAgentProgress,
 	publishMemoryAgentResult,
-} from "../commands/browse/graphql/pubsub.ts";
+} from "../graphql/pubsub.ts";
 import {
 	type MemoryAgentResponse,
 	type MemoryProgressUpdate,
