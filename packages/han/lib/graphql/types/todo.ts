@@ -9,22 +9,11 @@ import {
 	getActiveTodos,
 	getCurrentTodo,
 	getTodoCounts,
+	getTodosFromDb,
 	type TodoItem,
-	type TodoStatus,
 } from "../../api/todos.ts";
 import { builder } from "../builder.ts";
-
-/**
- * Todo status enum
- */
-export const TodoStatusEnum = builder.enumType("TodoStatus", {
-	description: "Status of a todo item",
-	values: {
-		PENDING: { value: "pending" as TodoStatus },
-		IN_PROGRESS: { value: "in_progress" as TodoStatus },
-		COMPLETED: { value: "completed" as TodoStatus },
-	} as const,
-});
+import { TodoStatusEnum } from "./enums/todo-status.ts";
 
 /**
  * Todo type ref
@@ -64,37 +53,12 @@ export const TodoType = TodoRef.implement({
 	}),
 });
 
-/**
- * Todo counts type for session summary
- */
-interface TodoCountsData {
-	total: number;
-	pending: number;
-	inProgress: number;
-	completed: number;
-}
-
-const TodoCountsRef = builder.objectRef<TodoCountsData>("TodoCounts");
-
-export const TodoCountsType = TodoCountsRef.implement({
-	description: "Counts of todos by status",
-	fields: (t) => ({
-		total: t.exposeInt("total", { description: "Total number of todos" }),
-		pending: t.exposeInt("pending", { description: "Number of pending todos" }),
-		inProgress: t.exposeInt("inProgress", {
-			description: "Number of in-progress todos",
-		}),
-		completed: t.exposeInt("completed", {
-			description: "Number of completed todos",
-		}),
-	}),
-});
-
 // Re-export utilities for use in session.ts
 export {
 	extractTodosFromMessages,
 	getActiveTodos,
 	getCurrentTodo,
 	getTodoCounts,
+	getTodosFromDb,
 };
 export type { TodoItem };

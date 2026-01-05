@@ -1,40 +1,35 @@
 {
-  "description": "Core infrastructure hooks for Han marketplace",
+  "description": "Core infrastructure hooks for Han marketplace - all hooks go through orchestrator",
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook orchestrate Stop",
+            "timeout": 300000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook orchestrate SubagentStop",
+            "timeout": 300000
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook session-id"
-          },
-          {
-            "type": "command",
-            "command": "han metrics session-context"
-          },
-          {
-            "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/no-time-estimates.md\""
-          },
-          {
-            "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/metrics-tracking.md\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/professional-honesty.md --must-read-first \"epistemic rigor and professional honesty\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/ensure-subagent.md --must-read-first \"subagent delegation rules\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/bash-output-capture.md --must-read-first \"bash output capture best practices\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/ensure-skill-use.md --must-read-first \"skill selection and transparency\""
+            "command": "han hook orchestrate SessionStart",
+            "timeout": 60000
           }
         ]
       }
@@ -44,23 +39,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/current-datetime.sh\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/no-excuses.md --must-read-first \"no excuses for pre-existing issues\""
-          },
-          {
-            "type": "command",
-            "command": "han metrics detect-frustration"
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/memory-learning.md --must-read-first \"autonomous self-learning rules\""
-          },
-          {
-            "type": "command",
-            "command": "han hook reference hooks/memory-confidence.md --must-read-first \"memory-augmented answers\""
+            "command": "han hook orchestrate UserPromptSubmit",
+            "timeout": 30000
           }
         ]
       }
@@ -70,31 +50,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-push-check.sh\"",
-            "timeout": 120
+            "command": "han hook orchestrate PreToolUse",
+            "timeout": 30000
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": {
-          "tool_name": "Edit|Write"
-        },
         "hooks": [
           {
             "type": "command",
-            "command": "han hook record-file-change",
-            "timeout": 5000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han memory capture",
-            "timeout": 5
+            "command": "han hook orchestrate PostToolUse",
+            "timeout": 30000
           }
         ]
       }
@@ -104,8 +72,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han checkpoint capture",
-            "timeout": 30
+            "command": "han hook orchestrate SubagentStart",
+            "timeout": 30000
           }
         ]
       }

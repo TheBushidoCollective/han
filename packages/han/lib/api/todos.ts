@@ -3,8 +3,11 @@
  *
  * Parses session messages to find the most recent TodoWrite tool call
  * and extract the current todo list state.
+ *
+ * Now supports database-backed retrieval (faster) with fallback to message parsing.
  */
 
+import { sessionTodos } from "../db/index.ts";
 import type { SessionMessage } from "./sessions.ts";
 
 /**
@@ -92,4 +95,31 @@ export function getTodoCounts(todos: TodoItem[]): {
 		inProgress: todos.filter((t) => t.status === "in_progress").length,
 		completed: todos.filter((t) => t.status === "completed").length,
 	};
+}
+
+/**
+ * Get todos for a session from the database
+ *
+ * This is faster than parsing messages because the indexer
+ * extracts and stores the latest TodoWrite state.
+ */
+export async function getTodosFromDb(sessionId: string): Promise<TodoItem[]> {
+	try {
+		const result = await sessionTodos.get(sessionId);
+		if (!result?.todosJson) {
+			return [];
+		}
+		const parsed = JSON.parse(result.todosJson);
+		if (!Array.isArray(parsed)) {
+			return [];
+		}
+		// Map database format to TodoItem
+		return parsed.map((item: Record<string, unknown>) => ({
+			content: String(item.content || ""),
+			status: String(item.status || "pending") as TodoStatus,
+			activeForm: String(item.activeForm || ""),
+		}));
+	} catch {
+		return [];
+	}
 }

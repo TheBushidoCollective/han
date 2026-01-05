@@ -22,18 +22,13 @@ mcp_servers:
     command: han
     args: ["mcp", "memory"]
 
-# Core hooks - migrated to orchestrate format
+# Core hooks - all hooks go through orchestrator
 hooks:
   # SessionStart hooks - run at session start
-  session-id:
+  context:
     event: SessionStart
-    command: han hook session-id
-    description: Initialize session ID for tracking
-
-  session-context:
-    event: SessionStart
-    command: han metrics session-context
-    description: Load session context from metrics
+    command: han hook context
+    description: Consolidated session context (session ID, performance metrics, memory context)
 
   no-time-estimates-ref:
     event: SessionStart
@@ -81,9 +76,6 @@ hooks:
     command: han hook reference hooks/no-excuses.md --must-read-first "no excuses for pre-existing issues"
     description: Reference no-excuses policy
 
-  # NOTE: detect-frustration hook removed - sentiment analysis now happens during indexing
-  # This allows proper message UUID linking and avoids hook overhead
-
   memory-learning-ref:
     event: UserPromptSubmit
     command: han hook reference hooks/memory-learning.md --must-read-first "autonomous self-learning rules"
@@ -94,8 +86,11 @@ hooks:
     command: han hook reference hooks/memory-confidence.md --must-read-first "memory-augmented answers"
     description: Reference memory confidence guidelines
 
-  # NOTE: checkpoint-capture hook removed - not used
-  # NOTE: memory-capture hook removed - file changes are tracked by the indexer from JSONL transcripts
+  # SubagentStart hooks - capture checkpoint when subagent starts
+  subagent-checkpoint:
+    event: SubagentStart
+    command: han checkpoint capture
+    description: Capture checkpoint when subagent starts for validation filtering
 
   # PreToolUse safety hooks - prevent dangerous operations
   safe-operations:

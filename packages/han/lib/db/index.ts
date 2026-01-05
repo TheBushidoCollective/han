@@ -65,6 +65,10 @@ export type {
 	SessionInput,
 	// Session timestamps
 	SessionTimestamps,
+	// Session todos
+	SessionTodos,
+	SessionTodosInput,
+	TodoItem,
 	// Task/Metrics
 	Task,
 	TaskCompletion,
@@ -858,6 +862,35 @@ export const sessionFileValidations = {
 		const dbPath = await ensureInitialized();
 		const native = getNativeModule();
 		return native.getAllSessionValidations(dbPath, sessionId);
+	},
+};
+
+// ============================================================================
+// Session Todos Operations
+// ============================================================================
+
+export const sessionTodos = {
+	/**
+	 * Get the current todos for a session
+	 * Returns the most recent TodoWrite state
+	 */
+	async get(
+		sessionId: string,
+	): Promise<import("../../../han-native").SessionTodos | null> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getSessionTodos(dbPath, sessionId);
+	},
+
+	/**
+	 * Upsert session todos (used by indexer)
+	 */
+	async upsert(
+		input: import("../../../han-native").SessionTodosInput,
+	): Promise<import("../../../han-native").SessionTodos> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.upsertSessionTodos(dbPath, input);
 	},
 };
 

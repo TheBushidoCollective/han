@@ -43,6 +43,8 @@ pub use schema::{
     // Session summaries and compacts (event-sourced)
     SessionSummary, SessionSummaryInput,
     SessionCompact, SessionCompactInput,
+    // Session todos (event-sourced)
+    SessionTodos, SessionTodosInput, TodoItem,
 };
 
 // Re-export JSONL types and functions
@@ -983,6 +985,18 @@ pub fn upsert_session_compact(_db_path: String, input: SessionCompactInput) -> n
 #[napi]
 pub fn get_session_compact(_db_path: String, session_id: String) -> napi::Result<Option<SessionCompact>> {
     crud::get_session_compact(&session_id)
+}
+
+/// Upsert session todos (keeps the latest by timestamp)
+#[napi]
+pub fn upsert_session_todos(_db_path: String, input: SessionTodosInput) -> napi::Result<SessionTodos> {
+    crud::upsert_session_todos(input)
+}
+
+/// Get session todos by session ID
+#[napi]
+pub fn get_session_todos(_db_path: String, session_id: String) -> napi::Result<Option<SessionTodos>> {
+    crud::get_session_todos(&session_id)
 }
 
 // ============================================================================

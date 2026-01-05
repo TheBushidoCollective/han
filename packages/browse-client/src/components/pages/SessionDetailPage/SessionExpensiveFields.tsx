@@ -25,7 +25,7 @@ import {
 } from './components.ts';
 import { formatMs } from './utils.ts';
 
-type SidebarTab = 'hooks' | 'files';
+type SidebarTab = 'todos' | 'hooks' | 'files';
 
 /**
  * Fragment for expensive fields loaded via @defer
@@ -211,22 +211,57 @@ const tabBarStyle: CSSProperties = {
   marginBottom: spacing.md,
 };
 
+/**
+ * Status color helper for todos
+ */
+function getTodoStatusColor(status: string): string {
+  switch (status) {
+    case 'COMPLETED':
+      return colors.success;
+    case 'IN_PROGRESS':
+      return colors.primary;
+    default:
+      return colors.text.muted;
+  }
+}
+
+/**
+ * Status label helper for todos
+ */
+function getTodoStatusLabel(status: string): string {
+  switch (status) {
+    case 'COMPLETED':
+      return '✓';
+    case 'IN_PROGRESS':
+      return '●';
+    default:
+      return '○';
+  }
+}
+
 function SessionExpensiveFieldsContent({
   fragmentRef,
 }: SessionExpensiveFieldsProps): ReactElement {
   const data = useFragment(SessionExpensiveFieldsFragment, fragmentRef);
-  const [activeTab, setActiveTab] = useState<SidebarTab>('hooks');
 
   const checkpoints = data.checkpoints ?? [];
   const hookExecutions = data.hookExecutions ?? [];
   const hookStats = data.hookStats;
   const tasks = data.tasks ?? [];
+  const todos = data.todos ?? [];
+  const todoCounts = data.todoCounts;
   const fileChanges = data.fileChanges ?? [];
   const fileChangeCount = data.fileChangeCount ?? 0;
 
   // Determine counts for tabs
+  const todosCount = todoCounts?.total ?? todos.length;
   const hooksCount = hookStats?.totalHooks ?? hookExecutions.length;
   const filesCount = fileChangeCount || fileChanges.length;
+
+  // Set initial tab based on which has data (prefer todos if available)
+  const [activeTab, setActiveTab] = useState<SidebarTab>(
+    todosCount > 0 ? 'todos' : hooksCount > 0 ? 'hooks' : 'files'
+  );
 
   return (
     <>
@@ -259,9 +294,17 @@ function SessionExpensiveFieldsContent({
         </VStack>
       )}
 
-      {/* Tab Bar for switching between hooks and file changes */}
-      {(hookExecutions.length > 0 || fileChanges.length > 0) && (
+      {/* Tab Bar for switching between todos, hooks, and file changes */}
+      {(todos.length > 0 || hookExecutions.length > 0 || fileChanges.length > 0) && (
         <div style={tabBarStyle}>
+          {todos.length > 0 && (
+            <TabButton
+              active={activeTab === 'todos'}
+              onClick={() => setActiveTab('todos')}
+            >
+              Todos ({todosCount})
+            </TabButton>
+          )}
           <TabButton
             active={activeTab === 'hooks'}
             onClick={() => setActiveTab('hooks')}
@@ -275,6 +318,82 @@ function SessionExpensiveFieldsContent({
             Files ({filesCount})
           </TabButton>
         </div>
+      )}
+
+      {activeTab === 'todos' && todos.length > 0 && (
+        <VStack className="todos-section" gap="md" align="stretch">
+          <Heading size="sm" as="h3">
+            Todos ({todosCount})
+          </Heading>
+
+          {/* Todo Summary Cards */}
+          <HStack gap="sm" style={{ flexWrap: 'wrap' }}>
+            <StatCard
+              value={todoCounts?.completed ?? 0}
+              label="Done"
+              color={colors.success}
+            />
+            <StatCard
+              value={todoCounts?.inProgress ?? 0}
+              label="Active"
+              color={colors.primary}
+            />
+            <StatCard
+              value={todoCounts?.pending ?? 0}
+              label="Pending"
+              color={colors.text.muted}
+            />
+          </HStack>
+
+          {/* Todo List */}
+          <VStack className="todos-grid" gap="xs">
+            {todos
+              .filter((t): t is typeof t & { id: string } => !!t.id)
+              .map((todo) => (
+                <Box
+                  key={todo.id}
+                  style={{
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    backgroundColor: colors.bg.tertiary,
+                    borderRadius: radii.sm,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: spacing.sm,
+                  }}
+                >
+                  <Text
+                    size="md"
+                    style={{
+                      color: getTodoStatusColor(todo.status ?? 'PENDING'),
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    {getTodoStatusLabel(todo.status ?? 'PENDING')}
+                  </Text>
+                  <VStack gap="xs" align="stretch" style={{ flex: 1 }}>
+                    <Text
+                      size="sm"
+                      style={{
+                        color:
+                          todo.status === 'COMPLETED'
+                            ? colors.text.muted
+                            : colors.text.primary,
+                        textDecorationLine:
+                          todo.status === 'COMPLETED' ? 'line-through' : 'none',
+                      }}
+                    >
+                      {todo.content}
+                    </Text>
+                    {todo.status === 'IN_PROGRESS' && todo.activeForm && (
+                      <Text size="xs" color="muted">
+                        {todo.activeForm}...
+                      </Text>
+                    )}
+                  </VStack>
+                </Box>
+              ))}
+          </VStack>
+        </VStack>
       )}
 
       {activeTab === 'hooks' && hookExecutions.length > 0 && hookStats && (

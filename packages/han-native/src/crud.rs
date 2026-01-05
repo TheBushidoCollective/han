@@ -744,6 +744,77 @@ pub fn get_session_compact(session_id: &str) -> napi::Result<Option<SessionCompa
 }
 
 // ============================================================================
+// Session Todos Operations (event-sourced)
+// ============================================================================
+
+/// Upsert session todos - only if this one is newer than existing
+pub fn upsert_session_todos(input: SessionTodosInput) -> napi::Result<SessionTodos> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let id = uuid::Uuid::new_v4().to_string();
+
+    // UPSERT - only update if new timestamp is >= existing timestamp
+    let mut stmt = conn.prepare(
+        "INSERT INTO session_todos (id, session_id, message_id, todos_json, timestamp, line_number, indexed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(session_id) DO UPDATE SET
+             id = CASE WHEN excluded.timestamp >= session_todos.timestamp THEN excluded.id ELSE session_todos.id END,
+             message_id = CASE WHEN excluded.timestamp >= session_todos.timestamp THEN excluded.message_id ELSE session_todos.message_id END,
+             todos_json = CASE WHEN excluded.timestamp >= session_todos.timestamp THEN excluded.todos_json ELSE session_todos.todos_json END,
+             timestamp = CASE WHEN excluded.timestamp >= session_todos.timestamp THEN excluded.timestamp ELSE session_todos.timestamp END,
+             line_number = CASE WHEN excluded.timestamp >= session_todos.timestamp THEN excluded.line_number ELSE session_todos.line_number END,
+             indexed_at = excluded.indexed_at
+         RETURNING id, session_id, message_id, todos_json, timestamp, line_number, indexed_at"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+
+    stmt.query_row(
+        params![id, input.session_id, input.message_id, input.todos_json, input.timestamp, input.line_number, now],
+        |row| {
+            Ok(SessionTodos {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                message_id: row.get(2)?,
+                todos_json: row.get(3)?,
+                timestamp: row.get(4)?,
+                line_number: row.get(5)?,
+                indexed_at: row.get(6)?,
+            })
+        }
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session todos: {}", e)))
+}
+
+/// Get session todos by session ID
+pub fn get_session_todos(session_id: &str) -> napi::Result<Option<SessionTodos>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, message_id, todos_json, timestamp, line_number, indexed_at
+         FROM session_todos WHERE session_id = ?1 LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id], |row| {
+        Ok(SessionTodos {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            message_id: row.get(2)?,
+            todos_json: row.get(3)?,
+            timestamp: row.get(4)?,
+            line_number: row.get(5)?,
+            indexed_at: row.get(6)?,
+        })
+    });
+
+    match result {
+        Ok(todos) => Ok(Some(todos)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session todos: {}", e))),
+    }
+}
+
+// ============================================================================
 // Message Operations
 // ============================================================================
 

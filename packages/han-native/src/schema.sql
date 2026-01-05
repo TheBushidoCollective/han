@@ -327,6 +327,24 @@ CREATE INDEX IF NOT EXISTS idx_file_validations_plugin ON session_file_validatio
 CREATE INDEX IF NOT EXISTS idx_file_validations_dir ON session_file_validations(directory);
 
 -- ============================================================================
+-- Session Todos (event-sourced: latest todo list for each session)
+-- Populated during indexing when TodoWrite tool calls are encountered
+-- Stores the full todo list as JSON (since TodoWrite replaces the entire list)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS session_todos (
+    id TEXT PRIMARY KEY,  -- Generated ID
+    session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),  -- One todo list per session
+    message_id TEXT NOT NULL,  -- Reference to the source tool_use message
+    todos_json TEXT NOT NULL,  -- JSON array of todos [{content, status, activeForm}]
+    timestamp TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_todos_session ON session_todos(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_todos_timestamp ON session_todos(timestamp);
+
+-- ============================================================================
 -- Vector embeddings (for semantic search)
 -- Note: sqlite-vec tables are created dynamically with appropriate dimensions
 -- ============================================================================

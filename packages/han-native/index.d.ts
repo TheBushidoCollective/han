@@ -6,598 +6,584 @@
 /** Lock file contents */
 export interface LockInfo {
   /** Process ID holding the lock */
-  pid: number;
+  pid: number
   /** Timestamp when lock was acquired (Unix epoch seconds) */
-  acquiredAt: number;
+  acquiredAt: number
   /** Last heartbeat timestamp (Unix epoch seconds) */
-  heartbeatAt: number;
+  heartbeatAt: number
   /** Whether this process is the coordinator */
-  isCoordinator: boolean;
+  isCoordinator: boolean
 }
 /** Coordinator status */
 export interface CoordinatorStatus {
   /** Whether this process is the active coordinator */
-  isCoordinator: boolean;
+  isCoordinator: boolean
   /** Whether a coordinator is running (possibly another process) */
-  coordinatorRunning: boolean;
+  coordinatorRunning: boolean
   /** Lock info if available */
-  lockInfo?: LockInfo;
+  lockInfo?: LockInfo
 }
 /** A document record for FTS indexing */
 export interface FtsDocument {
   /** Unique identifier for the document */
-  id: string;
+  id: string
   /** The text content to index */
-  content: string;
+  content: string
   /** Optional metadata as JSON string */
-  metadata?: string;
+  metadata?: string
 }
 /** A search result from FTS query */
 export interface FtsSearchResult {
   /** Document ID */
-  id: string;
+  id: string
   /** The matched content */
-  content: string;
+  content: string
   /** Optional metadata as JSON string */
-  metadata?: string;
+  metadata?: string
   /** BM25 relevance score */
-  score: number;
+  score: number
 }
 /** A search result from vector query */
 export interface VectorSearchResult {
   /** Document ID */
-  id: string;
+  id: string
   /** The matched content */
-  content: string;
+  content: string
   /** Optional metadata as JSON string */
-  metadata?: string;
+  metadata?: string
   /** Similarity score (higher is more similar) */
-  score: number;
+  score: number
 }
 /**
  * Clean up old SurrealDB/RocksDB files from the legacy database location
  * This should be called after confirming the SQLite migration is complete
  */
-export declare function cleanupLegacyDatabase(): boolean;
+export declare function cleanupLegacyDatabase(): boolean
 /** Check if legacy SurrealDB files exist */
-export declare function hasLegacyDatabase(): boolean;
+export declare function hasLegacyDatabase(): boolean
 /** Git repository information */
 export interface GitInfo {
   /** Current branch name (None if detached HEAD) */
-  branch?: string;
+  branch?: string
   /** Remote origin URL */
-  remote?: string;
+  remote?: string
   /** Repository name extracted from remote */
-  repoName?: string;
+  repoName?: string
 }
 /** Git worktree information */
 export interface GitWorktree {
   /** Absolute path to the worktree */
-  path: string;
+  path: string
   /** Name of the worktree (basename of path for main, or worktree name) */
-  name: string;
+  name: string
   /** Current branch or commit */
-  head?: string;
+  head?: string
   /** Whether this is the main worktree */
-  isMain: boolean;
+  isMain: boolean
   /** Whether the worktree is locked */
-  isLocked: boolean;
+  isLocked: boolean
 }
 /**
  * Get current git branch for a directory
  * Returns None if not in a git repository or on a detached HEAD
  */
-export declare function getGitBranch(directory: string): string | null;
+export declare function getGitBranch(directory: string): string | null
 /** Get git repository root (equivalent to `git rev-parse --show-toplevel`) */
-export declare function getGitRoot(directory: string): string | null;
+export declare function getGitRoot(directory: string): string | null
 /**
  * Get git common directory (equivalent to `git rev-parse --git-common-dir`)
  * For worktrees, this returns the main .git directory
  */
-export declare function getGitCommonDir(directory: string): string | null;
+export declare function getGitCommonDir(directory: string): string | null
 /** Get remote origin URL */
-export declare function getGitRemoteUrl(directory: string): string | null;
+export declare function getGitRemoteUrl(directory: string): string | null
 /** Get comprehensive git info for a directory */
-export declare function getGitInfo(directory: string): GitInfo;
+export declare function getGitInfo(directory: string): GitInfo
 /** List tracked files in the repository (equivalent to `git ls-files`) */
-export declare function gitLsFiles(directory: string): Array<string>;
+export declare function gitLsFiles(directory: string): Array<string>
 /** List git worktrees (equivalent to `git worktree list --porcelain`) */
-export declare function gitWorktreeList(directory: string): Array<GitWorktree>;
+export declare function gitWorktreeList(directory: string): Array<GitWorktree>
 /** Get git log entries (equivalent to `git log`) */
 export interface GitLogEntry {
   /** Commit hash (full SHA) */
-  hash: string;
+  hash: string
   /** Short commit hash (first 8 chars) */
-  shortHash: string;
+  shortHash: string
   /** Commit message (first line) */
-  message: string;
+  message: string
   /** Author name */
-  authorName: string;
+  authorName: string
   /** Author email */
-  authorEmail: string;
+  authorEmail: string
   /** Commit timestamp (ISO 8601) */
-  timestamp: string;
+  timestamp: string
 }
 /** Get git log for a directory */
-export declare function gitLog(
-  directory: string,
-  maxCount?: number | undefined | null
-): Array<GitLogEntry>;
+export declare function gitLog(directory: string, maxCount?: number | undefined | null): Array<GitLogEntry>
 /** Get file content at a specific commit (equivalent to `git show <commit>:<path>`) */
-export declare function gitShowFile(
-  directory: string,
-  commit: string,
-  filePath: string
-): string;
+export declare function gitShowFile(directory: string, commit: string, filePath: string): string
 /** Diff statistics for a file */
 export interface GitDiffStat {
   /** File path */
-  path: string;
+  path: string
   /** Lines added */
-  additions: number;
+  additions: number
   /** Lines deleted */
-  deletions: number;
+  deletions: number
   /** Change type: "added", "deleted", "modified", "renamed" */
-  changeType: string;
+  changeType: string
   /** Old path (for renames) */
-  oldPath?: string;
+  oldPath?: string
 }
 /**
  * Get diff between two commits - simplified version using tree comparison
  * Returns list of changed files without line counts (for now)
  */
-export declare function gitDiffStat(
-  directory: string,
-  fromCommit: string,
-  toCommit: string
-): Array<GitDiffStat>;
+export declare function gitDiffStat(directory: string, fromCommit: string, toCommit: string): Array<GitDiffStat>
 /** Result of indexing a single JSONL file */
 export interface IndexResult {
   /** Session ID that was indexed */
-  sessionId: string;
+  sessionId: string
   /** Number of new messages indexed */
-  messagesIndexed: number;
+  messagesIndexed: number
   /** Total messages in session after indexing */
-  totalMessages: number;
+  totalMessages: number
   /** Whether this is a new session */
-  isNewSession: boolean;
+  isNewSession: boolean
   /** Any error message */
-  error?: string;
+  error?: string
 }
 /** Statistics about a JSONL file */
 export interface JsonlStats {
   /** Number of lines in the file */
-  lineCount: number;
+  lineCount: number
   /** File size in bytes */
-  fileSize: number;
+  fileSize: number
   /** Whether an index file exists for fast access */
-  hasIndex: boolean;
+  hasIndex: boolean
   /** Whether the index is stale (file modified after index) */
-  indexStale: boolean;
+  indexStale: boolean
 }
 /** A single line from a JSONL file */
 export interface JsonlLine {
   /** Line number (0-indexed) */
-  lineNumber: number;
+  lineNumber: number
   /** Byte offset in the file */
-  byteOffset: number;
+  byteOffset: number
   /** Raw content of the line */
-  content: string;
+  content: string
 }
 /** Result of a paginated read operation */
 export interface PaginatedResult {
   /** Lines returned */
-  lines: Array<JsonlLine>;
+  lines: Array<JsonlLine>
   /** Total number of lines in the file */
-  totalLines: number;
+  totalLines: number
   /** Whether there are more lines after this page */
-  hasMore: boolean;
+  hasMore: boolean
   /** Offset for the next page */
-  nextOffset: number;
+  nextOffset: number
 }
 /** Index for fast random access to JSONL lines */
 export interface JsonlIndex {
   /** Original file path */
-  filePath: string;
+  filePath: string
   /** Byte offsets of each line start */
-  lineOffsets: Array<number>;
+  lineOffsets: Array<number>
   /** File modification time when index was built (Unix timestamp) */
-  fileMtime: number;
+  fileMtime: number
   /** File size when index was built */
-  fileSize: number;
+  fileSize: number
 }
 /** Filter specification for querying JSONL */
 export interface JsonlFilter {
   /** JSON path to the field (e.g., "type" or "metadata.timestamp") */
-  fieldPath: string;
+  fieldPath: string
   /** Comparison operator: "eq", "ne", "gt", "lt", "gte", "lte", "contains" */
-  operator: string;
+  operator: string
   /** Value to compare against (as string, will be parsed based on field type) */
-  value: string;
+  value: string
 }
 /** Result of a filter operation */
 export interface FilterResult {
   /** Matching lines */
-  lines: Array<JsonlLine>;
+  lines: Array<JsonlLine>
   /** Number of lines that matched */
-  matchedCount: number;
+  matchedCount: number
   /** Number of lines scanned */
-  scannedCount: number;
+  scannedCount: number
 }
 /** Count the number of lines in a JSONL file (fast, uses mmap + SIMD) */
-export declare function jsonlCountLines(filePath: string): number;
+export declare function jsonlCountLines(filePath: string): number
 /** Get statistics about a JSONL file */
-export declare function jsonlStats(filePath: string): JsonlStats;
+export declare function jsonlStats(filePath: string): JsonlStats
 /** Read a page of lines from a JSONL file */
-export declare function jsonlReadPage(
-  filePath: string,
-  offset: number,
-  limit: number
-): PaginatedResult;
+export declare function jsonlReadPage(filePath: string, offset: number, limit: number): PaginatedResult
 /** Read lines in reverse order (for recent-first access) */
-export declare function jsonlReadReverse(
-  filePath: string,
-  limit: number
-): Array<JsonlLine>;
+export declare function jsonlReadReverse(filePath: string, limit: number): Array<JsonlLine>
 /** Build a byte offset index for fast random access */
-export declare function jsonlBuildIndex(filePath: string): JsonlIndex;
+export declare function jsonlBuildIndex(filePath: string): JsonlIndex
 /** Save an index to disk for later use */
-export declare function jsonlSaveIndex(index: JsonlIndex): void;
+export declare function jsonlSaveIndex(index: JsonlIndex): void
 /** Load an index from disk */
-export declare function jsonlLoadIndex(filePath: string): JsonlIndex | null;
+export declare function jsonlLoadIndex(filePath: string): JsonlIndex | null
 /** Read specific lines by number using an index (O(1) per line) */
-export declare function jsonlReadIndexed(
-  filePath: string,
-  index: JsonlIndex,
-  lineNumbers: Array<number>
-): Array<JsonlLine>;
+export declare function jsonlReadIndexed(filePath: string, index: JsonlIndex, lineNumbers: Array<number>): Array<JsonlLine>
 /** Stream lines with a callback (memory efficient for large files) */
-export declare function jsonlStream(
-  filePath: string,
-  callback: (err: Error | null, arg: Array<JsonlLine>) => any,
-  batchSize: number
-): Promise<number>;
+export declare function jsonlStream(filePath: string, callback: (err: Error | null, arg: Array<JsonlLine>) => any, batchSize: number): Promise<number>
 /** Filter JSONL lines by field value */
-export declare function jsonlFilter(
-  filePath: string,
-  filters: Array<JsonlFilter>,
-  limit?: number | undefined | null
-): FilterResult;
+export declare function jsonlFilter(filePath: string, filters: Array<JsonlFilter>, limit?: number | undefined | null): FilterResult
 /** Filter with time range (common use case, optimized) */
-export declare function jsonlFilterTimeRange(
-  filePath: string,
-  timestampField: string,
-  startTime: string,
-  endTime: string,
-  limit?: number | undefined | null
-): FilterResult;
+export declare function jsonlFilterTimeRange(filePath: string, timestampField: string, startTime: string, endTime: string, limit?: number | undefined | null): FilterResult
 export interface Repo {
-  id?: string;
-  remote: string;
-  name: string;
-  defaultBranch?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  id?: string
+  remote: string
+  name: string
+  defaultBranch?: string
+  createdAt?: string
+  updatedAt?: string
 }
 export interface RepoInput {
-  remote: string;
-  name: string;
-  defaultBranch?: string;
+  remote: string
+  name: string
+  defaultBranch?: string
 }
 export interface Project {
-  id?: string;
-  repoId?: string;
-  slug: string;
-  path: string;
-  relativePath?: string;
-  name: string;
-  isWorktree: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  id?: string
+  repoId?: string
+  slug: string
+  path: string
+  relativePath?: string
+  name: string
+  isWorktree: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 export interface ProjectInput {
-  repoId?: string;
-  slug: string;
-  path: string;
-  relativePath?: string;
-  name: string;
-  isWorktree?: boolean;
+  repoId?: string
+  slug: string
+  path: string
+  relativePath?: string
+  name: string
+  isWorktree?: boolean
 }
 export interface Session {
-  id: string;
-  projectId?: string;
-  status: string;
-  transcriptPath?: string;
-  lastIndexedLine?: number;
+  id: string
+  projectId?: string
+  status: string
+  transcriptPath?: string
+  lastIndexedLine?: number
 }
 export interface SessionInput {
-  id: string;
-  projectId?: string;
-  status?: string;
-  transcriptPath?: string;
+  id: string
+  projectId?: string
+  status?: string
+  transcriptPath?: string
 }
 export interface SessionFile {
-  id: string;
-  sessionId: string;
-  fileType: string;
-  filePath: string;
-  agentId?: string;
-  lastIndexedLine?: number;
-  lastIndexedAt?: string;
-  createdAt?: string;
+  id: string
+  sessionId: string
+  fileType: string
+  filePath: string
+  agentId?: string
+  lastIndexedLine?: number
+  lastIndexedAt?: string
+  createdAt?: string
 }
 export interface SessionSummary {
-  id: string;
-  sessionId: string;
-  messageId: string;
-  content?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
-  indexedAt?: string;
+  id: string
+  sessionId: string
+  messageId: string
+  content?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
+  indexedAt?: string
 }
 export interface SessionSummaryInput {
-  sessionId: string;
-  messageId: string;
-  content?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
+  sessionId: string
+  messageId: string
+  content?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
 }
 export interface SessionCompact {
-  id: string;
-  sessionId: string;
-  messageId: string;
-  content?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
-  compactType?: string;
-  indexedAt?: string;
+  id: string
+  sessionId: string
+  messageId: string
+  content?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
+  compactType?: string
+  indexedAt?: string
 }
 export interface SessionCompactInput {
-  sessionId: string;
-  messageId: string;
-  content?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
-  compactType?: string;
+  sessionId: string
+  messageId: string
+  content?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
+  compactType?: string
+}
+/** Individual todo item structure */
+export interface TodoItem {
+  content: string
+  status: string
+  activeForm: string
+}
+export interface SessionTodos {
+  id: string
+  sessionId: string
+  messageId: string
+  todosJson: string
+  timestamp: string
+  lineNumber: number
+  indexedAt?: string
+}
+export interface SessionTodosInput {
+  sessionId: string
+  messageId: string
+  todosJson: string
+  timestamp: string
+  lineNumber: number
 }
 export interface Message {
-  id: string;
-  sessionId: string;
-  agentId?: string;
-  parentId?: string;
-  messageType: string;
-  role?: string;
-  content?: string;
-  toolName?: string;
-  toolInput?: string;
-  toolResult?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
-  sourceFileName?: string;
-  sourceFileType?: string;
-  sentimentScore?: number;
-  sentimentLevel?: string;
-  frustrationScore?: number;
-  frustrationLevel?: string;
-  indexedAt?: string;
+  id: string
+  sessionId: string
+  agentId?: string
+  parentId?: string
+  messageType: string
+  role?: string
+  content?: string
+  toolName?: string
+  toolInput?: string
+  toolResult?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
+  sourceFileName?: string
+  sourceFileType?: string
+  sentimentScore?: number
+  sentimentLevel?: string
+  frustrationScore?: number
+  frustrationLevel?: string
+  indexedAt?: string
 }
 export interface MessageInput {
-  id: string;
-  sessionId: string;
-  agentId?: string;
-  parentId?: string;
-  messageType: string;
-  role?: string;
-  content?: string;
-  toolName?: string;
-  toolInput?: string;
-  toolResult?: string;
-  rawJson?: string;
-  timestamp: string;
-  lineNumber: number;
-  sourceFileName?: string;
-  sourceFileType?: string;
-  sentimentScore?: number;
-  sentimentLevel?: string;
-  frustrationScore?: number;
-  frustrationLevel?: string;
+  id: string
+  sessionId: string
+  agentId?: string
+  parentId?: string
+  messageType: string
+  role?: string
+  content?: string
+  toolName?: string
+  toolInput?: string
+  toolResult?: string
+  rawJson?: string
+  timestamp: string
+  lineNumber: number
+  sourceFileName?: string
+  sourceFileType?: string
+  sentimentScore?: number
+  sentimentLevel?: string
+  frustrationScore?: number
+  frustrationLevel?: string
 }
 export interface MessageBatch {
-  sessionId: string;
-  messages: Array<MessageInput>;
+  sessionId: string
+  messages: Array<MessageInput>
 }
 export interface Task {
-  id?: string;
-  sessionId?: string;
-  taskId: string;
-  description: string;
-  taskType: string;
-  outcome?: string;
-  confidence?: number;
-  notes?: string;
-  filesModified?: Array<string>;
-  testsAdded?: number;
-  startedAt?: string;
-  completedAt?: string;
+  id?: string
+  sessionId?: string
+  taskId: string
+  description: string
+  taskType: string
+  outcome?: string
+  confidence?: number
+  notes?: string
+  filesModified?: Array<string>
+  testsAdded?: number
+  startedAt?: string
+  completedAt?: string
 }
 export interface TaskInput {
-  sessionId?: string;
-  taskId: string;
-  description: string;
-  taskType: string;
-  estimatedComplexity?: string;
+  sessionId?: string
+  taskId: string
+  description: string
+  taskType: string
+  estimatedComplexity?: string
 }
 export interface TaskCompletion {
-  taskId: string;
-  outcome: string;
-  confidence: number;
-  notes?: string;
-  filesModified?: Array<string>;
-  testsAdded?: number;
+  taskId: string
+  outcome: string
+  confidence: number
+  notes?: string
+  filesModified?: Array<string>
+  testsAdded?: number
 }
 export interface TaskFailure {
-  taskId: string;
-  reason: string;
-  attemptedSolutions?: Array<string>;
-  confidence?: number;
-  notes?: string;
+  taskId: string
+  reason: string
+  attemptedSolutions?: Array<string>
+  confidence?: number
+  notes?: string
 }
 export interface HookCacheEntry {
-  id?: string;
-  cacheKey: string;
-  fileHash: string;
-  result: string;
-  cachedAt?: string;
-  expiresAt?: string;
+  id?: string
+  cacheKey: string
+  fileHash: string
+  result: string
+  cachedAt?: string
+  expiresAt?: string
 }
 export interface HookCacheInput {
-  cacheKey: string;
-  fileHash: string;
-  result: string;
-  ttlSeconds?: number;
+  cacheKey: string
+  fileHash: string
+  result: string
+  ttlSeconds?: number
 }
 export interface TaskMetrics {
-  totalTasks: number;
-  completedTasks: number;
-  successfulTasks: number;
-  partialTasks: number;
-  failedTasks: number;
-  successRate: number;
-  averageConfidence?: number;
-  averageDurationSeconds?: number;
-  calibrationScore?: number;
-  byType?: string;
-  byOutcome?: string;
+  totalTasks: number
+  completedTasks: number
+  successfulTasks: number
+  partialTasks: number
+  failedTasks: number
+  successRate: number
+  averageConfidence?: number
+  averageDurationSeconds?: number
+  calibrationScore?: number
+  byType?: string
+  byOutcome?: string
 }
 export interface HookExecution {
-  id?: string;
-  sessionId?: string;
-  taskId?: string;
-  hookType: string;
-  hookName: string;
-  hookSource?: string;
-  durationMs: number;
-  exitCode: number;
-  passed: boolean;
-  output?: string;
-  error?: string;
-  executedAt?: string;
+  id?: string
+  sessionId?: string
+  taskId?: string
+  hookType: string
+  hookName: string
+  hookSource?: string
+  durationMs: number
+  exitCode: number
+  passed: boolean
+  output?: string
+  error?: string
+  executedAt?: string
 }
 export interface HookExecutionInput {
-  sessionId?: string;
-  taskId?: string;
-  hookType: string;
-  hookName: string;
-  hookSource?: string;
-  durationMs: number;
-  exitCode: number;
-  passed: boolean;
-  output?: string;
-  error?: string;
+  sessionId?: string
+  taskId?: string
+  hookType: string
+  hookName: string
+  hookSource?: string
+  durationMs: number
+  exitCode: number
+  passed: boolean
+  output?: string
+  error?: string
 }
 export interface HookStats {
-  totalExecutions: number;
-  totalPassed: number;
-  totalFailed: number;
-  passRate: number;
-  uniqueHooks: number;
-  byHookType?: string;
+  totalExecutions: number
+  totalPassed: number
+  totalFailed: number
+  passRate: number
+  uniqueHooks: number
+  byHookType?: string
 }
 export interface FrustrationEvent {
-  id?: string;
-  sessionId?: string;
-  taskId?: string;
-  frustrationLevel: string;
-  frustrationScore: number;
-  userMessage: string;
-  detectedSignals?: string;
-  context?: string;
-  recordedAt?: string;
+  id?: string
+  sessionId?: string
+  taskId?: string
+  frustrationLevel: string
+  frustrationScore: number
+  userMessage: string
+  detectedSignals?: string
+  context?: string
+  recordedAt?: string
 }
 export interface FrustrationEventInput {
-  sessionId?: string;
-  taskId?: string;
-  frustrationLevel: string;
-  frustrationScore: number;
-  userMessage: string;
-  detectedSignals?: Array<string>;
-  context?: string;
+  sessionId?: string
+  taskId?: string
+  frustrationLevel: string
+  frustrationScore: number
+  userMessage: string
+  detectedSignals?: Array<string>
+  context?: string
 }
 export interface FrustrationMetrics {
-  totalFrustrations: number;
-  significantFrustrations: number;
-  frustrationRate: number;
-  significantFrustrationRate: number;
-  weightedScore: number;
-  byLevel?: string;
+  totalFrustrations: number
+  significantFrustrations: number
+  frustrationRate: number
+  significantFrustrationRate: number
+  weightedScore: number
+  byLevel?: string
 }
 export interface SessionFileChange {
-  id?: string;
-  sessionId: string;
-  filePath: string;
-  action: string;
-  fileHashBefore?: string;
-  fileHashAfter?: string;
-  toolName?: string;
-  recordedAt?: string;
+  id?: string
+  sessionId: string
+  filePath: string
+  action: string
+  fileHashBefore?: string
+  fileHashAfter?: string
+  toolName?: string
+  recordedAt?: string
 }
 export interface SessionFileChangeInput {
-  sessionId: string;
-  filePath: string;
-  action: string;
-  fileHashBefore?: string;
-  fileHashAfter?: string;
-  toolName?: string;
+  sessionId: string
+  filePath: string
+  action: string
+  fileHashBefore?: string
+  fileHashAfter?: string
+  toolName?: string
 }
 export interface SessionFileValidation {
-  id?: string;
-  sessionId: string;
-  filePath: string;
-  fileHash: string;
-  pluginName: string;
-  hookName: string;
-  directory: string;
-  commandHash: string;
-  validatedAt?: string;
+  id?: string
+  sessionId: string
+  filePath: string
+  fileHash: string
+  pluginName: string
+  hookName: string
+  directory: string
+  commandHash: string
+  validatedAt?: string
 }
 export interface SessionFileValidationInput {
-  sessionId: string;
-  filePath: string;
-  fileHash: string;
-  pluginName: string;
-  hookName: string;
-  directory: string;
-  commandHash: string;
+  sessionId: string
+  filePath: string
+  fileHash: string
+  pluginName: string
+  hookName: string
+  directory: string
+  commandHash: string
 }
 /** A file operation extracted from transcript content */
 export interface FileOperation {
   /** File path */
-  path: string;
+  path: string
   /** Operation type: "read", "write", "edit", "delete" */
-  operation: string;
+  operation: string
 }
 /** Result of file operation extraction */
 export interface ExtractionResult {
   /** Extracted file operations */
-  operations: Array<FileOperation>;
+  operations: Array<FileOperation>
   /** Number of patterns matched */
-  patternMatches: number;
+  patternMatches: number
 }
 /** Session file info */
 export interface SessionFile {
   /** File name (without directory) */
-  name: string;
+  name: string
   /** Full path */
-  path: string;
+  path: string
   /** File size in bytes */
-  size: number;
+  size: number
   /** Last modified timestamp (Unix ms) */
-  modified: number;
+  modified: number
 }
 /**
  * Extract file operations from transcript message content
@@ -605,248 +591,160 @@ export interface SessionFile {
  * This is a high-performance replacement for the TypeScript regex extraction.
  * Uses compiled regex patterns for speed.
  */
-export declare function extractFileOperations(
-  content: string
-): ExtractionResult;
+export declare function extractFileOperations(content: string): ExtractionResult
 /** Extract file operations from multiple messages (batch processing) */
-export declare function extractFileOperationsBatch(
-  contents: Array<string>
-): Array<ExtractionResult>;
+export declare function extractFileOperationsBatch(contents: Array<string>): Array<ExtractionResult>
 /**
  * List JSONL session files in a directory
  *
  * Returns files sorted by modification time (newest first).
  */
-export declare function listSessionFiles(dirPath: string): Array<SessionFile>;
+export declare function listSessionFiles(dirPath: string): Array<SessionFile>
 /**
  * List JSONL files matching a pattern in a directory
  *
  * More flexible than list_session_files - allows custom prefix/suffix matching.
  */
-export declare function listJsonlFiles(
-  dirPath: string,
-  prefix?: string | undefined | null,
-  suffix?: string | undefined | null
-): Array<SessionFile>;
+export declare function listJsonlFiles(dirPath: string, prefix?: string | undefined | null, suffix?: string | undefined | null): Array<SessionFile>
 /**
  * Get all pending index results and clear the queue
  * TypeScript calls this periodically to get results and publish subscription events
  */
-export declare function pollIndexResults(): Array<IndexResult>;
+export declare function pollIndexResults(): Array<IndexResult>
 /** Event type for file changes */
-export enum FileEventType {
+export const enum FileEventType {
   Created = 'Created',
   Modified = 'Modified',
-  Removed = 'Removed',
+  Removed = 'Removed'
 }
 /** File change event */
 export interface FileEvent {
   /** Type of file event */
-  eventType: FileEventType;
+  eventType: FileEventType
   /** Absolute path to the file */
-  path: string;
+  path: string
   /** Session ID extracted from the filename (if applicable) */
-  sessionId?: string;
+  sessionId?: string
   /** Project path extracted from the directory structure */
-  projectPath?: string;
+  projectPath?: string
 }
 /**
  * Start watching the Claude projects directory for JSONL changes
  * Returns true if watcher was started, false if already running
  */
-export declare function startFileWatcher(
-  watchPath?: string | undefined | null
-): boolean;
+export declare function startFileWatcher(watchPath?: string | undefined | null): boolean
 /** Stop the file watcher */
-export declare function stopFileWatcher(): boolean;
+export declare function stopFileWatcher(): boolean
 /**
  * Register a callback to be called when new index results are ready
  * This enables event-driven updates instead of polling
  * The callback receives IndexResult objects directly
  */
-export declare function setIndexCallback(
-  callback: (result: IndexResult) => void
-): void;
+export declare function setIndexCallback(callback: (result: IndexResult) => void): void
 /** Clear the index callback (revert to polling mode) */
-export declare function clearIndexCallback(): void;
+export declare function clearIndexCallback(): void
 /** Check if the file watcher is running */
-export declare function isWatcherRunning(): boolean;
+export declare function isWatcherRunning(): boolean
 /** Get the default watch path (~/.claude/projects) */
-export declare function getDefaultWatchPath(): string;
+export declare function getDefaultWatchPath(): string
 /**
  * Compute SHA256 hash of a file's contents
  * Returns empty string if file cannot be read
  */
-export declare function computeFileHash(filePath: string): string;
+export declare function computeFileHash(filePath: string): string
 /**
  * Compute SHA256 hashes for multiple files in parallel
  * Returns a map of file path to hash
  */
-export declare function computeFileHashesParallel(
-  filePaths: Array<string>
-): Record<string, string>;
+export declare function computeFileHashesParallel(filePaths: Array<string>): Record<string, string>
 /**
  * Find files matching glob patterns in a directory, respecting gitignore
  * Returns absolute file paths
  */
-export declare function findFilesWithGlob(
-  rootDir: string,
-  patterns: Array<string>
-): Array<string>;
+export declare function findFilesWithGlob(rootDir: string, patterns: Array<string>): Array<string>
 /**
  * Find directories containing marker files or directories
  * Returns absolute directory paths
  */
-export declare function findDirectoriesWithMarkers(
-  rootDir: string,
-  markers: Array<string>
-): Array<string>;
+export declare function findDirectoriesWithMarkers(rootDir: string, markers: Array<string>): Array<string>
 /** Build a manifest of file hashes for given files */
-export declare function buildManifest(
-  files: Array<string>,
-  rootDir: string
-): Record<string, string>;
+export declare function buildManifest(files: Array<string>, rootDir: string): Record<string, string>
 /** Check if any files have changed compared to a cached manifest */
-export declare function hasChanges(
-  rootDir: string,
-  patterns: Array<string>,
-  cachedManifest: Record<string, string>
-): boolean;
+export declare function hasChanges(rootDir: string, patterns: Array<string>, cachedManifest: Record<string, string>): boolean
 export interface CheckResult {
-  hasChanges: boolean;
-  manifest: Record<string, string>;
-  files: Array<string>;
+  hasChanges: boolean
+  manifest: Record<string, string>
+  files: Array<string>
 }
 /** Efficiently check for changes and build manifest in one pass */
-export declare function checkAndBuildManifest(
-  rootDir: string,
-  patterns: Array<string>,
-  cachedManifest?: Record<string, string> | undefined | null
-): CheckResult;
+export declare function checkAndBuildManifest(rootDir: string, patterns: Array<string>, cachedManifest?: Record<string, string> | undefined | null): CheckResult
 /**
  * Initialize or open a database at the given path
  * Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
  */
-export declare function dbInit(dbPath: string): boolean;
+export declare function dbInit(dbPath: string): boolean
 /** Index documents for FTS */
-export declare function ftsIndex(
-  dbPath: string,
-  tableName: string,
-  documents: Array<FtsDocument>
-): number;
+export declare function ftsIndex(dbPath: string, tableName: string, documents: Array<FtsDocument>): number
 /** Search documents using FTS (BM25) */
-export declare function ftsSearch(
-  dbPath: string,
-  tableName: string,
-  query: string,
-  limit?: number | undefined | null
-): Array<FtsSearchResult>;
+export declare function ftsSearch(dbPath: string, tableName: string, query: string, limit?: number | undefined | null): Array<FtsSearchResult>
 /** Delete documents by ID */
-export declare function ftsDelete(
-  dbPath: string,
-  tableName: string,
-  ids: Array<string>
-): number;
+export declare function ftsDelete(dbPath: string, tableName: string, ids: Array<string>): number
 /** Input for vector document indexing (napi-compatible) */
 export interface VectorDocumentInput {
-  id: string;
-  content: string;
-  vector: Array<number>;
-  metadata?: string;
+  id: string
+  content: string
+  vector: Array<number>
+  metadata?: string
 }
 /** Index documents with vectors */
-export declare function vectorIndex(
-  dbPath: string,
-  tableName: string,
-  documents: Array<VectorDocumentInput>
-): number;
+export declare function vectorIndex(dbPath: string, tableName: string, documents: Array<VectorDocumentInput>): number
 /** Search documents using vector similarity */
-export declare function vectorSearch(
-  dbPath: string,
-  tableName: string,
-  queryVector: Array<number>,
-  limit?: number | undefined | null
-): Array<VectorSearchResult>;
+export declare function vectorSearch(dbPath: string, tableName: string, queryVector: Array<number>, limit?: number | undefined | null): Array<VectorSearchResult>
 /** Check if ONNX Runtime is available (downloaded) */
-export declare function embeddingIsAvailable(): Promise<boolean>;
+export declare function embeddingIsAvailable(): Promise<boolean>
 /**
  * Ensure ONNX Runtime and model are downloaded
  * Returns path to the ONNX Runtime library
  */
-export declare function embeddingEnsureAvailable(): Promise<string>;
+export declare function embeddingEnsureAvailable(): Promise<string>
 /** Generate embeddings for a list of texts */
-export declare function generateEmbeddings(
-  texts: Array<string>
-): Promise<Array<Array<number>>>;
+export declare function generateEmbeddings(texts: Array<string>): Promise<Array<Array<number>>>
 /** Generate embedding for a single text */
-export declare function generateEmbedding(text: string): Promise<Array<number>>;
+export declare function generateEmbedding(text: string): Promise<Array<number>>
 /** Get the embedding dimension (384 for all-MiniLM-L6-v2) */
-export declare function getEmbeddingDimension(): number;
+export declare function getEmbeddingDimension(): number
 /** Create or update a repo record */
-export declare function upsertRepo(dbPath: string, input: RepoInput): Repo;
+export declare function upsertRepo(dbPath: string, input: RepoInput): Repo
 /** Get a repo by its remote URL */
-export declare function getRepoByRemote(
-  dbPath: string,
-  remote: string
-): Repo | null;
+export declare function getRepoByRemote(dbPath: string, remote: string): Repo | null
 /** List all repos */
-export declare function listRepos(dbPath: string): Array<Repo>;
+export declare function listRepos(dbPath: string): Array<Repo>
 /** Create or update a project record */
-export declare function upsertProject(
-  dbPath: string,
-  input: ProjectInput
-): Project;
+export declare function upsertProject(dbPath: string, input: ProjectInput): Project
 /** Get a project by its slug */
-export declare function getProjectBySlug(
-  dbPath: string,
-  slug: string
-): Project | null;
+export declare function getProjectBySlug(dbPath: string, slug: string): Project | null
 /** Get a project by its absolute path */
-export declare function getProjectByPath(
-  dbPath: string,
-  path: string
-): Project | null;
+export declare function getProjectByPath(dbPath: string, path: string): Project | null
 /** List projects, optionally filtered by repo */
-export declare function listProjects(
-  dbPath: string,
-  repoId?: string | undefined | null
-): Array<Project>;
+export declare function listProjects(dbPath: string, repoId?: string | undefined | null): Array<Project>
 /** Create or update a session record */
-export declare function upsertSession(
-  dbPath: string,
-  input: SessionInput
-): Session;
+export declare function upsertSession(dbPath: string, input: SessionInput): Session
 /** Mark a session as completed */
-export declare function endSession(dbPath: string, sessionId: string): boolean;
+export declare function endSession(dbPath: string, sessionId: string): boolean
 /** Get a session by ID */
-export declare function getSession(
-  dbPath: string,
-  sessionId: string
-): Session | null;
+export declare function getSession(dbPath: string, sessionId: string): Session | null
 /** List sessions with optional filters */
-export declare function listSessions(
-  dbPath: string,
-  projectId?: string | undefined | null,
-  status?: string | undefined | null,
-  limit?: number | undefined | null
-): Array<Session>;
+export declare function listSessions(dbPath: string, projectId?: string | undefined | null, status?: string | undefined | null, limit?: number | undefined | null): Array<Session>
 /**
  * Reset all sessions for re-indexing
  * Sets last_indexed_line to 0 so all messages will be re-processed
  * Use this when you need to backfill raw_json or other fields
  */
-export declare function resetAllSessionsForReindex(dbPath: string): number;
+export declare function resetAllSessionsForReindex(dbPath: string): number
 /** Insert a batch of messages for a session */
-export declare function insertMessagesBatch(
-  dbPath: string,
-  sessionId: string,
-  messages: Array<MessageInput>
-): number;
+export declare function insertMessagesBatch(dbPath: string, sessionId: string, messages: Array<MessageInput>): number
 /** Get a message by ID */
-export declare function getMessage(
-  dbPath: string,
-  messageId: string
-): Message | null;
+export declare function getMessage(dbPath: string, messageId: string): Message | null
 /**
  * List messages for a session with optional type filter, agent filter, and pagination
  * agent_id_filter behavior:
@@ -854,221 +752,112 @@ export declare function getMessage(
  *   - empty string "": returns only main conversation (agent_id IS NULL)
  *   - non-empty string: returns only messages from that specific agent
  */
-export declare function listSessionMessages(
-  dbPath: string,
-  sessionId: string,
-  messageType?: string | undefined | null,
-  agentIdFilter?: string | undefined | null,
-  limit?: number | undefined | null,
-  offset?: number | undefined | null
-): Array<Message>;
+export declare function listSessionMessages(dbPath: string, sessionId: string, messageType?: string | undefined | null, agentIdFilter?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Array<Message>
 /** Get message count for a session */
-export declare function getMessageCount(
-  dbPath: string,
-  sessionId: string
-): number;
+export declare function getMessageCount(dbPath: string, sessionId: string): number
 /**
  * Get message counts for multiple sessions in a single query
  * Returns a map of session_id -> count
  */
-export declare function getMessageCountsBatch(
-  dbPath: string,
-  sessionIds: Array<string>
-): Record<string, number>;
+export declare function getMessageCountsBatch(dbPath: string, sessionIds: Array<string>): Record<string, number>
 /** Get the last indexed line number for incremental indexing */
-export declare function getLastIndexedLine(
-  dbPath: string,
-  sessionId: string
-): number;
+export declare function getLastIndexedLine(dbPath: string, sessionId: string): number
 /** Session timestamps returned by get_session_timestamps_batch */
 export interface SessionTimestamps {
-  sessionId: string;
-  startedAt?: string;
-  endedAt?: string;
+  sessionId: string
+  startedAt?: string
+  endedAt?: string
 }
 /**
  * Get first/last message timestamps for multiple sessions in a single query
  * Returns a map of session_id -> SessionTimestamps
  */
-export declare function getSessionTimestampsBatch(
-  dbPath: string,
-  sessionIds: Array<string>
-): Record<string, SessionTimestamps>;
+export declare function getSessionTimestampsBatch(dbPath: string, sessionIds: Array<string>): Record<string, SessionTimestamps>
 /** Search messages using FTS */
-export declare function searchMessages(
-  dbPath: string,
-  query: string,
-  sessionId?: string | undefined | null,
-  limit?: number | undefined | null
-): Array<Message>;
+export declare function searchMessages(dbPath: string, query: string, sessionId?: string | undefined | null, limit?: number | undefined | null): Array<Message>
 /** Create a new task record */
-export declare function createTask(dbPath: string, input: TaskInput): Task;
+export declare function createTask(dbPath: string, input: TaskInput): Task
 /** Mark a task as completed with outcome */
-export declare function completeTask(
-  dbPath: string,
-  completion: TaskCompletion
-): Task;
+export declare function completeTask(dbPath: string, completion: TaskCompletion): Task
 /** Mark a task as failed */
-export declare function failTask(dbPath: string, failure: TaskFailure): Task;
+export declare function failTask(dbPath: string, failure: TaskFailure): Task
 /** Get a task by ID */
-export declare function getTask(dbPath: string, taskId: string): Task | null;
+export declare function getTask(dbPath: string, taskId: string): Task | null
 /** Query task metrics with optional filters */
-export declare function queryTaskMetrics(
-  dbPath: string,
-  taskType?: string | undefined | null,
-  outcome?: string | undefined | null,
-  period?: string | undefined | null
-): TaskMetrics;
+export declare function queryTaskMetrics(dbPath: string, taskType?: string | undefined | null, outcome?: string | undefined | null, period?: string | undefined | null): TaskMetrics
 /** Set a hook cache entry */
-export declare function setHookCache(
-  dbPath: string,
-  input: HookCacheInput
-): boolean;
+export declare function setHookCache(dbPath: string, input: HookCacheInput): boolean
 /** Get a hook cache entry by cache_key */
-export declare function getHookCache(
-  dbPath: string,
-  cacheKey: string
-): HookCacheEntry | null;
+export declare function getHookCache(dbPath: string, cacheKey: string): HookCacheEntry | null
 /** Invalidate a hook cache entry by cache_key */
-export declare function invalidateHookCache(
-  dbPath: string,
-  cacheKey: string
-): boolean;
+export declare function invalidateHookCache(dbPath: string, cacheKey: string): boolean
 /** Clean up expired cache entries */
-export declare function cleanupExpiredCache(dbPath: string): number;
+export declare function cleanupExpiredCache(dbPath: string): number
 /** Record a hook execution */
-export declare function recordHookExecution(
-  dbPath: string,
-  input: HookExecutionInput
-): HookExecution;
+export declare function recordHookExecution(dbPath: string, input: HookExecutionInput): HookExecution
 /** Query hook statistics */
-export declare function queryHookStats(
-  dbPath: string,
-  period?: string | undefined | null
-): HookStats;
+export declare function queryHookStats(dbPath: string, period?: string | undefined | null): HookStats
 /** Record a frustration event */
-export declare function recordFrustration(
-  dbPath: string,
-  input: FrustrationEventInput
-): FrustrationEvent;
+export declare function recordFrustration(dbPath: string, input: FrustrationEventInput): FrustrationEvent
 /** Query frustration metrics */
-export declare function queryFrustrationMetrics(
-  dbPath: string,
-  period: string | undefined | null,
-  totalTasks: number
-): FrustrationMetrics;
+export declare function queryFrustrationMetrics(dbPath: string, period: string | undefined | null, totalTasks: number): FrustrationMetrics
 /** Record a file change in a session */
-export declare function recordFileChange(
-  dbPath: string,
-  input: SessionFileChangeInput
-): SessionFileChange;
+export declare function recordFileChange(dbPath: string, input: SessionFileChangeInput): SessionFileChange
 /** Get file changes for a session */
-export declare function getSessionFileChanges(
-  dbPath: string,
-  sessionId: string
-): Array<SessionFileChange>;
+export declare function getSessionFileChanges(dbPath: string, sessionId: string): Array<SessionFileChange>
 /** Check if a session has any file changes */
-export declare function hasSessionChanges(
-  dbPath: string,
-  sessionId: string
-): boolean;
+export declare function hasSessionChanges(dbPath: string, sessionId: string): boolean
 /** Record a file validation (upserts based on session/file/plugin/hook) */
-export declare function recordFileValidation(
-  dbPath: string,
-  input: SessionFileValidationInput
-): SessionFileValidation;
+export declare function recordFileValidation(dbPath: string, input: SessionFileValidationInput): SessionFileValidation
 /** Get a specific file validation */
-export declare function getFileValidation(
-  dbPath: string,
-  sessionId: string,
-  filePath: string,
-  pluginName: string,
-  hookName: string,
-  directory: string
-): SessionFileValidation | null;
+export declare function getFileValidation(dbPath: string, sessionId: string, filePath: string, pluginName: string, hookName: string, directory: string): SessionFileValidation | null
 /** Get all validations for a session and plugin/hook/directory combo */
-export declare function getSessionValidations(
-  dbPath: string,
-  sessionId: string,
-  pluginName: string,
-  hookName: string,
-  directory: string
-): Array<SessionFileValidation>;
+export declare function getSessionValidations(dbPath: string, sessionId: string, pluginName: string, hookName: string, directory: string): Array<SessionFileValidation>
 /** Check if files need validation (any changed since last validation or command changed) */
-export declare function needsValidation(
-  dbPath: string,
-  sessionId: string,
-  pluginName: string,
-  hookName: string,
-  directory: string,
-  commandHash: string
-): boolean;
+export declare function needsValidation(dbPath: string, sessionId: string, pluginName: string, hookName: string, directory: string, commandHash: string): boolean
 /**
  * Get ALL file validations for a session (not filtered by plugin/hook)
  * Useful for showing validation status across all hooks for file changes
  */
-export declare function getAllSessionValidations(
-  dbPath: string,
-  sessionId: string
-): Array<SessionFileValidation>;
+export declare function getAllSessionValidations(dbPath: string, sessionId: string): Array<SessionFileValidation>
 /** Upsert a session summary (keeps the latest by timestamp) */
-export declare function upsertSessionSummary(
-  dbPath: string,
-  input: SessionSummaryInput
-): SessionSummary;
+export declare function upsertSessionSummary(dbPath: string, input: SessionSummaryInput): SessionSummary
 /** Get session summary by session ID */
-export declare function getSessionSummary(
-  dbPath: string,
-  sessionId: string
-): SessionSummary | null;
+export declare function getSessionSummary(dbPath: string, sessionId: string): SessionSummary | null
 /** Upsert a session compact (keeps the latest by timestamp) */
-export declare function upsertSessionCompact(
-  dbPath: string,
-  input: SessionCompactInput
-): SessionCompact;
+export declare function upsertSessionCompact(dbPath: string, input: SessionCompactInput): SessionCompact
 /** Get session compact by session ID */
-export declare function getSessionCompact(
-  dbPath: string,
-  sessionId: string
-): SessionCompact | null;
+export declare function getSessionCompact(dbPath: string, sessionId: string): SessionCompact | null
+/** Upsert session todos (keeps the latest by timestamp) */
+export declare function upsertSessionTodos(dbPath: string, input: SessionTodosInput): SessionTodos
+/** Get session todos by session ID */
+export declare function getSessionTodos(dbPath: string, sessionId: string): SessionTodos | null
 /** Try to acquire the coordinator lock (single-instance indexer pattern) */
-export declare function tryAcquireCoordinatorLock(): boolean;
+export declare function tryAcquireCoordinatorLock(): boolean
 /** Release the coordinator lock */
-export declare function releaseCoordinatorLock(): boolean;
+export declare function releaseCoordinatorLock(): boolean
 /** Update coordinator heartbeat (call periodically while coordinating) */
-export declare function updateCoordinatorHeartbeat(): boolean;
+export declare function updateCoordinatorHeartbeat(): boolean
 /** Get current coordinator status */
-export declare function getCoordinatorStatus(): CoordinatorStatus;
+export declare function getCoordinatorStatus(): CoordinatorStatus
 /** Check if this process is the coordinator */
-export declare function isCoordinator(): boolean;
+export declare function isCoordinator(): boolean
 /** Get the heartbeat interval in seconds */
-export declare function getHeartbeatInterval(): number;
+export declare function getHeartbeatInterval(): number
 /** Get the stale lock timeout in seconds */
-export declare function getStaleLockTimeout(): number;
+export declare function getStaleLockTimeout(): number
 /**
  * Index a single JSONL session file incrementally
  * Only processes lines after the last indexed line
  * Task association for sentiment events is loaded from SQLite automatically
  */
-export declare function indexSessionFile(
-  dbPath: string,
-  filePath: string
-): IndexResult;
+export declare function indexSessionFile(dbPath: string, filePath: string): IndexResult
 /** Index all JSONL files in a project directory */
-export declare function indexProjectDirectory(
-  dbPath: string,
-  projectDir: string
-): Array<IndexResult>;
+export declare function indexProjectDirectory(dbPath: string, projectDir: string): Array<IndexResult>
 /** Handle a file event from the watcher (coordinator use only) */
-export declare function handleFileEvent(
-  dbPath: string,
-  eventType: FileEventType,
-  filePath: string,
-  sessionId?: string | undefined | null,
-  projectPath?: string | undefined | null
-): IndexResult | null;
+export declare function handleFileEvent(dbPath: string, eventType: FileEventType, filePath: string, sessionId?: string | undefined | null, projectPath?: string | undefined | null): IndexResult | null
 /**
  * Perform a full scan and index of all Claude Code sessions
  * Should be called on coordinator startup
  */
-export declare function fullScanAndIndex(dbPath: string): Array<IndexResult>;
+export declare function fullScanAndIndex(dbPath: string): Array<IndexResult>

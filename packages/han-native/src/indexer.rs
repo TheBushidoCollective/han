@@ -15,7 +15,7 @@
 
 use crate::crud;
 use crate::jsonl::{jsonl_read_page, JsonlLine};
-use crate::schema::{MessageInput, ProjectInput, RepoInput, SessionInput, SessionFileChangeInput, SessionFileValidationInput, TaskInput, TaskCompletion, TaskFailure, SessionSummaryInput, SessionCompactInput};
+use crate::schema::{MessageInput, ProjectInput, RepoInput, SessionInput, SessionFileChangeInput, SessionFileValidationInput, TaskInput, TaskCompletion, TaskFailure, SessionSummaryInput, SessionCompactInput, SessionTodosInput};
 use crate::sentiment;
 use crate::task_timeline::{build_task_timeline, TaskTimeline};
 use crate::watcher::FileEventType;
@@ -802,6 +802,44 @@ fn record_file_change_from_tool(
     }
 }
 
+/// Extract and save todos from a TodoWrite tool call
+/// The tool_input contains a JSON object with a "todos" array
+fn extract_and_save_todos(
+    session_id: &str,
+    message_id: &str,
+    tool_input: &str,
+    timestamp: &str,
+    line_number: i32,
+) {
+    let input: Value = match serde_json::from_str(tool_input) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    // Extract the todos array from the input
+    let todos = match input.get("todos") {
+        Some(t) if t.is_array() => t,
+        _ => return,
+    };
+
+    // Serialize the todos array back to JSON string for storage
+    let todos_json = match serde_json::to_string(todos) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let input = SessionTodosInput {
+        session_id: session_id.to_string(),
+        message_id: message_id.to_string(),
+        todos_json,
+        timestamp: timestamp.to_string(),
+        line_number,
+    };
+
+    // Upsert to database (ignore errors - todo tracking is best-effort)
+    let _ = crud::upsert_session_todos(input);
+}
+
 /// Compute sentiment analysis for a message and return tuple of fields
 /// Returns (sentiment_score, sentiment_level, frustration_score, frustration_level)
 fn compute_sentiment(content: &str) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
@@ -1266,11 +1304,15 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
             let message_timestamp = finalized.timestamp.clone();
 
             // Record file changes for Write/Edit/NotebookEdit tools (before moving finalized)
+            // Also extract TodoWrite tool calls to session_todos table
             // For tool_use messages, check the direct tool_name/tool_input
             if finalized.message_type == MessageType::ToolUse {
                 if let (Some(ref tool_name), Some(ref tool_input)) = (&finalized.tool_name, &finalized.tool_input) {
                     if is_file_modification_tool(tool_name) {
                         record_file_change_from_tool(&session_id, tool_name, tool_input);
+                    }
+                    if tool_name == "TodoWrite" {
+                        extract_and_save_todos(&session_id, &message_id, tool_input, &message_timestamp, line_number);
                     }
                 }
             }
@@ -1285,6 +1327,12 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
                                         if let Some(input) = item.get("input") {
                                             let input_str = input.to_string();
                                             record_file_change_from_tool(&session_id, tool_name, &input_str);
+                                        }
+                                    }
+                                    if tool_name == "TodoWrite" {
+                                        if let Some(input) = item.get("input") {
+                                            let input_str = input.to_string();
+                                            extract_and_save_todos(&session_id, &message_id, &input_str, &message_timestamp, line_number);
                                         }
                                     }
                                 }

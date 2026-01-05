@@ -165,6 +165,41 @@ pub struct SessionCompactInput {
 }
 
 // ============================================================================
+// Data Structures - Session Todos (event-sourced)
+// ============================================================================
+
+/// Individual todo item structure
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TodoItem {
+    pub content: String,
+    pub status: String,  // 'pending', 'in_progress', 'completed'
+    pub active_form: String,  // The "...ing" form shown when active
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionTodos {
+    pub id: String,
+    pub session_id: String,
+    pub message_id: String,
+    pub todos_json: String,  // JSON array of TodoItem
+    pub timestamp: String,
+    pub line_number: i32,
+    pub indexed_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionTodosInput {
+    pub session_id: String,
+    pub message_id: String,
+    pub todos_json: String,  // JSON array of TodoItem
+    pub timestamp: String,
+    pub line_number: i32,
+}
+
+// ============================================================================
 // Data Structures - Messages
 // id IS the message UUID from JSONL - no separate message_id
 // ============================================================================
