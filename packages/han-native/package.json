@@ -24,7 +24,8 @@
   ],
   "scripts": {
     "artifacts": "napi artifacts",
-    "build": "napi build --platform --release",
+    "build": "napi build --platform --release && npm run copy-to-han",
+    "copy-to-han": "mkdir -p ../han/native && cp *.node ../han/native/han-native.node",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm",
     "universal": "napi universal",
@@ -37,7 +38,7 @@
     "type": "git",
     "url": "https://github.com/thebushidocollective/han"
   },
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "author": "The Bushido Collective",
   "keywords": [
     "napi-rs",

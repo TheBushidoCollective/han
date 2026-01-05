@@ -7,7 +7,7 @@
 //! - Messages (JSONL entries)
 //! - Tasks (metrics tracking)
 //! - Hook cache
-//! - Marketplace cache
+//! - Session file changes and validations
 
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
@@ -107,6 +107,64 @@ pub struct SessionFile {
 }
 
 // ============================================================================
+// Data Structures - Session Summaries (event-sourced)
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionSummary {
+    pub id: String,
+    pub session_id: String,
+    pub message_id: String,
+    pub content: Option<String>,
+    pub raw_json: Option<String>,
+    pub timestamp: String,
+    pub line_number: i32,
+    pub indexed_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionSummaryInput {
+    pub session_id: String,
+    pub message_id: String,
+    pub content: Option<String>,
+    pub raw_json: Option<String>,
+    pub timestamp: String,
+    pub line_number: i32,
+}
+
+// ============================================================================
+// Data Structures - Session Compacts (event-sourced)
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionCompact {
+    pub id: String,
+    pub session_id: String,
+    pub message_id: String,
+    pub content: Option<String>,
+    pub raw_json: Option<String>,
+    pub timestamp: String,
+    pub line_number: i32,
+    pub compact_type: Option<String>,  // 'auto_compact', 'compact', 'continuation'
+    pub indexed_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionCompactInput {
+    pub session_id: String,
+    pub message_id: String,
+    pub content: Option<String>,
+    pub raw_json: Option<String>,
+    pub timestamp: String,
+    pub line_number: i32,
+    pub compact_type: Option<String>,
+}
+
+// ============================================================================
 // Data Structures - Messages
 // id IS the message UUID from JSONL - no separate message_id
 // ============================================================================
@@ -116,6 +174,8 @@ pub struct SessionFile {
 pub struct Message {
     pub id: String,  // This IS the message UUID from JSONL
     pub session_id: String,
+    pub agent_id: Option<String>,  // NULL for main conversation, agent ID for agent messages
+    pub parent_id: Option<String>,  // For result messages, references the call message id
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
@@ -125,6 +185,13 @@ pub struct Message {
     pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
+    pub source_file_name: Option<String>,  // Basename of source file
+    pub source_file_type: Option<String>,  // Type: 'main', 'agent', 'han_events'
+    // Sentiment analysis (computed during indexing for user messages)
+    pub sentiment_score: Option<f64>,  // Raw sentiment score (typically -5 to +5)
+    pub sentiment_level: Option<String>,  // 'positive', 'neutral', 'negative'
+    pub frustration_score: Option<f64>,  // Frustration score (0-10) if detected
+    pub frustration_level: Option<String>,  // 'low', 'moderate', 'high' if detected
     pub indexed_at: Option<String>,
 }
 
@@ -133,6 +200,8 @@ pub struct Message {
 pub struct MessageInput {
     pub id: String,  // The message UUID from JSONL
     pub session_id: String,
+    pub agent_id: Option<String>,  // NULL for main conversation, agent ID for agent messages
+    pub parent_id: Option<String>,  // For result messages, references the call message id
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
@@ -142,6 +211,13 @@ pub struct MessageInput {
     pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
+    pub source_file_name: Option<String>,  // Basename of source file
+    pub source_file_type: Option<String>,  // Type: 'main', 'agent', 'han_events'
+    // Sentiment analysis (computed by TypeScript during indexing)
+    pub sentiment_score: Option<f64>,
+    pub sentiment_level: Option<String>,
+    pub frustration_score: Option<f64>,
+    pub frustration_level: Option<String>,
 }
 
 #[napi(object)]
@@ -205,16 +281,16 @@ pub struct TaskFailure {
 
 // ============================================================================
 // Data Structures - Hook Cache
+// Similar structure to session_file_validations for consistency
 // ============================================================================
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HookCacheEntry {
     pub id: Option<String>,
-    pub project_id: Option<String>,
-    pub cache_key: String,
-    pub file_hash: String,
-    pub result: String, // JSON string
+    pub cache_key: String,     // Composite key: "{pluginName}_{hookName}"
+    pub file_hash: String,     // SHA256 hash of manifest content
+    pub result: String,        // JSON manifest of file hashes
     pub cached_at: Option<String>,
     pub expires_at: Option<String>,
 }
@@ -222,40 +298,15 @@ pub struct HookCacheEntry {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HookCacheInput {
-    pub project_id: Option<String>,
-    pub cache_key: String,
-    pub file_hash: String,
-    pub result: String, // JSON string
+    pub cache_key: String,     // Composite key: "{pluginName}_{hookName}"
+    pub file_hash: String,     // SHA256 hash of manifest content
+    pub result: String,        // JSON manifest of file hashes
     pub ttl_seconds: Option<i64>,
 }
 
 // ============================================================================
-// Data Structures - Marketplace
+// NOTE: Marketplace structs removed - not used
 // ============================================================================
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MarketplacePlugin {
-    pub id: Option<String>,
-    pub plugin_id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub version: Option<String>,
-    pub category: Option<String>,
-    pub metadata: Option<String>, // JSON string
-    pub fetched_at: Option<String>,
-}
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MarketplacePluginInput {
-    pub plugin_id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub version: Option<String>,
-    pub category: Option<String>,
-    pub metadata: Option<String>, // JSON string
-}
 
 // ============================================================================
 // Metrics Query Results
@@ -366,30 +417,8 @@ pub struct FrustrationMetrics {
 }
 
 // ============================================================================
-// Data Structures - Checkpoints
+// NOTE: Checkpoint structs removed - not used
 // ============================================================================
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Checkpoint {
-    pub id: Option<String>,
-    pub session_id: String,
-    pub project_path: String,
-    pub file_path: String,
-    pub file_hash: String,
-    pub blob_path: String,
-    pub created_at: Option<String>,
-}
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CheckpointInput {
-    pub session_id: String,
-    pub project_path: String,
-    pub file_path: String,
-    pub file_hash: String,
-    pub blob_path: String,
-}
 
 // ============================================================================
 // Data Structures - Session File Changes
@@ -417,4 +446,34 @@ pub struct SessionFileChangeInput {
     pub file_hash_before: Option<String>,
     pub file_hash_after: Option<String>,
     pub tool_name: Option<String>,
+}
+
+// ============================================================================
+// Data Structures - Session File Validations
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionFileValidation {
+    pub id: Option<String>,
+    pub session_id: String,
+    pub file_path: String,
+    pub file_hash: String,
+    pub plugin_name: String,
+    pub hook_name: String,
+    pub directory: String,
+    pub command_hash: String,
+    pub validated_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionFileValidationInput {
+    pub session_id: String,
+    pub file_path: String,
+    pub file_hash: String,
+    pub plugin_name: String,
+    pub hook_name: String,
+    pub directory: String,
+    pub command_hash: String,
 }

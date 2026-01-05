@@ -326,6 +326,16 @@ if (!nativeBinding) {
 const {
   cleanupLegacyDatabase,
   hasLegacyDatabase,
+  getGitBranch,
+  getGitRoot,
+  getGitCommonDir,
+  getGitRemoteUrl,
+  getGitInfo,
+  gitLsFiles,
+  gitWorktreeList,
+  gitLog,
+  gitShowFile,
+  gitDiffStat,
   jsonlCountLines,
   jsonlStats,
   jsonlReadPage,
@@ -396,19 +406,22 @@ const {
   getHookCache,
   invalidateHookCache,
   cleanupExpiredCache,
-  upsertMarketplacePlugin,
-  getMarketplacePlugin,
-  listMarketplacePlugins,
   recordHookExecution,
   queryHookStats,
   recordFrustration,
   queryFrustrationMetrics,
-  createCheckpoint,
-  getCheckpoint,
-  listCheckpoints,
   recordFileChange,
   getSessionFileChanges,
   hasSessionChanges,
+  recordFileValidation,
+  getFileValidation,
+  getSessionValidations,
+  needsValidation,
+  getAllSessionValidations,
+  upsertSessionSummary,
+  getSessionSummary,
+  upsertSessionCompact,
+  getSessionCompact,
   tryAcquireCoordinatorLock,
   releaseCoordinatorLock,
   updateCoordinatorHeartbeat,
@@ -424,6 +437,16 @@ const {
 
 module.exports.cleanupLegacyDatabase = cleanupLegacyDatabase;
 module.exports.hasLegacyDatabase = hasLegacyDatabase;
+module.exports.getGitBranch = getGitBranch;
+module.exports.getGitRoot = getGitRoot;
+module.exports.getGitCommonDir = getGitCommonDir;
+module.exports.getGitRemoteUrl = getGitRemoteUrl;
+module.exports.getGitInfo = getGitInfo;
+module.exports.gitLsFiles = gitLsFiles;
+module.exports.gitWorktreeList = gitWorktreeList;
+module.exports.gitLog = gitLog;
+module.exports.gitShowFile = gitShowFile;
+module.exports.gitDiffStat = gitDiffStat;
 module.exports.jsonlCountLines = jsonlCountLines;
 module.exports.jsonlStats = jsonlStats;
 module.exports.jsonlReadPage = jsonlReadPage;
@@ -494,19 +517,22 @@ module.exports.setHookCache = setHookCache;
 module.exports.getHookCache = getHookCache;
 module.exports.invalidateHookCache = invalidateHookCache;
 module.exports.cleanupExpiredCache = cleanupExpiredCache;
-module.exports.upsertMarketplacePlugin = upsertMarketplacePlugin;
-module.exports.getMarketplacePlugin = getMarketplacePlugin;
-module.exports.listMarketplacePlugins = listMarketplacePlugins;
 module.exports.recordHookExecution = recordHookExecution;
 module.exports.queryHookStats = queryHookStats;
 module.exports.recordFrustration = recordFrustration;
 module.exports.queryFrustrationMetrics = queryFrustrationMetrics;
-module.exports.createCheckpoint = createCheckpoint;
-module.exports.getCheckpoint = getCheckpoint;
-module.exports.listCheckpoints = listCheckpoints;
 module.exports.recordFileChange = recordFileChange;
 module.exports.getSessionFileChanges = getSessionFileChanges;
 module.exports.hasSessionChanges = hasSessionChanges;
+module.exports.recordFileValidation = recordFileValidation;
+module.exports.getFileValidation = getFileValidation;
+module.exports.getSessionValidations = getSessionValidations;
+module.exports.needsValidation = needsValidation;
+module.exports.getAllSessionValidations = getAllSessionValidations;
+module.exports.upsertSessionSummary = upsertSessionSummary;
+module.exports.getSessionSummary = getSessionSummary;
+module.exports.upsertSessionCompact = upsertSessionCompact;
+module.exports.getSessionCompact = getSessionCompact;
 module.exports.tryAcquireCoordinatorLock = tryAcquireCoordinatorLock;
 module.exports.releaseCoordinatorLock = releaseCoordinatorLock;
 module.exports.updateCoordinatorHeartbeat = updateCoordinatorHeartbeat;

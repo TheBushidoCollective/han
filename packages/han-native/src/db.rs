@@ -60,17 +60,117 @@ fn open_database(path: &str) -> Result<Mutex<Connection>, rusqlite::Error> {
     conn.execute_batch("PRAGMA cache_size=-64000;")?; // 64MB cache
     conn.execute_batch("PRAGMA foreign_keys=ON;")?;
 
-    // Initialize schema
-    conn.execute_batch(include_str!("schema.sql"))?;
-
-    // Run migrations for existing databases
+    // Run migrations FIRST for existing databases
+    // This ensures columns exist before schema.sql tries to create indexes on them
+    // For new databases, migrations are no-ops (tables don't exist yet)
     run_migrations(&conn)?;
+
+    // Initialize schema (CREATE TABLE/INDEX IF NOT EXISTS)
+    conn.execute_batch(include_str!("schema.sql"))?;
 
     Ok(Mutex::new(conn))
 }
 
 /// Run database migrations for schema updates
 fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
+    // Migration: session_summaries and session_compacts were changed from VIEWs to TABLEs
+    // We need to drop the old objects (whether VIEW or TABLE) before schema.sql runs
+    for table_name in ["session_summaries", "session_compacts"] {
+        // Check what type of object exists (if any)
+        let obj_type: Option<String> = conn
+            .query_row(
+                "SELECT type FROM sqlite_master WHERE name = ?",
+                [table_name],
+                |row| row.get(0),
+            )
+            .ok();
+
+        match obj_type.as_deref() {
+            Some("view") => {
+                // Drop the old view so schema.sql can create the table
+                conn.execute(&format!("DROP VIEW IF EXISTS {}", table_name), [])?;
+            }
+            Some("table") => {
+                // Table already exists - drop it so schema.sql recreates with correct schema
+                // This ensures any schema changes are applied
+                conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), [])?;
+            }
+            _ => {
+                // Object doesn't exist, schema.sql will create it
+            }
+        }
+    }
+
+    // Migration for session_file_validations runs FIRST and unconditionally
+    // This handles the case where schema.sql partially ran and created this table
+    // with the old schema (missing directory column) but messages table doesn't exist yet.
+    // We must fix this before schema.sql tries to create indexes on the directory column.
+    let validations_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='session_file_validations'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if validations_exists {
+        let has_directory: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('session_file_validations') WHERE name = 'directory'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_directory {
+            // Need to recreate the table since we're changing the UNIQUE constraint
+            // SQLite doesn't support adding columns to UNIQUE constraints
+            conn.execute_batch(
+                "
+                -- Create new table with correct schema
+                CREATE TABLE IF NOT EXISTS session_file_validations_new (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL REFERENCES sessions(id),
+                    file_path TEXT NOT NULL,
+                    file_hash TEXT NOT NULL,
+                    plugin_name TEXT NOT NULL,
+                    hook_name TEXT NOT NULL,
+                    directory TEXT NOT NULL DEFAULT '.',
+                    command_hash TEXT NOT NULL DEFAULT '',
+                    validated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    UNIQUE(session_id, file_path, plugin_name, hook_name, directory)
+                );
+
+                -- Copy data from old table
+                INSERT OR IGNORE INTO session_file_validations_new
+                    (id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at)
+                SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, '.', '', validated_at
+                FROM session_file_validations;
+
+                -- Drop old table
+                DROP TABLE session_file_validations;
+
+                -- Rename new table
+                ALTER TABLE session_file_validations_new RENAME TO session_file_validations;
+                "
+            )?;
+        }
+    }
+
+    // Check if messages table exists - if not, skip remaining migrations (schema.sql will create it)
+    let messages_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='messages'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !messages_exists {
+        // New database - schema.sql will create everything correctly
+        return Ok(());
+    }
+
     // Migration 1: Add raw_json column to messages table
     // Check if column exists first (SQLite doesn't support IF NOT EXISTS for columns)
     let has_raw_json: bool = conn
@@ -83,6 +183,58 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
 
     if !has_raw_json {
         conn.execute("ALTER TABLE messages ADD COLUMN raw_json TEXT", [])?;
+    }
+
+    // Migration 2: Add agent_id column to messages table
+    let has_agent_id: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('messages') WHERE name = 'agent_id'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_agent_id {
+        conn.execute("ALTER TABLE messages ADD COLUMN agent_id TEXT", [])?;
+        // Create index for the new column
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_messages_agent ON messages(session_id, agent_id)",
+            [],
+        )?;
+    }
+
+    // Migration 3: Add parent_id column to messages table
+    let has_parent_id: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('messages') WHERE name = 'parent_id'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_parent_id {
+        conn.execute("ALTER TABLE messages ADD COLUMN parent_id TEXT", [])?;
+        // Create index for the new column
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_messages_parent ON messages(parent_id)",
+            [],
+        )?;
+    }
+
+    // Migration 4: Add sentiment analysis columns to messages table
+    let has_sentiment_score: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('messages') WHERE name = 'sentiment_score'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_sentiment_score {
+        conn.execute("ALTER TABLE messages ADD COLUMN sentiment_score REAL", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN sentiment_level TEXT", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN frustration_score REAL", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN frustration_level TEXT", [])?;
     }
 
     Ok(())

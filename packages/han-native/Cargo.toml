@@ -61,6 +61,8 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 
 # Directory utilities
 dirs = "5"
+# Pure Rust git implementation (gitoxide)
+gix = { version = "0.68", default-features = false, features = ["worktree-mutation", "index", "revision"] }
 # Tracing for debug logging
 tracing = "0.1"
 # UUID generation for message IDs

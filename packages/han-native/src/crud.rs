@@ -328,26 +328,43 @@ pub fn list_sessions(
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let limit_val = limit.unwrap_or(100);
 
-    // id IS the session UUID - no separate session_id column
+    // Join with messages to get max timestamp for sorting
+    // Sessions are ordered by most recent message timestamp (descending)
     let sql = match (&project_id, &status) {
         (Some(_), Some(_)) => {
-            "SELECT id, project_id, status, transcript_path, last_indexed_line
-             FROM sessions WHERE project_id = ?1 AND status = ?2
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+             FROM sessions s
+             LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
+             ON s.id = m.session_id
+             WHERE s.project_id = ?1 AND s.status = ?2
+             ORDER BY m.max_ts DESC NULLS LAST
              LIMIT ?3"
         }
         (Some(_), None) => {
-            "SELECT id, project_id, status, transcript_path, last_indexed_line
-             FROM sessions WHERE project_id = ?1
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+             FROM sessions s
+             LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
+             ON s.id = m.session_id
+             WHERE s.project_id = ?1
+             ORDER BY m.max_ts DESC NULLS LAST
              LIMIT ?2"
         }
         (None, Some(_)) => {
-            "SELECT id, project_id, status, transcript_path, last_indexed_line
-             FROM sessions WHERE status = ?1
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+             FROM sessions s
+             LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
+             ON s.id = m.session_id
+             WHERE s.status = ?1
+             ORDER BY m.max_ts DESC NULLS LAST
              LIMIT ?2"
         }
         (None, None) => {
-            "SELECT id, project_id, status, transcript_path, last_indexed_line
-             FROM sessions LIMIT ?1"
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+             FROM sessions s
+             LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
+             ON s.id = m.session_id
+             ORDER BY m.max_ts DESC NULLS LAST
+             LIMIT ?1"
         }
     };
 
@@ -578,6 +595,155 @@ pub fn list_unindexed_session_files() -> napi::Result<Vec<SessionFile>> {
 }
 
 // ============================================================================
+// Session Summary Operations (event-sourced)
+// ============================================================================
+
+/// Upsert a session summary - only if this one is newer than existing
+pub fn upsert_session_summary(input: SessionSummaryInput) -> napi::Result<SessionSummary> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // UPSERT - only update if new timestamp is >= existing timestamp
+    let mut stmt = conn.prepare(
+        "INSERT INTO session_summaries (id, session_id, message_id, content, raw_json, timestamp, line_number, indexed_at)
+         VALUES (?1, ?2, ?1, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(session_id) DO UPDATE SET
+             id = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.id ELSE session_summaries.id END,
+             message_id = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.message_id ELSE session_summaries.message_id END,
+             content = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.content ELSE session_summaries.content END,
+             raw_json = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.raw_json ELSE session_summaries.raw_json END,
+             timestamp = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.timestamp ELSE session_summaries.timestamp END,
+             line_number = CASE WHEN excluded.timestamp >= session_summaries.timestamp THEN excluded.line_number ELSE session_summaries.line_number END,
+             indexed_at = excluded.indexed_at
+         RETURNING id, session_id, message_id, content, raw_json, timestamp, line_number, indexed_at"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+
+    stmt.query_row(
+        params![input.message_id, input.session_id, input.content, input.raw_json, input.timestamp, input.line_number, now],
+        |row| {
+            Ok(SessionSummary {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                message_id: row.get(2)?,
+                content: row.get(3)?,
+                raw_json: row.get(4)?,
+                timestamp: row.get(5)?,
+                line_number: row.get(6)?,
+                indexed_at: row.get(7)?,
+            })
+        }
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session summary: {}", e)))
+}
+
+/// Get session summary by session ID
+pub fn get_session_summary(session_id: &str) -> napi::Result<Option<SessionSummary>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, message_id, content, raw_json, timestamp, line_number, indexed_at
+         FROM session_summaries WHERE session_id = ?1 LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id], |row| {
+        Ok(SessionSummary {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            message_id: row.get(2)?,
+            content: row.get(3)?,
+            raw_json: row.get(4)?,
+            timestamp: row.get(5)?,
+            line_number: row.get(6)?,
+            indexed_at: row.get(7)?,
+        })
+    });
+
+    match result {
+        Ok(summary) => Ok(Some(summary)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session summary: {}", e))),
+    }
+}
+
+// ============================================================================
+// Session Compact Operations (event-sourced)
+// ============================================================================
+
+/// Upsert a session compact - only if this one is newer than existing
+pub fn upsert_session_compact(input: SessionCompactInput) -> napi::Result<SessionCompact> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // UPSERT - only update if new timestamp is >= existing timestamp
+    let mut stmt = conn.prepare(
+        "INSERT INTO session_compacts (id, session_id, message_id, content, raw_json, timestamp, line_number, compact_type, indexed_at)
+         VALUES (?1, ?2, ?1, ?3, ?4, ?5, ?6, ?7, ?8)
+         ON CONFLICT(session_id) DO UPDATE SET
+             id = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.id ELSE session_compacts.id END,
+             message_id = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.message_id ELSE session_compacts.message_id END,
+             content = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.content ELSE session_compacts.content END,
+             raw_json = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.raw_json ELSE session_compacts.raw_json END,
+             timestamp = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.timestamp ELSE session_compacts.timestamp END,
+             line_number = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.line_number ELSE session_compacts.line_number END,
+             compact_type = CASE WHEN excluded.timestamp >= session_compacts.timestamp THEN excluded.compact_type ELSE session_compacts.compact_type END,
+             indexed_at = excluded.indexed_at
+         RETURNING id, session_id, message_id, content, raw_json, timestamp, line_number, compact_type, indexed_at"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+
+    stmt.query_row(
+        params![input.message_id, input.session_id, input.content, input.raw_json, input.timestamp, input.line_number, input.compact_type, now],
+        |row| {
+            Ok(SessionCompact {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                message_id: row.get(2)?,
+                content: row.get(3)?,
+                raw_json: row.get(4)?,
+                timestamp: row.get(5)?,
+                line_number: row.get(6)?,
+                compact_type: row.get(7)?,
+                indexed_at: row.get(8)?,
+            })
+        }
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session compact: {}", e)))
+}
+
+/// Get session compact by session ID
+pub fn get_session_compact(session_id: &str) -> napi::Result<Option<SessionCompact>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, message_id, content, raw_json, timestamp, line_number, compact_type, indexed_at
+         FROM session_compacts WHERE session_id = ?1 LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id], |row| {
+        Ok(SessionCompact {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            message_id: row.get(2)?,
+            content: row.get(3)?,
+            raw_json: row.get(4)?,
+            timestamp: row.get(5)?,
+            line_number: row.get(6)?,
+            compact_type: row.get(7)?,
+            indexed_at: row.get(8)?,
+        })
+    });
+
+    match result {
+        Ok(compact) => Ok(Some(compact)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session compact: {}", e))),
+    }
+}
+
+// ============================================================================
 // Message Operations
 // ============================================================================
 
@@ -600,17 +766,27 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
         // NOTE: message_type must be updated to fix sentiment events that were stored with wrong type
         conn.execute(
             "INSERT INTO messages
-             (id, session_id, message_type, role, content, tool_name, tool_input, tool_result, raw_json, timestamp, line_number, indexed_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+             (id, session_id, agent_id, parent_id, message_type, role, content, tool_name, tool_input, tool_result, raw_json, timestamp, line_number, source_file_name, source_file_type, sentiment_score, sentiment_level, frustration_score, frustration_level, indexed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
              ON CONFLICT(id) DO UPDATE SET
                 message_type = excluded.message_type,
+                agent_id = COALESCE(excluded.agent_id, agent_id),
+                parent_id = COALESCE(excluded.parent_id, parent_id),
                 tool_name = excluded.tool_name,
                 content = COALESCE(excluded.content, content),
                 raw_json = COALESCE(excluded.raw_json, raw_json),
+                source_file_name = COALESCE(excluded.source_file_name, source_file_name),
+                source_file_type = COALESCE(excluded.source_file_type, source_file_type),
+                sentiment_score = COALESCE(excluded.sentiment_score, sentiment_score),
+                sentiment_level = COALESCE(excluded.sentiment_level, sentiment_level),
+                frustration_score = COALESCE(excluded.frustration_score, frustration_score),
+                frustration_level = COALESCE(excluded.frustration_level, frustration_level),
                 indexed_at = excluded.indexed_at",
             params![
                 msg.id,  // id IS the message UUID from JSONL
                 session_id,  // session_id IS the session's id
+                msg.agent_id,  // NULL for main conversation, agent ID for agent messages
+                msg.parent_id,  // For result messages, references the call message id
                 msg.message_type,
                 msg.role,
                 msg.content,
@@ -620,6 +796,12 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
                 msg.raw_json,
                 msg.timestamp,
                 msg.line_number,
+                msg.source_file_name,
+                msg.source_file_type,
+                msg.sentiment_score,
+                msg.sentiment_level,
+                msg.frustration_score,
+                msg.frustration_level,
                 now
             ],
         ).map_err(|e| napi::Error::from_reason(format!("Failed to insert message: {}", e)))?;
@@ -637,8 +819,10 @@ pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
 
     // id IS the message UUID - no separate message_id column
     let mut stmt = conn.prepare(
-        "SELECT id, session_id, message_type, role, content,
-                tool_name, tool_input, tool_result, raw_json, timestamp, line_number, indexed_at
+        "SELECT id, session_id, agent_id, parent_id, message_type, role, content,
+                tool_name, tool_input, tool_result, raw_json, timestamp, line_number,
+                source_file_name, source_file_type, sentiment_score, sentiment_level,
+                frustration_score, frustration_level, indexed_at
          FROM messages WHERE id = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -646,16 +830,24 @@ pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
         Ok(Message {
             id: row.get(0)?,
             session_id: row.get(1)?,
-            message_type: row.get(2)?,
-            role: row.get(3)?,
-            content: row.get(4)?,
-            tool_name: row.get(5)?,
-            tool_input: row.get(6)?,
-            tool_result: row.get(7)?,
-            raw_json: row.get(8)?,
-            timestamp: row.get(9)?,
-            line_number: row.get(10)?,
-            indexed_at: row.get(11)?,
+            agent_id: row.get(2)?,
+            parent_id: row.get(3)?,
+            message_type: row.get(4)?,
+            role: row.get(5)?,
+            content: row.get(6)?,
+            tool_name: row.get(7)?,
+            tool_input: row.get(8)?,
+            tool_result: row.get(9)?,
+            raw_json: row.get(10)?,
+            timestamp: row.get(11)?,
+            line_number: row.get(12)?,
+            source_file_name: row.get(13)?,
+            source_file_type: row.get(14)?,
+            sentiment_score: row.get(15)?,
+            sentiment_level: row.get(16)?,
+            frustration_score: row.get(17)?,
+            frustration_level: row.get(18)?,
+            indexed_at: row.get(19)?,
         })
     });
 
@@ -667,9 +859,14 @@ pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
 }
 
 /// List messages for a session (session_id IS the session's id)
+/// agent_id filter:
+///   - None: returns all messages (main + agent)
+///   - Some(None): returns only main conversation (agent_id IS NULL)
+///   - Some(Some(id)): returns only messages from that agent
 pub fn list_session_messages(
     session_id: &str,
     message_type: Option<String>,
+    agent_id_filter: Option<Option<String>>,  // None = all, Some(None) = main only, Some(Some(id)) = specific agent
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> napi::Result<Vec<Message>> {
@@ -679,59 +876,105 @@ pub fn list_session_messages(
     let limit_val = limit.unwrap_or(100_000);
     let offset_val = offset.unwrap_or(0);
 
+    // Build dynamic SQL based on filters
     // No JOIN needed - session_id is the FK directly
     // Order by timestamp DESC (newest first) for forward pagination with column-reverse
-    // first/after pagination takes from the start, giving us newest messages
-    // column-reverse in UI puts first array item at visual bottom = newest at bottom
-    // Note: line_number is still stored for incremental indexing, but UI sorts by timestamp
-    // because han_events and sentiment events have artificial line_number offsets (1M and 500K)
-    let sql = if message_type.is_some() {
-        "SELECT id, session_id, message_type, role, content,
-                tool_name, tool_input, tool_result, raw_json, timestamp, line_number, indexed_at
-         FROM messages
-         WHERE session_id = ?1 AND message_type = ?2
-         ORDER BY timestamp DESC
-         LIMIT ?3 OFFSET ?4"
-    } else {
-        "SELECT id, session_id, message_type, role, content,
-                tool_name, tool_input, tool_result, raw_json, timestamp, line_number, indexed_at
-         FROM messages
-         WHERE session_id = ?1
-         ORDER BY timestamp DESC
-         LIMIT ?2 OFFSET ?3"
+    let base_cols = "id, session_id, agent_id, parent_id, message_type, role, content,
+                     tool_name, tool_input, tool_result, raw_json, timestamp, line_number,
+                     source_file_name, source_file_type, sentiment_score, sentiment_level,
+                     frustration_score, frustration_level, indexed_at";
+
+    let (sql, params_vec): (String, Vec<Box<dyn rusqlite::ToSql>>) = match (&message_type, &agent_id_filter) {
+        (Some(mtype), Some(Some(agent))) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 AND message_type = ?2 AND agent_id = ?3 ORDER BY timestamp DESC LIMIT ?4 OFFSET ?5", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(mtype.clone()),
+                Box::new(agent.clone()),
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
+        (Some(mtype), Some(None)) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 AND message_type = ?2 AND agent_id IS NULL ORDER BY timestamp DESC LIMIT ?3 OFFSET ?4", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(mtype.clone()),
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
+        (Some(mtype), None) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 AND message_type = ?2 ORDER BY timestamp DESC LIMIT ?3 OFFSET ?4", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(mtype.clone()),
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
+        (None, Some(Some(agent))) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 AND agent_id = ?2 ORDER BY timestamp DESC LIMIT ?3 OFFSET ?4", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(agent.clone()),
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
+        (None, Some(None)) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 AND agent_id IS NULL ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
+        (None, None) => (
+            format!("SELECT {} FROM messages WHERE session_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3", base_cols),
+            vec![
+                Box::new(session_id.to_string()) as Box<dyn rusqlite::ToSql>,
+                Box::new(limit_val),
+                Box::new(offset_val),
+            ]
+        ),
     };
 
-    let mut stmt = conn.prepare(sql)
+    let mut stmt = conn.prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let map_row = |row: &rusqlite::Row| -> rusqlite::Result<Message> {
         Ok(Message {
             id: row.get(0)?,
             session_id: row.get(1)?,
-            message_type: row.get(2)?,
-            role: row.get(3)?,
-            content: row.get(4)?,
-            tool_name: row.get(5)?,
-            tool_input: row.get(6)?,
-            tool_result: row.get(7)?,
-            raw_json: row.get(8)?,
-            timestamp: row.get(9)?,
-            line_number: row.get(10)?,
-            indexed_at: row.get(11)?,
+            agent_id: row.get(2)?,
+            parent_id: row.get(3)?,
+            message_type: row.get(4)?,
+            role: row.get(5)?,
+            content: row.get(6)?,
+            tool_name: row.get(7)?,
+            tool_input: row.get(8)?,
+            tool_result: row.get(9)?,
+            raw_json: row.get(10)?,
+            timestamp: row.get(11)?,
+            line_number: row.get(12)?,
+            source_file_name: row.get(13)?,
+            source_file_type: row.get(14)?,
+            sentiment_score: row.get(15)?,
+            sentiment_level: row.get(16)?,
+            frustration_score: row.get(17)?,
+            frustration_level: row.get(18)?,
+            indexed_at: row.get(19)?,
         })
     };
 
-    let rows: Vec<Message> = if let Some(ref mtype) = message_type {
-        stmt.query_map(params![session_id, mtype, limit_val, offset_val], map_row)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to list messages: {}", e)))?
-            .filter_map(|r| r.ok())
-            .collect()
-    } else {
-        stmt.query_map(params![session_id, limit_val, offset_val], map_row)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to list messages: {}", e)))?
-            .filter_map(|r| r.ok())
-            .collect()
-    };
+    // Convert params to references for query_map
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+
+    let rows: Vec<Message> = stmt.query_map(params_refs.as_slice(), map_row)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to list messages: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
 
     Ok(rows)
 }
@@ -905,16 +1148,18 @@ pub fn search_messages(
     // No JOINs needed - session_id in messages directly references sessions.id
     // id IS the message UUID from JSONL (no separate message_id column)
     let sql = if session_id.is_some() {
-        "SELECT m.id, m.session_id, m.message_type, m.role, m.content,
-                m.tool_name, m.tool_input, m.tool_result, m.raw_json, m.timestamp, m.line_number, m.indexed_at
+        "SELECT m.id, m.session_id, m.agent_id, m.parent_id, m.message_type, m.role, m.content,
+                m.tool_name, m.tool_input, m.tool_result, m.raw_json, m.timestamp, m.line_number,
+                m.source_file_name, m.source_file_type, m.indexed_at
          FROM messages m
          JOIN messages_fts ON messages_fts.rowid = m.rowid
          WHERE messages_fts MATCH ?1 AND m.session_id = ?2
          ORDER BY m.timestamp DESC
          LIMIT ?3"
     } else {
-        "SELECT m.id, m.session_id, m.message_type, m.role, m.content,
-                m.tool_name, m.tool_input, m.tool_result, m.raw_json, m.timestamp, m.line_number, m.indexed_at
+        "SELECT m.id, m.session_id, m.agent_id, m.parent_id, m.message_type, m.role, m.content,
+                m.tool_name, m.tool_input, m.tool_result, m.raw_json, m.timestamp, m.line_number,
+                m.source_file_name, m.source_file_type, m.indexed_at
          FROM messages m
          JOIN messages_fts ON messages_fts.rowid = m.rowid
          WHERE messages_fts MATCH ?1
@@ -925,44 +1170,41 @@ pub fn search_messages(
     let mut stmt = conn.prepare(sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare search: {}", e)))?;
 
+    let map_row = |row: &rusqlite::Row| -> rusqlite::Result<Message> {
+        Ok(Message {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            agent_id: row.get(2)?,
+            parent_id: row.get(3)?,
+            message_type: row.get(4)?,
+            role: row.get(5)?,
+            content: row.get(6)?,
+            tool_name: row.get(7)?,
+            tool_input: row.get(8)?,
+            tool_result: row.get(9)?,
+            raw_json: row.get(10)?,
+            timestamp: row.get(11)?,
+            line_number: row.get(12)?,
+            source_file_name: row.get(13)?,
+            source_file_type: row.get(14)?,
+            sentiment_score: row.get(15)?,
+            sentiment_level: row.get(16)?,
+            frustration_score: row.get(17)?,
+            frustration_level: row.get(18)?,
+            indexed_at: row.get(19)?,
+        })
+    };
+
     let rows: Vec<Message> = if let Some(ref sid) = session_id {
-        stmt.query_map(params![escaped_query, sid, limit_val], |row| {
-            Ok(Message {
-                id: row.get(0)?,
-                session_id: row.get(1)?,
-                message_type: row.get(2)?,
-                role: row.get(3)?,
-                content: row.get(4)?,
-                tool_name: row.get(5)?,
-                tool_input: row.get(6)?,
-                tool_result: row.get(7)?,
-                raw_json: row.get(8)?,
-                timestamp: row.get(9)?,
-                line_number: row.get(10)?,
-                indexed_at: row.get(11)?,
-            })
-        }).map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
-        .filter_map(|r| r.ok())
-        .collect()
+        stmt.query_map(params![escaped_query, sid, limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect()
     } else {
-        stmt.query_map(params![escaped_query, limit_val], |row| {
-            Ok(Message {
-                id: row.get(0)?,
-                session_id: row.get(1)?,
-                message_type: row.get(2)?,
-                role: row.get(3)?,
-                content: row.get(4)?,
-                tool_name: row.get(5)?,
-                tool_input: row.get(6)?,
-                tool_result: row.get(7)?,
-                raw_json: row.get(8)?,
-                timestamp: row.get(9)?,
-                line_number: row.get(10)?,
-                indexed_at: row.get(11)?,
-            })
-        }).map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
-        .filter_map(|r| r.ok())
-        .collect()
+        stmt.query_map(params![escaped_query, limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect()
     };
 
     Ok(rows)
@@ -1281,6 +1523,7 @@ fn get_tasks_by_outcome(conn: &rusqlite::Connection, time_filter: &str) -> napi:
 
 // ============================================================================
 // Hook Cache Operations
+// Similar structure to session_file_validations for consistency
 // ============================================================================
 
 pub fn set_hook_cache(input: HookCacheInput) -> napi::Result<bool> {
@@ -1294,14 +1537,14 @@ pub fn set_hook_cache(input: HookCacheInput) -> napi::Result<bool> {
     });
 
     conn.execute(
-        "INSERT INTO hook_cache (id, project_id, cache_key, file_hash, result, cached_at, expires_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        "INSERT INTO hook_cache (id, cache_key, file_hash, result, cached_at, expires_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(cache_key) DO UPDATE SET
              file_hash = excluded.file_hash,
              result = excluded.result,
              cached_at = excluded.cached_at,
              expires_at = excluded.expires_at",
-        params![id, input.project_id, input.cache_key, input.file_hash, input.result, now, expires_at],
+        params![id, input.cache_key, input.file_hash, input.result, now, expires_at],
     ).map_err(|e| napi::Error::from_reason(format!("Failed to set hook cache: {}", e)))?;
 
     Ok(true)
@@ -1312,21 +1555,21 @@ pub fn get_hook_cache(cache_key: &str) -> napi::Result<Option<HookCacheEntry>> {
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, project_id, cache_key, file_hash, result, cached_at, expires_at
+        "SELECT id, cache_key, file_hash, result, cached_at, expires_at
          FROM hook_cache
-         WHERE cache_key = ?1 AND (expires_at IS NULL OR expires_at > datetime('now'))
+         WHERE cache_key = ?1
+         AND (expires_at IS NULL OR expires_at > datetime('now'))
          LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![cache_key], |row| {
         Ok(HookCacheEntry {
             id: Some(row.get(0)?),
-            project_id: row.get(1)?,
-            cache_key: row.get(2)?,
-            file_hash: row.get(3)?,
-            result: row.get(4)?,
-            cached_at: row.get(5)?,
-            expires_at: row.get(6)?,
+            cache_key: row.get(1)?,
+            file_hash: row.get(2)?,
+            result: row.get(3)?,
+            cached_at: row.get(4)?,
+            expires_at: row.get(5)?,
         })
     });
 
@@ -1362,110 +1605,8 @@ pub fn cleanup_expired_cache() -> napi::Result<u32> {
 }
 
 // ============================================================================
-// Marketplace Cache Operations
+// NOTE: Marketplace Cache Operations removed - not used
 // ============================================================================
-
-pub fn upsert_marketplace_plugin(input: MarketplacePluginInput) -> napi::Result<bool> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let id = Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-
-    conn.execute(
-        "INSERT INTO marketplace_plugins (id, plugin_id, name, description, version, category, metadata, fetched_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-         ON CONFLICT(plugin_id) DO UPDATE SET
-             name = excluded.name,
-             description = excluded.description,
-             version = excluded.version,
-             category = excluded.category,
-             metadata = excluded.metadata,
-             fetched_at = excluded.fetched_at",
-        params![id, input.plugin_id, input.name, input.description, input.version, input.category, input.metadata, now],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert plugin: {}", e)))?;
-
-    Ok(true)
-}
-
-pub fn get_marketplace_plugin(plugin_id: &str) -> napi::Result<Option<MarketplacePlugin>> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, plugin_id, name, description, version, category, metadata, fetched_at
-         FROM marketplace_plugins WHERE plugin_id = ?1 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let result = stmt.query_row(params![plugin_id], |row| {
-        Ok(MarketplacePlugin {
-            id: Some(row.get(0)?),
-            plugin_id: row.get(1)?,
-            name: row.get(2)?,
-            description: row.get(3)?,
-            version: row.get(4)?,
-            category: row.get(5)?,
-            metadata: row.get(6)?,
-            fetched_at: row.get(7)?,
-        })
-    });
-
-    match result {
-        Ok(plugin) => Ok(Some(plugin)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get plugin: {}", e))),
-    }
-}
-
-pub fn list_marketplace_plugins(category: Option<String>) -> napi::Result<Vec<MarketplacePlugin>> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let sql = if category.is_some() {
-        "SELECT id, plugin_id, name, description, version, category, metadata, fetched_at
-         FROM marketplace_plugins WHERE category = ?1 ORDER BY name ASC"
-    } else {
-        "SELECT id, plugin_id, name, description, version, category, metadata, fetched_at
-         FROM marketplace_plugins ORDER BY name ASC"
-    };
-
-    let mut stmt = conn.prepare(sql)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let rows: Vec<MarketplacePlugin> = if let Some(ref cat) = category {
-        stmt.query_map(params![cat], |row| {
-            Ok(MarketplacePlugin {
-                id: Some(row.get(0)?),
-                plugin_id: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                version: row.get(4)?,
-                category: row.get(5)?,
-                metadata: row.get(6)?,
-                fetched_at: row.get(7)?,
-            })
-        }).map_err(|e| napi::Error::from_reason(format!("Failed to list plugins: {}", e)))?
-        .filter_map(|r| r.ok())
-        .collect()
-    } else {
-        stmt.query_map([], |row| {
-            Ok(MarketplacePlugin {
-                id: Some(row.get(0)?),
-                plugin_id: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                version: row.get(4)?,
-                category: row.get(5)?,
-                metadata: row.get(6)?,
-                fetched_at: row.get(7)?,
-            })
-        }).map_err(|e| napi::Error::from_reason(format!("Failed to list plugins: {}", e)))?
-        .filter_map(|r| r.ok())
-        .collect()
-    };
-
-    Ok(rows)
-}
 
 // ============================================================================
 // Hook Execution Operations
@@ -1650,93 +1791,8 @@ pub fn query_frustration_metrics(period: Option<String>, total_tasks: i64) -> na
 }
 
 // ============================================================================
-// Checkpoint Operations
+// NOTE: Checkpoint Operations removed - not used
 // ============================================================================
-
-pub fn create_checkpoint(input: CheckpointInput) -> napi::Result<Checkpoint> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let id = Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-
-    let mut stmt = conn.prepare(
-        "INSERT INTO checkpoints (id, session_id, project_path, file_path, file_hash, blob_path, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-         ON CONFLICT(session_id, project_path, file_path) DO UPDATE SET
-             file_hash = excluded.file_hash,
-             blob_path = excluded.blob_path,
-             created_at = excluded.created_at
-         RETURNING id, session_id, project_path, file_path, file_hash, blob_path, created_at"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
-
-    stmt.query_row(
-        params![id, input.session_id, input.project_path, input.file_path, input.file_hash, input.blob_path, now],
-        |row| {
-            Ok(Checkpoint {
-                id: Some(row.get(0)?),
-                session_id: row.get(1)?,
-                project_path: row.get(2)?,
-                file_path: row.get(3)?,
-                file_hash: row.get(4)?,
-                blob_path: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to create checkpoint: {}", e)))
-}
-
-pub fn get_checkpoint(session_id: &str, file_path: &str) -> napi::Result<Option<Checkpoint>> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, session_id, project_path, file_path, file_hash, blob_path, created_at
-         FROM checkpoints WHERE session_id = ?1 AND file_path = ?2 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let result = stmt.query_row(params![session_id, file_path], |row| {
-        Ok(Checkpoint {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            project_path: row.get(2)?,
-            file_path: row.get(3)?,
-            file_hash: row.get(4)?,
-            blob_path: row.get(5)?,
-            created_at: row.get(6)?,
-        })
-    });
-
-    match result {
-        Ok(checkpoint) => Ok(Some(checkpoint)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get checkpoint: {}", e))),
-    }
-}
-
-pub fn list_checkpoints(session_id: &str) -> napi::Result<Vec<Checkpoint>> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, session_id, project_path, file_path, file_hash, blob_path, created_at
-         FROM checkpoints WHERE session_id = ?1 ORDER BY created_at DESC"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let rows = stmt.query_map(params![session_id], |row| {
-        Ok(Checkpoint {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            project_path: row.get(2)?,
-            file_path: row.get(3)?,
-            file_hash: row.get(4)?,
-            blob_path: row.get(5)?,
-            created_at: row.get(6)?,
-        })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to list checkpoints: {}", e)))?;
-
-    Ok(rows.filter_map(|r| r.ok()).collect())
-}
 
 // ============================================================================
 // Session File Change Operations
@@ -1808,4 +1864,180 @@ pub fn has_session_changes(session_id: &str) -> napi::Result<bool> {
     ).map_err(|e| napi::Error::from_reason(format!("Failed to check session changes: {}", e)))?;
 
     Ok(count > 0)
+}
+
+// ============================================================================
+// Session File Validation Operations
+// ============================================================================
+
+pub fn record_file_validation(input: SessionFileValidationInput) -> napi::Result<SessionFileValidation> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // UPSERT - update if this session/file/plugin/hook/directory combo already validated
+    let mut stmt = conn.prepare(
+        "INSERT INTO session_file_validations (id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(session_id, file_path, plugin_name, hook_name, directory) DO UPDATE SET
+             file_hash = excluded.file_hash,
+             command_hash = excluded.command_hash,
+             validated_at = excluded.validated_at
+         RETURNING id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
+
+    stmt.query_row(
+        params![id, input.session_id, input.file_path, input.file_hash, input.plugin_name, input.hook_name, input.directory, input.command_hash, now],
+        |row| {
+            Ok(SessionFileValidation {
+                id: Some(row.get(0)?),
+                session_id: row.get(1)?,
+                file_path: row.get(2)?,
+                file_hash: row.get(3)?,
+                plugin_name: row.get(4)?,
+                hook_name: row.get(5)?,
+                directory: row.get(6)?,
+                command_hash: row.get(7)?,
+                validated_at: row.get(8)?,
+            })
+        }
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to record file validation: {}", e)))
+}
+
+pub fn get_file_validation(
+    session_id: &str,
+    file_path: &str,
+    plugin_name: &str,
+    hook_name: &str,
+    directory: &str,
+) -> napi::Result<Option<SessionFileValidation>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
+         FROM session_file_validations
+         WHERE session_id = ?1 AND file_path = ?2 AND plugin_name = ?3 AND hook_name = ?4 AND directory = ?5
+         LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id, file_path, plugin_name, hook_name, directory], |row| {
+        Ok(SessionFileValidation {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            file_path: row.get(2)?,
+            file_hash: row.get(3)?,
+            plugin_name: row.get(4)?,
+            hook_name: row.get(5)?,
+            directory: row.get(6)?,
+            command_hash: row.get(7)?,
+            validated_at: row.get(8)?,
+        })
+    });
+
+    match result {
+        Ok(validation) => Ok(Some(validation)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get file validation: {}", e))),
+    }
+}
+
+/// Get all validations for a session and plugin/hook/directory combo
+/// Returns files that have been validated by this hook in this directory
+pub fn get_session_validations(
+    session_id: &str,
+    plugin_name: &str,
+    hook_name: &str,
+    directory: &str,
+) -> napi::Result<Vec<SessionFileValidation>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
+         FROM session_file_validations
+         WHERE session_id = ?1 AND plugin_name = ?2 AND hook_name = ?3 AND directory = ?4
+         ORDER BY validated_at DESC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map(params![session_id, plugin_name, hook_name, directory], |row| {
+        Ok(SessionFileValidation {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            file_path: row.get(2)?,
+            file_hash: row.get(3)?,
+            plugin_name: row.get(4)?,
+            hook_name: row.get(5)?,
+            directory: row.get(6)?,
+            command_hash: row.get(7)?,
+            validated_at: row.get(8)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session validations: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Check if files need validation by comparing current hashes to last validated hashes
+/// Returns true if any file in the session has changed since last validation
+/// Also returns true if the command has changed (different command_hash)
+pub fn needs_validation(
+    session_id: &str,
+    plugin_name: &str,
+    hook_name: &str,
+    directory: &str,
+    command_hash: &str,
+) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Check if there are any file changes in this session that don't have
+    // a matching validation with the same file_hash AND command_hash
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(DISTINCT fc.file_path)
+         FROM session_file_changes fc
+         LEFT JOIN session_file_validations fv
+           ON fc.session_id = fv.session_id
+           AND fc.file_path = fv.file_path
+           AND fv.plugin_name = ?2
+           AND fv.hook_name = ?3
+           AND fv.directory = ?4
+         WHERE fc.session_id = ?1
+           AND (fv.id IS NULL OR fv.file_hash != fc.file_hash_after OR fv.command_hash != ?5)",
+        params![session_id, plugin_name, hook_name, directory, command_hash],
+        |row| row.get(0)
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to check validation needs: {}", e)))?;
+
+    Ok(count > 0)
+}
+
+/// Get ALL validations for a session (not filtered by plugin/hook)
+/// Useful for showing validation status across all hooks for file changes
+pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<SessionFileValidation>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
+         FROM session_file_validations
+         WHERE session_id = ?1
+         ORDER BY file_path, validated_at DESC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map(params![session_id], |row| {
+        Ok(SessionFileValidation {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            file_path: row.get(2)?,
+            file_hash: row.get(3)?,
+            plugin_name: row.get(4)?,
+            hook_name: row.get(5)?,
+            directory: row.get(6)?,
+            command_hash: row.get(7)?,
+            validated_at: row.get(8)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session validations: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }

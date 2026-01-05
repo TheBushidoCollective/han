@@ -61,6 +61,96 @@ export interface VectorSearchResult {
 export declare function cleanupLegacyDatabase(): boolean;
 /** Check if legacy SurrealDB files exist */
 export declare function hasLegacyDatabase(): boolean;
+/** Git repository information */
+export interface GitInfo {
+  /** Current branch name (None if detached HEAD) */
+  branch?: string;
+  /** Remote origin URL */
+  remote?: string;
+  /** Repository name extracted from remote */
+  repoName?: string;
+}
+/** Git worktree information */
+export interface GitWorktree {
+  /** Absolute path to the worktree */
+  path: string;
+  /** Name of the worktree (basename of path for main, or worktree name) */
+  name: string;
+  /** Current branch or commit */
+  head?: string;
+  /** Whether this is the main worktree */
+  isMain: boolean;
+  /** Whether the worktree is locked */
+  isLocked: boolean;
+}
+/**
+ * Get current git branch for a directory
+ * Returns None if not in a git repository or on a detached HEAD
+ */
+export declare function getGitBranch(directory: string): string | null;
+/** Get git repository root (equivalent to `git rev-parse --show-toplevel`) */
+export declare function getGitRoot(directory: string): string | null;
+/**
+ * Get git common directory (equivalent to `git rev-parse --git-common-dir`)
+ * For worktrees, this returns the main .git directory
+ */
+export declare function getGitCommonDir(directory: string): string | null;
+/** Get remote origin URL */
+export declare function getGitRemoteUrl(directory: string): string | null;
+/** Get comprehensive git info for a directory */
+export declare function getGitInfo(directory: string): GitInfo;
+/** List tracked files in the repository (equivalent to `git ls-files`) */
+export declare function gitLsFiles(directory: string): Array<string>;
+/** List git worktrees (equivalent to `git worktree list --porcelain`) */
+export declare function gitWorktreeList(directory: string): Array<GitWorktree>;
+/** Get git log entries (equivalent to `git log`) */
+export interface GitLogEntry {
+  /** Commit hash (full SHA) */
+  hash: string;
+  /** Short commit hash (first 8 chars) */
+  shortHash: string;
+  /** Commit message (first line) */
+  message: string;
+  /** Author name */
+  authorName: string;
+  /** Author email */
+  authorEmail: string;
+  /** Commit timestamp (ISO 8601) */
+  timestamp: string;
+}
+/** Get git log for a directory */
+export declare function gitLog(
+  directory: string,
+  maxCount?: number | undefined | null
+): Array<GitLogEntry>;
+/** Get file content at a specific commit (equivalent to `git show <commit>:<path>`) */
+export declare function gitShowFile(
+  directory: string,
+  commit: string,
+  filePath: string
+): string;
+/** Diff statistics for a file */
+export interface GitDiffStat {
+  /** File path */
+  path: string;
+  /** Lines added */
+  additions: number;
+  /** Lines deleted */
+  deletions: number;
+  /** Change type: "added", "deleted", "modified", "renamed" */
+  changeType: string;
+  /** Old path (for renames) */
+  oldPath?: string;
+}
+/**
+ * Get diff between two commits - simplified version using tree comparison
+ * Returns list of changed files without line counts (for now)
+ */
+export declare function gitDiffStat(
+  directory: string,
+  fromCommit: string,
+  toCommit: string
+): Array<GitDiffStat>;
 /** Result of indexing a single JSONL file */
 export interface IndexResult {
   /** Session ID that was indexed */
@@ -236,23 +326,49 @@ export interface SessionFile {
   lastIndexedAt?: string;
   createdAt?: string;
 }
-export interface Message {
+export interface SessionSummary {
   id: string;
   sessionId: string;
-  messageType: string;
-  role?: string;
+  messageId: string;
   content?: string;
-  toolName?: string;
-  toolInput?: string;
-  toolResult?: string;
   rawJson?: string;
   timestamp: string;
   lineNumber: number;
   indexedAt?: string;
 }
-export interface MessageInput {
+export interface SessionSummaryInput {
+  sessionId: string;
+  messageId: string;
+  content?: string;
+  rawJson?: string;
+  timestamp: string;
+  lineNumber: number;
+}
+export interface SessionCompact {
   id: string;
   sessionId: string;
+  messageId: string;
+  content?: string;
+  rawJson?: string;
+  timestamp: string;
+  lineNumber: number;
+  compactType?: string;
+  indexedAt?: string;
+}
+export interface SessionCompactInput {
+  sessionId: string;
+  messageId: string;
+  content?: string;
+  rawJson?: string;
+  timestamp: string;
+  lineNumber: number;
+  compactType?: string;
+}
+export interface Message {
+  id: string;
+  sessionId: string;
+  agentId?: string;
+  parentId?: string;
   messageType: string;
   role?: string;
   content?: string;
@@ -262,6 +378,34 @@ export interface MessageInput {
   rawJson?: string;
   timestamp: string;
   lineNumber: number;
+  sourceFileName?: string;
+  sourceFileType?: string;
+  sentimentScore?: number;
+  sentimentLevel?: string;
+  frustrationScore?: number;
+  frustrationLevel?: string;
+  indexedAt?: string;
+}
+export interface MessageInput {
+  id: string;
+  sessionId: string;
+  agentId?: string;
+  parentId?: string;
+  messageType: string;
+  role?: string;
+  content?: string;
+  toolName?: string;
+  toolInput?: string;
+  toolResult?: string;
+  rawJson?: string;
+  timestamp: string;
+  lineNumber: number;
+  sourceFileName?: string;
+  sourceFileType?: string;
+  sentimentScore?: number;
+  sentimentLevel?: string;
+  frustrationScore?: number;
+  frustrationLevel?: string;
 }
 export interface MessageBatch {
   sessionId: string;
@@ -305,7 +449,6 @@ export interface TaskFailure {
 }
 export interface HookCacheEntry {
   id?: string;
-  projectId?: string;
   cacheKey: string;
   fileHash: string;
   result: string;
@@ -313,29 +456,10 @@ export interface HookCacheEntry {
   expiresAt?: string;
 }
 export interface HookCacheInput {
-  projectId?: string;
   cacheKey: string;
   fileHash: string;
   result: string;
   ttlSeconds?: number;
-}
-export interface MarketplacePlugin {
-  id?: string;
-  pluginId: string;
-  name: string;
-  description?: string;
-  version?: string;
-  category?: string;
-  metadata?: string;
-  fetchedAt?: string;
-}
-export interface MarketplacePluginInput {
-  pluginId: string;
-  name: string;
-  description?: string;
-  version?: string;
-  category?: string;
-  metadata?: string;
 }
 export interface TaskMetrics {
   totalTasks: number;
@@ -412,22 +536,6 @@ export interface FrustrationMetrics {
   weightedScore: number;
   byLevel?: string;
 }
-export interface Checkpoint {
-  id?: string;
-  sessionId: string;
-  projectPath: string;
-  filePath: string;
-  fileHash: string;
-  blobPath: string;
-  createdAt?: string;
-}
-export interface CheckpointInput {
-  sessionId: string;
-  projectPath: string;
-  filePath: string;
-  fileHash: string;
-  blobPath: string;
-}
 export interface SessionFileChange {
   id?: string;
   sessionId: string;
@@ -445,6 +553,26 @@ export interface SessionFileChangeInput {
   fileHashBefore?: string;
   fileHashAfter?: string;
   toolName?: string;
+}
+export interface SessionFileValidation {
+  id?: string;
+  sessionId: string;
+  filePath: string;
+  fileHash: string;
+  pluginName: string;
+  hookName: string;
+  directory: string;
+  commandHash: string;
+  validatedAt?: string;
+}
+export interface SessionFileValidationInput {
+  sessionId: string;
+  filePath: string;
+  fileHash: string;
+  pluginName: string;
+  hookName: string;
+  directory: string;
+  commandHash: string;
 }
 /** A file operation extracted from transcript content */
 export interface FileOperation {
@@ -719,11 +847,18 @@ export declare function getMessage(
   dbPath: string,
   messageId: string
 ): Message | null;
-/** List messages for a session with optional type filter and pagination */
+/**
+ * List messages for a session with optional type filter, agent filter, and pagination
+ * agent_id_filter behavior:
+ *   - undefined/null: returns all messages (main + agent)
+ *   - empty string "": returns only main conversation (agent_id IS NULL)
+ *   - non-empty string: returns only messages from that specific agent
+ */
 export declare function listSessionMessages(
   dbPath: string,
   sessionId: string,
   messageType?: string | undefined | null,
+  agentIdFilter?: string | undefined | null,
   limit?: number | undefined | null,
   offset?: number | undefined | null
 ): Array<Message>;
@@ -789,33 +924,18 @@ export declare function setHookCache(
   dbPath: string,
   input: HookCacheInput
 ): boolean;
-/** Get a hook cache entry by key */
+/** Get a hook cache entry by cache_key */
 export declare function getHookCache(
   dbPath: string,
   cacheKey: string
 ): HookCacheEntry | null;
-/** Invalidate a hook cache entry */
+/** Invalidate a hook cache entry by cache_key */
 export declare function invalidateHookCache(
   dbPath: string,
   cacheKey: string
 ): boolean;
 /** Clean up expired cache entries */
 export declare function cleanupExpiredCache(dbPath: string): number;
-/** Upsert a marketplace plugin entry */
-export declare function upsertMarketplacePlugin(
-  dbPath: string,
-  input: MarketplacePluginInput
-): boolean;
-/** Get a marketplace plugin by ID */
-export declare function getMarketplacePlugin(
-  dbPath: string,
-  pluginId: string
-): MarketplacePlugin | null;
-/** List marketplace plugins with optional category filter */
-export declare function listMarketplacePlugins(
-  dbPath: string,
-  category?: string | undefined | null
-): Array<MarketplacePlugin>;
 /** Record a hook execution */
 export declare function recordHookExecution(
   dbPath: string,
@@ -837,22 +957,6 @@ export declare function queryFrustrationMetrics(
   period: string | undefined | null,
   totalTasks: number
 ): FrustrationMetrics;
-/** Create a checkpoint */
-export declare function createCheckpoint(
-  dbPath: string,
-  input: CheckpointInput
-): Checkpoint;
-/** Get a checkpoint by session and file path */
-export declare function getCheckpoint(
-  dbPath: string,
-  sessionId: string,
-  filePath: string
-): Checkpoint | null;
-/** List checkpoints for a session */
-export declare function listCheckpoints(
-  dbPath: string,
-  sessionId: string
-): Array<Checkpoint>;
 /** Record a file change in a session */
 export declare function recordFileChange(
   dbPath: string,
@@ -868,6 +972,65 @@ export declare function hasSessionChanges(
   dbPath: string,
   sessionId: string
 ): boolean;
+/** Record a file validation (upserts based on session/file/plugin/hook) */
+export declare function recordFileValidation(
+  dbPath: string,
+  input: SessionFileValidationInput
+): SessionFileValidation;
+/** Get a specific file validation */
+export declare function getFileValidation(
+  dbPath: string,
+  sessionId: string,
+  filePath: string,
+  pluginName: string,
+  hookName: string,
+  directory: string
+): SessionFileValidation | null;
+/** Get all validations for a session and plugin/hook/directory combo */
+export declare function getSessionValidations(
+  dbPath: string,
+  sessionId: string,
+  pluginName: string,
+  hookName: string,
+  directory: string
+): Array<SessionFileValidation>;
+/** Check if files need validation (any changed since last validation or command changed) */
+export declare function needsValidation(
+  dbPath: string,
+  sessionId: string,
+  pluginName: string,
+  hookName: string,
+  directory: string,
+  commandHash: string
+): boolean;
+/**
+ * Get ALL file validations for a session (not filtered by plugin/hook)
+ * Useful for showing validation status across all hooks for file changes
+ */
+export declare function getAllSessionValidations(
+  dbPath: string,
+  sessionId: string
+): Array<SessionFileValidation>;
+/** Upsert a session summary (keeps the latest by timestamp) */
+export declare function upsertSessionSummary(
+  dbPath: string,
+  input: SessionSummaryInput
+): SessionSummary;
+/** Get session summary by session ID */
+export declare function getSessionSummary(
+  dbPath: string,
+  sessionId: string
+): SessionSummary | null;
+/** Upsert a session compact (keeps the latest by timestamp) */
+export declare function upsertSessionCompact(
+  dbPath: string,
+  input: SessionCompactInput
+): SessionCompact;
+/** Get session compact by session ID */
+export declare function getSessionCompact(
+  dbPath: string,
+  sessionId: string
+): SessionCompact | null;
 /** Try to acquire the coordinator lock (single-instance indexer pattern) */
 export declare function tryAcquireCoordinatorLock(): boolean;
 /** Release the coordinator lock */

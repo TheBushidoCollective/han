@@ -15,7 +15,7 @@
 
 use crate::crud;
 use crate::jsonl::{jsonl_read_page, JsonlLine};
-use crate::schema::{MessageInput, ProjectInput, RepoInput, SessionInput};
+use crate::schema::{MessageInput, ProjectInput, RepoInput, SessionInput, SessionFileChangeInput, SessionFileValidationInput, TaskInput, TaskCompletion, TaskFailure, SessionSummaryInput, SessionCompactInput};
 use crate::sentiment;
 use crate::task_timeline::{build_task_timeline, TaskTimeline};
 use crate::watcher::FileEventType;
@@ -23,7 +23,6 @@ use chrono::{DateTime, Duration, Utc};
 use napi_derive::napi;
 use serde_json::Value;
 use std::path::Path;
-use std::process::Command;
 use std::sync::OnceLock;
 use uuid::Uuid;
 
@@ -110,6 +109,8 @@ struct ParsedMessage {
     raw_json: String,
     timestamp: String,
     uuid: String,
+    agent_id: Option<String>,
+    parent_id: Option<String>,
 }
 
 // ============================================================================
@@ -202,9 +203,11 @@ fn parse_jsonl_line_intermediate(line: &JsonlLine) -> Option<IntermediateParsedL
 fn finalize_parsed_message(
     parsed: IntermediateParsedLine,
     uuid_to_timestamp: &std::collections::HashMap<String, String>,
+    fallback_timestamp: Option<&str>,
 ) -> Option<ParsedMessage> {
-    // Resolve timestamp - if we can't determine it, skip the message
-    let timestamp = extract_timestamp(&parsed, uuid_to_timestamp)?;
+    // Resolve timestamp - try extract first, then fallback to previous message's timestamp
+    let timestamp = extract_timestamp(&parsed, uuid_to_timestamp)
+        .or_else(|| fallback_timestamp.map(|s| s.to_string()))?;
 
     let json = &parsed.json;
     let message_type = parsed.message_type;
@@ -262,6 +265,22 @@ fn finalize_parsed_message(
         _ => (None, None, None),
     };
 
+    // Extract agent_id from message if present (for agent-scoped messages)
+    let agent_id = json
+        .get("agentId")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    // Extract parent_id - for tool results, link to their tool_use message
+    let parent_id = match message_type {
+        MessageType::ToolResult => json
+            .get("toolUseId")
+            .or_else(|| json.get("tool_use_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        _ => None,
+    };
+
     Some(ParsedMessage {
         message_type,
         role,
@@ -272,6 +291,8 @@ fn finalize_parsed_message(
         raw_json: parsed.raw_content,
         timestamp,
         uuid: parsed.uuid,
+        agent_id,
+        parent_id,
     })
 }
 
@@ -394,9 +415,9 @@ fn classify_file(file_path: &Path) -> SessionFileType {
         }
     }
 
-    // Check for han events file: {uuid}-han.jsonl
+    // Check for han events file: {uuid}-han.jsonl or cli-{uuid}-han.jsonl
     if let Some(session_id) = filename.strip_suffix("-han") {
-        if is_valid_uuid(session_id) {
+        if is_valid_uuid(session_id) || is_valid_cli_session_id(session_id) {
             return SessionFileType::HanEvents {
                 session_id: session_id.to_string(),
             };
@@ -422,6 +443,15 @@ fn classify_file(file_path: &Path) -> SessionFileType {
 /// Check if a string looks like a UUID
 fn is_valid_uuid(s: &str) -> bool {
     s.len() >= 32 && s.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+}
+
+/// Check if a string looks like a CLI session ID (cli-{uuid})
+fn is_valid_cli_session_id(s: &str) -> bool {
+    if let Some(uuid_part) = s.strip_prefix("cli-") {
+        is_valid_uuid(uuid_part)
+    } else {
+        false
+    }
 }
 
 /// Extract session ID from agent file by reading the first line
@@ -467,63 +497,51 @@ fn extract_project_slug(file_path: &Path) -> Option<String> {
 /// Decode project path from slug
 /// Slug format: `-Volumes-dev-src-github-com-user-project` (leading dash)
 fn decode_project_path(slug: &str) -> String {
-    // The slug already starts with a dash representing the root /
-    // So just replace dashes with slashes
-    slug.replace('-', "/")
+    // Claude Code encodes paths by replacing / and . with -
+    // We need to reconstruct the original path by trying different combinations
+    // Strategy: Replace - with / first, then check if path exists. If not, try
+    // common patterns like replacing /com/ with .com/ for domain-like segments.
+
+    let naive_path = slug.replace('-', "/");
+
+    // Check if naive path exists
+    if std::path::Path::new(&naive_path).exists() {
+        return naive_path;
+    }
+
+    // Try common domain patterns: github/com -> github.com
+    let domain_patterns = [
+        ("/github/com/", "/github.com/"),
+        ("/gitlab/com/", "/gitlab.com/"),
+        ("/bitbucket/org/", "/bitbucket.org/"),
+    ];
+
+    let mut candidate = naive_path.clone();
+    for (from, to) in domain_patterns {
+        if candidate.contains(from) {
+            let fixed = candidate.replace(from, to);
+            if std::path::Path::new(&fixed).exists() {
+                return fixed;
+            }
+            // Keep the fix even if path doesn't exist - it's more likely correct
+            candidate = fixed;
+        }
+    }
+
+    candidate
 }
 
 /// Detect git repository info from a project path
 /// Returns (remote_url, repo_name, default_branch) if in a git repo
+/// Uses gitoxide (pure Rust) instead of shelling out to git CLI
 fn detect_git_repo(project_path: &str) -> Option<(String, String, Option<String>)> {
-    let path = Path::new(project_path);
-    if !path.exists() {
-        return None;
-    }
+    use crate::git;
 
-    // Get remote URL
-    let remote_output = Command::new("git")
-        .arg("-C")
-        .arg(project_path)
-        .arg("remote")
-        .arg("get-url")
-        .arg("origin")
-        .output()
-        .ok()?;
+    let info = git::get_git_info(project_path.to_string());
 
-    if !remote_output.status.success() {
-        return None;
-    }
-
-    let remote = String::from_utf8_lossy(&remote_output.stdout)
-        .trim()
-        .to_string();
-    if remote.is_empty() {
-        return None;
-    }
-
-    // Extract repo name from remote URL
-    // Handles: https://github.com/user/repo.git, git@github.com:user/repo.git
-    let name = remote
-        .rsplit('/')
-        .next()
-        .or_else(|| remote.rsplit(':').next())
-        .map(|s| s.trim_end_matches(".git"))
-        .unwrap_or("unknown")
-        .to_string();
-
-    // Get default branch
-    let branch_output = Command::new("git")
-        .arg("-C")
-        .arg(project_path)
-        .arg("rev-parse")
-        .arg("--abbrev-ref")
-        .arg("HEAD")
-        .output()
-        .ok();
-
-    let default_branch = branch_output
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+    let remote = info.remote?;
+    let name = info.repo_name.unwrap_or_else(|| "unknown".to_string());
+    let default_branch = info.branch;
 
     Some((remote, name, default_branch))
 }
@@ -538,25 +556,60 @@ struct ParsedHanEvent {
     id: String,
     event_type: String,
     timestamp: String,
+    agent_id: Option<String>,
     data: Value,
     raw_json: String,
 }
 
+/// Resolve a ref file path to get the full event JSON
+/// ref_path is relative like "hook_result/abc123.json"
+/// base_dir is the session's ref directory like "/path/to/projects/slug/{session-id}/"
+fn resolve_ref_file(ref_path: &str, base_dir: &Path) -> Option<Value> {
+    let full_path = base_dir.join(ref_path);
+    let content = std::fs::read_to_string(&full_path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
 /// Parse a Han event JSONL line
-fn parse_han_event_line(line: &JsonlLine) -> Option<ParsedHanEvent> {
+/// Supports both inline events and ref-based events for large content
+/// ref_base_dir: The directory containing ref files (e.g., /path/to/projects/slug/{session-id}/)
+fn parse_han_event_line(line: &JsonlLine, ref_base_dir: Option<&Path>) -> Option<ParsedHanEvent> {
     let json: Value = serde_json::from_str(&line.content).ok()?;
 
-    let id = json.get("id")?.as_str()?.to_string();
-    let event_type = json.get("type")?.as_str()?.to_string();
-    let timestamp = json.get("timestamp")?.as_str()?.to_string();
-    let data = json.get("data").cloned().unwrap_or(Value::Null);
+    // Check if this is a ref entry (large content stored in separate file)
+    let resolved_json = if let Some(ref_path) = json.get("ref").and_then(|v| v.as_str()) {
+        // Resolve the ref file
+        if let Some(base_dir) = ref_base_dir {
+            resolve_ref_file(ref_path, base_dir)?
+        } else {
+            // No base dir provided, can't resolve ref - use inline data as fallback
+            json.clone()
+        }
+    } else {
+        // Inline event, use as-is
+        json.clone()
+    };
+
+    // Try both uuid (new format) and id (legacy format)
+    let id = resolved_json.get("uuid")
+        .or_else(|| resolved_json.get("id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())?;
+    let event_type = resolved_json.get("type")?.as_str()?.to_string();
+    let timestamp = resolved_json.get("timestamp")?.as_str()?.to_string();
+    let agent_id = resolved_json.get("agentId").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let data = resolved_json.get("data").cloned().unwrap_or(Value::Null);
+
+    // Use resolved JSON as raw_json for full content
+    let raw_json = serde_json::to_string(&resolved_json).unwrap_or_else(|_| line.content.clone());
 
     Some(ParsedHanEvent {
         id,
         event_type,
         timestamp,
+        agent_id,
         data,
-        raw_json: line.content.clone(),
+        raw_json,
     })
 }
 
@@ -602,10 +655,14 @@ fn get_han_events_path(session_file: &Path) -> Option<std::path::PathBuf> {
 }
 
 /// Read all Han events from the -han.jsonl file
-fn read_han_events(han_file: &Path) -> Vec<ParsedHanEvent> {
+/// session_id is used to locate ref files in the {session-id}/ subdirectory
+fn read_han_events(han_file: &Path, session_id: &str) -> Vec<ParsedHanEvent> {
     let mut events = Vec::new();
     let mut offset = 0u32;
     let batch_size = 1000u32;
+
+    // Ref files are stored in {han_file_dir}/{session-id}/
+    let ref_base_dir = han_file.parent().map(|p| p.join(session_id));
 
     loop {
         let result = match jsonl_read_page(han_file.to_string_lossy().to_string(), offset, batch_size) {
@@ -618,7 +675,7 @@ fn read_han_events(han_file: &Path) -> Vec<ParsedHanEvent> {
         }
 
         for line in &result.lines {
-            if let Some(event) = parse_han_event_line(line) {
+            if let Some(event) = parse_han_event_line(line, ref_base_dir.as_deref()) {
                 events.push(event);
             }
         }
@@ -633,11 +690,138 @@ fn read_han_events(han_file: &Path) -> Vec<ParsedHanEvent> {
     events
 }
 
+// ============================================================================
+// File Change Extraction
+// ============================================================================
+
+/// Check if a tool is a file modification tool
+fn is_file_modification_tool(tool_name: &str) -> bool {
+    matches!(tool_name, "Write" | "Edit" | "NotebookEdit")
+}
+
+/// Detect if a summary message is a compact (auto_compact, compact, or continuation)
+/// Returns the compact type if it is, None if it's a regular summary
+fn detect_compact_type(raw_json: &str, content: Option<&str>) -> Option<String> {
+    if let Ok(json) = serde_json::from_str::<Value>(raw_json) {
+        // Check for explicit type fields
+        if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
+            if msg_type == "auto_compact" || msg_type == "compact" {
+                return Some(msg_type.to_string());
+            }
+        }
+
+        // Check for is_compact flag (snake_case)
+        if json.get("is_compact").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Some("compact".to_string());
+        }
+
+        // Check for isCompact flag (camelCase)
+        if json.get("isCompact").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Some("compact".to_string());
+        }
+
+        // Check for auto_compacted flag
+        if json.get("auto_compacted").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Some("auto_compact".to_string());
+        }
+    }
+
+    // Check for continuation messages in user content
+    if let Some(text) = content {
+        if text.contains("This session is being continued from a previous conversation") {
+            return Some("continuation".to_string());
+        }
+    }
+
+    None
+}
+
+/// Extract file path from tool input for Write/Edit/NotebookEdit tools
+fn extract_file_path_from_tool_input(tool_name: &str, tool_input: &str) -> Option<String> {
+    let input: Value = serde_json::from_str(tool_input).ok()?;
+
+    match tool_name {
+        "Write" | "Edit" => {
+            input.get("file_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        }
+        "NotebookEdit" => {
+            input.get("notebook_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        }
+        _ => None,
+    }
+}
+
+/// Record a file change from a tool_use message
+fn record_file_change_from_tool(
+    session_id: &str,
+    tool_name: &str,
+    tool_input: &str,
+) {
+    if let Some(file_path) = extract_file_path_from_tool_input(tool_name, tool_input) {
+        let action = match tool_name {
+            "Write" => "created",
+            "Edit" => "modified",
+            "NotebookEdit" => "modified",
+            _ => "modified",
+        };
+
+        // Compute hash of the file after the change
+        let file_hash_after = std::fs::File::open(&file_path)
+            .ok()
+            .map(|mut file| {
+                use std::io::Read;
+                use sha2::{Sha256, Digest};
+                let mut hasher = Sha256::new();
+                let mut buffer = [0u8; 8192];
+                loop {
+                    match file.read(&mut buffer) {
+                        Ok(0) => break,
+                        Ok(n) => hasher.update(&buffer[..n]),
+                        Err(_) => return None,
+                    }
+                }
+                Some(format!("{:x}", hasher.finalize()))
+            })
+            .flatten();
+
+        let input = SessionFileChangeInput {
+            session_id: session_id.to_string(),
+            file_path,
+            action: action.to_string(),
+            file_hash_before: None,
+            file_hash_after,
+            tool_name: Some(tool_name.to_string()),
+        };
+
+        // Record to database (ignore errors - file tracking is best-effort)
+        let _ = crud::record_file_change(input);
+    }
+}
+
+/// Compute sentiment analysis for a message and return tuple of fields
+/// Returns (sentiment_score, sentiment_level, frustration_score, frustration_level)
+fn compute_sentiment(content: &str) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
+    match sentiment::analyze_sentiment(content) {
+        Some(result) => (
+            Some(result.sentiment_score),
+            Some(result.sentiment_level.as_str().to_string()),
+            result.frustration_score,
+            result.frustration_level.map(|f| f.as_str().to_string()),
+        ),
+        None => (None, None, None, None),
+    }
+}
+
 /// Convert a Han event to a MessageInput
 fn han_event_to_message_input(
     event: ParsedHanEvent,
     session_id: &str,
     line_number: i32,
+    source_file_name: Option<String>,
 ) -> MessageInput {
     // Content is the full event data as JSON
     let content = serde_json::to_string(&event.data).ok();
@@ -648,6 +832,8 @@ fn han_event_to_message_input(
     MessageInput {
         id: event.id,
         session_id: session_id.to_string(),
+        agent_id: event.agent_id, // Han events may have agent context
+        parent_id: None, // Han events don't have parent relationships
         message_type: "han_event".to_string(),
         role: None, // Han events don't have a role
         content,
@@ -657,7 +843,177 @@ fn han_event_to_message_input(
         raw_json: Some(event.raw_json),
         timestamp: event.timestamp,
         line_number,
+        source_file_name,
+        source_file_type: Some("han_events".to_string()),
+        // Han events don't have sentiment analysis
+        sentiment_score: None,
+        sentiment_level: None,
+        frustration_score: None,
+        frustration_level: None,
     }
+}
+
+// ============================================================================
+// Task Event Processing
+// ============================================================================
+
+/// Process a task event from Han events and update the tasks table
+/// Returns Ok(true) if task was processed, Ok(false) if not a task event
+fn process_task_event(event: &ParsedHanEvent, session_id: &str) -> napi::Result<bool> {
+    match event.event_type.as_str() {
+        "task_start" => {
+            // Create a new task from the event data
+            let task_id = event.data.get("task_id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| napi::Error::from_reason("task_start missing task_id"))?;
+            let description = event.data.get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown task");
+            let task_type = event.data.get("task_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let estimated_complexity = event.data.get("estimated_complexity")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            let input = TaskInput {
+                session_id: Some(session_id.to_string()),
+                task_id: task_id.to_string(),
+                description: description.to_string(),
+                task_type: task_type.to_string(),
+                estimated_complexity,
+            };
+
+            // Create the task (ignore if already exists)
+            match crud::create_task(input) {
+                Ok(_) => Ok(true),
+                Err(e) if e.to_string().contains("UNIQUE constraint failed") => Ok(true),
+                Err(e) => Err(e),
+            }
+        }
+        "task_complete" => {
+            // Complete an existing task
+            let task_id = event.data.get("task_id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| napi::Error::from_reason("task_complete missing task_id"))?;
+            let outcome = event.data.get("outcome")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let confidence = event.data.get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let notes = event.data.get("notes")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let files_modified = event.data.get("files_modified")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect());
+            let tests_added = event.data.get("tests_added")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32);
+
+            let completion = TaskCompletion {
+                task_id: task_id.to_string(),
+                outcome: outcome.to_string(),
+                confidence,
+                notes,
+                files_modified,
+                tests_added,
+            };
+
+            // Complete the task (ignore if task doesn't exist)
+            match crud::complete_task(completion) {
+                Ok(_) => Ok(true),
+                Err(e) if e.to_string().contains("No task found") => Ok(true),
+                Err(e) => Err(e),
+            }
+        }
+        "task_fail" => {
+            // Fail an existing task
+            let task_id = event.data.get("task_id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| napi::Error::from_reason("task_fail missing task_id"))?;
+            let reason = event.data.get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown reason");
+            let confidence = event.data.get("confidence")
+                .and_then(|v| v.as_f64());
+            let notes = event.data.get("notes")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let attempted_solutions = event.data.get("attempted_solutions")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect());
+
+            let failure = TaskFailure {
+                task_id: task_id.to_string(),
+                reason: reason.to_string(),
+                confidence,
+                notes,
+                attempted_solutions,
+            };
+
+            // Fail the task (ignore if task doesn't exist)
+            match crud::fail_task(failure) {
+                Ok(_) => Ok(true),
+                Err(e) if e.to_string().contains("No task found") => Ok(true),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Ok(false), // Not a task event
+    }
+}
+
+/// Process hook_validation_cache events to populate session_file_validations table
+/// These events contain a map of file paths to their hashes, which we explode into individual rows
+fn process_validation_cache_event(event: &ParsedHanEvent, session_id: &str) -> napi::Result<bool> {
+    if event.event_type != "hook_validation_cache" {
+        return Ok(false);
+    }
+
+    let plugin = event.data.get("plugin")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| napi::Error::from_reason("hook_validation_cache missing plugin"))?;
+    let hook = event.data.get("hook")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| napi::Error::from_reason("hook_validation_cache missing hook"))?;
+    let directory = event.data.get("directory")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| napi::Error::from_reason("hook_validation_cache missing directory"))?;
+    let command_hash = event.data.get("command_hash")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| napi::Error::from_reason("hook_validation_cache missing command_hash"))?;
+    let files = event.data.get("files")
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| napi::Error::from_reason("hook_validation_cache missing files"))?;
+
+    // Insert a validation record for each file in the map
+    for (file_path, file_hash_value) in files {
+        let file_hash = file_hash_value.as_str().unwrap_or("");
+
+        let input = SessionFileValidationInput {
+            session_id: session_id.to_string(),
+            file_path: file_path.clone(),
+            file_hash: file_hash.to_string(),
+            plugin_name: plugin.to_string(),
+            hook_name: hook.to_string(),
+            directory: directory.to_string(),
+            command_hash: command_hash.to_string(),
+        };
+
+        // Record the validation (ignore duplicates - UNIQUE constraint handles this)
+        match crud::record_file_validation(input) {
+            Ok(_) => {}
+            Err(e) if e.to_string().contains("UNIQUE constraint failed") => {}
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(true)
 }
 
 // ============================================================================
@@ -725,6 +1081,8 @@ fn generate_sentiment_event(
     Some(MessageInput {
         id: event_id,
         session_id: session_id.to_string(),
+        agent_id: None, // Sentiment events are generated during indexing, not from agent context
+        parent_id: Some(message_id.to_string()), // Link to the message being analyzed
         message_type: "han_event".to_string(),
         role: None,
         content: Some(serde_json::to_string(&data).unwrap_or_default()),
@@ -734,6 +1092,13 @@ fn generate_sentiment_event(
         raw_json: Some(serde_json::to_string(&raw_event).unwrap_or_default()),
         timestamp: event_timestamp,
         line_number: line_number + 500_000, // Offset between Claude messages and Han events
+        source_file_name: None, // Generated during indexing, not from original file
+        source_file_type: Some("generated".to_string()),
+        // Sentiment data is in the content, not separate fields for event-type messages
+        sentiment_score: None,
+        sentiment_level: None,
+        frustration_score: None,
+        frustration_level: None,
     })
 }
 
@@ -746,6 +1111,17 @@ fn generate_sentiment_event(
 /// Task association for sentiment events is automatically loaded from SQLite
 pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     let path = Path::new(&file_path);
+
+    // Extract source file metadata for session reconstruction
+    let source_file_name = path.file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_string());
+    let source_file_type = match classify_file(path) {
+        SessionFileType::Main { .. } => Some("main".to_string()),
+        SessionFileType::Agent { .. } => Some("agent".to_string()),
+        SessionFileType::HanEvents { .. } => Some("han_events".to_string()),
+        SessionFileType::Unknown => None,
+    };
 
     // Extract session ID
     let session_id = match extract_session_id(path) {
@@ -875,19 +1251,110 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     // Also generate sentiment analysis events for user messages
     let mut total_indexed = 0u32;
     let mut messages_batch: Vec<MessageInput> = Vec::new();
+    // Track last known timestamp for fallback (summary messages may not have their own)
+    let mut last_known_timestamp: Option<String> = None;
 
     for parsed in intermediate_lines {
         let line_number = parsed.line_number;
-        if let Some(finalized) = finalize_parsed_message(parsed, &uuid_to_timestamp) {
+        if let Some(finalized) = finalize_parsed_message(parsed, &uuid_to_timestamp, last_known_timestamp.as_deref()) {
+            // Update last known timestamp for next iteration
+            last_known_timestamp = Some(finalized.timestamp.clone());
             // Check if this is a user message for sentiment analysis
             let is_user_message = finalized.message_type == MessageType::User;
             let message_content = finalized.content.clone();
             let message_id = finalized.uuid.clone();
             let message_timestamp = finalized.timestamp.clone();
 
+            // Record file changes for Write/Edit/NotebookEdit tools (before moving finalized)
+            // For tool_use messages, check the direct tool_name/tool_input
+            if finalized.message_type == MessageType::ToolUse {
+                if let (Some(ref tool_name), Some(ref tool_input)) = (&finalized.tool_name, &finalized.tool_input) {
+                    if is_file_modification_tool(tool_name) {
+                        record_file_change_from_tool(&session_id, tool_name, tool_input);
+                    }
+                }
+            }
+            // For assistant messages, extract tool_use blocks from the message.content array
+            if finalized.message_type == MessageType::Assistant {
+                if let Ok(json) = serde_json::from_str::<Value>(&finalized.raw_json) {
+                    if let Some(content) = json.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+                        for item in content {
+                            if item.get("type").and_then(|t| t.as_str()) == Some("tool_use") {
+                                if let Some(tool_name) = item.get("name").and_then(|n| n.as_str()) {
+                                    if is_file_modification_tool(tool_name) {
+                                        if let Some(input) = item.get("input") {
+                                            let input_str = input.to_string();
+                                            record_file_change_from_tool(&session_id, tool_name, &input_str);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Process summary/compact messages for event sourcing
+            // Detect if this is a summary or compact and store in appropriate table
+            if finalized.message_type == MessageType::Summary {
+                let compact_type = detect_compact_type(&finalized.raw_json, finalized.content.as_deref());
+                if let Some(ct) = compact_type {
+                    // This is a compact message
+                    let _ = crud::upsert_session_compact(SessionCompactInput {
+                        session_id: session_id.clone(),
+                        message_id: finalized.uuid.clone(),
+                        content: finalized.content.clone(),
+                        raw_json: Some(finalized.raw_json.clone()),
+                        timestamp: finalized.timestamp.clone(),
+                        line_number,
+                        compact_type: Some(ct),
+                    });
+                } else {
+                    // This is a regular summary
+                    let _ = crud::upsert_session_summary(SessionSummaryInput {
+                        session_id: session_id.clone(),
+                        message_id: finalized.uuid.clone(),
+                        content: finalized.content.clone(),
+                        raw_json: Some(finalized.raw_json.clone()),
+                        timestamp: finalized.timestamp.clone(),
+                        line_number,
+                    });
+                }
+            }
+            // Also check user messages for continuation summaries
+            else if is_user_message {
+                if let Some(ref content) = message_content {
+                    if content.contains("This session is being continued from a previous conversation") {
+                        let _ = crud::upsert_session_compact(SessionCompactInput {
+                            session_id: session_id.clone(),
+                            message_id: finalized.uuid.clone(),
+                            content: Some(content.clone()),
+                            raw_json: Some(finalized.raw_json.clone()),
+                            timestamp: finalized.timestamp.clone(),
+                            line_number,
+                            compact_type: Some("continuation".to_string()),
+                        });
+                    }
+                }
+            }
+
+            // Compute sentiment for user messages directly on the message
+            let (sentiment_score, sentiment_level, frustration_score, frustration_level) =
+                if is_user_message {
+                    if let Some(ref content) = message_content {
+                        compute_sentiment(content)
+                    } else {
+                        (None, None, None, None)
+                    }
+                } else {
+                    (None, None, None, None)
+                };
+
             messages_batch.push(MessageInput {
                 id: finalized.uuid,  // id IS the message UUID from JSONL
                 session_id: session_id.clone(),
+                agent_id: finalized.agent_id,
+                parent_id: finalized.parent_id,
                 message_type: finalized.message_type.as_str().to_string(),
                 role: finalized.role,
                 content: finalized.content,
@@ -897,6 +1364,12 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
                 raw_json: Some(finalized.raw_json),
                 timestamp: finalized.timestamp,
                 line_number,
+                source_file_name: source_file_name.clone(),
+                source_file_type: source_file_type.clone(),
+                sentiment_score,
+                sentiment_level,
+                frustration_score,
+                frustration_level,
             });
 
             // Generate sentiment analysis event for user messages
@@ -935,15 +1408,24 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     // collide with Claude message line numbers. The UI should sort by timestamp.
 
     if let Some(han_file) = get_han_events_path(path) {
-        let han_events = read_han_events(&han_file);
+        let han_events = read_han_events(&han_file, &session_id);
+        let han_file_name = han_file.file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string());
 
         // Line numbers for Han events are offset to avoid collision
         // The actual sorting should use timestamp in the UI
         const HAN_LINE_OFFSET: i32 = 1_000_000;
 
         for (idx, event) in han_events.into_iter().enumerate() {
+            // Process task events (task_start, task_complete, task_fail) to populate tasks table
+            // This is done before converting to message input since process_task_event borrows event
+            let _ = process_task_event(&event, &session_id);
+            // Process validation cache events to populate session_file_validations table
+            let _ = process_validation_cache_event(&event, &session_id);
+
             let line_number = HAN_LINE_OFFSET + (idx as i32);
-            let message_input = han_event_to_message_input(event, &session_id, line_number);
+            let message_input = han_event_to_message_input(event, &session_id, line_number, han_file_name.clone());
             messages_batch.push(message_input);
 
             // Insert batch every 100 events
@@ -1248,6 +1730,24 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_session_id_cli_han_file() {
+        // Test CLI session Han events file extraction (cli-{uuid}-han.jsonl)
+        let path = Path::new("/home/user/.claude/projects/test/cli-abc12345-1234-5678-9abc-def012345678-han.jsonl");
+        assert_eq!(
+            extract_session_id(path),
+            Some("cli-abc12345-1234-5678-9abc-def012345678".to_string())
+        );
+    }
+
+    #[test]
+    fn test_is_valid_cli_session_id() {
+        assert!(is_valid_cli_session_id("cli-abc12345-1234-5678-9abc-def012345678"));
+        assert!(!is_valid_cli_session_id("abc12345-1234-5678-9abc-def012345678")); // Regular UUID
+        assert!(!is_valid_cli_session_id("cli-short")); // UUID too short
+        assert!(!is_valid_cli_session_id("clix-abc12345-1234-5678-9abc-def012345678")); // Wrong prefix
+    }
+
+    #[test]
     fn test_parse_han_event_line() {
         let line = JsonlLine {
             line_number: 1,
@@ -1255,10 +1755,27 @@ mod tests {
             content: r#"{"id":"evt_abc123","type":"hook_run","timestamp":"2024-01-01T00:00:00Z","data":{"plugin":"test","hook":"lint"}}"#.to_string(),
         };
 
-        let parsed = parse_han_event_line(&line).unwrap();
+        // Test inline event (no ref)
+        let parsed = parse_han_event_line(&line, None).unwrap();
         assert_eq!(parsed.id, "evt_abc123");
         assert_eq!(parsed.event_type, "hook_run");
         assert_eq!(parsed.timestamp, "2024-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_parse_han_event_line_with_ref() {
+        // Test ref event that can't be resolved (no base dir)
+        let line = JsonlLine {
+            line_number: 1,
+            byte_offset: 0,
+            content: r#"{"uuid":"evt_ref123","type":"hook_result","timestamp":"2024-01-01T00:00:00Z","ref":"hook_result/evt_ref123.json"}"#.to_string(),
+        };
+
+        // Without a base dir, ref events fall back to inline data
+        // Since the inline data has no "data" field, it uses Null
+        let parsed = parse_han_event_line(&line, None).unwrap();
+        assert_eq!(parsed.id, "evt_ref123");
+        assert_eq!(parsed.event_type, "hook_result");
     }
 
     #[test]
@@ -1267,11 +1784,12 @@ mod tests {
             id: "evt_abc123".to_string(),
             event_type: "hook_result".to_string(),
             timestamp: "2024-01-01T00:00:00Z".to_string(),
+            agent_id: None,
             data: serde_json::json!({"plugin": "jutsu-biome", "hook": "lint", "exit_code": 0, "success": true}),
             raw_json: r#"{"id":"evt_abc123","type":"hook_result","timestamp":"2024-01-01T00:00:00Z"}"#.to_string(),
         };
 
-        let msg = han_event_to_message_input(event, "session-123", 1000001);
+        let msg = han_event_to_message_input(event, "session-123", 1000001, Some("test-han.jsonl".to_string()));
 
         assert_eq!(msg.id, "evt_abc123");
         assert_eq!(msg.session_id, "session-123");
@@ -1279,5 +1797,9 @@ mod tests {
         assert_eq!(msg.tool_name, Some("hook_result".to_string()));
         assert_eq!(msg.line_number, 1000001);
         assert!(msg.role.is_none());
+        assert!(msg.agent_id.is_none());
+        assert!(msg.parent_id.is_none());
+        assert_eq!(msg.source_file_name, Some("test-han.jsonl".to_string()));
+        assert_eq!(msg.source_file_type, Some("han_events".to_string()));
     }
 }

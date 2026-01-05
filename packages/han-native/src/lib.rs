@@ -5,6 +5,7 @@ mod crud;
 mod db;
 mod download;
 mod embedding;
+mod git;
 mod indexer;
 mod jsonl;
 mod schema;
@@ -29,16 +30,19 @@ pub use db::{FtsDocument, FtsSearchResult, VectorSearchResult};
 pub use schema::{
     Repo, RepoInput, Project, ProjectInput, Session, SessionInput,
     Task, TaskInput, TaskCompletion, TaskFailure, TaskMetrics,
-    HookCacheEntry, HookCacheInput, MarketplacePlugin, MarketplacePluginInput,
+    HookCacheEntry, HookCacheInput,
     Message, MessageInput, MessageBatch,
     // Hook execution tracking
     HookExecution, HookExecutionInput, HookStats,
     // Frustration tracking
     FrustrationEvent, FrustrationEventInput, FrustrationMetrics,
-    // Checkpoints
-    Checkpoint, CheckpointInput,
     // Session file changes
     SessionFileChange, SessionFileChangeInput,
+    // Session file validations
+    SessionFileValidation, SessionFileValidationInput,
+    // Session summaries and compacts (event-sourced)
+    SessionSummary, SessionSummaryInput,
+    SessionCompact, SessionCompactInput,
 };
 
 // Re-export JSONL types and functions
@@ -685,16 +689,32 @@ pub fn get_message(_db_path: String, message_id: String) -> napi::Result<Option<
     crud::get_message(&message_id)
 }
 
-/// List messages for a session with optional type filter and pagination
+/// List messages for a session with optional type filter, agent filter, and pagination
+/// agent_id_filter behavior:
+///   - undefined/null: returns all messages (main + agent)
+///   - empty string "": returns only main conversation (agent_id IS NULL)
+///   - non-empty string: returns only messages from that specific agent
 #[napi]
 pub fn list_session_messages(
     _db_path: String,
     session_id: String,
     message_type: Option<String>,
+    agent_id_filter: Option<String>,  // "" = main only, Some(id) = specific agent, None = all
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> napi::Result<Vec<Message>> {
-    crud::list_session_messages(&session_id, message_type, limit, offset)
+    // Convert the JS-friendly Option<String> to our internal Option<Option<String>>
+    // None (undefined/null in JS) -> None (all messages)
+    // Some("") -> Some(None) (main conversation only, where agent_id IS NULL)
+    // Some("xyz") -> Some(Some("xyz")) (specific agent only)
+    let agent_filter = agent_id_filter.map(|s| {
+        if s.is_empty() {
+            None
+        } else {
+            Some(s)
+        }
+    });
+    crud::list_session_messages(&session_id, message_type, agent_filter, limit, offset)
 }
 
 /// Get message count for a session
@@ -798,13 +818,13 @@ pub fn set_hook_cache(_db_path: String, input: HookCacheInput) -> napi::Result<b
     crud::set_hook_cache(input)
 }
 
-/// Get a hook cache entry by key
+/// Get a hook cache entry by cache_key
 #[napi]
 pub fn get_hook_cache(_db_path: String, cache_key: String) -> napi::Result<Option<HookCacheEntry>> {
     crud::get_hook_cache(&cache_key)
 }
 
-/// Invalidate a hook cache entry
+/// Invalidate a hook cache entry by cache_key
 #[napi]
 pub fn invalidate_hook_cache(_db_path: String, cache_key: String) -> napi::Result<bool> {
     crud::invalidate_hook_cache(&cache_key)
@@ -817,26 +837,8 @@ pub fn cleanup_expired_cache(_db_path: String) -> napi::Result<u32> {
 }
 
 // ============================================================================
-// Marketplace Cache Operations
+// NOTE: Marketplace Cache Operations removed - not used
 // ============================================================================
-
-/// Upsert a marketplace plugin entry
-#[napi]
-pub fn upsert_marketplace_plugin(_db_path: String, input: MarketplacePluginInput) -> napi::Result<bool> {
-    crud::upsert_marketplace_plugin(input)
-}
-
-/// Get a marketplace plugin by ID
-#[napi]
-pub fn get_marketplace_plugin(_db_path: String, plugin_id: String) -> napi::Result<Option<MarketplacePlugin>> {
-    crud::get_marketplace_plugin(&plugin_id)
-}
-
-/// List marketplace plugins with optional category filter
-#[napi]
-pub fn list_marketplace_plugins(_db_path: String, category: Option<String>) -> napi::Result<Vec<MarketplacePlugin>> {
-    crud::list_marketplace_plugins(category)
-}
 
 // ============================================================================
 // Hook Execution Operations
@@ -871,26 +873,8 @@ pub fn query_frustration_metrics(_db_path: String, period: Option<String>, total
 }
 
 // ============================================================================
-// Checkpoint Operations
+// NOTE: Checkpoint Operations removed - not used
 // ============================================================================
-
-/// Create a checkpoint
-#[napi]
-pub fn create_checkpoint(_db_path: String, input: CheckpointInput) -> napi::Result<Checkpoint> {
-    crud::create_checkpoint(input)
-}
-
-/// Get a checkpoint by session and file path
-#[napi]
-pub fn get_checkpoint(_db_path: String, session_id: String, file_path: String) -> napi::Result<Option<Checkpoint>> {
-    crud::get_checkpoint(&session_id, &file_path)
-}
-
-/// List checkpoints for a session
-#[napi]
-pub fn list_checkpoints(_db_path: String, session_id: String) -> napi::Result<Vec<Checkpoint>> {
-    crud::list_checkpoints(&session_id)
-}
 
 // ============================================================================
 // Session File Change Operations
@@ -912,6 +896,93 @@ pub fn get_session_file_changes(_db_path: String, session_id: String) -> napi::R
 #[napi]
 pub fn has_session_changes(_db_path: String, session_id: String) -> napi::Result<bool> {
     crud::has_session_changes(&session_id)
+}
+
+// ============================================================================
+// Session File Validation Operations
+// ============================================================================
+
+/// Record a file validation (upserts based on session/file/plugin/hook)
+#[napi]
+pub fn record_file_validation(_db_path: String, input: SessionFileValidationInput) -> napi::Result<SessionFileValidation> {
+    crud::record_file_validation(input)
+}
+
+/// Get a specific file validation
+#[napi]
+pub fn get_file_validation(
+    _db_path: String,
+    session_id: String,
+    file_path: String,
+    plugin_name: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<Option<SessionFileValidation>> {
+    crud::get_file_validation(&session_id, &file_path, &plugin_name, &hook_name, &directory)
+}
+
+/// Get all validations for a session and plugin/hook/directory combo
+#[napi]
+pub fn get_session_validations(
+    _db_path: String,
+    session_id: String,
+    plugin_name: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<Vec<SessionFileValidation>> {
+    crud::get_session_validations(&session_id, &plugin_name, &hook_name, &directory)
+}
+
+/// Check if files need validation (any changed since last validation or command changed)
+#[napi]
+pub fn needs_validation(
+    _db_path: String,
+    session_id: String,
+    plugin_name: String,
+    hook_name: String,
+    directory: String,
+    command_hash: String,
+) -> napi::Result<bool> {
+    crud::needs_validation(&session_id, &plugin_name, &hook_name, &directory, &command_hash)
+}
+
+/// Get ALL file validations for a session (not filtered by plugin/hook)
+/// Useful for showing validation status across all hooks for file changes
+#[napi]
+pub fn get_all_session_validations(_db_path: String, session_id: String) -> napi::Result<Vec<SessionFileValidation>> {
+    crud::get_all_session_validations(&session_id)
+}
+
+// ============================================================================
+// Session Summary Operations (event-sourced)
+// ============================================================================
+
+/// Upsert a session summary (keeps the latest by timestamp)
+#[napi]
+pub fn upsert_session_summary(_db_path: String, input: SessionSummaryInput) -> napi::Result<SessionSummary> {
+    crud::upsert_session_summary(input)
+}
+
+/// Get session summary by session ID
+#[napi]
+pub fn get_session_summary(_db_path: String, session_id: String) -> napi::Result<Option<SessionSummary>> {
+    crud::get_session_summary(&session_id)
+}
+
+// ============================================================================
+// Session Compact Operations (event-sourced)
+// ============================================================================
+
+/// Upsert a session compact (keeps the latest by timestamp)
+#[napi]
+pub fn upsert_session_compact(_db_path: String, input: SessionCompactInput) -> napi::Result<SessionCompact> {
+    crud::upsert_session_compact(input)
+}
+
+/// Get session compact by session ID
+#[napi]
+pub fn get_session_compact(_db_path: String, session_id: String) -> napi::Result<Option<SessionCompact>> {
+    crud::get_session_compact(&session_id)
 }
 
 // ============================================================================
@@ -1013,3 +1084,14 @@ pub fn handle_file_event(
 pub fn full_scan_and_index(_db_path: String) -> napi::Result<Vec<indexer::IndexResult>> {
     indexer::full_scan_and_index()
 }
+
+// ============================================================================
+// Git Utility Functions (using gitoxide - pure Rust)
+// ============================================================================
+
+// Re-export git types and functions from git module
+pub use git::{
+    get_git_branch, get_git_common_dir, get_git_info, get_git_remote_url, get_git_root,
+    git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list,
+    GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
+};

@@ -82,12 +82,53 @@ SELECT
 FROM sessions s;
 
 -- ============================================================================
+-- Session Summaries (event-sourced: latest summary for each session)
+-- Populated during indexing when summary messages are encountered
+-- Only includes regular summaries (not auto-compact/compact)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS session_summaries (
+    id TEXT PRIMARY KEY,  -- Same as message ID
+    session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),  -- One summary per session
+    message_id TEXT NOT NULL,  -- Reference to the source message
+    content TEXT,
+    raw_json TEXT,
+    timestamp TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_summaries_session ON session_summaries(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_summaries_timestamp ON session_summaries(timestamp);
+
+-- ============================================================================
+-- Session Compacts (event-sourced: latest compact/continuation for each session)
+-- Populated during indexing when auto-compact summaries or continuation messages
+-- are encountered
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS session_compacts (
+    id TEXT PRIMARY KEY,  -- Same as message ID
+    session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),  -- One compact per session
+    message_id TEXT NOT NULL,  -- Reference to the source message
+    content TEXT,
+    raw_json TEXT,
+    timestamp TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    compact_type TEXT,  -- 'auto_compact', 'compact', 'continuation'
+    indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_compacts_session ON session_compacts(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_compacts_timestamp ON session_compacts(timestamp);
+
+-- ============================================================================
 -- Messages (individual JSONL entries from sessions)
 -- id IS the message UUID from JSONL - no separate message_id column
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,  -- This IS the message UUID from JSONL
     session_id TEXT NOT NULL REFERENCES sessions(id),
+    agent_id TEXT,  -- NULL for main conversation, agent ID for agent messages
+    parent_id TEXT,  -- For result messages, references the call message id
     message_type TEXT NOT NULL,
     role TEXT,
     content TEXT,
@@ -97,10 +138,19 @@ CREATE TABLE IF NOT EXISTS messages (
     raw_json TEXT,  -- Original JSONL line for raw view
     timestamp TEXT NOT NULL,
     line_number INTEGER NOT NULL,
+    source_file_name TEXT,  -- Basename of source file (e.g., "abc123.jsonl", "agent-12345678.jsonl")
+    source_file_type TEXT,  -- Type: 'main', 'agent', 'han_events'
+    -- Sentiment analysis (computed during indexing for user messages)
+    sentiment_score REAL,  -- Raw sentiment score (typically -5 to +5)
+    sentiment_level TEXT,  -- 'positive', 'neutral', 'negative'
+    frustration_score REAL,  -- Frustration score (0-10) if detected
+    frustration_level TEXT,  -- 'low', 'moderate', 'high' if detected
     indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_messages_agent ON messages(session_id, agent_id);
+CREATE INDEX IF NOT EXISTS idx_messages_parent ON messages(parent_id);
 CREATE INDEX IF NOT EXISTS idx_messages_type ON messages(message_type);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 CREATE INDEX IF NOT EXISTS idx_messages_line ON messages(session_id, line_number);
@@ -157,37 +207,23 @@ CREATE INDEX IF NOT EXISTS idx_tasks_started ON tasks(started_at);
 
 -- ============================================================================
 -- Hook Cache (project-scoped caching for hook results)
+-- Similar structure to session_file_validations for consistency
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS hook_cache (
     id TEXT PRIMARY KEY,
-    project_id TEXT REFERENCES projects(id),
-    cache_key TEXT UNIQUE NOT NULL,
-    file_hash TEXT NOT NULL,
-    result TEXT NOT NULL,  -- JSON
+    cache_key TEXT NOT NULL UNIQUE,  -- Composite key: "{pluginName}_{hookName}"
+    file_hash TEXT NOT NULL,  -- SHA256 hash of manifest content
+    result TEXT NOT NULL,  -- JSON manifest of file hashes
     cached_at TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_hook_cache_key ON hook_cache(cache_key);
-CREATE INDEX IF NOT EXISTS idx_hook_cache_project ON hook_cache(project_id);
 CREATE INDEX IF NOT EXISTS idx_hook_cache_expires ON hook_cache(expires_at);
 
 -- ============================================================================
--- Marketplace Cache (plugin metadata cache)
+-- NOTE: marketplace_plugins table removed - not used
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS marketplace_plugins (
-    id TEXT PRIMARY KEY,
-    plugin_id TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    version TEXT,
-    category TEXT,
-    metadata TEXT,  -- JSON
-    fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_marketplace_plugin_id ON marketplace_plugins(plugin_id);
-CREATE INDEX IF NOT EXISTS idx_marketplace_category ON marketplace_plugins(category);
 
 -- ============================================================================
 -- Han Events are stored in the messages table with message_type = 'han_event'
@@ -244,22 +280,8 @@ CREATE INDEX IF NOT EXISTS idx_frustration_level ON frustration_events(frustrati
 CREATE INDEX IF NOT EXISTS idx_frustration_recorded ON frustration_events(recorded_at);
 
 -- ============================================================================
--- Checkpoints (file state capture for session recovery)
+-- NOTE: checkpoints table removed - not used
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS checkpoints (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
-    project_path TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    file_hash TEXT NOT NULL,
-    blob_path TEXT NOT NULL,  -- Path to actual file content blob
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(session_id, project_path, file_path)
-);
-
-CREATE INDEX IF NOT EXISTS idx_checkpoints_session ON checkpoints(session_id);
-CREATE INDEX IF NOT EXISTS idx_checkpoints_project ON checkpoints(project_path);
-CREATE INDEX IF NOT EXISTS idx_checkpoints_hash ON checkpoints(file_hash);
 
 -- ============================================================================
 -- Session File Changes (track files modified during session)
@@ -280,6 +302,29 @@ CREATE TABLE IF NOT EXISTS session_file_changes (
 CREATE INDEX IF NOT EXISTS idx_file_changes_session ON session_file_changes(session_id);
 CREATE INDEX IF NOT EXISTS idx_file_changes_path ON session_file_changes(file_path);
 CREATE INDEX IF NOT EXISTS idx_file_changes_action ON session_file_changes(action);
+
+-- ============================================================================
+-- Session File Validations (track which hooks have validated which files)
+-- Used to skip re-running hooks when files haven't changed since last validation
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS session_file_validations (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    file_path TEXT NOT NULL,
+    file_hash TEXT NOT NULL,  -- Hash at time of validation
+    plugin_name TEXT NOT NULL,
+    hook_name TEXT NOT NULL,
+    directory TEXT NOT NULL,  -- The directory context (dirs_with match)
+    command_hash TEXT NOT NULL,  -- SHA256 of the command to detect config changes
+    validated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Unique per file/plugin/hook/directory combo within a session
+    UNIQUE(session_id, file_path, plugin_name, hook_name, directory)
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_validations_session ON session_file_validations(session_id);
+CREATE INDEX IF NOT EXISTS idx_file_validations_path ON session_file_validations(file_path);
+CREATE INDEX IF NOT EXISTS idx_file_validations_plugin ON session_file_validations(plugin_name, hook_name);
+CREATE INDEX IF NOT EXISTS idx_file_validations_dir ON session_file_validations(directory);
 
 -- ============================================================================
 -- Vector embeddings (for semantic search)
