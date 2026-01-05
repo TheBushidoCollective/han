@@ -454,6 +454,32 @@ export async function withSlot<T>(
 }
 
 /**
+ * Helper to run a function with global slot coordination.
+ * Uses the coordinator's global slot pool when available for cross-session coordination.
+ * Falls back to local per-session slots when coordinator is unavailable.
+ *
+ * Use this for resource-intensive operations like playwright tests where you want
+ * to prevent multiple sessions from overwhelming the system.
+ */
+export async function withGlobalSlot<T>(
+	hookName: string,
+	pluginName: string | undefined,
+	fn: () => Promise<T>,
+): Promise<T> {
+	if (!isLockingEnabled()) {
+		return fn();
+	}
+
+	// Use the slot client which handles coordinator detection and fallback
+	const { withGlobalSlot: clientWithGlobalSlot } = await import(
+		"./hooks/slot-client.ts"
+	);
+
+	const sessionId = getSessionId();
+	return clientWithGlobalSlot(sessionId, hookName, pluginName, fn);
+}
+
+/**
  * Check if a specific plugin:hook is currently running in any slot.
  * Used for dependency coordination - if the dependency hook is already running,
  * we should wait for it rather than spawn another instance.

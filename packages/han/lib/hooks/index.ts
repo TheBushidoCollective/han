@@ -77,6 +77,7 @@ export {
 	isLockingEnabled,
 	releaseSlot,
 	signalFailure,
+	withGlobalSlot,
 	withSlot,
 } from "./hook-lock.ts";
 // Testing

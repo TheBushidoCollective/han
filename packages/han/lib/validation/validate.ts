@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,26 +9,28 @@ import {
 	isCacheEnabled,
 	isCheckpointsEnabled,
 	isFailFastEnabled,
-	isTranscriptFilterEnabled,
 } from "../config/index.ts";
+import {
+	ensureSessionIndexed,
+	getSessionModifiedFiles,
+	type SessionModifiedFiles,
+	sessionFileValidations,
+} from "../db/index.ts";
 import {
 	buildCommandWithFiles,
 	checkFailureSignal,
 	checkForChangesAsync,
 	clearFailureSignal,
 	commandUsesSessionFiles,
+	computeFileHash,
 	createLockManager,
 	findDirectoriesWithMarkers,
+	findFilesWithGlob,
 	getHookConfigs,
-	getSessionFilteredFiles,
-	getTranscriptModifiedFiles,
-	hasChangedSinceCheckpointAsync,
-	hasSessionModifiedPatternFiles,
 	type ResolvedHookConfig,
 	signalFailure,
-	type TranscriptModifiedFiles,
 	trackFilesAsync,
-	withSlot,
+	withGlobalSlot,
 } from "../hooks/index.ts";
 import { getPluginNameFromRoot } from "../shared/index.ts";
 
@@ -37,6 +40,166 @@ import { getPluginNameFromRoot } from "../shared/index.ts";
 export function isDebugMode(): boolean {
 	const debug = process.env.HAN_DEBUG;
 	return debug === "1" || debug === "true";
+}
+
+/**
+ * Compute SHA256 hash of a command string.
+ * Used to detect when hook commands change and need to re-run.
+ */
+function computeCommandHash(command: string): string {
+	return createHash("sha256").update(command).digest("hex");
+}
+
+/**
+ * Get session ID from environment.
+ * Used for recording file validations scoped to the current Claude session.
+ */
+function getSessionIdFromEnv(): string | undefined {
+	return process.env.HAN_SESSION_ID || process.env.CLAUDE_SESSION_ID;
+}
+
+/**
+ * Check if any files from ifChanged patterns were modified in this session.
+ *
+ * @param modifiedFiles - Files from session_file_changes table
+ * @param directory - Hook target directory
+ * @param patterns - ifChanged glob patterns from hook config
+ * @returns true if session modified any files matching patterns
+ */
+function hasSessionModifiedPatternFiles(
+	modifiedFiles: SessionModifiedFiles,
+	directory: string,
+	patterns: string[],
+): boolean {
+	if (modifiedFiles.allModified.length === 0) {
+		return false;
+	}
+
+	if (!patterns || patterns.length === 0) {
+		// No patterns = run on all changes
+		return true;
+	}
+
+	// Get files matching patterns in target directory
+	const patternFiles = findFilesWithGlob(directory, patterns);
+
+	// Convert pattern files to relative paths for comparison
+	const patternFilesSet = new Set(
+		patternFiles.map((f) => {
+			const { relative } = require("node:path");
+			return relative(directory, f);
+		}),
+	);
+
+	// Check if any session-modified files match pattern files
+	for (const modifiedPath of modifiedFiles.allModified) {
+		const { relative } = require("node:path");
+
+		// Normalize the modified path (may be relative or absolute)
+		let normalizedPath = modifiedPath;
+
+		if (modifiedPath.startsWith("/")) {
+			// Absolute path - make relative to directory
+			normalizedPath = relative(directory, modifiedPath);
+		}
+
+		// Direct match
+		if (patternFilesSet.has(normalizedPath)) {
+			return true;
+		}
+
+		// Also check if any pattern file ends with the modified path
+		for (const patternFile of patternFilesSet) {
+			if (patternFile.endsWith(normalizedPath)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Get the intersection of session-modified files with pattern-matched files.
+ *
+ * @param modifiedFiles - Files from session_file_changes table
+ * @param directory - Hook target directory
+ * @param patterns - ifChanged glob patterns from hook config
+ * @returns Array of relative file paths to pass to the hook command
+ */
+function getSessionFilteredFiles(
+	modifiedFiles: SessionModifiedFiles,
+	directory: string,
+	patterns: string[],
+): string[] {
+	if (modifiedFiles.allModified.length === 0) {
+		return [];
+	}
+
+	const { relative } = require("node:path");
+
+	if (!patterns || patterns.length === 0) {
+		// No patterns = return all session-modified files (relative to directory)
+		return modifiedFiles.allModified
+			.map((f) => {
+				if (f.startsWith("/")) {
+					const rel = relative(directory, f);
+					// Only include files within the directory
+					return rel.startsWith("..") ? null : rel;
+				}
+				// Already relative - check if it goes outside directory
+				if (f.startsWith("..")) {
+					return null;
+				}
+				return f;
+			})
+			.filter((f): f is string => f !== null);
+	}
+
+	// Get files matching patterns in target directory
+	const patternFiles = findFilesWithGlob(directory, patterns);
+
+	// Convert pattern files to relative paths for comparison
+	const patternFilesMap = new Map<string, string>();
+	for (const f of patternFiles) {
+		patternFilesMap.set(relative(directory, f), relative(directory, f));
+	}
+
+	const result: string[] = [];
+
+	// Find intersection of session-modified files with pattern files
+	for (const modifiedPath of modifiedFiles.allModified) {
+		// Normalize the modified path (may be relative or absolute)
+		let normalizedPath = modifiedPath;
+
+		if (modifiedPath.startsWith("/")) {
+			// Absolute path - make relative to directory
+			normalizedPath = relative(directory, modifiedPath);
+		}
+
+		// Skip files outside the directory
+		if (normalizedPath.startsWith("..")) {
+			continue;
+		}
+
+		// Direct match
+		if (patternFilesMap.has(normalizedPath)) {
+			result.push(normalizedPath);
+			continue;
+		}
+
+		// Also check if any pattern file ends with the modified path
+		for (const patternFile of patternFilesMap.keys()) {
+			if (
+				patternFile.endsWith(normalizedPath) &&
+				!result.includes(patternFile)
+			) {
+				result.push(patternFile);
+			}
+		}
+	}
+
+	return result;
 }
 
 /**
@@ -410,9 +573,14 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		}
 
 		// Acquire slot, run command, release slot
-		const success = await withSlot("legacy-validate", undefined, async () => {
-			return runCommandSync(rootDir, commandToRun, verbose);
-		});
+		// Use global slots for cross-session coordination
+		const success = await withGlobalSlot(
+			"legacy-validate",
+			undefined,
+			async () => {
+				return runCommandSync(rootDir, commandToRun, verbose);
+			},
+		);
 		if (!success) {
 			console.error(
 				`\n❌ The command \`${commandToRun}\` failed.\n\n` +
@@ -451,9 +619,14 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		}
 
 		// Acquire slot, run command, release slot (per directory)
-		const success = await withSlot("legacy-validate", undefined, async () => {
-			return runCommandSync(dir, commandToRun, verbose);
-		});
+		// Use global slots for cross-session coordination
+		const success = await withGlobalSlot(
+			"legacy-validate",
+			undefined,
+			async () => {
+				return runCommandSync(dir, commandToRun, verbose);
+			},
+		);
 
 		if (!success) {
 			// Show individual failure
@@ -632,18 +805,6 @@ export interface RunConfiguredHookOptions {
 	 */
 	verbose?: boolean;
 	/**
-	 * Checkpoint type to filter against (session or agent)
-	 * When set, only runs hook if files changed since both:
-	 * 1. Last hook run (cache check)
-	 * 2. Checkpoint creation (checkpoint check)
-	 */
-	checkpointType?: "session" | "agent";
-	/**
-	 * Checkpoint ID to filter against
-	 * Required when checkpointType is set
-	 */
-	checkpointId?: string;
-	/**
 	 * Skip slot management (for MCP tools that run independently with timeouts)
 	 */
 	skipSlot?: boolean;
@@ -714,15 +875,7 @@ export function buildMcpToolInstruction(
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const {
-		pluginName,
-		hookName,
-		only,
-		verbose,
-		checkpointType,
-		checkpointId,
-		skipSlot,
-	} = options;
+	const { pluginName, hookName, only, verbose, skipSlot } = options;
 
 	// Settings resolution priority (highest to lowest):
 	// 1. Environment variable (HAN_NO_X=1 forces false)
@@ -746,15 +899,6 @@ export async function runConfiguredHook(
 		process.env.HAN_NO_CACHE === "1" || process.env.HAN_NO_CACHE === "true"
 			? false
 			: (options.cache ?? isCacheEnabled());
-
-	// Resolve checkpoints setting
-	// Priority: HAN_NO_CHECKPOINTS env > checkpointType presence > han.yml default
-	// Note: If checkpointType is not provided, checkpoints are effectively disabled
-	const checkpointsEnabled =
-		process.env.HAN_NO_CHECKPOINTS === "1" ||
-		process.env.HAN_NO_CHECKPOINTS === "true"
-			? false
-			: isCheckpointsEnabled();
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -817,8 +961,18 @@ export async function runConfiguredHook(
 	let totalFound = 0;
 	let disabledCount = 0;
 	let skippedCount = 0;
-	let checkpointSkippedCount = 0;
-	let transcriptSkippedCount = 0;
+	let sessionSkippedCount = 0;
+
+	// Get session ID for session-scoped filtering
+	const sessionId = options.sessionId ?? getSessionIdFromEnv();
+
+	// Force-index the current session to ensure session_file_changes is up to date
+	// This replaces transcript parsing with SQLite queries
+	let sessionModifiedFiles: SessionModifiedFiles | undefined;
+	if (sessionId && isCheckpointsEnabled()) {
+		await ensureSessionIndexed(sessionId, projectRoot);
+		sessionModifiedFiles = await getSessionModifiedFiles(sessionId);
+	}
 
 	for (const config of configs) {
 		totalFound++;
@@ -849,53 +1003,21 @@ export async function runConfiguredHook(
 				continue;
 			}
 
-			// NEW: Also check checkpoint if available (uses DB-backed storage)
-			if (hasChanges && checkpointType && checkpointId && checkpointsEnabled) {
-				const changedSinceCheckpoint = await hasChangedSinceCheckpointAsync(
-					checkpointId,
-					config.ifChanged,
-					config.directory,
-				);
-				if (!changedSinceCheckpoint) {
-					// File changed since last hook run, but NOT since checkpoint
-					// Skip this hook
-					if (verbose) {
-						const relativePath =
-							config.directory === projectRoot
-								? "."
-								: config.directory.replace(`${projectRoot}/`, "");
-						console.log(
-							`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
-						);
-					}
-					checkpointSkippedCount++;
-					continue;
-				}
-				// If hasChangedSinceCheckpointAsync returns true (or fails), run hook
-			}
-
-			// NEW: Check transcript-modified files filter
-			// Only applies when cache is enabled (if cache=false, skip all filtering)
-			let transcriptModifiedFiles: TranscriptModifiedFiles | undefined;
-			if (checkpointType && checkpointId && isTranscriptFilterEnabled()) {
-				transcriptModifiedFiles = getTranscriptModifiedFiles(
-					checkpointType,
-					checkpointId,
-					projectRoot,
-				);
-
-				// Only apply filter if transcript was successfully found and has modifications
+			// Check session-modified files filter (from SQLite session_file_changes)
+			// Only applies when cache is enabled and session filter is enabled
+			if (sessionModifiedFiles && isCheckpointsEnabled()) {
+				// Only apply filter if we have modifications
 				if (
-					transcriptModifiedFiles.success &&
-					transcriptModifiedFiles.allModified.length > 0
+					sessionModifiedFiles.success &&
+					sessionModifiedFiles.allModified.length > 0
 				) {
-					const sessionModifiedPatternFiles = hasSessionModifiedPatternFiles(
-						transcriptModifiedFiles,
+					const hasPatternFiles = hasSessionModifiedPatternFiles(
+						sessionModifiedFiles,
 						config.directory,
 						config.ifChanged,
 					);
 
-					if (!sessionModifiedPatternFiles) {
+					if (!hasPatternFiles) {
 						// Files changed since last hook run, but not by THIS session
 						if (verbose) {
 							const relativePath =
@@ -903,10 +1025,10 @@ export async function runConfiguredHook(
 									? "."
 									: config.directory.replace(`${projectRoot}/`, "");
 							console.log(
-								`[${pluginName}/${hookName}] Skipping ${relativePath}: Pattern files not modified by this ${checkpointType}`,
+								`[${pluginName}/${hookName}] Skipping ${relativePath}: Pattern files not modified by this session`,
 							);
 						}
-						transcriptSkippedCount++;
+						sessionSkippedCount++;
 						continue;
 					}
 				}
@@ -937,23 +1059,16 @@ export async function runConfiguredHook(
 
 	if (
 		configsToRun.length === 0 &&
-		(skippedCount > 0 ||
-			checkpointSkippedCount > 0 ||
-			transcriptSkippedCount > 0)
+		(skippedCount > 0 || sessionSkippedCount > 0)
 	) {
 		if (skippedCount > 0) {
 			console.log(
 				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 			);
 		}
-		if (checkpointSkippedCount > 0) {
+		if (sessionSkippedCount > 0) {
 			console.log(
-				`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
-			);
-		}
-		if (transcriptSkippedCount > 0) {
-			console.log(
-				`Skipped ${transcriptSkippedCount} director${transcriptSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this ${checkpointType})`,
+				`Skipped ${sessionSkippedCount} director${sessionSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this session)`,
 			);
 		}
 		console.log("No changes detected in any directories. Nothing to run.");
@@ -997,40 +1112,30 @@ export async function runConfiguredHook(
 
 		// Compute the actual command to run
 		// If command uses ${HAN_FILES} template, substitute with:
-		// - session-filtered files (when cache=true and transcript filter enabled)
-		// - all files "." (when cache=false or transcript filter disabled)
+		// - session-filtered files (when cache=true and session filter enabled)
+		// - all files "." (when cache=false or session filter disabled)
 		let cmdToRun = config.command;
 		if (commandUsesSessionFiles(config.command)) {
 			if (
 				cache &&
-				checkpointType &&
-				checkpointId &&
-				isTranscriptFilterEnabled()
+				sessionModifiedFiles &&
+				sessionModifiedFiles.success &&
+				isCheckpointsEnabled()
 			) {
 				// Session-scoped: only run on files THIS session modified
-				const modifiedFiles = getTranscriptModifiedFiles(
-					checkpointType,
-					checkpointId,
-					projectRoot,
+				const sessionFiles = getSessionFilteredFiles(
+					sessionModifiedFiles,
+					config.directory,
+					config.ifChanged ?? [],
 				);
-				if (modifiedFiles.success) {
-					const sessionFiles = getSessionFilteredFiles(
-						modifiedFiles,
-						config.directory,
-						config.ifChanged ?? [],
+				cmdToRun = buildCommandWithFiles(config.command, sessionFiles);
+				if (verbose && sessionFiles.length > 0) {
+					console.log(
+						`[${pluginName}/${hookName}] Session files: ${sessionFiles.join(", ")}`,
 					);
-					cmdToRun = buildCommandWithFiles(config.command, sessionFiles);
-					if (verbose && sessionFiles.length > 0) {
-						console.log(
-							`[${pluginName}/${hookName}] Session files: ${sessionFiles.join(", ")}`,
-						);
-					}
-				} else {
-					// Transcript not found - fall back to all files
-					cmdToRun = buildCommandWithFiles(config.command, []);
 				}
 			} else {
-				// cache=false or no transcript filter - run on all files
+				// cache=false or no session filter - run on all files
 				cmdToRun = buildCommandWithFiles(config.command, []);
 			}
 		}
@@ -1053,9 +1158,10 @@ export async function runConfiguredHook(
 			});
 
 		// MCP tools skip slot management - they have their own timeout handling
+		// Use global slots for cross-session coordination when coordinator is available
 		const result = skipSlot
 			? await runFn()
-			: await withSlot(hookName, pluginName, runFn);
+			: await withGlobalSlot(hookName, pluginName, runFn);
 
 		if (!result.success) {
 			// Show individual failure
@@ -1120,19 +1226,16 @@ export async function runConfiguredHook(
 			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 		);
 	}
-	if (checkpointSkippedCount > 0) {
+	if (sessionSkippedCount > 0) {
 		console.log(
-			`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
-		);
-	}
-	if (transcriptSkippedCount > 0) {
-		console.log(
-			`Skipped ${transcriptSkippedCount} director${transcriptSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this ${checkpointType})`,
+			`Skipped ${sessionSkippedCount} director${sessionSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this session)`,
 		);
 	}
 
-	// Update cache manifest for successful executions
+	// Update cache manifest and record file validations for successful executions
 	if (cache && successfulConfigs.length > 0) {
+		const sessionId = options.sessionId ?? getSessionIdFromEnv();
+
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
 				const cacheKey = getCacheKeyForDirectory(
@@ -1147,6 +1250,39 @@ export async function runConfiguredHook(
 					config.ifChanged,
 					pluginRoot,
 				);
+
+				// Record file validations directly to the database
+				// This tracks which files have been validated by this plugin/hook/directory
+				if (sessionId) {
+					const commandHash = computeCommandHash(config.command);
+					const matchedFiles = findFilesWithGlob(
+						config.directory,
+						config.ifChanged,
+					);
+
+					// Record validation for each matched file
+					for (const filePath of matchedFiles) {
+						const fileHash = computeFileHash(filePath);
+						try {
+							await sessionFileValidations.record({
+								sessionId,
+								filePath,
+								fileHash,
+								pluginName,
+								hookName,
+								directory: config.directory,
+								commandHash,
+							});
+						} catch (err) {
+							// Log but don't fail - validation tracking is informational
+							if (verbose) {
+								console.warn(
+									`[${pluginName}/${hookName}] Failed to record validation for ${filePath}: ${err}`,
+								);
+							}
+						}
+					}
+				}
 			}
 		}
 	}

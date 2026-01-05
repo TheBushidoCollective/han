@@ -1,4 +1,5 @@
 import { execSync, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -25,15 +26,26 @@ import {
 	isHookRunning,
 	signalFailure,
 	waitForHook,
+	withGlobalSlot,
 	withSlot,
 } from "./hook-lock.ts";
 import { hasChangedSinceCheckpointAsync } from "./hooks/checkpoint.ts";
 import {
 	checkForChangesAsync,
+	computeFileHash,
 	findDirectoriesWithMarkers,
+	findFilesWithGlob,
 	trackFilesAsync,
 } from "./hooks/hook-cache.ts";
 import { getPluginNameFromRoot, isDebugMode } from "./shared.ts";
+
+/**
+ * Compute SHA256 hash of a command string.
+ * Used to detect when hook commands change and need to re-run.
+ */
+function computeCommandHash(command: string): string {
+	return createHash("sha256").update(command).digest("hex");
+}
 
 /**
  * Get the han temp directory for output files
@@ -1013,7 +1025,8 @@ export async function runConfiguredHook(
 		const hookStartTime = Date.now();
 
 		// Acquire slot, run command, release slot (per directory)
-		const result = await withSlot(hookName, pluginName, async () => {
+		// Use global slots for cross-session coordination when coordinator is available
+		const result = await withGlobalSlot(hookName, pluginName, async () => {
 			return runCommand({
 				dir: config.directory,
 				cmd: config.command,
@@ -1024,9 +1037,9 @@ export async function runConfiguredHook(
 			});
 		});
 
-		// Log hook result event (end)
+		// Log hook validation event (end)
 		const hookDuration = Date.now() - hookStartTime;
-		eventLogger?.logHookResult(
+		eventLogger?.logHookValidation(
 			pluginName,
 			hookName,
 			relativePath,
@@ -1099,8 +1112,10 @@ export async function runConfiguredHook(
 		);
 	}
 
-	// Update cache manifest for successful executions
+	// Update cache manifest and log validation events for successful executions
 	if (cache && successfulConfigs.length > 0) {
+		const logger = getEventLogger();
+
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
 				const cacheKey = getCacheKeyForDirectory(
@@ -1108,12 +1123,32 @@ export async function runConfiguredHook(
 					config.directory,
 					projectRoot,
 				);
+
+				// Build manifest of file hashes for this config
+				const matchedFiles = findFilesWithGlob(
+					config.directory,
+					config.ifChanged,
+				);
+				const manifest: Record<string, string> = {};
+				for (const filePath of matchedFiles) {
+					manifest[filePath] = computeFileHash(filePath);
+				}
+
+				const commandHash = computeCommandHash(config.command);
+
+				// Track files in cache (uses hook_cache table)
+				// Also logs hook_validation_cache event if logger is available
 				await trackFilesAsync(
 					pluginName,
 					cacheKey,
 					config.directory,
 					config.ifChanged,
 					pluginRoot,
+					{
+						logger: logger ?? undefined,
+						directory: config.directory,
+						commandHash,
+					},
 				);
 			}
 		}

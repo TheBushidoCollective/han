@@ -17,14 +17,15 @@ import {
 	messages,
 	watcher,
 } from "../../db/index.ts";
-import { createLoaders } from "../browse/graphql/loaders.ts";
+import { createLoaders } from "../../graphql/loaders.ts";
 import {
 	type MessageEdgeData,
 	publishSessionAdded,
 	publishSessionMessageAdded,
 	publishSessionUpdated,
-} from "../browse/graphql/pubsub.ts";
-import { schema } from "../browse/graphql/schema.ts";
+} from "../../graphql/pubsub.ts";
+import { schema } from "../../graphql/schema.ts";
+import { globalSlotManager } from "../../graphql/types/slot.ts";
 import { COORDINATOR_PORT, type CoordinatorOptions } from "./types.ts";
 
 /**
@@ -35,6 +36,8 @@ interface ServerState {
 	wss: WebSocketServer | null;
 	startedAt: Date | null;
 	heartbeatInterval: NodeJS.Timeout | null;
+	watchdogInterval: NodeJS.Timeout | null;
+	lastActivity: number;
 }
 
 const state: ServerState = {
@@ -42,7 +45,20 @@ const state: ServerState = {
 	wss: null,
 	startedAt: null,
 	heartbeatInterval: null,
+	watchdogInterval: null,
+	lastActivity: Date.now(),
 };
+
+// Watchdog constants
+const WATCHDOG_INTERVAL_MS = 30000; // Check every 30 seconds
+const WATCHDOG_TIMEOUT_MS = 120000; // Consider stuck after 2 minutes of no activity
+
+/**
+ * Update the last activity timestamp (called on any request/event)
+ */
+function recordActivity(): void {
+	state.lastActivity = Date.now();
+}
 
 /**
  * Handle indexed data from the watcher
@@ -135,6 +151,22 @@ export async function startServer(
 		}
 	}, heartbeatMs);
 
+	// Start watchdog timer to detect hangs
+	state.watchdogInterval = setInterval(() => {
+		const timeSinceActivity = Date.now() - state.lastActivity;
+		if (timeSinceActivity > WATCHDOG_TIMEOUT_MS) {
+			console.error(
+				`[coordinator] Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s, restarting...`,
+			);
+			// Force restart by stopping server - the daemon will restart it
+			stopServer();
+			process.exit(1);
+		}
+	}, WATCHDOG_INTERVAL_MS);
+
+	// Record initial activity
+	recordActivity();
+
 	// Create GraphQL Yoga handler with DataLoader context
 	const yoga = createYoga({
 		schema,
@@ -155,6 +187,9 @@ export async function startServer(
 
 	// Create HTTP server
 	const httpServer = createServer(async (req, res) => {
+		// Record activity on every request
+		recordActivity();
+
 		const pathname = parse(req.url || "/").pathname || "/";
 
 		// Health endpoint
@@ -198,6 +233,9 @@ export async function startServer(
 	const wss = new WebSocketServer({ noServer: true });
 
 	httpServer.on("upgrade", (request, socket, head) => {
+		// Record activity on WebSocket upgrades
+		recordActivity();
+
 		const pathname = parse(request.url || "/").pathname;
 
 		if (pathname === "/graphql") {
@@ -248,6 +286,8 @@ export async function startServer(
 		// Register callback for instant event-driven updates
 		// This is called directly from Rust when new messages are indexed
 		watcher.setCallback((result) => {
+			// Record activity from file watcher
+			recordActivity();
 			// Fire and forget - don't block the watcher callback
 			void onDataIndexed(result);
 		});
@@ -255,6 +295,10 @@ export async function startServer(
 	} else {
 		console.error("[coordinator] Failed to start file watcher");
 	}
+
+	// Start global slot manager for cross-session resource coordination
+	globalSlotManager.start();
+	console.log("[coordinator] Global slot manager started");
 
 	// Skip initial index to keep server responsive during startup
 	// Sessions are indexed incrementally via file watcher
@@ -273,8 +317,14 @@ export function stopServer(): void {
 		state.heartbeatInterval = null;
 	}
 
+	if (state.watchdogInterval) {
+		clearInterval(state.watchdogInterval);
+		state.watchdogInterval = null;
+	}
+
 	// Callback is cleared automatically by watcher.stop()
 	watcher.stop();
+	globalSlotManager.stop();
 	coordinator.release();
 
 	if (state.wss) {
