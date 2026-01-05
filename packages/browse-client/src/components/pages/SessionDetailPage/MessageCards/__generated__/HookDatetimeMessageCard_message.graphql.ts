@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<21b54208a4f4b6b808026cc7324b377d>>
+ * @generated SignedSource<<8fa3d9777d4abc29e77e6fde4b3425ae>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -10,24 +10,25 @@
 
 import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
-export type QueueOperationMessageCard_message$data = {
+export type HookDatetimeMessageCard_message$data = {
+  readonly datetime: string | null | undefined;
+  readonly durationMs: number | null | undefined;
   readonly id: string | null | undefined;
-  readonly operation: string | null | undefined;
-  readonly queueSessionId: string | null | undefined;
+  readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly timestamp: any | null | undefined;
-  readonly " $fragmentType": "QueueOperationMessageCard_message";
+  readonly " $fragmentType": "HookDatetimeMessageCard_message";
 };
-export type QueueOperationMessageCard_message$key = {
-  readonly " $data"?: QueueOperationMessageCard_message$data;
-  readonly " $fragmentSpreads": FragmentRefs<"QueueOperationMessageCard_message">;
+export type HookDatetimeMessageCard_message$key = {
+  readonly " $data"?: HookDatetimeMessageCard_message$data;
+  readonly " $fragmentSpreads": FragmentRefs<"HookDatetimeMessageCard_message">;
 };
 
 const node: ReaderFragment = {
   "argumentDefinitions": [],
   "kind": "Fragment",
   "metadata": null,
-  "name": "QueueOperationMessageCard_message",
+  "name": "HookDatetimeMessageCard_message",
   "selections": [
     {
       "alias": null,
@@ -54,21 +55,28 @@ const node: ReaderFragment = {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "operation",
+      "name": "plugin",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "queueSessionId",
+      "name": "datetime",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "durationMs",
       "storageKey": null
     }
   ],
-  "type": "QueueOperationMessage",
+  "type": "HookDatetimeMessage",
   "abstractKey": null
 };
 
-(node as any).hash = "570a26253a136dd05c328fda504482e8";
+(node as any).hash = "6f80e94c5bb4f2479aa8c1744ea1d6a2";
 
 export default node;

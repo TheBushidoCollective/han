@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d2d22e1084dbb9cf62c8f00c9d65f1d0>>
+ * @generated SignedSource<<71b4fe2573db867594274d5dd61788bf>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -10,28 +10,31 @@
 
 import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
-export type ExposedToolResultMessageCard_message$data = {
+export type HookValidationMessageCard_message$data = {
+  readonly cached: boolean | null | undefined;
+  readonly directory: string | null | undefined;
   readonly durationMs: number | null | undefined;
   readonly error: string | null | undefined;
+  readonly exitCode: number | null | undefined;
+  readonly hook: string | null | undefined;
   readonly id: string | null | undefined;
   readonly output: string | null | undefined;
-  readonly prefixedName: string | null | undefined;
+  readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly success: boolean | null | undefined;
   readonly timestamp: any | null | undefined;
-  readonly tool: string | null | undefined;
-  readonly " $fragmentType": "ExposedToolResultMessageCard_message";
+  readonly " $fragmentType": "HookValidationMessageCard_message";
 };
-export type ExposedToolResultMessageCard_message$key = {
-  readonly " $data"?: ExposedToolResultMessageCard_message$data;
-  readonly " $fragmentSpreads": FragmentRefs<"ExposedToolResultMessageCard_message">;
+export type HookValidationMessageCard_message$key = {
+  readonly " $data"?: HookValidationMessageCard_message$data;
+  readonly " $fragmentSpreads": FragmentRefs<"HookValidationMessageCard_message">;
 };
 
 const node: ReaderFragment = {
   "argumentDefinitions": [],
   "kind": "Fragment",
   "metadata": null,
-  "name": "ExposedToolResultMessageCard_message",
+  "name": "HookValidationMessageCard_message",
   "selections": [
     {
       "alias": null,
@@ -58,14 +61,28 @@ const node: ReaderFragment = {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "tool",
+      "name": "plugin",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "prefixedName",
+      "name": "hook",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "directory",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "cached",
       "storageKey": null
     },
     {
@@ -73,6 +90,13 @@ const node: ReaderFragment = {
       "args": null,
       "kind": "ScalarField",
       "name": "durationMs",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "exitCode",
       "storageKey": null
     },
     {
@@ -97,10 +121,10 @@ const node: ReaderFragment = {
       "storageKey": null
     }
   ],
-  "type": "ExposedToolResultMessage",
+  "type": "HookValidationMessage",
   "abstractKey": null
 };
 
-(node as any).hash = "6a2fb9de736df15a883f9cded5edb11b";
+(node as any).hash = "5d2bd8a4d3605145b451225c8d94bcf4";
 
 export default node;

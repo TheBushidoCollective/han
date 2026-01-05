@@ -116,7 +116,7 @@ export function DashboardContent({
     significantFrustrations: 0,
     significantFrustrationRate: 0,
   };
-  const checkpointStats = data.checkpointStats ?? {
+  const _checkpointStats = data.checkpointStats ?? {
     totalCheckpoints: 0,
     sessionCheckpoints: 0,
     agentCheckpoints: 0,
@@ -172,18 +172,18 @@ export function DashboardContent({
       models: (d?.models ?? []).map((m) => ({
         model: m?.model ?? '',
         displayName: m?.displayName ?? '',
-        tokens: m?.tokens ?? 0,
+        tokens: Number(m?.tokens ?? 0),
       })),
-      totalTokens: d?.totalTokens ?? 0,
+      totalTokens: Number(d?.totalTokens ?? 0),
     })),
     modelUsage: (rawActivity?.modelUsage ?? []).map((m) => ({
       model: m?.model ?? '',
       displayName: m?.displayName ?? '',
-      inputTokens: m?.inputTokens ?? 0,
-      outputTokens: m?.outputTokens ?? 0,
-      cacheReadTokens: m?.cacheReadTokens ?? 0,
-      cacheCreationTokens: m?.cacheCreationTokens ?? 0,
-      totalTokens: m?.totalTokens ?? 0,
+      inputTokens: Number(m?.inputTokens ?? 0),
+      outputTokens: Number(m?.outputTokens ?? 0),
+      cacheReadTokens: Number(m?.cacheReadTokens ?? 0),
+      cacheCreationTokens: Number(m?.cacheCreationTokens ?? 0),
+      totalTokens: Number(m?.totalTokens ?? 0),
     })),
     totalSessions: rawActivity?.totalSessions ?? 0,
     totalMessages: rawActivity?.totalMessages ?? 0,
@@ -382,16 +382,16 @@ export function DashboardContent({
               </VStack>
               <VStack gap="sm">
                 <StatusItem
-                  label="Checkpoints"
-                  value={checkpointStats.totalCheckpoints ?? 0}
+                  label="Total Tasks"
+                  value={metrics.totalTasks ?? 0}
                 />
                 <StatusItem
-                  label="Session"
-                  value={checkpointStats.sessionCheckpoints ?? 0}
+                  label="Success Rate"
+                  value={`${Math.round((metrics.successRate ?? 0) * 100)}%`}
                 />
                 <StatusItem
-                  label="Agent"
-                  value={checkpointStats.agentCheckpoints ?? 0}
+                  label="Avg Confidence"
+                  value={`${Math.round((metrics.averageConfidence ?? 0) * 100)}%`}
                 />
               </VStack>
             </VStack>

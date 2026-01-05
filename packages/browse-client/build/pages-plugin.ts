@@ -19,11 +19,16 @@ export interface PagesPluginOptions {
   pagesDir: string;
   /** File extensions to consider as pages */
   extensions?: string[];
+  /** Root directory for module resolution (where node_modules lives) */
+  clientRoot?: string;
 }
 
 export function pagesPlugin(opts: PagesPluginOptions): BunPlugin {
   const extensions = opts.extensions ?? ['.tsx'];
   const pagesDir = opts.pagesDir;
+  // Get the browse-client root directory (where node_modules lives)
+  // Use explicit clientRoot if provided, otherwise infer from pagesDir
+  const clientRoot = opts.clientRoot ?? join(pagesDir, '..', '..');
 
   return {
     name: 'pages',
@@ -37,11 +42,13 @@ export function pagesPlugin(opts: PagesPluginOptions): BunPlugin {
       // Generate routes module
       build.onLoad({ filter: /.*/, namespace: 'pages' }, () => {
         const routes = scanPages(pagesDir, pagesDir, extensions);
-        const code = generateRoutesCode(routes, pagesDir);
+        const code = generateRoutesCode(routes, pagesDir, clientRoot);
 
         return {
           contents: code,
-          loader: 'tsx',
+          loader: 'ts', // Use 'ts' not 'tsx' since we use createElement, not JSX
+          // Resolve imports relative to clientRoot (finds node_modules)
+          resolveDir: clientRoot,
         };
       });
     },
@@ -139,10 +146,17 @@ function convertPathToRoute(filePath: string): string {
     .join('/');
 }
 
-function generateRoutesCode(routes: Route[], _baseDir: string): string {
+function generateRoutesCode(
+  routes: Route[],
+  _baseDir: string,
+  clientRoot: string
+): string {
   const imports: string[] = [];
   const importMap = new Map<string, string>();
   let importCounter = 0;
+
+  // Use explicit path to react to avoid resolution issues when running from different CWDs
+  const reactPath = join(clientRoot, 'node_modules', 'react');
 
   function getImportName(file: string): string {
     if (!file) return '';
@@ -165,7 +179,8 @@ function generateRoutesCode(routes: Route[], _baseDir: string): string {
     parts.push(`path: "${path}"`);
 
     if (componentName) {
-      parts.push(`element: <${componentName} />`);
+      // Use createElement instead of JSX to avoid jsx-runtime resolution issues
+      parts.push(`element: createElement(${componentName})`);
     }
 
     if (route.children && route.children.length > 0) {
@@ -182,7 +197,7 @@ function generateRoutesCode(routes: Route[], _baseDir: string): string {
   const flatRoutes = flattenRoutes(routes);
   const routeObjects = flatRoutes.map((r) => generateRouteObject(r, true));
 
-  return `import { createElement } from "react";
+  return `import { createElement } from "${reactPath}";
 ${imports.join('\n')}
 
 const routes = [

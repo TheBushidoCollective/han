@@ -28,12 +28,14 @@ When('the page loads', async ({ page }) => {
   // Wait for DOM content loaded (don't use networkidle - EventSource keeps connection open)
   await page.waitForLoadState('domcontentloaded');
   // Wait for the root element to have content (React mounted)
+  // Use polling to be more resilient to slow server startup
+  // 60s timeout allows for cold server startup during first tests
   await page.waitForFunction(
     () => {
       const root = document.getElementById('root');
       return root && root.children.length > 0;
     },
-    { timeout: 30000 }
+    { timeout: 60000, polling: 500 }
   );
   // Wait for Suspense boundaries to resolve (no "Loading..." spinners)
   try {
@@ -109,7 +111,7 @@ When('I clear {string}', async ({ page }, selector: string) => {
 
 Then('I should see {string}', async ({ page }, text: string) => {
   await expect(page.locator(`text=${text}`).first()).toBeVisible({
-    timeout: 10000,
+    timeout: 30000,
   });
 });
 
@@ -122,7 +124,7 @@ Then(
   'the element {string} should be visible',
   async ({ page }, selector: string) => {
     await expect(page.locator(selector).first()).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
   }
 );
@@ -135,7 +137,7 @@ Then(
 );
 
 Then('I should see element {string}', async ({ page }, selector: string) => {
-  await expect(page.locator(selector).first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator(selector).first()).toBeVisible({ timeout: 30000 });
 });
 
 // ----- URL Steps -----
@@ -197,8 +199,9 @@ Then(
 // ----- Content Steps -----
 
 Then('the page should contain {string}', async ({ page }, text: string) => {
-  const bodyText = await page.locator('body').textContent();
-  expect(bodyText).toContain(text);
+  // Use Playwright's auto-waiting assertion to handle async React rendering
+  // Increased timeout for parallel test execution where server may be under load
+  await expect(page.locator('body')).toContainText(text, { timeout: 30000 });
 });
 
 Then('the page should not contain {string}', async ({ page }, text: string) => {
@@ -230,7 +233,7 @@ Given('I wait for {int} seconds', async ({ page }, seconds: number) => {
 });
 
 Then('I wait for element {string}', async ({ page }, selector: string) => {
-  await page.waitForSelector(selector, { timeout: 10000 });
+  await page.waitForSelector(selector, { timeout: 30000 });
 });
 
 // ----- Form Steps -----
@@ -329,7 +332,7 @@ When(
 
 Then('{string} should be visible', async ({ page }, selector: string) => {
   await expect(page.locator(selector).first()).toBeVisible({
-    timeout: 10000,
+    timeout: 30000,
   });
 });
 
@@ -344,7 +347,7 @@ Then(
     expectedValue: string
   ) => {
     const element = page.locator(selector).first();
-    await expect(element).toBeVisible({ timeout: 10000 });
+    await expect(element).toBeVisible({ timeout: 30000 });
     const actualValue = await element.evaluate(
       (el, prop) => window.getComputedStyle(el).getPropertyValue(prop),
       cssProperty

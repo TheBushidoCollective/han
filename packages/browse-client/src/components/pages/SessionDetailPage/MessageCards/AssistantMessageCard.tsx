@@ -192,17 +192,7 @@ function AssistantBadges({
           <Badge variant="warning">🔧 {toolUseCount}</Badge>
         </span>
       )}
-      {model && (
-        <span title={`Model: ${model}`}>
-          <Badge variant="default">
-            {model.includes('opus')
-              ? '💎'
-              : model.includes('sonnet')
-                ? '✨'
-                : '🎯'}
-          </Badge>
-        </span>
-      )}
+      {model && <Badge variant="purple">{model}</Badge>}
       {(inputTokens || outputTokens) && (
         <Text size="xs" color="muted" title="Token usage">
           {inputTokens?.toLocaleString() ?? 0}↓{' '}

@@ -89,7 +89,7 @@ export const SessionDetailPageQuery = graphql`
         gitBranch
         version
         ...SessionMessages_session
-        ...SessionExpensiveFields_session @defer
+        ...SessionExpensiveFields_session
       }
     }
   }

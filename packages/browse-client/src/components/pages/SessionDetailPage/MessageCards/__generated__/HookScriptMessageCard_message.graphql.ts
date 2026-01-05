@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d280cbf631d07b8d749f12a3b0cd2bdb>>
+ * @generated SignedSource<<461583b486765437c2c52e81dd362164>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -10,26 +10,28 @@
 
 import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
-export type MemoryLearnMessageCard_message$data = {
-  readonly append: boolean | null | undefined;
-  readonly domain: string | null | undefined;
+export type HookScriptMessageCard_message$data = {
+  readonly command: string | null | undefined;
+  readonly durationMs: number | null | undefined;
+  readonly exitCode: number | null | undefined;
   readonly id: string | null | undefined;
-  readonly paths: ReadonlyArray<string> | null | undefined;
+  readonly output: string | null | undefined;
+  readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
-  readonly scope: string | null | undefined;
+  readonly success: boolean | null | undefined;
   readonly timestamp: any | null | undefined;
-  readonly " $fragmentType": "MemoryLearnMessageCard_message";
+  readonly " $fragmentType": "HookScriptMessageCard_message";
 };
-export type MemoryLearnMessageCard_message$key = {
-  readonly " $data"?: MemoryLearnMessageCard_message$data;
-  readonly " $fragmentSpreads": FragmentRefs<"MemoryLearnMessageCard_message">;
+export type HookScriptMessageCard_message$key = {
+  readonly " $data"?: HookScriptMessageCard_message$data;
+  readonly " $fragmentSpreads": FragmentRefs<"HookScriptMessageCard_message">;
 };
 
 const node: ReaderFragment = {
   "argumentDefinitions": [],
   "kind": "Fragment",
   "metadata": null,
-  "name": "MemoryLearnMessageCard_message",
+  "name": "HookScriptMessageCard_message",
   "selections": [
     {
       "alias": null,
@@ -56,35 +58,49 @@ const node: ReaderFragment = {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "domain",
+      "name": "plugin",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "scope",
+      "name": "command",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "paths",
+      "name": "durationMs",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "append",
+      "name": "exitCode",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "success",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "output",
       "storageKey": null
     }
   ],
-  "type": "MemoryLearnMessage",
+  "type": "HookScriptMessage",
   "abstractKey": null
 };
 
-(node as any).hash = "da488cbea5054ec7ca456244e98f7e90";
+(node as any).hash = "c93b725fc1ead56285283e9dd76d02ee";
 
 export default node;

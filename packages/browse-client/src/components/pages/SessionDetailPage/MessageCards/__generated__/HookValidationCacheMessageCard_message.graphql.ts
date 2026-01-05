@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<21b54208a4f4b6b808026cc7324b377d>>
+ * @generated SignedSource<<04367137681e1667baac959ed78d2962>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -10,24 +10,26 @@
 
 import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
-export type QueueOperationMessageCard_message$data = {
+export type HookValidationCacheMessageCard_message$data = {
+  readonly directory: string | null | undefined;
+  readonly fileCount: number | null | undefined;
+  readonly hook: string | null | undefined;
   readonly id: string | null | undefined;
-  readonly operation: string | null | undefined;
-  readonly queueSessionId: string | null | undefined;
+  readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly timestamp: any | null | undefined;
-  readonly " $fragmentType": "QueueOperationMessageCard_message";
+  readonly " $fragmentType": "HookValidationCacheMessageCard_message";
 };
-export type QueueOperationMessageCard_message$key = {
-  readonly " $data"?: QueueOperationMessageCard_message$data;
-  readonly " $fragmentSpreads": FragmentRefs<"QueueOperationMessageCard_message">;
+export type HookValidationCacheMessageCard_message$key = {
+  readonly " $data"?: HookValidationCacheMessageCard_message$data;
+  readonly " $fragmentSpreads": FragmentRefs<"HookValidationCacheMessageCard_message">;
 };
 
 const node: ReaderFragment = {
   "argumentDefinitions": [],
   "kind": "Fragment",
   "metadata": null,
-  "name": "QueueOperationMessageCard_message",
+  "name": "HookValidationCacheMessageCard_message",
   "selections": [
     {
       "alias": null,
@@ -54,21 +56,35 @@ const node: ReaderFragment = {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "operation",
+      "name": "plugin",
       "storageKey": null
     },
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
-      "name": "queueSessionId",
+      "name": "hook",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "directory",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "fileCount",
       "storageKey": null
     }
   ],
-  "type": "QueueOperationMessage",
+  "type": "HookValidationCacheMessage",
   "abstractKey": null
 };
 
-(node as any).hash = "570a26253a136dd05c328fda504482e8";
+(node as any).hash = "3fef13789977697cb1a1c8507c417ac4";
 
 export default node;

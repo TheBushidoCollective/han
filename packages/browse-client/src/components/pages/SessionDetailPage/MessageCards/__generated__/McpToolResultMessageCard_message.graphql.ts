@@ -8,7 +8,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { FragmentRefs, ReaderFragment } from 'relay-runtime';
+import { ReaderFragment } from 'relay-runtime';
+import { FragmentRefs } from "relay-runtime";
 export type McpToolResultMessageCard_message$data = {
   readonly durationMs: number | null | undefined;
   readonly error: string | null | undefined;
@@ -20,94 +21,94 @@ export type McpToolResultMessageCard_message$data = {
   readonly success: boolean | null | undefined;
   readonly timestamp: any | null | undefined;
   readonly tool: string | null | undefined;
-  readonly ' $fragmentType': 'McpToolResultMessageCard_message';
+  readonly " $fragmentType": "McpToolResultMessageCard_message";
 };
 export type McpToolResultMessageCard_message$key = {
-  readonly ' $data'?: McpToolResultMessageCard_message$data;
-  readonly ' $fragmentSpreads': FragmentRefs<'McpToolResultMessageCard_message'>;
+  readonly " $data"?: McpToolResultMessageCard_message$data;
+  readonly " $fragmentSpreads": FragmentRefs<"McpToolResultMessageCard_message">;
 };
 
 const node: ReaderFragment = {
-  argumentDefinitions: [],
-  kind: 'Fragment',
-  metadata: null,
-  name: 'McpToolResultMessageCard_message',
-  selections: [
+  "argumentDefinitions": [],
+  "kind": "Fragment",
+  "metadata": null,
+  "name": "McpToolResultMessageCard_message",
+  "selections": [
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'id',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "id",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'timestamp',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "timestamp",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'rawJson',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "rawJson",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'tool',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "tool",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'server',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "server",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'prefixedName',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "prefixedName",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'durationMs',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "durationMs",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'success',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "success",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'output',
-      storageKey: null,
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "output",
+      "storageKey": null
     },
     {
-      alias: null,
-      args: null,
-      kind: 'ScalarField',
-      name: 'error',
-      storageKey: null,
-    },
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "error",
+      "storageKey": null
+    }
   ],
-  type: 'McpToolResultMessage',
-  abstractKey: null,
+  "type": "McpToolResultMessage",
+  "abstractKey": null
 };
 
-(node as any).hash = '671dcf758a2f6bece72839cdfd310f01';
+(node as any).hash = "671dcf758a2f6bece72839cdfd310f01";
 
 export default node;

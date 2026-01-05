@@ -3,6 +3,7 @@ Feature: Project Sessions
   I want to view sessions for a specific project
   So that I can focus on work for that project
 
+  @requires-data
   Scenario: Project sessions page loads
     Given I am on the "/projects" page
     When the page loads
@@ -12,6 +13,7 @@ Feature: Project Sessions
     When the page loads
     Then the page should contain "Sessions"
 
+  @requires-data
   Scenario: Project sessions page shows empty state when no sessions
     Given I am on the "/projects" page
     When the page loads
@@ -22,6 +24,7 @@ Feature: Project Sessions
     Then the page should contain "Sessions"
     And I should see "No sessions found" if it exists
 
+  @requires-data
   Scenario: Project sessions page shows session count
     Given I am on the "/projects" page
     When the page loads
@@ -31,6 +34,7 @@ Feature: Project Sessions
     When the page loads
     Then the page should contain "Sessions"
 
+  @requires-data
   Scenario: Project sessions page has filter input
     Given I am on the "/projects" page
     When the page loads

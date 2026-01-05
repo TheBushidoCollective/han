@@ -17,11 +17,13 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { VStack } from '@/components/atoms/VStack.tsx';
 import { colors, fonts, spacing } from '@/theme.ts';
 import type { SessionDetailContentSubscription } from './__generated__/SessionDetailContentSubscription.graphql.ts';
 import type { SessionDetailPageQuery } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { formatDuration } from './components.ts';
 import { SessionDetailPageQuery as SessionDetailPageQueryDef } from './index.tsx';
+import { SessionExpensiveFields } from './SessionExpensiveFields.tsx';
 import { SessionMessages } from './SessionMessages.tsx';
 
 /**
@@ -179,12 +181,50 @@ export function SessionDetailContent({
         </HStack>
       </Box>
 
-      {/* Messages scroll area - takes remaining space, scrollbar at edge */}
-      <SessionMessages
-        fragmentRef={session}
-        sessionId={sessionId}
-        isLive={isLive}
-      />
+      {/* Main content area with messages and sidebar */}
+      <Box
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Messages scroll area - takes most space */}
+        <Box
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <SessionMessages
+            fragmentRef={session}
+            sessionId={sessionId}
+            isLive={isLive}
+          />
+        </Box>
+
+        {/* Expensive fields sidebar - checkpoints, hooks, file changes */}
+        <Box
+          style={{
+            width: 360,
+            flexShrink: 0,
+            borderLeft: `1px solid ${colors.border.default}`,
+            overflowY: 'auto',
+            backgroundColor: colors.bg.secondary,
+            padding: spacing.md,
+          }}
+        >
+          <VStack gap="lg" align="stretch">
+            <SessionExpensiveFields fragmentRef={session} />
+          </VStack>
+        </Box>
+      </Box>
     </Box>
   );
 }

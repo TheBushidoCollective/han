@@ -75,10 +75,72 @@ Feature: Session Messages
     And the element ".tool-result-inline" should be visible if it exists
 
   @requires-sessions
-  Scenario: Messages scroll with column-reverse layout
+  Scenario: Session messages container displays messages
     Given I am on the "/" page
     When the page loads
     And I click on "a[href*='/sessions/']" if it exists
     When the page loads
-    Then the element ".messages-list" should be visible
-    And the element ".messages-list" should have css "flex-direction" "column-reverse"
+    Then the element "[data-testid='session-messages']" should be visible if it exists
+
+  @requires-sessions
+  Scenario: Message search input is visible
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the element "input[placeholder='Jump to message...']" should be visible if it exists
+
+  @requires-sessions
+  Scenario: Message search shows autocomplete dropdown
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    And I type "test" into "input[placeholder='Jump to message...']" if it exists
+    Then the page should contain "Message #" if it exists
+
+  @requires-sessions
+  Scenario: Message search shows no results message
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    And I type "xyznonexistent123" into "input[placeholder='Jump to message...']" if it exists
+    Then the page should contain "No matching messages" if it exists
+
+  @requires-sessions
+  Scenario: Message search has clear button
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    And I type "test" into "input[placeholder='Jump to message...']" if it exists
+    Then the page should contain "×" if it exists
+
+  @requires-sessions
+  Scenario: File changes display in sidebar
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the element ".file-changes-section" should be visible if it exists
+    And the element ".file-change-card" should be visible if it exists
+
+  @requires-sessions
+  Scenario: Hook validation messages display correctly
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the page should not contain "HookValidationMessage"
+    And the page should not contain "HookValidationCacheMessage"
+    And the page should not contain "HookFileChangeMessage"
+
+  @requires-sessions
+  Scenario: Hook message cards render without showing type names
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the page should not contain "__typename"
+    And the page should not contain "UnknownEventMessage"

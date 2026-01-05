@@ -48,8 +48,13 @@ type ActivityData {
 
 """An assistant (Claude) message in a session"""
 type AssistantMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Cached tokens used"""
-  cachedTokens: Int
+  cachedTokens: BigInt
 
   """Assistant message text content"""
   content: String
@@ -65,7 +70,7 @@ type AssistantMessage implements Message {
   id: ID
 
   """Input tokens used"""
-  inputTokens: Int
+  inputTokens: BigInt
 
   """Whether this message only contains tool calls"""
   isToolOnly: Boolean
@@ -74,8 +79,18 @@ type AssistantMessage implements Message {
   model: String
 
   """Output tokens generated"""
-  outputTokens: Int
+  outputTokens: BigInt
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """Number of thinking blocks in this message"""
   thinkingCount: Int
@@ -86,6 +101,8 @@ type AssistantMessage implements Message {
   """Number of tool use blocks in this message"""
   toolUseCount: Int
 }
+
+scalar BigInt
 
 """A cached hook run entry"""
 type CacheEntry {
@@ -241,7 +258,7 @@ enum ContentBlockType {
 """Activity metrics for a single day"""
 type DailyActivity {
   """Total cached tokens used"""
-  cachedTokens: Int
+  cachedTokens: BigInt
 
   """Date in YYYY-MM-DD format"""
   date: String
@@ -250,7 +267,7 @@ type DailyActivity {
   filesChanged: Int
 
   """Total input tokens used"""
-  inputTokens: Int
+  inputTokens: BigInt
 
   """Lines of code added"""
   linesAdded: Int
@@ -262,7 +279,7 @@ type DailyActivity {
   messageCount: Int
 
   """Total output tokens generated"""
-  outputTokens: Int
+  outputTokens: BigInt
 
   """Number of sessions started on this day"""
   sessionCount: Int
@@ -277,7 +294,7 @@ type DailyModelTokens {
   models: [ModelTokenEntry!]
 
   """Total tokens across all models for this day"""
-  totalTokens: Int
+  totalTokens: BigInt
 }
 
 scalar DateTime
@@ -294,7 +311,7 @@ type ExposedToolCallEvent implements HanEvent {
   """Tool arguments as JSON string"""
   arguments: String
   eventType: String
-  id: String
+  id: ID
 
   """Full prefixed tool name"""
   prefixedName: String
@@ -309,6 +326,11 @@ type ExposedToolCallEvent implements HanEvent {
 
 """An exposed tool call event"""
 type ExposedToolCallMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Correlation ID to match with result"""
   callId: String
 
@@ -318,6 +340,11 @@ type ExposedToolCallMessage implements Message {
   """Tool input as JSON string"""
   input: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Full prefixed tool name"""
   prefixedName: String
   rawJson: String
@@ -326,6 +353,11 @@ type ExposedToolCallMessage implements Message {
   The result of this tool call (if available). Loaded via DataLoader from paired events.
   """
   result: ExposedToolResult
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the tool was called"""
   timestamp: DateTime
@@ -369,7 +401,7 @@ type ExposedToolResultEvent implements HanEvent {
   """Error message (if failed)"""
   error: String
   eventType: String
-  id: String
+  id: ID
 
   """Full prefixed tool name"""
   prefixedName: String
@@ -390,6 +422,11 @@ type ExposedToolResultEvent implements HanEvent {
 
 """An exposed tool result event"""
 type ExposedToolResultMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Execution duration in milliseconds"""
   durationMs: Int
 
@@ -402,9 +439,19 @@ type ExposedToolResultMessage implements Message {
   """Tool output"""
   output: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Full prefixed tool name"""
   prefixedName: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """Whether the tool call succeeded"""
   success: Boolean
@@ -416,8 +463,58 @@ type ExposedToolResultMessage implements Message {
   tool: String
 }
 
+"""A file change that occurred during a session"""
+type FileChange {
+  """The type of change (created, modified, deleted)"""
+  action: FileChangeAction
+
+  """SHA256 hash of file after change (if available)"""
+  fileHashAfter: String
+
+  """SHA256 hash of file before change (if available)"""
+  fileHashBefore: String
+
+  """Path to the changed file"""
+  filePath: String
+
+  """Unique identifier for this file change"""
+  id: String
+
+  """Whether this file has been validated by any hook"""
+  isValidated: Boolean
+
+  """When the change was recorded"""
+  recordedAt: DateTime
+
+  """The session ID this change belongs to"""
+  sessionId: String
+
+  """The tool that made the change (Edit, Write, Bash)"""
+  toolName: String
+
+  """Hook validations for this file"""
+  validations: [FileValidation!]
+}
+
+"""The type of file change action"""
+enum FileChangeAction {
+  """File was created"""
+  CREATED
+
+  """File was deleted"""
+  DELETED
+
+  """File was modified"""
+  MODIFIED
+}
+
 """A file history snapshot message tracking file state changes"""
 type FileHistorySnapshotMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Number of files tracked in this snapshot"""
   fileCount: Int
 
@@ -429,13 +526,41 @@ type FileHistorySnapshotMessage implements Message {
 
   """ID of the message this snapshot is associated with"""
   messageId: String
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """Timestamp of the actual snapshot data"""
   snapshotTimestamp: DateTime
 
   """When the snapshot was taken"""
   timestamp: DateTime
+}
+
+"""A hook validation for a file"""
+type FileValidation {
+  """Directory context for the validation"""
+  directory: String
+
+  """Name of the hook that validated the file"""
+  hookName: String
+
+  """Unique identifier for this validation"""
+  id: String
+
+  """Name of the plugin that validated the file"""
+  pluginName: String
+
+  """When the file was validated"""
+  validatedAt: DateTime
 }
 
 """Summary of Han user configuration"""
@@ -467,8 +592,8 @@ interface HanEvent {
   """Event type discriminator (hook_run, mcp_tool_call, etc.)"""
   eventType: String
 
-  """Unique event ID"""
-  id: String
+  """Global event ID in format {EventTypename}:{uuid}"""
+  id: ID
 
   """When the event occurred"""
   timestamp: DateTime
@@ -485,6 +610,40 @@ enum HanEventType {
   MEMORY_LEARN
   MEMORY_QUERY
   SENTIMENT_ANALYSIS
+}
+
+"""A datetime injection event"""
+type HookDatetimeMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """The datetime string that was output"""
+  datetime: String
+
+  """Duration in milliseconds"""
+  durationMs: Int
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
+  """Plugin injecting the datetime"""
+  plugin: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """When the datetime was injected"""
+  timestamp: DateTime
 }
 
 """A single hook execution record"""
@@ -524,6 +683,80 @@ type HookExecution {
 
   """When the hook executed"""
   timestamp: String
+}
+
+"""A file change recording event"""
+type HookFileChangeMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Tool that made the change (Edit, Write)"""
+  changeToolName: String
+
+  """Path to the changed file"""
+  filePath: String
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """Session ID where the change occurred"""
+  recordedSessionId: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """When the file change was recorded"""
+  timestamp: DateTime
+}
+
+"""A hook reference injection event (must-read-first files)"""
+type HookReferenceMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Duration in milliseconds"""
+  durationMs: Int
+
+  """Path to the referenced file"""
+  filePath: String
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
+  """Plugin that injected the reference"""
+  plugin: String
+  rawJson: String
+
+  """Reason for must-read-first requirement"""
+  reason: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Whether the file was found and injected"""
+  success: Boolean
+
+  """When the reference was injected"""
+  timestamp: DateTime
 }
 
 """Hook execution result (inline, not a separate event)"""
@@ -570,7 +803,7 @@ type HookResultEvent implements HanEvent {
 
   """Hook name"""
   hook: String
-  id: String
+  id: ID
 
   """Hook output (if success)"""
   output: String
@@ -585,6 +818,11 @@ type HookResultEvent implements HanEvent {
 
 """A hook execution result event with success/failure status"""
 type HookResultMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Whether this result was from cache"""
   cached: Boolean
 
@@ -609,9 +847,19 @@ type HookResultMessage implements Message {
   """Hook output content"""
   output: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Plugin that owns the hook"""
   plugin: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """Whether the hook succeeded"""
   success: Boolean
@@ -631,7 +879,7 @@ type HookRunEvent implements HanEvent {
 
   """Hook name"""
   hook: String
-  id: String
+  id: ID
 
   """Plugin name"""
   plugin: String
@@ -645,6 +893,11 @@ type HookRunEvent implements HanEvent {
 
 """A hook execution start event"""
 type HookRunMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Whether this hook result was cached"""
   cached: Boolean
 
@@ -657,11 +910,64 @@ type HookRunMessage implements Message {
   """Message global ID"""
   id: ID
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Plugin that owns the hook"""
   plugin: String
   rawJson: String
 
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
   """When the hook started execution"""
+  timestamp: DateTime
+}
+
+"""A generic script execution event (bash/cat commands)"""
+type HookScriptMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """The command that was executed"""
+  command: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Exit code from the script"""
+  exitCode: Int
+
+  """Message global ID"""
+  id: ID
+
+  """Script output"""
+  output: String
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
+  """Plugin running the script"""
+  plugin: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Whether the script succeeded"""
+  success: Boolean
+
+  """When the script executed"""
   timestamp: DateTime
 }
 
@@ -696,6 +1002,95 @@ type HookTypeStat {
 
   """Total executions of this type"""
   total: Int
+}
+
+"""A hook validation cache event with tracked file hashes"""
+type HookValidationCacheMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Directory that was validated"""
+  directory: String
+
+  """Number of files tracked in cache"""
+  fileCount: Int
+
+  """Validation hook name (e.g., typecheck, lint)"""
+  hook: String
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
+  """Plugin that ran the validation"""
+  plugin: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """When the cache was written"""
+  timestamp: DateTime
+}
+
+"""A per-directory validation hook result event"""
+type HookValidationMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Whether result was from cache"""
+  cached: Boolean
+
+  """Directory being validated"""
+  directory: String
+
+  """Execution duration in milliseconds"""
+  durationMs: Int
+
+  """Error message if validation failed"""
+  error: String
+
+  """Exit code from the validation"""
+  exitCode: Int
+
+  """Validation hook name (e.g., lint, typecheck)"""
+  hook: String
+
+  """Message global ID"""
+  id: ID
+
+  """Validation output"""
+  output: String
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
+  """Plugin running the validation"""
+  plugin: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Whether validation passed"""
+  success: Boolean
+
+  """When the validation completed"""
+  timestamp: DateTime
 }
 
 """Activity metrics for an hour of the day"""
@@ -764,7 +1159,7 @@ type McpToolCallEvent implements HanEvent {
   """Tool arguments as JSON string"""
   arguments: String
   eventType: String
-  id: String
+  id: ID
   timestamp: DateTime
 
   """Tool name"""
@@ -773,6 +1168,11 @@ type McpToolCallEvent implements HanEvent {
 
 """An MCP tool call event"""
 type McpToolCallMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Correlation ID to match with result"""
   callId: String
 
@@ -782,6 +1182,11 @@ type McpToolCallMessage implements Message {
   """Tool input as JSON string"""
   input: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Full prefixed tool name"""
   prefixedName: String
   rawJson: String
@@ -790,6 +1195,11 @@ type McpToolCallMessage implements Message {
   The result of this tool call (if available). Loaded via DataLoader from paired events.
   """
   result: McpToolResult
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """MCP server handling the tool"""
   server: String
@@ -836,7 +1246,7 @@ type McpToolResultEvent implements HanEvent {
   """Error message (if failed)"""
   error: String
   eventType: String
-  id: String
+  id: ID
 
   """Result as JSON string (if success)"""
   result: String
@@ -851,6 +1261,11 @@ type McpToolResultEvent implements HanEvent {
 
 """An MCP tool result event"""
 type McpToolResultMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Execution duration in milliseconds"""
   durationMs: Int
 
@@ -863,9 +1278,19 @@ type McpToolResultMessage implements Message {
   """Tool output"""
   output: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Full prefixed tool name"""
   prefixedName: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """MCP server that handled the tool"""
   server: String
@@ -972,7 +1397,7 @@ type MemoryLearnEvent implements HanEvent {
   """Learning domain"""
   domain: String
   eventType: String
-  id: String
+  id: ID
 
   """Scope (project or user)"""
   scope: String
@@ -984,6 +1409,11 @@ type MemoryLearnEvent implements HanEvent {
 
 """A memory learn event"""
 type MemoryLearnMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Whether content was appended vs replaced"""
   append: Boolean
 
@@ -993,12 +1423,22 @@ type MemoryLearnMessage implements Message {
   """Message global ID"""
   id: ID
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Path patterns if path-specific"""
   paths: [String!]
   rawJson: String
 
   """Scope of the learning (e.g., 'project', 'user')"""
   scope: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the learning was captured"""
   timestamp: DateTime
@@ -1026,7 +1466,7 @@ type MemoryQueryEvent implements HanEvent {
   """Query duration in milliseconds"""
   durationMs: Int
   eventType: String
-  id: String
+  id: ID
 
   """Query question"""
   question: String
@@ -1041,11 +1481,21 @@ type MemoryQueryEvent implements HanEvent {
 
 """A memory query event"""
 type MemoryQueryMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Query duration in milliseconds"""
   durationMs: Int
 
   """Message global ID"""
   id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
 
   """The question being asked"""
   question: String
@@ -1056,6 +1506,11 @@ type MemoryQueryMessage implements Message {
 
   """Memory route used (e.g., 'personal', 'team', 'project')"""
   route: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the memory was queried"""
   timestamp: DateTime
@@ -1109,11 +1564,26 @@ enum MemorySource {
 Base interface for all message types in a session. Contains only shared fields - concrete types add their own specific fields.
 """
 interface Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Message global ID"""
   id: ID
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Original JSONL line content for debugging"""
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the message was sent"""
   timestamp: DateTime
@@ -1138,6 +1608,21 @@ type MessageEdge {
 
   """The message at this edge"""
   node: Message
+}
+
+"""A search result from searching session messages"""
+type MessageSearchResult {
+  """The matched text with surrounding context"""
+  matchContext: String
+
+  """The message ID"""
+  messageId: String
+
+  """The 0-based index of the message in the session (for jumping)"""
+  messageIndex: Int
+
+  """Preview text showing match context"""
+  preview: String
 }
 
 """Aggregate metrics for a time period"""
@@ -1192,31 +1677,31 @@ type ModelTokenEntry {
   model: String
 
   """Token count for this model"""
-  tokens: Int
+  tokens: BigInt
 }
 
 """Cumulative usage statistics for a model"""
 type ModelUsageStats {
   """Total cache creation tokens"""
-  cacheCreationTokens: Int
+  cacheCreationTokens: BigInt
 
   """Total cache read tokens"""
-  cacheReadTokens: Int
+  cacheReadTokens: BigInt
 
   """Human-readable model name"""
   displayName: String
 
   """Total input tokens"""
-  inputTokens: Int
+  inputTokens: BigInt
 
   """Model ID"""
   model: String
 
   """Total output tokens"""
-  outputTokens: Int
+  outputTokens: BigInt
 
   """Total tokens (input + output)"""
-  totalTokens: Int
+  totalTokens: BigInt
 }
 
 type Mutation {
@@ -1489,15 +1974,30 @@ type Query {
 
 """A queue state change operation"""
 type QueueOperationMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Message global ID"""
   id: ID
 
   """Type of queue operation (e.g., 'enqueue', 'dequeue', 'clear')"""
   operation: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Session ID involved in the queue operation"""
   queueSessionId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the queue operation occurred"""
   timestamp: DateTime
@@ -1627,7 +2127,7 @@ type SentimentAnalysisEvent implements HanEvent {
 
   """Frustration score (0-10) if frustration detected"""
   frustrationScore: Float
-  id: String
+  id: ID
 
   """ID of the user message being analyzed"""
   messageId: String
@@ -1648,6 +2148,11 @@ type SentimentAnalysisEvent implements HanEvent {
 
 """A sentiment analysis event"""
 type SentimentAnalysisMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """ID of the message that was analyzed"""
   analyzedMessageId: String
 
@@ -1659,7 +2164,17 @@ type SentimentAnalysisMessage implements Message {
 
   """Message global ID"""
   id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """Categorized sentiment level (positive, neutral, negative)"""
   sentimentLevel: String
@@ -1696,6 +2211,12 @@ type Session implements Node {
 
   """Session date"""
   date: String
+
+  """Number of file changes in this session"""
+  fileChangeCount: Int
+
+  """Files that were changed during this session"""
+  fileChanges: [FileChange!]
 
   """Git branch active during session"""
   gitBranch: String
@@ -1744,6 +2265,17 @@ type Session implements Node {
 
   """Encoded project directory for URL routing (e.g., -Volumes-dev-src-...)"""
   projectSlug: String
+
+  """
+  Search all messages in this session using FTS and return matching results with indices
+  """
+  searchMessages(
+    """Maximum number of results to return (default: 20)"""
+    limit: Int
+
+    """Search query to find in messages"""
+    query: String!
+  ): [MessageSearchResult!]
 
   """Session ID"""
   sessionId: String
@@ -1934,6 +2466,11 @@ type Subscription {
 
 """A context summary message in a session"""
 type SummaryMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Summary text content"""
   content: String
   contentBlocks: [ContentBlock!]
@@ -1945,7 +2482,17 @@ type SummaryMessage implements Message {
   Whether this is an auto-compaction summary (context was automatically condensed)
   """
   isCompactSummary: Boolean
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the summary was created"""
   timestamp: DateTime
@@ -1953,6 +2500,11 @@ type SummaryMessage implements Message {
 
 """A system notification message with subtype and level"""
 type SystemMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """System message content"""
   content: String
 
@@ -1964,7 +2516,17 @@ type SystemMessage implements Message {
 
   """Message severity level (e.g., 'info', 'warning', 'error')"""
   level: String
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """System message subtype (e.g., 'init', 'error', 'warning')"""
   subtype: String
@@ -2118,16 +2680,16 @@ type TokenUsageStats {
   sessionCount: Int
 
   """Total cached tokens used"""
-  totalCachedTokens: Int
+  totalCachedTokens: BigInt
 
   """Total input tokens across all messages"""
-  totalInputTokens: Int
+  totalInputTokens: BigInt
 
   """Total output tokens generated"""
-  totalOutputTokens: Int
+  totalOutputTokens: BigInt
 
   """Total tokens (input + output)"""
-  totalTokens: Int
+  totalTokens: BigInt
 }
 
 """Category of tool"""
@@ -2210,6 +2772,11 @@ type ToolUseBlock implements ContentBlock {
 A fallback message type for unknown or future event types. Contains raw JSON for debugging.
 """
 type UnknownEventMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """The event subtype if han_event"""
   eventType: String
 
@@ -2219,8 +2786,18 @@ type UnknownEventMessage implements Message {
   """The original message type"""
   messageType: String
 
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+
   """Raw JSON for debugging unknown types"""
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """When the event occurred"""
   timestamp: DateTime
@@ -2228,6 +2805,11 @@ type UnknownEventMessage implements Message {
 
 """A user message in a session"""
 type UserMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
   """Name of the slash command if isCommand is true"""
   commandName: String
 
@@ -2246,7 +2828,17 @@ type UserMessage implements Message {
 
   """Whether this is a meta/system message"""
   isMeta: Boolean
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
   rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
 
   """
   Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.

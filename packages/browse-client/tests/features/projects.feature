@@ -18,7 +18,7 @@ Feature: Projects
     Given I am on the "/repos" page
     When the page loads
     And I click on "a[href*='/repos/']" if it exists
-    Then the url should contain "/repos/" or I am on the homepage
+    Then the url should contain "/repos"
 
   @requires-data
   Scenario: Project detail shows sessions

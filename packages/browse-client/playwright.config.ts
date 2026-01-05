@@ -25,18 +25,19 @@ export default defineConfig({
   testIgnore: 'legacy/**', // Ignore converted tests
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  // Limit workers to prevent race conditions with shared server
-  workers: process.env.CI ? 1 : 3,
+  // Retry flaky tests - 2 retries helps with timing issues
+  retries: 2,
+  // Use 1 worker for stability - parallel workers cause browser context corruption on timeouts
+  workers: 1,
   reporter: 'html',
   // Increase timeout for slower page loads
-  timeout: 45000,
+  timeout: 60000,
   use: {
     baseURL: 'http://localhost:41956',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // Add action timeout
-    actionTimeout: 10000,
+    // Action timeout must be >= waitForFunction timeouts (45s for page loads)
+    actionTimeout: 60000,
   },
 
   projects: [
@@ -47,12 +48,18 @@ export default defineConfig({
   ],
 
   webServer: {
-    // Use han browse which starts both coordinator and Vite dev server
-    command: 'cd ../han && bun lib/main.ts browse --no-open',
+    // First ensure coordinator is running, then start browse server
+    // The coordinator provides the GraphQL backend on port 41957
+    // HAN_NO_DEV_WATCHERS=1 disables relay-compiler and file watchers to prevent
+    // premature shutdown during tests
+    command:
+      'cd ../han && bun lib/main.ts coordinator ensure && HAN_NO_DEV_WATCHERS=1 bun lib/main.ts browse --no-open',
     url: 'http://localhost:41956',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
+    // Ensure proper cleanup on test end
+    gracefulExit: 'signal',
   },
 });

@@ -15,7 +15,12 @@ import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { SessionExpensiveFields_session$key } from './__generated__/SessionExpensiveFields_session.graphql.ts';
-import { CheckpointCard, HookExecutionCard, TaskCard } from './components.ts';
+import {
+  CheckpointCard,
+  FileChangeCard,
+  HookExecutionCard,
+  TaskCard,
+} from './components.ts';
 
 /**
  * Fragment for expensive fields loaded via @defer
@@ -99,6 +104,20 @@ const SessionExpensiveFieldsFragment = graphql`
       status
       startedAt
     }
+    fileChanges {
+      id
+      filePath
+      action
+      toolName
+      recordedAt
+      isValidated
+      validations {
+        pluginName
+        hookName
+        validatedAt
+      }
+    }
+    fileChangeCount
   }
 `;
 
@@ -115,6 +134,8 @@ function SessionExpensiveFieldsContent({
   const hookExecutions = data.hookExecutions ?? [];
   const hookStats = data.hookStats;
   const tasks = data.tasks ?? [];
+  const fileChanges = data.fileChanges ?? [];
+  const fileChangeCount = data.fileChangeCount ?? 0;
 
   return (
     <>
@@ -254,6 +275,52 @@ function SessionExpensiveFieldsContent({
                     startedAt: task.startedAt ?? '',
                     completedAt: task.completedAt ?? null,
                     durationSeconds: task.durationSeconds ?? null,
+                  }}
+                />
+              ))}
+          </VStack>
+        </VStack>
+      )}
+
+      {fileChanges.length > 0 && (
+        <VStack className="file-changes-section" gap="md" align="stretch">
+          <Heading size="sm" as="h3">
+            File Changes ({fileChangeCount})
+          </Heading>
+          <HStack
+            className="file-changes-stats"
+            gap="lg"
+            style={{ flexWrap: 'wrap' }}
+          >
+            <Text className="file-changes-stat file-changes-created">
+              {fileChanges.filter((f) => f.action === 'CREATED').length} created
+            </Text>
+            <Text className="file-changes-stat file-changes-modified">
+              {fileChanges.filter((f) => f.action === 'MODIFIED').length}{' '}
+              modified
+            </Text>
+            <Text className="file-changes-stat file-changes-deleted">
+              {fileChanges.filter((f) => f.action === 'DELETED').length} deleted
+            </Text>
+          </HStack>
+          <VStack className="file-changes-grid" gap="xs">
+            {fileChanges
+              .filter((f): f is typeof f & { id: string } => !!f.id)
+              .map((fileChange) => (
+                <FileChangeCard
+                  key={fileChange.id}
+                  fileChange={{
+                    id: fileChange.id,
+                    filePath: fileChange.filePath ?? '',
+                    action: (['CREATED', 'MODIFIED', 'DELETED'].includes(
+                      fileChange.action ?? ''
+                    )
+                      ? fileChange.action
+                      : 'MODIFIED') as 'CREATED' | 'MODIFIED' | 'DELETED',
+                    toolName: fileChange.toolName ?? null,
+                    recordedAt: fileChange.recordedAt ?? null,
+                    isValidated: fileChange.isValidated ?? false,
+                    validations: fileChange.validations ?? [],
                   }}
                 />
               ))}
