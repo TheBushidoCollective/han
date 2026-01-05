@@ -21,7 +21,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
-} from "../claude-settings.ts";
+} from "../config/claude-settings.ts";
 import { loadPluginConfig } from "../hook-config.ts";
 import type {
 	ExtractedObservation,

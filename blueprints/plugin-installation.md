@@ -167,25 +167,6 @@ AI-powered plugin detection.
 - Lists all available plugins with metadata
 - Supports directory and git sources
 
-### Binary Installation
-
-The core plugin automatically installs the han binary to `~/.claude/bin/han` on SessionStart via the `install-han-binary.sh` hook. This ensures:
-
-- Hooks execute with fastest performance
-- No npx overhead
-- Binary is always up-to-date
-- Works within Claude Code's automatic PATH setup
-
-Users can also manually install via:
-
-```bash
-# Quick install
-curl -fsSL https://han.guru/install.sh | bash
-
-# Or via Homebrew
-brew install thebushidocollective/tap/han
-```
-
 ## Files
 
 - `lib/commands/plugin/install.ts` - Command handler

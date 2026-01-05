@@ -16,7 +16,7 @@ import {
 	getSettingsPaths,
 	type MarketplaceConfig,
 	readSettingsFile,
-} from "../../claude-settings.ts";
+} from "../../config/claude-settings.ts";
 
 // Lazy import to avoid loading native module for commands that don't need it
 // (e.g., `han hook reference` doesn't need the native module)
@@ -32,7 +32,7 @@ async function getSessionFileChanges() {
 }
 
 import { getEventLogger, initEventLogger } from "../../events/logger.ts";
-import { getHanBinary, isCheckpointsEnabled } from "../../han-settings.ts";
+import { isCheckpointsEnabled } from "../../han-settings.ts";
 import { getClaudeProjectPath } from "../../memory/paths.ts";
 import { getPluginNameFromRoot, isDebugMode } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
@@ -182,7 +182,7 @@ function getStdinPayload(): HookPayload | null {
 /**
  * Parse stdin to extract session_id for metrics reporting
  */
-function getSessionIdFromStdin(): string | undefined {
+function _getSessionIdFromStdin(): string | undefined {
 	const payload = getStdinPayload();
 	return payload?.session_id;
 }
@@ -426,6 +426,7 @@ function executeCommandHook(
 			eventLogger?.logHookResult(
 				pluginName,
 				hookName,
+				hookType,
 				process.cwd(),
 				false,
 				duration,
@@ -439,18 +440,6 @@ function executeCommandHook(
 
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, true, duration, hookType);
-
-		// Report successful hook execution to internal metrics
-		reportHookExecution({
-			hookType,
-			hookName,
-			hookSource: pluginName,
-			durationMs: duration,
-			exitCode: 0,
-			passed: true,
-			output: output.trim(),
-			sessionId,
-		});
 
 		return output.trim();
 	} catch (error: unknown) {
@@ -477,6 +466,7 @@ function executeCommandHook(
 			eventLogger?.logHookResult(
 				pluginName,
 				hookName,
+				hookType,
 				process.cwd(),
 				false,
 				duration,
@@ -490,18 +480,6 @@ function executeCommandHook(
 
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, false, duration, hookType);
-
-		// Report failed hook execution to internal metrics
-		reportHookExecution({
-			hookType,
-			hookName,
-			hookSource: pluginName,
-			durationMs: duration,
-			exitCode,
-			passed: false,
-			error: stderr,
-			sessionId: getSessionIdFromStdin(),
-		});
 
 		// For Stop/SubagentStop hooks, write stderr to file and return link
 		// This prevents large error output from clogging the agent's context
@@ -518,31 +496,6 @@ function executeCommandHook(
 		// Other hook types - silently skip errors for dispatch
 		// (we don't want to block the agent on hook failures)
 		return null;
-	}
-}
-
-/**
- * Report hook execution to metrics (non-blocking)
- */
-function reportHookExecution(data: {
-	hookType: string;
-	hookName: string;
-	hookSource: string;
-	durationMs: number;
-	exitCode: number;
-	passed: boolean;
-	output?: string;
-	error?: string;
-	sessionId?: string;
-}): void {
-	try {
-		execSync(`${getHanBinary()} metrics hook-exec`, {
-			input: JSON.stringify(data),
-			stdio: "pipe",
-			timeout: 5000, // 5 second timeout for reporting
-		});
-	} catch {
-		// Silently fail - don't block hooks on metrics failures
 	}
 }
 

@@ -9,7 +9,7 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 	type SettingsScope,
-} from "../../claude-settings.ts";
+} from "../../config/claude-settings.ts";
 import {
 	getHookEvents,
 	loadPluginConfig,

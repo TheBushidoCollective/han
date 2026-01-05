@@ -6,9 +6,9 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { getGitRemoteUrl } from "../../../han-native";
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 
 /**
  * Override for memory root (used in tests)
@@ -24,16 +24,6 @@ export function setMemoryRoot(path: string | null): void {
 }
 
 /**
- * Get Claude config directory, respecting CLAUDE_CONFIG_DIR env var
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	return join(homedir(), ".claude");
-}
-
-/**
  * Get root directory for all Han memory data
  * Computed lazily to support test environment overrides
  */
@@ -44,11 +34,6 @@ export function getMemoryRoot(): string {
 	return join(getClaudeConfigDir(), "han", "memory");
 }
 
-/**
- * @deprecated Use getMemoryRoot() instead - this constant is computed at import time
- * and doesn't respect runtime CLAUDE_CONFIG_DIR changes (for testing)
- */
-export const HAN_MEMORY_ROOT = join(homedir(), ".claude", "han", "memory");
 
 /**
  * Get path to personal memory storage

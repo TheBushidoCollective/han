@@ -15,11 +15,11 @@ import {
 	type SessionMessage,
 } from "../../api/sessions.ts";
 import type {
+	Task as DbTask,
 	SessionFileChange as FileChangeData,
 	SessionFileValidation as FileValidationData,
 } from "../../db/index.ts";
 import { sessionFileChanges, sessionFileValidations } from "../../db/index.ts";
-import type { Task as TaskData } from "../../metrics/types.ts";
 import { builder } from "../builder.ts";
 import { registerNodeLoader } from "../node-registry.ts";
 import { CheckpointType } from "./checkpoint.ts";
@@ -70,7 +70,11 @@ import {
 	UnknownEventMessageType,
 	UserMessageType,
 } from "./message.ts";
-import { getMetricsStorage, TaskType } from "./metrics.ts";
+import {
+	getActiveTasksForSession,
+	getTasksForSession,
+	TaskType,
+} from "./metrics.ts";
 import {
 	applyConnectionArgs,
 	type ConnectionArgs,
@@ -642,9 +646,8 @@ export const SessionType = SessionRef.implement({
 		tasks: t.field({
 			type: [TaskType],
 			description: "All tasks tracked in this session via start_task MCP tool",
-			resolve: (session): TaskData[] => {
-				const storage = getMetricsStorage();
-				return storage.getTasksForSession(session.sessionId);
+			resolve: (session): DbTask[] => {
+				return getTasksForSession(session.sessionId);
 			},
 		}),
 		// Messages with Relay-style cursor pagination
@@ -737,18 +740,16 @@ export const SessionType = SessionRef.implement({
 		activeTasks: t.field({
 			type: [TaskType],
 			description: "Active (in-progress) tasks in this session",
-			resolve: (session): TaskData[] => {
-				const storage = getMetricsStorage();
-				return storage.getActiveTasksForSession(session.sessionId);
+			resolve: (session): DbTask[] => {
+				return getActiveTasksForSession(session.sessionId);
 			},
 		}),
 		currentTask: t.field({
 			type: TaskType,
 			nullable: true,
 			description: "The most recently started active task, if any",
-			resolve: (session): TaskData | null => {
-				const storage = getMetricsStorage();
-				const activeTasks = storage.getActiveTasksForSession(session.sessionId);
+			resolve: (session): DbTask | null => {
+				const activeTasks = getActiveTasksForSession(session.sessionId);
 				// Return the most recent active task (sorted by started_at descending)
 				return activeTasks.length > 0 ? activeTasks[0] : null;
 			},

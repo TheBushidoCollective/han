@@ -28,7 +28,7 @@ import {
 } from "../../api/sessions.ts";
 import { builder } from "../builder.ts";
 import type { SentimentEventData } from "../loaders.ts";
-import { registerNodeLoader } from "../node-registry.ts";
+import { encodeGlobalId, registerNodeLoader } from "../node-registry.ts";
 import {
 	type ContentBlockData,
 	ContentBlockInterface,
@@ -50,7 +50,11 @@ export const SentimentAnalysisType = builder
 		description:
 			"Sentiment analysis result for a user message (inline, not a separate event)",
 		fields: (t) => ({
-			id: t.exposeString("id", { description: "Event ID" }),
+			id: t.id({
+				description: "Message global ID",
+				resolve: (msg) =>
+					encodeGlobalId("Message", msg.id),
+			}),
 			timestamp: t.field({
 				type: "DateTime",
 				description: "When the analysis occurred",
@@ -260,7 +264,7 @@ function parseAssistantMetadata(
 			defaults.outputTokens = usage.output_tokens ?? null;
 			defaults.cachedTokens =
 				(usage.cache_read_input_tokens ?? 0) +
-					(usage.cache_creation_input_tokens ?? 0) || null;
+				(usage.cache_creation_input_tokens ?? 0) || null;
 		}
 
 		return defaults;
@@ -286,9 +290,9 @@ function isUserMessageActuallySummary(msg: MessageWithSession): boolean {
 			? msg.content
 			: Array.isArray(msg.content)
 				? msg.content
-						.filter((c) => c.type === "text")
-						.map((c) => c.text || "")
-						.join("")
+					.filter((c) => c.type === "text")
+					.map((c) => c.text || "")
+					.join("")
 				: "";
 
 	// Continuation summary patterns
@@ -391,7 +395,7 @@ MessageInterface.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -491,7 +495,7 @@ export const UserMessageType = UserMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -583,7 +587,7 @@ export const AssistantMessageType = AssistantMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -692,9 +696,9 @@ function isCompactSummary(msg: MessageWithSession): boolean {
 				? msg.content
 				: Array.isArray(msg.content)
 					? msg.content
-							.filter((c) => c.type === "text")
-							.map((c) => c.text || "")
-							.join("")
+						.filter((c) => c.type === "text")
+						.map((c) => c.text || "")
+						.join("")
 					: "";
 		if (
 			content.includes(
@@ -754,7 +758,7 @@ export const SummaryMessageType = SummaryMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -848,7 +852,7 @@ export const SystemMessageType = SystemMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -951,7 +955,7 @@ export const FileHistorySnapshotMessageType =
 			id: t.id({
 				description: "Message global ID",
 				resolve: (msg) =>
-					`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+					encodeGlobalId("Message", msg.id),
 			}),
 			timestamp: t.field({
 				type: "DateTime",
@@ -1044,7 +1048,7 @@ export const HookRunMessageType = HookRunMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1150,7 +1154,7 @@ export const HookResultMessageType = HookResultMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1267,7 +1271,7 @@ export const HookReferenceMessageType = HookReferenceMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1388,7 +1392,7 @@ export const HookValidationMessageType = HookValidationMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1514,7 +1518,7 @@ export const HookValidationCacheMessageType =
 			id: t.id({
 				description: "Message global ID",
 				resolve: (msg) =>
-					`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+					encodeGlobalId("Message", msg.id),
 			}),
 			timestamp: t.field({
 				type: "DateTime",
@@ -1610,7 +1614,7 @@ export const HookScriptMessageType = HookScriptMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1706,7 +1710,7 @@ export const HookDatetimeMessageType = HookDatetimeMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1788,7 +1792,7 @@ export const HookFileChangeMessageType = HookFileChangeMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1865,7 +1869,7 @@ export const QueueOperationMessageType = QueueOperationMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -1955,7 +1959,7 @@ export const McpToolCallMessageType = McpToolCallMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -2075,7 +2079,7 @@ export const McpToolResultMessageType = McpToolResultMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -2145,7 +2149,7 @@ export const ExposedToolCallMessageType = ExposedToolCallMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -2217,7 +2221,7 @@ export const ExposedToolResultMessageType =
 			id: t.id({
 				description: "Message global ID",
 				resolve: (msg) =>
-					`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+					encodeGlobalId("Message", msg.id),
 			}),
 			timestamp: t.field({
 				type: "DateTime",
@@ -2316,7 +2320,7 @@ export const MemoryQueryMessageType = MemoryQueryMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -2406,7 +2410,7 @@ export const MemoryLearnMessageType = MemoryLearnMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",
@@ -2503,7 +2507,7 @@ export const SentimentAnalysisMessageType =
 			id: t.id({
 				description: "Message global ID",
 				resolve: (msg) =>
-					`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+					encodeGlobalId("Message", msg.id),
 			}),
 			timestamp: t.field({
 				type: "DateTime",
@@ -2606,7 +2610,7 @@ export const UnknownEventMessageType = UnknownEventMessageRef.implement({
 		id: t.id({
 			description: "Message global ID",
 			resolve: (msg) =>
-				`Message:${msg.projectDir}:${msg.sessionId}:${msg.lineNumber}`,
+				encodeGlobalId("Message", msg.id),
 		}),
 		timestamp: t.field({
 			type: "DateTime",

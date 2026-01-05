@@ -1,30 +1,11 @@
 import { createInterface } from "node:readline";
-import {
-	getOrCreateEventLogger,
-	initEventLogger,
-} from "../../events/logger.ts";
-import type {
-	TaskComplexity,
-	TaskOutcome,
-	TaskType,
-} from "../../events/types.ts";
-import { isMemoryEnabled } from "../../han-settings.ts";
+import { getOrCreateEventLogger } from "../../events/logger.ts";
+import { isMemoryEnabled, isMetricsEnabled } from "../../han-settings.ts";
 import {
 	formatMemoryAgentResult,
 	type MemoryQueryParams,
 	queryMemoryAgent,
 } from "../../memory/memory-agent.ts";
-import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
-import type {
-	CompleteTaskParams,
-	FailTaskParams,
-	QueryMetricsParams,
-	StartTaskParams,
-	UpdateTaskParams,
-} from "../../metrics/types.ts";
-import { recordTaskCompletion } from "../../telemetry/index.ts";
-import { cleanCheckpoints } from "../checkpoint/clean.ts";
-import { listCheckpoints } from "../checkpoint/list.ts";
 import { type BackendPool, createBackendPool } from "./backend-pool.ts";
 import { getExposedMcpServers } from "./capability-registry.ts";
 import { captureMemory, type LearnParams } from "./memory.ts";
@@ -33,6 +14,7 @@ import {
 	getOrchestratorConfig,
 	type Orchestrator,
 } from "./orchestrator.ts";
+import { handleToolsCall as handleTaskToolsCall, TASK_TOOLS } from "./task.ts";
 import {
 	discoverPluginTools,
 	executePluginTool,
@@ -84,16 +66,6 @@ function discoverTools(): PluginTool[] {
 		cachedTools = discoverPluginTools();
 	}
 	return cachedTools;
-}
-
-// Lazy-load metrics storage instance
-let storage: JsonlMetricsStorage | null = null;
-
-function getStorage(): JsonlMetricsStorage {
-	if (!storage) {
-		storage = new JsonlMetricsStorage();
-	}
-	return storage;
 }
 
 export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
@@ -152,48 +124,6 @@ export function handleInitialize(): unknown {
 		},
 	};
 }
-
-// Checkpoint tools definition
-const CHECKPOINT_TOOLS: McpTool[] = [
-	{
-		name: "checkpoint_list",
-		description:
-			"List checkpoints for current project. Shows session and agent checkpoints with creation time and file counts.",
-		annotations: {
-			title: "List Checkpoints",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {},
-		},
-	},
-	{
-		name: "checkpoint_clean",
-		description:
-			"Clean stale checkpoints with optional maxAge parameter. Removes checkpoints older than specified age.",
-		annotations: {
-			title: "Clean Checkpoints",
-			readOnlyHint: false,
-			destructiveHint: true,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				maxAge: {
-					type: "number",
-					description:
-						"Maximum age in hours (default: 24). Checkpoints older than this will be removed.",
-				},
-			},
-		},
-	},
-];
 
 // Workflow async tools definition (status, cancel, list)
 const WORKFLOW_ASYNC_TOOLS: McpTool[] = [
@@ -260,211 +190,7 @@ const WORKFLOW_ASYNC_TOOLS: McpTool[] = [
 	},
 ];
 
-// Metrics tools definition
-const METRICS_TOOLS: McpTool[] = [
-	{
-		name: "start_task",
-		description:
-			"Start tracking a new task. Returns a task_id for future updates. Use this when beginning work on a feature, fix, or refactoring.",
-		annotations: {
-			title: "Start Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: false,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				session_id: {
-					type: "string",
-					description:
-						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
-				},
-				description: {
-					type: "string",
-					description: "Clear description of the task being performed",
-				},
-				type: {
-					type: "string",
-					enum: ["implementation", "fix", "refactor", "research"],
-					description: "Type of task being performed",
-				},
-				estimated_complexity: {
-					type: "string",
-					enum: ["simple", "moderate", "complex"],
-					description: "Optional estimated complexity of the task",
-				},
-			},
-			required: ["session_id", "description", "type"],
-		},
-	},
-	{
-		name: "update_task",
-		description:
-			"Update a task with progress notes or status changes. Use this to log incremental progress.",
-		annotations: {
-			title: "Update Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				session_id: {
-					type: "string",
-					description:
-						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
-				},
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				status: {
-					type: "string",
-					description: "Optional status update",
-				},
-				notes: {
-					type: "string",
-					description: "Progress notes or observations",
-				},
-			},
-			required: ["session_id", "task_id"],
-		},
-	},
-	{
-		name: "complete_task",
-		description:
-			"Mark a task as completed with outcome assessment. Use this when finishing a task successfully or partially.",
-		annotations: {
-			title: "Complete Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				session_id: {
-					type: "string",
-					description:
-						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
-				},
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				outcome: {
-					type: "string",
-					enum: ["success", "partial", "failure"],
-					description: "Outcome of the task",
-				},
-				confidence: {
-					type: "number",
-					minimum: 0,
-					maximum: 1,
-					description:
-						"Confidence level (0-1) in the success of this task. Used for calibration.",
-				},
-				files_modified: {
-					type: "array",
-					items: { type: "string" },
-					description: "Optional list of files modified during this task",
-				},
-				tests_added: {
-					type: "number",
-					description: "Optional count of tests added",
-				},
-				notes: {
-					type: "string",
-					description: "Optional completion notes",
-				},
-			},
-			required: ["session_id", "task_id", "outcome", "confidence"],
-		},
-	},
-	{
-		name: "fail_task",
-		description:
-			"Mark a task as failed with detailed reason and attempted solutions. Use when unable to complete a task.",
-		annotations: {
-			title: "Fail Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				session_id: {
-					type: "string",
-					description:
-						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
-				},
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				reason: {
-					type: "string",
-					description: "Reason for failure",
-				},
-				confidence: {
-					type: "number",
-					minimum: 0,
-					maximum: 1,
-					description: "Optional confidence in the failure assessment",
-				},
-				attempted_solutions: {
-					type: "array",
-					items: { type: "string" },
-					description: "Optional list of solutions that were attempted",
-				},
-				notes: {
-					type: "string",
-					description: "Optional additional notes",
-				},
-			},
-			required: ["session_id", "task_id", "reason"],
-		},
-	},
-	{
-		name: "query_metrics",
-		description:
-			"Query task metrics and performance data. Use this to generate reports or analyze agent performance over time.",
-		annotations: {
-			title: "Query Metrics",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				period: {
-					type: "string",
-					enum: ["day", "week", "month"],
-					description: "Optional time period to filter by",
-				},
-				task_type: {
-					type: "string",
-					enum: ["implementation", "fix", "refactor", "research"],
-					description: "Optional filter by task type",
-				},
-				outcome: {
-					type: "string",
-					enum: ["success", "partial", "failure"],
-					description: "Optional filter by outcome",
-				},
-			},
-		},
-	},
-];
+// Task tools are imported from ./task.ts (TASK_TOOLS)
 
 // Unified memory tool (auto-routes to Personal, Team, or Rules)
 const UNIFIED_MEMORY_TOOLS: McpTool[] = [
@@ -652,6 +378,7 @@ async function getExposedTools(): Promise<{
 async function handleToolsList(): Promise<unknown> {
 	const hookTools = formatToolsForMcp(discoverTools());
 	const memoryEnabled = isMemoryEnabled();
+	const metricsEnabled = isMetricsEnabled();
 	const orchestratorConfig = getOrchestratorConfig();
 
 	// Get exposed tools from backend MCP servers
@@ -670,8 +397,8 @@ async function handleToolsList(): Promise<unknown> {
 		...hookTools,
 		...exposedTools,
 		...orchestratorTools,
-		...CHECKPOINT_TOOLS,
-		...METRICS_TOOLS,
+		// Only include task tools if metrics are enabled
+		...(metricsEnabled ? TASK_TOOLS : []),
 		// Only include memory tools if memory is enabled
 		// Two tools: `memory` (query) and `learn` (write)
 		...(memoryEnabled ? UNIFIED_MEMORY_TOOLS : []),
@@ -807,292 +534,12 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Check if this is a checkpoint tool
-	const isCheckpointTool = CHECKPOINT_TOOLS.some((t) => t.name === params.name);
+	// Check if this is a task tool (metrics)
+	const isTaskTool = TASK_TOOLS.some((t) => t.name === params.name);
 
-	if (isCheckpointTool) {
-		// Handle checkpoint tools
-		try {
-			switch (params.name) {
-				case "checkpoint_list": {
-					// Capture output by temporarily overriding console.log
-					const output: string[] = [];
-					const originalLog = console.log;
-					console.log = (...args: unknown[]) => {
-						output.push(args.join(" "));
-					};
-
-					try {
-						await listCheckpoints();
-					} finally {
-						console.log = originalLog;
-					}
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: output.join("\n"),
-							},
-						],
-					};
-				}
-
-				case "checkpoint_clean": {
-					const maxAge = typeof args.maxAge === "number" ? args.maxAge : 24;
-
-					// Capture output by temporarily overriding console.log
-					const output: string[] = [];
-					const originalLog = console.log;
-					console.log = (...args: unknown[]) => {
-						output.push(args.join(" "));
-					};
-
-					try {
-						await cleanCheckpoints({ maxAge: maxAge.toString() });
-					} finally {
-						console.log = originalLog;
-					}
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: output.join("\n"),
-							},
-						],
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown checkpoint tool: ${params.name}`,
-					};
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
-		}
-	}
-
-	// Check if this is a metrics tool
-	const isMetricsTool = METRICS_TOOLS.some((t) => t.name === params.name);
-
-	if (isMetricsTool) {
-		// Handle metrics tools
-		try {
-			switch (params.name) {
-				case "start_task": {
-					const sessionId = args.session_id as string;
-					if (!sessionId) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
-								},
-							],
-							isError: true,
-						};
-					}
-
-					const taskParams = args as unknown as StartTaskParams;
-					const result = getStorage().startTask(taskParams);
-
-					// Log Han event for task start (event-sourcing)
-					// Use initEventLogger with the provided session_id
-					const logger = initEventLogger(sessionId, {}, process.cwd());
-					logger.logTaskStart(
-						result.task_id,
-						taskParams.description,
-						taskParams.type as TaskType,
-						taskParams.estimated_complexity as TaskComplexity | undefined,
-					);
-					logger.flush();
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "update_task": {
-					const sessionId = args.session_id as string;
-					if (!sessionId) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
-								},
-							],
-							isError: true,
-						};
-					}
-
-					const taskParams = args as unknown as UpdateTaskParams;
-					const result = getStorage().updateTask(taskParams);
-
-					// Log Han event for task update (event-sourcing)
-					const logger = initEventLogger(sessionId, {}, process.cwd());
-					logger.logTaskUpdate(
-						taskParams.task_id,
-						taskParams.status,
-						taskParams.notes,
-					);
-					logger.flush();
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "complete_task": {
-					const sessionId = args.session_id as string;
-					if (!sessionId) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
-								},
-							],
-							isError: true,
-						};
-					}
-
-					const taskParams = args as unknown as CompleteTaskParams;
-					const result = getStorage().completeTask(taskParams);
-
-					// Log Han event for task complete (event-sourcing)
-					const logger = initEventLogger(sessionId, {}, process.cwd());
-					const durationSeconds =
-						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
-					logger.logTaskComplete(
-						taskParams.task_id,
-						taskParams.outcome as TaskOutcome,
-						taskParams.confidence,
-						durationSeconds,
-						taskParams.files_modified,
-						taskParams.tests_added,
-						taskParams.notes,
-					);
-					logger.flush();
-
-					// Record OTEL telemetry for task completion
-					recordTaskCompletion(
-						(result as { type?: string })?.type || "unknown",
-						taskParams.outcome,
-						taskParams.confidence,
-					);
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "fail_task": {
-					const sessionId = args.session_id as string;
-					if (!sessionId) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: "Error: session_id is required. Get it from CLAUDE_SESSION_ID environment variable.",
-								},
-							],
-							isError: true,
-						};
-					}
-
-					const taskParams = args as unknown as FailTaskParams;
-					const result = getStorage().failTask(taskParams);
-
-					// Log Han event for task fail (event-sourcing)
-					const logger = initEventLogger(sessionId, {}, process.cwd());
-					const durationSeconds =
-						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
-					logger.logTaskFail(
-						taskParams.task_id,
-						taskParams.reason,
-						durationSeconds,
-						taskParams.confidence,
-						taskParams.attempted_solutions,
-						taskParams.notes,
-					);
-					logger.flush();
-
-					// Record OTEL telemetry for task failure
-					recordTaskCompletion(
-						(result as { type?: string })?.type || "unknown",
-						"failure",
-						taskParams.confidence || 0,
-					);
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "query_metrics": {
-					const taskParams = args as unknown as QueryMetricsParams;
-					const result = getStorage().queryMetrics(taskParams);
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown metrics tool: ${params.name}`,
-					};
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
-		}
+	if (isTaskTool) {
+		// Delegate to task.ts handler which uses the database API
+		return await handleTaskToolsCall(params);
 	}
 
 	// Check if this is the unified memory tool

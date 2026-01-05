@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import type React from "react";
-import type { SettingsScope } from "./claude-settings.ts";
+import type { SettingsScope } from "./config/claude-settings.ts";
 import type { HookDependency } from "./hook-config.ts";
 
 /**

@@ -26,13 +26,20 @@ import {
 const COORDINATOR_PORT = 41957;
 
 /**
+ * Build-time injected URLs (replaced by Bun.build define)
+ * These constants are replaced at build time with actual values
+ */
+declare const __GRAPHQL_URL__: string | undefined;
+declare const __GRAPHQL_WS_URL__: string | undefined;
+
+/**
  * Get the GraphQL endpoint URL
- * Always connects to the coordinator daemon at port 41957
+ * Uses build-time injected URL or falls back to default port
  */
 function getGraphQLUrl(): string {
-  // Check for Vite-injected URL first (development mode)
-  if (import.meta.env?.VITE_GRAPHQL_URL) {
-    return import.meta.env.VITE_GRAPHQL_URL;
+  // Build-time injected URL takes priority
+  if (typeof __GRAPHQL_URL__ !== 'undefined') {
+    return __GRAPHQL_URL__;
   }
   // Default to coordinator port
   return `http://127.0.0.1:${COORDINATOR_PORT}/graphql`;
@@ -265,12 +272,12 @@ const fetchFn: FetchFunction = (
 
 /**
  * Get the GraphQL WebSocket URL
- * Always connects to the coordinator daemon at port 41957
+ * Uses build-time injected URL or falls back to default port
  */
 function getGraphQLWsUrl(): string {
-  // Check for Vite-injected URL first (development mode)
-  if (import.meta.env?.VITE_GRAPHQL_WS_URL) {
-    return import.meta.env.VITE_GRAPHQL_WS_URL;
+  // Build-time injected URL takes priority
+  if (typeof __GRAPHQL_WS_URL__ !== 'undefined') {
+    return __GRAPHQL_WS_URL__;
   }
   // Default to coordinator port
   return `ws://127.0.0.1:${COORDINATOR_PORT}/graphql`;

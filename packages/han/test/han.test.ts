@@ -119,7 +119,7 @@ describe("Basic CLI", () => {
 				encoding: "utf8",
 			});
 			expect(output).toContain("run");
-			expect(output).toContain("test");
+			expect(output).toContain("explain");
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
@@ -1506,40 +1506,6 @@ describe("Explain command", () => {
 			});
 
 			expect(output.toLowerCase()).toContain("han configuration");
-		},
-		{ timeout: BINARY_TIMEOUT },
-	);
-});
-
-// ============================================
-// Summary command tests
-// ============================================
-
-describe("Summary command", () => {
-	test(
-		"shows help",
-		() => {
-			const output = execSync(`${binCommand} summary --help`, {
-				encoding: "utf8",
-			});
-			expect(output).toContain("summary");
-		},
-		{ timeout: BINARY_TIMEOUT },
-	);
-});
-
-// ============================================
-// Gaps command tests
-// ============================================
-
-describe("Gaps command", () => {
-	test(
-		"shows help",
-		() => {
-			const output = execSync(`${binCommand} gaps --help`, {
-				encoding: "utf8",
-			});
-			expect(output).toContain("gaps");
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);

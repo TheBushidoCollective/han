@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { getGitRemoteUrl } from "../../../han-native";
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import { getHookCache, setHookCache } from "../db/index.ts";
 import type { EventLogger } from "../events/logger.ts";
 import { getNativeModule } from "../native.ts";
@@ -42,14 +42,6 @@ function normalizeGitRemote(gitRemote: string): string {
 		.replace(/^(git@|https?:\/\/)/, "")
 		.replace(/\.git$/, "")
 		.replace(/[/:.]/g, "-");
-}
-
-/**
- * Get the base claude config directory
- * Respects CLAUDE_CONFIG_DIR environment variable for testing
- */
-function getClaudeConfigDir(): string {
-	return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
 }
 
 /**

@@ -4,7 +4,7 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
-} from "../../claude-settings.ts";
+} from "../../config/claude-settings.ts";
 import { loadPluginConfig, type PluginConfig } from "../../hook-config.ts";
 import { recordMcpToolCall } from "../../telemetry/index.ts";
 import { runConfiguredHook } from "../../validate.ts";

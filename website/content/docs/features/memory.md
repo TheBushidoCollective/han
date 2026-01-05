@@ -318,7 +318,7 @@ han index run --layer transcripts
 han index run --layer team
 
 # Index specific session
-han index run --session <session-id>
+han index run --session "<session-id>"
 
 # Search indexed content
 han index search "authentication"

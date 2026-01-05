@@ -10,10 +10,6 @@
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/install-han-binary.sh\""
-          },
-          {
-            "type": "command",
             "command": "han metrics session-context"
           },
           {

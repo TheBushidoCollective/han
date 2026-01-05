@@ -389,6 +389,7 @@ export class EventLogger {
 	logHookResult(
 		plugin: string,
 		hook: string,
+		hookType: string,
 		directory: string,
 		cached: boolean,
 		durationMs: number,
@@ -398,12 +399,13 @@ export class EventLogger {
 		error?: string,
 		hookRunId?: string,
 	): void {
-		this.writeEvent({
+		const event = {
 			...this.createBaseEvent("hook_result"),
 			...(hookRunId && { hookRunId }),
 			data: {
 				plugin,
 				hook,
+				hook_type: hookType,
 				directory,
 				cached,
 				duration_ms: durationMs,
@@ -415,7 +417,8 @@ export class EventLogger {
 						: undefined,
 				error,
 			},
-		});
+		} as const;
+		this.writeEvent(event as HanEvent);
 	}
 
 	// =========================================================================
@@ -574,6 +577,7 @@ export class EventLogger {
 	logHookValidation(
 		plugin: string,
 		hook: string,
+		hookType: string,
 		directory: string,
 		cached: boolean,
 		durationMs: number,
@@ -582,11 +586,12 @@ export class EventLogger {
 		output?: string,
 		error?: string,
 	): void {
-		this.writeEvent({
+		const event = {
 			...this.createBaseEvent("hook_validation"),
 			data: {
 				plugin,
 				hook,
+				hook_type: hookType,
 				directory,
 				cached,
 				duration_ms: durationMs,
@@ -598,7 +603,8 @@ export class EventLogger {
 						: undefined,
 				error,
 			},
-		});
+		} as const;
+		this.writeEvent(event as HanEvent);
 	}
 
 	/**

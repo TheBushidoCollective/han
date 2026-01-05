@@ -326,6 +326,13 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 					"process.env.NODE_ENV": JSON.stringify(
 						devMode ? "development" : "production",
 					),
+					// Inject GraphQL URLs for the frontend to connect to coordinator
+					__GRAPHQL_URL__: JSON.stringify(
+						`http://127.0.0.1:${coordinatorPort}/graphql`,
+					),
+					__GRAPHQL_WS_URL__: JSON.stringify(
+						`ws://127.0.0.1:${coordinatorPort}/graphql`,
+					),
 				},
 				loader: {
 					".css": "css",

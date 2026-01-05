@@ -16,7 +16,6 @@ import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
 import { browse } from "./commands/browse/index.ts";
-import { registerCheckpointCommands } from "./commands/checkpoint/index.ts";
 import {
 	handleGetCompletions,
 	registerCompletionCommand,
@@ -24,15 +23,11 @@ import {
 import { registerCoordinatorCommands } from "./commands/coordinator/index.ts";
 import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
-import { registerIndexCommand } from "./commands/index/index.ts";
+import { registerReindexCommand } from "./commands/index/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
-import { registerMetricsCommand } from "./commands/metrics/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
-import { explainHan } from "./explain.ts";
-import { analyzeGaps } from "./gaps.ts";
 import { getMergedHanConfig } from "./han-settings.ts";
-import { generateSummary } from "./summary.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
 
 /**
@@ -206,9 +201,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerHookCommands(program);
 	registerMcpCommands(program);
 	registerMemoryCommand(program);
-	registerMetricsCommand(program);
-	registerCheckpointCommands(program);
-	registerIndexCommand(program);
+	registerReindexCommand(program);
 	registerAliasCommands(program);
 	registerCompletionCommand(program);
 	registerDoctorCommand(program);
@@ -239,74 +232,6 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 
 	// Register coordinator commands (includes launchd management on macOS)
 	registerCoordinatorCommands(program);
-
-	// Register top-level explain command
-	program
-		.command("explain")
-		.description("Show comprehensive overview of Han configuration")
-		.action(async () => {
-			try {
-				await explainHan();
-				if (!options.exitOverride) {
-					process.exit(0);
-				}
-			} catch (error: unknown) {
-				const message = `Error showing Han configuration: ${error instanceof Error ? error.message : error}`;
-				if (!options.suppressOutput) {
-					console.error(message);
-				}
-				if (!options.exitOverride) {
-					process.exit(1);
-				}
-				throw error;
-			}
-		});
-
-	// Register top-level summary command
-	program
-		.command("summary")
-		.description("AI-powered summary of how Han is improving this repository")
-		.action(async () => {
-			try {
-				await generateSummary();
-				if (!options.exitOverride) {
-					process.exit(0);
-				}
-			} catch (error: unknown) {
-				const message = `Error generating summary: ${error instanceof Error ? error.message : error}`;
-				if (!options.suppressOutput) {
-					console.error(message);
-				}
-				if (!options.exitOverride) {
-					process.exit(1);
-				}
-				throw error;
-			}
-		});
-
-	// Register top-level gaps command
-	program
-		.command("gaps")
-		.description(
-			"AI-powered analysis of repository gaps and Han plugin recommendations",
-		)
-		.action(async () => {
-			try {
-				await analyzeGaps();
-				if (!options.exitOverride) {
-					process.exit(0);
-				}
-			} catch (error: unknown) {
-				const message = `Error analyzing gaps: ${error instanceof Error ? error.message : error}`;
-				if (!options.suppressOutput) {
-					console.error(message);
-				}
-				if (!options.exitOverride) {
-					process.exit(1);
-				}
-				throw error;
-			}
-		});
 
 	return program;
 }

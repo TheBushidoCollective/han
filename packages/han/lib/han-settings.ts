@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import YAML from "yaml";
-import { getClaudeConfigDir, getProjectDir } from "./claude-settings.ts";
+import { getClaudeConfigDir, getProjectDir } from "./config/claude-settings.ts";
 
 /**
  * Hook override settings for a specific plugin hook

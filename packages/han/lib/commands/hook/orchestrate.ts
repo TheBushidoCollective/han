@@ -7,7 +7,7 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
-} from "../../claude-settings.ts";
+} from "../../config/claude-settings.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
@@ -430,6 +430,7 @@ async function executeHookInDirectory(
 		verbose: boolean;
 		cliMode: boolean;
 		sessionId: string;
+		hookType: string;
 	},
 ): Promise<HookResult> {
 	const startTime = Date.now();
@@ -459,6 +460,7 @@ async function executeHookInDirectory(
 		logger?.logHookResult(
 			task.plugin,
 			task.hookName,
+			options.hookType,
 			relativePath,
 			false,
 			duration,
@@ -503,6 +505,7 @@ async function executeHookInDirectory(
 			logger?.logHookResult(
 				task.plugin,
 				task.hookName,
+				options.hookType,
 				relativePath,
 				true, // cached
 				duration,
@@ -535,6 +538,7 @@ async function executeHookInDirectory(
 				logger?.logHookResult(
 					task.plugin,
 					task.hookName,
+					options.hookType,
 					relativePath,
 					true, // cached via checkpoint
 					duration,
@@ -630,6 +634,7 @@ async function executeHookInDirectory(
 		logger?.logHookResult(
 			task.plugin,
 			task.hookName,
+			options.hookType,
 			relativePath,
 			false,
 			duration,
@@ -662,6 +667,7 @@ async function executeHookInDirectory(
 		logger?.logHookResult(
 			task.plugin,
 			task.hookName,
+			options.hookType,
 			relativePath,
 			false,
 			duration,
@@ -858,6 +864,7 @@ async function orchestrate(
 						...options,
 						cliMode,
 						sessionId,
+						hookType: eventType,
 					},
 				);
 

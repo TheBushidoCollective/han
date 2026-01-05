@@ -94,7 +94,7 @@ A lightweight haiku-model agent that:
 han_workflow({
   intent: "Research Reddit posts about Claude AI",
   async: true,
-  sessionId: "<session-id-from-hook>",
+  sessionId: "<session-id>",
   fork: true
 })
 ```

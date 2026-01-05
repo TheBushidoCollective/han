@@ -5,8 +5,8 @@
  * Loaded via @defer for better initial page load performance.
  */
 
-import type React from 'react';
-import { Suspense } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
+import { Suspense, useState } from 'react';
 import { graphql, useFragment } from 'react-relay';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
@@ -14,6 +14,8 @@ import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { TabButton } from '@/components/molecules/TabButton.tsx';
+import { colors, radii, spacing } from '@/theme.ts';
 import type { SessionExpensiveFields_session$key } from './__generated__/SessionExpensiveFields_session.graphql.ts';
 import {
   CheckpointCard,
@@ -21,6 +23,9 @@ import {
   HookExecutionCard,
   TaskCard,
 } from './components.ts';
+import { formatMs } from './utils.ts';
+
+type SidebarTab = 'hooks' | 'files';
 
 /**
  * Fragment for expensive fields loaded via @defer
@@ -125,10 +130,92 @@ interface SessionExpensiveFieldsProps {
   fragmentRef: SessionExpensiveFields_session$key;
 }
 
+/**
+ * Stat Card Component - Displays a single metric in a card format
+ */
+interface StatCardProps {
+  value: number | string;
+  label: string;
+  color: string;
+}
+
+const statCardStyle: CSSProperties = {
+  backgroundColor: colors.bg.secondary,
+  borderRadius: radii.md,
+  padding: `${spacing.sm}px ${spacing.md}px`,
+  minWidth: 80,
+  textAlign: 'center',
+};
+
+function StatCard({ value, label, color }: StatCardProps): ReactElement {
+  return (
+    <div style={statCardStyle}>
+      <Text
+        size="lg"
+        weight="bold"
+        style={{ color, display: 'block', marginBottom: 2 }}
+      >
+        {value}
+      </Text>
+      <Text size="xs" color="muted">
+        {label}
+      </Text>
+    </div>
+  );
+}
+
+/**
+ * Hook Type Chip - Shows hook type with pass/total count
+ */
+interface HookTypeChipProps {
+  hookType: string;
+  passed: number;
+  total: number;
+}
+
+const hookTypeChipStyle: CSSProperties = {
+  backgroundColor: colors.bg.tertiary,
+  borderRadius: radii.lg,
+  padding: `${spacing.xs}px ${spacing.sm}px`,
+  display: 'flex',
+  alignItems: 'center',
+  gap: spacing.xs,
+};
+
+function HookTypeChip({
+  hookType,
+  passed,
+  total,
+}: HookTypeChipProps): ReactElement {
+  const allPassed = passed === total;
+  const countColor = allPassed ? colors.success : colors.warning;
+
+  return (
+    <div style={hookTypeChipStyle}>
+      <Text size="sm" weight="medium">
+        {hookType}
+      </Text>
+      <Text size="sm" style={{ color: countColor }}>
+        {passed}/{total}
+      </Text>
+    </div>
+  );
+}
+
+const tabBarStyle: CSSProperties = {
+  display: 'flex',
+  gap: spacing.xs,
+  padding: spacing.xs,
+  backgroundColor: colors.bg.tertiary,
+  borderRadius: radii.md,
+  marginBottom: spacing.md,
+};
+
 function SessionExpensiveFieldsContent({
   fragmentRef,
-}: SessionExpensiveFieldsProps): React.ReactElement {
+}: SessionExpensiveFieldsProps): ReactElement {
   const data = useFragment(SessionExpensiveFieldsFragment, fragmentRef);
+  const [activeTab, setActiveTab] = useState<SidebarTab>('hooks');
 
   const checkpoints = data.checkpoints ?? [];
   const hookExecutions = data.hookExecutions ?? [];
@@ -136,6 +223,10 @@ function SessionExpensiveFieldsContent({
   const tasks = data.tasks ?? [];
   const fileChanges = data.fileChanges ?? [];
   const fileChangeCount = data.fileChangeCount ?? 0;
+
+  // Determine counts for tabs
+  const hooksCount = hookStats?.totalHooks ?? hookExecutions.length;
+  const filesCount = fileChangeCount || fileChanges.length;
 
   return (
     <>
@@ -168,41 +259,84 @@ function SessionExpensiveFieldsContent({
         </VStack>
       )}
 
-      {hookExecutions.length > 0 && hookStats && (
+      {/* Tab Bar for switching between hooks and file changes */}
+      {(hookExecutions.length > 0 || fileChanges.length > 0) && (
+        <div style={tabBarStyle}>
+          <TabButton
+            active={activeTab === 'hooks'}
+            onClick={() => setActiveTab('hooks')}
+          >
+            Hooks ({hooksCount})
+          </TabButton>
+          <TabButton
+            active={activeTab === 'files'}
+            onClick={() => setActiveTab('files')}
+          >
+            Files ({filesCount})
+          </TabButton>
+        </div>
+      )}
+
+      {activeTab === 'hooks' && hookExecutions.length > 0 && hookStats && (
         <VStack className="hooks-section" gap="md" align="stretch">
           <Heading size="sm" as="h3">
             Hook Executions ({hookStats.totalHooks})
           </Heading>
-          <HStack className="hooks-stats" gap="lg" style={{ flexWrap: 'wrap' }}>
-            <Text className="hooks-stat hooks-passed">
-              {hookStats.passedHooks} passed
-            </Text>
-            <Text className="hooks-stat hooks-failed">
-              {hookStats.failedHooks} failed
-            </Text>
-            <Text className="hooks-stat" color="muted">
-              {(hookStats.passRate ?? 0).toFixed(1)}% pass rate
-            </Text>
-            <Text className="hooks-stat" color="muted">
-              {hookStats.totalDurationMs}ms total
-            </Text>
+
+          {/* Summary Cards */}
+          <HStack gap="sm" style={{ flexWrap: 'wrap' }}>
+            <StatCard
+              value={hookStats.passedHooks ?? 0}
+              label="Passed"
+              color={colors.success}
+            />
+            <StatCard
+              value={hookStats.failedHooks ?? 0}
+              label="Failed"
+              color={colors.danger}
+            />
+            <StatCard
+              value={`${(hookStats.passRate ?? 0).toFixed(1)}%`}
+              label="Pass Rate"
+              color={
+                (hookStats.passRate ?? 0) >= 90
+                  ? colors.success
+                  : (hookStats.passRate ?? 0) >= 70
+                    ? colors.warning
+                    : colors.danger
+              }
+            />
+            <StatCard
+              value={formatMs(hookStats.totalDurationMs ?? 0)}
+              label="Total Time"
+              color={colors.text.muted}
+            />
           </HStack>
+
+          {/* Hook Type Breakdown */}
           {(hookStats.byHookType?.length ?? 0) > 0 && (
-            <HStack
-              className="hooks-by-type"
-              gap="md"
-              style={{ flexWrap: 'wrap' }}
-            >
+            <HStack gap="sm" style={{ flexWrap: 'wrap' }}>
               {(hookStats.byHookType ?? []).map((stat) => (
-                <Text key={stat.hookType} className="hook-type-stat">
-                  <strong>{stat.hookType}</strong>: {stat.passed}/{stat.total}
-                </Text>
+                <HookTypeChip
+                  key={stat.hookType ?? 'unknown'}
+                  hookType={stat.hookType ?? 'unknown'}
+                  passed={stat.passed ?? 0}
+                  total={stat.total ?? 0}
+                />
               ))}
             </HStack>
           )}
-          <VStack className="hooks-grid" gap="md">
+
+          {/* Hook Execution Cards - sorted newest first */}
+          <VStack className="hooks-grid" gap="sm">
             {hookExecutions
               .filter((h): h is typeof h & { id: string } => !!h.id)
+              .slice()
+              .sort((a, b) => {
+                const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                return timeB - timeA;
+              })
               .map((hook) => (
                 <HookExecutionCard
                   key={hook.id}
@@ -282,7 +416,7 @@ function SessionExpensiveFieldsContent({
         </VStack>
       )}
 
-      {fileChanges.length > 0 && (
+      {activeTab === 'files' && fileChanges.length > 0 && (
         <VStack className="file-changes-section" gap="md" align="stretch">
           <Heading size="sm" as="h3">
             File Changes ({fileChangeCount})
@@ -336,7 +470,7 @@ function SessionExpensiveFieldsContent({
  */
 export function SessionExpensiveFields({
   fragmentRef,
-}: SessionExpensiveFieldsProps): React.ReactElement {
+}: SessionExpensiveFieldsProps): ReactElement {
   return (
     <Suspense
       fallback={

@@ -6,6 +6,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 
 export type PluginScope = "user" | "project" | "local";
 
@@ -22,20 +23,6 @@ export interface PluginStats {
 	projectPlugins: number;
 	localPlugins: number;
 	enabledPlugins: number;
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		throw new Error("Could not determine home directory");
-	}
-	return join(homeDir, ".claude");
 }
 
 /**

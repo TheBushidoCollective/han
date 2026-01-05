@@ -1,12 +1,10 @@
 /**
  * GraphQL Metrics types
  *
- * Represents task metrics and performance data from the metrics system.
+ * Represents task metrics and performance data from the database.
  */
 
-import { getDbPath } from "../../db/index.ts";
-import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
-import type { MetricsResult, Task as TaskData } from "../../metrics/types.ts";
+import { type Task as DbTask, getDbPath, tasks } from "../../db/index.ts";
 import { tryGetNativeModule } from "../../native.ts";
 import { builder } from "../builder.ts";
 
@@ -90,9 +88,18 @@ export const TaskOutcomeCountType = TaskOutcomeCountRef.implement({
 });
 
 /**
- * Task ref
+ * Task ref - using database Task type
  */
-const TaskRef = builder.objectRef<TaskData>("Task");
+const TaskRef = builder.objectRef<DbTask>("Task");
+
+/**
+ * Determine task status from outcome
+ */
+function getTaskStatus(task: DbTask): "ACTIVE" | "COMPLETED" | "FAILED" {
+	if (!task.outcome) return "ACTIVE";
+	if (task.outcome === "failure") return "FAILED";
+	return "COMPLETED";
+}
 
 /**
  * Task type implementation
@@ -102,9 +109,9 @@ export const TaskType = TaskRef.implement({
 	fields: (t) => ({
 		id: t.id({
 			description: "Task ID",
-			resolve: (task) => task.id,
+			resolve: (task) => task.taskId,
 		}),
-		taskId: t.exposeString("id", { description: "Task ID" }),
+		taskId: t.exposeString("taskId", { description: "Task ID" }),
 		description: t.exposeString("description", {
 			description: "Task description",
 		}),
@@ -112,7 +119,7 @@ export const TaskType = TaskRef.implement({
 			type: TaskTypeEnum,
 			description: "Type of task",
 			resolve: (task) =>
-				task.type.toUpperCase() as
+				task.taskType.toUpperCase() as
 					| "IMPLEMENTATION"
 					| "FIX"
 					| "REFACTOR"
@@ -121,8 +128,7 @@ export const TaskType = TaskRef.implement({
 		status: t.field({
 			type: TaskStatusEnum,
 			description: "Current status",
-			resolve: (task) =>
-				task.status.toUpperCase() as "ACTIVE" | "COMPLETED" | "FAILED",
+			resolve: (task) => getTaskStatus(task),
 		}),
 		outcome: t.field({
 			type: TaskOutcomeEnum,
@@ -141,35 +147,33 @@ export const TaskType = TaskRef.implement({
 		startedAt: t.field({
 			type: "DateTime",
 			description: "When the task started",
-			resolve: (task) => task.started_at,
+			resolve: (task) => task.startedAt ?? new Date().toISOString(),
 		}),
 		completedAt: t.field({
 			type: "DateTime",
 			nullable: true,
 			description: "When the task completed",
-			resolve: (task) => task.completed_at ?? null,
+			resolve: (task) => task.completedAt ?? null,
 		}),
 		durationSeconds: t.int({
 			nullable: true,
 			description: "Duration in seconds",
-			resolve: (task) => task.duration_seconds ?? null,
+			resolve: (task) => {
+				if (!task.startedAt || !task.completedAt) return null;
+				const start = new Date(task.startedAt).getTime();
+				const end = new Date(task.completedAt).getTime();
+				return Math.floor((end - start) / 1000);
+			},
 		}),
 		filesModified: t.stringList({
 			nullable: true,
 			description: "List of modified files",
-			resolve: (task) => {
-				if (!task.files_modified) return null;
-				try {
-					return JSON.parse(task.files_modified);
-				} catch {
-					return [task.files_modified];
-				}
-			},
+			resolve: (task) => task.filesModified ?? null,
 		}),
 		testsAdded: t.int({
 			nullable: true,
 			description: "Number of tests added",
-			resolve: (task) => task.tests_added ?? null,
+			resolve: (task) => task.testsAdded ?? null,
 		}),
 		notes: t.string({
 			nullable: true,
@@ -178,6 +182,22 @@ export const TaskType = TaskRef.implement({
 		}),
 	}),
 });
+
+/**
+ * Metrics result for GraphQL - maps from database TaskMetrics
+ */
+interface MetricsResult {
+	totalTasks: number;
+	completedTasks: number;
+	successRate: number;
+	averageConfidence: number;
+	averageDurationSeconds: number | null;
+	calibrationScore: number | null;
+	byType: Record<string, number>;
+	byOutcome: Record<string, number>;
+	significantFrustrations: number;
+	significantFrustrationRate: number;
+}
 
 /**
  * Metrics data ref
@@ -192,35 +212,35 @@ export const MetricsDataType = MetricsDataRef.implement({
 	fields: (t) => ({
 		totalTasks: t.int({
 			description: "Total number of tasks",
-			resolve: (data) => data.total_tasks,
+			resolve: (data) => data.totalTasks,
 		}),
 		completedTasks: t.int({
 			description: "Number of completed tasks",
-			resolve: (data) => data.completed_tasks,
+			resolve: (data) => data.completedTasks,
 		}),
 		successRate: t.float({
 			description: "Success rate (0-1)",
-			resolve: (data) => data.success_rate,
+			resolve: (data) => data.successRate,
 		}),
 		averageConfidence: t.float({
 			description: "Average confidence score (0-1)",
-			resolve: (data) => data.average_confidence,
+			resolve: (data) => data.averageConfidence,
 		}),
 		averageDuration: t.float({
 			nullable: true,
 			description: "Average duration in seconds",
-			resolve: (data) => data.average_duration_seconds || null,
+			resolve: (data) => data.averageDurationSeconds,
 		}),
 		calibrationScore: t.float({
 			nullable: true,
 			description: "Calibration score (how well confidence matches outcomes)",
-			resolve: (data) => data.calibration_score || null,
+			resolve: (data) => data.calibrationScore,
 		}),
 		tasksByType: t.field({
 			type: [TaskTypeCountType],
 			description: "Task breakdown by type",
 			resolve: (data): TaskTypeCount[] => {
-				return Object.entries(data.by_type).map(([type, count]) => ({
+				return Object.entries(data.byType).map(([type, count]) => ({
 					type: type.toUpperCase() as
 						| "IMPLEMENTATION"
 						| "FIX"
@@ -234,54 +254,75 @@ export const MetricsDataType = MetricsDataRef.implement({
 			type: [TaskOutcomeCountType],
 			description: "Task breakdown by outcome",
 			resolve: (data): TaskOutcomeCount[] => {
-				return Object.entries(data.by_outcome).map(([outcome, count]) => ({
+				return Object.entries(data.byOutcome).map(([outcome, count]) => ({
 					outcome: outcome.toUpperCase() as "SUCCESS" | "PARTIAL" | "FAILURE",
 					count: count as number,
 				}));
 			},
 		}),
-		recentTasks: t.field({
-			type: [TaskType],
-			args: {
-				first: t.arg.int({ defaultValue: 10 }),
-			},
-			description: "Most recent tasks",
-			resolve: (data, args) => {
-				return data.tasks.slice(0, args.first || 10);
-			},
-		}),
+		// Note: recentTasks field removed - need native list function to support this
 		significantFrustrations: t.int({
 			description: "Count of moderate/high frustration events",
-			resolve: (data) => data.significant_frustrations,
+			resolve: (data) => data.significantFrustrations,
 		}),
 		significantFrustrationRate: t.float({
 			description: "Significant frustrations per task",
-			resolve: (data) => data.significant_frustration_rate,
+			resolve: (data) => data.significantFrustrationRate,
 		}),
 	}),
 });
 
 /**
- * Helper to get metrics storage instance
+ * Helper to query metrics from database
+ * Combines task metrics with native database frustration metrics
  */
-export function getMetricsStorage(): JsonlMetricsStorage {
-	return new JsonlMetricsStorage();
-}
-
-/**
- * Helper to query metrics
- * Combines JSONL-based task metrics with native database frustration metrics
- */
-export function queryMetrics(period?: "DAY" | "WEEK" | "MONTH"): MetricsResult {
-	const storage = getMetricsStorage();
+export async function queryMetrics(
+	period?: "DAY" | "WEEK" | "MONTH",
+): Promise<MetricsResult> {
 	const periodMap = {
 		DAY: "day" as const,
 		WEEK: "week" as const,
 		MONTH: "month" as const,
 	};
-	const jsonlResult = storage.queryMetrics({
+
+	// Query task metrics from database
+	const dbMetrics = await tasks.queryMetrics({
 		period: period ? periodMap[period] : undefined,
 	});
+
+	// Parse byType and byOutcome from JSON strings
+	let byType: Record<string, number> = {};
+	let byOutcome: Record<string, number> = {};
+
+	try {
+		if (dbMetrics.byType) {
+			byType = JSON.parse(dbMetrics.byType);
+		}
+	} catch {
+		// Ignore parse errors
+	}
+
+	try {
+		if (dbMetrics.byOutcome) {
+			byOutcome = JSON.parse(dbMetrics.byOutcome);
+		}
+	} catch {
+		// Ignore parse errors
+	}
+
+	// Base result from task metrics
+	const result: MetricsResult = {
+		totalTasks: dbMetrics.totalTasks,
+		completedTasks: dbMetrics.completedTasks,
+		successRate: dbMetrics.successRate,
+		averageConfidence: dbMetrics.averageConfidence ?? 0,
+		averageDurationSeconds: dbMetrics.averageDurationSeconds ?? null,
+		calibrationScore: dbMetrics.calibrationScore ?? null,
+		byType,
+		byOutcome,
+		significantFrustrations: 0,
+		significantFrustrationRate: 0,
+	};
 
 	// Try to get frustration metrics from native database
 	const native = tryGetNativeModule();
@@ -296,21 +337,34 @@ export function queryMetrics(period?: "DAY" | "WEEK" | "MONTH"): MetricsResult {
 			const frustrationMetrics = native.queryFrustrationMetrics(
 				dbPath,
 				period ? nativePeriodMap[period] : undefined,
-				jsonlResult.total_tasks,
+				dbMetrics.totalTasks,
 			);
-			// Override JSONL frustration data with native database data
-			return {
-				...jsonlResult,
-				significant_frustrations: frustrationMetrics.significantFrustrations,
-				significant_frustration_rate:
-					frustrationMetrics.significantFrustrationRate,
-				total_frustrations: frustrationMetrics.totalFrustrations,
-				frustration_rate: frustrationMetrics.frustrationRate,
-			};
+			result.significantFrustrations =
+				frustrationMetrics.significantFrustrations;
+			result.significantFrustrationRate =
+				frustrationMetrics.significantFrustrationRate;
 		} catch {
-			// Fall back to JSONL data if native fails
+			// Fall back to zero if native fails
 		}
 	}
 
-	return jsonlResult;
+	return result;
+}
+
+/**
+ * Get tasks for a session - stub for now (native list function needed)
+ * TODO: Add listTasksForSession to han-native
+ */
+export function getTasksForSession(_sessionId: string): DbTask[] {
+	// No native function to list tasks yet
+	return [];
+}
+
+/**
+ * Get active tasks for a session - stub for now
+ * TODO: Add listActiveTasksForSession to han-native
+ */
+export function getActiveTasksForSession(_sessionId: string): DbTask[] {
+	// No native function to list tasks yet
+	return [];
 }

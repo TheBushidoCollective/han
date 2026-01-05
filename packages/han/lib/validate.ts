@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
-} from "./claude-settings.ts";
+} from "./config/claude-settings.ts";
 import { getEventLogger } from "./events/logger.ts";
 import {
 	getPluginHookSettings,
@@ -1042,6 +1042,7 @@ export async function runConfiguredHook(
 		eventLogger?.logHookValidation(
 			pluginName,
 			hookName,
+			"Stop", // hookType - han hook run is used for Stop hooks
 			relativePath,
 			false, // cached
 			hookDuration,

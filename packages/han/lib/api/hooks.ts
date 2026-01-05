@@ -31,15 +31,31 @@ export interface HookExecution {
 
 /**
  * Hook event data from han_event rawJson
+ * Supports both snake_case (from JSONL storage) and camelCase formats
  */
 interface HookEventData {
-	type: "hook_run" | "hook_result";
+	type: "hook_run" | "hook_result" | "hook_execution";
 	id?: string;
 	timestamp: string;
+	// Top-level fields (from hook_execution events in JSONL)
+	hook_type?: string;
+	hook_name?: string;
+	hook_source?: string;
+	duration_ms?: number;
+	exit_code?: number;
+	passed?: boolean;
+	output?: string;
+	error?: string;
+	session_id?: string;
+	task_id?: string;
+	// Nested data fields (from hook_run/hook_result events)
 	data?: {
 		plugin?: string;
 		hook?: string;
 		hookType?: string;
+		hook_type?: string;
+		hook_name?: string;
+		hook_source?: string;
 		directory?: string;
 		success?: boolean;
 		passed?: boolean;
@@ -58,6 +74,9 @@ interface HookEventData {
 
 /**
  * Parse hook execution data from a Message with han_event type
+ * Handles multiple event formats:
+ * - hook_execution: From JSONL storage (snake_case fields at top level)
+ * - hook_result: From event logger (nested data object)
  */
 function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
 	// Try to parse the rawJson which contains the full event data
@@ -68,27 +87,46 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
 	try {
 		const event = JSON.parse(msg.rawJson) as HookEventData;
 
-		// Only process hook_result events (completed hooks with results)
-		if (event.type !== "hook_result") {
-			return null;
+		// Process hook_execution events (from JSONL storage via metrics)
+		if (event.type === "hook_execution") {
+			return {
+				id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
+				sessionId: msg.sessionId || event.session_id || null,
+				taskId: event.task_id || null,
+				hookType: event.hook_type || "unknown",
+				hookName: event.hook_name || "unknown",
+				hookSource: event.hook_source || null,
+				durationMs: event.duration_ms || 0,
+				exitCode: event.exit_code ?? 0,
+				passed: event.passed ?? true,
+				output: event.output || null,
+				error: event.error || null,
+				timestamp: msg.timestamp || event.timestamp,
+			};
 		}
 
-		const data = event.data || {};
+		// Process hook_result events (from event logger)
+		if (event.type === "hook_result") {
+			const data = event.data || {};
 
-		return {
-			id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
-			sessionId: msg.sessionId || data.session_id || data.sessionId || null,
-			taskId: data.task_id || data.taskId || null,
-			hookType: data.hookType || "unknown",
-			hookName: data.hook || data.plugin || "unknown",
-			hookSource: data.plugin || null,
-			durationMs: data.duration_ms || data.durationMs || 0,
-			exitCode: data.exit_code ?? data.exitCode ?? 0,
-			passed: data.passed ?? data.success ?? true,
-			output: data.output || null,
-			error: data.error || null,
-			timestamp: msg.timestamp || event.timestamp,
-		};
+			return {
+				id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
+				sessionId: msg.sessionId || data.session_id || data.sessionId || null,
+				taskId: data.task_id || data.taskId || null,
+				hookType:
+					data.hookType || data.hook_type || event.hook_type || "unknown",
+				hookName: data.hook || data.hook_name || data.plugin || "unknown",
+				hookSource: data.hook_source || data.plugin || null,
+				durationMs: data.duration_ms || data.durationMs || 0,
+				exitCode: data.exit_code ?? data.exitCode ?? 0,
+				passed: data.passed ?? data.success ?? true,
+				output: data.output || null,
+				error: data.error || null,
+				timestamp: msg.timestamp || event.timestamp,
+			};
+		}
+
+		return null;
 	} catch {
 		return null;
 	}

@@ -57,6 +57,8 @@ export interface HookResultEvent extends BaseEvent {
 	data: {
 		plugin: string;
 		hook: string;
+		/** Hook type (e.g., "Stop", "SessionStart") */
+		hook_type: string;
 		directory: string;
 		cached: boolean;
 		duration_ms: number;
@@ -98,6 +100,8 @@ export interface HookValidationEvent extends BaseEvent {
 		plugin: string;
 		/** Hook name (e.g., "lint", "typecheck") */
 		hook: string;
+		/** Hook type (e.g., "Stop", "SessionStart") */
+		hook_type: string;
 		/** Directory being validated */
 		directory: string;
 		/** Whether result was from cache */

@@ -62,7 +62,6 @@ export {
 	getSessionsPath,
 	getSummariesPath,
 	getSummaryFilePath,
-	HAN_MEMORY_ROOT,
 	normalizeGitRemote,
 	setMemoryRoot,
 } from "./paths.ts";

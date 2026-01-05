@@ -75,11 +75,14 @@ export function readSettingsFile(path: string): ClaudeSettings | null {
 
 /**
  * Get all settings file paths in order of precedence (lowest to highest)
+ * @param projectPath - Optional explicit project path (overrides cwd-based detection)
  */
-export function getSettingsPaths(): { scope: SettingsScope; path: string }[] {
+export function getSettingsPaths(
+	projectPath?: string,
+): { scope: SettingsScope; path: string }[] {
 	const paths: { scope: SettingsScope; path: string }[] = [];
 	const configDir = getClaudeConfigDir();
-	const projectDir = getProjectDir();
+	const projectDir = projectPath || getProjectDir();
 
 	// 1. User settings (lowest priority)
 	if (configDir) {
@@ -162,9 +165,10 @@ function mergeMarketplaces(
  * 3. Local settings (.claude/settings.local.json)
  * 4. Enterprise settings (managed-settings.json) - highest priority
  *
+ * @param projectPath - Optional explicit project path for settings lookup
  * @see https://code.claude.com/docs/en/settings
  */
-export function getMergedPluginsAndMarketplaces(): {
+export function getMergedPluginsAndMarketplaces(projectPath?: string): {
 	plugins: Map<string, string>;
 	marketplaces: Map<string, MarketplaceConfig>;
 } {
@@ -172,7 +176,7 @@ export function getMergedPluginsAndMarketplaces(): {
 	const marketplaces = new Map<string, MarketplaceConfig>();
 
 	// Process settings in order of precedence (lowest to highest)
-	for (const { path } of getSettingsPaths()) {
+	for (const { path } of getSettingsPaths(projectPath)) {
 		const settings = readSettingsFile(path);
 		if (settings) {
 			mergeMarketplaces(marketplaces, settings);

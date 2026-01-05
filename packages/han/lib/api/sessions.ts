@@ -49,7 +49,7 @@ function isTempFolderPath(path: string): boolean {
  * A message from a Claude Code session
  */
 export interface SessionMessage {
-	id?: string; // The message UUID from JSONL (for sentiment matching)
+	id: string; // The message UUID from JSONL (for sentiment matching)
 	type: string;
 	role?: string;
 	content?: string | Array<{ type: string; text?: string }>;

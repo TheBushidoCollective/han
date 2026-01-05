@@ -1,4 +1,13 @@
+/**
+ * MCP Task Tools
+ *
+ * Provides task tracking tools via MCP protocol.
+ * Uses the unified database API for storage.
+ */
+
+import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
+import { tasks } from "../../db/index.ts";
 import { getOrCreateEventLogger } from "../../events/logger.ts";
 import type {
 	TaskComplexity,
@@ -6,14 +15,6 @@ import type {
 	TaskType,
 } from "../../events/types.ts";
 import { isMetricsEnabled } from "../../han-settings.ts";
-import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
-import type {
-	CompleteTaskParams,
-	FailTaskParams,
-	QueryMetricsParams,
-	StartTaskParams,
-	UpdateTaskParams,
-} from "../../metrics/types.ts";
 import { recordTaskCompletion } from "../../telemetry/index.ts";
 
 interface JsonRpcRequest {
@@ -53,30 +54,10 @@ interface McpTool {
 	};
 }
 
-// Lazy-load storage instance
-let storage: JsonlMetricsStorage | null = null;
-
-function getStorage(): JsonlMetricsStorage {
-	if (!storage) {
-		storage = new JsonlMetricsStorage();
-	}
-	return storage;
-}
-
 /**
- * Reset the storage singleton - useful for testing
+ * Define task tracking tools
  */
-export function resetMetricsStorage(): void {
-	if (storage) {
-		storage.close();
-		storage = null;
-	}
-}
-
-/**
- * Define all metrics tools
- */
-export const METRICS_TOOLS: McpTool[] = [
+export const TASK_TOOLS: McpTool[] = [
 	{
 		name: "start_task",
 		description:
@@ -91,6 +72,11 @@ export const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				description: {
 					type: "string",
 					description: "Clear description of the task being performed",
@@ -105,13 +91,8 @@ export const METRICS_TOOLS: McpTool[] = [
 					enum: ["simple", "moderate", "complex"],
 					description: "Optional estimated complexity of the task",
 				},
-				session_id: {
-					type: "string",
-					description:
-						"Session ID to associate this task with. Available from Claude Code context.",
-				},
 			},
-			required: ["description", "type", "session_id"],
+			required: ["session_id", "description", "type"],
 		},
 	},
 	{
@@ -128,6 +109,11 @@ export const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -141,7 +127,7 @@ export const METRICS_TOOLS: McpTool[] = [
 					description: "Progress notes or observations",
 				},
 			},
-			required: ["task_id"],
+			required: ["session_id", "task_id"],
 		},
 	},
 	{
@@ -158,6 +144,11 @@ export const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -188,7 +179,7 @@ export const METRICS_TOOLS: McpTool[] = [
 					description: "Optional completion notes",
 				},
 			},
-			required: ["task_id", "outcome", "confidence"],
+			required: ["session_id", "task_id", "outcome", "confidence"],
 		},
 	},
 	{
@@ -205,6 +196,11 @@ export const METRICS_TOOLS: McpTool[] = [
 		inputSchema: {
 			type: "object",
 			properties: {
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Get this from the CLAUDE_SESSION_ID environment variable in your Claude Code session.",
+				},
 				task_id: {
 					type: "string",
 					description: "The task ID returned from start_task",
@@ -229,95 +225,7 @@ export const METRICS_TOOLS: McpTool[] = [
 					description: "Optional additional notes",
 				},
 			},
-			required: ["task_id", "reason"],
-		},
-	},
-	{
-		name: "query_metrics",
-		description:
-			"Query task metrics and performance data. Use this to generate reports or analyze agent performance over time.",
-		annotations: {
-			title: "Query Metrics",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				period: {
-					type: "string",
-					enum: ["day", "week", "month"],
-					description: "Optional time period to filter by",
-				},
-				task_type: {
-					type: "string",
-					enum: ["implementation", "fix", "refactor", "research"],
-					description: "Optional filter by task type",
-				},
-				outcome: {
-					type: "string",
-					enum: ["success", "partial", "failure"],
-					description: "Optional filter by outcome",
-				},
-			},
-		},
-	},
-	{
-		name: "query_hook_metrics",
-		description:
-			"Query hook execution statistics and failure patterns. Use this to understand which hooks fail frequently and need attention.",
-		annotations: {
-			title: "Query Hook Metrics",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				period: {
-					type: "string",
-					enum: ["day", "week", "month"],
-					description: "Time period to analyze (default: week)",
-				},
-				hook_name: {
-					type: "string",
-					description: "Optional filter by specific hook name",
-				},
-				min_failure_rate: {
-					type: "number",
-					description: "Optional minimum failure rate (0-100) to include",
-				},
-			},
-		},
-	},
-	{
-		name: "query_session_metrics",
-		description:
-			"Query session-level statistics and trends. Use this to understand performance across multiple work sessions.",
-		annotations: {
-			title: "Query Session Metrics",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				period: {
-					type: "string",
-					enum: ["day", "week", "month"],
-					description: "Time period to analyze (default: week)",
-				},
-				limit: {
-					type: "number",
-					description: "Maximum number of sessions to return (default: 10)",
-				},
-			},
+			required: ["session_id", "task_id", "reason"],
 		},
 	},
 ];
@@ -329,7 +237,7 @@ function handleInitialize(): unknown {
 			tools: {},
 		},
 		serverInfo: {
-			name: "han-metrics",
+			name: "han-task",
 			version: "1.0.0",
 		},
 	};
@@ -341,7 +249,7 @@ export function handleToolsList(): unknown {
 		return { tools: [] };
 	}
 	return {
-		tools: METRICS_TOOLS,
+		tools: TASK_TOOLS,
 	};
 }
 
@@ -367,157 +275,32 @@ export async function handleToolsCall(params: {
 
 		switch (params.name) {
 			case "start_task": {
-				const taskParams = args as unknown as StartTaskParams;
-				const result = getStorage().startTask(taskParams);
+				const sessionId = args.session_id as string;
+				const description = args.description as string;
+				const taskType = args.type as string;
+				const complexity = args.estimated_complexity as string | undefined;
 
-				// Log Han event for task start (event-sourcing)
+				// Generate a unique task ID
+				const taskId = randomUUID();
+
+				// Create task in database
+				const task = await tasks.create({
+					taskId,
+					sessionId,
+					description,
+					taskType,
+					estimatedComplexity: complexity,
+				});
+
+				// Log Han event for task start
 				const logger = getOrCreateEventLogger();
 				if (logger) {
 					logger.logTaskStart(
-						result.task_id,
-						taskParams.description,
-						taskParams.type as TaskType,
-						taskParams.estimated_complexity as TaskComplexity | undefined,
+						task.taskId,
+						description,
+						taskType as TaskType,
+						complexity as TaskComplexity | undefined,
 					);
-				}
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result, null, 2),
-						},
-					],
-				};
-			}
-
-			case "update_task": {
-				const taskParams = args as unknown as UpdateTaskParams;
-				const result = getStorage().updateTask(taskParams);
-
-				// Log Han event for task update (event-sourcing)
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					logger.logTaskUpdate(
-						taskParams.task_id,
-						taskParams.status,
-						taskParams.notes,
-					);
-				}
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result, null, 2),
-						},
-					],
-				};
-			}
-
-			case "complete_task": {
-				const taskParams = args as unknown as CompleteTaskParams;
-				const result = getStorage().completeTask(taskParams);
-
-				// Log Han event for task complete (event-sourcing)
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					// Calculate duration from result if available
-					const durationSeconds =
-						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
-					logger.logTaskComplete(
-						taskParams.task_id,
-						taskParams.outcome as TaskOutcome,
-						taskParams.confidence,
-						durationSeconds,
-						taskParams.files_modified,
-						taskParams.tests_added,
-						taskParams.notes,
-					);
-				}
-
-				// Record OTEL telemetry for task completion
-				recordTaskCompletion(
-					(result as { type?: string })?.type || "unknown",
-					taskParams.outcome,
-					taskParams.confidence,
-				);
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result, null, 2),
-						},
-					],
-				};
-			}
-
-			case "fail_task": {
-				const taskParams = args as unknown as FailTaskParams;
-				const result = getStorage().failTask(taskParams);
-
-				// Log Han event for task fail (event-sourcing)
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					const durationSeconds =
-						(result as { duration_seconds?: number })?.duration_seconds ?? 0;
-					logger.logTaskFail(
-						taskParams.task_id,
-						taskParams.reason,
-						durationSeconds,
-						taskParams.confidence,
-						taskParams.attempted_solutions,
-						taskParams.notes,
-					);
-				}
-
-				// Record OTEL telemetry for task failure
-				recordTaskCompletion(
-					(result as { type?: string })?.type || "unknown",
-					"failure",
-					taskParams.confidence || 0,
-				);
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result, null, 2),
-						},
-					],
-				};
-			}
-
-			case "query_metrics": {
-				const taskParams = args as unknown as QueryMetricsParams;
-				const result = getStorage().queryMetrics(taskParams);
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result, null, 2),
-						},
-					],
-				};
-			}
-
-			case "query_hook_metrics": {
-				const period =
-					(args.period as "day" | "week" | "month" | undefined) || "week";
-				const hook_name = args.hook_name as string | undefined;
-				const min_failure_rate = args.min_failure_rate as number | undefined;
-
-				let hooks = getStorage().getHookFailureStats(period);
-
-				// Filter by hook name if provided
-				if (hook_name) {
-					hooks = hooks.filter((h) => h.name === hook_name);
-				}
-
-				// Filter by minimum failure rate if provided
-				if (min_failure_rate !== undefined) {
-					hooks = hooks.filter((h) => h.failureRate >= min_failure_rate);
 				}
 
 				return {
@@ -526,9 +309,11 @@ export async function handleToolsCall(params: {
 							type: "text",
 							text: JSON.stringify(
 								{
-									hooks,
-									period,
-									total_hooks: hooks.length,
+									task_id: task.taskId,
+									session_id: sessionId,
+									description: task.description,
+									type: task.taskType,
+									started_at: task.startedAt,
 								},
 								null,
 								2,
@@ -538,18 +323,180 @@ export async function handleToolsCall(params: {
 				};
 			}
 
-			case "query_session_metrics": {
-				const period =
-					(args.period as "day" | "week" | "month" | undefined) || "week";
-				const limit = (args.limit as number | undefined) || 10;
+			case "update_task": {
+				const taskId = args.task_id as string;
+				const status = args.status as string | undefined;
+				const notes = args.notes as string | undefined;
 
-				const result = getStorage().querySessionMetrics(period, limit);
+				// Get existing task
+				const task = await tasks.get(taskId);
+				if (!task) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Task not found: ${taskId}`,
+							},
+						],
+						isError: true,
+					};
+				}
+
+				// Log Han event for task update
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					logger.logTaskUpdate(taskId, status, notes);
+				}
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(result, null, 2),
+							text: JSON.stringify(
+								{
+									task_id: taskId,
+									status: status || task.outcome || "in_progress",
+									notes: notes || "Update recorded",
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "complete_task": {
+				const taskId = args.task_id as string;
+				const outcome = args.outcome as string;
+				const confidence = args.confidence as number;
+				const filesModified = args.files_modified as string[] | undefined;
+				const testsAdded = args.tests_added as number | undefined;
+				const notes = args.notes as string | undefined;
+
+				// Complete task in database
+				const task = await tasks.complete({
+					taskId,
+					outcome,
+					confidence,
+					filesModified,
+					testsAdded,
+					notes,
+				});
+
+				// Calculate duration
+				const durationSeconds =
+					task.completedAt && task.startedAt
+						? Math.floor(
+								(new Date(task.completedAt).getTime() -
+									new Date(task.startedAt).getTime()) /
+									1000,
+							)
+						: 0;
+
+				// Log Han event for task complete
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					logger.logTaskComplete(
+						taskId,
+						outcome as TaskOutcome,
+						confidence,
+						durationSeconds,
+						filesModified,
+						testsAdded,
+						notes,
+					);
+				}
+
+				// Record OTEL telemetry
+				recordTaskCompletion(
+					task.taskType || "unknown",
+					outcome as "success" | "partial" | "failure",
+					confidence,
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									task_id: taskId,
+									outcome,
+									confidence,
+									duration_seconds: durationSeconds,
+									status: "completed",
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "fail_task": {
+				const taskId = args.task_id as string;
+				const reason = args.reason as string;
+				const confidence = args.confidence as number | undefined;
+				const attemptedSolutions = args.attempted_solutions as
+					| string[]
+					| undefined;
+				const notes = args.notes as string | undefined;
+
+				// Fail task in database
+				const task = await tasks.fail({
+					taskId,
+					reason,
+					confidence,
+					attemptedSolutions,
+					notes,
+				});
+
+				// Calculate duration
+				const durationSeconds =
+					task.completedAt && task.startedAt
+						? Math.floor(
+								(new Date(task.completedAt).getTime() -
+									new Date(task.startedAt).getTime()) /
+									1000,
+							)
+						: 0;
+
+				// Log Han event for task fail
+				const logger = getOrCreateEventLogger();
+				if (logger) {
+					logger.logTaskFail(
+						taskId,
+						reason,
+						durationSeconds,
+						confidence,
+						attemptedSolutions,
+						notes,
+					);
+				}
+
+				// Record OTEL telemetry
+				recordTaskCompletion(
+					task.taskType || "unknown",
+					"failure",
+					confidence || 0,
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									task_id: taskId,
+									reason,
+									duration_seconds: durationSeconds,
+									status: "failed",
+								},
+								null,
+								2,
+							),
 						},
 					],
 				};
@@ -586,10 +533,8 @@ async function handleRequest(
 				result = handleInitialize();
 				break;
 			case "initialized":
-				// Notification, no response needed
 				return { jsonrpc: "2.0", id: request.id, result: {} };
 			case "ping":
-				// Simple ping/pong for health checks
 				result = {};
 				break;
 			case "tools/list":
@@ -635,10 +580,9 @@ function sendResponse(response: JsonRpcResponse): void {
 }
 
 /**
- * Start the metrics MCP server
+ * Start the task MCP server
  */
-export async function startMetricsMcpServer(): Promise<void> {
-	// Setup signal handlers for graceful shutdown
+export async function startTaskMcpServer(): Promise<void> {
 	process.on("SIGINT", () => process.exit(0));
 	process.on("SIGTERM", () => process.exit(0));
 
@@ -654,12 +598,10 @@ export async function startMetricsMcpServer(): Promise<void> {
 			const request = JSON.parse(line) as JsonRpcRequest;
 			const response = await handleRequest(request);
 
-			// Only send response if there's an id (not a notification)
 			if (request.id !== undefined) {
 				sendResponse(response);
 			}
 		} catch (error) {
-			// JSON parse error
 			sendResponse({
 				jsonrpc: "2.0",
 				error: {

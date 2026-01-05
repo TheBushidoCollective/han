@@ -12,7 +12,7 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
-} from "./claude-settings.ts";
+} from "./config/claude-settings.ts";
 import {
 	buildManifest,
 	type CacheManifest,

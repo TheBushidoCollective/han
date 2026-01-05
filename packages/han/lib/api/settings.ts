@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 
 export interface ClaudeSettings {
 	enabledPlugins: Record<string, boolean>;
@@ -94,20 +95,6 @@ export interface SettingsSummary {
 		metricsEnabled: boolean;
 		pluginConfigCount: number;
 	};
-}
-
-/**
- * Get Claude config directory
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDir) {
-		throw new Error("Could not determine home directory");
-	}
-	return join(homeDir, ".claude");
 }
 
 /**
