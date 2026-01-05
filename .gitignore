@@ -11,4 +11,4 @@ packages/han-native/*.node
 playwright-report
 .features-gen
 test-results
-out
+outtsconfig.tsbuildinfo

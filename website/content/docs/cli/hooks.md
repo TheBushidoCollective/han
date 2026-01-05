@@ -87,9 +87,9 @@ Hooks are defined in plugin `han-plugin.yml` files:
 hooks:
   test:
     command: bun test --only-failures
-    dirsWith: [bun.lock, bun.lockb]
+    dirs_with: [bun.lock, bun.lockb]
     description: Run Bun tests
-    ifChanged: ["**/*.ts", "**/*.test.ts"]
+    if_changed: ["**/*.ts", "**/*.test.ts"]
 ```
 
 When you run `han hook run jutsu-bun test`, Han:

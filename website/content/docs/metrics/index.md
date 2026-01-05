@@ -107,6 +107,7 @@ Returns aggregated statistics including success rates by confidence bucket, enab
 All metrics are stored locally in SQLite at `~/.claude/han/han.db`. **No data leaves your machine.** You control it entirely.
 
 The database contains tables for:
+
 - `tasks` - Task tracking with descriptions, outcomes, and confidence
 - `hook_executions` - Hook run results with timing and exit codes
 - `frustration_events` - User sentiment and frustration detection

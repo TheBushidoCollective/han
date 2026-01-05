@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import YAML from "yaml";
 import {
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
@@ -172,22 +173,22 @@ export default async function PluginPage({
 	const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
 	const tags = pluginJson.keywords || [];
 
-	// Load han-config.json if it exists (for hook configuration)
-	const hanConfigPath = path.join(pluginDir, "han-config.json");
+	// Load han-plugin.yml if it exists (for hook configuration)
+	const hanPluginPath = path.join(pluginDir, "han-plugin.yml");
 	let hanConfig: {
 		hooks?: Record<
 			string,
 			{
 				command?: string;
-				dirsWith?: string[];
-				testDir?: string;
-				ifChanged?: string[];
+				dirs_with?: string[];
+				dir_test?: string;
+				if_changed?: string[];
 			}
 		>;
 	} | null = null;
-	if (fs.existsSync(hanConfigPath)) {
+	if (fs.existsSync(hanPluginPath)) {
 		try {
-			hanConfig = JSON.parse(fs.readFileSync(hanConfigPath, "utf-8"));
+			hanConfig = YAML.parse(fs.readFileSync(hanPluginPath, "utf-8"));
 		} catch {
 			hanConfig = null;
 		}

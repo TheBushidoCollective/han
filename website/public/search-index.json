@@ -71,8 +71,7 @@
     "path": "/plugins/hashi/hashi-agent-sop",
     "components": [
       "skill",
-      "command",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -289,7 +288,8 @@
     "components": [
       "skill",
       "command",
-      "hook"
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -410,9 +410,7 @@
     ],
     "path": "/plugins/hashi/hashi-clickup",
     "components": [
-      "command",
-      "hook",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -841,8 +839,7 @@
     ],
     "path": "/plugins/hashi/hashi-figma",
     "components": [
-      "command",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -929,8 +926,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-git-storytelling",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -949,8 +945,7 @@
     ],
     "path": "/plugins/hashi/hashi-github",
     "components": [
-      "command",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -970,8 +965,7 @@
     ],
     "path": "/plugins/hashi/hashi-gitlab",
     "components": [
-      "command",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -1031,8 +1025,7 @@
     "path": "/plugins/jutsu/jutsu-gluestack",
     "components": [
       "skill",
-      "hook",
-      "mcp"
+      "hook"
     ]
   },
   {
@@ -1202,7 +1195,6 @@
     "path": "/plugins/hashi/hashi-jira",
     "components": [
       "command",
-      "hook",
       "mcp"
     ]
   },
@@ -1305,9 +1297,7 @@
     ],
     "path": "/plugins/hashi/hashi-linear",
     "components": [
-      "command",
-      "hook",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -1532,6 +1522,24 @@
     ]
   },
   {
+    "id": "hashi-notion",
+    "name": "hashi-notion",
+    "description": "Notion integration providing workspace search, page management, database operations, and AI-optimized content access via Notion's hosted MCP server.",
+    "category": "hashi",
+    "tags": [
+      "notion",
+      "mcp",
+      "knowledge-management",
+      "pages",
+      "databases",
+      "workspace",
+      "documentation",
+      "productivity"
+    ],
+    "path": "/plugins/hashi/hashi-notion",
+    "components": []
+  },
+  {
     "id": "jutsu-npm",
     "name": "jutsu-npm",
     "description": "NPM package manager skills with dependency validation hooks.",
@@ -1711,8 +1719,7 @@
     ],
     "path": "/plugins/hashi/hashi-playwright-mcp",
     "components": [
-      "agent",
-      "mcp"
+      "agent"
     ]
   },
   {
@@ -1931,6 +1938,24 @@
     ]
   },
   {
+    "id": "hashi-reddit",
+    "name": "hashi-reddit",
+    "description": "MCP server configuration for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "reddit",
+      "social-media",
+      "content",
+      "posts",
+      "comments",
+      "subreddits",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-reddit",
+    "components": []
+  },
+  {
     "id": "jutsu-relay",
     "name": "jutsu-relay",
     "description": "Advanced Relay GraphQL framework skills for React applications",
@@ -2123,8 +2148,7 @@
     ],
     "path": "/plugins/hashi/hashi-sentry",
     "components": [
-      "command",
-      "mcp"
+      "command"
     ]
   },
   {
@@ -2233,6 +2257,27 @@
       "concurrency"
     ],
     "path": "/plugins/jutsu/jutsu-swift",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-syncpack",
+    "name": "jutsu-syncpack",
+    "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
+    "category": "jutsu",
+    "tags": [
+      "syncpack",
+      "monorepo",
+      "dependencies",
+      "version-management",
+      "npm",
+      "yarn",
+      "pnpm",
+      "workspaces"
+    ],
+    "path": "/plugins/jutsu/jutsu-syncpack",
     "components": [
       "skill",
       "hook"

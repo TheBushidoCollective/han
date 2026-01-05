@@ -142,16 +142,14 @@ plugins:
 
 ## Plugin Configuration Keys
 
-Han supports both YAML (snake_case) and legacy JSON (camelCase) formats:
+Han uses YAML configuration with snake_case keys:
 
-| YAML (Preferred) | JSON (Legacy) | Description |
-|------------------|---------------|-------------|
-| `dirs_with` | `dirsWith` | Directory detection patterns |
-| `dir_test` | `dirTest` | Directory test command |
-| `if_changed` | `ifChanged` | File change patterns |
-| `idle_timeout` | `idleTimeout` | File stability timeout |
-
-**Note:** When both `han.yml` and `han-config.json` exist, YAML takes precedence.
+| Key | Description |
+|-----|-------------|
+| `dirs_with` | Directory detection patterns |
+| `dir_test` | Directory test command |
+| `if_changed` | File change patterns |
+| `idle_timeout` | File stability timeout |
 
 ## Example Configurations
 

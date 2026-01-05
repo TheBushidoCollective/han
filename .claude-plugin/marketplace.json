@@ -411,6 +411,21 @@
       "keywords": ["graphql", "api", "queries"]
     },
     {
+      "name": "jutsu-graphql-inspector",
+      "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
+      "source": "./jutsu/jutsu-graphql-inspector",
+      "category": "Technique",
+      "keywords": [
+        "graphql",
+        "graphql-inspector",
+        "schema",
+        "validation",
+        "breaking-changes",
+        "diff",
+        "operations"
+      ]
+    },
+    {
       "name": "jutsu-helm",
       "description": "Helm chart validation and best practices for Kubernetes package management",
       "source": "./jutsu/jutsu-helm",
@@ -796,6 +811,22 @@
         "enforcement",
         "stories",
         "documentation"
+      ]
+    },
+    {
+      "name": "jutsu-syncpack",
+      "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
+      "source": "./jutsu/jutsu-syncpack",
+      "category": "Technique",
+      "keywords": [
+        "syncpack",
+        "monorepo",
+        "dependencies",
+        "version-management",
+        "npm",
+        "yarn",
+        "pnpm",
+        "workspaces"
       ]
     },
     {
