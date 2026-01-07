@@ -68,46 +68,44 @@ validate_file_locations() {
 		error "$plugin_dir/hooks.json: Should be in hooks/hooks.json"
 	fi
 
-	# Check for han-config.json in hooks/ (wrong location - should be at plugin root)
-	if [ -f "$plugin_dir/hooks/han-config.json" ]; then
-		error "$plugin_dir/hooks/han-config.json: Should be at plugin root ($plugin_dir/han-config.json)"
+	# Check for deprecated han-config.json (should use han-plugin.yml)
+	if [ -f "$plugin_dir/han-config.json" ]; then
+		error "$plugin_dir/han-config.json: Deprecated - migrate to han-plugin.yml"
 	fi
 }
 
-# Validate han-config.json structure (at plugin root)
-validate_han_config() {
+# Validate han-plugin.yml structure (at plugin root)
+validate_han_plugin_yml() {
 	local plugin_dir="$1"
-	local han_config="$plugin_dir/han-config.json"
+	local han_plugin="$plugin_dir/han-plugin.yml"
 
-	if [ ! -f "$han_config" ]; then
-		return # han-config.json is optional
+	if [ ! -f "$han_plugin" ]; then
+		return # han-plugin.yml is optional
 	fi
 
-	# Check if file is valid JSON
-	if ! jq empty "$han_config" 2>/dev/null; then
-		error "$han_config: Invalid JSON"
-		return
-	fi
+	# Check if file is valid YAML (using yq if available, otherwise skip deep validation)
+	if command -v yq &>/dev/null; then
+		if ! yq '.' "$han_plugin" >/dev/null 2>&1; then
+			error "$han_plugin: Invalid YAML"
+			return
+		fi
 
-	# Check for dirsWith as string instead of array
-	local dirs_with_strings
-	dirs_with_strings=$(jq -r '.. | objects | select(has("dirsWith")) | select(.dirsWith | type == "string") | .dirsWith' "$han_config" 2>/dev/null)
-	if [ -n "$dirs_with_strings" ]; then
-		error "$han_config: dirsWith must be an array, not a string (found: \"$dirs_with_strings\")"
-	fi
+		# Check that hooks object exists
+		local has_hooks
+		has_hooks=$(yq '.hooks // empty' "$han_plugin" 2>/dev/null)
+		if [ -z "$has_hooks" ]; then
+			error "$han_plugin: Missing 'hooks' object"
+		fi
 
-	# Check that hooks object exists
-	if ! jq -e '.hooks' "$han_config" >/dev/null 2>&1; then
-		error "$han_config: Missing 'hooks' object"
-	fi
-
-	# Validate each hook has required 'command' field
-	local hooks_without_command
-	hooks_without_command=$(jq -r '.hooks | to_entries[] | select(.value.command == null) | .key' "$han_config" 2>/dev/null)
-	if [ -n "$hooks_without_command" ]; then
-		while IFS= read -r hook_name; do
-			error "$han_config: Hook '$hook_name' missing required 'command' field"
-		done <<<"$hooks_without_command"
+		# Validate each hook has required 'command' field
+		local hooks_without_command
+		hooks_without_command=$(yq '.hooks | to_entries[] | select(.value.command == null) | .key' "$han_plugin" 2>/dev/null)
+		if [ -n "$hooks_without_command" ]; then
+			while IFS= read -r hook_name; do
+				[ -z "$hook_name" ] && continue
+				error "$han_plugin: Hook '$hook_name' missing required 'command' field"
+			done <<<"$hooks_without_command"
+		fi
 	fi
 }
 
@@ -270,7 +268,7 @@ main() {
 		validate_claude_plugin_dir "$plugin_dir"
 		validate_file_locations "$plugin_dir"
 		validate_plugin_json "$plugin_dir"
-		validate_han_config "$plugin_dir"
+		validate_han_plugin_yml "$plugin_dir"
 		validate_hooks_json "$plugin_dir"
 		validate_skills "$plugin_dir"
 		validate_marketplace_registration "$plugin_dir"

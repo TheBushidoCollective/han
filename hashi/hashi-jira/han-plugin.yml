@@ -1,6 +1,25 @@
 # hashi-jira plugin configuration
 # This plugin provides Jira integration via Atlassian MCP server
 
+# MCP server definition (managed by Han, not exposed to Claude Code)
+mcp_servers:
+  atlassian:
+    name: atlassian
+    description: Jira and Confluence integration via Atlassian MCP
+    command: npx
+    args:
+      - "-y"
+      - mcp-remote
+      - https://mcp.atlassian.com/v1/sse
+    env: {}
+    capabilities:
+      - category: Project Management
+        summary: Jira ticket management, JQL search, Confluence access
+        examples:
+          - Search for tickets assigned to me
+          - Create a new ticket for the bug
+          - Update ticket status
+
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
 

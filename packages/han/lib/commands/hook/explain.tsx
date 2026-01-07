@@ -9,25 +9,23 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 	type SettingsScope,
-} from "../../claude-settings.ts";
-import { HookExplainUI, type HookSource } from "../../hook-explain-ui.tsx";
+} from "../../config/claude-settings.ts";
+import {
+	getHookEvents,
+	HookExplainUI,
+	type HookSource,
+	loadPluginConfig,
+	type PluginHookDefinition,
+} from "../../hooks/index.ts";
 
 /**
- * Hook entry from Claude Code settings or plugin hooks.json
+ * Hook entry from Claude Code settings (legacy format)
  */
-interface HookEntry {
+interface LegacyHookEntry {
 	type: "command" | "prompt";
 	command?: string;
 	prompt?: string;
 	timeout?: number;
-}
-
-interface HookGroup {
-	hooks: HookEntry[];
-}
-
-interface PluginHooks {
-	hooks: Record<string, HookGroup[]>;
 }
 
 /**
@@ -41,6 +39,7 @@ function findPluginInMarketplace(
 		join(marketplaceRoot, "jutsu", pluginName),
 		join(marketplaceRoot, "do", pluginName),
 		join(marketplaceRoot, "hashi", pluginName),
+		join(marketplaceRoot, "core"),
 		join(marketplaceRoot, pluginName),
 	];
 
@@ -113,38 +112,9 @@ function getPluginDir(
 }
 
 /**
- * Load a plugin's hooks.json
+ * Parse legacy hooks from a hooks object (from settings.hooks)
  */
-function loadPluginHooks(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
-): { hooks: PluginHooks; pluginRoot: string } | null {
-	const pluginRoot = getPluginDir(pluginName, marketplace, marketplaceConfig);
-	if (!pluginRoot) {
-		return null;
-	}
-
-	const hooksPath = join(pluginRoot, "hooks", "hooks.json");
-	if (!existsSync(hooksPath)) {
-		return null;
-	}
-
-	try {
-		const content = readFileSync(hooksPath, "utf-8");
-		return {
-			hooks: JSON.parse(content) as PluginHooks,
-			pluginRoot,
-		};
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Parse hooks from a hooks object (either from settings.hooks or hooks.json)
- */
-function parseHooksObject(
+function parseLegacyHooksObject(
 	hooksObj: Record<string, unknown>,
 	source: string,
 	scope?: SettingsScope,
@@ -161,11 +131,17 @@ function parseHooksObject(
 				"hooks" in group &&
 				Array.isArray(group.hooks)
 			) {
+				// Convert legacy format to new format
+				const hooks = (group.hooks as LegacyHookEntry[]).map((h) => ({
+					command: h.command || h.prompt || "",
+					description: h.type === "prompt" ? "Prompt hook" : undefined,
+				}));
+
 				sources.push({
 					source,
 					scope,
 					hookType,
-					hooks: group.hooks as HookEntry[],
+					hooks,
 				});
 			}
 		}
@@ -175,7 +151,7 @@ function parseHooksObject(
 }
 
 /**
- * Get hooks from Claude Code settings files and hooks.json files
+ * Get hooks from Claude Code settings files (legacy format)
  */
 function getSettingsHooks(): HookSource[] {
 	const sources: HookSource[] = [];
@@ -185,7 +161,7 @@ function getSettingsHooks(): HookSource[] {
 		const settings = readSettingsFile(path);
 		if (settings?.hooks) {
 			sources.push(
-				...parseHooksObject(
+				...parseLegacyHooksObject(
 					settings.hooks as Record<string, unknown>,
 					path,
 					scope,
@@ -206,7 +182,7 @@ function getSettingsHooks(): HookSource[] {
 				// hooks.json can have hooks at root level or under "hooks" key
 				if (hooksJson.hooks && typeof hooksJson.hooks === "object") {
 					sources.push(
-						...parseHooksObject(
+						...parseLegacyHooksObject(
 							hooksJson.hooks as Record<string, unknown>,
 							hooksJsonPath,
 							scope,
@@ -214,7 +190,9 @@ function getSettingsHooks(): HookSource[] {
 					);
 				} else {
 					// Hooks directly at root level
-					sources.push(...parseHooksObject(hooksJson, hooksJsonPath, scope));
+					sources.push(
+						...parseLegacyHooksObject(hooksJson, hooksJsonPath, scope),
+					);
 				}
 			} catch {
 				// Invalid JSON, skip
@@ -226,7 +204,7 @@ function getSettingsHooks(): HookSource[] {
 }
 
 /**
- * Get hooks from installed Han plugins
+ * Get hooks from installed Han plugins (from han-plugin.yml)
  */
 function getPluginHooks(): HookSource[] {
 	const sources: HookSource[] = [];
@@ -234,22 +212,46 @@ function getPluginHooks(): HookSource[] {
 
 	for (const [pluginName, marketplace] of plugins.entries()) {
 		const marketplaceConfig = marketplaces.get(marketplace);
-		const result = loadPluginHooks(pluginName, marketplace, marketplaceConfig);
+		const pluginRoot = getPluginDir(pluginName, marketplace, marketplaceConfig);
 
-		if (!result?.hooks?.hooks) continue;
+		if (!pluginRoot) continue;
 
-		const { hooks: pluginHooks, pluginRoot } = result;
+		const config = loadPluginConfig(pluginRoot, false);
+		if (!config?.hooks) continue;
 
-		for (const [hookType, hookGroups] of Object.entries(pluginHooks.hooks)) {
-			for (const group of hookGroups) {
-				sources.push({
-					source: pluginRoot,
-					pluginName,
-					marketplace,
-					hookType,
-					hooks: group.hooks,
-				});
+		// Group hooks by event type
+		const hooksByEvent = new Map<
+			string,
+			Array<{ name: string; def: PluginHookDefinition }>
+		>();
+
+		for (const [hookName, hookDef] of Object.entries(config.hooks)) {
+			const events = getHookEvents(hookDef);
+			for (const event of events) {
+				const existing = hooksByEvent.get(event) || [];
+				existing.push({ name: hookName, def: hookDef });
+				hooksByEvent.set(event, existing);
 			}
+		}
+
+		// Create HookSource for each event type
+		for (const [eventType, hooks] of hooksByEvent.entries()) {
+			sources.push({
+				source: pluginRoot,
+				pluginName,
+				marketplace,
+				hookType: eventType,
+				hooks: hooks.map(({ name, def }) => ({
+					name,
+					command: def.command,
+					description: def.description,
+					dirsWith: def.dirsWith,
+					ifChanged: def.ifChanged,
+					toolFilter: def.toolFilter,
+					tip: def.tip,
+					dependsOn: def.dependsOn,
+				})),
+			});
 		}
 	}
 
@@ -282,7 +284,7 @@ export function registerHookExplain(hookCommand: Command): void {
 		.command("explain [hookType]")
 		.description(
 			"Show comprehensive information about configured hooks.\n" +
-				"By default, shows only Han plugin hooks.\n" +
+				"By default, shows only Han plugin hooks (from han-plugin.yml).\n" +
 				"Use --all to include hooks from Claude Code settings.\n\n" +
 				"Examples:\n" +
 				"  han hook explain           # Show Han plugin hooks\n" +

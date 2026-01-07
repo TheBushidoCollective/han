@@ -136,7 +136,7 @@ Use YAML frontmatter to target specific paths:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts", "src/services/**/*.ts"]
+paths: ["src/api/**/*.ts", "src/services/**/*.ts"]
 ---
 
 # API Development Rules
@@ -236,7 +236,7 @@ Imported files are treated as direct context.
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Development Rules
@@ -266,7 +266,7 @@ globs: ["src/api/**/*.ts"]
 
 ```markdown
 ---
-globs: ["**/*.test.ts", "**/*.spec.ts"]
+paths: ["**/*.test.ts", "**/*.spec.ts"]
 ---
 
 # Testing Rules
@@ -294,7 +294,7 @@ globs: ["**/*.test.ts", "**/*.spec.ts"]
 
 ```markdown
 ---
-globs: ["src/components/**/*.tsx"]
+paths: ["src/components/**/*.tsx"]
 ---
 
 # Component Rules

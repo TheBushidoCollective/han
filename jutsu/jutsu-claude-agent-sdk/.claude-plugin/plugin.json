@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "claude",
     "agent-sdk",

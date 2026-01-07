@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
 	detectPluginsByMarkers,
 	type PluginWithDetection,
-} from "../lib/marker-detection.ts";
+} from "../lib/validation/index.ts";
 
 describe("marker-detection", () => {
 	let testDir: string;

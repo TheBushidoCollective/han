@@ -1,0 +1,15 @@
+hooks:
+  compile:
+    command: "npx relay-compiler"
+    dirs_with:
+      - "relay.config.js"
+      - "relay.config.json"
+      - "relay.config.cjs"
+      - "relay.config.mjs"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.graphql"
+    tip: "Use the `jutsu_relay_compile` MCP tool before marking complete."

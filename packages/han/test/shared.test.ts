@@ -24,7 +24,7 @@ import {
 	readOrCreateSettings,
 	writeGlobalSettings,
 	writeSettings,
-} from "../lib/shared.ts";
+} from "../lib/shared/index.ts";
 
 // Store original environment
 const originalEnv = { ...process.env };
@@ -310,7 +310,7 @@ describe("shared.ts type definitions", () => {
 
 describe("parsePluginRecommendations", () => {
 	// Import the function dynamically to test it
-	const { parsePluginRecommendations } = require("../lib/shared.ts");
+	const { parsePluginRecommendations } = require("../lib/shared/index.ts");
 
 	test("parses JSON array of plugin names", () => {
 		const content =
@@ -417,7 +417,7 @@ describe("ensureDispatchHooks", () => {
 
 	// Import dynamically to get fresh module state
 	const getEnsureDispatchHooks = () =>
-		require("../lib/shared.ts").ensureDispatchHooks;
+		require("../lib/shared/index.ts").ensureDispatchHooks;
 
 	test("creates hooks if none exist", () => {
 		// Start with settings file that has no hooks
@@ -541,7 +541,8 @@ describe("detectHanScopes", () => {
 		}
 	});
 
-	const getDetectHanScopes = () => require("../lib/shared.ts").detectHanScopes;
+	const getDetectHanScopes = () =>
+		require("../lib/shared/index.ts").detectHanScopes;
 
 	test("returns empty array when no Han configured", () => {
 		const detectHanScopes = getDetectHanScopes();
@@ -647,7 +648,7 @@ describe("getInstalledPlugins", () => {
 	});
 
 	const getGetInstalledPlugins = () =>
-		require("../lib/shared.ts").getInstalledPlugins;
+		require("../lib/shared/index.ts").getInstalledPlugins;
 
 	test("returns empty array when no plugins installed", () => {
 		const getInstalledPlugins = getGetInstalledPlugins();
@@ -735,7 +736,7 @@ describe("removeInvalidPlugins", () => {
 	});
 
 	const getRemoveInvalidPlugins = () =>
-		require("../lib/shared.ts").removeInvalidPlugins;
+		require("../lib/shared/index.ts").removeInvalidPlugins;
 
 	test("removes plugins not in valid set", () => {
 		const settings = {
@@ -831,7 +832,7 @@ describe("readOrCreateSettings error handling", () => {
 			"invalid json content",
 		);
 
-		const { readOrCreateSettings } = require("../lib/shared.ts");
+		const { readOrCreateSettings } = require("../lib/shared/index.ts");
 		const result = readOrCreateSettings("project");
 		expect(result).toEqual({});
 	});
@@ -842,14 +843,14 @@ describe("readOrCreateSettings error handling", () => {
 			"{ broken json",
 		);
 
-		const { readOrCreateSettings } = require("../lib/shared.ts");
+		const { readOrCreateSettings } = require("../lib/shared/index.ts");
 		const result = readOrCreateSettings("local");
 		expect(result).toEqual({});
 	});
 });
 
 describe("findClaudeExecutable", () => {
-	const { findClaudeExecutable } = require("../lib/shared.ts");
+	const { findClaudeExecutable } = require("../lib/shared/index.ts");
 
 	test("returns path when Claude CLI is found", () => {
 		// This test will pass when Claude is installed (which it is in the dev environment)
@@ -1066,8 +1067,159 @@ describe("Plugins type", () => {
 
 describe("HAN_MARKETPLACE_REPO constant", () => {
 	test("exports correct repo value", () => {
-		const { HAN_MARKETPLACE_REPO } = require("../lib/shared.ts");
+		const { HAN_MARKETPLACE_REPO } = require("../lib/shared/index.ts");
 		expect(HAN_MARKETPLACE_REPO).toBe("thebushidocollective/han");
+	});
+});
+
+describe("getEffectiveProjectScope", () => {
+	const originalEnv = { ...process.env };
+	const originalCwd = process.cwd;
+	let testDir: string;
+	let configDir: string;
+	let projectDir: string;
+
+	beforeEach(() => {
+		const random = Math.random().toString(36).substring(2, 9);
+		testDir = join(
+			tmpdir(),
+			`han-effective-scope-test-${Date.now()}-${random}`,
+		);
+		configDir = join(testDir, ".claude");
+		projectDir = join(testDir, "project");
+		mkdirSync(configDir, { recursive: true });
+		mkdirSync(join(projectDir, ".claude"), { recursive: true });
+		process.env.CLAUDE_CONFIG_DIR = configDir;
+		process.env.HOME = testDir;
+		process.cwd = () => projectDir;
+	});
+
+	afterEach(() => {
+		process.env = { ...originalEnv };
+		process.cwd = originalCwd;
+		if (testDir && existsSync(testDir)) {
+			try {
+				rmSync(testDir, { recursive: true, force: true });
+			} catch {
+				// Ignore cleanup errors
+			}
+		}
+	});
+
+	const getGetEffectiveProjectScope = () =>
+		require("../lib/shared/index.ts").getEffectiveProjectScope;
+
+	test("returns null when Han is only in user scope", () => {
+		// Han configured in user scope only
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBeNull();
+	});
+
+	test("returns null when Han is not installed anywhere", () => {
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBeNull();
+	});
+
+	test("returns 'project' when Han is in project scope only", () => {
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		writeFileSync(
+			join(projectDir, ".claude", "settings.json"),
+			JSON.stringify(settings),
+		);
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBe("project");
+	});
+
+	test("returns 'local' when Han is in local scope only", () => {
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		writeFileSync(
+			join(projectDir, ".claude", "settings.local.json"),
+			JSON.stringify(settings),
+		);
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBe("local");
+	});
+
+	test("returns 'local' when Han is in both project and local scopes (local takes precedence)", () => {
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		// Install Han in both project and local scopes
+		writeFileSync(
+			join(projectDir, ".claude", "settings.json"),
+			JSON.stringify(settings),
+		);
+		writeFileSync(
+			join(projectDir, ".claude", "settings.local.json"),
+			JSON.stringify(settings),
+		);
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBe("local");
+	});
+
+	test("returns 'project' when Han is in user and project scopes (project-level overrides user)", () => {
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		// Install Han in user and project scopes
+		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
+		writeFileSync(
+			join(projectDir, ".claude", "settings.json"),
+			JSON.stringify(settings),
+		);
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBe("project");
+	});
+
+	test("returns 'local' when Han is in all three scopes", () => {
+		const settings = {
+			extraKnownMarketplaces: {
+				han: { source: { source: "github", repo: "test/repo" } },
+			},
+		};
+		// Install Han in all scopes
+		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
+		writeFileSync(
+			join(projectDir, ".claude", "settings.json"),
+			JSON.stringify(settings),
+		);
+		writeFileSync(
+			join(projectDir, ".claude", "settings.local.json"),
+			JSON.stringify(settings),
+		);
+
+		const getEffectiveProjectScope = getGetEffectiveProjectScope();
+		const result = getEffectiveProjectScope();
+		expect(result).toBe("local");
 	});
 });
 

@@ -8,6 +8,15 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["csharp", "c#", "dotnet", "async", "linq"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["csharp", "c#", "dotnet", "async", "linq"],
+  "lspServers": {
+    "csharp-ls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".cs": "csharp"
+      }
+    }
+  }
 }

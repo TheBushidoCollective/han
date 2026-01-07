@@ -1,15 +1,15 @@
 /**
- * Han Index Command
+ * Han Reindex Command
  *
- * CLI command for indexing memory content into FTS.
+ * CLI command for reindexing memory content into FTS.
  *
  * Usage:
- *   han index                      # Index all content for current project
- *   han index --layer observations # Index only observations
- *   han index --layer summaries    # Index only summaries
- *   han index --layer transcripts  # Index only transcripts
- *   han index --layer team         # Index only team memory
- *   han index --all                # Full reindex of all projects
+ *   han reindex                      # Reindex all content for current project
+ *   han reindex --layer observations # Reindex only observations
+ *   han reindex --layer summaries    # Reindex only summaries
+ *   han reindex --layer transcripts  # Reindex only transcripts
+ *   han reindex --layer team         # Reindex only team memory
+ *   han reindex --all                # Full reindex of all projects
  */
 
 import type { Command } from "commander";
@@ -17,15 +17,15 @@ import { type IndexLayer, searchAll } from "../../memory/indexer.ts";
 import { getGitRemote } from "../../memory/paths.ts";
 
 /**
- * Register the index command
+ * Register the reindex command
  */
-export function registerIndexCommand(program: Command): void {
-	const indexCommand = program
-		.command("index")
-		.description("Index memory content for semantic search");
+export function registerReindexCommand(program: Command): void {
+	const reindexCommand = program
+		.command("reindex")
+		.description("Reindex memory content for semantic search");
 
-	// Main index action (default)
-	indexCommand
+	// Main reindex action (default)
+	reindexCommand
 		.command("run", { isDefault: true })
 		.description("Run indexing on memory content")
 		.option(
@@ -124,7 +124,7 @@ export function registerIndexCommand(program: Command): void {
 		);
 
 	// Search command for testing the index
-	indexCommand
+	reindexCommand
 		.command("search <query>")
 		.description("Search indexed content (for testing)")
 		.option(
@@ -184,7 +184,7 @@ export function registerIndexCommand(program: Command): void {
 		);
 
 	// Status command to check index health
-	indexCommand
+	reindexCommand
 		.command("status")
 		.description("Show index status")
 		.action(async () => {

@@ -8,6 +8,16 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["terraform", "infrastructure", "iac", "devops", "hashicorp"],
+  "lspServers": {
+    "terraform-ls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["serve"],
+      "extensionToLanguage": {
+        ".tf": "terraform",
+        ".tfvars": "terraform-vars"
+      }
+    }
+  }
 }

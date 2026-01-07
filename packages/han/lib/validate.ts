@@ -1,38 +1,48 @@
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { hasChangedSinceCheckpoint, loadCheckpoint } from "./checkpoint.ts";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
-} from "./claude-settings.ts";
+} from "./config/claude-settings.ts";
 import {
+	getPluginHookSettings,
 	isCacheEnabled,
-	isCheckpointsEnabled,
 	isFailFastEnabled,
-} from "./han-settings.ts";
-import {
-	checkForChanges,
-	findDirectoriesWithMarkers,
-	trackFiles,
-} from "./hook-cache.ts";
-import { getHookConfigs, type ResolvedHookConfig } from "./hook-config.ts";
+} from "./config/han-settings.ts";
+import { getEventLogger } from "./events/logger.ts";
 import {
 	checkFailureSignal,
 	clearFailureSignal,
 	createLockManager,
+	isHookRunning,
 	signalFailure,
+	waitForHook,
+	withGlobalSlot,
 	withSlot,
 } from "./hook-lock.ts";
-import { getPluginNameFromRoot } from "./shared.ts";
+import {
+	checkForChangesAsync,
+	computeFileHash,
+	findDirectoriesWithMarkers,
+	findFilesWithGlob,
+	trackFilesAsync,
+} from "./hooks/hook-cache.ts";
+import {
+	getHookConfigs,
+	getHookDefinition,
+	type ResolvedHookConfig,
+} from "./hooks/hook-config.ts";
+import { getPluginNameFromRoot, isDebugMode } from "./shared.ts";
 
 /**
- * Check if debug mode is enabled via HAN_DEBUG environment variable
+ * Compute SHA256 hash of a command string.
+ * Used to detect when hook commands change and need to re-run.
  */
-export function isDebugMode(): boolean {
-	const debug = process.env.HAN_DEBUG;
-	return debug === "1" || debug === "true";
+function computeCommandHash(command: string): string {
+	return createHash("sha256").update(command).digest("hex");
 }
 
 /**
@@ -585,6 +595,11 @@ export interface RunConfiguredHookOptions {
 	 * Required when checkpointType is set
 	 */
 	checkpointId?: string;
+	/**
+	 * Skip dependency checks. Useful for recheck/retry scenarios
+	 * when dependencies have already been satisfied.
+	 */
+	skipDeps?: boolean;
 }
 
 /**
@@ -648,8 +663,14 @@ export function buildMcpToolInstruction(
 export async function runConfiguredHook(
 	options: RunConfiguredHookOptions,
 ): Promise<void> {
-	const { pluginName, hookName, only, verbose, checkpointType, checkpointId } =
-		options;
+	const {
+		pluginName,
+		hookName,
+		only,
+		verbose,
+		// checkpointType and checkpointId are no longer used - checkpoints feature removed
+		skipDeps,
+	} = options;
 
 	// Settings resolution priority (highest to lowest):
 	// 1. Environment variable (HAN_NO_X=1 forces false)
@@ -674,14 +695,7 @@ export async function runConfiguredHook(
 			? false
 			: (options.cache ?? isCacheEnabled());
 
-	// Resolve checkpoints setting
-	// Priority: HAN_NO_CHECKPOINTS env > checkpointType presence > han.yml default
-	// Note: If checkpointType is not provided, checkpoints are effectively disabled
-	const checkpointsEnabled =
-		process.env.HAN_NO_CHECKPOINTS === "1" ||
-		process.env.HAN_NO_CHECKPOINTS === "true"
-			? false
-			: isCheckpointsEnabled();
+	// Checkpoints feature has been removed - now using ifChanged + transcript filtering
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -716,6 +730,88 @@ export async function runConfiguredHook(
 		}
 	}
 
+	// Handle dependencies (unless --skip-deps is set)
+	if (!skipDeps) {
+		const hookDef = getHookDefinition(pluginRoot, hookName);
+		if (hookDef?.dependsOn && hookDef.dependsOn.length > 0) {
+			const lockManager = createLockManager();
+			const { plugins } = getMergedPluginsAndMarketplaces();
+
+			for (const dep of hookDef.dependsOn) {
+				// Check if dependency plugin is installed
+				const isDepInstalled = plugins.has(dep.plugin);
+
+				if (!isDepInstalled) {
+					if (dep.optional) {
+						if (verbose) {
+							console.log(
+								`[${pluginName}/${hookName}] Skipping optional dependency: ${dep.plugin}/${dep.hook} (not installed)`,
+							);
+						}
+						continue;
+					}
+					// Required dependency is missing
+					console.error(
+						`Error: Required dependency plugin "${dep.plugin}" is not installed.\n\n` +
+							`The hook "${pluginName}/${hookName}" requires "${dep.plugin}/${dep.hook}" to run first.\n` +
+							`Install the dependency plugin with: han plugin install ${dep.plugin}`,
+					);
+					process.exit(1);
+				}
+
+				// Check if dependency hook is already running
+				if (isHookRunning(lockManager, dep.plugin, dep.hook)) {
+					if (verbose) {
+						console.log(
+							`[${pluginName}/${hookName}] Waiting for dependency: ${dep.plugin}/${dep.hook} (already running)`,
+						);
+					}
+					const completed = await waitForHook(
+						lockManager,
+						dep.plugin,
+						dep.hook,
+					);
+					if (!completed) {
+						console.error(
+							`Error: Timeout waiting for dependency hook "${dep.plugin}/${dep.hook}" to complete.\n`,
+						);
+						process.exit(1);
+					}
+				} else {
+					// Dependency is not running - spawn it and wait
+					if (verbose) {
+						console.log(
+							`[${pluginName}/${hookName}] Running dependency: ${dep.plugin}/${dep.hook}`,
+						);
+					}
+
+					// Run the dependency hook synchronously
+					const result = spawnSync(
+						"han",
+						["hook", "run", dep.plugin, dep.hook, "--skip-deps"],
+						{
+							stdio: verbose ? "inherit" : "pipe",
+							shell: true,
+							env: {
+								...process.env,
+								// Don't inherit CLAUDE_PLUGIN_ROOT since we're running a different plugin
+								CLAUDE_PLUGIN_ROOT: "",
+							},
+						},
+					);
+
+					if (result.status !== 0) {
+						console.error(
+							`Error: Dependency hook "${dep.plugin}/${dep.hook}" failed.\n` +
+								`Fix the dependency first, then retry.`,
+						);
+						process.exit(2);
+					}
+				}
+			}
+		}
+	}
+
 	// Get all configs
 	let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
 
@@ -738,13 +834,41 @@ export async function runConfiguredHook(
 		}
 	}
 
+	// Execute before_all script if configured (runs once before all directory iterations)
+	const hookSettings = getPluginHookSettings(pluginName, hookName);
+	if (hookSettings?.before_all) {
+		if (verbose) {
+			console.log(`\n[${pluginName}/${hookName}] Running before_all script:`);
+			console.log(`  $ ${hookSettings.before_all}\n`);
+		}
+		try {
+			execSync(hookSettings.before_all, {
+				encoding: "utf-8",
+				timeout: 60000, // 60 second timeout
+				stdio: verbose ? "inherit" : ["pipe", "pipe", "pipe"],
+				shell: "/bin/bash",
+				cwd: projectRoot,
+				env: {
+					...process.env,
+					CLAUDE_PROJECT_DIR: projectRoot,
+					CLAUDE_PLUGIN_ROOT: pluginRoot,
+				},
+			});
+		} catch (error: unknown) {
+			const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+			console.error(
+				`\n❌ before_all script failed for ${pluginName}/${hookName}:\n${stderr}`,
+			);
+			process.exit(2);
+		}
+	}
+
 	// Phase 1: Check cache and categorize configs BEFORE acquiring lock
 	// This avoids holding a slot while just checking hashes
 	const configsToRun: ResolvedHookConfig[] = [];
 	let totalFound = 0;
 	let disabledCount = 0;
 	let skippedCount = 0;
-	let checkpointSkippedCount = 0;
 
 	for (const config of configs) {
 		totalFound++;
@@ -762,7 +886,7 @@ export async function runConfiguredHook(
 				config.directory,
 				projectRoot,
 			);
-			const hasChanges = checkForChanges(
+			const hasChanges = await checkForChangesAsync(
 				pluginName,
 				cacheKey,
 				config.directory,
@@ -773,34 +897,6 @@ export async function runConfiguredHook(
 			if (!hasChanges) {
 				skippedCount++;
 				continue;
-			}
-
-			// NEW: Also check checkpoint if available
-			if (hasChanges && checkpointType && checkpointId && checkpointsEnabled) {
-				const checkpoint = loadCheckpoint(checkpointType, checkpointId);
-				if (checkpoint) {
-					const changedSinceCheckpoint = hasChangedSinceCheckpoint(
-						checkpoint,
-						config.directory,
-						config.ifChanged,
-					);
-					if (!changedSinceCheckpoint) {
-						// File changed since last hook run, but NOT since checkpoint
-						// Skip this hook
-						if (verbose) {
-							const relativePath =
-								config.directory === projectRoot
-									? "."
-									: config.directory.replace(`${projectRoot}/`, "");
-							console.log(
-								`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
-							);
-						}
-						checkpointSkippedCount++;
-						continue;
-					}
-				}
-				// If no checkpoint, fall through to run hook (graceful degradation)
 			}
 		}
 
@@ -823,20 +919,10 @@ export async function runConfiguredHook(
 		process.exit(0);
 	}
 
-	if (
-		configsToRun.length === 0 &&
-		(skippedCount > 0 || checkpointSkippedCount > 0)
-	) {
-		if (skippedCount > 0) {
-			console.log(
-				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
-			);
-		}
-		if (checkpointSkippedCount > 0) {
-			console.log(
-				`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
-			);
-		}
+	if (configsToRun.length === 0 && skippedCount > 0) {
+		console.log(
+			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+		);
 		console.log("No changes detected in any directories. Nothing to run.");
 		process.exit(0);
 	}
@@ -882,8 +968,19 @@ export async function runConfiguredHook(
 			console.log(`  $ ${config.command}\n`);
 		}
 
+		// Log hook run event (start)
+		const eventLogger = getEventLogger();
+		if (isDebugMode()) {
+			console.error(
+				`[validate] eventLogger=${eventLogger ? "exists" : "null"}, about to log hook_run`,
+			);
+		}
+		eventLogger?.logHookRun(pluginName, hookName, "Stop", relativePath, false);
+		const hookStartTime = Date.now();
+
 		// Acquire slot, run command, release slot (per directory)
-		const result = await withSlot(hookName, pluginName, async () => {
+		// Use global slots for cross-session coordination when coordinator is available
+		const result = await withGlobalSlot(hookName, pluginName, async () => {
 			return runCommand({
 				dir: config.directory,
 				cmd: config.command,
@@ -893,6 +990,21 @@ export async function runConfiguredHook(
 				pluginRoot,
 			});
 		});
+
+		// Log hook validation event (end)
+		const hookDuration = Date.now() - hookStartTime;
+		eventLogger?.logHookValidation(
+			pluginName,
+			hookName,
+			"Stop", // hookType - han hook run is used for Stop hooks
+			relativePath,
+			false, // cached
+			hookDuration,
+			result.success ? 0 : 1, // exit code
+			result.success,
+			result.output,
+			result.success ? undefined : "Hook failed",
+		);
 
 		if (!result.success) {
 			failures.push({
@@ -949,14 +1061,11 @@ export async function runConfiguredHook(
 			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 		);
 	}
-	if (checkpointSkippedCount > 0) {
-		console.log(
-			`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
-		);
-	}
 
-	// Update cache manifest for successful executions
+	// Update cache manifest and log validation events for successful executions
 	if (cache && successfulConfigs.length > 0) {
+		const logger = getEventLogger();
+
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
 				const cacheKey = getCacheKeyForDirectory(
@@ -964,12 +1073,32 @@ export async function runConfiguredHook(
 					config.directory,
 					projectRoot,
 				);
-				trackFiles(
+
+				// Build manifest of file hashes for this config
+				const matchedFiles = findFilesWithGlob(
+					config.directory,
+					config.ifChanged,
+				);
+				const manifest: Record<string, string> = {};
+				for (const filePath of matchedFiles) {
+					manifest[filePath] = computeFileHash(filePath);
+				}
+
+				const commandHash = computeCommandHash(config.command);
+
+				// Track files in cache (uses hook_cache table)
+				// Also logs hook_validation_cache event if logger is available
+				await trackFilesAsync(
 					pluginName,
 					cacheKey,
 					config.directory,
 					config.ifChanged,
 					pluginRoot,
+					{
+						logger: logger ?? undefined,
+						directory: config.directory,
+						commandHash,
+					},
 				);
 			}
 		}

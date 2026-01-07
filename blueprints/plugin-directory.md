@@ -83,7 +83,7 @@ jutsu/jutsu-{tool}/
 ├── hooks/                      # Validation hooks (if present)
 │   ├── hooks.json             # Claude Code event hooks
 │   └── *.md                   # Hook documentation
-├── han-config.json            # Validation commands (if present)
+├── han-plugin.yml             # Validation commands (if present)
 └── README.md
 ```
 
@@ -97,8 +97,8 @@ jutsu/jutsu-{tool}/
 
 - Tool-specific skills
 - Validation hooks (lint, test, typecheck, format)
-- Smart caching (ifChanged patterns)
-- Directory targeting (dirsWith markers)
+- Smart caching (if_changed patterns)
+- Directory targeting (dirs_with markers)
 
 ### Discipline Plugin (Do)
 
@@ -183,7 +183,7 @@ hashi/hashi-{service}/
 - `.claude-plugin/hooks.json` - Claude Code event hooks
 - `hooks/*.md` - Hook documentation
 - `commands/*.md` - Slash commands
-- `han-config.json` - Validation hook configuration
+- `han-plugin.yml` - Validation hook configuration
 - `han-config.yml` - User hook overrides (not committed)
 
 ### Plugin Metadata (plugin.json)
@@ -275,32 +275,31 @@ description: Brief description of the agent role
 - Decision-making framework
 - Interaction patterns
 
-### Hook Configuration (han-config.json)
+### Hook Configuration (han-plugin.yml)
 
-```json
-{
-  "hooks": {
-    "lint": {
-      "command": "npm run lint",
-      "dirsWith": ["package.json"],
-      "ifChanged": ["**/*.{ts,tsx,js,jsx}"],
-      "idleTimeout": 5000
-    },
-    "typecheck": {
-      "command": "npx -y --package typescript tsc",
-      "dirsWith": ["tsconfig.json"],
-      "ifChanged": ["**/*.{ts,tsx}"]
-    }
-  }
-}
+```yaml
+hooks:
+  lint:
+    command: npm run lint
+    dirs_with:
+      - package.json
+    if_changed:
+      - "**/*.{ts,tsx,js,jsx}"
+    idle_timeout: 5000
+  typecheck:
+    command: npx -y --package typescript tsc
+    dirs_with:
+      - tsconfig.json
+    if_changed:
+      - "**/*.{ts,tsx}"
 ```
 
 **Hook Properties**:
 
 - `command` - Shell command to execute
-- `dirsWith` - Marker files for target directories
-- `ifChanged` - Glob patterns for change detection
-- `idleTimeout` - Max idle time before timeout (optional)
+- `dirs_with` - Marker files for target directories
+- `if_changed` - Glob patterns for change detection
+- `idle_timeout` - Max idle time before timeout (optional)
 
 ## Naming Conventions
 

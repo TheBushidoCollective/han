@@ -19,6 +19,37 @@ Once enabled, Claude will automatically apply these skills when working with rel
 - Catch common mistakes and anti-patterns
 - Provide framework-specific guidance
 
+## Quality Hooks
+
+This plugin includes hooks that ensure Relay artifacts are compiled before completing work. The hooks use `@thebushidocollective/han` to support both single-package and monorepo projects.
+
+### Compile Hook
+
+The `compile` hook runs `npx relay-compiler` to generate artifacts from GraphQL fragments and queries. It automatically detects directories containing Relay configuration files:
+
+- `relay.config.js`
+- `relay.config.json`
+- `relay.config.cjs`
+- `relay.config.mjs`
+
+The hook runs when any of the following file types are changed:
+
+- `**/*.ts`
+- `**/*.tsx`
+- `**/*.js`
+- `**/*.jsx`
+- `**/*.graphql`
+
+### Monorepo Support
+
+The hooks automatically detect directories with Relay config files and run the compiler in each:
+
+```bash
+han hook run jutsu-relay compile
+```
+
+This ensures all packages in your monorepo have up-to-date Relay artifacts before work is marked complete.
+
 ## Installation
 
 Install with npx (no installation required):

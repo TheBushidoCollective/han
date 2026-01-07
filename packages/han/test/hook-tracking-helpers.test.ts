@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import { getPluginNameFromRoot } from "../lib/shared.ts";
+import { getPluginNameFromRoot } from "../lib/shared/index.ts";
 
 describe("hook-tracking.ts helper functions", () => {
 	describe("getPluginNameFromRoot", () => {

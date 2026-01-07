@@ -5,9 +5,8 @@ hooks:
       - "playwright.config.ts"
       - "playwright.config.js"
     if_changed:
-      - "**/*.e2e.{js,ts}"
-      - "**/*.spec.{js,ts}"
-      - "**/*.test.{js,ts}"
-      - "playwright.config.*"
-      - "e2e/**/*"
-      - "tests/**/*"
+      - "**/*.{js,ts}x?"
+    depends_on:
+      - plugin: jutsu-playwright-bdd
+        hook: generate
+        optional: true

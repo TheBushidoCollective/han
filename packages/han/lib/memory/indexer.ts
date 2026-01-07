@@ -1,14 +1,13 @@
 /**
  * Han Memory Indexer
  *
- * Orchestrates indexing of memory content via han-native using SurrealDB.
- * Provides FTS (BM25) search and embedding generation for the 5-layer
+ * Orchestrates indexing of memory content via han-native using SQLite.
+ * Provides FTS5 (BM25) search and embedding generation for the 5-layer
  * memory system: rules, summaries, observations, transcripts, and team memory.
  *
- * Storage location: ~/.claude/han/memory/index/
+ * Storage location: ~/.claude/han/han.db
  *
- * @note The native module uses pure Rust dependencies (SurrealDB with kv-surrealkv,
- * ort with load-dynamic) for cross-compilation compatibility.
+ * @note The native module uses SQLite with FTS5 and sqlite-vec extensions.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
@@ -49,7 +48,12 @@ export interface FtsResult {
 /**
  * Index layer types
  */
-export type IndexLayer = "observations" | "summaries" | "transcripts" | "team";
+export type IndexLayer =
+	| "observations"
+	| "summaries"
+	| "transcripts"
+	| "team"
+	| "han_events";
 
 /**
  * Index status for a layer
@@ -63,18 +67,19 @@ export interface IndexStatus {
 
 /**
  * Get the index database path
+ * All data is stored in the main han.db database
  */
 export function getIndexDbPath(): string {
-	return join(homedir(), ".claude", "han", "memory", "index", "fts.db");
+	return join(homedir(), ".claude", "han", "han.db");
 }
 
 /**
- * Ensure index directory exists
+ * Ensure database directory exists
  */
 export function ensureIndexDir(): void {
-	const indexDir = join(homedir(), ".claude", "han", "memory", "index");
-	if (!existsSync(indexDir)) {
-		mkdirSync(indexDir, { recursive: true });
+	const dbDir = join(homedir(), ".claude", "han");
+	if (!existsSync(dbDir)) {
+		mkdirSync(dbDir, { recursive: true });
 	}
 }
 
@@ -103,7 +108,8 @@ export async function initTable(_tableName: string): Promise<boolean> {
 }
 
 /**
- * Index documents into FTS
+ * Index documents into FTS and Vector store
+ * Runs both in parallel - FTS for keyword search, Vector for semantic search
  */
 export async function indexDocuments(
 	tableName: string,
@@ -111,17 +117,81 @@ export async function indexDocuments(
 ): Promise<number> {
 	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) return 0;
+	if (documents.length === 0) return 0;
+
 	ensureIndexDir();
 	const dbPath = getIndexDbPath();
 
-	// Convert to native format
+	// Convert to native format for FTS
 	const nativeDocs = documents.map((doc) => ({
 		id: doc.id,
 		content: doc.content,
 		metadata: doc.metadata,
 	}));
 
-	return nativeModule.ftsIndex(dbPath, tableName, nativeDocs);
+	// Index to FTS (always)
+	const ftsCount = nativeModule.ftsIndex(dbPath, tableName, nativeDocs);
+
+	// Also index to vector store for semantic search (best effort)
+	try {
+		await indexDocumentsToVector(tableName, documents, nativeModule, dbPath);
+	} catch {
+		// Vector indexing failed - FTS still works
+		// This can happen if ONNX isn't available yet
+	}
+
+	return ftsCount;
+}
+
+/**
+ * Batch size for embedding generation
+ * Larger batches are more efficient but use more memory
+ */
+const EMBEDDING_BATCH_SIZE = 32;
+
+/**
+ * Index documents to vector store for semantic search
+ * Generates embeddings and stores with sqlite-vec
+ */
+async function indexDocumentsToVector(
+	tableName: string,
+	documents: IndexDocument[],
+	nativeModule: ReturnType<typeof tryGetNativeModule>,
+	dbPath: string,
+): Promise<void> {
+	if (!nativeModule) return;
+
+	// Check if embedding system is available
+	const embeddingAvailable = await nativeModule.embeddingIsAvailable();
+	if (!embeddingAvailable) {
+		// Try to download ONNX Runtime and model on first use
+		try {
+			await nativeModule.embeddingEnsureAvailable();
+		} catch {
+			// Embedding system not available - skip vector indexing
+			return;
+		}
+	}
+
+	// Process in batches to avoid memory issues
+	for (let i = 0; i < documents.length; i += EMBEDDING_BATCH_SIZE) {
+		const batch = documents.slice(i, i + EMBEDDING_BATCH_SIZE);
+		const texts = batch.map((doc) => doc.content);
+
+		// Generate embeddings for batch
+		const embeddings = await nativeModule.generateEmbeddings(texts);
+
+		// Prepare documents with embeddings for vector store
+		const vectorDocs = batch.map((doc, idx) => ({
+			id: doc.id,
+			content: doc.content,
+			vector: embeddings[idx],
+			metadata: doc.metadata,
+		}));
+
+		// Store in vector database
+		await nativeModule.vectorIndex(dbPath, tableName, vectorDocs);
+	}
 }
 
 /**
@@ -155,10 +225,126 @@ export async function searchFts(
 			metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
 			score: r.score,
 		}));
-	} catch {
+	} catch (error) {
+		// Handle case where table doesn't exist or database issues
+		if (error instanceof Error && error.message.includes("no such table")) {
+			return [];
+		}
 		// Database may be corrupted or incompatible - return empty results
 		return [];
 	}
+}
+
+/**
+ * Search vector index by semantic similarity
+ */
+export async function searchVector(
+	tableName: string,
+	query: string,
+	limit = 10,
+): Promise<FtsResult[]> {
+	const nativeModule = tryGetNativeModule();
+	if (!nativeModule) return [];
+	const dbPath = getIndexDbPath();
+
+	// Check if DB exists
+	if (!existsSync(dbPath)) {
+		return [];
+	}
+
+	try {
+		// Check if embeddings are available
+		const embeddingAvailable = await nativeModule.embeddingIsAvailable();
+		if (!embeddingAvailable) {
+			return [];
+		}
+
+		// Generate embedding for query
+		const queryEmbedding = await nativeModule.generateEmbedding(query);
+
+		// Search by vector similarity
+		const results = await nativeModule.vectorSearch(
+			dbPath,
+			tableName,
+			queryEmbedding,
+			limit,
+		);
+
+		return results.map((r) => ({
+			id: r.id,
+			content: r.content,
+			metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+			score: r.score,
+		}));
+	} catch (error) {
+		// Handle case where table doesn't exist or embeddings unavailable
+		if (error instanceof Error && error.message.includes("no such table")) {
+			return [];
+		}
+		return [];
+	}
+}
+
+/**
+ * Reciprocal Rank Fusion constant
+ * Higher values give more weight to top results
+ */
+const RRF_K = 60;
+
+/**
+ * Hybrid search combining FTS (keyword) and Vector (semantic) results
+ * Uses Reciprocal Rank Fusion to combine rankings
+ */
+export async function hybridSearch(
+	tableName: string,
+	query: string,
+	limit = 10,
+): Promise<FtsResult[]> {
+	// Search both systems in parallel, request more results for fusion
+	const expandedLimit = limit * 2;
+
+	const [ftsResults, vectorResults] = await Promise.all([
+		searchFts(tableName, query, expandedLimit),
+		searchVector(tableName, query, expandedLimit),
+	]);
+
+	// If only one system has results, return those
+	if (ftsResults.length === 0) return vectorResults.slice(0, limit);
+	if (vectorResults.length === 0) return ftsResults.slice(0, limit);
+
+	// Reciprocal Rank Fusion
+	const scores = new Map<string, { score: number; result: FtsResult }>();
+
+	// Add FTS results with RRF scores
+	ftsResults.forEach((result, rank) => {
+		const rrfScore = 1 / (RRF_K + rank + 1);
+		const existing = scores.get(result.id);
+		if (existing) {
+			existing.score += rrfScore;
+		} else {
+			scores.set(result.id, { score: rrfScore, result });
+		}
+	});
+
+	// Add Vector results with RRF scores
+	vectorResults.forEach((result, rank) => {
+		const rrfScore = 1 / (RRF_K + rank + 1);
+		const existing = scores.get(result.id);
+		if (existing) {
+			existing.score += rrfScore;
+		} else {
+			scores.set(result.id, { score: rrfScore, result });
+		}
+	});
+
+	// Sort by combined RRF score and return top results
+	return Array.from(scores.values())
+		.sort((a, b) => b.score - a.score)
+		.slice(0, limit)
+		.map(({ result, score }) => ({
+			...result,
+			score, // Replace original score with RRF fusion score
+		}));
 }
 
 /**
@@ -301,7 +487,90 @@ function extractedObservationToDocument(
 }
 
 /**
+ * Parsed event format for indexing
+ * Used for dynamic property access when converting events to documents.
+ * Matches the shape written by EventLogger (lib/events/types.ts HanEvent union).
+ */
+interface ParsedHanEvent {
+	id: string;
+	type: string;
+	timestamp: string; // ISO string
+	data: Record<string, unknown>;
+}
+
+/**
+ * Convert logged event to IndexDocument
+ * Handles the actual format written by EventLogger
+ */
+function _hanEventToDocument(
+	event: ParsedHanEvent,
+	sessionId: string,
+): IndexDocument {
+	const eventTypeLabels: Record<string, string> = {
+		hook_run: "Hook started",
+		hook_result: "Hook completed",
+		mcp_tool_call: "MCP tool called",
+		mcp_tool_result: "MCP tool result",
+		exposed_tool_call: "Exposed tool called",
+		exposed_tool_result: "Exposed tool result",
+		memory_query: "Memory queried",
+		memory_learn: "Memory learned",
+		sentiment_analysis: "Sentiment analyzed",
+	};
+
+	const label = eventTypeLabels[event.type] || event.type;
+	const data = event.data || {};
+
+	// Build descriptive content from event data
+	const contentParts = [`[${label}]`];
+	if (data.plugin) contentParts.push(`Plugin: ${data.plugin}`);
+	if (data.hook) contentParts.push(`Hook: ${data.hook}`);
+	if (data.directory) contentParts.push(`Directory: ${data.directory}`);
+	if (data.success !== undefined) contentParts.push(`Success: ${data.success}`);
+	if (data.output)
+		contentParts.push(`Output: ${String(data.output).slice(0, 500)}`);
+
+	const content = contentParts.join("\n");
+
+	return {
+		id: event.id,
+		content,
+		metadata: JSON.stringify({
+			session_id: sessionId,
+			timestamp: event.timestamp,
+			event_type: event.type,
+			layer: "han_events",
+		}),
+	};
+}
+
+/**
+ * Index Han events from session files
+ *
+ * @deprecated This function is no longer needed. The Rust coordinator (han-native)
+ * automatically indexes Han events from JSONL files into the messages table with
+ * message_type='han_event'. Query using messages.list({ messageType: 'han_event' }).
+ *
+ * This function now returns 0 (no-op) since the Rust indexer handles all JSONL indexing.
+ *
+ * @param _projectSlug - Ignored, kept for API compatibility
+ */
+export async function indexHanEvents(_projectSlug?: string): Promise<number> {
+	// No-op: The Rust coordinator (han-native/src/indexer.rs) already indexes
+	// Han events from *-han.jsonl files into the SQLite database.
+	// Query using: messages.list({ sessionId, messageType: 'han_event' })
+	return 0;
+}
+
+/**
  * Index personal session observations
+ *
+ * @deprecated This function reads JSONL files directly. In the future, Han's personal
+ * memory system should be migrated to use the Rust indexer. For now, this function
+ * remains as-is since it reads from a different location (~/.claude/han/personal/sessions)
+ * than the Claude Code transcripts indexed by the Rust coordinator.
+ *
+ * TODO: Migrate Han personal memory to Rust indexer for consistency.
  */
 export async function indexObservations(sessionId?: string): Promise<number> {
 	const sessionsPath = getSessionsPath();
@@ -418,12 +687,14 @@ export async function runIndex(options: IndexOptions = {}): Promise<{
 	summaries: number;
 	team: number;
 	transcripts: number;
+	han_events: number;
 }> {
 	const results = {
 		observations: 0,
 		summaries: 0,
 		team: 0,
 		transcripts: 0,
+		han_events: 0,
 	};
 
 	const layers = options.layer
@@ -439,12 +710,15 @@ export async function runIndex(options: IndexOptions = {}): Promise<{
 				}
 				break;
 
-			case "summaries":
-				results.summaries = await indexSummaries();
+			case "summaries": {
+				// Index native Claude summaries from transcripts (Layer 2)
+				const { indexNativeSummaries } = await import("./transcript-search.ts");
+				results.summaries = await indexNativeSummaries(options.projectSlug);
 				if (options.verbose) {
-					console.log(`Indexed ${results.summaries} summaries`);
+					console.log(`Indexed ${results.summaries} native summaries`);
 				}
 				break;
+			}
 
 			case "team": {
 				// Team memory requires git remote
@@ -469,6 +743,14 @@ export async function runIndex(options: IndexOptions = {}): Promise<{
 				results.transcripts = await indexTranscripts(options.projectSlug);
 				if (options.verbose) {
 					console.log(`Indexed ${results.transcripts} transcript messages`);
+				}
+				break;
+			}
+
+			case "han_events": {
+				results.han_events = await indexHanEvents(options.projectSlug);
+				if (options.verbose) {
+					console.log(`Indexed ${results.han_events} Han events`);
 				}
 				break;
 			}

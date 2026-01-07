@@ -1,0 +1,83 @@
+/**
+ * Hooks Module
+ *
+ * Re-exports all hook-related functionality for cleaner imports.
+ *
+ * @example
+ * import { testHooks, loadPluginConfig, checkForChanges } from './hooks';
+ */
+
+// UI Components
+export { HookExplainUI, type HookSource } from "../hook-explain-ui.tsx";
+// Cache management
+export {
+	buildManifest,
+	type CacheManifest,
+	checkForChanges,
+	checkForChangesAsync,
+	computeFileHash,
+	findDirectoriesWithMarkers,
+	findFilesWithGlob,
+	getCacheDir,
+	getCacheFilePath,
+	getProjectRoot,
+	loadCacheManifest,
+	loadCacheManifestAsync,
+	saveCacheManifest,
+	saveCacheManifestAsync,
+	trackFiles,
+	trackFilesAsync,
+} from "./hook-cache.ts";
+// Hook configuration
+export {
+	DEFAULT_HOOK_EVENTS,
+	getHookConfigs,
+	getHookDefinition,
+	getHookEvents,
+	type HookDependency,
+	type HookEventType,
+	hookMatchesEvent,
+	listAvailableHooks,
+	loadPluginConfig,
+	loadUserConfig,
+	type PluginConfig,
+	type PluginHookDefinition,
+	type PluginMcpConfig,
+	type PluginMemoryConfig,
+	type ResolvedHookConfig,
+	type UserConfig,
+	type UserHookOverride,
+} from "./hook-config.ts";
+// Locking
+export {
+	acquireSlot,
+	checkFailureSignal,
+	cleanupOwnedSlots,
+	clearFailureSignal,
+	createLockManager,
+	isLockingEnabled,
+	releaseSlot,
+	signalFailure,
+	withGlobalSlot,
+	withSlot,
+} from "./hook-lock.ts";
+// Testing
+export {
+	type LiveOutputState,
+	makeLiveOutputKey,
+	type TestHooksOptions,
+	testHooks,
+} from "./hook-test.ts";
+export { HookTestUI } from "./hook-test-ui.tsx";
+// Transcript filtering
+export {
+	buildCommandWithFiles,
+	clearTranscriptCache,
+	commandUsesSessionFiles,
+	getProjectsBaseDir,
+	getSessionFilteredFiles,
+	getTranscriptModifiedFiles,
+	HAN_FILES_TEMPLATE,
+	hasSessionModifiedPatternFiles,
+	type TranscriptModifiedFiles,
+} from "./transcript-filter.ts";

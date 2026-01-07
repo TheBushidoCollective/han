@@ -1,7 +1,3 @@
-# Han development configuration
-# Use local development version instead of installed binary
-#
-# NOTE: This requires the native extension to be built:
-#   cd packages/han-native && npm run build
-#
-hanBinary: bun run /Volumes/dev/src/github.com/thebushidocollective/han/packages/han/lib/main.ts
+hanBinary: bun ./packages/han/lib/main.ts
+hooks:
+  enabled: true

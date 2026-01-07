@@ -1,5 +1,4 @@
 hooks:
   check_commits:
-    command: "\"${CLAUDE_PLUGIN_ROOT}/hooks/git-storytelling.sh\""
+    command: "git diff --stat --quiet 2>/dev/null && git diff --cached --stat --quiet 2>/dev/null && echo 'No uncommitted changes' || echo '⚠️ Uncommitted changes detected. Consider committing to tell the story of your development.'"
     description: "Commit work early and often for git storytelling"
-    tip: "Use the `jutsu_git_storytelling_check_commits` MCP tool. Follow conventional format: `type(scope): description`."

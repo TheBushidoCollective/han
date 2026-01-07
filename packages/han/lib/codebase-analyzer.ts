@@ -1,5 +1,5 @@
-import { execSync } from "node:child_process";
 import { basename } from "node:path";
+import { gitLsFiles } from "../../han-native";
 
 export interface ExtensionCount {
 	extension: string;
@@ -43,14 +43,8 @@ export function analyzeCodebase(rootPath: string): CodebaseStats {
 	let files: string[] = [];
 
 	try {
-		// Use git ls-files to get tracked files (respects .gitignore automatically)
-		const output = execSync("git ls-files", {
-			cwd: rootPath,
-			encoding: "utf-8",
-			maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large repos
-		});
-
-		files = output.trim().split("\n").filter(Boolean);
+		// Use native gitoxide to get tracked files (respects .gitignore automatically)
+		files = gitLsFiles(rootPath);
 
 		for (const file of files) {
 			const ext = getExtension(file);

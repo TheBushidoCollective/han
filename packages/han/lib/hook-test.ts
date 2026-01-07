@@ -7,7 +7,7 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
-} from "./claude-settings.ts";
+} from "./config/claude-settings.ts";
 import { HookTestUI } from "./hook-test-ui.tsx";
 
 interface HookCommand {

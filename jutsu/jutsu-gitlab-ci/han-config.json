@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "lint": {
-      "description": "Validates GitLab CI configuration using glab CLI",
-      "dirsWith": [".gitlab-ci.yml"],
-      "command": "glab ci lint"
-    }
-  }
-}

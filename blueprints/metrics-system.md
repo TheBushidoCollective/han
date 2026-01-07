@@ -74,7 +74,7 @@ Sessions are long-lived and don't have explicit start/end management. Instead:
 - `fail_task` - Record task failure with details
 - `query_metrics` - Query performance analytics
 
-**Storage**: JSONL files at `~/.claude/han/metrics/jsonldb/`
+**Storage**: SQLite database at `~/.claude/han/han.db`
 
 **Transport**: STDIO (subprocess)
 
@@ -111,9 +111,9 @@ Sessions are long-lived and don't have explicit start/end management. Instead:
 
 ### 4. Storage Format
 
-**Location**: `~/.claude/han/metrics/jsonldb/`
+**Location**: SQLite database at `~/.claude/han/han.db`
 
-**Files**: Daily partitioned JSONL files (`metrics-YYYY-MM-DD.jsonl`)
+**Tables**: `tasks`, `frustration_events`, `hook_executions`
 
 **Task Record Schema**:
 
@@ -363,13 +363,13 @@ LIMIT 10;
 
 **Local-First**:
 
-- All data stored in `~/.claude/han/metrics/jsonldb/`
+- All data stored in SQLite at `~/.claude/han/han.db`
 - No network calls
 - No external tracking
 
 **User-Owned**:
 
-- JSONL files are human-readable and easily searchable
+- SQLite database is portable and easily queryable
 - Data can be exported, backed up, or deleted
 - Full transparency
 

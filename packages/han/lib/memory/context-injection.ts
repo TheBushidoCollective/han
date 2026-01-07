@@ -34,7 +34,7 @@
  * ```
  */
 
-import { isMemoryEnabled } from "../han-settings.ts";
+import { isMemoryEnabled } from "../config/han-settings.ts";
 import { getMemoryStore } from "./storage.ts";
 
 /**

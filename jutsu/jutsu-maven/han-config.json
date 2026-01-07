@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "validate": {
-      "command": "mvn validate -q",
-      "dirsWith": ["pom.xml"],
-      "ifChanged": ["pom.xml"]
-    }
-  }
-}

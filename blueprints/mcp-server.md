@@ -146,7 +146,7 @@ Execute a tool.
 1. Get merged plugins and marketplaces from settings
 2. For each enabled plugin:
    a. Find plugin directory
-   b. Load `han-config.json`
+   b. Load `han-plugin.yml`
    c. Create tool for each hook
 3. Cache discovered tools for session
 

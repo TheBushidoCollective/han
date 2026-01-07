@@ -1,0 +1,22 @@
+{
+  "name": "hashi-reddit",
+  "version": "1.0.0",
+  "description": "MCP server configuration for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "FSL-1.1-ALv2",
+  "keywords": [
+    "mcp",
+    "reddit",
+    "social-media",
+    "content",
+    "posts",
+    "comments",
+    "subreddits",
+    "server"
+  ]
+}

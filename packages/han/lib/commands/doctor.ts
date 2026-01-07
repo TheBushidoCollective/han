@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Command } from "commander";
-import { getMergedHanConfig } from "../han-settings.ts";
+import { getMergedHanConfig } from "../config/han-settings.ts";
 import { tryGetNativeModule } from "../native.ts";
 import { readGlobalSettings } from "../shared.ts";
 

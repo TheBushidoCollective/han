@@ -11,7 +11,7 @@ import {
 	getProjectDir,
 	getSettingsPaths,
 	readSettingsFile,
-} from "../lib/claude-settings.ts";
+} from "../lib/config/index.ts";
 
 describe.serial("claude-settings.ts", () => {
 	describe("getClaudeConfigDir", () => {

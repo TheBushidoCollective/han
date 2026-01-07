@@ -8,6 +8,16 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["python", "types", "async"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["python", "types", "async"],
+  "lspServers": {
+    "pyright": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".py": "python",
+        ".pyi": "python"
+      }
+    }
+  }
 }

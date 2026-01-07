@@ -1,6 +1,24 @@
 # hashi-agent-sop plugin configuration
 # This plugin provides Standard Operating Procedures via MCP server
 
+# MCP server definition (managed by Han, not exposed to Claude Code)
+mcp_servers:
+  agent-sops:
+    name: agent-sops
+    description: Standard Operating Procedures for AI agents
+    command: strands-agents-sops
+    args:
+      - mcp
+      - --sop-paths
+      - "${AGENT_SOP_PATHS-$PLUGIN_ROOT_DIR/sops}"
+    capabilities:
+      - category: Documentation
+        summary: SOP management, workflow definitions, RFC 2119 compliance
+        examples:
+          - List available SOPs
+          - Get SOP details and requirements
+          - Search for workflows by topic
+
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
 

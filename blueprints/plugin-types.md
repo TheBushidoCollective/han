@@ -70,7 +70,7 @@ jutsu-{tool}/
 │       └── SKILL.md
 ├── hooks/              # Validation hooks (optional)
 │   └── hooks.json
-└── han-config.json     # Hook definitions (optional)
+└── han-plugin.yml      # Hook definitions (optional)
 ```
 
 ### Key Features

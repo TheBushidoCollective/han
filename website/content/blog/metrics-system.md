@@ -148,17 +148,9 @@ This aggregates across sessions, showing:
 
 ## What Gets Stored
 
-All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. No data leaves your machine. You control it entirely.
+All metrics are stored locally in SQLite at `~/.claude/han/han.db`. No data leaves your machine. You control it entirely.
 
-```
-~/.claude/han/metrics/
-├── tasks/
-│   └── 2025-12.jsonl
-├── hooks/
-│   └── 2025-12.jsonl
-└── sessions/
-    └── 2025-12.jsonl
-```
+The database contains tables for tasks, hook executions, and frustration events - all queryable with any SQLite client or through the Browse UI.
 
 ## Integration with Hooks
 

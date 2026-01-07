@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "terraform init && terraform fmt -check && terraform validate"
+    command: "terraform init -backend=false && terraform fmt -check && terraform validate"
     dirs_with:
       - "*.tf"
     if_changed:

@@ -1,5 +1,5 @@
 ---
-globs: ["**/han.yml", "**/han-plugin.yml", "packages/han/lib/han-settings.ts"]
+paths: ["**/han.yml", "**/han-plugin.yml", "packages/han/lib/han-settings.ts"]
 ---
 
 # Han Configuration Precedence
@@ -36,7 +36,7 @@ plugins:
 ## Plugin Config Keys
 
 | YAML (snake_case) | JSON (camelCase) |
-|-------------------|------------------|
+| ----------------- | ---------------- |
 | dirs_with         | dirsWith         |
 | dir_test          | dirTest          |
 | if_changed        | ifChanged        |

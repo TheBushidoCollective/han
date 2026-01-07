@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	type CodebaseStats,
 	formatStatsForPrompt,
-} from "../lib/codebase-analyzer.ts";
+} from "../lib/analyze/index.ts";
 
 describe("codebase-analyzer.ts", () => {
 	describe("formatStatsForPrompt", () => {
