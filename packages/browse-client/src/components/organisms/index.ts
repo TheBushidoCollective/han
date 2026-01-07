@@ -10,8 +10,63 @@
  * They are re-exported here for consumers who prefer atomic design imports.
  */
 
+// Content Blocks (colocated with Relay fragments in pages/)
+export {
+  ImageBlock,
+  TextBlock,
+  ThinkingBlock,
+  ToolResultBlock,
+  ToolUseBlock,
+  type ContentBlockData,
+  type ContentBlockType,
+  type ImageBlockData,
+  type TextBlockData,
+  type ThinkingBlockData,
+  type ToolResultBlockData,
+  type ToolUseBlockData,
+} from '@/components/pages/SessionDetailPage/ContentBlocks';
+
 export { FileChangeCard } from '@/components/pages/SessionDetailPage/FileChangeCard.tsx';
 export { HookExecutionCard } from '@/components/pages/SessionDetailPage/HookExecutionCard.tsx';
+
+// MessageCards - main registry and all individual cards (colocated with Relay fragments)
+export {
+  AssistantMessageCard,
+  ExposedToolCallMessageCard,
+  ExposedToolResultMessageCard,
+  FileHistorySnapshotMessageCard,
+  formatRawJson,
+  formatTimestamp,
+  HookDatetimeMessageCard,
+  HookFileChangeMessageCard,
+  HookReferenceMessageCard,
+  HookResultMessageCard,
+  HookRunMessageCard,
+  HookScriptMessageCard,
+  HookValidationCacheMessageCard,
+  HookValidationMessageCard,
+  isKnownMessageType,
+  McpToolCallMessageCard,
+  McpToolResultMessageCard,
+  MemoryLearnMessageCard,
+  MemoryQueryMessageCard,
+  MessageCard,
+  MessageContextProvider,
+  MessageHeader,
+  type MessageRoleInfo,
+  type MessageTypename,
+  MessageWrapper,
+  QueueOperationMessageCard,
+  RawJsonView,
+  SentimentAnalysisMessageCard,
+  SummaryMessageCard,
+  SystemMessageCard,
+  UnknownEventMessageCard,
+  useMessageContext,
+  useRawJsonToggle,
+  UserMessageCard,
+} from '@/components/pages/SessionDetailPage/MessageCards';
+
 // Session Detail organisms (colocated with Relay fragments in pages/)
 export { SessionMessages } from '@/components/pages/SessionDetailPage/SessionMessages.tsx';
 export { SessionSidebar } from '@/components/pages/SessionDetailPage/SessionSidebar.tsx';

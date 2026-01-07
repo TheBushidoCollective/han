@@ -12,7 +12,9 @@ import type React from 'react';
 import { useState } from 'react';
 import { graphql, useFragment } from 'react-relay';
 import { Badge } from '@/components/atoms/Badge.tsx';
+import { Box } from '@/components/atoms/Box.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { Pressable } from '@/components/atoms/Pressable.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
@@ -65,33 +67,31 @@ export function SummaryMessageCard({
   // For compact summaries, show a collapsed view by default
   if (isCompact && !isExpanded && !showRawJson) {
     return (
-      <button
-        type="button"
-        style={{
-          padding: spacing.sm,
-          paddingLeft: spacing.md,
-          paddingRight: spacing.md,
-          backgroundColor: colors.bg.tertiary,
-          borderRadius: 6,
-          border: `1px solid ${colors.border.subtle}`,
-          cursor: 'pointer',
-          opacity: 0.8,
-          width: '100%',
-          textAlign: 'left',
-          font: 'inherit',
-        }}
-        onClick={() => setIsExpanded(true)}
-      >
-        <HStack gap="sm" align="center">
-          <Text size="sm" color="muted">
-            📦
-          </Text>
-          <Text size="sm" color="muted">
-            Context auto-compacted
-          </Text>
-          <Badge variant="default">Click to expand</Badge>
-        </HStack>
-      </button>
+      <Pressable onPress={() => setIsExpanded(true)}>
+        <Box
+          style={{
+            padding: spacing.sm,
+            paddingLeft: spacing.md,
+            paddingRight: spacing.md,
+            backgroundColor: colors.bg.tertiary,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: colors.border.subtle,
+            opacity: 0.8,
+            width: '100%',
+          }}
+        >
+          <HStack gap="sm" align="center">
+            <Text size="sm" color="muted">
+              📦
+            </Text>
+            <Text size="sm" color="muted">
+              Context auto-compacted
+            </Text>
+            <Badge variant="default">Click to expand</Badge>
+          </HStack>
+        </Box>
+      </Pressable>
     );
   }
 
@@ -104,19 +104,9 @@ export function SummaryMessageCard({
         onToggleRawJson={toggleRawJson}
         badges={
           isCompact && isExpanded ? (
-            <button
-              type="button"
-              onClick={() => setIsExpanded(false)}
-              style={{
-                cursor: 'pointer',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                font: 'inherit',
-              }}
-            >
+            <Pressable onPress={() => setIsExpanded(false)}>
               <Badge variant="default">Collapse</Badge>
-            </button>
+            </Pressable>
           ) : undefined
         }
       />

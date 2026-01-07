@@ -6,6 +6,7 @@
  */
 
 export { ConfidenceBadge } from './ConfidenceBadge.tsx';
+export { ErrorBoundary } from './ErrorBoundary.tsx';
 export { FeatureBadge } from './FeatureBadge.tsx';
 export { StatItem } from './StatItem.tsx';
 export { StatusIndicator } from './StatusIndicator.tsx';

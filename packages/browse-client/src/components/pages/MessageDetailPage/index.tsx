@@ -5,7 +5,7 @@
  * Uses the message query to fetch by UUID directly.
  */
 
-import React, { Component, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box } from '@/components/atoms/Box.tsx';
@@ -15,72 +15,10 @@ import { Pressable } from '@/components/atoms/Pressable.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
-import { MessageCard } from '@/components/pages/SessionDetailPage/MessageCards';
-import { colors, fonts, spacing } from '@/theme';
+import { ErrorBoundary } from '@/components/molecules/ErrorBoundary.tsx';
+import { MessageCard } from '@/components/organisms';
+import { fonts, spacing } from '@/theme';
 import type { MessageDetailPageQuery } from './__generated__/MessageDetailPageQuery.graphql.ts';
-
-// Error boundary to catch and display errors
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends Component<
-  { children: React.ReactNode },
-  ErrorBoundaryState
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('MessageDetailPage error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Box style={{ padding: spacing.lg }}>
-          <Heading
-            size="md"
-            style={{ color: colors.danger, marginBottom: spacing.sm }}
-          >
-            Something went wrong
-          </Heading>
-          <Box
-            style={{
-              fontFamily: fonts.mono,
-              fontSize: 12,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              color: colors.danger,
-            }}
-          >
-            <Text>{this.state.error?.message}</Text>
-          </Box>
-          <Box
-            style={{
-              fontFamily: fonts.mono,
-              fontSize: 10,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              marginTop: spacing.md,
-              color: colors.text.muted,
-            }}
-          >
-            <Text size="xs">{this.state.error?.stack}</Text>
-          </Box>
-        </Box>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 const MessageDetailPageQueryDef = graphql`
   query MessageDetailPageQuery($id: String!) {
