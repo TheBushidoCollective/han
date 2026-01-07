@@ -12,6 +12,7 @@ import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { InlineCode } from '@/components/atoms/InlineCode.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
@@ -167,15 +168,9 @@ export function CacheContent(): React.ReactElement {
       >
         <Text size="sm" color="secondary">
           The hook cache stores file hashes to skip unchanged hooks. Run{' '}
-          <code
-            style={{
-              backgroundColor: theme.colors.bg.secondary,
-              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-              borderRadius: theme.borderRadius.sm,
-            }}
-          >
+          <InlineCode>
             han hook run &lt;plugin&gt; &lt;hook&gt; --cache=false
-          </code>{' '}
+          </InlineCode>{' '}
           to force re-run.
         </Text>
       </Card>

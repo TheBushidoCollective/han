@@ -20,6 +20,7 @@ import {
 } from 'relay-runtime';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
+import { CodeBlock } from '@/components/atoms/CodeBlock.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
@@ -236,20 +237,13 @@ export function HookRunMessageCard({
                     <Text size="sm" color="muted">
                       Error:
                     </Text>
-                    <pre
-                      style={{
-                        fontSize: '12px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        backgroundColor: '#2d1f1f',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        margin: 0,
-                        color: '#f85149',
-                      }}
+                    <CodeBlock
+                      maxHeight={200}
+                      isError
+                      containerStyle={{ backgroundColor: '#2d1f1f' }}
                     >
-                      <code>{result.error}</code>
-                    </pre>
+                      {result.error}
+                    </CodeBlock>
                   </VStack>
                 )}
 
@@ -258,19 +252,7 @@ export function HookRunMessageCard({
                     <Text size="sm" color="muted">
                       Output:
                     </Text>
-                    <pre
-                      style={{
-                        fontSize: '12px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        backgroundColor: '#161b22',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        margin: 0,
-                      }}
-                    >
-                      <code>{result.output}</code>
-                    </pre>
+                    <CodeBlock maxHeight={200}>{result.output}</CodeBlock>
                   </VStack>
                 )}
               </>

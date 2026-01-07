@@ -15,6 +15,7 @@ import { Box } from '@/components/atoms/Box.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { InlineCode } from '@/components/atoms/InlineCode.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
@@ -270,7 +271,7 @@ function SettingsContent({
               {!hanConfig?.exists && (
                 <Box bg="tertiary" p="md" borderRadius="md">
                   <Text size="sm" color="secondary">
-                    Create <code>~/.claude/han.yml</code> to configure Han
+                    Create <InlineCode>~/.claude/han.yml</InlineCode> to configure Han
                     settings.
                   </Text>
                 </Box>
@@ -343,19 +344,19 @@ function SettingsContent({
               <VStack gap="sm" style={{ paddingLeft: theme.spacing.md }}>
                 <Text size="sm">
                   1. <strong>User</strong> - Global defaults in{' '}
-                  <code>~/.claude/</code>
+                  <InlineCode>~/.claude/</InlineCode>
                 </Text>
                 <Text size="sm">
                   2. <strong>Project</strong> - Team settings in{' '}
-                  <code>.claude/</code> (committed to git)
+                  <InlineCode>.claude/</InlineCode> (committed to git)
                 </Text>
                 <Text size="sm">
                   3. <strong>Local</strong> - Personal overrides in{' '}
-                  <code>.claude/*.local.*</code> (gitignored)
+                  <InlineCode>.claude/*.local.*</InlineCode> (gitignored)
                 </Text>
                 <Text size="sm">
                   4. <strong>Project Root</strong> - Han config in{' '}
-                  <code>han.yml</code> (project root)
+                  <InlineCode>han.yml</InlineCode> (project root)
                 </Text>
               </VStack>
             </VStack>
@@ -374,7 +375,7 @@ function SettingsContent({
             >
               <Text color="secondary">No MCP servers configured.</Text>
               <Text size="sm" color="muted">
-                Add MCP servers to <code>~/.claude/settings.json</code> under
+                Add MCP servers to <InlineCode>~/.claude/settings.json</InlineCode> under
                 "mcpServers"
               </Text>
             </VStack>
@@ -491,16 +492,16 @@ function SettingsContent({
           </Heading>
           <VStack gap="xs">
             <Text size="sm">
-              <code>~/.claude/settings.json</code> - Claude Code user settings
+              <InlineCode>~/.claude/settings.json</InlineCode> - Claude Code user settings
             </Text>
             <Text size="sm">
-              <code>~/.claude/han.yml</code> - Han global configuration
+              <InlineCode>~/.claude/han.yml</InlineCode> - Han global configuration
             </Text>
             <Text size="sm">
-              <code>.claude/settings.json</code> - Project-level Claude settings
+              <InlineCode>.claude/settings.json</InlineCode> - Project-level Claude settings
             </Text>
             <Text size="sm">
-              <code>.claude/han.yml</code> - Project-level Han configuration
+              <InlineCode>.claude/han.yml</InlineCode> - Project-level Han configuration
             </Text>
           </VStack>
         </VStack>

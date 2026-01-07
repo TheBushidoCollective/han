@@ -13,6 +13,8 @@ export { Box, type BoxProps } from './Box.tsx';
 export { Button, type ButtonProps } from './Button.tsx';
 export { Card } from './Card.tsx';
 export { Center, type CenterProps } from './Center.tsx';
+export { CodeBlock, type CodeBlockProps } from './CodeBlock.tsx';
+export { InlineCode, type InlineCodeProps } from './InlineCode.tsx';
 export { Checkbox } from './Checkbox.tsx';
 export { Divider } from './Divider.tsx';
 export { Heading } from './Heading.tsx';

@@ -14,6 +14,7 @@ import { Button } from '@/components/atoms/Button.tsx';
 import { Card } from '@/components/atoms/Card.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { InlineCode } from '@/components/atoms/InlineCode.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
@@ -425,27 +426,11 @@ function PluginsContent({
         <VStack gap="sm">
           <Text size="sm" color="secondary">
             To install plugins, use:{' '}
-            <code
-              style={{
-                backgroundColor: theme.colors.bg.secondary,
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                borderRadius: theme.borderRadius.sm,
-              }}
-            >
-              han plugin install &lt;name&gt;
-            </code>
+            <InlineCode>han plugin install &lt;name&gt;</InlineCode>
           </Text>
           <Text size="sm" color="secondary">
             Or auto-detect for your project:{' '}
-            <code
-              style={{
-                backgroundColor: theme.colors.bg.secondary,
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                borderRadius: theme.borderRadius.sm,
-              }}
-            >
-              han plugin install --auto
-            </code>
+            <InlineCode>han plugin install --auto</InlineCode>
           </Text>
         </VStack>
       </Card>

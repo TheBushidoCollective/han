@@ -12,17 +12,17 @@
 
 // Content Blocks (colocated with Relay fragments in pages/)
 export {
-  ImageBlock,
-  TextBlock,
-  ThinkingBlock,
-  ToolResultBlock,
-  ToolUseBlock,
   type ContentBlockData,
   type ContentBlockType,
+  ImageBlock,
   type ImageBlockData,
+  TextBlock,
   type TextBlockData,
+  ThinkingBlock,
   type ThinkingBlockData,
+  ToolResultBlock,
   type ToolResultBlockData,
+  ToolUseBlock,
   type ToolUseBlockData,
 } from '@/components/pages/SessionDetailPage/ContentBlocks';
 
@@ -62,9 +62,9 @@ export {
   SummaryMessageCard,
   SystemMessageCard,
   UnknownEventMessageCard,
+  UserMessageCard,
   useMessageContext,
   useRawJsonToggle,
-  UserMessageCard,
 } from '@/components/pages/SessionDetailPage/MessageCards';
 
 // Session Detail organisms (colocated with Relay fragments in pages/)
