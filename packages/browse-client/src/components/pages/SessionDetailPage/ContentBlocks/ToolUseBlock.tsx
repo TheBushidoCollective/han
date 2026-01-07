@@ -52,7 +52,7 @@ const terminalStyle: CSSProperties = {
 
 const terminalHeaderStyle: CSSProperties = {
   backgroundColor: '#24283b',
-  padding: '8px 12px',
+  padding: '12px 24px',
   display: 'flex',
   alignItems: 'center',
   gap: 8,
@@ -60,7 +60,7 @@ const terminalHeaderStyle: CSSProperties = {
 };
 
 const terminalContentStyle: CSSProperties = {
-  padding: '16px 20px',
+  padding: 24,
 };
 
 const diffRemoveStyle: CSSProperties = {
