@@ -42,6 +42,7 @@ const result = await Bun.build({
   ],
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
+    global: 'globalThis',
   },
   loader: {
     '.css': 'css',

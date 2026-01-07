@@ -27,7 +27,7 @@ import { registerReindexCommand } from "./commands/index/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
-import { getMergedHanConfig } from "./han-settings.ts";
+import { getMergedHanConfig } from "./config/han-settings.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
 
 /**

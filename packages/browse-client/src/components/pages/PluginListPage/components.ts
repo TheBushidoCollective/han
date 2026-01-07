@@ -4,8 +4,8 @@
  * Extracted components for the plugins page.
  */
 
+export { StatCard } from '@/components/organisms/StatCard.tsx';
 export { PluginCard } from './PluginCard.tsx';
-export { StatCard } from './StatCard.tsx';
 export type { MutationResult, Plugin, PluginsData } from './types.ts';
 export {
   formatScope,

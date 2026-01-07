@@ -34,6 +34,7 @@ import {
 
 const UserMessageCardFragment = graphql`
   fragment UserMessageCard_message on UserMessage {
+    __typename
     id
     timestamp
     rawJson
@@ -56,24 +57,20 @@ const UserMessageCardFragment = graphql`
         icon
         displayName
         color
-      }
-      ... on ToolResultBlock {
-        toolCallId
-        content
-        isError
-        isLong
-        preview
-        hasImage
+        result {
+          toolCallId
+          content
+          isError
+          isLong
+          preview
+          hasImage
+        }
       }
       ... on ImageBlock {
         mediaType
         dataUrl
       }
     }
-    isMeta
-    isInterrupt
-    isCommand
-    commandName
     sentimentAnalysis {
       sentimentScore
       sentimentLevel
@@ -81,46 +78,50 @@ const UserMessageCardFragment = graphql`
       frustrationLevel
       signals
     }
+    # Type-specific fields via inline fragments
+    ... on CommandUserMessage {
+      commandName
+    }
   }
 `;
 
 interface UserMessageCardProps {
   fragmentRef: UserMessageCard_message$key;
-  toolResultsMap?: Map<string, ContentBlockType>;
 }
 
 /**
- * Get role info for user message variants
+ * Get role info for user message variants based on __typename
  */
 function getUserRoleInfo(
-  isMeta: boolean | null,
-  isCommand: boolean | null,
-  isInterrupt: boolean | null,
+  typename: string,
   commandName: string | null
 ): MessageRoleInfo {
-  if (isMeta) {
-    return { label: 'System', color: '#8b949e', icon: '⚙️' };
+  switch (typename) {
+    case 'MetaUserMessage':
+      return { label: 'System', color: '#8b949e', icon: '⚙️' };
+    case 'CommandUserMessage':
+      return {
+        label: commandName ? `/${commandName}` : 'Command',
+        color: '#d29922', // warning orange
+        icon: '⚡',
+      };
+    case 'InterruptUserMessage':
+      return { label: 'Interrupt', color: '#f85149', icon: '⏸️' };
+    case 'ToolResultUserMessage':
+      return { label: 'Tool Result', color: '#8957e5', icon: '🔧' };
+    default:
+      // RegularUserMessage and any unknown types
+      return { label: 'User', color: '#58a6ff', icon: '👤' };
   }
-  if (isCommand) {
-    return {
-      label: commandName ? `/${commandName}` : 'Command',
-      color: '#d29922', // warning orange
-      icon: '⚡',
-    };
-  }
-  if (isInterrupt) {
-    return { label: 'Interrupt', color: '#f85149', icon: '⏸️' };
-  }
-  return { label: 'User', color: '#58a6ff', icon: '👤' };
 }
 
 /**
  * Render content blocks for user messages
+ * Note: Tool results are now fetched inline via GraphQL result field on ToolUseBlock
  */
 function renderContentBlock(
   block: ContentBlockType,
-  index: number,
-  toolResultsMap?: Map<string, ContentBlockType>
+  index: number
 ): React.ReactElement | null {
   switch (block.type) {
     case 'THINKING':
@@ -151,7 +152,18 @@ function renderContentBlock(
         )
           ? category
           : 'OTHER';
-      const result = toolResultsMap?.get(block.toolCallId ?? '');
+      // Result is now fetched via GraphQL result field on ToolUseBlock
+      const result = block.result
+        ? {
+            type: 'TOOL_RESULT' as const,
+            toolCallId: block.result.toolCallId ?? '',
+            content: block.result.content ?? '',
+            isError: block.result.isError ?? false,
+            isLong: block.result.isLong ?? false,
+            preview: block.result.preview ?? '',
+            hasImage: block.result.hasImage ?? false,
+          }
+        : undefined;
       return (
         <ToolUseBlock
           key={`tool-use-${index}`}
@@ -167,6 +179,7 @@ function renderContentBlock(
       );
     }
     case 'TOOL_RESULT':
+      // Tool results are now rendered inline with their parent ToolUseBlock
       return null;
     case 'IMAGE':
       return (
@@ -250,17 +263,17 @@ function InlineSentiment({
 
 export function UserMessageCard({
   fragmentRef,
-  toolResultsMap,
 }: UserMessageCardProps): React.ReactElement {
   const data = useFragment(UserMessageCardFragment, fragmentRef);
   const { showRawJson, toggleRawJson } = useRawJsonToggle();
 
-  const roleInfo = getUserRoleInfo(
-    data.isMeta ?? false,
-    data.isCommand ?? false,
-    data.isInterrupt ?? false,
-    data.commandName ?? null
-  );
+  // Get commandName from CommandUserMessage subtype (via inline fragment)
+  const commandName =
+    data.__typename === 'CommandUserMessage'
+      ? (data.commandName ?? null)
+      : null;
+
+  const roleInfo = getUserRoleInfo(data.__typename, commandName);
 
   const hasContentBlocks = data.contentBlocks && data.contentBlocks.length > 0;
   const contentBlocks = data.contentBlocks ?? [];
@@ -280,11 +293,7 @@ export function UserMessageCard({
         <VStack className="message-content" gap="sm" align="stretch">
           {hasContentBlocks ? (
             contentBlocks.map((block, index) =>
-              renderContentBlock(
-                block as ContentBlockType,
-                index,
-                toolResultsMap
-              )
+              renderContentBlock(block as ContentBlockType, index)
             )
           ) : (
             <MarkdownContent>{data.content ?? ''}</MarkdownContent>

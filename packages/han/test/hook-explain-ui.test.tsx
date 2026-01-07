@@ -27,15 +27,16 @@ describe("hook-explain-ui.tsx", () => {
 
 	describe("HookExplainUI - With Hooks", () => {
 		const samplePluginHook: HookSource = {
-			source: "/path/to/plugin/hooks.json",
+			source: "/path/to/plugin",
 			pluginName: "jutsu-typescript",
 			marketplace: "han",
 			hookType: "PreToolUse",
 			hooks: [
 				{
-					type: "command",
-					command: "han hook dispatch PreToolUse",
-					timeout: 5000,
+					name: "typecheck",
+					command: "han hook run jutsu-typescript typecheck",
+					description: "Run TypeScript type checking",
+					toolFilter: ["Edit", "Write"],
 				},
 			],
 		};
@@ -46,8 +47,8 @@ describe("hook-explain-ui.tsx", () => {
 			hookType: "SessionStart",
 			hooks: [
 				{
-					type: "prompt",
-					prompt: "Hello world\nSecond line",
+					command: "han hook dispatch SessionStart",
+					description: "Dispatch session start hooks",
 				},
 			],
 		};
@@ -57,7 +58,7 @@ describe("hook-explain-ui.tsx", () => {
 				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("CONFIGURED HOOKS");
+			expect(output).toContain("ORCHESTRATOR-MANAGED HOOKS");
 			expect(output).toContain("Han plugins only");
 		});
 
@@ -88,24 +89,30 @@ describe("hook-explain-ui.tsx", () => {
 			expect(output).toContain("user");
 		});
 
-		test("renders command hook details", () => {
+		test("renders command hook details with name", () => {
 			const { lastFrame } = render(
 				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("command");
-			expect(output).toContain("han hook dispatch PreToolUse");
-			expect(output).toContain("5000ms");
+			expect(output).toContain("typecheck");
+			expect(output).toContain("han hook run jutsu-typescript typecheck");
 		});
 
-		test("renders prompt hook with multiline content", () => {
+		test("renders hook description", () => {
 			const { lastFrame } = render(
-				<HookExplainUI hooks={[sampleSettingsHook]} showAll={true} />,
+				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("prompt");
-			expect(output).toContain("Hello world");
-			expect(output).toContain("Second line");
+			expect(output).toContain("Run TypeScript type checking");
+		});
+
+		test("renders tool filter", () => {
+			const { lastFrame } = render(
+				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
+			);
+			const output = lastFrame();
+			expect(output).toContain("Tool filter:");
+			expect(output).toContain("Edit, Write");
 		});
 
 		test("renders summary section", () => {
@@ -115,30 +122,18 @@ describe("hook-explain-ui.tsx", () => {
 			);
 			const output = lastFrame();
 			expect(output).toContain("SUMMARY");
-			expect(output).toContain("Total hook sources:");
-			expect(output).toContain("Command hooks:");
-			expect(output).toContain("Prompt hooks:");
-			expect(output).toContain("Hook types:");
+			expect(output).toContain("Total plugins:");
+			expect(output).toContain("Total hooks:");
+			expect(output).toContain("Event types:");
 		});
 
-		test("counts command and prompt hooks correctly", () => {
-			const hooks: HookSource[] = [samplePluginHook, sampleSettingsHook];
-			const { lastFrame } = render(
-				<HookExplainUI hooks={hooks} showAll={true} />,
-			);
-			const output = lastFrame();
-			// 1 command hook, 1 prompt hook
-			expect(output).toContain("1"); // Command hooks count
-		});
-
-		test("renders note section", () => {
+		test("renders HOW IT WORKS section", () => {
 			const { lastFrame } = render(
 				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("NOTE:");
-			expect(output).toContain("Command hooks execute shell commands");
-			expect(output).toContain("Prompt hooks inject text");
+			expect(output).toContain("HOW IT WORKS:");
+			expect(output).toContain("central orchestrator");
 		});
 
 		test("renders path information", () => {
@@ -147,7 +142,7 @@ describe("hook-explain-ui.tsx", () => {
 			);
 			const output = lastFrame();
 			expect(output).toContain("Path:");
-			expect(output).toContain("/path/to/plugin/hooks.json");
+			expect(output).toContain("/path/to/plugin");
 		});
 
 		test("groups hooks by type", () => {
@@ -167,115 +162,175 @@ describe("hook-explain-ui.tsx", () => {
 			// Should show both PreToolUse and SessionStart sections
 			expect(output).toContain("PreToolUse");
 			expect(output).toContain("SessionStart");
-			// PreToolUse should show "(2 sources)"
-			expect(output).toContain("2 source");
+			// PreToolUse should show "(2 plugins"
+			expect(output).toContain("2 plugin");
 		});
 
 		test("renders multiple hooks within a single source", () => {
 			const multiHookSource: HookSource = {
-				source: "/path/to/hooks.json",
+				source: "/path/to/hooks",
 				pluginName: "test-plugin",
 				marketplace: "han",
 				hookType: "Stop",
 				hooks: [
-					{ type: "command", command: "first-command" },
-					{ type: "command", command: "second-command" },
-					{ type: "prompt", prompt: "test prompt" },
+					{ name: "lint", command: "bun run lint" },
+					{ name: "test", command: "bun run test" },
+					{ command: "bun run format" },
 				],
 			};
 			const { lastFrame } = render(
 				<HookExplainUI hooks={[multiHookSource]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("Hook 1:");
-			expect(output).toContain("Hook 2:");
-			expect(output).toContain("Hook 3:");
-			expect(output).toContain("first-command");
-			expect(output).toContain("second-command");
-			expect(output).toContain("test prompt");
+			// Check hook names are rendered (colon may be rendered separately)
+			expect(output).toContain("lint");
+			expect(output).toContain("test");
+			expect(output).toContain("Hook 3");
+			expect(output).toContain("bun run lint");
+			expect(output).toContain("bun run test");
+			expect(output).toContain("bun run format");
 		});
 	});
 
 	describe("HookExplainUI - Edge Cases", () => {
-		test("handles hook without timeout", () => {
-			const hookNoTimeout: HookSource = {
+		test("handles hook with dirsWith", () => {
+			const hookWithDirs: HookSource = {
 				source: "/path",
 				pluginName: "test",
 				marketplace: "han",
 				hookType: "Test",
-				hooks: [{ type: "command", command: "test" }],
+				hooks: [
+					{
+						command: "test",
+						dirsWith: ["package.json", "tsconfig.json"],
+					},
+				],
 			};
 			const { lastFrame } = render(
-				<HookExplainUI hooks={[hookNoTimeout]} showAll={false} />,
+				<HookExplainUI hooks={[hookWithDirs]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).not.toContain("Timeout:");
+			expect(output).toContain("Directories with:");
+			expect(output).toContain("package.json, tsconfig.json");
 		});
 
-		test("handles hook with only prompt type", () => {
-			const promptOnly: HookSource = {
+		test("handles hook with ifChanged", () => {
+			const hookWithIfChanged: HookSource = {
 				source: "/path",
-				scope: "project",
-				hookType: "UserPromptSubmit",
-				hooks: [{ type: "prompt", prompt: "context injection" }],
+				pluginName: "test",
+				marketplace: "han",
+				hookType: "Test",
+				hooks: [
+					{
+						command: "test",
+						ifChanged: ["**/*.ts", "**/*.tsx"],
+					},
+				],
 			};
 			const { lastFrame } = render(
-				<HookExplainUI hooks={[promptOnly]} showAll={true} />,
+				<HookExplainUI hooks={[hookWithIfChanged]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("prompt");
-			expect(output).toContain("context injection");
+			expect(output).toContain("If changed:");
+			expect(output).toContain("**/*.ts, **/*.tsx");
 		});
 
-		test("sorts hook types alphabetically", () => {
+		test("handles hook with dependsOn", () => {
+			const hookWithDeps: HookSource = {
+				source: "/path",
+				pluginName: "test",
+				marketplace: "han",
+				hookType: "Test",
+				hooks: [
+					{
+						command: "test",
+						dependsOn: [
+							{ plugin: "jutsu-typescript", hook: "typecheck" },
+							{ plugin: "jutsu-biome", hook: "lint", optional: true },
+						],
+					},
+				],
+			};
+			const { lastFrame } = render(
+				<HookExplainUI hooks={[hookWithDeps]} showAll={false} />,
+			);
+			const output = lastFrame();
+			expect(output).toContain("Depends on:");
+			expect(output).toContain("jutsu-typescript/typecheck");
+			expect(output).toContain("jutsu-biome/lint (optional)");
+		});
+
+		test("handles hook with tip", () => {
+			const hookWithTip: HookSource = {
+				source: "/path",
+				pluginName: "test",
+				marketplace: "han",
+				hookType: "Test",
+				hooks: [
+					{
+						command: "test",
+						tip: "Run with --verbose for more output",
+					},
+				],
+			};
+			const { lastFrame } = render(
+				<HookExplainUI hooks={[hookWithTip]} showAll={false} />,
+			);
+			const output = lastFrame();
+			expect(output).toContain("Tip:");
+			expect(output).toContain("Run with --verbose for more output");
+		});
+
+		test("sorts hook types in logical order", () => {
 			const hooks: HookSource[] = [
 				{
 					source: "/z",
 					pluginName: "z",
 					marketplace: "han",
-					hookType: "ZHook",
-					hooks: [{ type: "command", command: "z" }],
+					hookType: "Stop",
+					hooks: [{ command: "z" }],
 				},
 				{
 					source: "/a",
 					pluginName: "a",
 					marketplace: "han",
-					hookType: "AHook",
-					hooks: [{ type: "command", command: "a" }],
+					hookType: "SessionStart",
+					hooks: [{ command: "a" }],
 				},
 				{
 					source: "/m",
 					pluginName: "m",
 					marketplace: "han",
-					hookType: "MHook",
-					hooks: [{ type: "command", command: "m" }],
+					hookType: "PreToolUse",
+					hooks: [{ command: "m" }],
 				},
 			];
 			const { lastFrame } = render(
 				<HookExplainUI hooks={hooks} showAll={false} />,
 			);
 			const output = lastFrame() || "";
-			const aIndex = output.indexOf("AHook");
-			const mIndex = output.indexOf("MHook");
-			const zIndex = output.indexOf("ZHook");
-			expect(aIndex).toBeLessThan(mIndex);
-			expect(mIndex).toBeLessThan(zIndex);
+			// SessionStart should come before PreToolUse which should come before Stop
+			const sessionIndex = output.indexOf("SessionStart");
+			const preToolIndex = output.indexOf("PreToolUse");
+			const stopIndex = output.indexOf("Stop");
+			expect(sessionIndex).toBeLessThan(preToolIndex);
+			expect(preToolIndex).toBeLessThan(stopIndex);
 		});
 
-		test("handles single source with singular text", () => {
+		test("handles single plugin with singular text", () => {
 			const singleSource: HookSource = {
 				source: "/path",
 				pluginName: "single",
 				marketplace: "han",
 				hookType: "Test",
-				hooks: [{ type: "command", command: "test" }],
+				hooks: [{ command: "test" }],
 			};
 			const { lastFrame } = render(
 				<HookExplainUI hooks={[singleSource]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("1 source)");
-			expect(output).not.toContain("1 sources)");
+			expect(output).toContain("1 plugin");
+			expect(output).not.toContain("1 plugins");
 		});
 
 		test("handles empty hooks array in source", () => {
@@ -292,7 +347,26 @@ describe("hook-explain-ui.tsx", () => {
 			const output = lastFrame();
 			// Should still render the source but without hook entries
 			expect(output).toContain("empty");
-			expect(output).not.toContain("Hook 1:");
+		});
+
+		test("counts hooks with caching correctly", () => {
+			const hooks: HookSource[] = [
+				{
+					source: "/path1",
+					pluginName: "test1",
+					marketplace: "han",
+					hookType: "Stop",
+					hooks: [
+						{ command: "test1", ifChanged: ["*.ts"] },
+						{ command: "test2" },
+					],
+				},
+			];
+			const { lastFrame } = render(
+				<HookExplainUI hooks={hooks} showAll={false} />,
+			);
+			const output = lastFrame();
+			expect(output).toContain("With caching (if_changed):");
 		});
 	});
 });

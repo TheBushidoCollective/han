@@ -214,7 +214,6 @@ describe("CLI Unit Tests", () => {
 
 			expect(stdout).toContain("mcp");
 		});
-
 	});
 
 	describe("Plugin subcommand help", () => {
@@ -304,7 +303,6 @@ describe("CLI Unit Tests", () => {
 
 			expect(stdout).toContain("run");
 		});
-
 	});
 
 	describe("MCP subcommand help", () => {

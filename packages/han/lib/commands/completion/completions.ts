@@ -5,7 +5,10 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { listAvailableHooks, loadPluginConfig } from "../../hook-config.ts";
+import {
+	listAvailableHooks,
+	loadPluginConfig,
+} from "../../hooks/hook-config.ts";
 import { getMarketplacePlugins } from "../../marketplace-cache.ts";
 import { getInstalledPlugins } from "../../shared.ts";
 

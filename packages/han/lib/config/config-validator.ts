@@ -197,6 +197,10 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			"dependsOn",
 			"depends_on",
 			"tip",
+			"event",
+			"toolFilter",
+			"tool_filter",
+			"mcp",
 		];
 		for (const key of Object.keys(hook)) {
 			if (!validProperties.includes(key)) {

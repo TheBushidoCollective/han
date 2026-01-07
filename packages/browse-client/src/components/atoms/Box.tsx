@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   forwardRef,
   type KeyboardEvent,
   type ReactNode,
@@ -15,9 +16,17 @@ import {
   spacing,
 } from '../../theme.ts';
 
+/**
+ * Extended style type for Box component.
+ * Allows both React Native ViewStyle and web-specific CSSProperties.
+ * This is needed because react-native-web handles CSS properties at runtime,
+ * but ViewStyle doesn't include web-only properties like wordBreak, whiteSpace, etc.
+ */
+type BoxStyle = ViewStyle | CSSProperties;
+
 export interface BoxProps {
   children?: ReactNode;
-  style?: ViewStyle;
+  style?: BoxStyle;
   className?: string;
   id?: string;
   bg?: BackgroundKey;
@@ -93,6 +102,7 @@ export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
   },
   ref
 ) {
+  // Cast to allow both ViewStyle and CSSProperties - react-native-web handles this at runtime
   const computedStyle = StyleSheet.flatten(
     [
       bg && { backgroundColor: colors.bg[bg] },
@@ -126,7 +136,7 @@ export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box(
       maxHeight !== undefined && { maxHeight },
       onClick && { cursor: 'pointer' },
       style,
-    ].filter(Boolean) as ViewStyle[]
+    ].filter(Boolean) as unknown as ViewStyle[]
   );
 
   const handleKeyDown = onClick

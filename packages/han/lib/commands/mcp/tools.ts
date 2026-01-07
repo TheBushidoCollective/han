@@ -5,7 +5,10 @@ import {
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
-import { loadPluginConfig, type PluginConfig } from "../../hook-config.ts";
+import {
+	loadPluginConfig,
+	type PluginConfig,
+} from "../../hooks/hook-config.ts";
 import { recordMcpToolCall } from "../../telemetry/index.ts";
 import { runConfiguredHook } from "../../validate.ts";
 
@@ -14,6 +17,13 @@ export interface PluginTool {
 	description: string;
 	pluginName: string;
 	hookName: string;
+	pluginRoot: string;
+}
+
+export interface AvailableHook {
+	plugin: string;
+	hook: string;
+	description: string;
 	pluginRoot: string;
 }
 
@@ -169,8 +179,13 @@ export function discoverPluginTools(): PluginTool[] {
 			continue;
 		}
 
-		// Create a tool for each hook
-		for (const hookName of Object.keys(pluginConfig.hooks)) {
+		// Create a tool for each hook (skip hooks with mcp: false)
+		for (const [hookName, hookDef] of Object.entries(pluginConfig.hooks)) {
+			// Skip hooks explicitly marked as not exposed to MCP
+			if (hookDef.mcp === false) {
+				continue;
+			}
+
 			const toolName = `${pluginName}_${hookName}`.replace(/-/g, "_");
 
 			tools.push({
@@ -188,6 +203,120 @@ export function discoverPluginTools(): PluginTool[] {
 	}
 
 	return tools;
+}
+
+/**
+ * Discover all available hooks from installed plugins (for consolidated hook_run tool)
+ */
+export function discoverAvailableHooks(): AvailableHook[] {
+	const hooks: AvailableHook[] = [];
+	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
+
+	for (const [pluginName, marketplace] of plugins.entries()) {
+		const marketplaceConfig = marketplaces.get(marketplace);
+		const pluginRoot = getPluginDir(pluginName, marketplace, marketplaceConfig);
+
+		if (!pluginRoot) {
+			continue;
+		}
+
+		// Load plugin config to discover hooks
+		const pluginConfig = loadPluginConfig(pluginRoot, false);
+		if (!pluginConfig || !pluginConfig.hooks) {
+			continue;
+		}
+
+		// Create an entry for each hook (skip hooks with mcp: false)
+		for (const [hookName, hookDef] of Object.entries(pluginConfig.hooks)) {
+			// Skip hooks explicitly marked as not exposed to MCP
+			if (hookDef.mcp === false) {
+				continue;
+			}
+
+			hooks.push({
+				plugin: pluginName,
+				hook: hookName,
+				description: generateToolDescription(
+					pluginName,
+					hookName,
+					pluginConfig,
+				),
+				pluginRoot,
+			});
+		}
+	}
+
+	return hooks;
+}
+
+/**
+ * Find a specific hook by plugin and hook name
+ */
+export function findHook(
+	plugin: string,
+	hook: string,
+): AvailableHook | undefined {
+	const hooks = discoverAvailableHooks();
+	return hooks.find((h) => h.plugin === plugin && h.hook === hook);
+}
+
+/**
+ * Generate dynamic description for the consolidated hook_run tool
+ */
+export function generateHookRunDescription(hooks: AvailableHook[]): string {
+	// Group hooks by category (jutsu, do, hashi, core, bushido)
+	const byCategory = new Map<string, AvailableHook[]>();
+
+	for (const hook of hooks) {
+		let category = "other";
+		if (hook.plugin.startsWith("jutsu-")) category = "jutsu";
+		else if (hook.plugin.startsWith("do-")) category = "do";
+		else if (hook.plugin.startsWith("hashi-")) category = "hashi";
+		else if (hook.plugin === "core" || hook.plugin === "bushido")
+			category = "core";
+
+		if (!byCategory.has(category)) {
+			byCategory.set(category, []);
+		}
+		byCategory.get(category)?.push(hook);
+	}
+
+	const lines: string[] = [
+		"Execute a plugin hook. Available hooks by category:",
+		"",
+	];
+
+	// Sort categories for consistent output
+	const categoryOrder = ["jutsu", "do", "hashi", "core", "other"];
+	const categoryTitles: Record<string, string> = {
+		jutsu: "Jutsu (validation/quality)",
+		do: "Do (specialized agents)",
+		hashi: "Hashi (MCP integrations)",
+		core: "Core (foundation)",
+		other: "Other",
+	};
+
+	for (const cat of categoryOrder) {
+		const catHooks = byCategory.get(cat);
+		if (!catHooks || catHooks.length === 0) continue;
+
+		lines.push(`**${categoryTitles[cat]}:**`);
+		for (const h of catHooks) {
+			// Extract short description (first sentence or first N chars)
+			const shortDesc = h.description.split(".")[0];
+			lines.push(`- ${h.plugin}/${h.hook}: ${shortDesc}`);
+		}
+		lines.push("");
+	}
+
+	lines.push("Parameters:");
+	lines.push("- plugin (required): Plugin name (e.g., 'jutsu-biome')");
+	lines.push("- hook (required): Hook name (e.g., 'lint')");
+	lines.push("- cache: Use cached results (default: true)");
+	lines.push("- directory: Limit to specific directory");
+	lines.push("- verbose: Show full output in real-time");
+
+	return lines.join("\n");
 }
 
 export interface ExecuteToolOptions {
@@ -358,4 +487,33 @@ export async function executePluginTool(
 		output: outputLines.join("\n") || (success ? "Success" : "Failed"),
 		idleTimedOut: timedOut,
 	};
+}
+
+/**
+ * Execute a hook by plugin and hook name (for consolidated hook_run tool)
+ */
+export async function executeHookByName(
+	pluginName: string,
+	hookName: string,
+	options: ExecuteToolOptions,
+): Promise<ExecuteToolResult> {
+	const hook = findHook(pluginName, hookName);
+
+	if (!hook) {
+		return {
+			success: false,
+			output: `Unknown hook: ${pluginName}/${hookName}. Use the tool without arguments to see available hooks.`,
+		};
+	}
+
+	// Convert to PluginTool format for executePluginTool
+	const tool: PluginTool = {
+		name: `${pluginName}_${hookName}`.replace(/-/g, "_"),
+		description: hook.description,
+		pluginName: hook.plugin,
+		hookName: hook.hook,
+		pluginRoot: hook.pluginRoot,
+	};
+
+	return executePluginTool(tool, options);
 }

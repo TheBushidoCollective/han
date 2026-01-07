@@ -366,17 +366,32 @@ export class EventLogger {
 	/**
 	 * Log hook run event (like tool_use)
 	 * Returns event UUID for correlating with result
+	 * @param ifChanged - Glob patterns for file validation (snapshot at execution time)
+	 * @param command - The command that will be executed
 	 */
 	logHookRun(
 		plugin: string,
 		hook: string,
+		hookType: string,
 		directory: string,
 		cached: boolean,
+		ifChanged?: string[],
+		command?: string,
 	): string {
 		const base = this.createBaseEvent("hook_run");
 		this.writeEvent({
 			...base,
-			data: { plugin, hook, directory, cached },
+			data: {
+				plugin,
+				hook,
+				hook_type: hookType,
+				directory,
+				cached,
+				// Only include if_changed if patterns exist (captures config at execution time)
+				...(ifChanged && ifChanged.length > 0 && { if_changed: ifChanged }),
+				// Include command for validation tracking
+				...(command && { command }),
+			},
 		});
 		return base.uuid;
 	}
@@ -385,6 +400,8 @@ export class EventLogger {
 	 * Log hook result event (like tool_result)
 	 * Combines success and error cases into single event type
 	 * @param hookRunId - UUID of the parent hook_run event for correlation
+	 * @param ifChanged - Glob patterns for file validation (snapshot at execution time)
+	 * @param command - The command that was executed
 	 */
 	logHookResult(
 		plugin: string,
@@ -398,6 +415,8 @@ export class EventLogger {
 		output?: string,
 		error?: string,
 		hookRunId?: string,
+		ifChanged?: string[],
+		command?: string,
 	): void {
 		const event = {
 			...this.createBaseEvent("hook_result"),
@@ -416,6 +435,9 @@ export class EventLogger {
 						? this.truncateOutput(output)
 						: undefined,
 				error,
+				// Include validation context for tracking
+				...(ifChanged && ifChanged.length > 0 && { if_changed: ifChanged }),
+				...(command && { command }),
 			},
 		} as const;
 		this.writeEvent(event as HanEvent);

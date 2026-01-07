@@ -39,11 +39,16 @@ export const SessionListItemFragment = graphql`
       status
     }
     activeTasks {
-      id
-      taskId
-      description
-      type
-      status
+      totalCount
+      edges {
+        node {
+          id
+          taskId
+          description
+          type
+          status
+        }
+      }
     }
     todoCounts {
       total
@@ -176,9 +181,12 @@ export function SessionListItem({
   const completed = session.todoCounts?.completed ?? 0;
   const todoProgress = total > 0 ? Math.round((completed / total) * 100) : null;
 
-  // Filter to only active tasks
+  // Extract and filter to only active tasks
   const activeTasks =
-    session.activeTasks?.filter((task) => task.status === 'ACTIVE') ?? [];
+    session.activeTasks?.edges
+      ?.map((edge) => edge.node)
+      .filter((node): node is NonNullable<typeof node> => node != null)
+      .filter((task) => task.status === 'ACTIVE') ?? [];
   const hasActiveTasks = activeTasks.length > 0;
   const hasActiveTodo = session.currentTodo && !hasActiveTasks;
 

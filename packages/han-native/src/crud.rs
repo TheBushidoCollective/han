@@ -1691,13 +1691,13 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
     let now = chrono::Utc::now().to_rfc3339();
 
     let mut stmt = conn.prepare(
-        "INSERT INTO hook_executions (id, session_id, task_id, hook_type, hook_name, hook_source, duration_ms, exit_code, passed, output, error, executed_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
-         RETURNING id, session_id, task_id, hook_type, hook_name, hook_source, duration_ms, exit_code, passed, output, error, executed_at"
+        "INSERT INTO hook_executions (id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+         RETURNING id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.task_id, input.hook_type, input.hook_name, input.hook_source, input.duration_ms, input.exit_code, input.passed as i32, input.output, input.error, now],
+        params![id, input.session_id, input.task_id, input.hook_type, input.hook_name, input.hook_source, input.directory, input.duration_ms, input.exit_code, input.passed as i32, input.output, input.error, input.if_changed, input.command, now],
         |row| {
             Ok(HookExecution {
                 id: Some(row.get(0)?),
@@ -1706,12 +1706,15 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
                 hook_type: row.get(3)?,
                 hook_name: row.get(4)?,
                 hook_source: row.get(5)?,
-                duration_ms: row.get(6)?,
-                exit_code: row.get(7)?,
-                passed: row.get::<_, i32>(8)? != 0,
-                output: row.get(9)?,
-                error: row.get(10)?,
-                executed_at: row.get(11)?,
+                directory: row.get(6)?,
+                duration_ms: row.get(7)?,
+                exit_code: row.get(8)?,
+                passed: row.get::<_, i32>(9)? != 0,
+                output: row.get(10)?,
+                error: row.get(11)?,
+                if_changed: row.get(12)?,
+                command: row.get(13)?,
+                executed_at: row.get(14)?,
             })
         }
     ).map_err(|e| napi::Error::from_reason(format!("Failed to record hook execution: {}", e)))

@@ -15,11 +15,12 @@ import {
 	GraphQLString,
 } from "graphql";
 import type { ProjectGroup } from "../api/sessions.ts";
-import { indexer } from "../db/index.ts";
+import { getMessage, indexer } from "../db/index.ts";
 import { startMemoryQuerySession } from "../memory/streaming.ts";
 import { builder } from "./builder.ts";
 import { decodeGlobalId } from "./node-registry.ts";
 import {
+	type HookResultAddedPayload,
 	type MemoryAgentProgressPayload,
 	type MemoryAgentResultPayload,
 	type NodeUpdatedPayload,
@@ -28,25 +29,20 @@ import {
 	type RepoAddedPayload,
 	type RepoMemoryAddedPayload,
 	type SessionAddedPayload,
+	type SessionFilesChangedPayload,
+	type SessionHooksChangedPayload,
 	type SessionMessageAddedPayload,
+	type SessionTodosChangedPayload,
 	TOPICS,
 	type ToolResultAddedPayload,
 } from "./pubsub.ts";
-import { ActivityDataType, queryActivityData } from "./types/activity.ts";
-import {
-	CacheEntryType,
-	CacheStatsType,
-	getAllCacheEntries,
-	queryCacheStats,
-} from "./types/cache.ts";
-import {
-	CheckpointStatsType,
-	CheckpointType,
-	getAllCheckpoints,
-	queryCheckpointStats,
-} from "./types/checkpoint.ts";
-import { ExposedToolResultType, McpToolResultType } from "./types/han-event.ts";
-import { HookExecutionType, HookStatsType } from "./types/hook.ts";
+import { ActivityDataType, queryActivityData } from "./types/activity-data.ts";
+import { CacheEntryType, getAllCacheEntries } from "./types/cache-entry.ts";
+import { CacheStatsType, queryCacheStats } from "./types/cache-stats.ts";
+import { PluginScopeEnum } from "./types/enums/plugin-scope.ts";
+import { HookExecutionType } from "./types/hook-execution.ts";
+import { HookStatsType } from "./types/hook-stats.ts";
+import { McpServerType } from "./types/mcp-server.ts";
 import {
 	MemoryAgentProgressType,
 	MemoryAgentResultType,
@@ -54,27 +50,44 @@ import {
 	MemorySearchResultType,
 } from "./types/memory.ts";
 import {
+	type MemoryEventPayload,
+	MemoryEventType,
+} from "./types/memory-event.ts";
+import {
 	AssistantMessageType,
+	CommandUserMessageType,
 	ExposedToolCallMessageType,
 	ExposedToolResultMessageType,
+	ExposedToolResultType,
 	FileHistorySnapshotMessageType,
-	getMessageByLineNumber,
+	HookDatetimeMessageType,
+	HookFileChangeMessageType,
+	HookReferenceMessageType,
 	HookResultMessageType,
 	HookRunMessageType,
+	HookScriptMessageType,
+	HookValidationCacheMessageType,
+	HookValidationMessageType,
+	InterruptUserMessageType,
 	McpToolCallMessageType,
 	McpToolResultMessageType,
+	McpToolResultType,
 	MemoryLearnMessageType,
 	MemoryQueryMessageType,
 	MessageConnectionType,
 	MessageEdgeType,
 	MessageInterface,
 	type MessageWithSession,
+	MetaUserMessageType,
+	nativeMessageToMessageWithSession,
 	QueueOperationMessageType,
+	RegularUserMessageType,
 	SentimentAnalysisMessageType,
 	SummaryMessageType,
 	SystemMessageType,
+	ToolResultUserMessageType,
 	UnknownEventMessageType,
-	UserMessageType,
+	UserMessageInterface,
 } from "./types/message.ts";
 import {
 	MetricsDataType,
@@ -83,18 +96,19 @@ import {
 	TaskType,
 } from "./types/metrics.ts";
 import { PageInfoType } from "./types/pagination.ts";
+import { PermissionsType } from "./types/permissions.ts";
 import {
 	getAllPlugins,
-	PluginCategoryType,
-	PluginScopeEnum,
-	PluginStatsType,
 	PluginType,
-	queryPluginCategories,
-	queryPluginStats,
 	queryPluginsByScope,
 	removePluginFromSettings,
 	togglePluginEnabled,
 } from "./types/plugin.ts";
+import {
+	PluginCategoryType,
+	queryPluginCategories,
+} from "./types/plugin-category.ts";
+import { PluginStatsType, queryPluginStats } from "./types/plugin-stats.ts";
 // Import all types (side effects register them with builder)
 import {
 	getAllProjects,
@@ -115,23 +129,17 @@ import {
 	SessionEdgeType,
 } from "./types/session-connection.ts";
 import {
-	McpServerType,
-	PermissionsType,
 	querySettingsSummary,
 	SettingsSummaryType,
-} from "./types/settings.ts";
+} from "./types/settings-summary.ts";
+import { SlotAcquireResultType } from "./types/slot-acquire-result.ts";
 import {
 	acquireSlot,
 	querySlotStatus,
 	releaseSlot,
-	SlotAcquireResultType,
-	SlotReleaseResultType,
-	SlotStatusType,
-} from "./types/slot.ts";
-import {
-	type MemoryEventPayload,
-	MemoryEventType,
-} from "./types/subscription.ts";
+} from "./types/slot-manager.ts";
+import { SlotReleaseResultType } from "./types/slot-release-result.ts";
+import { SlotStatusType } from "./types/slot-status.ts";
 
 // =============================================================================
 // Direct Root Queries (no viewer pattern)
@@ -240,28 +248,6 @@ builder.queryField("cacheStats", (t) =>
 );
 
 /**
- * Query for checkpoints
- */
-builder.queryField("checkpoints", (t) =>
-	t.field({
-		type: [CheckpointType],
-		description: "All checkpoints for the current project",
-		resolve: () => getAllCheckpoints(),
-	}),
-);
-
-/**
- * Query for checkpoint stats
- */
-builder.queryField("checkpointStats", (t) =>
-	t.field({
-		type: CheckpointStatsType,
-		description: "Aggregate checkpoint statistics",
-		resolve: () => queryCheckpointStats(),
-	}),
-);
-
-/**
  * Query for global slot status
  */
 builder.queryField("slots", (t) =>
@@ -361,8 +347,8 @@ builder.queryField("session", (t) =>
 );
 
 /**
- * Query for a single message by ID
- * ID format: projectDir:sessionId:lineNumber (e.g., "Message:-Volumes-dev-...:abc-123:42")
+ * Query for a single message by UUID
+ * ID format: UUID (the message's unique identifier) or "Message:{uuid}"
  */
 builder.queryField("message", (t) =>
 	t.field({
@@ -372,35 +358,24 @@ builder.queryField("message", (t) =>
 			id: t.arg.string({ required: true }),
 		},
 		description:
-			"Get a message by its global ID (format: Message:projectDir:sessionId:lineNumber)",
+			"Get a message by its UUID (optionally prefixed with 'Message:')",
 		resolve: async (_parent, args) => {
-			// Parse the global ID
-			// Format: "Message:projectDir:sessionId:lineNumber" or just "projectDir:sessionId:lineNumber"
-			let compositeId = args.id;
+			// Extract the UUID from the ID
+			// Accept either raw UUID or "Message:{uuid}" format
+			let messageId = args.id;
 
 			// Strip the "Message:" prefix if present
-			if (compositeId.startsWith("Message:")) {
-				compositeId = compositeId.slice(8);
+			if (messageId.startsWith("Message:")) {
+				messageId = messageId.slice(8);
 			}
 
-			const parts = compositeId.split(":");
-			if (parts.length < 3) {
+			// Fetch message by UUID directly from the database
+			const msg = await getMessage(messageId);
+			if (!msg) {
 				return null;
 			}
 
-			// Last part is lineNumber
-			const lineNumberStr = parts[parts.length - 1];
-			// Second to last is sessionId (UUID)
-			const sessionId = parts[parts.length - 2];
-			// Everything before is projectDir
-			const projectDir = parts.slice(0, -2).join(":");
-
-			const lineNumber = Number.parseInt(lineNumberStr, 10);
-			if (Number.isNaN(lineNumber)) {
-				return null;
-			}
-
-			return getMessageByLineNumber(projectDir, sessionId, lineNumber);
+			return nativeMessageToMessageWithSession(msg);
 		},
 	}),
 );
@@ -574,6 +549,102 @@ const ToolResultAddedPayloadType = ToolResultAddedPayloadRef.implement({
 		}),
 		durationMs: t.exposeInt("durationMs", {
 			description: "Duration of the tool call in milliseconds",
+		}),
+	}),
+});
+
+/**
+ * Hook result added subscription payload type
+ */
+const HookResultAddedPayloadRef = builder.objectRef<HookResultAddedPayload>(
+	"HookResultAddedPayload",
+);
+const HookResultAddedPayloadType = HookResultAddedPayloadRef.implement({
+	description: "Payload for hook result added events",
+	fields: (t) => ({
+		sessionId: t.exposeString("sessionId", {
+			description: "ID of the session containing the hook run",
+		}),
+		hookRunId: t.exposeString("hookRunId", {
+			description: "UUID of the parent hook_run event for correlation",
+		}),
+		pluginName: t.exposeString("pluginName", {
+			description: "Plugin that executed the hook",
+		}),
+		hookName: t.exposeString("hookName", {
+			description: "Name of the hook that was executed",
+		}),
+		success: t.exposeBoolean("success", {
+			description: "Whether the hook succeeded",
+		}),
+		durationMs: t.exposeInt("durationMs", {
+			description: "Duration of the hook execution in milliseconds",
+		}),
+	}),
+});
+
+/**
+ * Session todos changed subscription payload type
+ */
+const SessionTodosChangedPayloadRef =
+	builder.objectRef<SessionTodosChangedPayload>("SessionTodosChangedPayload");
+const SessionTodosChangedPayloadType = SessionTodosChangedPayloadRef.implement({
+	description: "Payload for session todos changed events",
+	fields: (t) => ({
+		sessionId: t.exposeString("sessionId", {
+			description: "ID of the session whose todos changed",
+		}),
+		todoCount: t.exposeInt("todoCount", {
+			description: "Total count of todos after the change",
+		}),
+		inProgressCount: t.exposeInt("inProgressCount", {
+			description: "Count of in-progress todos",
+		}),
+		completedCount: t.exposeInt("completedCount", {
+			description: "Count of completed todos",
+		}),
+	}),
+});
+
+/**
+ * Session files changed subscription payload type
+ */
+const SessionFilesChangedPayloadRef =
+	builder.objectRef<SessionFilesChangedPayload>("SessionFilesChangedPayload");
+const SessionFilesChangedPayloadType = SessionFilesChangedPayloadRef.implement({
+	description: "Payload for session files changed events",
+	fields: (t) => ({
+		sessionId: t.exposeString("sessionId", {
+			description: "ID of the session whose files changed",
+		}),
+		fileCount: t.exposeInt("fileCount", {
+			description: "Count of file changes",
+		}),
+		toolName: t.exposeString("toolName", {
+			description: "Name of the tool that triggered the change",
+		}),
+	}),
+});
+
+/**
+ * Session hooks changed subscription payload type
+ */
+const SessionHooksChangedPayloadRef =
+	builder.objectRef<SessionHooksChangedPayload>("SessionHooksChangedPayload");
+const SessionHooksChangedPayloadType = SessionHooksChangedPayloadRef.implement({
+	description: "Payload for session hooks changed events",
+	fields: (t) => ({
+		sessionId: t.exposeString("sessionId", {
+			description: "ID of the session whose hooks changed",
+		}),
+		pluginName: t.exposeString("pluginName", {
+			description: "Plugin name of the hook",
+		}),
+		hookName: t.exposeString("hookName", {
+			description: "Name of the hook",
+		}),
+		eventType: t.exposeString("eventType", {
+			description: "Whether this is a new run or a result update",
 		}),
 	}),
 });
@@ -769,6 +840,142 @@ builder.subscriptionType({
 				};
 			},
 			resolve: (payload: ToolResultAddedPayload) => payload,
+		}),
+
+		hookResultAdded: t.field({
+			type: HookResultAddedPayloadType,
+			args: {
+				hookRunId: t.arg.string({
+					required: true,
+					description: "Hook run UUID to watch for result",
+				}),
+			},
+			description: "Subscribe to hook result for a specific hook run ID",
+			subscribe: (_parent, args) => {
+				const iterator = pubsub.asyncIterator<HookResultAddedPayload>(
+					TOPICS.HOOK_RESULT_ADDED,
+				);
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							while (true) {
+								const result = await iterator.next();
+								if (result.done) return result;
+								if (result.value.hookRunId === args.hookRunId) {
+									return result;
+								}
+							}
+						},
+						return: () =>
+							iterator.return?.() ??
+							Promise.resolve({ value: undefined, done: true }),
+						throw: (e: Error) => iterator.throw?.(e) ?? Promise.reject(e),
+					}),
+				};
+			},
+			resolve: (payload: HookResultAddedPayload) => payload,
+		}),
+
+		sessionTodosChanged: t.field({
+			type: SessionTodosChangedPayloadType,
+			args: {
+				sessionId: t.arg.id({
+					required: true,
+					description: "Session ID to watch for todo changes",
+				}),
+			},
+			description: "Subscribe to todo changes for a session",
+			subscribe: (_parent, args) => {
+				const iterator = pubsub.asyncIterator<SessionTodosChangedPayload>(
+					TOPICS.SESSION_TODOS_CHANGED,
+				);
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							while (true) {
+								const result = await iterator.next();
+								if (result.done) return result;
+								if (result.value.sessionId === args.sessionId) {
+									return result;
+								}
+							}
+						},
+						return: () =>
+							iterator.return?.() ??
+							Promise.resolve({ value: undefined, done: true }),
+						throw: (e: Error) => iterator.throw?.(e) ?? Promise.reject(e),
+					}),
+				};
+			},
+			resolve: (payload: SessionTodosChangedPayload) => payload,
+		}),
+
+		sessionFilesChanged: t.field({
+			type: SessionFilesChangedPayloadType,
+			args: {
+				sessionId: t.arg.id({
+					required: true,
+					description: "Session ID to watch for file changes",
+				}),
+			},
+			description: "Subscribe to file changes for a session",
+			subscribe: (_parent, args) => {
+				const iterator = pubsub.asyncIterator<SessionFilesChangedPayload>(
+					TOPICS.SESSION_FILES_CHANGED,
+				);
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							while (true) {
+								const result = await iterator.next();
+								if (result.done) return result;
+								if (result.value.sessionId === args.sessionId) {
+									return result;
+								}
+							}
+						},
+						return: () =>
+							iterator.return?.() ??
+							Promise.resolve({ value: undefined, done: true }),
+						throw: (e: Error) => iterator.throw?.(e) ?? Promise.reject(e),
+					}),
+				};
+			},
+			resolve: (payload: SessionFilesChangedPayload) => payload,
+		}),
+
+		sessionHooksChanged: t.field({
+			type: SessionHooksChangedPayloadType,
+			args: {
+				sessionId: t.arg.id({
+					required: true,
+					description: "Session ID to watch for hook changes",
+				}),
+			},
+			description: "Subscribe to hook run and result events for a session",
+			subscribe: (_parent, args) => {
+				const iterator = pubsub.asyncIterator<SessionHooksChangedPayload>(
+					TOPICS.SESSION_HOOKS_CHANGED,
+				);
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							while (true) {
+								const result = await iterator.next();
+								if (result.done) return result;
+								if (result.value.sessionId === args.sessionId) {
+									return result;
+								}
+							}
+						},
+						return: () =>
+							iterator.return?.() ??
+							Promise.resolve({ value: undefined, done: true }),
+						throw: (e: Error) => iterator.throw?.(e) ?? Promise.reject(e),
+					}),
+				};
+			},
+			resolve: (payload: SessionHooksChangedPayload) => payload,
 		}),
 
 		sessionAdded: t.field({
@@ -1207,8 +1414,6 @@ export {
 	MemoryAgentResultType,
 	CacheEntryType,
 	CacheStatsType,
-	CheckpointType,
-	CheckpointStatsType,
 	PluginType,
 	PluginStatsType,
 	PluginCategoryType,
@@ -1226,13 +1431,24 @@ export {
 	MessageConnectionType,
 	MessageEdgeType,
 	// Message types - concrete implementations of Message interface
-	UserMessageType,
+	UserMessageInterface,
+	RegularUserMessageType,
+	MetaUserMessageType,
+	CommandUserMessageType,
+	InterruptUserMessageType,
+	ToolResultUserMessageType,
 	AssistantMessageType,
 	SummaryMessageType,
 	SystemMessageType,
 	FileHistorySnapshotMessageType,
 	HookRunMessageType,
 	HookResultMessageType,
+	HookDatetimeMessageType,
+	HookFileChangeMessageType,
+	HookReferenceMessageType,
+	HookScriptMessageType,
+	HookValidationCacheMessageType,
+	HookValidationMessageType,
 	QueueOperationMessageType,
 	McpToolCallMessageType,
 	McpToolResultMessageType,

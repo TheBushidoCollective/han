@@ -326,6 +326,8 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 					"process.env.NODE_ENV": JSON.stringify(
 						devMode ? "development" : "production",
 					),
+					// Polyfill Node.js globals for React Native libraries
+					global: "globalThis",
 					// Inject GraphQL URLs for the frontend to connect to coordinator
 					__GRAPHQL_URL__: JSON.stringify(
 						`http://127.0.0.1:${coordinatorPort}/graphql`,

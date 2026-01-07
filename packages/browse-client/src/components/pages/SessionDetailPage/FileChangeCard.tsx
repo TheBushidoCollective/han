@@ -2,6 +2,7 @@
  * File Change Card Component
  *
  * Displays details of a single file change with action type and tool info.
+ * Shows per-hook validation status: which hooks validated this file vs which are missing.
  */
 
 import type React from 'react';
@@ -14,7 +15,7 @@ import { colors, fonts, spacing } from '@/theme.ts';
 export interface FileValidation {
   pluginName: string | null | undefined;
   hookName: string | null | undefined;
-  validatedAt: string | null | undefined;
+  validatedAt?: string | null | undefined;
 }
 
 export interface FileChange {
@@ -25,6 +26,7 @@ export interface FileChange {
   recordedAt: string | null;
   isValidated?: boolean;
   validations?: readonly FileValidation[];
+  missingValidations?: readonly FileValidation[];
 }
 
 interface FileChangeCardProps {
@@ -48,6 +50,11 @@ export function FileChangeCard({
   const dirPath =
     fileChange.filePath.slice(0, fileChange.filePath.lastIndexOf('/')) || '.';
 
+  const validations = fileChange.validations ?? [];
+  const missingValidations = fileChange.missingValidations ?? [];
+  const hasValidations = validations.length > 0;
+  const hasMissingValidations = missingValidations.length > 0;
+
   return (
     <Box
       className="file-change-card"
@@ -58,6 +65,7 @@ export function FileChangeCard({
         border: `1px solid ${colors.border.subtle}`,
       }}
     >
+      {/* File info row */}
       <HStack gap="sm" align="center" style={{ flexWrap: 'wrap' }}>
         <Text
           style={{
@@ -72,43 +80,80 @@ export function FileChangeCard({
             fontWeight: 600,
             fontSize: 14,
             fontFamily: fonts.mono,
+            flexShrink: 0,
           }}
         >
           {actionStyle.icon}
         </Text>
         <Text
           size="sm"
-          style={{ fontFamily: fonts.mono, fontWeight: 500 }}
+          style={{ fontFamily: fonts.mono, fontWeight: 500, minWidth: 0 }}
           title={fileChange.filePath}
         >
           {fileName}
         </Text>
-        <Text size="xs" color="muted" style={{ fontFamily: fonts.mono }}>
+        <Text
+          size="xs"
+          color="muted"
+          style={{ fontFamily: fonts.mono, minWidth: 0, flexShrink: 1 }}
+        >
           {dirPath.length > 40 ? `...${dirPath.slice(-37)}` : dirPath}
         </Text>
         {fileChange.toolName && (
           <Badge variant="info">{fileChange.toolName}</Badge>
         )}
-        {fileChange.isValidated &&
-          fileChange.validations &&
-          fileChange.validations.length > 0 && (
-            <span
-              title={fileChange.validations
-                .map((v) => `${v.pluginName ?? ''}:${v.hookName ?? ''}`)
-                .join(', ')}
-            >
-              <Badge variant="success">
-                ✓{' '}
-                {fileChange.validations.length > 1
-                  ? `${fileChange.validations.length} hooks`
-                  : (fileChange.validations[0]?.hookName ?? 'validated')}
-              </Badge>
-            </span>
-          )}
-        {fileChange.isValidated === false && (
-          <Badge variant="warning">unvalidated</Badge>
-        )}
       </HStack>
+      {/* Validation badges row - show which hooks validated this file */}
+      {(hasValidations || hasMissingValidations) && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: spacing.xs,
+            marginTop: spacing.xs,
+            paddingLeft: 20 + spacing.sm, // Align with filename
+          }}
+        >
+          {validations.map((v, i) => {
+            const label =
+              v.pluginName && v.hookName
+                ? `${v.pluginName}:${v.hookName}`
+                : (v.hookName ?? v.pluginName ?? 'hook');
+            return (
+              <span
+                key={`validated-${v.pluginName}-${v.hookName}-${i}`}
+                title={`${label} validated`}
+              >
+                <Badge
+                  variant="success"
+                  style={{ fontSize: 11, padding: '2px 6px' }}
+                >
+                  ✓ {label}
+                </Badge>
+              </span>
+            );
+          })}
+          {missingValidations.map((v, i) => {
+            const label =
+              v.pluginName && v.hookName
+                ? `${v.pluginName}:${v.hookName}`
+                : (v.hookName ?? v.pluginName ?? 'hook');
+            return (
+              <span
+                key={`missing-${v.pluginName}-${v.hookName}-${i}`}
+                title={`${label} needs validation`}
+              >
+                <Badge
+                  variant="warning"
+                  style={{ fontSize: 11, padding: '2px 6px' }}
+                >
+                  ⚠ {label}
+                </Badge>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </Box>
   );
 }

@@ -5,9 +5,8 @@
  * Uses GraphQL mutations to start queries and subscriptions for live progress.
  */
 
-import { marked } from 'marked';
 import type React from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { graphql, useMutation, useSubscription } from 'react-relay';
 import { theme } from '@/components/atoms';
 import { Badge } from '@/components/atoms/Badge.tsx';
@@ -20,16 +19,11 @@ import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
 import type { SearchTabProgressSubscription } from './__generated__/SearchTabProgressSubscription.graphql.ts';
 import type { SearchTabResultSubscription } from './__generated__/SearchTabResultSubscription.graphql.ts';
 import type { SearchTabStartMutation } from './__generated__/SearchTabStartMutation.graphql.ts';
 import { ConfidenceBadge } from './ConfidenceBadge.tsx';
-
-// Configure marked for safe rendering
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-});
 
 // Mutation to start a memory query - returns session ID for subscriptions
 const StartMemoryQueryMutation = graphql`
@@ -263,12 +257,6 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
     setLoading(false);
   }, []);
 
-  // Parse markdown answer - memoize to avoid re-parsing on each render
-  const renderedAnswer = useMemo(() => {
-    if (!result?.answer) return '';
-    return marked.parse(result.answer) as string;
-  }, [result?.answer]);
-
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) return;
 
@@ -468,11 +456,7 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
               <Heading size="sm" as="h3">
                 Answer
               </Heading>
-              <div
-                className="markdown-content"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: markdown rendering
-                dangerouslySetInnerHTML={{ __html: renderedAnswer }}
-              />
+              <MarkdownContent>{result.answer}</MarkdownContent>
             </VStack>
 
             {/* Citations */}
@@ -493,11 +477,7 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
                       <VStack gap="sm">
                         <HStack gap="sm" align="center" wrap>
                           {citation.projectName && (
-                            <span title={citation.projectPath ?? undefined}>
-                              <Badge variant="info">
-                                {citation.projectName}
-                              </Badge>
-                            </span>
+                            <Badge variant="info">{citation.projectName}</Badge>
                           )}
                           <Badge variant="purple">{citation.source}</Badge>
                           {citation.layer && (
@@ -509,19 +489,21 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
                             </Text>
                           )}
                         </HStack>
-                        <div
-                          className="markdown-content"
+                        <Box
                           style={{
                             borderLeft: `2px solid ${theme.colors.border.default}`,
                             paddingLeft: theme.spacing.md,
-                            fontSize: theme.fontSize.sm,
-                            color: theme.colors.text.secondary,
                           }}
-                          // biome-ignore lint/security/noDangerouslySetInnerHtml: markdown rendering
-                          dangerouslySetInnerHTML={{
-                            __html: marked.parse(citation.excerpt) as string,
-                          }}
-                        />
+                        >
+                          <MarkdownContent
+                            style={{
+                              fontSize: theme.fontSize.sm,
+                              color: theme.colors.text.secondary,
+                            }}
+                          >
+                            {citation.excerpt}
+                          </MarkdownContent>
+                        </Box>
                       </VStack>
                     </Card>
                   );

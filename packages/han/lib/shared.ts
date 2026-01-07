@@ -10,7 +10,7 @@ import {
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.ts";
-import { getHanBinary } from "./han-settings.ts";
+import { getHanBinary } from "./config/han-settings.ts";
 import { getMarketplacePlugins } from "./marketplace-cache.ts";
 
 const __filename = fileURLToPath(import.meta.url);

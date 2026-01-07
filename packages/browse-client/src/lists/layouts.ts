@@ -1,4 +1,3 @@
-import { LayoutProvider } from 'recyclerlistview/web';
 import { ViewTypes } from '../components/organisms/index.ts';
 
 // Standard row heights for different view types
@@ -36,39 +35,22 @@ export function getSessionItemHeight(session: {
   return ItemHeights.SESSION_ROW_MINIMAL;
 }
 
-// Create a layout provider for session lists
-export function createSessionListLayout(width: number) {
-  return new LayoutProvider(
-    () => ViewTypes.SESSION_ROW,
-    (_type, dim) => {
-      dim.width = width;
-      dim.height = ItemHeights.SESSION_ROW;
-    }
-  );
+/**
+ * Get item type for FlashList recycling optimization
+ */
+export function getItemType(
+  _item: unknown,
+  _index: number
+): (typeof ViewTypes)[keyof typeof ViewTypes] {
+  return ViewTypes.SESSION_ROW;
 }
 
-// Create a layout provider for project cards (grid)
-export function createProjectGridLayout(width: number, columns = 2) {
-  const cardWidth = Math.floor((width - 16 * (columns - 1)) / columns);
-  return new LayoutProvider(
-    () => ViewTypes.PROJECT_CARD,
-    (_type, dim) => {
-      dim.width = cardWidth;
-      dim.height = ItemHeights.PROJECT_CARD;
-    }
-  );
-}
-
-// Create a layout provider for message list (variable height)
-export function createMessageListLayout(
-  width: number,
-  getMessageHeight: (index: number) => number
-) {
-  return new LayoutProvider(
-    () => ViewTypes.MESSAGE_ITEM,
-    (_type, dim, index) => {
-      dim.width = width;
-      dim.height = getMessageHeight(index);
-    }
-  );
+/**
+ * Get message item type for FlashList
+ */
+export function getMessageItemType(
+  _item: unknown,
+  _index: number
+): (typeof ViewTypes)[keyof typeof ViewTypes] {
+  return ViewTypes.MESSAGE_ITEM;
 }

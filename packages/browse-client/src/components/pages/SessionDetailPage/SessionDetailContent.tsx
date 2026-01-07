@@ -17,14 +17,16 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { VStack } from '@/components/atoms/VStack.tsx';
 import { colors, fonts, spacing } from '@/theme.ts';
+import type { SessionDetailContentFilesSubscription } from './__generated__/SessionDetailContentFilesSubscription.graphql.ts';
+import type { SessionDetailContentHooksSubscription } from './__generated__/SessionDetailContentHooksSubscription.graphql.ts';
 import type { SessionDetailContentSubscription } from './__generated__/SessionDetailContentSubscription.graphql.ts';
+import type { SessionDetailContentTodosSubscription } from './__generated__/SessionDetailContentTodosSubscription.graphql.ts';
 import type { SessionDetailPageQuery } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { formatDuration } from './components.ts';
 import { SessionDetailPageQuery as SessionDetailPageQueryDef } from './index.tsx';
-import { SessionExpensiveFields } from './SessionExpensiveFields.tsx';
 import { SessionMessages } from './SessionMessages.tsx';
+import { SessionSidebar } from './SessionSidebar.tsx';
 
 /**
  * Subscription for live updates - watches for new messages in this session
@@ -34,6 +36,47 @@ const SessionDetailContentSubscriptionDef = graphql`
     sessionMessageAdded(sessionId: $sessionId) {
       sessionId
       messageIndex
+    }
+  }
+`;
+
+/**
+ * Subscription for todo updates - watches for TodoWrite tool calls
+ */
+const SessionTodosSubscriptionDef = graphql`
+  subscription SessionDetailContentTodosSubscription($sessionId: ID!) {
+    sessionTodosChanged(sessionId: $sessionId) {
+      sessionId
+      todoCount
+      inProgressCount
+      completedCount
+    }
+  }
+`;
+
+/**
+ * Subscription for file changes - watches for Edit, Write, NotebookEdit tool calls
+ */
+const SessionFilesSubscriptionDef = graphql`
+  subscription SessionDetailContentFilesSubscription($sessionId: ID!) {
+    sessionFilesChanged(sessionId: $sessionId) {
+      sessionId
+      fileCount
+      toolName
+    }
+  }
+`;
+
+/**
+ * Subscription for hook changes - watches for hook_run and hook_result events
+ */
+const SessionHooksSubscriptionDef = graphql`
+  subscription SessionDetailContentHooksSubscription($sessionId: ID!) {
+    sessionHooksChanged(sessionId: $sessionId) {
+      sessionId
+      pluginName
+      hookName
+      eventType
     }
   }
 `;
@@ -48,7 +91,6 @@ export function SessionDetailContent({
   sessionId,
 }: SessionDetailContentProps): React.ReactElement {
   const navigate = useNavigate();
-  const [isLive, setIsLive] = useState(false);
   const [, setRefreshKey] = useState(0);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -70,7 +112,6 @@ export function SessionDetailContent({
       onNext: (response) => {
         const event = response?.sessionMessageAdded;
         if (event?.sessionId === sessionId) {
-          setIsLive(true);
           // Debounce refresh
           if (fetchTimeoutRef.current) {
             clearTimeout(fetchTimeoutRef.current);
@@ -88,6 +129,81 @@ export function SessionDetailContent({
   );
 
   useSubscription<SessionDetailContentSubscription>(subscriptionConfig);
+
+  // Subscription for todo changes - triggers a refresh when todos update
+  const todosSubscriptionConfig = useMemo<
+    GraphQLSubscriptionConfig<SessionDetailContentTodosSubscription>
+  >(
+    () => ({
+      subscription: SessionTodosSubscriptionDef,
+      variables: { sessionId },
+      onNext: (response) => {
+        const event = response?.sessionTodosChanged;
+        if (event?.sessionId === sessionId) {
+          // Trigger a refresh - the sidebar will re-render with updated todos
+          setRefreshKey((k) => k + 1);
+        }
+      },
+      onError: (err) => {
+        console.warn('Todos subscription error:', err);
+      },
+    }),
+    [sessionId]
+  );
+
+  useSubscription<SessionDetailContentTodosSubscription>(
+    todosSubscriptionConfig
+  );
+
+  // Subscription for file changes - triggers a refresh when files are modified
+  const filesSubscriptionConfig = useMemo<
+    GraphQLSubscriptionConfig<SessionDetailContentFilesSubscription>
+  >(
+    () => ({
+      subscription: SessionFilesSubscriptionDef,
+      variables: { sessionId },
+      onNext: (response) => {
+        const event = response?.sessionFilesChanged;
+        if (event?.sessionId === sessionId) {
+          // Trigger a refresh - the sidebar will re-render with updated file changes
+          setRefreshKey((k) => k + 1);
+        }
+      },
+      onError: (err) => {
+        console.warn('Files subscription error:', err);
+      },
+    }),
+    [sessionId]
+  );
+
+  useSubscription<SessionDetailContentFilesSubscription>(
+    filesSubscriptionConfig
+  );
+
+  // Subscription for hook changes - triggers a refresh when hooks run or complete
+  const hooksSubscriptionConfig = useMemo<
+    GraphQLSubscriptionConfig<SessionDetailContentHooksSubscription>
+  >(
+    () => ({
+      subscription: SessionHooksSubscriptionDef,
+      variables: { sessionId },
+      onNext: (response) => {
+        const event = response?.sessionHooksChanged;
+        if (event?.sessionId === sessionId) {
+          // Trigger a refresh - the sidebar will re-render with updated hooks
+          setRefreshKey((k) => k + 1);
+        }
+      },
+      onError: (err) => {
+        console.warn('Hooks subscription error:', err);
+      },
+    }),
+    [sessionId]
+  );
+
+  useSubscription<SessionDetailContentHooksSubscription>(
+    hooksSubscriptionConfig
+  );
 
   const handleBack = () => {
     // Navigate back to project sessions if projectId available, else global sessions
@@ -202,27 +318,25 @@ export function SessionDetailContent({
             overflow: 'hidden',
           }}
         >
-          <SessionMessages
-            fragmentRef={session}
-            sessionId={sessionId}
-            isLive={isLive}
-          />
+          <SessionMessages fragmentRef={session} sessionId={sessionId} />
         </Box>
 
         {/* Expensive fields sidebar - checkpoints, hooks, file changes */}
         <Box
           style={{
             width: 360,
+            minWidth: 360,
+            maxWidth: 360,
+            flexBasis: 360,
             flexShrink: 0,
+            flexGrow: 0,
             borderLeft: `1px solid ${colors.border.default}`,
             overflowY: 'auto',
             backgroundColor: colors.bg.secondary,
             padding: spacing.md,
           }}
         >
-          <VStack gap="lg" align="stretch">
-            <SessionExpensiveFields fragmentRef={session} />
-          </VStack>
+          <SessionSidebar fragmentRef={session} />
         </Box>
       </Box>
     </Box>

@@ -116,11 +116,6 @@ export function DashboardContent({
     significantFrustrations: 0,
     significantFrustrationRate: 0,
   };
-  const _checkpointStats = data.checkpointStats ?? {
-    totalCheckpoints: 0,
-    sessionCheckpoints: 0,
-    agentCheckpoints: 0,
-  };
   const pluginStats = data.pluginStats ?? {
     totalPlugins: 0,
     userPlugins: 0,

@@ -21,12 +21,17 @@ export interface HookExecution {
 	hookType: string;
 	hookName: string;
 	hookSource: string | null;
+	directory: string | null;
 	durationMs: number;
 	exitCode: number;
 	passed: boolean;
 	output: string | null;
 	error: string | null;
 	timestamp: string;
+	/** Glob patterns that trigger this hook (used for file validation tracking) */
+	ifChanged: string[] | null;
+	/** The command that was executed */
+	command: string | null;
 }
 
 /**
@@ -69,6 +74,12 @@ interface HookEventData {
 		sessionId?: string;
 		task_id?: string;
 		taskId?: string;
+		// Correlation ID linking hook_result to its parent hook_run
+		hookRunId?: string;
+		// File validation tracking fields
+		if_changed?: string[];
+		ifChanged?: string[];
+		command?: string;
 	};
 }
 
@@ -96,12 +107,15 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
 				hookType: event.hook_type || "unknown",
 				hookName: event.hook_name || "unknown",
 				hookSource: event.hook_source || null,
+				directory: event.data?.directory || null,
 				durationMs: event.duration_ms || 0,
 				exitCode: event.exit_code ?? 0,
 				passed: event.passed ?? true,
 				output: event.output || null,
 				error: event.error || null,
 				timestamp: msg.timestamp || event.timestamp,
+				ifChanged: event.data?.if_changed || event.data?.ifChanged || null,
+				command: event.data?.command || null,
 			};
 		}
 
@@ -117,12 +131,41 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
 					data.hookType || data.hook_type || event.hook_type || "unknown",
 				hookName: data.hook || data.hook_name || data.plugin || "unknown",
 				hookSource: data.hook_source || data.plugin || null,
+				directory: data.directory || null,
 				durationMs: data.duration_ms || data.durationMs || 0,
 				exitCode: data.exit_code ?? data.exitCode ?? 0,
 				passed: data.passed ?? data.success ?? true,
 				output: data.output || null,
 				error: data.error || null,
 				timestamp: msg.timestamp || event.timestamp,
+				ifChanged: data.if_changed || data.ifChanged || null,
+				command: data.command || null,
+			};
+		}
+
+		// Process hook_run events (from event logger - start of hook execution)
+		// These represent the start of a hook run; the result comes in hook_result
+		if (event.type === "hook_run") {
+			const data = event.data || {};
+
+			return {
+				id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
+				sessionId: msg.sessionId || data.session_id || data.sessionId || null,
+				taskId: data.task_id || data.taskId || null,
+				hookType:
+					data.hookType || data.hook_type || event.hook_type || "unknown",
+				hookName: data.hook || data.hook_name || data.plugin || "unknown",
+				hookSource: data.hook_source || data.plugin || null,
+				directory: data.directory || null,
+				durationMs: data.duration_ms || data.durationMs || 0,
+				exitCode: data.exit_code ?? data.exitCode ?? 0,
+				// hook_run events are in-progress - passed is unknown until result arrives
+				passed: data.passed ?? data.success ?? true,
+				output: data.output || null,
+				error: data.error || null,
+				timestamp: msg.timestamp || event.timestamp,
+				ifChanged: data.if_changed || data.ifChanged || null,
+				command: data.command || null,
 			};
 		}
 
@@ -135,6 +178,13 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
 /**
  * Get hook executions for a specific session
  * Queries han_events from the database instead of reading JSONL files.
+ *
+ * Handles correlation between hook_run and hook_result events:
+ * - hook_run: Logged when hook starts executing
+ * - hook_result: Logged when hook completes (has hookRunId for correlation)
+ *
+ * We prefer hook_result events as they contain the final outcome.
+ * hook_run events without a corresponding result are treated as in-progress.
  */
 export async function getHookExecutionsForSession(
 	sessionId: string,
@@ -147,11 +197,43 @@ export async function getHookExecutionsForSession(
 		});
 
 		const executions: HookExecution[] = [];
+		// Track hook_run IDs that have a corresponding hook_result
+		const hookRunIdsWithResults = new Set<string>();
 
+		// First pass: identify hook_result events and collect their hookRunId
 		for (const msg of hanEvents) {
-			const execution = parseHookExecutionFromMessage(msg);
-			if (execution) {
-				executions.push(execution);
+			if (!msg.rawJson) continue;
+			try {
+				const event = JSON.parse(msg.rawJson) as HookEventData;
+				if (event.type === "hook_result" && event.data?.hookRunId) {
+					hookRunIdsWithResults.add(event.data.hookRunId);
+				}
+			} catch {
+				// Ignore parse errors
+			}
+		}
+
+		// Second pass: parse hook executions, skipping hook_run events that have a result
+		for (const msg of hanEvents) {
+			if (!msg.rawJson) continue;
+			try {
+				const event = JSON.parse(msg.rawJson) as HookEventData;
+
+				// Skip hook_run events that have a corresponding hook_result
+				// (the hook_result has the complete data)
+				if (event.type === "hook_run") {
+					const eventId = msg.id || event.id;
+					if (eventId && hookRunIdsWithResults.has(eventId)) {
+						continue; // Skip - we'll use the hook_result instead
+					}
+				}
+
+				const execution = parseHookExecutionFromMessage(msg);
+				if (execution) {
+					executions.push(execution);
+				}
+			} catch {
+				// Ignore parse errors
 			}
 		}
 

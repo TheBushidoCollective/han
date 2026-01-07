@@ -25,8 +25,11 @@ import {
 	publishSessionUpdated,
 } from "../../graphql/pubsub.ts";
 import { schema } from "../../graphql/schema.ts";
-import { globalSlotManager } from "../../graphql/types/slot.ts";
+import { globalSlotManager } from "../../graphql/types/slot-manager.ts";
+import { createLogger } from "../../logger.ts";
 import { COORDINATOR_PORT, type CoordinatorOptions } from "./types.ts";
+
+const log = createLogger("coordinator");
 
 /**
  * Server state
@@ -66,6 +69,7 @@ function recordActivity(): void {
  */
 async function onDataIndexed(result: IndexResult): Promise<void> {
 	if (result.error) {
+		log.debug("Index result had error, skipping publish");
 		return;
 	}
 
@@ -87,9 +91,16 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 				offset: Math.max(0, result.totalMessages - result.messagesIndexed),
 			});
 
-			// Publish each message with edge data for @appendEdge
+			// Publish each message with edge data for @prependEdge
+			// Skip messages with parentId - they belong to a parent message
 			for (let i = 0; i < newMessages.length; i++) {
 				const msg = newMessages[i];
+
+				// Skip messages with parentId - these are tool results that belong to a parent message
+				if (msg.parentId) {
+					continue;
+				}
+
 				const messageIndex = result.totalMessages - result.messagesIndexed + i;
 
 				const edgeData: MessageEdgeData = {
@@ -101,6 +112,7 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 						projectDir: "", // Project dir is on session, not message
 						sessionId: result.sessionId,
 						lineNumber: msg.lineNumber,
+						toolName: msg.toolName, // Required for han_event subtype resolution
 					},
 					cursor: Buffer.from(`cursor:${messageIndex}`).toString("base64"),
 				};
@@ -108,10 +120,7 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 				publishSessionMessageAdded(result.sessionId, messageIndex, edgeData);
 			}
 		} catch (error) {
-			console.error(
-				`[coordinator] Failed to fetch messages for subscription:`,
-				error,
-			);
+			log.error("Failed to fetch messages for subscription:", error);
 			publishSessionMessageAdded(result.sessionId, -1, null);
 		}
 	}
@@ -126,13 +135,13 @@ export async function startServer(
 	const port = options.port ?? COORDINATOR_PORT;
 
 	if (state.httpServer) {
-		console.log("[coordinator] Server already running");
+		log.info("Server already running");
 		return;
 	}
 
 	// Initialize database
 	await initDb();
-	console.log("[coordinator] Database initialized");
+	log.info("Database initialized");
 
 	// Acquire coordinator lock
 	const acquired = coordinator.tryAcquire();
@@ -141,13 +150,13 @@ export async function startServer(
 			"Failed to acquire coordinator lock - another instance may be running",
 		);
 	}
-	console.log("[coordinator] Acquired coordinator lock");
+	log.info("Acquired coordinator lock");
 
 	// Start heartbeat
 	const heartbeatMs = coordinator.getHeartbeatInterval() * 1000;
 	state.heartbeatInterval = setInterval(() => {
 		if (!coordinator.updateHeartbeat()) {
-			console.error("[coordinator] Failed to update heartbeat");
+			log.error("Failed to update heartbeat");
 		}
 	}, heartbeatMs);
 
@@ -155,8 +164,8 @@ export async function startServer(
 	state.watchdogInterval = setInterval(() => {
 		const timeSinceActivity = Date.now() - state.lastActivity;
 		if (timeSinceActivity > WATCHDOG_TIMEOUT_MS) {
-			console.error(
-				`[coordinator] Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s, restarting...`,
+			log.error(
+				`Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s, restarting...`,
 			);
 			// Force restart by stopping server - the daemon will restart it
 			stopServer();
@@ -217,7 +226,7 @@ export async function startServer(
 				const webResponse = await yoga.fetch(webRequest);
 				await sendWebResponse(res, webResponse);
 			} catch (error) {
-				console.error("[coordinator] GraphQL error:", error);
+				log.error("GraphQL error:", error);
 				res.statusCode = 500;
 				res.end("Internal Server Error");
 			}
@@ -268,20 +277,18 @@ export async function startServer(
 	// Start listening
 	await new Promise<void>((resolve) => {
 		httpServer.listen(port, "127.0.0.1", () => {
-			console.log(
-				`[coordinator] GraphQL server listening on http://127.0.0.1:${port}/graphql`,
-			);
+			log.info(`GraphQL server listening on http://127.0.0.1:${port}/graphql`);
 			resolve();
 		});
 	});
 
 	// Start file watcher first to handle incremental updates
-	console.log("[coordinator] Starting file watcher...");
+	log.info("Starting file watcher...");
 	const watchPath = watcher.getDefaultPath();
 	const watchStarted = await watcher.start(watchPath);
 
 	if (watchStarted) {
-		console.log(`[coordinator] Watching ${watchPath}`);
+		log.info(`Watching ${watchPath}`);
 
 		// Register callback for instant event-driven updates
 		// This is called directly from Rust when new messages are indexed
@@ -291,21 +298,19 @@ export async function startServer(
 			// Fire and forget - don't block the watcher callback
 			void onDataIndexed(result);
 		});
-		console.log("[coordinator] Event-driven updates enabled");
+		log.info("Event-driven updates enabled");
 	} else {
-		console.error("[coordinator] Failed to start file watcher");
+		log.error("Failed to start file watcher");
 	}
 
 	// Start global slot manager for cross-session resource coordination
 	globalSlotManager.start();
-	console.log("[coordinator] Global slot manager started");
+	log.info("Global slot manager started");
 
 	// Skip initial index to keep server responsive during startup
 	// Sessions are indexed incrementally via file watcher
 	// A full reindex can be triggered with: han index run --all
-	console.log(
-		"[coordinator] Ready (run 'han index run --all' to index existing sessions)",
-	);
+	log.info("Ready (run 'han index run --all' to index existing sessions)");
 }
 
 /**
@@ -338,7 +343,7 @@ export function stopServer(): void {
 	}
 
 	state.startedAt = null;
-	console.log("[coordinator] Server stopped");
+	log.info("Server stopped");
 }
 
 /**
@@ -399,6 +404,9 @@ async function sendWebResponse(
 	res.statusMessage = webResponse.statusText;
 
 	webResponse.headers.forEach((value, key) => {
+		// Skip Transfer-Encoding - Node.js handles chunked encoding automatically
+		// when using res.write() with streaming responses
+		if (key.toLowerCase() === "transfer-encoding") return;
 		res.setHeader(key, value);
 	});
 

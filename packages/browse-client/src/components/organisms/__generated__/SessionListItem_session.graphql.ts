@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<654a6659b3ca912ea220f7d096a4b69c>>
+ * @generated SignedSource<<8737ad062ab50a12da6f72b841e5db61>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,13 +14,18 @@ export type TaskType = "FIX" | "IMPLEMENTATION" | "REFACTOR" | "RESEARCH" | "%fu
 export type TodoStatus = "COMPLETED" | "IN_PROGRESS" | "PENDING" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionListItem_session$data = {
-  readonly activeTasks: ReadonlyArray<{
-    readonly description: string | null | undefined;
-    readonly id: string | null | undefined;
-    readonly status: TaskStatus | null | undefined;
-    readonly taskId: string | null | undefined;
-    readonly type: TaskType | null | undefined;
-  }> | null | undefined;
+  readonly activeTasks: {
+    readonly edges: ReadonlyArray<{
+      readonly node: {
+        readonly description: string | null | undefined;
+        readonly id: string | null | undefined;
+        readonly status: TaskStatus | null | undefined;
+        readonly taskId: string | null | undefined;
+        readonly type: TaskType | null | undefined;
+      } | null | undefined;
+    }> | null | undefined;
+    readonly totalCount: number | null | undefined;
+  } | null | undefined;
   readonly currentTodo: {
     readonly activeForm: string | null | undefined;
     readonly content: string | null | undefined;
@@ -171,34 +176,63 @@ return {
     {
       "alias": null,
       "args": null,
-      "concreteType": "Task",
+      "concreteType": "TaskConnection",
       "kind": "LinkedField",
       "name": "activeTasks",
-      "plural": true,
+      "plural": false,
       "selections": [
-        (v0/*: any*/),
         {
           "alias": null,
           "args": null,
           "kind": "ScalarField",
-          "name": "taskId",
+          "name": "totalCount",
           "storageKey": null
         },
         {
           "alias": null,
           "args": null,
-          "kind": "ScalarField",
-          "name": "description",
+          "concreteType": "TaskEdge",
+          "kind": "LinkedField",
+          "name": "edges",
+          "plural": true,
+          "selections": [
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "Task",
+              "kind": "LinkedField",
+              "name": "node",
+              "plural": false,
+              "selections": [
+                (v0/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "taskId",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "description",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "type",
+                  "storageKey": null
+                },
+                (v1/*: any*/)
+              ],
+              "storageKey": null
+            }
+          ],
           "storageKey": null
-        },
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "type",
-          "storageKey": null
-        },
-        (v1/*: any*/)
+        }
       ],
       "storageKey": null
     },
@@ -247,6 +281,6 @@ return {
 };
 })();
 
-(node as any).hash = "1471d68b78d2ac94c0f5ddfd4597907b";
+(node as any).hash = "40ebbd7ccf815f1d12a348b5c421ae56";
 
 export default node;

@@ -4,7 +4,18 @@
  * Organisms are relatively complex UI components composed of groups
  * of molecules and/or atoms and/or other organisms. They form
  * distinct sections of an interface.
+ *
+ * Note: Some organisms (SessionMessages, SessionSidebar, MessageCards) live in
+ * pages/SessionDetailPage/ due to Relay fragment colocation requirements.
+ * They are re-exported here for consumers who prefer atomic design imports.
  */
+
+export { FileChangeCard } from '@/components/pages/SessionDetailPage/FileChangeCard.tsx';
+export { HookExecutionCard } from '@/components/pages/SessionDetailPage/HookExecutionCard.tsx';
+// Session Detail organisms (colocated with Relay fragments in pages/)
+export { SessionMessages } from '@/components/pages/SessionDetailPage/SessionMessages.tsx';
+export { SessionSidebar } from '@/components/pages/SessionDetailPage/SessionSidebar.tsx';
+export { TaskCard } from '@/components/pages/SessionDetailPage/TaskCard.tsx';
 
 export type { MarkdownContentProps } from './MarkdownContent.tsx';
 export {
@@ -14,6 +25,7 @@ export {
   MarkdownContent,
   stripAnsi,
 } from './MarkdownContent.tsx';
+export { NavCard } from './NavCard.tsx';
 export { NavItem } from './NavItem.tsx';
 export { ProjectCardItem } from './ProjectCardItem.tsx';
 export { SectionCard } from './SectionCard.tsx';
@@ -21,5 +33,5 @@ export { SessionListItem } from './SessionListItem.tsx';
 export { StatCard } from './StatCard.tsx';
 export type { Toast as ToastType } from './Toast.tsx';
 export { ToastContainer } from './Toast.tsx';
-export type { ViewType } from './VirtualList.tsx';
+export type { ViewType, VirtualListRef } from './VirtualList.tsx';
 export { ViewTypes, VirtualList } from './VirtualList.tsx';

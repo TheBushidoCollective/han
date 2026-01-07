@@ -19,7 +19,7 @@
 		"prepack": "npm test",
 		"build:binary": "bun scripts/build-bundle.js",
 		"build:bundle": "bun scripts/build-bundle.js",
-		"schema:export": "bun lib/commands/browse/graphql/export-schema.ts"
+		"schema:export": "bun lib/graphql/export-schema.ts"
 	},
 	"repository": {
 		"type": "git",
@@ -72,6 +72,7 @@
 		"@pothos/core": "^4.5.0",
 		"@pothos/plugin-relay": "^4.4.0",
 		"@types/marked-terminal": "6.1.1",
+		"@types/micromatch": "^4.0.10",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",
 		"@types/react-dom": "^19.0.0",
@@ -109,6 +110,7 @@
 		"dataloader": "^2.2.3",
 		"highlight.js": "^11.11.1",
 		"marked": "^17.0.1",
+		"micromatch": "^4.0.8",
 		"recyclerlistview": "^4.2.3"
 	}
 }

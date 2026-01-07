@@ -16,13 +16,19 @@ import {
 	indexer,
 	initDb,
 	messages,
+	sessionTodos,
 	watcher,
 } from "../db/index.ts";
 import {
 	type MessageEdgeData,
+	publishHookResultAdded,
 	publishSessionAdded,
+	publishSessionFilesChanged,
+	publishSessionHooksChanged,
 	publishSessionMessageAdded,
+	publishSessionTodosChanged,
 	publishSessionUpdated,
+	publishToolResultAdded,
 } from "../graphql/pubsub.ts";
 
 /**
@@ -34,6 +40,17 @@ const PAIRED_EVENT_TYPES = new Set([
 	"hook_result",
 	"mcp_tool_result",
 	"exposed_tool_result",
+]);
+
+/**
+ * Tools that modify files
+ * Used to detect file changes for the sessionFilesChanged subscription
+ */
+const FILE_MODIFYING_TOOLS = new Set([
+	"Edit",
+	"Write",
+	"NotebookEdit",
+	// Bash can modify files but we don't track it to avoid noise
 ]);
 
 /**
@@ -83,21 +100,173 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 				offset: Math.max(0, result.totalMessages - result.messagesIndexed),
 			});
 
-			// Publish each message as a separate event with edge data for @appendEdge
+			// Track if any message contains a TodoWrite tool call
+			let hasTodoWrite = false;
+			// Track file-modifying tools and count
+			const fileModifyingTools: Set<string> = new Set();
+
+			// Publish each message as a separate event with edge data for @prependEdge
 			// Filter out paired event types that are loaded as nested fields
 			for (let i = 0; i < newMessages.length; i++) {
 				const msg = newMessages[i];
 
+				// Skip messages with parentId - these are tool results that belong to a parent message
+				// They should NOT appear in the main message stream, instead publish an update for the parent
+				if (msg.parentId) {
+					// TODO: Publish a parent message update event so the UI can refetch the parent's results
+					// For now, just skip adding to the stream
+					continue;
+				}
+
 				// Skip paired event types - they're loaded as nested fields on other messages
+				// But publish to specific topics so subscribers can update the parent message
 				if (msg.messageType === "han_event" && msg.toolName) {
 					if (PAIRED_EVENT_TYPES.has(msg.toolName)) {
+						// Publish to specific topic for paired events
+						if (msg.toolName === "hook_result" && msg.rawJson) {
+							try {
+								const event = JSON.parse(msg.rawJson);
+								const data = event.data || {};
+								// hookRunId is at the event level, not inside data
+								const hookRunId = event.hookRunId;
+								const pluginName = data.plugin || "unknown";
+								const hookName = data.hook || "unknown";
+								if (hookRunId) {
+									publishHookResultAdded(
+										result.sessionId,
+										hookRunId,
+										pluginName,
+										hookName,
+										data.success ?? data.passed ?? true,
+										data.duration_ms || data.durationMs || 0,
+									);
+								}
+								// Also publish session hooks changed for sidebar refresh
+								publishSessionHooksChanged(
+									result.sessionId,
+									pluginName,
+									hookName,
+									"result",
+								);
+							} catch {
+								// Ignore parse errors
+							}
+						} else if (
+							(msg.toolName === "mcp_tool_result" ||
+								msg.toolName === "exposed_tool_result") &&
+							msg.rawJson
+						) {
+							try {
+								const event = JSON.parse(msg.rawJson);
+								const data = event.data || {};
+								if (data.callId) {
+									publishToolResultAdded(
+										result.sessionId,
+										data.callId,
+										msg.toolName === "mcp_tool_result" ? "mcp" : "exposed",
+										data.success ?? true,
+										data.duration_ms || data.durationMs || 0,
+									);
+								}
+							} catch {
+								// Ignore parse errors
+							}
+						}
 						continue;
+					}
+
+					// Detect hook_run events and publish session hooks changed
+					if (msg.toolName === "hook_run" && msg.rawJson) {
+						try {
+							const event = JSON.parse(msg.rawJson);
+							const data = event.data || {};
+							publishSessionHooksChanged(
+								result.sessionId,
+								data.plugin || "unknown",
+								data.hook || "unknown",
+								"run",
+							);
+						} catch {
+							// Ignore parse errors
+						}
+					}
+				}
+
+				// Apply the same filtering as the query to keep subscription in sync
+				// Skip messages that should not appear in the main stream
+				if (msg.rawJson) {
+					try {
+						const parsed = JSON.parse(msg.rawJson);
+						const content = parsed.message?.content;
+
+						if (Array.isArray(content) && content.length > 0) {
+							// Skip tool_result-only messages (Claude API tool results)
+							// These are shown with their parent tool_use message
+							if (
+								content.every(
+									(block: { type: string }) => block.type === "tool_result",
+								)
+							) {
+								continue;
+							}
+						}
+
+						// Check if message has displayable text content
+						// This matches getMessageText() logic from the query
+						let hasDisplayableContent = false;
+
+						if (typeof content === "string" && content.length > 0) {
+							hasDisplayableContent = true;
+						} else if (Array.isArray(content)) {
+							// Check for text blocks
+							const hasTextBlocks = content.some(
+								(block: { type: string; text?: string }) =>
+									block.type === "text" && block.text && block.text.length > 0,
+							);
+							// Check for tool_use blocks (these generate a summary in the UI)
+							const hasToolUse = content.some(
+								(block: { type: string }) => block.type === "tool_use",
+							);
+							// Check for TodoWrite tool calls
+							if (
+								content.some(
+									(block: { type: string; name?: string }) =>
+										block.type === "tool_use" && block.name === "TodoWrite",
+								)
+							) {
+								hasTodoWrite = true;
+							}
+							// Check for file-modifying tool calls
+							for (const block of content) {
+								if (
+									block.type === "tool_use" &&
+									block.name &&
+									FILE_MODIFYING_TOOLS.has(block.name)
+								) {
+									fileModifyingTools.add(block.name);
+								}
+							}
+
+							hasDisplayableContent = hasTextBlocks || hasToolUse;
+						}
+
+						// Skip messages with no displayable content (unless summary/han_event)
+						if (!hasDisplayableContent) {
+							if (
+								msg.messageType !== "han_event" &&
+								msg.messageType !== "summary"
+							) {
+								continue;
+							}
+						}
+					} catch {
+						// Ignore parse errors, let message through
 					}
 				}
 
 				const messageIndex = result.totalMessages - result.messagesIndexed + i;
 
-				// Build the edge data for Relay @appendEdge
+				// Build the edge data for Relay @prependEdge
 				const edgeData: MessageEdgeData = {
 					node: {
 						id: msg.id,
@@ -107,11 +276,51 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 						projectDir: "", // Project dir is on session, not message
 						sessionId: result.sessionId,
 						lineNumber: msg.lineNumber,
+						toolName: msg.toolName, // Required for han_event subtype resolution
 					},
 					cursor: Buffer.from(`cursor:${messageIndex}`).toString("base64"),
 				};
 
 				publishSessionMessageAdded(result.sessionId, messageIndex, edgeData);
+			}
+
+			// If TodoWrite was detected, publish todos changed event
+			if (hasTodoWrite) {
+				try {
+					const todos = await sessionTodos.get(result.sessionId);
+					if (todos?.todosJson) {
+						const parsed = JSON.parse(todos.todosJson);
+						if (Array.isArray(parsed)) {
+							const todoCount = parsed.length;
+							const inProgressCount = parsed.filter(
+								(t: { status?: string }) => t.status === "in_progress",
+							).length;
+							const completedCount = parsed.filter(
+								(t: { status?: string }) => t.status === "completed",
+							).length;
+							publishSessionTodosChanged(
+								result.sessionId,
+								todoCount,
+								inProgressCount,
+								completedCount,
+							);
+						}
+					}
+				} catch {
+					// Ignore errors, just skip the todos update
+				}
+			}
+
+			// If file-modifying tools were detected, publish files changed event
+			if (fileModifyingTools.size > 0) {
+				// Publish for each tool type detected
+				for (const toolName of fileModifyingTools) {
+					publishSessionFilesChanged(
+						result.sessionId,
+						fileModifyingTools.size,
+						toolName,
+					);
+				}
 			}
 		} catch (error) {
 			console.error(

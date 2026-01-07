@@ -19,6 +19,7 @@ export { Heading } from './Heading.tsx';
 export { HStack, type HStackProps } from './HStack.tsx';
 export { Input } from './Input.tsx';
 export { Link, type LinkProps } from './Link.tsx';
+export { Pressable, type PressableProps } from './Pressable.tsx';
 export { Skeleton } from './Skeleton.tsx';
 export { Spinner } from './Spinner.tsx';
 export { Text, type TextProps } from './Text.tsx';

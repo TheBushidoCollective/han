@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<984819354698e9c93606374384c26654>>
+ * @generated SignedSource<<f2820fcabf1a86b38ea5af61185a3cc7>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -28,7 +28,7 @@ export type SessionDetailPageQuery$data = {
     readonly updatedAt?: any | null | undefined;
     readonly version?: string | null | undefined;
     readonly worktreeName?: string | null | undefined;
-    readonly " $fragmentSpreads": FragmentRefs<"SessionExpensiveFields_session" | "SessionMessages_session">;
+    readonly " $fragmentSpreads": FragmentRefs<"SessionMessages_session" | "SessionSidebar_session">;
   } | null | undefined;
 };
 export type SessionDetailPageQuery = {
@@ -290,40 +290,44 @@ v24 = {
           "kind": "ScalarField",
           "name": "color",
           "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "concreteType": "ToolResultBlock",
+          "kind": "LinkedField",
+          "name": "result",
+          "plural": false,
+          "selections": [
+            (v22/*: any*/),
+            (v19/*: any*/),
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "isError",
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "isLong",
+              "storageKey": null
+            },
+            (v21/*: any*/),
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "hasImage",
+              "storageKey": null
+            }
+          ],
+          "storageKey": null
         }
       ],
       "type": "ToolUseBlock",
-      "abstractKey": null
-    },
-    {
-      "kind": "InlineFragment",
-      "selections": [
-        (v22/*: any*/),
-        (v19/*: any*/),
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "isError",
-          "storageKey": null
-        },
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "isLong",
-          "storageKey": null
-        },
-        (v21/*: any*/),
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "hasImage",
-          "storageKey": null
-        }
-      ],
-      "type": "ToolResultBlock",
       "abstractKey": null
     },
     {
@@ -354,77 +358,77 @@ v25 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "isMeta",
+  "name": "sentimentScore",
   "storageKey": null
 },
 v26 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "sentimentScore",
+  "name": "sentimentLevel",
   "storageKey": null
 },
 v27 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "sentimentLevel",
+  "name": "frustrationScore",
   "storageKey": null
 },
 v28 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "frustrationScore",
+  "name": "frustrationLevel",
   "storageKey": null
 },
 v29 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "frustrationLevel",
+  "name": "signals",
   "storageKey": null
 },
 v30 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "signals",
+  "name": "fileCount",
   "storageKey": null
 },
 v31 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "fileCount",
+  "name": "plugin",
   "storageKey": null
 },
 v32 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "plugin",
+  "name": "hook",
   "storageKey": null
 },
 v33 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "hook",
+  "name": "directory",
   "storageKey": null
 },
 v34 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "directory",
+  "name": "cached",
   "storageKey": null
 },
 v35 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "cached",
+  "name": "success",
   "storageKey": null
 },
 v36 = {
@@ -445,74 +449,67 @@ v38 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "success",
+  "name": "output",
   "storageKey": null
 },
 v39 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "output",
-  "storageKey": null
-},
-v40 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
   "name": "error",
   "storageKey": null
 },
-v41 = [
+v40 = [
   (v17/*: any*/),
   (v18/*: any*/),
+  (v31/*: any*/),
   (v32/*: any*/),
   (v33/*: any*/),
   (v34/*: any*/),
-  (v35/*: any*/),
   (v36/*: any*/),
   (v37/*: any*/),
+  (v35/*: any*/),
   (v38/*: any*/),
-  (v39/*: any*/),
-  (v40/*: any*/)
+  (v39/*: any*/)
 ],
-v42 = {
+v41 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "filePath",
   "storageKey": null
 },
-v43 = {
+v42 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "tool",
   "storageKey": null
 },
-v44 = {
+v43 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "server",
   "storageKey": null
 },
-v45 = {
+v44 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "prefixedName",
   "storageKey": null
 },
-v46 = {
+v45 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "callId",
   "storageKey": null
 },
-v47 = [
+v46 = [
   (v2/*: any*/),
-  (v38/*: any*/),
+  (v35/*: any*/),
   (v36/*: any*/),
   {
     "alias": null,
@@ -521,70 +518,116 @@ v47 = [
     "name": "result",
     "storageKey": null
   },
-  (v40/*: any*/)
+  (v39/*: any*/)
 ],
-v48 = {
+v47 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "hookType",
+  "name": "cursor",
+  "storageKey": null
+},
+v48 = {
+  "alias": null,
+  "args": null,
+  "concreteType": "PageInfo",
+  "kind": "LinkedField",
+  "name": "pageInfo",
+  "plural": false,
+  "selections": [
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "hasNextPage",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "endCursor",
+      "storageKey": null
+    }
+  ],
   "storageKey": null
 },
 v49 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "hookName",
+  "name": "totalCount",
   "storageKey": null
 },
 v50 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "passed",
+  "name": "hookType",
   "storageKey": null
 },
 v51 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "total",
+  "name": "hookName",
   "storageKey": null
 },
 v52 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "status",
+  "name": "passed",
   "storageKey": null
 },
 v53 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "activeForm",
+  "name": "pluginName",
   "storageKey": null
 },
 v54 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "taskId",
+  "name": "total",
   "storageKey": null
 },
 v55 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "status",
+  "storageKey": null
+},
+v56 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "activeForm",
+  "storageKey": null
+},
+v57 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "taskId",
+  "storageKey": null
+},
+v58 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "description",
   "storageKey": null
 },
-v56 = [
+v59 = [
   (v2/*: any*/),
-  (v54/*: any*/),
-  (v55/*: any*/),
+  (v57/*: any*/),
+  (v58/*: any*/),
   (v20/*: any*/),
-  (v52/*: any*/),
+  (v55/*: any*/),
   (v11/*: any*/)
 ];
 return {
@@ -626,7 +669,7 @@ return {
               {
                 "args": null,
                 "kind": "FragmentSpread",
-                "name": "SessionExpensiveFields_session"
+                "name": "SessionSidebar_session"
               }
             ],
             "type": "Session",
@@ -714,28 +757,6 @@ return {
                               (v18/*: any*/),
                               (v19/*: any*/),
                               (v24/*: any*/),
-                              (v25/*: any*/),
-                              {
-                                "alias": null,
-                                "args": null,
-                                "kind": "ScalarField",
-                                "name": "isInterrupt",
-                                "storageKey": null
-                              },
-                              {
-                                "alias": null,
-                                "args": null,
-                                "kind": "ScalarField",
-                                "name": "isCommand",
-                                "storageKey": null
-                              },
-                              {
-                                "alias": null,
-                                "args": null,
-                                "kind": "ScalarField",
-                                "name": "commandName",
-                                "storageKey": null
-                              },
                               {
                                 "alias": null,
                                 "args": null,
@@ -744,17 +765,32 @@ return {
                                 "name": "sentimentAnalysis",
                                 "plural": false,
                                 "selections": [
+                                  (v25/*: any*/),
                                   (v26/*: any*/),
                                   (v27/*: any*/),
                                   (v28/*: any*/),
                                   (v29/*: any*/),
-                                  (v30/*: any*/)
+                                  (v2/*: any*/)
                                 ],
                                 "storageKey": null
+                              },
+                              {
+                                "kind": "InlineFragment",
+                                "selections": [
+                                  {
+                                    "alias": null,
+                                    "args": null,
+                                    "kind": "ScalarField",
+                                    "name": "commandName",
+                                    "storageKey": null
+                                  }
+                                ],
+                                "type": "CommandUserMessage",
+                                "abstractKey": null
                               }
                             ],
                             "type": "UserMessage",
-                            "abstractKey": null
+                            "abstractKey": "__isUserMessage"
                           },
                           {
                             "kind": "InlineFragment",
@@ -867,7 +903,13 @@ return {
                                 "name": "level",
                                 "storageKey": null
                               },
-                              (v25/*: any*/)
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "isMeta",
+                                "storageKey": null
+                              }
                             ],
                             "type": "SystemMessage",
                             "abstractKey": null
@@ -891,7 +933,7 @@ return {
                                 "name": "isSnapshotUpdate",
                                 "storageKey": null
                               },
-                              (v31/*: any*/),
+                              (v30/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -908,17 +950,41 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
+                              (v31/*: any*/),
                               (v32/*: any*/),
                               (v33/*: any*/),
                               (v34/*: any*/),
-                              (v35/*: any*/)
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "hookRunId",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "concreteType": "HookResult",
+                                "kind": "LinkedField",
+                                "name": "result",
+                                "plural": false,
+                                "selections": [
+                                  (v2/*: any*/),
+                                  (v35/*: any*/),
+                                  (v36/*: any*/),
+                                  (v37/*: any*/),
+                                  (v38/*: any*/),
+                                  (v39/*: any*/)
+                                ],
+                                "storageKey": null
+                              }
                             ],
                             "type": "HookRunMessage",
                             "abstractKey": null
                           },
                           {
                             "kind": "InlineFragment",
-                            "selections": (v41/*: any*/),
+                            "selections": (v40/*: any*/),
                             "type": "HookResultMessage",
                             "abstractKey": null
                           },
@@ -927,8 +993,8 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
-                              (v32/*: any*/),
-                              (v42/*: any*/),
+                              (v31/*: any*/),
+                              (v41/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -936,7 +1002,7 @@ return {
                                 "name": "reason",
                                 "storageKey": null
                               },
-                              (v38/*: any*/),
+                              (v35/*: any*/),
                               (v36/*: any*/)
                             ],
                             "type": "HookReferenceMessage",
@@ -944,7 +1010,7 @@ return {
                           },
                           {
                             "kind": "InlineFragment",
-                            "selections": (v41/*: any*/),
+                            "selections": (v40/*: any*/),
                             "type": "HookValidationMessage",
                             "abstractKey": null
                           },
@@ -953,10 +1019,10 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
+                              (v31/*: any*/),
                               (v32/*: any*/),
                               (v33/*: any*/),
-                              (v34/*: any*/),
-                              (v31/*: any*/)
+                              (v30/*: any*/)
                             ],
                             "type": "HookValidationCacheMessage",
                             "abstractKey": null
@@ -966,7 +1032,7 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
-                              (v32/*: any*/),
+                              (v31/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -976,8 +1042,8 @@ return {
                               },
                               (v36/*: any*/),
                               (v37/*: any*/),
-                              (v38/*: any*/),
-                              (v39/*: any*/)
+                              (v35/*: any*/),
+                              (v38/*: any*/)
                             ],
                             "type": "HookScriptMessage",
                             "abstractKey": null
@@ -987,7 +1053,7 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
-                              (v32/*: any*/),
+                              (v31/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1019,7 +1085,7 @@ return {
                                 "name": "changeToolName",
                                 "storageKey": null
                               },
-                              (v42/*: any*/)
+                              (v41/*: any*/)
                             ],
                             "type": "HookFileChangeMessage",
                             "abstractKey": null
@@ -1052,11 +1118,11 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
+                              (v42/*: any*/),
                               (v43/*: any*/),
                               (v44/*: any*/),
-                              (v45/*: any*/),
                               (v23/*: any*/),
-                              (v46/*: any*/),
+                              (v45/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1064,7 +1130,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "result",
                                 "plural": false,
-                                "selections": (v47/*: any*/),
+                                "selections": (v46/*: any*/),
                                 "storageKey": null
                               }
                             ],
@@ -1076,13 +1142,13 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
+                              (v42/*: any*/),
                               (v43/*: any*/),
                               (v44/*: any*/),
-                              (v45/*: any*/),
                               (v36/*: any*/),
+                              (v35/*: any*/),
                               (v38/*: any*/),
-                              (v39/*: any*/),
-                              (v40/*: any*/)
+                              (v39/*: any*/)
                             ],
                             "type": "McpToolResultMessage",
                             "abstractKey": null
@@ -1092,10 +1158,10 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
-                              (v43/*: any*/),
-                              (v45/*: any*/),
+                              (v42/*: any*/),
+                              (v44/*: any*/),
                               (v23/*: any*/),
-                              (v46/*: any*/),
+                              (v45/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1103,7 +1169,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "result",
                                 "plural": false,
-                                "selections": (v47/*: any*/),
+                                "selections": (v46/*: any*/),
                                 "storageKey": null
                               }
                             ],
@@ -1115,12 +1181,12 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
-                              (v43/*: any*/),
-                              (v45/*: any*/),
+                              (v42/*: any*/),
+                              (v44/*: any*/),
                               (v36/*: any*/),
+                              (v35/*: any*/),
                               (v38/*: any*/),
-                              (v39/*: any*/),
-                              (v40/*: any*/)
+                              (v39/*: any*/)
                             ],
                             "type": "ExposedToolResultMessage",
                             "abstractKey": null
@@ -1198,11 +1264,11 @@ return {
                             "selections": [
                               (v17/*: any*/),
                               (v18/*: any*/),
+                              (v25/*: any*/),
                               (v26/*: any*/),
                               (v27/*: any*/),
                               (v28/*: any*/),
                               (v29/*: any*/),
-                              (v30/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1240,48 +1306,12 @@ return {
                         ],
                         "storageKey": null
                       },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "cursor",
-                        "storageKey": null
-                      }
+                      (v47/*: any*/)
                     ],
                     "storageKey": null
                   },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "concreteType": "PageInfo",
-                    "kind": "LinkedField",
-                    "name": "pageInfo",
-                    "plural": false,
-                    "selections": [
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "hasNextPage",
-                        "storageKey": null
-                      },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "endCursor",
-                        "storageKey": null
-                      }
-                    ],
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "totalCount",
-                    "storageKey": null
-                  },
+                  (v48/*: any*/),
+                  (v49/*: any*/),
                   {
                     "kind": "ClientExtension",
                     "selections": [
@@ -1308,70 +1338,180 @@ return {
               },
               {
                 "alias": null,
-                "args": null,
-                "concreteType": "Checkpoint",
-                "kind": "LinkedField",
-                "name": "checkpoints",
-                "plural": true,
-                "selections": [
-                  (v2/*: any*/),
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "checkpointId",
-                    "storageKey": null
-                  },
-                  (v20/*: any*/),
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "createdAt",
-                    "storageKey": null
-                  },
-                  (v31/*: any*/),
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "patternCount",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "patterns",
-                    "storageKey": null
-                  }
-                ],
-                "storageKey": null
-              },
-              {
-                "alias": null,
-                "args": null,
-                "concreteType": "HookExecution",
+                "args": (v16/*: any*/),
+                "concreteType": "HookExecutionConnection",
                 "kind": "LinkedField",
                 "name": "hookExecutions",
-                "plural": true,
+                "plural": false,
                 "selections": [
-                  (v2/*: any*/),
-                  (v48/*: any*/),
                   (v49/*: any*/),
                   {
                     "alias": null,
                     "args": null,
-                    "kind": "ScalarField",
-                    "name": "hookSource",
+                    "concreteType": "HookExecutionEdge",
+                    "kind": "LinkedField",
+                    "name": "edges",
+                    "plural": true,
+                    "selections": [
+                      {
+                        "alias": null,
+                        "args": null,
+                        "concreteType": "HookExecution",
+                        "kind": "LinkedField",
+                        "name": "node",
+                        "plural": false,
+                        "selections": [
+                          (v2/*: any*/),
+                          (v50/*: any*/),
+                          (v51/*: any*/),
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "hookSource",
+                            "storageKey": null
+                          },
+                          (v33/*: any*/),
+                          (v36/*: any*/),
+                          (v52/*: any*/),
+                          (v38/*: any*/),
+                          (v39/*: any*/),
+                          (v17/*: any*/),
+                          (v15/*: any*/)
+                        ],
+                        "storageKey": null
+                      },
+                      (v47/*: any*/)
+                    ],
                     "storageKey": null
                   },
-                  (v36/*: any*/),
-                  (v50/*: any*/),
-                  (v39/*: any*/),
-                  (v40/*: any*/),
-                  (v17/*: any*/)
+                  (v48/*: any*/)
                 ],
+                "storageKey": "hookExecutions(first:50)"
+              },
+              {
+                "alias": null,
+                "args": (v16/*: any*/),
+                "filters": null,
+                "handle": "connection",
+                "key": "SessionSidebar_hookExecutions",
+                "kind": "LinkedHandle",
+                "name": "hookExecutions"
+              },
+              {
+                "alias": null,
+                "args": (v16/*: any*/),
+                "concreteType": "FileChangeConnection",
+                "kind": "LinkedField",
+                "name": "fileChanges",
+                "plural": false,
+                "selections": [
+                  (v49/*: any*/),
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "FileChangeEdge",
+                    "kind": "LinkedField",
+                    "name": "edges",
+                    "plural": true,
+                    "selections": [
+                      {
+                        "alias": null,
+                        "args": null,
+                        "concreteType": "FileChange",
+                        "kind": "LinkedField",
+                        "name": "node",
+                        "plural": false,
+                        "selections": [
+                          (v2/*: any*/),
+                          (v41/*: any*/),
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "action",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "toolName",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "recordedAt",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "isValidated",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "concreteType": "FileValidation",
+                            "kind": "LinkedField",
+                            "name": "validations",
+                            "plural": true,
+                            "selections": [
+                              (v53/*: any*/),
+                              (v51/*: any*/),
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "validatedAt",
+                                "storageKey": null
+                              }
+                            ],
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "concreteType": "FileValidation",
+                            "kind": "LinkedField",
+                            "name": "missingValidations",
+                            "plural": true,
+                            "selections": [
+                              (v53/*: any*/),
+                              (v51/*: any*/)
+                            ],
+                            "storageKey": null
+                          },
+                          (v15/*: any*/)
+                        ],
+                        "storageKey": null
+                      },
+                      (v47/*: any*/)
+                    ],
+                    "storageKey": null
+                  },
+                  (v48/*: any*/)
+                ],
+                "storageKey": "fileChanges(first:50)"
+              },
+              {
+                "alias": null,
+                "args": (v16/*: any*/),
+                "filters": null,
+                "handle": "connection",
+                "key": "SessionSidebar_fileChanges",
+                "kind": "LinkedHandle",
+                "name": "fileChanges"
+              },
+              {
+                "alias": null,
+                "args": null,
+                "kind": "ScalarField",
+                "name": "fileChangeCount",
                 "storageKey": null
               },
               {
@@ -1425,9 +1565,9 @@ return {
                     "name": "byHookType",
                     "plural": true,
                     "selections": [
-                      (v48/*: any*/),
-                      (v51/*: any*/),
-                      (v50/*: any*/)
+                      (v50/*: any*/),
+                      (v54/*: any*/),
+                      (v52/*: any*/)
                     ],
                     "storageKey": null
                   }
@@ -1437,15 +1577,98 @@ return {
               {
                 "alias": null,
                 "args": null,
-                "concreteType": "Todo",
+                "concreteType": "FrustrationSummary",
+                "kind": "LinkedField",
+                "name": "frustrationSummary",
+                "plural": false,
+                "selections": [
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "totalAnalyzed",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "moderateCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "highCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "overallLevel",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "averageScore",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "peakScore",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "topSignals",
+                    "storageKey": null
+                  }
+                ],
+                "storageKey": null
+              },
+              {
+                "alias": null,
+                "args": null,
+                "concreteType": "TodoConnection",
                 "kind": "LinkedField",
                 "name": "todos",
-                "plural": true,
+                "plural": false,
                 "selections": [
-                  (v2/*: any*/),
-                  (v19/*: any*/),
-                  (v52/*: any*/),
-                  (v53/*: any*/)
+                  (v49/*: any*/),
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "TodoEdge",
+                    "kind": "LinkedField",
+                    "name": "edges",
+                    "plural": true,
+                    "selections": [
+                      {
+                        "alias": null,
+                        "args": null,
+                        "concreteType": "Todo",
+                        "kind": "LinkedField",
+                        "name": "node",
+                        "plural": false,
+                        "selections": [
+                          (v2/*: any*/),
+                          (v19/*: any*/),
+                          (v55/*: any*/),
+                          (v56/*: any*/)
+                        ],
+                        "storageKey": null
+                      }
+                    ],
+                    "storageKey": null
+                  }
                 ],
                 "storageKey": null
               },
@@ -1458,8 +1681,8 @@ return {
                 "plural": false,
                 "selections": [
                   (v19/*: any*/),
-                  (v53/*: any*/),
-                  (v52/*: any*/),
+                  (v56/*: any*/),
+                  (v55/*: any*/),
                   (v2/*: any*/)
                 ],
                 "storageKey": null
@@ -1472,7 +1695,7 @@ return {
                 "name": "todoCounts",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v54/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1500,127 +1723,63 @@ return {
               {
                 "alias": null,
                 "args": null,
-                "concreteType": "Task",
+                "concreteType": "TaskConnection",
                 "kind": "LinkedField",
                 "name": "tasks",
-                "plural": true,
-                "selections": [
-                  (v2/*: any*/),
-                  (v54/*: any*/),
-                  (v55/*: any*/),
-                  (v20/*: any*/),
-                  (v52/*: any*/),
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "outcome",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "confidence",
-                    "storageKey": null
-                  },
-                  (v11/*: any*/),
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "completedAt",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "durationSeconds",
-                    "storageKey": null
-                  }
-                ],
-                "storageKey": null
-              },
-              {
-                "alias": null,
-                "args": null,
-                "concreteType": "Task",
-                "kind": "LinkedField",
-                "name": "activeTasks",
-                "plural": true,
-                "selections": (v56/*: any*/),
-                "storageKey": null
-              },
-              {
-                "alias": null,
-                "args": null,
-                "concreteType": "Task",
-                "kind": "LinkedField",
-                "name": "currentTask",
                 "plural": false,
-                "selections": (v56/*: any*/),
-                "storageKey": null
-              },
-              {
-                "alias": null,
-                "args": null,
-                "concreteType": "FileChange",
-                "kind": "LinkedField",
-                "name": "fileChanges",
-                "plural": true,
                 "selections": [
-                  (v2/*: any*/),
-                  (v42/*: any*/),
+                  (v49/*: any*/),
                   {
                     "alias": null,
                     "args": null,
-                    "kind": "ScalarField",
-                    "name": "action",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "toolName",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "recordedAt",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "isValidated",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "concreteType": "FileValidation",
+                    "concreteType": "TaskEdge",
                     "kind": "LinkedField",
-                    "name": "validations",
+                    "name": "edges",
                     "plural": true,
                     "selections": [
                       {
                         "alias": null,
                         "args": null,
-                        "kind": "ScalarField",
-                        "name": "pluginName",
-                        "storageKey": null
-                      },
-                      (v49/*: any*/),
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "validatedAt",
+                        "concreteType": "Task",
+                        "kind": "LinkedField",
+                        "name": "node",
+                        "plural": false,
+                        "selections": [
+                          (v2/*: any*/),
+                          (v57/*: any*/),
+                          (v58/*: any*/),
+                          (v20/*: any*/),
+                          (v55/*: any*/),
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "outcome",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "confidence",
+                            "storageKey": null
+                          },
+                          (v11/*: any*/),
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "completedAt",
+                            "storageKey": null
+                          },
+                          {
+                            "alias": null,
+                            "args": null,
+                            "kind": "ScalarField",
+                            "name": "durationSeconds",
+                            "storageKey": null
+                          }
+                        ],
                         "storageKey": null
                       }
                     ],
@@ -1632,8 +1791,44 @@ return {
               {
                 "alias": null,
                 "args": null,
-                "kind": "ScalarField",
-                "name": "fileChangeCount",
+                "concreteType": "TaskConnection",
+                "kind": "LinkedField",
+                "name": "activeTasks",
+                "plural": false,
+                "selections": [
+                  (v49/*: any*/),
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "TaskEdge",
+                    "kind": "LinkedField",
+                    "name": "edges",
+                    "plural": true,
+                    "selections": [
+                      {
+                        "alias": null,
+                        "args": null,
+                        "concreteType": "Task",
+                        "kind": "LinkedField",
+                        "name": "node",
+                        "plural": false,
+                        "selections": (v59/*: any*/),
+                        "storageKey": null
+                      }
+                    ],
+                    "storageKey": null
+                  }
+                ],
+                "storageKey": null
+              },
+              {
+                "alias": null,
+                "args": null,
+                "concreteType": "Task",
+                "kind": "LinkedField",
+                "name": "currentTask",
+                "plural": false,
+                "selections": (v59/*: any*/),
                 "storageKey": null
               }
             ],
@@ -1646,16 +1841,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "33f1581e97d3f3a16b364026bf189169",
+    "cacheID": "9cdd81346fdf0b9b2f588abb93fb2279",
     "id": null,
     "metadata": {},
     "name": "SessionDetailPageQuery",
     "operationKind": "query",
-    "text": "query SessionDetailPageQuery(\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ... on Session {\n      id\n      sessionId\n      date\n      projectName\n      projectPath\n      projectId\n      worktreeName\n      summary\n      messageCount\n      startedAt\n      updatedAt\n      gitBranch\n      version\n      ...SessionMessages_session\n      ...SessionExpensiveFields_session\n    }\n    id\n  }\n}\n\nfragment AssistantMessageCard_message on AssistantMessage {\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n    }\n    ... on ToolResultBlock {\n      toolCallId\n      content\n      isError\n      isLong\n      preview\n      hasImage\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  isToolOnly\n  model\n  hasThinking\n  thinkingCount\n  hasToolUse\n  toolUseCount\n  inputTokens\n  outputTokens\n  cachedTokens\n}\n\nfragment ExposedToolCallMessageCard_message on ExposedToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment ExposedToolResultMessageCard_message on ExposedToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment FileHistorySnapshotMessageCard_message on FileHistorySnapshotMessage {\n  id\n  timestamp\n  rawJson\n  messageId\n  isSnapshotUpdate\n  fileCount\n  snapshotTimestamp\n}\n\nfragment HookDatetimeMessageCard_message on HookDatetimeMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  datetime\n  durationMs\n}\n\nfragment HookFileChangeMessageCard_message on HookFileChangeMessage {\n  id\n  timestamp\n  rawJson\n  recordedSessionId\n  changeToolName\n  filePath\n}\n\nfragment HookReferenceMessageCard_message on HookReferenceMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  filePath\n  reason\n  success\n  durationMs\n}\n\nfragment HookResultMessageCard_message on HookResultMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment HookRunMessageCard_message on HookRunMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n}\n\nfragment HookScriptMessageCard_message on HookScriptMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  command\n  durationMs\n  exitCode\n  success\n  output\n}\n\nfragment HookValidationCacheMessageCard_message on HookValidationCacheMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  fileCount\n}\n\nfragment HookValidationMessageCard_message on HookValidationMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment McpToolCallMessageCard_message on McpToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment McpToolResultMessageCard_message on McpToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment MemoryLearnMessageCard_message on MemoryLearnMessage {\n  id\n  timestamp\n  rawJson\n  domain\n  scope\n  paths\n  append\n}\n\nfragment MemoryQueryMessageCard_message on MemoryQueryMessage {\n  id\n  timestamp\n  rawJson\n  question\n  route\n  durationMs\n  resultCount\n}\n\nfragment MessageCards_message on Message {\n  __isMessage: __typename\n  __typename\n  id\n  ...UserMessageCard_message\n  ...AssistantMessageCard_message\n  ...SummaryMessageCard_message\n  ...SystemMessageCard_message\n  ...FileHistorySnapshotMessageCard_message\n  ...HookRunMessageCard_message\n  ...HookResultMessageCard_message\n  ...HookReferenceMessageCard_message\n  ...HookValidationMessageCard_message\n  ...HookValidationCacheMessageCard_message\n  ...HookScriptMessageCard_message\n  ...HookDatetimeMessageCard_message\n  ...HookFileChangeMessageCard_message\n  ...QueueOperationMessageCard_message\n  ...McpToolCallMessageCard_message\n  ...McpToolResultMessageCard_message\n  ...ExposedToolCallMessageCard_message\n  ...ExposedToolResultMessageCard_message\n  ...MemoryQueryMessageCard_message\n  ...MemoryLearnMessageCard_message\n  ...SentimentAnalysisMessageCard_message\n  ...UnknownEventMessageCard_message\n}\n\nfragment QueueOperationMessageCard_message on QueueOperationMessage {\n  id\n  timestamp\n  rawJson\n  operation\n  queueSessionId\n}\n\nfragment SentimentAnalysisMessageCard_message on SentimentAnalysisMessage {\n  id\n  timestamp\n  rawJson\n  sentimentScore\n  sentimentLevel\n  frustrationScore\n  frustrationLevel\n  signals\n  analyzedMessageId\n}\n\nfragment SessionExpensiveFields_session on Session {\n  checkpoints {\n    id\n    checkpointId\n    type\n    createdAt\n    fileCount\n    patternCount\n    patterns\n  }\n  hookExecutions {\n    id\n    hookType\n    hookName\n    hookSource\n    durationMs\n    passed\n    output\n    error\n    timestamp\n  }\n  hookStats {\n    totalHooks\n    passedHooks\n    failedHooks\n    totalDurationMs\n    passRate\n    byHookType {\n      hookType\n      total\n      passed\n    }\n  }\n  todos {\n    id\n    content\n    status\n    activeForm\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  tasks {\n    id\n    taskId\n    description\n    type\n    status\n    outcome\n    confidence\n    startedAt\n    completedAt\n    durationSeconds\n  }\n  activeTasks {\n    id\n    taskId\n    description\n    type\n    status\n    startedAt\n  }\n  currentTask {\n    id\n    taskId\n    description\n    type\n    status\n    startedAt\n  }\n  fileChanges {\n    id\n    filePath\n    action\n    toolName\n    recordedAt\n    isValidated\n    validations {\n      pluginName\n      hookName\n      validatedAt\n    }\n  }\n  fileChangeCount\n}\n\nfragment SessionMessages_session on Session {\n  messageCount\n  messages(first: 50) {\n    edges {\n      node {\n        __typename\n        id\n        searchText\n        ...MessageCards_message\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n  id\n}\n\nfragment SummaryMessageCard_message on SummaryMessage {\n  id\n  timestamp\n  rawJson\n  content\n  isCompactSummary\n}\n\nfragment SystemMessageCard_message on SystemMessage {\n  id\n  timestamp\n  rawJson\n  content\n  subtype\n  level\n  isMeta\n}\n\nfragment UnknownEventMessageCard_message on UnknownEventMessage {\n  id\n  timestamp\n  rawJson\n  messageType\n  eventType\n}\n\nfragment UserMessageCard_message on UserMessage {\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n    }\n    ... on ToolResultBlock {\n      toolCallId\n      content\n      isError\n      isLong\n      preview\n      hasImage\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  isMeta\n  isInterrupt\n  isCommand\n  commandName\n  sentimentAnalysis {\n    sentimentScore\n    sentimentLevel\n    frustrationScore\n    frustrationLevel\n    signals\n  }\n}\n"
+    "text": "query SessionDetailPageQuery(\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ... on Session {\n      id\n      sessionId\n      date\n      projectName\n      projectPath\n      projectId\n      worktreeName\n      summary\n      messageCount\n      startedAt\n      updatedAt\n      gitBranch\n      version\n      ...SessionMessages_session\n      ...SessionSidebar_session\n    }\n    id\n  }\n}\n\nfragment AssistantMessageCard_message on AssistantMessage {\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  isToolOnly\n  model\n  hasThinking\n  thinkingCount\n  hasToolUse\n  toolUseCount\n  inputTokens\n  outputTokens\n  cachedTokens\n}\n\nfragment ExposedToolCallMessageCard_message on ExposedToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment ExposedToolResultMessageCard_message on ExposedToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment FileHistorySnapshotMessageCard_message on FileHistorySnapshotMessage {\n  id\n  timestamp\n  rawJson\n  messageId\n  isSnapshotUpdate\n  fileCount\n  snapshotTimestamp\n}\n\nfragment HookDatetimeMessageCard_message on HookDatetimeMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  datetime\n  durationMs\n}\n\nfragment HookFileChangeMessageCard_message on HookFileChangeMessage {\n  id\n  timestamp\n  rawJson\n  recordedSessionId\n  changeToolName\n  filePath\n}\n\nfragment HookReferenceMessageCard_message on HookReferenceMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  filePath\n  reason\n  success\n  durationMs\n}\n\nfragment HookResultMessageCard_message on HookResultMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment HookRunMessageCard_message on HookRunMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  hookRunId\n  result {\n    id\n    success\n    durationMs\n    exitCode\n    output\n    error\n  }\n}\n\nfragment HookScriptMessageCard_message on HookScriptMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  command\n  durationMs\n  exitCode\n  success\n  output\n}\n\nfragment HookValidationCacheMessageCard_message on HookValidationCacheMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  fileCount\n}\n\nfragment HookValidationMessageCard_message on HookValidationMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment McpToolCallMessageCard_message on McpToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment McpToolResultMessageCard_message on McpToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment MemoryLearnMessageCard_message on MemoryLearnMessage {\n  id\n  timestamp\n  rawJson\n  domain\n  scope\n  paths\n  append\n}\n\nfragment MemoryQueryMessageCard_message on MemoryQueryMessage {\n  id\n  timestamp\n  rawJson\n  question\n  route\n  durationMs\n  resultCount\n}\n\nfragment MessageCards_message on Message {\n  __isMessage: __typename\n  __typename\n  id\n  ...UserMessageCard_message\n  ...AssistantMessageCard_message\n  ...SummaryMessageCard_message\n  ...SystemMessageCard_message\n  ...FileHistorySnapshotMessageCard_message\n  ...HookRunMessageCard_message\n  ...HookResultMessageCard_message\n  ...HookReferenceMessageCard_message\n  ...HookValidationMessageCard_message\n  ...HookValidationCacheMessageCard_message\n  ...HookScriptMessageCard_message\n  ...HookDatetimeMessageCard_message\n  ...HookFileChangeMessageCard_message\n  ...QueueOperationMessageCard_message\n  ...McpToolCallMessageCard_message\n  ...McpToolResultMessageCard_message\n  ...ExposedToolCallMessageCard_message\n  ...ExposedToolResultMessageCard_message\n  ...MemoryQueryMessageCard_message\n  ...MemoryLearnMessageCard_message\n  ...SentimentAnalysisMessageCard_message\n  ...UnknownEventMessageCard_message\n}\n\nfragment QueueOperationMessageCard_message on QueueOperationMessage {\n  id\n  timestamp\n  rawJson\n  operation\n  queueSessionId\n}\n\nfragment SentimentAnalysisMessageCard_message on SentimentAnalysisMessage {\n  id\n  timestamp\n  rawJson\n  sentimentScore\n  sentimentLevel\n  frustrationScore\n  frustrationLevel\n  signals\n  analyzedMessageId\n}\n\nfragment SessionMessages_session on Session {\n  messageCount\n  messages(first: 50) {\n    edges {\n      node {\n        __typename\n        id\n        searchText\n        ...MessageCards_message\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n  id\n}\n\nfragment SessionSidebar_fileChanges on Session {\n  fileChanges(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        filePath\n        action\n        toolName\n        recordedAt\n        isValidated\n        validations {\n          pluginName\n          hookName\n          validatedAt\n        }\n        missingValidations {\n          pluginName\n          hookName\n        }\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  fileChangeCount\n  id\n}\n\nfragment SessionSidebar_hookExecutions on Session {\n  hookExecutions(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        hookType\n        hookName\n        hookSource\n        directory\n        durationMs\n        passed\n        output\n        error\n        timestamp\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  id\n}\n\nfragment SessionSidebar_session on Session {\n  ...SessionSidebar_hookExecutions\n  ...SessionSidebar_fileChanges\n  hookStats {\n    totalHooks\n    passedHooks\n    failedHooks\n    totalDurationMs\n    passRate\n    byHookType {\n      hookType\n      total\n      passed\n    }\n  }\n  frustrationSummary {\n    totalAnalyzed\n    moderateCount\n    highCount\n    overallLevel\n    averageScore\n    peakScore\n    topSignals\n  }\n  todos {\n    totalCount\n    edges {\n      node {\n        id\n        content\n        status\n        activeForm\n      }\n    }\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  tasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        outcome\n        confidence\n        startedAt\n        completedAt\n        durationSeconds\n      }\n    }\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        startedAt\n      }\n    }\n  }\n  currentTask {\n    id\n    taskId\n    description\n    type\n    status\n    startedAt\n  }\n}\n\nfragment SummaryMessageCard_message on SummaryMessage {\n  id\n  timestamp\n  rawJson\n  content\n  isCompactSummary\n}\n\nfragment SystemMessageCard_message on SystemMessage {\n  id\n  timestamp\n  rawJson\n  content\n  subtype\n  level\n  isMeta\n}\n\nfragment UnknownEventMessageCard_message on UnknownEventMessage {\n  id\n  timestamp\n  rawJson\n  messageType\n  eventType\n}\n\nfragment UserMessageCard_message on UserMessage {\n  __isUserMessage: __typename\n  __typename\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  sentimentAnalysis {\n    sentimentScore\n    sentimentLevel\n    frustrationScore\n    frustrationLevel\n    signals\n    id\n  }\n  ... on CommandUserMessage {\n    commandName\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "173fc07561345ff6ffb4c6e5327aff6b";
+(node as any).hash = "713650faf7f609a697a1a03c5d40c8b9";
 
 export default node;

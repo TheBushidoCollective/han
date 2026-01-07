@@ -7,7 +7,6 @@
  *
  * Key loaders:
  * - sessionMessagesLoader: Batch load messages for multiple sessions
- * - sessionCheckpointsLoader: Batch load checkpoints for multiple sessions
  * - projectByIdLoader: Batch load projects by ID
  *
  * Paired event loaders (extract linked events from session messages):
@@ -17,13 +16,19 @@
 
 import DataLoader from "dataloader";
 import {
-	type CheckpointSummary,
-	getCheckpointsBySessionIds,
-} from "../api/checkpoints.ts";
+	getHookExecutionsForSession,
+	type HookExecution,
+} from "../api/hooks.ts";
 import {
+	getAgentTask,
 	getSessionMessagesBatch,
+	type SessionDetail,
 	type SessionMessage,
 } from "../api/sessions.ts";
+import {
+	type SessionFileValidation,
+	sessionFileValidations,
+} from "../db/index.ts";
 
 /**
  * Parsed paired event data for nested resolution
@@ -33,6 +38,8 @@ export interface PairedEventData {
 	sentimentByMessageId: Map<string, SentimentEventData>;
 	/** hook_result events keyed by "${plugin}:${hook}:${directory}" */
 	hookResultByKey: Map<string, HookResultEventData>;
+	/** hook_result events keyed by hookRunId (parent hook_run uuid) */
+	hookResultByHookRunId: Map<string, HookResultEventData>;
 	/** mcp_tool_result events keyed by call_id */
 	mcpResultByCallId: Map<string, McpResultEventData>;
 	/** exposed_tool_result events keyed by call_id */
@@ -54,6 +61,7 @@ export interface SentimentEventData {
 export interface HookResultEventData {
 	id: string;
 	timestamp: string;
+	hookRunId?: string;
 	plugin: string;
 	hook: string;
 	directory: string;
@@ -90,12 +98,85 @@ export interface ExposedResultEventData {
 }
 
 /**
+ * Tool result block data indexed by toolCallId
+ */
+export interface ToolResultData {
+	toolCallId: string;
+	content: string;
+	isError: boolean;
+	isLong: boolean;
+	preview: string;
+	hasImage: boolean;
+}
+
+/**
+ * Extract tool results from user messages' content blocks
+ * Returns a Map of toolCallId -> ToolResultData
+ */
+function extractToolResults(
+	messages: SessionMessage[],
+): Map<string, ToolResultData> {
+	const results = new Map<string, ToolResultData>();
+
+	for (const msg of messages) {
+		// Tool results are in user messages (type: "user")
+		if (msg.type !== "user" || !msg.rawJson) continue;
+
+		try {
+			const parsed = JSON.parse(msg.rawJson);
+			const content = parsed.message?.content;
+
+			if (!Array.isArray(content)) continue;
+
+			for (const block of content) {
+				if (block.type !== "tool_result" || !block.tool_use_id) continue;
+
+				// Extract content from the tool_result block
+				const contentStr =
+					typeof block.content === "string"
+						? block.content
+						: Array.isArray(block.content)
+							? block.content
+									.filter(
+										(c: { type: string; text?: string }) =>
+											c.type === "text" && c.text,
+									)
+									.map((c: { text: string }) => c.text)
+									.join("\n")
+							: "";
+
+				const hasImage =
+					Array.isArray(block.content) &&
+					block.content.some((c: { type: string }) => c.type === "image");
+
+				results.set(block.tool_use_id, {
+					toolCallId: block.tool_use_id,
+					content: contentStr,
+					isError: block.is_error ?? false,
+					isLong: contentStr.length > 500,
+					preview:
+						contentStr.length > 500
+							? `${contentStr.slice(0, 500)}...`
+							: contentStr,
+					hasImage,
+				});
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	}
+
+	return results;
+}
+
+/**
  * Parse paired events from session messages
  */
 function parsePairedEvents(messages: SessionMessage[]): PairedEventData {
 	const result: PairedEventData = {
 		sentimentByMessageId: new Map(),
 		hookResultByKey: new Map(),
+		hookResultByHookRunId: new Map(),
 		mcpResultByCallId: new Map(),
 		exposedResultByCallId: new Map(),
 	};
@@ -127,9 +208,10 @@ function parsePairedEvents(messages: SessionMessage[]): PairedEventData {
 
 				case "hook_result": {
 					const key = `${data.plugin}:${data.hook}:${data.directory}`;
-					result.hookResultByKey.set(key, {
+					const hookResultData: HookResultEventData = {
 						id: parsed.id,
 						timestamp: parsed.timestamp,
+						hookRunId: parsed.hookRunId,
 						plugin: data.plugin ?? "",
 						hook: data.hook ?? "",
 						directory: data.directory ?? "",
@@ -139,7 +221,12 @@ function parsePairedEvents(messages: SessionMessage[]): PairedEventData {
 						success: data.success ?? false,
 						output: data.output,
 						error: data.error,
-					});
+					};
+					result.hookResultByKey.set(key, hookResultData);
+					// Also index by hookRunId for real-time updates
+					if (parsed.hookRunId) {
+						result.hookResultByHookRunId.set(parsed.hookRunId, hookResultData);
+					}
 					break;
 				}
 
@@ -189,10 +276,16 @@ function parsePairedEvents(messages: SessionMessage[]): PairedEventData {
 export interface GraphQLLoaders {
 	/** Batch load messages for sessions by sessionId */
 	sessionMessagesLoader: DataLoader<string, SessionMessage[]>;
-	/** Batch load checkpoints for sessions by sessionId */
-	sessionCheckpointsLoader: DataLoader<string, CheckpointSummary[]>;
 	/** Batch load paired events for sessions by sessionId */
 	sessionPairedEventsLoader: DataLoader<string, PairedEventData>;
+	/** Batch load hook executions for sessions by sessionId */
+	sessionHookExecutionsLoader: DataLoader<string, HookExecution[]>;
+	/** Batch load file validations for sessions by sessionId */
+	sessionFileValidationsLoader: DataLoader<string, SessionFileValidation[]>;
+	/** Batch load tool results for sessions by sessionId (Map of toolCallId -> ToolResultData) */
+	sessionToolResultsLoader: DataLoader<string, Map<string, ToolResultData>>;
+	/** Batch load agent task details by "sessionId:agentId" key */
+	agentTaskLoader: DataLoader<string, SessionDetail | null>;
 }
 
 /**
@@ -223,23 +316,6 @@ export function createLoaders(): GraphQLLoaders {
 		sessionMessagesLoader,
 
 		/**
-		 * Batch load session checkpoints
-		 *
-		 * Instead of: for each session -> getCheckpointsForSession(sessionId)
-		 * Uses: getCheckpointsBySessionIds([sessionId1, sessionId2, ...])
-		 */
-		sessionCheckpointsLoader: new DataLoader<string, CheckpointSummary[]>(
-			async (sessionIds) => {
-				const results = await getCheckpointsBySessionIds([...sessionIds]);
-				return sessionIds.map((id) => results.get(id) ?? []);
-			},
-			{
-				cache: true,
-				batchScheduleFn: (callback) => setTimeout(callback, 0),
-			},
-		),
-
-		/**
 		 * Batch load paired events for sessions
 		 *
 		 * Extracts sentiment_analysis, hook_result, mcp_tool_result, exposed_tool_result
@@ -255,6 +331,100 @@ export function createLoaders(): GraphQLLoaders {
 
 				// Parse paired events for each session
 				return messagesBySession.map((messages) => parsePairedEvents(messages));
+			},
+			{
+				cache: true,
+				batchScheduleFn: (callback) => setTimeout(callback, 0),
+			},
+		),
+
+		/**
+		 * Batch load hook executions for sessions
+		 *
+		 * Instead of: for each file -> getHookExecutionsForSession(sessionId)
+		 * Uses batching to load once per session
+		 */
+		sessionHookExecutionsLoader: new DataLoader<string, HookExecution[]>(
+			async (sessionIds) => {
+				// Load hook executions for all sessions in parallel
+				const results = await Promise.all(
+					sessionIds.map((id) => getHookExecutionsForSession(id)),
+				);
+				return results;
+			},
+			{
+				cache: true,
+				batchScheduleFn: (callback) => setTimeout(callback, 0),
+			},
+		),
+
+		/**
+		 * Batch load file validations for sessions
+		 *
+		 * Instead of: for each file -> sessionFileValidations.listAll(sessionId)
+		 * Uses batching to load once per session
+		 */
+		sessionFileValidationsLoader: new DataLoader<
+			string,
+			SessionFileValidation[]
+		>(
+			async (sessionIds) => {
+				// Load file validations for all sessions in parallel
+				const results = await Promise.all(
+					sessionIds.map((id) => sessionFileValidations.listAll(id)),
+				);
+				return results;
+			},
+			{
+				cache: true,
+				batchScheduleFn: (callback) => setTimeout(callback, 0),
+			},
+		),
+
+		/**
+		 * Batch load tool results for sessions
+		 *
+		 * Extracts tool_result blocks from user messages and indexes by toolCallId.
+		 * Used by ToolUseBlock.result to resolve the corresponding tool result.
+		 * Uses the sessionMessagesLoader to reuse cached messages.
+		 */
+		sessionToolResultsLoader: new DataLoader<
+			string,
+			Map<string, ToolResultData>
+		>(
+			async (sessionIds) => {
+				// Load messages for all sessions (reuses cache from sessionMessagesLoader)
+				const messagesBySession = await Promise.all(
+					sessionIds.map((id) => sessionMessagesLoader.load(id)),
+				);
+
+				// Extract tool results for each session
+				return messagesBySession.map((messages) =>
+					extractToolResults(messages),
+				);
+			},
+			{
+				cache: true,
+				batchScheduleFn: (callback) => setTimeout(callback, 0),
+			},
+		),
+
+		/**
+		 * Batch load agent task details
+		 *
+		 * Keys are in format "sessionId:agentId".
+		 * Returns SessionDetail for the agent, or null if not found.
+		 */
+		agentTaskLoader: new DataLoader<string, SessionDetail | null>(
+			async (keys) => {
+				// Load agent tasks in parallel
+				return Promise.all(
+					keys.map((key) => {
+						const [sessionId, agentId] = key.split(":");
+						if (!sessionId || !agentId) return null;
+						return getAgentTask(sessionId, agentId);
+					}),
+				);
 			},
 			{
 				cache: true,

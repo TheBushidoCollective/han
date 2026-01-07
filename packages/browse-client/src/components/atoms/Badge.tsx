@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { colors, fontSizes, radii } from '../../theme.ts';
 
-interface BadgeProps {
+export interface BadgeProps {
   children?: ReactNode;
   style?: CSSProperties;
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'purple';

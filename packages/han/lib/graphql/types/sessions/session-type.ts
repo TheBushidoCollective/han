@@ -4,7 +4,6 @@
  * Represents a Claude Code session with messages.
  */
 
-import type { CheckpointSummary } from "../../../api/checkpoints.ts";
 import {
 	getAgentTask,
 	getAgentTasksForSession,
@@ -19,7 +18,6 @@ import type {
 import { sessionFileChanges } from "../../../db/index.ts";
 import { builder } from "../../builder.ts";
 import { registerNodeLoader } from "../../node-registry.ts";
-import { CheckpointType } from "../checkpoint.ts";
 import {
 	ImageBlockType,
 	TextBlockType,
@@ -29,12 +27,18 @@ import {
 	ToolUseBlockType,
 } from "../content-block.ts";
 import {
-	HookExecutionType,
-	queryHookExecutionsForSession,
-} from "../hook-execution.ts";
+	calculateFrustrationSummary,
+	FrustrationSummaryType,
+} from "../frustration-summary.ts";
+import { queryHookExecutionsForSession } from "../hook-execution.ts";
+import {
+	type HookExecutionConnectionData,
+	HookExecutionConnectionType,
+} from "../hook-execution-connection.ts";
 import { HookStatsType, querySessionHookStats } from "../hook-stats.ts";
 import {
 	AssistantMessageType,
+	CommandUserMessageType,
 	type ContentBlock,
 	ExposedToolCallMessageType,
 	ExposedToolResultMessageType,
@@ -42,6 +46,7 @@ import {
 	getMessageText,
 	HookResultMessageType,
 	HookRunMessageType,
+	InterruptUserMessageType,
 	McpToolCallMessageType,
 	McpToolResultMessageType,
 	MemoryLearnMessageType,
@@ -49,16 +54,21 @@ import {
 	type MessageConnectionData,
 	MessageConnectionType,
 	MessageEdgeType,
+	MetaUserMessageType,
 	QueueOperationMessageType,
+	RegularUserMessageType,
 	SentimentAnalysisMessageType,
 	SummaryMessageType,
 	SystemMessageType,
+	ToolResultUserMessageType,
 	UnknownEventMessageType,
-	UserMessageType,
+	UserMessageInterface,
 } from "../message.ts";
 import {
 	getActiveTasksForSession,
 	getTasksForSession,
+	type TaskConnectionData,
+	TaskConnectionType,
 	TaskType,
 } from "../metrics.ts";
 import { applyConnectionArgs, type ConnectionArgs } from "../pagination.ts";
@@ -73,8 +83,15 @@ import {
 	type TodoItem,
 	TodoType,
 } from "../todo.ts";
+import {
+	type TodoConnectionData,
+	TodoConnectionType,
+} from "../todo-connection.ts";
 import { TodoCountsType } from "../todo-counts.ts";
-import { FileChangeType } from "./file-change.ts";
+import {
+	type FileChangeConnectionData,
+	FileChangeConnectionType,
+} from "./file-change-connection.ts";
 import type { MessageSearchResultData } from "./message-search-result.ts";
 import { MessageSearchResultType } from "./message-search-result.ts";
 
@@ -86,7 +103,12 @@ void ToolResultBlockType;
 void ImageBlockType;
 
 // Ensure message types are registered (interface pattern)
-void UserMessageType;
+void UserMessageInterface;
+void RegularUserMessageType;
+void MetaUserMessageType;
+void CommandUserMessageType;
+void InterruptUserMessageType;
+void ToolResultUserMessageType;
 void AssistantMessageType;
 void SummaryMessageType;
 void SystemMessageType;
@@ -304,15 +326,67 @@ export const SessionType = SessionRef.implement({
 						// No loader available - can't fetch messages
 						return null;
 					}
-					// Find first user message
-					const firstUserMessage = messages.find((m) => m.type === "user");
-					if (firstUserMessage) {
-						// Extract text from content
-						let text = "";
-						if (typeof firstUserMessage.content === "string") {
-							text = firstUserMessage.content;
-						} else if (Array.isArray(firstUserMessage.content)) {
-							text = firstUserMessage.content
+
+					// Helper to check if a message is tool-result-only by checking rawJson
+					const isToolResultOnly = (m: SessionMessage): boolean => {
+						// Check rawJson for the original message structure
+						if (m.rawJson) {
+							try {
+								const raw = JSON.parse(m.rawJson);
+								const content = raw?.message?.content;
+								if (Array.isArray(content) && content.length > 0) {
+									// Check if all blocks are tool_result type
+									return content.every(
+										(block: { type: string }) => block.type === "tool_result",
+									);
+								}
+							} catch {
+								// Ignore parse errors
+							}
+						}
+						// Fallback to checking content directly
+						if (!Array.isArray(m.content)) return false;
+						return (
+							m.content.length > 0 &&
+							m.content.every(
+								(block: { type: string }) => block.type === "tool_result",
+							)
+						);
+					};
+
+					// Helper to extract text from a user message
+					const extractText = (m: SessionMessage): string => {
+						// Check rawJson for the original message structure with text blocks
+						if (m.rawJson) {
+							try {
+								const raw = JSON.parse(m.rawJson);
+								const content = raw?.message?.content;
+								// If content is a string in rawJson, use it
+								if (typeof content === "string") {
+									return content;
+								}
+								// If content is an array, extract text blocks
+								if (Array.isArray(content)) {
+									const textParts = content
+										.filter(
+											(block: { type: string; text?: string }) =>
+												block.type === "text" && typeof block.text === "string",
+										)
+										.map((block: { text: string }) => block.text);
+									if (textParts.length > 0) {
+										return textParts.join("\n");
+									}
+								}
+							} catch {
+								// Ignore parse errors, fall through to legacy handling
+							}
+						}
+						// Legacy fallback - use content field directly
+						if (typeof m.content === "string") {
+							return m.content;
+						}
+						if (Array.isArray(m.content)) {
+							return m.content
 								.filter(
 									(block): block is { type: string; text: string } =>
 										block.type === "text" && typeof block.text === "string",
@@ -320,6 +394,28 @@ export const SessionType = SessionRef.implement({
 								.map((block) => block.text)
 								.join("\n");
 						}
+						return "";
+					};
+
+					// Find first (chronologically) user message with actual text content
+					// Messages are returned DESC (newest first), so search from the end
+					// to find the oldest user message which is typically the first user input
+					let firstUserMessage: SessionMessage | undefined;
+					for (let i = messages.length - 1; i >= 0; i--) {
+						const m = messages[i];
+						if (m.type !== "user") continue;
+						// Skip tool-result-only messages
+						if (isToolResultOnly(m)) continue;
+						// Check if there's actual text content
+						const text = extractText(m);
+						if (text.length > 0) {
+							firstUserMessage = m;
+							break;
+						}
+					}
+
+					if (firstUserMessage) {
+						const text = extractText(firstUserMessage);
 						// Truncate to reasonable length for summary
 						if (text.length > 200) {
 							return `${text.slice(0, 200)}...`;
@@ -368,23 +464,33 @@ export const SessionType = SessionRef.implement({
 			description: "Claude Code version",
 			resolve: (s) => s.version ?? null,
 		}),
-		checkpoints: t.field({
-			type: [CheckpointType],
-			description: "Checkpoints associated with this session",
-			resolve: async (
-				session,
-				_args,
-				context,
-			): Promise<CheckpointSummary[]> => {
-				// Use DataLoader for batched loading
-				return context.loaders.sessionCheckpointsLoader.load(session.sessionId);
-			},
-		}),
 		hookExecutions: t.field({
-			type: [HookExecutionType],
-			description: "Hook executions that occurred during this session",
-			resolve: (session) => {
-				return queryHookExecutionsForSession(session.sessionId);
+			type: HookExecutionConnectionType,
+			args: {
+				first: t.arg.int({
+					description: "Number of hook executions from the start",
+				}),
+				after: t.arg.string({
+					description: "Cursor to fetch hook executions after",
+				}),
+				last: t.arg.int({
+					description: "Number of hook executions from the end",
+				}),
+				before: t.arg.string({
+					description: "Cursor to fetch hook executions before",
+				}),
+			},
+			description:
+				"Hook executions that occurred during this session (paginated)",
+			resolve: async (session, args): Promise<HookExecutionConnectionData> => {
+				const executions = await queryHookExecutionsForSession(
+					session.sessionId,
+				);
+				return applyConnectionArgs(
+					executions,
+					args,
+					(exec) => `HookExecution:${exec.id}`,
+				);
 			},
 		}),
 		hookStats: t.field({
@@ -392,6 +498,17 @@ export const SessionType = SessionRef.implement({
 			description: "Hook execution statistics for this session",
 			resolve: (session) => {
 				return querySessionHookStats(session.sessionId);
+			},
+		}),
+		frustrationSummary: t.field({
+			type: FrustrationSummaryType,
+			description: "Aggregated frustration metrics for this session",
+			resolve: async (session, _args, context) => {
+				const pairedEvents =
+					await context.loaders.sessionPairedEventsLoader.load(
+						session.sessionId,
+					);
+				return calculateFrustrationSummary(pairedEvents.sentimentByMessageId);
 			},
 		}),
 		agentTaskIds: t.stringList({
@@ -402,45 +519,79 @@ export const SessionType = SessionRef.implement({
 		}),
 		// Todo fields - from database (indexed) or fallback to message parsing
 		todos: t.field({
-			type: [TodoType],
+			type: TodoConnectionType,
 			description: "All todos from the most recent TodoWrite in this session",
-			resolve: async (session, _args, context): Promise<TodoItem[]> => {
+			args: {
+				first: t.arg.int({ description: "Number of todos from the start" }),
+				after: t.arg.string({ description: "Cursor to fetch todos after" }),
+				last: t.arg.int({ description: "Number of todos from the end" }),
+				before: t.arg.string({ description: "Cursor to fetch todos before" }),
+			},
+			resolve: async (session, args, context): Promise<TodoConnectionData> => {
 				// Try database first (faster - pre-indexed)
-				const dbTodos = await getTodosFromDb(session.sessionId);
-				if (dbTodos.length > 0) {
-					return dbTodos;
+				let todos = await getTodosFromDb(session.sessionId);
+				if (todos.length === 0) {
+					// Fallback to parsing messages (for sessions not yet indexed)
+					let messages: SessionMessage[] = [];
+					if ("messages" in session && Array.isArray(session.messages)) {
+						messages = session.messages;
+					} else {
+						messages = await context.loaders.sessionMessagesLoader.load(
+							session.sessionId,
+						);
+					}
+					todos = extractTodosFromMessages(messages);
 				}
-				// Fallback to parsing messages (for sessions not yet indexed)
-				let messages: SessionMessage[] = [];
-				if ("messages" in session && Array.isArray(session.messages)) {
-					messages = session.messages;
-				} else {
-					messages = await context.loaders.sessionMessagesLoader.load(
-						session.sessionId,
-					);
-				}
-				return extractTodosFromMessages(messages);
+				// Generate cursor from content hash
+				const getCursor = (todo: TodoItem) => {
+					let hash = 0;
+					for (let i = 0; i < todo.content.length; i++) {
+						const char = todo.content.charCodeAt(i);
+						hash = (hash << 5) - hash + char;
+						hash = hash & hash;
+					}
+					return `Todo:${Math.abs(hash).toString(36)}`;
+				};
+				return applyConnectionArgs(todos, args, getCursor);
 			},
 		}),
 		activeTodos: t.field({
-			type: [TodoType],
+			type: TodoConnectionType,
 			description: "Non-completed todos (pending or in-progress)",
-			resolve: async (session, _args, context): Promise<TodoItem[]> => {
+			args: {
+				first: t.arg.int({ description: "Number of todos from the start" }),
+				after: t.arg.string({ description: "Cursor to fetch todos after" }),
+				last: t.arg.int({ description: "Number of todos from the end" }),
+				before: t.arg.string({ description: "Cursor to fetch todos before" }),
+			},
+			resolve: async (session, args, context): Promise<TodoConnectionData> => {
 				// Try database first (faster - pre-indexed)
-				const dbTodos = await getTodosFromDb(session.sessionId);
-				if (dbTodos.length > 0) {
-					return getActiveTodos(dbTodos);
-				}
-				// Fallback to parsing messages
-				let messages: SessionMessage[] = [];
-				if ("messages" in session && Array.isArray(session.messages)) {
-					messages = session.messages;
+				let todos = await getTodosFromDb(session.sessionId);
+				if (todos.length > 0) {
+					todos = getActiveTodos(todos);
 				} else {
-					messages = await context.loaders.sessionMessagesLoader.load(
-						session.sessionId,
-					);
+					// Fallback to parsing messages
+					let messages: SessionMessage[] = [];
+					if ("messages" in session && Array.isArray(session.messages)) {
+						messages = session.messages;
+					} else {
+						messages = await context.loaders.sessionMessagesLoader.load(
+							session.sessionId,
+						);
+					}
+					todos = getActiveTodos(extractTodosFromMessages(messages));
 				}
-				return getActiveTodos(extractTodosFromMessages(messages));
+				// Generate cursor from content hash
+				const getCursor = (todo: TodoItem) => {
+					let hash = 0;
+					for (let i = 0; i < todo.content.length; i++) {
+						const char = todo.content.charCodeAt(i);
+						hash = (hash << 5) - hash + char;
+						hash = hash & hash;
+					}
+					return `Todo:${Math.abs(hash).toString(36)}`;
+				};
+				return applyConnectionArgs(todos, args, getCursor);
 			},
 		}),
 		currentTodo: t.field({
@@ -488,10 +639,21 @@ export const SessionType = SessionRef.implement({
 		}),
 		// Task fields - from metrics system task tracking
 		tasks: t.field({
-			type: [TaskType],
+			type: TaskConnectionType,
+			args: {
+				first: t.arg.int({ description: "Number of tasks from the start" }),
+				after: t.arg.string({ description: "Cursor to fetch tasks after" }),
+				last: t.arg.int({ description: "Number of tasks from the end" }),
+				before: t.arg.string({ description: "Cursor to fetch tasks before" }),
+			},
 			description: "All tasks tracked in this session via start_task MCP tool",
-			resolve: (session): DbTask[] => {
-				return getTasksForSession(session.sessionId);
+			resolve: (session, args): TaskConnectionData => {
+				const tasks = getTasksForSession(session.sessionId);
+				return applyConnectionArgs(
+					tasks,
+					args,
+					(task) => `Task:${task.taskId}`,
+				);
 			},
 		}),
 		// Messages with Relay-style cursor pagination
@@ -582,10 +744,27 @@ export const SessionType = SessionRef.implement({
 			},
 		}),
 		activeTasks: t.field({
-			type: [TaskType],
+			type: TaskConnectionType,
+			args: {
+				first: t.arg.int({
+					description: "Number of active tasks from the start",
+				}),
+				after: t.arg.string({
+					description: "Cursor to fetch active tasks after",
+				}),
+				last: t.arg.int({ description: "Number of active tasks from the end" }),
+				before: t.arg.string({
+					description: "Cursor to fetch active tasks before",
+				}),
+			},
 			description: "Active (in-progress) tasks in this session",
-			resolve: (session): DbTask[] => {
-				return getActiveTasksForSession(session.sessionId);
+			resolve: (session, args): TaskConnectionData => {
+				const tasks = getActiveTasksForSession(session.sessionId);
+				return applyConnectionArgs(
+					tasks,
+					args,
+					(task) => `Task:${task.taskId}`,
+				);
 			},
 		}),
 		currentTask: t.field({
@@ -599,18 +778,50 @@ export const SessionType = SessionRef.implement({
 			},
 		}),
 		// File changes tracked during this session
+		// Deduplicated by file path - shows the most recent change for each unique file
 		fileChanges: t.field({
-			type: [FileChangeType],
-			description: "Files that were changed during this session",
-			resolve: async (session): Promise<FileChangeData[]> => {
-				return sessionFileChanges.list(session.sessionId);
+			type: FileChangeConnectionType,
+			args: {
+				first: t.arg.int({
+					description: "Number of file changes from the start",
+				}),
+				after: t.arg.string({
+					description: "Cursor to fetch file changes after",
+				}),
+				last: t.arg.int({
+					description: "Number of file changes from the end",
+				}),
+				before: t.arg.string({
+					description: "Cursor to fetch file changes before",
+				}),
+			},
+			description:
+				"Files that were changed during this session (deduplicated by path, paginated)",
+			resolve: async (session, args): Promise<FileChangeConnectionData> => {
+				const allChanges = await sessionFileChanges.list(session.sessionId);
+				// Deduplicate by filePath - keep the most recent change for each file
+				// Changes are already ordered by recorded_at DESC from the database
+				const uniqueByPath = new Map<string, FileChangeData>();
+				for (const change of allChanges) {
+					if (!uniqueByPath.has(change.filePath)) {
+						uniqueByPath.set(change.filePath, change);
+					}
+				}
+				const dedupedChanges = Array.from(uniqueByPath.values());
+				return applyConnectionArgs(
+					dedupedChanges,
+					args,
+					(change) => `FileChange:${change.id}`,
+				);
 			},
 		}),
 		fileChangeCount: t.int({
-			description: "Number of file changes in this session",
+			description: "Number of unique files changed in this session",
 			resolve: async (session): Promise<number> => {
-				const changes = await sessionFileChanges.list(session.sessionId);
-				return changes.length;
+				const allChanges = await sessionFileChanges.list(session.sessionId);
+				// Count unique file paths
+				const uniquePaths = new Set(allChanges.map((c) => c.filePath));
+				return uniquePaths.size;
 			},
 		}),
 		// Search messages across the entire session using FTS

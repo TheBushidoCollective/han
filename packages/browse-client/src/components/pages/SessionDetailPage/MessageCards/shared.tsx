@@ -6,6 +6,7 @@
  */
 
 import type React from 'react';
+import type { CSSProperties } from 'react';
 import {
   createContext,
   useCallback,
@@ -15,6 +16,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/atoms/Badge.tsx';
+import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
@@ -282,7 +284,7 @@ export function MessageHeader({
 }: MessageHeaderProps): React.ReactElement {
   // Use prop if provided, otherwise get from context
   const { messageId: contextMessageId } = useMessageContext();
-  const messageId = messageIdProp ?? contextMessageId;
+  const messageId = (messageIdProp ?? contextMessageId)?.split(':', 2)[1];
 
   return (
     <HStack style={styles.messageHeader} gap="md" align="center">
@@ -300,43 +302,52 @@ export function MessageHeader({
       <HStack gap="xs" align="center" style={{ marginLeft: 'auto' }}>
         {badges}
         {showRawJson && <Badge variant="info">RAW</Badge>}
-        <span title={showRawJson ? 'Show formatted' : 'Show raw JSON'}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleRawJson}
-            style={{ padding: '2px 6px', fontSize: '11px' }}
-          >
-            {'{ }'}
-          </Button>
-        </span>
-        {messageId && (
-          <Link
-            to={`/messages/${encodeURIComponent(messageId)}`}
-            title="View message details"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '2px 6px',
-              fontSize: '11px',
-              color: colors.text.secondary,
-              textDecoration: 'none',
-              borderRadius: radii.sm,
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = colors.bg.tertiary;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <span role="img" aria-label="link">
-              🔗
-            </span>
-          </Link>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleRawJson}
+          style={{ padding: '2px 6px', fontSize: '11px' }}
+        >
+          {'{ }'}
+        </Button>
+        {messageId && <MessageDetailLink messageId={messageId} />}
       </HStack>
     </HStack>
+  );
+}
+
+/**
+ * Link to message detail page using react-router-dom Link
+ * Extracted to avoid inline HTML/DOM manipulation
+ */
+function MessageDetailLink({
+  messageId,
+}: {
+  messageId: string;
+}): React.ReactElement {
+  const [hovered, setHovered] = useState(false);
+
+  const linkStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '2px 6px',
+    fontSize: '11px',
+    color: colors.text.secondary,
+    textDecoration: 'none',
+    borderRadius: radii.sm,
+    backgroundColor: hovered ? colors.bg.tertiary : 'transparent',
+  };
+
+  return (
+    <Link
+      to={`/messages/${encodeURIComponent(messageId)}`}
+      style={linkStyle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-label="View message details"
+    >
+      <Text size="xs">🔗</Text>
+    </Link>
   );
 }
 
@@ -355,7 +366,7 @@ export function MessageWrapper({
   isToolOnly = false,
   children,
 }: MessageWrapperProps): React.ReactElement {
-  const baseStyle: React.CSSProperties = {
+  const baseStyle: CSSProperties = {
     padding: spacing.md,
     borderRadius: radii.md,
     border: `1px solid ${colors.border.subtle}`,
@@ -363,7 +374,7 @@ export function MessageWrapper({
   };
 
   return (
-    <div style={{ ...baseStyle, ...messageTypeStyles[type] }}>{children}</div>
+    <Box style={{ ...baseStyle, ...messageTypeStyles[type] }}>{children}</Box>
   );
 }
 
@@ -376,9 +387,14 @@ interface RawJsonViewProps {
  */
 export function RawJsonView({ rawJson }: RawJsonViewProps): React.ReactElement {
   return (
-    <pre style={styles.rawJsonContent}>
-      <code>{formatRawJson(rawJson)}</code>
-    </pre>
+    <Box style={styles.rawJsonContent}>
+      <Text
+        size="sm"
+        style={{ fontFamily: fonts.mono, color: colors.text.primary }}
+      >
+        {formatRawJson(rawJson)}
+      </Text>
+    </Box>
   );
 }
 

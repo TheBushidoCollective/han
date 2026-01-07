@@ -41,11 +41,6 @@ export const DashboardPageQuery = graphql`
       significantFrustrations
       significantFrustrationRate
     }
-    checkpointStats {
-      totalCheckpoints
-      sessionCheckpoints
-      agentCheckpoints
-    }
     pluginStats {
       totalPlugins
       userPlugins

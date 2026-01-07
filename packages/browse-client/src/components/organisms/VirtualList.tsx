@@ -1,21 +1,24 @@
 /**
  * Virtual List Organism
  *
- * High-performance virtualized list using recyclerlistview.
- * Supports infinite scrolling in both directions.
+ * High-performance virtualized list using React Native's FlatList.
+ * Supports infinite scrolling in both directions and inverted lists for chat UX.
  */
 
 import type React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import {
-  DataProvider,
-  LayoutProvider,
-  RecyclerListView,
-} from 'recyclerlistview/web';
-import { Spinner, theme } from '../atoms/index.ts';
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  View,
+} from 'react-native';
+import { Center } from '../atoms/Center.tsx';
+import { theme } from '../atoms/index.ts';
+import { Spinner } from '../atoms/Spinner.tsx';
 
-// View types for layout
+// View types for layout (kept for backwards compatibility)
 export const ViewTypes = {
   SESSION_ROW: 'SESSION_ROW',
   PROJECT_CARD: 'PROJECT_CARD',
@@ -26,17 +29,26 @@ export const ViewTypes = {
 
 export type ViewType = (typeof ViewTypes)[keyof typeof ViewTypes];
 
+export interface VirtualListRef {
+  scrollToIndex: (index: number, animated?: boolean) => void;
+  scrollToEnd: (animated?: boolean) => void;
+  scrollToTop: (animated?: boolean) => void;
+}
+
 interface VirtualListProps<T> {
   data: T[];
   renderItem: (item: T, index: number) => ReactNode;
   getItemType?: (item: T, index: number) => ViewType;
+  /** Estimated height for items */
   itemHeight: number | ((item: T, index: number) => number);
   width?: number | string;
   height?: number | string;
   style?: CSSProperties;
   onEndReached?: () => void;
   onStartReached?: () => void;
+  /** Threshold as a ratio (0-1) of visible length. Default: 0.5 */
   endReachedThreshold?: number;
+  /** Threshold as a ratio (0-1) of visible length. Default: 0.5 */
   startReachedThreshold?: number;
   isLoadingMore?: boolean;
   isLoadingPrev?: boolean;
@@ -44,173 +56,196 @@ interface VirtualListProps<T> {
   ListEmptyComponent?: ReactNode;
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
-  /** Index to render from initially (useful for starting at end of list) */
-  initialRenderIndex?: number;
-  /** Enable dynamic heights - items are measured after render */
+  /** Index to scroll to initially */
+  initialScrollIndex?: number;
+  /** Enable inverted list (newest at bottom, like chat) */
+  inverted?: boolean;
+  /** Callback when tail state changes (for inverted lists: at bottom = tailing) */
+  onTailStateChange?: (isTailing: boolean) => void;
+  /** Threshold in pixels to consider "at tail". Default: 50 */
+  tailThreshold?: number;
+  /** @deprecated Not needed with FlatList */
   dynamicHeights?: boolean;
+  /** @deprecated Use initialScrollIndex instead */
+  initialRenderIndex?: number;
 }
 
-export function VirtualList<T>({
-  data,
-  renderItem,
-  getItemType,
-  itemHeight,
-  width = '100%',
-  height = '100%',
-  style,
-  onEndReached,
-  onStartReached,
-  endReachedThreshold = 200,
-  startReachedThreshold = 200,
-  isLoadingMore = false,
-  isLoadingPrev = false,
-  keyExtractor,
-  ListEmptyComponent,
-  ListHeaderComponent,
-  ListFooterComponent,
-  initialRenderIndex,
-  dynamicHeights = false,
-}: VirtualListProps<T>) {
-  // Using any here to avoid complex generics with RecyclerListView internal state types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const listRef = useRef<InstanceType<typeof RecyclerListView> | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+function VirtualListInner<T>(
+  {
+    data,
+    renderItem,
+    itemHeight,
+    width = '100%',
+    height = '100%',
+    style,
+    onEndReached,
+    endReachedThreshold = 0.5,
+    isLoadingMore = false,
+    isLoadingPrev = false,
+    keyExtractor,
+    ListEmptyComponent,
+    ListHeaderComponent,
+    ListFooterComponent,
+    initialScrollIndex,
+    inverted = false,
+    onTailStateChange,
+    tailThreshold = 50,
+    dynamicHeights: _dynamicHeights,
+    initialRenderIndex,
+  }: VirtualListProps<T>,
+  ref: React.ForwardedRef<VirtualListRef>
+) {
+  const listRef = useRef<FlatList<T>>(null);
+  const lastTailStateRef = useRef(true); // Track last state to avoid unnecessary callbacks
 
-  // Measure container width
-  useEffect(() => {
-    if (containerRef.current) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          setContainerWidth(entry.contentRect.width);
-        }
-      });
-      resizeObserver.observe(containerRef.current);
-      return () => resizeObserver.disconnect();
-    }
-  }, []);
-
-  // Create data provider with a stable reference checker
-  const dataProvider = new DataProvider((r1: T, r2: T) => {
-    if (keyExtractor) {
-      return (
-        keyExtractor(r1, data.indexOf(r1)) !==
-        keyExtractor(r2, data.indexOf(r2))
-      );
-    }
-    return r1 !== r2;
-  }).cloneWithRows(data);
-
-  // Create layout provider
-  const layoutProvider = new LayoutProvider(
-    (index) => {
-      if (getItemType) {
-        return getItemType(data[index], index);
-      }
-      return ViewTypes.SESSION_ROW;
+  // Expose imperative methods
+  useImperativeHandle(ref, () => ({
+    scrollToIndex: (index: number, animated = true) => {
+      listRef.current?.scrollToIndex({ index, animated });
     },
-    (_type, dim, index) => {
-      dim.width = containerWidth || 800;
-      dim.height =
+    scrollToEnd: (animated = true) => {
+      listRef.current?.scrollToEnd({ animated });
+    },
+    scrollToTop: (animated = true) => {
+      listRef.current?.scrollToOffset({ offset: 0, animated });
+    },
+  }));
+
+  // FlatList renderItem adapter
+  // When using CSS transform for inverted, each item needs to be flipped back
+  const flatListRenderItem = useCallback(
+    ({ item, index }: { item: T; index: number }) => {
+      const rendered = renderItem(item, index);
+      return (
+        <View
+          style={[
+            { width: '100%' },
+            // Flip item back when container is inverted via CSS transform
+            inverted ? { transform: [{ scaleY: -1 }] } : {},
+          ]}
+        >
+          {rendered}
+        </View>
+      );
+    },
+    [renderItem, inverted]
+  );
+
+  // FlatList keyExtractor adapter
+  const flatListKeyExtractor = useCallback(
+    (item: T, index: number) => {
+      if (keyExtractor) {
+        return keyExtractor(item, index);
+      }
+      // Default: try to use item.id if available
+      const itemWithId = item as { id?: string };
+      return itemWithId.id ?? String(index);
+    },
+    [keyExtractor]
+  );
+
+  // Get item layout for performance optimization
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<T> | null | undefined, index: number) => {
+      const height =
         typeof itemHeight === 'function'
           ? itemHeight(data[index], index)
           : itemHeight;
-    }
-  );
-
-  // Row renderer - matches RecyclerListView expected signature
-  // Items are wrapped in a full-width container to ensure single-column layout
-  const rowRenderer = useCallback(
-    (
-      _type: string | number,
-      item: T,
-      index: number
-    ): React.JSX.Element | React.JSX.Element[] | null => {
-      const rendered = renderItem(item, index);
-      // Wrap in a full-width div to ensure items don't appear in a grid
-      return (
-        <div style={{ width: '100%' }}>
-          {rendered as React.JSX.Element | React.JSX.Element[] | null}
-        </div>
-      );
+      return {
+        length: height,
+        offset: height * index,
+        index,
+      };
     },
-    [renderItem]
+    [itemHeight, data]
   );
 
-  // Scroll handlers
+  // Handle scroll events to track tail state
   const handleScroll = useCallback(
-    (_rawEvent: unknown, _offsetX: number, offsetY: number) => {
-      const scrollElement = containerRef.current?.querySelector(
-        '.recycler-list-view'
-      ) as HTMLElement | null;
-      if (!scrollElement) return;
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!onTailStateChange) return;
 
-      const scrollHeight = scrollElement.scrollHeight;
-      const clientHeight = scrollElement.clientHeight;
+      const { contentOffset } = event.nativeEvent;
+      // For inverted lists, contentOffset.y near 0 = at visual bottom (tailing)
+      // For normal lists, we'd check against contentSize - layoutMeasurement
+      const isTailing = inverted ? contentOffset.y < tailThreshold : false; // Non-inverted tail detection would need more info
 
-      // Check if near bottom (load more)
-      if (
-        onEndReached &&
-        scrollHeight - offsetY - clientHeight < endReachedThreshold
-      ) {
-        onEndReached();
-      }
-
-      // Check if near top (load prev)
-      if (onStartReached && offsetY < startReachedThreshold) {
-        onStartReached();
+      // Only fire callback when state changes
+      if (isTailing !== lastTailStateRef.current) {
+        lastTailStateRef.current = isTailing;
+        onTailStateChange(isTailing);
       }
     },
-    [onEndReached, onStartReached, endReachedThreshold, startReachedThreshold]
+    [onTailStateChange, inverted, tailThreshold]
   );
-
-  // Empty state
-  if (data.length === 0 && ListEmptyComponent) {
-    return (
-      <div ref={containerRef} style={{ width, height, ...style }}>
-        {ListEmptyComponent}
-      </div>
-    );
-  }
 
   // Loading indicator components
   const LoadingIndicator = () => (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: theme.spacing.lg,
-      }}
-    >
+    <Center style={{ padding: theme.spacing.lg }}>
       <Spinner />
-    </div>
+    </Center>
   );
 
+  // Effective initial scroll index (handle deprecated prop)
+  const effectiveInitialScrollIndex = initialScrollIndex ?? initialRenderIndex;
+
+  // For web, react-native-web's inverted prop is buggy
+  // Use CSS transform instead for chat-style scrolling
+  // See: https://github.com/necolas/react-native-web/issues/1254
+  const useWebInvertedStyle = inverted;
+
   return (
-    <div
-      ref={containerRef}
-      style={{ width, height, position: 'relative', ...style }}
+    <View
+      style={[
+        {
+          width: typeof width === 'number' ? width : '100%',
+          height: typeof height === 'number' ? height : '100%',
+          flex: 1,
+        },
+        // Apply scaleY(-1) to container for inverted scroll on web
+        useWebInvertedStyle ? { transform: [{ scaleY: -1 }] } : {},
+        style as object,
+      ]}
     >
-      {ListHeaderComponent}
-      {isLoadingPrev && <LoadingIndicator />}
-      {containerWidth > 0 && data.length > 0 && (
-        <RecyclerListView
-          key={`recycler-${containerWidth}`}
-          ref={listRef}
-          layoutProvider={layoutProvider}
-          dataProvider={dataProvider}
-          rowRenderer={rowRenderer}
-          onScroll={handleScroll}
-          initialRenderIndex={initialRenderIndex}
-          forceNonDeterministicRendering={dynamicHeights}
-          isHorizontal={false}
-          scrollViewProps={{
-            style: { width: '100%', height: '100%' },
-          }}
-        />
-      )}
-      {isLoadingMore && <LoadingIndicator />}
-      {ListFooterComponent}
-    </div>
+      <FlatList
+        ref={listRef}
+        data={data}
+        renderItem={flatListRenderItem}
+        keyExtractor={flatListKeyExtractor}
+        getItemLayout={
+          typeof itemHeight === 'number' ? getItemLayout : undefined
+        }
+        // Don't use inverted prop on web - it's buggy
+        // inverted={inverted}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={endReachedThreshold}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        initialScrollIndex={effectiveInitialScrollIndex}
+        ListEmptyComponent={ListEmptyComponent as React.ReactElement}
+        ListHeaderComponent={
+          <>
+            {ListHeaderComponent}
+            {isLoadingPrev && <LoadingIndicator />}
+          </>
+        }
+        ListFooterComponent={
+          <>
+            {isLoadingMore && <LoadingIndicator />}
+            {ListFooterComponent}
+          </>
+        }
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={20}
+        windowSize={20}
+        initialNumToRender={20}
+      />
+    </View>
   );
 }
+
+// Forward ref with generics support
+export const VirtualList = forwardRef(VirtualListInner) as <T>(
+  props: VirtualListProps<T> & { ref?: React.ForwardedRef<VirtualListRef> }
+) => React.ReactElement;

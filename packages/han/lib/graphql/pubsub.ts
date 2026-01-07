@@ -5,6 +5,10 @@
  */
 
 import { basename } from "node:path";
+import { createLogger } from "../logger.ts";
+
+const log = createLogger("pubsub");
+
 import type { MemoryEvent } from "../commands/browse/types.ts";
 
 /**
@@ -27,6 +31,14 @@ export const TOPICS = {
 	MEMORY_AGENT_RESULT: "memory:agent:result",
 	// Tool result subscriptions
 	TOOL_RESULT_ADDED: "tool:result:added",
+	// Hook result subscriptions (for paired hook_run/hook_result events)
+	HOOK_RESULT_ADDED: "hook:result:added",
+	// Session todos subscription
+	SESSION_TODOS_CHANGED: "session:todos:changed",
+	// Session file changes subscription
+	SESSION_FILES_CHANGED: "session:files:changed",
+	// Session hooks subscription
+	SESSION_HOOKS_CHANGED: "session:hooks:changed",
 } as const;
 
 export type Topic = (typeof TOPICS)[keyof typeof TOPICS];
@@ -82,10 +94,7 @@ class PubSub {
 		let resolveWait: ((value: IteratorResult<T>) => void) | null = null;
 		let isComplete = false;
 
-		console.log(`[PubSub] Creating async iterator for topic: ${topic}`);
-
 		const unsubscribe = this.subscribe<T>(topic, (data) => {
-			console.log(`[PubSub] AsyncIterator received data for ${topic}:`, data);
 			if (resolveWait) {
 				resolveWait({ value: data, done: false });
 				resolveWait = null;
@@ -159,6 +168,8 @@ export interface MessageEdgeData {
 		projectDir: string;
 		sessionId: string;
 		lineNumber: number;
+		// For han_event messages, toolName determines the concrete type (hook_run, etc.)
+		toolName?: string;
 	};
 	cursor: string;
 }
@@ -231,6 +242,60 @@ export interface ToolResultAddedPayload {
 	type: "mcp" | "exposed";
 	success: boolean;
 	durationMs: number;
+}
+
+/**
+ * Hook result added payload
+ * Emitted when a hook_result event is received, correlating with its parent hook_run
+ */
+export interface HookResultAddedPayload {
+	sessionId: string;
+	/** UUID of the parent hook_run event */
+	hookRunId: string;
+	pluginName: string;
+	hookName: string;
+	success: boolean;
+	durationMs: number;
+}
+
+/**
+ * Session todos changed payload
+ * Emitted when a TodoWrite tool call is detected in new messages
+ */
+export interface SessionTodosChangedPayload {
+	sessionId: string;
+	/** Count of todos after the change */
+	todoCount: number;
+	/** Count of in-progress todos */
+	inProgressCount: number;
+	/** Count of completed todos */
+	completedCount: number;
+}
+
+/**
+ * Session files changed payload
+ * Emitted when file-modifying tool calls are detected (Edit, Write, etc.)
+ */
+export interface SessionFilesChangedPayload {
+	sessionId: string;
+	/** Count of file changes */
+	fileCount: number;
+	/** Name of the tool that triggered the change */
+	toolName: string;
+}
+
+/**
+ * Session hooks changed payload
+ * Emitted when hook_run or hook_result events are detected
+ */
+export interface SessionHooksChangedPayload {
+	sessionId: string;
+	/** Plugin name of the hook */
+	pluginName: string;
+	/** Hook name */
+	hookName: string;
+	/** Whether this is a new run or a result update */
+	eventType: "run" | "result";
 }
 
 /**
@@ -377,10 +442,9 @@ export function publishMemoryAgentProgress(
 		resultCount: options?.resultCount,
 		timestamp: Date.now(),
 	};
-	console.log(
-		`[PubSub] Publishing ${TOPICS.MEMORY_AGENT_PROGRESS} for session ${sessionId}:`,
+	log.debug(
+		`Publishing ${TOPICS.MEMORY_AGENT_PROGRESS} for session ${sessionId}:`,
 		type,
-		content,
 	);
 	pubsub.publish(TOPICS.MEMORY_AGENT_PROGRESS, payload);
 }
@@ -393,10 +457,9 @@ export function publishMemoryAgentProgress(
 export function publishMemoryAgentResult(
 	result: MemoryAgentResultPayload,
 ): void {
-	console.log(
-		`[PubSub] Publishing ${TOPICS.MEMORY_AGENT_RESULT} for session ${result.sessionId}:`,
+	log.debug(
+		`Publishing ${TOPICS.MEMORY_AGENT_RESULT} for session ${result.sessionId}:`,
 		result.success ? "success" : "error",
-		result.answer?.slice(0, 50),
 	);
 	pubsub.publish(TOPICS.MEMORY_AGENT_RESULT, result);
 }
@@ -422,4 +485,90 @@ export function publishToolResultAdded(
 		durationMs,
 	};
 	pubsub.publish(TOPICS.TOOL_RESULT_ADDED, payload);
+}
+
+/**
+ * Publish hook result added event
+ *
+ * Called when a hook_result event is received, allowing
+ * subscribed UI components to update the corresponding hook_run message.
+ */
+export function publishHookResultAdded(
+	sessionId: string,
+	hookRunId: string,
+	pluginName: string,
+	hookName: string,
+	success: boolean,
+	durationMs: number,
+): void {
+	const payload: HookResultAddedPayload = {
+		sessionId,
+		hookRunId,
+		pluginName,
+		hookName,
+		success,
+		durationMs,
+	};
+	pubsub.publish(TOPICS.HOOK_RESULT_ADDED, payload);
+}
+
+/**
+ * Publish session todos changed event
+ *
+ * Called when a TodoWrite tool call is detected, allowing
+ * subscribed UI components to refetch the session's todos.
+ */
+export function publishSessionTodosChanged(
+	sessionId: string,
+	todoCount: number,
+	inProgressCount: number,
+	completedCount: number,
+): void {
+	const payload: SessionTodosChangedPayload = {
+		sessionId,
+		todoCount,
+		inProgressCount,
+		completedCount,
+	};
+	pubsub.publish(TOPICS.SESSION_TODOS_CHANGED, payload);
+}
+
+/**
+ * Publish session files changed event
+ *
+ * Called when file-modifying tool calls are detected (Edit, Write, etc.),
+ * allowing subscribed UI components to refetch the session's file changes.
+ */
+export function publishSessionFilesChanged(
+	sessionId: string,
+	fileCount: number,
+	toolName: string,
+): void {
+	const payload: SessionFilesChangedPayload = {
+		sessionId,
+		fileCount,
+		toolName,
+	};
+	pubsub.publish(TOPICS.SESSION_FILES_CHANGED, payload);
+}
+
+/**
+ * Publish session hooks changed event
+ *
+ * Called when hook_run or hook_result events are detected,
+ * allowing subscribed UI components to refetch the session's hook stats.
+ */
+export function publishSessionHooksChanged(
+	sessionId: string,
+	pluginName: string,
+	hookName: string,
+	eventType: "run" | "result",
+): void {
+	const payload: SessionHooksChangedPayload = {
+		sessionId,
+		pluginName,
+		hookName,
+		eventType,
+	};
+	pubsub.publish(TOPICS.SESSION_HOOKS_CHANGED, payload);
 }

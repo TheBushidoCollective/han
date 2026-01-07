@@ -31,7 +31,6 @@
     "react-native-web": "^0.21.2",
     "react-relay": "^19.0.0",
     "react-router-dom": "^7.1.1",
-    "recyclerlistview": "^4.2.3",
     "relay-runtime": "^19.0.0"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ab5d222aa41a6bf5d22bc0e7a3cbb377>>
+ * @generated SignedSource<<60a45cceb4c148740b1ac43cee4f7abb>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -18,17 +18,21 @@ export type AssistantMessageCard_message$data = {
   readonly contentBlocks: ReadonlyArray<{
     readonly category?: ToolCategory | null | undefined;
     readonly color?: string | null | undefined;
-    readonly content?: string | null | undefined;
     readonly dataUrl?: string | null | undefined;
     readonly displayName?: string | null | undefined;
-    readonly hasImage?: boolean | null | undefined;
     readonly icon?: string | null | undefined;
     readonly input?: string | null | undefined;
-    readonly isError?: boolean | null | undefined;
-    readonly isLong?: boolean | null | undefined;
     readonly mediaType?: string | null | undefined;
     readonly name?: string | null | undefined;
     readonly preview?: string | null | undefined;
+    readonly result?: {
+      readonly content: string | null | undefined;
+      readonly hasImage: boolean | null | undefined;
+      readonly isError: boolean | null | undefined;
+      readonly isLong: boolean | null | undefined;
+      readonly preview: string | null | undefined;
+      readonly toolCallId: string | null | undefined;
+    } | null | undefined;
     readonly signature?: string | null | undefined;
     readonly text?: string | null | undefined;
     readonly thinking?: string | null | undefined;
@@ -199,40 +203,44 @@ return {
               "kind": "ScalarField",
               "name": "color",
               "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "ToolResultBlock",
+              "kind": "LinkedField",
+              "name": "result",
+              "plural": false,
+              "selections": [
+                (v2/*: any*/),
+                (v0/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "isError",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "isLong",
+                  "storageKey": null
+                },
+                (v1/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "hasImage",
+                  "storageKey": null
+                }
+              ],
+              "storageKey": null
             }
           ],
           "type": "ToolUseBlock",
-          "abstractKey": null
-        },
-        {
-          "kind": "InlineFragment",
-          "selections": [
-            (v2/*: any*/),
-            (v0/*: any*/),
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "isError",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "isLong",
-              "storageKey": null
-            },
-            (v1/*: any*/),
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "hasImage",
-              "storageKey": null
-            }
-          ],
-          "type": "ToolResultBlock",
           "abstractKey": null
         },
         {
@@ -328,6 +336,6 @@ return {
 };
 })();
 
-(node as any).hash = "742fe54d00e340d1aa7a7c2652efb00b";
+(node as any).hash = "9077d6919f52eaea3ad23cba79032b16";
 
 export default node;

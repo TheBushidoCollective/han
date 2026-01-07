@@ -376,11 +376,14 @@ pub struct HookExecution {
     pub hook_type: String,
     pub hook_name: String,
     pub hook_source: Option<String>,
+    pub directory: Option<String>,
     pub duration_ms: i64,
     pub exit_code: i32,
     pub passed: bool,
     pub output: Option<String>,
     pub error: Option<String>,
+    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub command: Option<String>,
     pub executed_at: Option<String>,
 }
 
@@ -392,11 +395,14 @@ pub struct HookExecutionInput {
     pub hook_type: String,
     pub hook_name: String,
     pub hook_source: Option<String>,
+    pub directory: Option<String>,
     pub duration_ms: i64,
     pub exit_code: i32,
     pub passed: bool,
     pub output: Option<String>,
     pub error: Option<String>,
+    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub command: Option<String>,
 }
 
 #[napi(object)]

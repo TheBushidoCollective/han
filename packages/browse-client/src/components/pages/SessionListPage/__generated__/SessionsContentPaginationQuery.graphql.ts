@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<308b58cb3be272dbb649835305da98ec>>
+ * @generated SignedSource<<8cc24b387e0d51a825184a3cfc943cad>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -81,6 +81,13 @@ v3 = {
   "args": null,
   "kind": "ScalarField",
   "name": "status",
+  "storageKey": null
+},
+v4 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "totalCount",
   "storageKey": null
 };
 return {
@@ -237,34 +244,57 @@ return {
                   {
                     "alias": null,
                     "args": null,
-                    "concreteType": "Task",
+                    "concreteType": "TaskConnection",
                     "kind": "LinkedField",
                     "name": "activeTasks",
-                    "plural": true,
+                    "plural": false,
                     "selections": [
-                      (v2/*: any*/),
+                      (v4/*: any*/),
                       {
                         "alias": null,
                         "args": null,
-                        "kind": "ScalarField",
-                        "name": "taskId",
+                        "concreteType": "TaskEdge",
+                        "kind": "LinkedField",
+                        "name": "edges",
+                        "plural": true,
+                        "selections": [
+                          {
+                            "alias": null,
+                            "args": null,
+                            "concreteType": "Task",
+                            "kind": "LinkedField",
+                            "name": "node",
+                            "plural": false,
+                            "selections": [
+                              (v2/*: any*/),
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "taskId",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "description",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "type",
+                                "storageKey": null
+                              },
+                              (v3/*: any*/)
+                            ],
+                            "storageKey": null
+                          }
+                        ],
                         "storageKey": null
-                      },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "description",
-                        "storageKey": null
-                      },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "type",
-                        "storageKey": null
-                      },
-                      (v3/*: any*/)
+                      }
                     ],
                     "storageKey": null
                   },
@@ -352,13 +382,7 @@ return {
             ],
             "storageKey": null
           },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "totalCount",
-            "storageKey": null
-          },
+          (v4/*: any*/),
           {
             "kind": "ClientExtension",
             "selections": [
@@ -389,12 +413,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "08bc91bbb72d254887d7df2f1c473111",
+    "cacheID": "72c9460b9f7707b2aa5279860842e2dc",
     "id": null,
     "metadata": {},
     "name": "SessionsContentPaginationQuery",
     "operationKind": "query",
-    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $first: Int = 50\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_2ZTWZT\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    id\n    taskId\n    description\n    type\n    status\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_2ZTWZT on Query {\n  sessions(first: $first, after: $after, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
+    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $first: Int = 50\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_2ZTWZT\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_2ZTWZT on Query {\n  sessions(first: $first, after: $after, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
   }
 };
 })();

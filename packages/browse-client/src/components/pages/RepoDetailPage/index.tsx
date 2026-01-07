@@ -19,6 +19,8 @@ import { HStack } from '@/components/atoms/HStack.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { NavCard } from '@/components/organisms/NavCard.tsx';
+import { StatCard } from '@/components/organisms/StatCard.tsx';
 import { formatRelativeTime } from '../Shared/utils.ts';
 import type { RepoDetailPageQuery as RepoDetailPageQueryType } from './__generated__/RepoDetailPageQuery.graphql.ts';
 
@@ -34,78 +36,6 @@ const RepoDetailPageQueryDef = graphql`
     }
   }
 `;
-
-/**
- * Navigation card component
- */
-function NavCard({
-  title,
-  description,
-  icon,
-  href,
-}: {
-  title: string;
-  description: string;
-  icon: string;
-  href: string;
-}): React.ReactElement {
-  const navigate = useNavigate();
-
-  return (
-    <Box
-      onClick={() => navigate(href)}
-      style={{
-        padding: theme.spacing.lg,
-        backgroundColor: theme.colors.bg.secondary,
-        borderRadius: theme.borderRadius.lg,
-        border: `1px solid ${theme.colors.border.default}`,
-        cursor: 'pointer',
-      }}
-    >
-      <HStack gap="md" align="center">
-        <Text style={{ fontSize: '24px' }}>{icon}</Text>
-        <VStack gap="xs">
-          <Text weight="semibold">{title}</Text>
-          <Text size="sm" color="muted">
-            {description}
-          </Text>
-        </VStack>
-      </HStack>
-    </Box>
-  );
-}
-
-/**
- * Stat card component
- */
-function StatCard({
-  value,
-  label,
-}: {
-  value: string | number;
-  label: string;
-}): React.ReactElement {
-  return (
-    <Box
-      style={{
-        padding: theme.spacing.lg,
-        backgroundColor: theme.colors.bg.secondary,
-        borderRadius: theme.borderRadius.lg,
-        border: `1px solid ${theme.colors.border.default}`,
-        textAlign: 'center',
-      }}
-    >
-      <VStack gap="xs" align="center">
-        <Text size="xl" weight="semibold">
-          {value}
-        </Text>
-        <Text size="sm" color="muted">
-          {label}
-        </Text>
-      </VStack>
-    </Box>
-  );
-}
 
 /**
  * Inner repo detail content component that uses Relay hooks
@@ -164,10 +94,17 @@ function RepoDetailContent({ repoId }: { repoId: string }): React.ReactElement {
           gap: theme.spacing.md,
         }}
       >
-        <StatCard value={repo.totalSessions ?? 0} label="Sessions" />
+        <StatCard
+          value={repo.totalSessions ?? 0}
+          label="Sessions"
+          variant="value-first"
+          centered
+        />
         <StatCard
           value={formatRelativeTime(repo.lastActivity ?? '')}
           label="Last Activity"
+          variant="value-first"
+          centered
         />
       </Box>
 

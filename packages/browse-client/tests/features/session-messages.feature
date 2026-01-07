@@ -144,3 +144,39 @@ Feature: Session Messages
     When the page loads
     Then the page should not contain "__typename"
     And the page should not contain "UnknownEventMessage"
+
+  @requires-sessions
+  Scenario: No messages shown as unknown events when they have known types
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the page should not contain "Unknown message type:"
+    And the page should not contain "Unknown event:"
+    And the element ".unknown-event-message" should not be visible if it exists
+
+  @requires-sessions
+  Scenario: User and assistant messages display correctly
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the element ".user-message-card" should be visible if it exists
+    And the element ".assistant-message-card" should be visible if it exists
+
+  @requires-sessions
+  Scenario: File change cards display validation status
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    When the page loads
+    Then the element ".file-change-card" should be visible if it exists
+    And the page should not contain "undefined:undefined"
+
+  @requires-sessions
+  Scenario: Session detail page loads within reasonable time
+    Given I am on the "/" page
+    When the page loads
+    And I click on "a[href*='/sessions/']" if it exists
+    Then the page should load within 5 seconds
+    And the page should not be stuck loading

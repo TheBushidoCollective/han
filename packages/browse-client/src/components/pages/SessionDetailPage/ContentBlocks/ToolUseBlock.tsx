@@ -9,12 +9,14 @@ import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import json from 'highlight.js/lib/languages/json';
 import type React from 'react';
+import type { CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { fonts } from '@/theme.ts';
 
 // Register languages for syntax highlighting
 hljs.registerLanguage('bash', bash);
@@ -33,6 +35,57 @@ interface ToolUseBlockProps {
   result?: ContentBlock;
 }
 
+const codeBlockStyle: CSSProperties = {
+  margin: 0,
+  fontFamily: fonts.mono,
+  fontSize: '0.8rem',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+};
+
+const terminalStyle: CSSProperties = {
+  backgroundColor: '#1a1b26',
+  borderRadius: 8,
+  overflow: 'hidden',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+};
+
+const terminalHeaderStyle: CSSProperties = {
+  backgroundColor: '#24283b',
+  padding: '8px 12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  borderBottom: '1px solid #414868',
+};
+
+const trafficLightStyle = (color: string): CSSProperties => ({
+  width: 12,
+  height: 12,
+  borderRadius: '50%',
+  backgroundColor: color,
+});
+
+const terminalContentStyle: CSSProperties = {
+  padding: '12px 16px',
+};
+
+const diffRemoveStyle: CSSProperties = {
+  backgroundColor: 'rgba(248, 81, 73, 0.15)',
+  borderLeftWidth: 3,
+  borderLeftColor: '#f85149',
+  borderRadius: 4,
+  padding: '8px 12px',
+};
+
+const diffAddStyle: CSSProperties = {
+  backgroundColor: 'rgba(63, 185, 80, 0.15)',
+  borderLeftWidth: 3,
+  borderLeftColor: '#3fb950',
+  borderRadius: 4,
+  padding: '8px 12px',
+};
+
 /**
  * Parse tool input from JSON string
  */
@@ -42,6 +95,47 @@ function parseInput(input: string): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+/**
+ * CodeBlock component for preformatted text
+ */
+function CodeBlock({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: CSSProperties;
+}): React.ReactElement {
+  return (
+    <Box style={{ ...codeBlockStyle, ...style }}>
+      <Text style={{ fontFamily: fonts.mono, fontSize: 12 }}>{children}</Text>
+    </Box>
+  );
+}
+
+/**
+ * HighlightedCode for syntax-highlighted content
+ * Note: Uses raw div since dangerouslySetInnerHTML is required for hljs output
+ * and is not supported by React Native View components
+ */
+function HighlightedCode({
+  code,
+  language,
+  style,
+}: {
+  code: string;
+  language: string;
+  style?: CSSProperties;
+}): React.ReactElement {
+  const highlighted = hljs.highlight(code, { language }).value;
+  return (
+    <div
+      style={{ ...codeBlockStyle, ...style }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting requires innerHTML
+      dangerouslySetInnerHTML={{ __html: highlighted }}
+    />
+  );
 }
 
 export function ToolUseBlock({
@@ -70,7 +164,7 @@ export function ToolUseBlock({
               </Text>
               <Text
                 size="sm"
-                style={{ fontFamily: 'monospace', color: '#58a6ff' }}
+                style={{ fontFamily: fonts.mono, color: '#58a6ff' }}
               >
                 {filePath}
               </Text>
@@ -104,22 +198,18 @@ export function ToolUseBlock({
               </Text>
               <Text
                 size="sm"
-                style={{ fontFamily: 'monospace', color: '#f0883e' }}
+                style={{ fontFamily: fonts.mono, color: '#f0883e' }}
               >
                 {filePath}
               </Text>
             </HStack>
             {content && (
-              <Box className="file-content-preview">
+              <VStack gap="xs">
                 <Text size="xs" color="muted">
                   Content: {content.length.toLocaleString()} chars
                 </Text>
-                {content.length <= 500 && (
-                  <pre className="content-preview">
-                    <code>{content}</code>
-                  </pre>
-                )}
-              </Box>
+                {content.length <= 500 && <CodeBlock>{content}</CodeBlock>}
+              </VStack>
             )}
           </VStack>
         );
@@ -137,21 +227,14 @@ export function ToolUseBlock({
               </Text>
               <Text
                 size="sm"
-                style={{ fontFamily: 'monospace', color: '#a371f7' }}
+                style={{ fontFamily: fonts.mono, color: '#a371f7' }}
               >
                 {filePath}
               </Text>
             </HStack>
             {oldString && newString && (
               <VStack gap="xs" align="stretch">
-                <div
-                  style={{
-                    backgroundColor: 'rgba(248, 81, 73, 0.15)',
-                    borderLeft: '3px solid #f85149',
-                    borderRadius: 4,
-                    padding: '8px 12px',
-                  }}
-                >
+                <Box style={diffRemoveStyle}>
                   <Text
                     size="xs"
                     weight="semibold"
@@ -159,30 +242,13 @@ export function ToolUseBlock({
                   >
                     - Remove:
                   </Text>
-                  <pre
-                    style={{
-                      margin: 0,
-                      fontSize: '0.8rem',
-                      fontFamily: 'var(--font-mono)',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    <code>
-                      {oldString.length > 200
-                        ? `${oldString.slice(0, 200)}...`
-                        : oldString}
-                    </code>
-                  </pre>
-                </div>
-                <div
-                  style={{
-                    backgroundColor: 'rgba(63, 185, 80, 0.15)',
-                    borderLeft: '3px solid #3fb950',
-                    borderRadius: 4,
-                    padding: '8px 12px',
-                  }}
-                >
+                  <CodeBlock>
+                    {oldString.length > 200
+                      ? `${oldString.slice(0, 200)}...`
+                      : oldString}
+                  </CodeBlock>
+                </Box>
+                <Box style={diffAddStyle}>
                   <Text
                     size="xs"
                     weight="semibold"
@@ -190,22 +256,12 @@ export function ToolUseBlock({
                   >
                     + Add:
                   </Text>
-                  <pre
-                    style={{
-                      margin: 0,
-                      fontSize: '0.8rem',
-                      fontFamily: 'var(--font-mono)',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    <code>
-                      {newString.length > 200
-                        ? `${newString.slice(0, 200)}...`
-                        : newString}
-                    </code>
-                  </pre>
-                </div>
+                  <CodeBlock>
+                    {newString.length > 200
+                      ? `${newString.slice(0, 200)}...`
+                      : newString}
+                  </CodeBlock>
+                </Box>
               </VStack>
             )}
           </VStack>
@@ -226,89 +282,44 @@ export function ToolUseBlock({
               </Text>
             )}
             {/* Terminal-style container */}
-            <div
-              style={{
-                backgroundColor: '#1a1b26',
-                borderRadius: 8,
-                overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              }}
-            >
+            <Box style={terminalStyle}>
               {/* Terminal title bar */}
-              <div
-                style={{
-                  backgroundColor: '#24283b',
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  borderBottom: '1px solid #414868',
-                }}
-              >
+              <Box style={terminalHeaderStyle}>
                 {/* Traffic lights */}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: '#ff5f57',
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: '#febc2e',
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: '#28c840',
-                    }}
-                  />
-                </div>
-                <span
+                <HStack gap="xs">
+                  <Box style={trafficLightStyle('#ff5f57')} />
+                  <Box style={trafficLightStyle('#febc2e')} />
+                  <Box style={trafficLightStyle('#28c840')} />
+                </HStack>
+                <Text
+                  size="xs"
                   style={{
                     flex: 1,
                     textAlign: 'center',
-                    fontSize: '0.75rem',
                     color: '#565f89',
-                    fontFamily: 'var(--font-mono)',
+                    fontFamily: fonts.mono,
                   }}
                 >
                   bash {isBackground ? '(background)' : ''}
-                </span>
-              </div>
+                </Text>
+              </Box>
               {/* Terminal content */}
-              <div style={{ padding: '12px 16px' }}>
-                <pre
-                  style={{
-                    margin: 0,
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.85rem',
-                    lineHeight: 1.5,
-                    color: '#c0caf5',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  <span style={{ color: '#7aa2f7', marginRight: 8 }}>$</span>
-                  <code
-                    className="hljs language-bash"
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
-                    dangerouslySetInnerHTML={{
-                      __html: hljs.highlight(command, { language: 'bash' })
-                        .value,
+              <Box style={terminalContentStyle}>
+                <HStack gap="xs" align="baseline">
+                  <Text style={{ color: '#7aa2f7', fontFamily: fonts.mono }}>
+                    $
+                  </Text>
+                  <HighlightedCode
+                    code={command}
+                    language="bash"
+                    style={{
+                      color: '#c0caf5',
+                      lineHeight: 1.5,
                     }}
                   />
-                </pre>
-              </div>
-            </div>
+                </HStack>
+              </Box>
+            </Box>
           </VStack>
         );
       }
@@ -324,7 +335,7 @@ export function ToolUseBlock({
                 <Text size="xs" color="muted">
                   Pattern:
                 </Text>
-                <Text size="sm" style={{ fontFamily: 'monospace' }}>
+                <Text size="sm" style={{ fontFamily: fonts.mono }}>
                   {pattern}
                 </Text>
               </HStack>
@@ -333,7 +344,7 @@ export function ToolUseBlock({
                   <Text size="xs" color="muted">
                     Path:
                   </Text>
-                  <Text size="sm" style={{ fontFamily: 'monospace' }}>
+                  <Text size="sm" style={{ fontFamily: fonts.mono }}>
                     {path}
                   </Text>
                 </HStack>
@@ -343,7 +354,7 @@ export function ToolUseBlock({
                   <Text size="xs" color="muted">
                     Glob:
                   </Text>
-                  <Text size="sm" style={{ fontFamily: 'monospace' }}>
+                  <Text size="sm" style={{ fontFamily: fonts.mono }}>
                     {glob}
                   </Text>
                 </HStack>
@@ -363,7 +374,7 @@ export function ToolUseBlock({
                 <Text size="xs" color="muted">
                   Pattern:
                 </Text>
-                <Text size="sm" style={{ fontFamily: 'monospace' }}>
+                <Text size="sm" style={{ fontFamily: fonts.mono }}>
                   {pattern}
                 </Text>
               </HStack>
@@ -372,7 +383,7 @@ export function ToolUseBlock({
                   <Text size="xs" color="muted">
                     Path:
                   </Text>
-                  <Text size="sm" style={{ fontFamily: 'monospace' }}>
+                  <Text size="sm" style={{ fontFamily: fonts.mono }}>
                     {path}
                   </Text>
                 </HStack>
@@ -399,7 +410,7 @@ export function ToolUseBlock({
                 <Text
                   size="sm"
                   weight="semibold"
-                  style={{ color: '#d29922', fontFamily: 'monospace' }}
+                  style={{ color: '#d29922', fontFamily: fonts.mono }}
                 >
                   {subagentType}
                 </Text>
@@ -417,7 +428,7 @@ export function ToolUseBlock({
               <Text
                 size="sm"
                 style={{
-                  maxHeight: '100px',
+                  maxHeight: 100,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}
@@ -432,7 +443,7 @@ export function ToolUseBlock({
                 </Text>
                 <Text
                   size="xs"
-                  style={{ fontFamily: 'monospace', color: '#8b949e' }}
+                  style={{ fontFamily: fonts.mono, color: '#8b949e' }}
                 >
                   {agentId}
                 </Text>
@@ -454,7 +465,7 @@ export function ToolUseBlock({
               <Text
                 size="sm"
                 style={{
-                  fontFamily: 'monospace',
+                  fontFamily: fonts.mono,
                   color: '#58a6ff',
                   wordBreak: 'break-all',
                 }}
@@ -478,7 +489,7 @@ export function ToolUseBlock({
             <Text size="xs" color="muted">
               Query:
             </Text>
-            <Text size="sm" style={{ fontFamily: 'monospace' }}>
+            <Text size="sm" style={{ fontFamily: fonts.mono }}>
               {query}
             </Text>
           </HStack>
@@ -521,21 +532,10 @@ export function ToolUseBlock({
         if (inputStr.length > 300) {
           return (
             <VStack gap="xs">
-              <pre className="tool-input-preview">
-                <code
-                  className="hljs language-json"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
-                  dangerouslySetInnerHTML={{
-                    __html: showFullInput
-                      ? hljs.highlight(inputStr, { language: 'json' }).value
-                      : hljs
-                          .highlight(inputStr.slice(0, 300), {
-                            language: 'json',
-                          })
-                          .value.concat('...'),
-                  }}
-                />
-              </pre>
+              <HighlightedCode
+                code={showFullInput ? inputStr : `${inputStr.slice(0, 300)}...`}
+                language="json"
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -547,17 +547,7 @@ export function ToolUseBlock({
           );
         }
         if (inputStr !== '{}') {
-          return (
-            <pre className="tool-input-preview">
-              <code
-                className="hljs language-json"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
-                dangerouslySetInnerHTML={{
-                  __html: hljs.highlight(inputStr, { language: 'json' }).value,
-                }}
-              />
-            </pre>
-          );
+          return <HighlightedCode code={inputStr} language="json" />;
         }
         return null;
       }
@@ -575,59 +565,51 @@ export function ToolUseBlock({
 
     return (
       <Box
-        className={`tool-result-inline ${isError ? 'tool-result-error' : 'tool-result-success'}`}
         style={{
-          marginTop: '0.5rem',
-          padding: '0.5rem',
-          borderRadius: '4px',
+          marginTop: 8,
+          padding: 8,
+          borderRadius: 4,
           backgroundColor: isError
             ? 'rgba(248, 81, 73, 0.1)'
             : 'rgba(63, 185, 80, 0.1)',
-          borderLeft: `3px solid ${isError ? '#f85149' : '#3fb950'}`,
+          borderLeftWidth: 3,
+          borderLeftColor: isError ? '#f85149' : '#3fb950',
         }}
       >
-        <HStack gap="xs" align="center" style={{ marginBottom: '0.25rem' }}>
+        <HStack gap="xs" align="center" style={{ marginBottom: 4 }}>
           <Text size="xs" style={{ color: isError ? '#f85149' : '#3fb950' }}>
             {isError ? '✗ Error' : '✓ Result'}
           </Text>
         </HStack>
-        <pre
+        <Box
           style={{
-            margin: 0,
-            padding: 0,
-            fontSize: '0.8rem',
-            fontFamily: 'var(--font-mono)',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            color: 'var(--color-text-muted)',
-            maxHeight: isLong ? '200px' : undefined,
+            ...codeBlockStyle,
+            maxHeight: isLong ? 200 : undefined,
             overflow: isLong ? 'auto' : undefined,
           }}
         >
-          <code>{isLong ? preview : content}</code>
-        </pre>
+          <Text size="sm" color="muted" style={{ fontFamily: fonts.mono }}>
+            {isLong ? preview : content}
+          </Text>
+        </Box>
       </Box>
     );
   };
 
   return (
-    <Box className="content-block tool-use-block">
-      <HStack className="tool-header" gap="sm" align="center">
-        <Text className="tool-icon" size="md">
-          {icon}
-        </Text>
+    <Box>
+      <HStack gap="sm" align="center">
+        <Text size="md">{icon}</Text>
         <Text size="sm" weight="semibold" style={{ color }}>
           {displayName}
         </Text>
         {name.startsWith('mcp__') && (
-          <Text size="xs" color="muted" style={{ fontFamily: 'monospace' }}>
+          <Text size="xs" color="muted" style={{ fontFamily: fonts.mono }}>
             {name}
           </Text>
         )}
       </HStack>
-      <Box className="tool-content" style={{ marginTop: 8 }}>
-        {renderToolContent()}
-      </Box>
+      <Box style={{ marginTop: 8 }}>{renderToolContent()}</Box>
       {renderResult()}
     </Box>
   );

@@ -13,9 +13,9 @@ import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { StatCard } from '@/components/organisms/StatCard.tsx';
 import type { MetricsContentQuery as MetricsContentQueryType } from './__generated__/MetricsContentQuery.graphql.ts';
 import { OutcomeBadge } from './OutcomeBadge.tsx';
-import { StatCard } from './StatCard.tsx';
 import { TaskTypeBadge } from './TaskTypeBadge.tsx';
 
 type Period = 'DAY' | 'WEEK' | 'MONTH';
@@ -39,18 +39,6 @@ const MetricsContentQueryDef = graphql`
         outcome
         count
       }
-      recentTasks(first: 10) {
-        id
-        taskId
-        description
-        type
-        status
-        outcome
-        confidence
-        startedAt
-        completedAt
-        durationSeconds
-      }
     }
   }
 `;
@@ -68,7 +56,9 @@ function formatPercent(value: number | null | undefined): string {
  */
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '-';
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 0.001) return '< 1ms';
+  if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
@@ -98,7 +88,6 @@ export function MetricsContent({
 
   const tasksByType = metrics.tasksByType ?? [];
   const tasksByOutcome = metrics.tasksByOutcome ?? [];
-  const recentTasks = metrics.recentTasks ?? [];
 
   return (
     <VStack gap="lg">
@@ -113,7 +102,7 @@ export function MetricsContent({
         <StatCard
           label="Total Tasks"
           value={metrics.totalTasks ?? 0}
-          subvalue={`${metrics.completedTasks ?? 0} completed`}
+          subValue={`${metrics.completedTasks ?? 0} completed`}
         />
         <StatCard
           label="Success Rate"
@@ -130,7 +119,7 @@ export function MetricsContent({
               ? formatPercent(metrics.calibrationScore)
               : '-'
           }
-          subvalue="confidence vs outcome"
+          subValue="confidence vs outcome"
         />
         <StatCard
           label="Avg Duration"
@@ -139,7 +128,7 @@ export function MetricsContent({
         <StatCard
           label="Frustrations"
           value={metrics.significantFrustrations ?? 0}
-          subvalue={`${formatPercent(metrics.significantFrustrationRate)} rate`}
+          subValue={`${formatPercent(metrics.significantFrustrationRate)} rate`}
         />
       </Box>
 
@@ -181,73 +170,6 @@ export function MetricsContent({
           </VStack>
         </Card>
       </HStack>
-
-      {/* Recent Tasks */}
-      <VStack gap="md">
-        <Heading size="sm" as="h3">
-          Recent Tasks
-        </Heading>
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: theme.fontSize.sm,
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: theme.colors.bg.tertiary,
-                  textAlign: 'left',
-                }}
-              >
-                <th style={{ padding: theme.spacing.md }}>Description</th>
-                <th style={{ padding: theme.spacing.md }}>Type</th>
-                <th style={{ padding: theme.spacing.md }}>Outcome</th>
-                <th style={{ padding: theme.spacing.md }}>Confidence</th>
-                <th style={{ padding: theme.spacing.md }}>Duration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentTasks.map((task) => (
-                <tr
-                  key={task.id}
-                  style={{
-                    borderTop: `1px solid ${theme.colors.border.default}`,
-                  }}
-                >
-                  <td
-                    style={{
-                      padding: theme.spacing.md,
-                      maxWidth: '300px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {task.description}
-                  </td>
-                  <td style={{ padding: theme.spacing.md }}>
-                    <TaskTypeBadge type={task.type ?? 'UNKNOWN'} />
-                  </td>
-                  <td style={{ padding: theme.spacing.md }}>
-                    <OutcomeBadge outcome={task.outcome} />
-                  </td>
-                  <td style={{ padding: theme.spacing.md }}>
-                    {task.confidence !== null
-                      ? formatPercent(task.confidence)
-                      : '-'}
-                  </td>
-                  <td style={{ padding: theme.spacing.md }}>
-                    {formatDuration(task.durationSeconds)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      </VStack>
     </VStack>
   );
 }

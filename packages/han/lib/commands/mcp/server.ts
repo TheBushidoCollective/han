@@ -1,6 +1,9 @@
 import { createInterface } from "node:readline";
+import {
+	isMemoryEnabled,
+	isMetricsEnabled,
+} from "../../config/han-settings.ts";
 import { getOrCreateEventLogger } from "../../events/logger.ts";
-import { isMemoryEnabled, isMetricsEnabled } from "../../han-settings.ts";
 import {
 	formatMemoryAgentResult,
 	type MemoryQueryParams,
@@ -16,8 +19,12 @@ import {
 } from "./orchestrator.ts";
 import { handleToolsCall as handleTaskToolsCall, TASK_TOOLS } from "./task.ts";
 import {
+	type AvailableHook,
+	discoverAvailableHooks,
 	discoverPluginTools,
+	executeHookByName,
 	executePluginTool,
+	generateHookRunDescription,
 	type PluginTool,
 } from "./tools.ts";
 
@@ -58,7 +65,7 @@ interface McpTool {
 	};
 }
 
-// Cache discovered tools
+// Cache discovered tools (for backwards compatibility with exposed tool lookup)
 let cachedTools: PluginTool[] | null = null;
 
 function discoverTools(): PluginTool[] {
@@ -68,9 +75,76 @@ function discoverTools(): PluginTool[] {
 	return cachedTools;
 }
 
+// Cache discovered hooks for the consolidated hook_run tool
+let cachedHooks: AvailableHook[] | null = null;
+
+function discoverHooks(): AvailableHook[] {
+	if (!cachedHooks) {
+		cachedHooks = discoverAvailableHooks();
+	}
+	return cachedHooks;
+}
+
+/**
+ * Generate the consolidated hook_run tool with dynamic description
+ */
+export function getHookRunTool(): McpTool | null {
+	const hooks = discoverHooks();
+	if (hooks.length === 0) {
+		return null;
+	}
+
+	// Generate enum values for plugin and hook parameters
+	const pluginNames = [...new Set(hooks.map((h) => h.plugin))].sort();
+	const hookNames = [...new Set(hooks.map((h) => h.hook))].sort();
+
+	return {
+		name: "hook_run",
+		description: generateHookRunDescription(hooks),
+		annotations: {
+			title: "Run Plugin Hook",
+			readOnlyHint: false, // Hooks may modify files (e.g., formatters)
+			destructiveHint: false, // Not destructive - can be safely re-run
+			idempotentHint: true, // Safe to run multiple times with same result
+			openWorldHint: false, // Works with local files only
+		},
+		inputSchema: {
+			type: "object" as const,
+			properties: {
+				plugin: {
+					type: "string",
+					description: `Plugin name. Available: ${pluginNames.join(", ")}`,
+					enum: pluginNames,
+				},
+				hook: {
+					type: "string",
+					description: `Hook name. Available: ${hookNames.join(", ")}`,
+					enum: hookNames,
+				},
+				cache: {
+					type: "boolean",
+					description:
+						"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true.",
+				},
+				directory: {
+					type: "string",
+					description:
+						"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
+				},
+				verbose: {
+					type: "boolean",
+					description:
+						"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false.",
+				},
+			},
+			required: ["plugin", "hook"],
+		},
+	};
+}
+
+// Keep formatToolsForMcp for backwards compatibility (used by some internal tooling)
 export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 	return tools.map((tool) => {
-		// Generate a human-readable title from the tool name
 		const title =
 			tool.hookName.charAt(0).toUpperCase() + tool.hookName.slice(1);
 		const technology = tool.pluginName.replace(/^(jutsu|do|hashi)-/, "");
@@ -82,10 +156,10 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 			description: tool.description,
 			annotations: {
 				title: `${title} ${techDisplay}`,
-				readOnlyHint: false, // These tools may modify files (e.g., formatters)
-				destructiveHint: false, // Not destructive - can be safely re-run
-				idempotentHint: true, // Safe to run multiple times with same result
-				openWorldHint: false, // Works with local files only
+				readOnlyHint: false,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: false,
 			},
 			inputSchema: {
 				type: "object" as const,
@@ -93,7 +167,7 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 					cache: {
 						type: "boolean",
 						description:
-							"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true. Tip: If the result says 'no changes', you can retry with cache=false to run anyway.",
+							"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true.",
 					},
 					directory: {
 						type: "string",
@@ -103,7 +177,7 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 					verbose: {
 						type: "boolean",
 						description:
-							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false (output captured and returned).",
+							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false.",
 					},
 				},
 				required: [],
@@ -376,7 +450,8 @@ async function getExposedTools(): Promise<{
 }
 
 async function handleToolsList(): Promise<unknown> {
-	const hookTools = formatToolsForMcp(discoverTools());
+	// Use consolidated hook_run tool instead of many individual tools
+	const hookRunTool = getHookRunTool();
 	const memoryEnabled = isMemoryEnabled();
 	const metricsEnabled = isMetricsEnabled();
 	const orchestratorConfig = getOrchestratorConfig();
@@ -394,7 +469,8 @@ async function handleToolsList(): Promise<unknown> {
 	}
 
 	const allTools = [
-		...hookTools,
+		// Single consolidated hook_run tool (replaces 30+ individual tools)
+		...(hookRunTool ? [hookRunTool] : []),
 		...exposedTools,
 		...orchestratorTools,
 		// Only include task tools if metrics are enabled
@@ -675,7 +751,84 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Handle hook tools
+	// Handle consolidated hook_run tool
+	if (params.name === "hook_run") {
+		const plugin = args.plugin as string | undefined;
+		const hook = args.hook as string | undefined;
+		const cache = args.cache !== false; // Default to true for MCP
+		const verbose = args.verbose === true;
+		const directory =
+			typeof args.directory === "string" ? args.directory : undefined;
+
+		// Validate required parameters
+		if (!plugin || !hook) {
+			// Return helpful list of available hooks
+			const hooks = discoverHooks();
+			const hookList = hooks
+				.map((h) => `  ${h.plugin}/${h.hook}`)
+				.slice(0, 20)
+				.join("\n");
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Missing required parameters: plugin and hook.\n\nAvailable hooks (first 20):\n${hookList}\n\nExample: hook_run({ plugin: "jutsu-biome", hook: "lint" })`,
+					},
+				],
+				isError: true,
+			};
+		}
+
+		try {
+			const result = await executeHookByName(plugin, hook, {
+				cache,
+				verbose,
+				failFast: false,
+				directory,
+			});
+
+			let outputText = result.output;
+
+			// If caching is enabled and output suggests no changes/skipped,
+			// add a helpful suggestion to retry without cache
+			if (cache && result.success) {
+				const lowerOutput = outputText.toLowerCase();
+				const hasNoChanges =
+					lowerOutput.includes("skipped") ||
+					lowerOutput.includes("no changes") ||
+					lowerOutput.includes("unchanged") ||
+					lowerOutput.includes("up to date");
+
+				if (hasNoChanges) {
+					outputText +=
+						"\n\n💡 Tip: Files appear unchanged. To force re-run, use cache=false.";
+				}
+			}
+
+			return {
+				content: [
+					{
+						type: "text",
+						text: outputText,
+					},
+				],
+				isError: !result.success,
+			};
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${plugin}/${hook}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Handle legacy hook tools (for backwards compatibility during transition)
 	const tools = discoverTools();
 	const tool = tools.find((t) => t.name === params.name);
 

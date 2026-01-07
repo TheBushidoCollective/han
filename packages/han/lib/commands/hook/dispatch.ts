@@ -1,4 +1,4 @@
-import { execSync, spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -32,7 +32,6 @@ async function getSessionFileChanges() {
 }
 
 import { getEventLogger, initEventLogger } from "../../events/logger.ts";
-import { isCheckpointsEnabled } from "../../han-settings.ts";
 import { getClaudeProjectPath } from "../../memory/paths.ts";
 import { getPluginNameFromRoot, isDebugMode } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
@@ -341,7 +340,13 @@ function executeCommandHook(
 	// han hook commands log their own events and may skip due to caching
 	const hookRunId = isHanHookCommand
 		? undefined
-		: eventLogger?.logHookRun(pluginName, hookName, process.cwd(), false);
+		: eventLogger?.logHookRun(
+				pluginName,
+				hookName,
+				hookType,
+				process.cwd(),
+				false,
+			);
 
 	try {
 		// Replace ${CLAUDE_PLUGIN_ROOT} with the actual local plugin path
@@ -687,60 +692,8 @@ async function dispatchHooks(
 		return;
 	}
 
-	// Capture checkpoint at session/agent start in background (fire-and-forget)
-	// This prevents large monorepos from blocking hook dispatch
-	if (isCheckpointsEnabled()) {
-		try {
-			// Capture session checkpoint at SessionStart (background)
-			if (hookType === "SessionStart" && payload?.session_id) {
-				// Fire-and-forget: run checkpoint capture in detached background process
-				const child = spawn(
-					process.execPath,
-					[
-						process.argv[1],
-						"checkpoint",
-						"capture",
-						"--type",
-						"session",
-						"--id",
-						payload.session_id,
-					],
-					{
-						detached: true,
-						stdio: "ignore",
-						cwd: process.cwd(),
-					},
-				);
-				child.unref(); // Allow parent to exit independently
-			}
-
-			// Capture agent checkpoint at SubagentStart (background)
-			if (hookType === "SubagentStart" && payload?.agent_id) {
-				// Fire-and-forget: run checkpoint capture in detached background process
-				const child = spawn(
-					process.execPath,
-					[
-						process.argv[1],
-						"checkpoint",
-						"capture",
-						"--type",
-						"agent",
-						"--id",
-						payload.agent_id,
-					],
-					{
-						detached: true,
-						stdio: "ignore",
-						cwd: process.cwd(),
-					},
-				);
-				child.unref(); // Allow parent to exit independently
-			}
-		} catch {
-			// Checkpoint spawn failed - log but continue with hook dispatch
-			// We don't want to block hooks on checkpoint failures
-		}
-	}
+	// Note: Checkpoint capture at session/agent start has been removed.
+	// Session filtering now uses the database-backed session_file_changes table.
 
 	const outputs: string[] = [];
 

@@ -15,9 +15,9 @@ import { HStack } from '@/components/atoms/HStack.tsx';
 import { Input } from '@/components/atoms/Input.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { StatCard } from '@/components/organisms/StatCard.tsx';
 import type { CacheContentQuery as CacheContentQueryType } from './__generated__/CacheContentQuery.graphql.ts';
 import { CacheEntryCard } from './CacheEntryCard.tsx';
-import { StatCard } from './StatCard.tsx';
 
 const CacheContentQueryDef = graphql`
   query CacheContentQuery {

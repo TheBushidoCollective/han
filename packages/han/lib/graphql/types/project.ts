@@ -9,7 +9,6 @@ import { getPluginsForProject } from "../../api/plugins.ts";
 import {
 	getProjectGroups,
 	type ProjectGroup,
-	type SubdirInfo,
 	type WorktreeInfo,
 } from "../../api/sessions.ts";
 import { builder } from "../builder.ts";
@@ -17,55 +16,7 @@ import { encodeGlobalId, registerNodeLoader } from "../node-registry.ts";
 import { PluginType } from "./plugin.ts";
 // Import session connection type - safe because session-connection.ts doesn't import from here
 import { SessionConnectionType } from "./session-connection.ts";
-
-/**
- * Subdir type ref
- */
-const SubdirRef = builder.objectRef<SubdirInfo>("Subdir");
-
-/**
- * Worktree type ref
- */
-const WorktreeRef = builder.objectRef<WorktreeInfo>("Worktree");
-
-/**
- * Subdir type implementation
- */
-export const SubdirType = SubdirRef.implement({
-	description: "A subdirectory within a worktree",
-	fields: (t) => ({
-		relativePath: t.exposeString("relativePath", {
-			description: "Relative path from worktree root",
-		}),
-		path: t.exposeString("path", { description: "Full path to subdirectory" }),
-		sessionCount: t.exposeInt("sessionCount", {
-			description: "Number of sessions in this subdirectory",
-		}),
-	}),
-});
-
-/**
- * Worktree type implementation
- */
-export const WorktreeType = WorktreeRef.implement({
-	description: "A git worktree within a project",
-	fields: (t) => ({
-		name: t.exposeString("name", { description: "Worktree name" }),
-		path: t.exposeString("path", { description: "Full path to worktree" }),
-		sessionCount: t.exposeInt("sessionCount", {
-			description: "Number of sessions at this worktree root",
-		}),
-		isWorktree: t.exposeBoolean("isWorktree", {
-			description: "Whether this is a linked worktree (vs main repo)",
-		}),
-		subdirs: t.field({
-			type: [SubdirType],
-			nullable: true,
-			description: "Subdirectories with sessions within this worktree",
-			resolve: (worktree) => worktree.subdirs || null,
-		}),
-	}),
-});
+import { WorktreeType } from "./worktree.ts";
 
 /**
  * Project type ref - exported so session.ts can reference it without circular import

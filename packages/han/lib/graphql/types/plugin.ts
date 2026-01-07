@@ -1,13 +1,11 @@
 /**
- * GraphQL Plugin types
+ * GraphQL Plugin type
  *
- * Represents installed plugin data.
+ * Represents an installed plugin.
  */
 
 import {
 	getInstalledPlugins,
-	getPluginCategories,
-	getPluginStats,
 	getPluginsByScope,
 	type InstalledPlugin,
 	type PluginScope,
@@ -15,14 +13,7 @@ import {
 	togglePlugin,
 } from "../../api/plugins.ts";
 import { builder } from "../builder.ts";
-
-/**
- * Plugin scope enum
- */
-export const PluginScopeEnum = builder.enumType("PluginScope", {
-	values: ["USER", "PROJECT", "LOCAL"] as const,
-	description: "Scope where plugin is installed",
-});
+import { PluginScopeEnum } from "./enums/plugin-scope.ts";
 
 /**
  * Plugin type ref
@@ -73,63 +64,6 @@ export const PluginType = PluginRef.implement({
 });
 
 /**
- * Plugin stats type
- */
-interface PluginStatsData {
-	totalPlugins: number;
-	userPlugins: number;
-	projectPlugins: number;
-	localPlugins: number;
-	enabledPlugins: number;
-}
-
-const PluginStatsRef = builder.objectRef<PluginStatsData>("PluginStats");
-
-export const PluginStatsType = PluginStatsRef.implement({
-	description: "Aggregate plugin statistics",
-	fields: (t) => ({
-		totalPlugins: t.exposeInt("totalPlugins", {
-			description: "Total number of installed plugins",
-		}),
-		userPlugins: t.exposeInt("userPlugins", {
-			description: "Plugins installed at user scope",
-		}),
-		projectPlugins: t.exposeInt("projectPlugins", {
-			description: "Plugins installed at project scope",
-		}),
-		localPlugins: t.exposeInt("localPlugins", {
-			description: "Plugins installed at local scope",
-		}),
-		enabledPlugins: t.exposeInt("enabledPlugins", {
-			description: "Number of enabled plugins",
-		}),
-	}),
-});
-
-/**
- * Plugin category count type
- */
-interface PluginCategoryData {
-	category: string;
-	count: number;
-}
-
-const PluginCategoryRef =
-	builder.objectRef<PluginCategoryData>("PluginCategory");
-
-export const PluginCategoryType = PluginCategoryRef.implement({
-	description: "Plugin count by category",
-	fields: (t) => ({
-		category: t.exposeString("category", {
-			description: "Category name",
-		}),
-		count: t.exposeInt("count", {
-			description: "Number of plugins in this category",
-		}),
-	}),
-});
-
-/**
  * Get all installed plugins
  */
 export function getAllPlugins(): InstalledPlugin[] {
@@ -142,23 +76,6 @@ export function getAllPlugins(): InstalledPlugin[] {
 export function queryPluginsByScope(scope: string): InstalledPlugin[] {
 	const normalizedScope = scope.toLowerCase() as PluginScope;
 	return getPluginsByScope(normalizedScope);
-}
-
-/**
- * Get plugin statistics
- */
-export function queryPluginStats(): PluginStatsData {
-	return getPluginStats();
-}
-
-/**
- * Get plugin categories
- */
-export function queryPluginCategories(): PluginCategoryData[] {
-	const categories = getPluginCategories();
-	return Object.entries(categories)
-		.filter(([, count]) => count > 0)
-		.map(([category, count]) => ({ category, count }));
 }
 
 /**

@@ -5,7 +5,7 @@
  * content preview, and image display.
  */
 
-import type React from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { useState } from 'react';
 import { AnsiText, containsAnsi } from '@/components/atoms/AnsiText.tsx';
 import { Badge } from '@/components/atoms/Badge.tsx';
@@ -14,6 +14,7 @@ import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { colors, fonts, radii, spacing } from '@/theme.ts';
 
 interface ToolResultBlockProps {
   toolCallId: string;
@@ -24,13 +25,25 @@ interface ToolResultBlockProps {
   hasImage: boolean;
 }
 
+const codeBlockStyle: CSSProperties = {
+  backgroundColor: colors.bg.primary,
+  borderRadius: radii.sm,
+  padding: spacing.sm,
+  fontFamily: fonts.mono,
+  fontSize: 12,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  overflow: 'auto',
+  maxHeight: 400,
+};
+
 export function ToolResultBlock({
   content,
   isError,
   isLong,
   preview,
   hasImage,
-}: ToolResultBlockProps): React.ReactElement {
+}: ToolResultBlockProps): ReactElement {
   const [expanded, setExpanded] = useState(false);
   const displayContent = expanded ? content : preview;
   const hasAnsiCodes = containsAnsi(content);
@@ -48,14 +61,15 @@ export function ToolResultBlock({
 
   const indicator = getResultIndicator();
 
+  const containerStyle: CSSProperties = {
+    borderLeft: `3px solid ${isError ? colors.danger : colors.success}`,
+    paddingLeft: spacing.sm,
+  };
+
   return (
-    <Box
-      className={`content-block tool-result-block ${isError ? 'result-error' : 'result-success'}`}
-    >
-      <HStack className="result-header" gap="sm" align="center">
-        <Text className="result-icon" size="sm">
-          {indicator.icon}
-        </Text>
+    <Box style={containerStyle}>
+      <HStack gap="sm" align="center">
+        <Text size="sm">{indicator.icon}</Text>
         <Badge variant={indicator.variant}>{indicator.label}</Badge>
         {isLong && (
           <Text size="xs" color="muted">
@@ -73,15 +87,20 @@ export function ToolResultBlock({
           </Button>
         )}
       </HStack>
-      <VStack className="result-content" gap="xs">
+      <VStack gap="xs" style={{ marginTop: spacing.xs }}>
         {displayContent ? (
-          <pre className="result-output">
+          <Box style={codeBlockStyle}>
             {hasAnsiCodes ? (
               <AnsiText>{displayContent}</AnsiText>
             ) : (
-              <code>{displayContent}</code>
+              <Text
+                size="sm"
+                style={{ fontFamily: fonts.mono, color: colors.text.primary }}
+              >
+                {displayContent}
+              </Text>
             )}
-          </pre>
+          </Box>
         ) : (
           <Text size="xs" color="muted">
             (empty result)

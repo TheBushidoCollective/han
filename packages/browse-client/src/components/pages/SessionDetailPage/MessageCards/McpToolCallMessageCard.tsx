@@ -3,17 +3,28 @@
  *
  * Renders MCP tool call events with inline result display.
  * The result is loaded via DataLoader on the backend.
- * Results update when the parent SessionMessages refetches.
+ * Subscribes to toolResultAdded to get real-time updates when result arrives.
  */
 
 import type React from 'react';
-import { graphql, useFragment } from 'react-relay';
+import { useMemo } from 'react';
+import {
+  graphql,
+  useFragment,
+  useRelayEnvironment,
+  useSubscription,
+} from 'react-relay';
+import {
+  commitLocalUpdate,
+  type GraphQLSubscriptionConfig,
+} from 'relay-runtime';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import type { McpToolCallMessageCard_message$key } from './__generated__/McpToolCallMessageCard_message.graphql.ts';
+import type { McpToolCallMessageCardResultSubscription } from './__generated__/McpToolCallMessageCardResultSubscription.graphql.ts';
 import {
   MessageHeader,
   type MessageRoleInfo,
@@ -42,6 +53,22 @@ const McpToolCallMessageCardFragment = graphql`
   }
 `;
 
+/**
+ * Subscription to receive tool result updates.
+ * Only subscribed when result is pending (null).
+ */
+const McpToolCallMessageCardResultSubscriptionDef = graphql`
+  subscription McpToolCallMessageCardResultSubscription($callId: String!) {
+    toolResultAdded(callId: $callId) {
+      sessionId
+      callId
+      type
+      success
+      durationMs
+    }
+  }
+`;
+
 interface McpToolCallMessageCardProps {
   fragmentRef: McpToolCallMessageCard_message$key;
 }
@@ -62,9 +89,47 @@ export function McpToolCallMessageCard({
 }: McpToolCallMessageCardProps): React.ReactElement {
   const data = useFragment(McpToolCallMessageCardFragment, fragmentRef);
   const { showRawJson, toggleRawJson } = useRawJsonToggle();
+  const environment = useRelayEnvironment();
 
   const roleInfo = getMcpToolCallRoleInfo();
   const result = data.result;
+
+  // Subscribe to tool result updates only when result is pending
+  // When subscription fires, invalidate the message to trigger a refetch
+  const subscriptionConfig = useMemo<
+    GraphQLSubscriptionConfig<McpToolCallMessageCardResultSubscription>
+  >(
+    () => ({
+      subscription: McpToolCallMessageCardResultSubscriptionDef,
+      variables: { callId: data.callId ?? '' },
+      onNext: () => {
+        // Result arrived - invalidate this message's record to refetch result
+        const messageId = data.id;
+        if (messageId) {
+          commitLocalUpdate(environment, (store) => {
+            const record = store.get(messageId);
+            if (record) {
+              record.invalidateRecord();
+            }
+          });
+        }
+      },
+      onError: (err: Error) => {
+        console.warn('Tool result subscription error:', err);
+      },
+    }),
+    [data.callId, data.id, environment]
+  );
+
+  // Only subscribe if result is pending and we have a callId
+  useSubscription<McpToolCallMessageCardResultSubscription>(
+    result === null && data.callId
+      ? subscriptionConfig
+      : {
+          subscription: McpToolCallMessageCardResultSubscriptionDef,
+          variables: { callId: '' },
+        }
+  );
 
   const badges = (
     <HStack gap="xs">

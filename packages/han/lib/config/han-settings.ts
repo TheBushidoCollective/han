@@ -11,6 +11,11 @@ export interface HookOverride {
 	command?: string;
 	if_changed?: string[];
 	idle_timeout?: number | false;
+	/**
+	 * Script to run once before all directory iterations.
+	 * Useful for generating files that the hook depends on.
+	 */
+	before_all?: string;
 }
 
 /**
@@ -345,13 +350,16 @@ export function isHooksEnabled(): boolean {
 }
 
 /**
- * Check if checkpoints are enabled (default: true)
- * Note: If hooks are globally disabled, checkpoints are also disabled
+ * Check if session filtering is enabled (default: true)
+ * When enabled, hooks only run on files modified by the current session.
+ * Note: If hooks are globally disabled, session filtering is also disabled.
+ *
+ * This setting is controlled by `hooks.checkpoints` in han.yml for backwards compatibility.
  */
-export function isCheckpointsEnabled(): boolean {
+export function isSessionFilteringEnabled(): boolean {
 	const config = getMergedHanConfig();
 
-	// If hooks are globally disabled, checkpoints are also disabled
+	// If hooks are globally disabled, session filtering is also disabled
 	if (config.hooks?.enabled === false) {
 		return false;
 	}

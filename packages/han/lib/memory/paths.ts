@@ -34,7 +34,6 @@ export function getMemoryRoot(): string {
 	return join(getClaudeConfigDir(), "han", "memory");
 }
 
-
 /**
  * Get path to personal memory storage
  */

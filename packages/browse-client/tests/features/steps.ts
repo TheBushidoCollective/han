@@ -355,3 +355,55 @@ Then(
     expect(actualValue).toBe(expectedValue);
   }
 );
+
+// ----- Performance Steps -----
+
+Then(
+  'the page should load within {int} seconds',
+  async ({ page }, seconds: number) => {
+    // Wait for main content to be visible (not just spinner)
+    const startTime = Date.now();
+    try {
+      await page.waitForFunction(
+        () => {
+          const bodyText = document.body?.textContent || '';
+          // Page is loaded when there are no loading indicators
+          return (
+            !bodyText.includes('Loading...') &&
+            !bodyText.includes('Loading messages') &&
+            !bodyText.includes('Loading session')
+          );
+        },
+        { timeout: seconds * 1000 }
+      );
+    } catch {
+      const elapsed = (Date.now() - startTime) / 1000;
+      throw new Error(
+        `Page did not finish loading within ${seconds} seconds (elapsed: ${elapsed.toFixed(1)}s)`
+      );
+    }
+  }
+);
+
+Then('the page should not be stuck loading', async ({ page }) => {
+  // Check that there are no infinite loading spinners
+  const bodyText = await page.locator('body').textContent();
+  expect(bodyText).not.toContain('Loading...');
+  expect(bodyText).not.toContain('Loading messages');
+  expect(bodyText).not.toContain('Loading session');
+});
+
+// ----- Element Existence Steps -----
+
+Then(
+  'the element {string} should not be visible if it exists',
+  async ({ page }, selector: string) => {
+    const element = page.locator(selector).first();
+    const exists = await element.isVisible().catch(() => false);
+    // If it exists, it should not be visible
+    if (exists) {
+      await expect(element).not.toBeVisible();
+    }
+    // If it doesn't exist, that's fine - step passes
+  }
+);

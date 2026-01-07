@@ -2,8 +2,12 @@
  * Session Messages Component
  *
  * Displays messages with backward pagination (load earlier messages).
- * Uses usePaginationFragment for pagination.
- * Uses column-reverse for natural scroll-to-bottom behavior.
+ * Uses VirtualList (@shopify/flash-list) for performance.
+ *
+ * CRITICAL ARCHITECTURE RULES (see .claude/rules/browse/):
+ * - Uses VirtualList for virtualized rendering (virtualized-lists.md)
+ * - Uses inverted={true} for chat UX - newest at bottom (chat-log-scroll.md)
+ * - Uses Gluestack components, NO HTML tags (react-native-first.md)
  */
 
 import type React from 'react';
@@ -23,10 +27,15 @@ import {
   useSubscription,
 } from 'react-relay';
 import { fetchQuery, type GraphQLSubscriptionConfig } from 'relay-runtime';
+import { Box } from '@/components/atoms/Box.tsx';
+import { Button } from '@/components/atoms/Button.tsx';
 import { Center } from '@/components/atoms/Center.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { VStack } from '@/components/atoms/VStack.tsx';
+import { VirtualList, type VirtualListRef } from '@/lists/index.ts';
 import { colors, spacing } from '@/theme.ts';
 import type { SessionMessages_session$key } from './__generated__/SessionMessages_session.graphql.ts';
 import type { SessionMessagesPaginationQuery } from './__generated__/SessionMessagesPaginationQuery.graphql.ts';
@@ -63,7 +72,9 @@ interface SearchResult {
  * Pagination fragment for messages (forward pagination through DESC-ordered list).
  * Messages are returned newest-first from API, so `first: N` gets newest N,
  * and `after: cursor` gets older messages for "load more" when scrolling up.
- * Uses column-reverse so newest messages appear at the bottom.
+ *
+ * CRITICAL: Uses inverted VirtualList so newest messages appear at the bottom.
+ * The data order stays as-is (newest first), CSS transform handles display.
  */
 const SessionMessagesFragment = graphql`
   fragment SessionMessages_session on Session
@@ -95,17 +106,14 @@ const SessionMessagesFragment = graphql`
 
 /**
  * Subscription for new messages in this session.
- * Uses @appendEdge to add new messages to the connection.
+ * Uses @prependEdge to add new messages to the connection.
  *
- * NOTE ON ORDERING (may seem backwards but is correct):
+ * NOTE ON ORDERING WITH INVERTED LIST:
  * - API returns messages in DESC order (newest first)
- * - CSS column-reverse displays items bottom-to-top
- * - So: FIRST item in array = BOTTOM of visual display = newest message
- * - New messages need to appear at the BOTTOM (as newest)
- * - @appendEdge adds to END of Relay's connection edges
- * - With column-reverse, END of edges = TOP visually... BUT
- * - Relay connections with forward pagination (first/after) append new items
- *   at the logical "end" which with DESC data means they appear correctly
+ * - Connection stores [newest, ..., oldest]
+ * - Inverted VirtualList displays them visually as [oldest at top, newest at bottom]
+ * - New messages prepend to connection start = appear at visual bottom
+ * - @prependEdge adds to START of Relay's connection = correct!
  */
 const SessionMessagesSubscriptionDef = graphql`
   subscription SessionMessagesSubscription(
@@ -115,7 +123,7 @@ const SessionMessagesSubscriptionDef = graphql`
     sessionMessageAdded(sessionId: $sessionId) {
       sessionId
       messageIndex
-      newMessageEdge @appendEdge(connections: $connections) {
+      newMessageEdge @prependEdge(connections: $connections) {
         node {
           id
           searchText
@@ -130,13 +138,11 @@ const SessionMessagesSubscriptionDef = graphql`
 interface SessionMessagesProps {
   fragmentRef: SessionMessages_session$key;
   sessionId: string;
-  isLive: boolean;
 }
 
 export function SessionMessages({
   fragmentRef,
   sessionId,
-  isLive,
 }: SessionMessagesProps): React.ReactElement {
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,10 +156,15 @@ export function SessionMessages({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<VirtualListRef>(null);
   const environment = useRelayEnvironment();
+
+  // Tail/non-tail state - when true, auto-scroll on new messages
+  const isTailingRef = useRef(true);
+  const isLoadingRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
 
   // Update dropdown position when showing
   useEffect(() => {
@@ -182,8 +193,6 @@ export function SessionMessages({
     setIsSearching(true);
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        // Build the global ID for the session
-        // The format matches what the server expects
         const globalSessionId = `Session:${sessionId}`;
         const result = await fetchQuery<SessionMessagesSearchQuery>(
           environment,
@@ -215,11 +224,10 @@ export function SessionMessages({
     SessionMessages_session$key
   >(SessionMessagesFragment, fragmentRef);
 
-  // Get connection ID for @appendEdge directive
-  // The connection ID is the __id of the messages connection
+  // Get connection ID for @prependEdge directive
   const connectionId = data?.messages?.__id;
 
-  // Subscription for live updates - uses @appendEdge to add new messages without refetching
+  // Subscription for live updates
   const subscriptionConfig = useMemo<
     GraphQLSubscriptionConfig<SessionMessagesSubscription>
   >(
@@ -239,82 +247,65 @@ export function SessionMessages({
   useSubscription<SessionMessagesSubscription>(subscriptionConfig);
 
   // Get message nodes from edges, filtering out null/undefined
-  // API returns newest-first (DESC), reverse to show oldest-first (newest at bottom)
-  const messageNodes = (data?.messages?.edges ?? [])
-    .map((edge) => edge?.node)
-    .filter(
-      (node): node is NonNullable<typeof node> =>
-        node != null && node.id != null
-    )
-    .reverse();
+  // DO NOT reverse - inverted VirtualList handles visual order
+  const messageNodes = useMemo(
+    () =>
+      (data?.messages?.edges ?? [])
+        .map((edge) => edge?.node)
+        .filter(
+          (node): node is NonNullable<typeof node> =>
+            node != null && node.id != null
+        ),
+    [data?.messages?.edges]
+  );
 
-  // Refs for scroll container and load more trigger
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const isLoadingRef = useRef(false);
-  const prevScrollHeightRef = useRef<number>(0);
+  // Track message count changes for auto-scroll
+  useEffect(() => {
+    const currentCount = messageNodes.length;
+    const prevCount = prevMessageCountRef.current;
 
-  // Load older messages when scrolling up (forward pagination through DESC list)
-  // Preserves scroll position by recording scroll height before load
-  const handleLoadMore = useCallback(() => {
+    // New messages arrived (not from pagination loading)
+    if (
+      currentCount > prevCount &&
+      !isLoadingRef.current &&
+      isTailingRef.current
+    ) {
+      // Scroll to top (which is visual bottom with inverted list)
+      listRef.current?.scrollToTop(true);
+    }
+
+    prevMessageCountRef.current = currentCount;
+  }, [messageNodes.length]);
+
+  // Load older messages (called when scrolling to the END of inverted list = visual TOP)
+  const handleLoadOlder = useCallback(() => {
     if (hasNext && !isLoadingNext && !isPending && !isLoadingRef.current) {
       isLoadingRef.current = true;
-      // Record scroll height before loading
-      if (scrollRef.current) {
-        prevScrollHeightRef.current = scrollRef.current.scrollHeight;
-      }
       startTransition(() => {
         loadNext(50);
       });
     }
   }, [hasNext, isLoadingNext, isPending, loadNext]);
 
-  // Restore scroll position after loading older messages
+  // Reset loading flag
   useEffect(() => {
     if (!isLoadingNext && !isPending && isLoadingRef.current) {
       isLoadingRef.current = false;
-      const scrollEl = scrollRef.current;
-      if (scrollEl && prevScrollHeightRef.current > 0) {
-        // Calculate new scroll position to maintain view
-        const newScrollHeight = scrollEl.scrollHeight;
-        const heightDiff = newScrollHeight - prevScrollHeightRef.current;
-        if (heightDiff > 0) {
-          scrollEl.scrollTop += heightDiff;
-        }
-        prevScrollHeightRef.current = 0;
-      }
     }
   }, [isLoadingNext, isPending]);
 
-  // Scroll to bottom on initial load only
-  const hasInitializedRef = useRef(false);
-  useEffect(() => {
-    if (
-      !hasInitializedRef.current &&
-      bottomRef.current &&
-      messageNodes.length > 0
-    ) {
-      hasInitializedRef.current = true;
-      bottomRef.current.scrollIntoView({ behavior: 'instant' });
-    }
-  }, [messageNodes.length]);
+  // Handle tail state changes from VirtualList
+  const handleTailStateChange = useCallback((isTailing: boolean) => {
+    isTailingRef.current = isTailing;
+  }, []);
 
-  // Jump to a specific message by index
-  // The index comes from the server-side FTS search (lineNumber)
+  // Jump to a specific message
   const jumpToMessage = useCallback(
     (messageIndex: number, messageId: string) => {
       setHighlightedIndex(messageIndex);
-      // Try to find the message in already-loaded messages
       const element = messageRefs.current.get(messageId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        // Message not loaded yet - we'd need to load more messages
-        // For now, just highlight and let the user know
-        console.log(
-          `Message ${messageId} at index ${messageIndex} not yet loaded`
-        );
       }
       setShowDropdown(false);
       setSearchQuery('');
@@ -323,42 +314,67 @@ export function SessionMessages({
     []
   );
 
-  // Intersection observer for infinite scroll - triggers when "load older" element is visible
-  // Only triggers if not already loading
-  useEffect(() => {
-    const element = loadMoreRef.current;
-    if (!element || !hasNext) return;
+  // Handle search input key events
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowDown' && searchResults.length > 0) {
+        e.preventDefault();
+        setSelectedResultIndex((prev) =>
+          Math.min(prev + 1, searchResults.length - 1)
+        );
+      }
+      if (e.key === 'ArrowUp' && searchResults.length > 0) {
+        e.preventDefault();
+        setSelectedResultIndex((prev) => Math.max(prev - 1, 0));
+      }
+      if (e.key === 'Enter' && searchResults.length > 0) {
+        e.preventDefault();
+        const result = searchResults[selectedResultIndex];
+        jumpToMessage(result.messageIndex, result.messageId);
+      }
+      if (e.key === 'Escape') {
+        setSearchQuery('');
+        setShowDropdown(false);
+        setHighlightedIndex(null);
+      }
+    },
+    [searchResults, selectedResultIndex, jumpToMessage]
+  );
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isLoadingRef.current) {
-          handleLoadMore();
-        }
-      },
-      { threshold: 0.1, rootMargin: '100px' }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [hasNext, handleLoadMore]);
+  // Render a single message item
+  const renderMessage = useCallback(
+    (node: NonNullable<(typeof messageNodes)[number]>, index: number) => {
+      const isHighlighted = highlightedIndex === index;
+      return (
+        <Box
+          ref={(el: HTMLDivElement | null) => {
+            if (el && node.id) messageRefs.current.set(node.id, el);
+          }}
+          style={{
+            paddingVertical: spacing.xs,
+            paddingHorizontal: spacing.sm,
+            borderRadius: 6,
+            borderWidth: isHighlighted ? 2 : 0,
+            borderColor: isHighlighted ? colors.accent.primary : 'transparent',
+            borderStyle: 'solid',
+            width: '100%',
+          }}
+        >
+          <MessageCard fragmentRef={node} />
+        </Box>
+      );
+    },
+    [highlightedIndex]
+  );
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Sticky header at top */}
-      <div
+    <VStack style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {/* Sticky header */}
+      <Box
         style={{
           flexShrink: 0,
           backgroundColor: colors.bg.primary,
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.sm,
+          padding: spacing.sm,
           paddingLeft: spacing.md,
           paddingRight: spacing.md,
           borderBottom: `1px solid ${colors.border.default}`,
@@ -373,99 +389,53 @@ export function SessionMessages({
             <Text size="sm" style={{ fontWeight: 600 }}>
               Messages ({data?.messageCount ?? 0})
             </Text>
-            {isLive && (
-              <span
-                title="Live - receiving updates"
-                style={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: '#22c55e',
-                  boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)',
-                  animation: 'pulse 2s ease-in-out infinite',
-                }}
-              />
-            )}
+            <Box
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: '#22c55e',
+                boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)',
+              }}
+            />
           </HStack>
-          <div ref={searchContainerRef} style={{ position: 'relative' }}>
+
+          {/* Search input */}
+          <Box ref={searchContainerRef} style={{ position: 'relative' }}>
             <HStack gap="xs" align="center">
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Jump to message..."
+              <Input
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
+                onChange={(value) => {
+                  setSearchQuery(value);
                   setShowDropdown(true);
                   setSelectedResultIndex(0);
                 }}
-                onFocus={() => {
-                  if (searchQuery.trim()) setShowDropdown(true);
-                }}
-                onBlur={() => {
-                  // Delay to allow click on dropdown item
-                  setTimeout(() => setShowDropdown(false), 150);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown' && searchResults.length > 0) {
-                    e.preventDefault();
-                    setSelectedResultIndex((prev) =>
-                      Math.min(prev + 1, searchResults.length - 1)
-                    );
-                  }
-                  if (e.key === 'ArrowUp' && searchResults.length > 0) {
-                    e.preventDefault();
-                    setSelectedResultIndex((prev) => Math.max(prev - 1, 0));
-                  }
-                  if (e.key === 'Enter' && searchResults.length > 0) {
-                    e.preventDefault();
-                    const result = searchResults[selectedResultIndex];
-                    jumpToMessage(result.messageIndex, result.messageId);
-                  }
-                  if (e.key === 'Escape') {
-                    setSearchQuery('');
-                    setShowDropdown(false);
-                    setHighlightedIndex(null);
-                  }
-                }}
-                style={{
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  fontSize: 12,
-                  backgroundColor: colors.bg.secondary,
-                  border: `1px solid ${colors.border.subtle}`,
-                  borderRadius: 4,
-                  color: colors.text.primary,
-                  width: 200,
-                  outline: 'none',
-                }}
+                placeholder="Jump to message..."
+                size="sm"
+                style={{ width: 200 }}
+                onKeyDown={handleSearchKeyDown}
               />
               {searchQuery && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setSearchQuery('');
                     setShowDropdown(false);
                     setHighlightedIndex(null);
                   }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: colors.text.muted,
-                    fontSize: 14,
-                    padding: 2,
-                  }}
+                  style={{ padding: 2, minWidth: 'auto' }}
                 >
-                  ×
-                </button>
+                  <Text size="sm">×</Text>
+                </Button>
               )}
             </HStack>
-            {/* Autocomplete dropdown - rendered via portal to avoid z-index clipping */}
+
+            {/* Search dropdown - portal for z-index */}
             {showDropdown &&
               searchResults.length > 0 &&
               createPortal(
-                <div
+                <Box
                   style={{
                     position: 'fixed',
                     top: dropdownPosition.top,
@@ -480,58 +450,56 @@ export function SessionMessages({
                     zIndex: 10000,
                   }}
                 >
-                  {searchResults.map((result, resultIdx) => (
-                    <button
+                  {searchResults.map((result, idx) => (
+                    <Button
                       key={result.messageId}
-                      type="button"
+                      variant="ghost"
                       onClick={() =>
                         jumpToMessage(result.messageIndex, result.messageId)
                       }
                       style={{
                         display: 'block',
                         width: '100%',
-                        padding: `${spacing.sm}px ${spacing.md}px`,
+                        padding: spacing.sm,
                         textAlign: 'left',
-                        border: 'none',
+                        borderRadius: 0,
                         borderBottom:
-                          resultIdx < searchResults.length - 1
+                          idx < searchResults.length - 1
                             ? `1px solid ${colors.border.subtle}`
                             : 'none',
                         backgroundColor:
-                          resultIdx === selectedResultIndex
+                          idx === selectedResultIndex
                             ? colors.bg.tertiary
                             : 'transparent',
-                        cursor: 'pointer',
-                        color: colors.text.primary,
                       }}
-                      onMouseEnter={() => setSelectedResultIndex(resultIdx)}
                     >
-                      <Text size="xs" color="muted" style={{ marginBottom: 2 }}>
-                        Message #{result.messageIndex + 1}
-                      </Text>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          lineHeight: 1.4,
-                          color: colors.text.primary,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {result.matchContext || result.preview || '(empty)'}
-                      </span>
-                    </button>
+                      <VStack gap="xs" align="flex-start">
+                        <Text size="xs" color="muted">
+                          Message #{result.messageIndex + 1}
+                        </Text>
+                        <Text
+                          size="sm"
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%',
+                          }}
+                        >
+                          {result.matchContext || result.preview || '(empty)'}
+                        </Text>
+                      </VStack>
+                    </Button>
                   ))}
-                </div>,
+                </Box>,
                 document.body
               )}
+
             {showDropdown &&
               searchQuery.trim() &&
               searchResults.length === 0 &&
               createPortal(
-                <div
+                <Box
                   style={{
                     position: 'fixed',
                     top: dropdownPosition.top,
@@ -557,88 +525,28 @@ export function SessionMessages({
                       No matching messages
                     </Text>
                   )}
-                </div>,
+                </Box>,
                 document.body
               )}
-          </div>
-          <style>
-            {`
-              @keyframes pulse {
-                0%, 100% {
-                  opacity: 1;
-                  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
-                }
-                50% {
-                  opacity: 0.6;
-                  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
-                }
-              }
-            `}
-          </style>
+          </Box>
         </HStack>
-      </div>
+      </Box>
 
-      {/* Scrollable messages area */}
-      <div
-        ref={scrollRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          minHeight: 0,
-        }}
-      >
-        {messageNodes.length === 0 ? (
-          <Center style={{ padding: spacing.xl }}>
+      {/* Scrollable messages list */}
+      <VirtualList
+        ref={listRef}
+        data={messageNodes}
+        renderItem={(node, index) => renderMessage(node, index)}
+        itemHeight={200}
+        inverted
+        onEndReached={handleLoadOlder}
+        onTailStateChange={handleTailStateChange}
+        ListEmptyComponent={
+          <Center style={{ height: '100%' }}>
             <Text color="muted">No messages in this session.</Text>
           </Center>
-        ) : (
-          <>
-            {/* Load more trigger at top */}
-            {hasNext && (
-              <div ref={loadMoreRef}>
-                <Center style={{ padding: spacing.md }}>
-                  {isLoadingNext || isPending ? (
-                    <Spinner />
-                  ) : (
-                    <Text size="xs" color="muted">
-                      ↑ Scroll up to load older messages
-                    </Text>
-                  )}
-                </Center>
-              </div>
-            )}
-
-            {/* Messages in chronological order (oldest first) */}
-            <div style={{ padding: spacing.md, paddingTop: 0 }}>
-              {messageNodes.map((node, idx) => {
-                const isHighlighted = highlightedIndex === idx;
-                return (
-                  <div
-                    key={node.id ?? idx}
-                    ref={(el) => {
-                      if (el && node.id) messageRefs.current.set(node.id, el);
-                    }}
-                    style={{
-                      marginBottom: spacing.sm,
-                      borderRadius: 6,
-                      outline: isHighlighted
-                        ? `2px solid ${colors.accent.primary}`
-                        : 'none',
-                      outlineOffset: 2,
-                    }}
-                  >
-                    <MessageCard fragmentRef={node} />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Bottom anchor for scroll-to-bottom */}
-            <div ref={bottomRef} style={{ height: spacing.md }} />
-          </>
-        )}
-      </div>
-    </div>
+        }
+      />
+    </VStack>
   );
 }

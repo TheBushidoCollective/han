@@ -68,13 +68,13 @@ export type {
 	// Session todos
 	SessionTodos,
 	SessionTodosInput,
-	TodoItem,
 	// Task/Metrics
 	Task,
 	TaskCompletion,
 	TaskFailure,
 	TaskInput,
 	TaskMetrics,
+	TodoItem,
 	VectorSearchResult,
 } from "../../../han-native";
 

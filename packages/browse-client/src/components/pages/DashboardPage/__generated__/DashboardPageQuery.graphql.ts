@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<1ac3059ea0f296b179c50331d72dc5c3>>
+ * @generated SignedSource<<e46b7e61e9ee5b18afd35198f4caccb8>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -63,11 +63,6 @@ export type DashboardPageQuery$data = {
     readonly totalActiveDays: number | null | undefined;
     readonly totalMessages: number | null | undefined;
     readonly totalSessions: number | null | undefined;
-  } | null | undefined;
-  readonly checkpointStats: {
-    readonly agentCheckpoints: number | null | undefined;
-    readonly sessionCheckpoints: number | null | undefined;
-    readonly totalCheckpoints: number | null | undefined;
   } | null | undefined;
   readonly metrics: {
     readonly averageConfidence: number | null | undefined;
@@ -265,38 +260,6 @@ v8 = {
 v9 = {
   "alias": null,
   "args": null,
-  "concreteType": "CheckpointStats",
-  "kind": "LinkedField",
-  "name": "checkpointStats",
-  "plural": false,
-  "selections": [
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "totalCheckpoints",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "sessionCheckpoints",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "agentCheckpoints",
-      "storageKey": null
-    }
-  ],
-  "storageKey": null
-},
-v10 = {
-  "alias": null,
-  "args": null,
   "concreteType": "PluginStats",
   "kind": "LinkedField",
   "name": "pluginStats",
@@ -340,7 +303,7 @@ v10 = {
   ],
   "storageKey": null
 },
-v11 = {
+v10 = {
   "alias": null,
   "args": null,
   "concreteType": "PluginCategory",
@@ -365,63 +328,63 @@ v11 = {
   ],
   "storageKey": null
 },
-v12 = {
+v11 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "date",
   "storageKey": null
 },
-v13 = {
+v12 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "sessionCount",
   "storageKey": null
 },
-v14 = {
+v13 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "messageCount",
   "storageKey": null
 },
-v15 = {
+v14 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "inputTokens",
   "storageKey": null
 },
-v16 = {
+v15 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "outputTokens",
   "storageKey": null
 },
-v17 = {
+v16 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "totalTokens",
   "storageKey": null
 },
-v18 = {
+v17 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "model",
   "storageKey": null
 },
-v19 = {
+v18 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "displayName",
   "storageKey": null
 },
-v20 = {
+v19 = {
   "alias": null,
   "args": [
     {
@@ -443,11 +406,11 @@ v20 = {
       "name": "dailyActivity",
       "plural": true,
       "selections": [
+        (v11/*: any*/),
         (v12/*: any*/),
         (v13/*: any*/),
         (v14/*: any*/),
         (v15/*: any*/),
-        (v16/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -494,8 +457,8 @@ v20 = {
           "name": "hour",
           "storageKey": null
         },
-        (v13/*: any*/),
-        (v14/*: any*/)
+        (v12/*: any*/),
+        (v13/*: any*/)
       ],
       "storageKey": null
     },
@@ -528,7 +491,7 @@ v20 = {
           "name": "totalCachedTokens",
           "storageKey": null
         },
-        (v17/*: any*/),
+        (v16/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -536,8 +499,8 @@ v20 = {
           "name": "estimatedCostUsd",
           "storageKey": null
         },
-        (v14/*: any*/),
-        (v13/*: any*/)
+        (v13/*: any*/),
+        (v12/*: any*/)
       ],
       "storageKey": null
     },
@@ -549,7 +512,7 @@ v20 = {
       "name": "dailyModelTokens",
       "plural": true,
       "selections": [
-        (v12/*: any*/),
+        (v11/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -558,8 +521,8 @@ v20 = {
           "name": "models",
           "plural": true,
           "selections": [
+            (v17/*: any*/),
             (v18/*: any*/),
-            (v19/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -570,7 +533,7 @@ v20 = {
           ],
           "storageKey": null
         },
-        (v17/*: any*/)
+        (v16/*: any*/)
       ],
       "storageKey": null
     },
@@ -582,10 +545,10 @@ v20 = {
       "name": "modelUsage",
       "plural": true,
       "selections": [
+        (v17/*: any*/),
         (v18/*: any*/),
-        (v19/*: any*/),
+        (v14/*: any*/),
         (v15/*: any*/),
-        (v16/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -600,7 +563,7 @@ v20 = {
           "name": "cacheCreationTokens",
           "storageKey": null
         },
-        (v17/*: any*/)
+        (v16/*: any*/)
       ],
       "storageKey": null
     },
@@ -642,7 +605,7 @@ v20 = {
   ],
   "storageKey": "activity(days:730)"
 },
-v21 = [
+v20 = [
   {
     "kind": "Literal",
     "name": "first",
@@ -650,7 +613,7 @@ v21 = [
   },
   (v3/*: any*/)
 ],
-v22 = {
+v21 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -713,8 +676,7 @@ return {
       (v8/*: any*/),
       (v9/*: any*/),
       (v10/*: any*/),
-      (v11/*: any*/),
-      (v20/*: any*/)
+      (v19/*: any*/)
     ],
     "type": "Query",
     "abstractKey": null
@@ -728,7 +690,7 @@ return {
       (v2/*: any*/),
       {
         "alias": null,
-        "args": (v21/*: any*/),
+        "args": (v20/*: any*/),
         "concreteType": "SessionConnection",
         "kind": "LinkedField",
         "name": "sessions",
@@ -800,7 +762,7 @@ return {
                     "name": "summary",
                     "storageKey": null
                   },
-                  (v14/*: any*/),
+                  (v13/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -837,7 +799,7 @@ return {
                         "name": "activeForm",
                         "storageKey": null
                       },
-                      (v22/*: any*/),
+                      (v21/*: any*/),
                       (v1/*: any*/)
                     ],
                     "storageKey": null
@@ -845,34 +807,63 @@ return {
                   {
                     "alias": null,
                     "args": null,
-                    "concreteType": "Task",
+                    "concreteType": "TaskConnection",
                     "kind": "LinkedField",
                     "name": "activeTasks",
-                    "plural": true,
+                    "plural": false,
                     "selections": [
-                      (v1/*: any*/),
                       {
                         "alias": null,
                         "args": null,
                         "kind": "ScalarField",
-                        "name": "taskId",
+                        "name": "totalCount",
                         "storageKey": null
                       },
                       {
                         "alias": null,
                         "args": null,
-                        "kind": "ScalarField",
-                        "name": "description",
+                        "concreteType": "TaskEdge",
+                        "kind": "LinkedField",
+                        "name": "edges",
+                        "plural": true,
+                        "selections": [
+                          {
+                            "alias": null,
+                            "args": null,
+                            "concreteType": "Task",
+                            "kind": "LinkedField",
+                            "name": "node",
+                            "plural": false,
+                            "selections": [
+                              (v1/*: any*/),
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "taskId",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "description",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "type",
+                                "storageKey": null
+                              },
+                              (v21/*: any*/)
+                            ],
+                            "storageKey": null
+                          }
+                        ],
                         "storageKey": null
-                      },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "type",
-                        "storageKey": null
-                      },
-                      (v22/*: any*/)
+                      }
                     ],
                     "storageKey": null
                   },
@@ -930,7 +921,7 @@ return {
       },
       {
         "alias": null,
-        "args": (v21/*: any*/),
+        "args": (v20/*: any*/),
         "filters": [
           "projectId"
         ],
@@ -942,12 +933,11 @@ return {
       (v8/*: any*/),
       (v9/*: any*/),
       (v10/*: any*/),
-      (v11/*: any*/),
-      (v20/*: any*/)
+      (v19/*: any*/)
     ]
   },
   "params": {
-    "cacheID": "b3b2be1bcb3635deb99f3163c410ea95",
+    "cacheID": "1c9d820d1c9b70d52423edbb6f6bb8f5",
     "id": null,
     "metadata": {
       "connection": [
@@ -963,11 +953,11 @@ return {
     },
     "name": "DashboardPageQuery",
     "operationKind": "query",
-    "text": "query DashboardPageQuery(\n  $projectId: String\n) {\n  projects(first: 100) {\n    id\n  }\n  sessions(first: 5, projectId: $projectId) {\n    edges {\n      node {\n        id\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n  metrics(period: WEEK) {\n    totalTasks\n    completedTasks\n    successRate\n    averageConfidence\n    calibrationScore\n    significantFrustrations\n    significantFrustrationRate\n  }\n  checkpointStats {\n    totalCheckpoints\n    sessionCheckpoints\n    agentCheckpoints\n  }\n  pluginStats {\n    totalPlugins\n    userPlugins\n    projectPlugins\n    localPlugins\n    enabledPlugins\n  }\n  pluginCategories {\n    category\n    count\n  }\n  activity(days: 730) {\n    dailyActivity {\n      date\n      sessionCount\n      messageCount\n      inputTokens\n      outputTokens\n      cachedTokens\n      linesAdded\n      linesRemoved\n      filesChanged\n    }\n    hourlyActivity {\n      hour\n      sessionCount\n      messageCount\n    }\n    tokenUsage {\n      totalInputTokens\n      totalOutputTokens\n      totalCachedTokens\n      totalTokens\n      estimatedCostUsd\n      messageCount\n      sessionCount\n    }\n    dailyModelTokens {\n      date\n      models {\n        model\n        displayName\n        tokens\n      }\n      totalTokens\n    }\n    modelUsage {\n      model\n      displayName\n      inputTokens\n      outputTokens\n      cacheReadTokens\n      cacheCreationTokens\n      totalTokens\n    }\n    totalSessions\n    totalMessages\n    firstSessionDate\n    streakDays\n    totalActiveDays\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    id\n    taskId\n    description\n    type\n    status\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
+    "text": "query DashboardPageQuery(\n  $projectId: String\n) {\n  projects(first: 100) {\n    id\n  }\n  sessions(first: 5, projectId: $projectId) {\n    edges {\n      node {\n        id\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n  metrics(period: WEEK) {\n    totalTasks\n    completedTasks\n    successRate\n    averageConfidence\n    calibrationScore\n    significantFrustrations\n    significantFrustrationRate\n  }\n  pluginStats {\n    totalPlugins\n    userPlugins\n    projectPlugins\n    localPlugins\n    enabledPlugins\n  }\n  pluginCategories {\n    category\n    count\n  }\n  activity(days: 730) {\n    dailyActivity {\n      date\n      sessionCount\n      messageCount\n      inputTokens\n      outputTokens\n      cachedTokens\n      linesAdded\n      linesRemoved\n      filesChanged\n    }\n    hourlyActivity {\n      hour\n      sessionCount\n      messageCount\n    }\n    tokenUsage {\n      totalInputTokens\n      totalOutputTokens\n      totalCachedTokens\n      totalTokens\n      estimatedCostUsd\n      messageCount\n      sessionCount\n    }\n    dailyModelTokens {\n      date\n      models {\n        model\n        displayName\n        tokens\n      }\n      totalTokens\n    }\n    modelUsage {\n      model\n      displayName\n      inputTokens\n      outputTokens\n      cacheReadTokens\n      cacheCreationTokens\n      totalTokens\n    }\n    totalSessions\n    totalMessages\n    firstSessionDate\n    streakDays\n    totalActiveDays\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "cda16f75e3f5843fb5c4f69a234145c2";
+(node as any).hash = "e816707f10a9202c4669c081170ae66a";
 
 export default node;

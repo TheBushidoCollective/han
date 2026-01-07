@@ -7,8 +7,8 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	isCacheEnabled,
-	isCheckpointsEnabled,
 	isFailFastEnabled,
+	isSessionFilteringEnabled,
 } from "../config/index.ts";
 import {
 	ensureSessionIndexed,
@@ -969,7 +969,7 @@ export async function runConfiguredHook(
 	// Force-index the current session to ensure session_file_changes is up to date
 	// This replaces transcript parsing with SQLite queries
 	let sessionModifiedFiles: SessionModifiedFiles | undefined;
-	if (sessionId && isCheckpointsEnabled()) {
+	if (sessionId && isSessionFilteringEnabled()) {
 		await ensureSessionIndexed(sessionId, projectRoot);
 		sessionModifiedFiles = await getSessionModifiedFiles(sessionId);
 	}
@@ -1005,7 +1005,7 @@ export async function runConfiguredHook(
 
 			// Check session-modified files filter (from SQLite session_file_changes)
 			// Only applies when cache is enabled and session filter is enabled
-			if (sessionModifiedFiles && isCheckpointsEnabled()) {
+			if (sessionModifiedFiles && isSessionFilteringEnabled()) {
 				// Only apply filter if we have modifications
 				if (
 					sessionModifiedFiles.success &&
@@ -1120,7 +1120,7 @@ export async function runConfiguredHook(
 				cache &&
 				sessionModifiedFiles &&
 				sessionModifiedFiles.success &&
-				isCheckpointsEnabled()
+				isSessionFilteringEnabled()
 			) {
 				// Session-scoped: only run on files THIS session modified
 				const sessionFiles = getSessionFilteredFiles(
@@ -1233,6 +1233,8 @@ export async function runConfiguredHook(
 	}
 
 	// Update cache manifest and record file validations for successful executions
+	// Only hooks WITH ifChanged patterns record file validations (they validate specific files)
+	// Hooks without ifChanged validate the entire codebase, not specific files
 	if (cache && successfulConfigs.length > 0) {
 		const sessionId = options.sessionId ?? getSessionIdFromEnv();
 
@@ -1251,8 +1253,7 @@ export async function runConfiguredHook(
 					pluginRoot,
 				);
 
-				// Record file validations directly to the database
-				// This tracks which files have been validated by this plugin/hook/directory
+				// Record file validations for matched files
 				if (sessionId) {
 					const commandHash = computeCommandHash(config.command);
 					const matchedFiles = findFilesWithGlob(
@@ -1260,7 +1261,6 @@ export async function runConfiguredHook(
 						config.ifChanged,
 					);
 
-					// Record validation for each matched file
 					for (const filePath of matchedFiles) {
 						const fileHash = computeFileHash(filePath);
 						try {
@@ -1274,7 +1274,6 @@ export async function runConfiguredHook(
 								commandHash,
 							});
 						} catch (err) {
-							// Log but don't fail - validation tracking is informational
 							if (verbose) {
 								console.warn(
 									`[${pluginName}/${hookName}] Failed to record validation for ${filePath}: ${err}`,

@@ -9,6 +9,27 @@ directive @defer(
   label: String
 ) on FRAGMENT_SPREAD | INLINE_FRAGMENT
 
+"""Information about an active slot"""
+type ActiveSlot {
+  """How long the slot has been held in milliseconds"""
+  heldForMs: Int
+
+  """Hook currently running"""
+  hookName: String
+
+  """Process ID holding the slot"""
+  pid: Int
+
+  """Plugin that owns the hook"""
+  pluginName: String
+
+  """Session that owns this slot"""
+  sessionId: String
+
+  """Slot identifier"""
+  slotId: Int
+}
+
 """Complete activity data for dashboard visualizations"""
 type ActivityData {
   """Activity by day for heatmap (last 365 days)"""
@@ -44,6 +65,30 @@ type ActivityData {
 
   """Total sessions from Claude Code stats (survives session cleanup)"""
   totalSessions: Int
+}
+
+"""A subagent task spawned by a Task tool call"""
+type AgentTask {
+  """Unique ID of the agent task"""
+  agentId: String
+
+  """When the agent task ended"""
+  endedAt: String
+
+  """Number of messages in the agent task"""
+  messageCount: Int
+
+  """Project name"""
+  project: String
+
+  """Full path to the project"""
+  projectPath: String
+
+  """Parent session ID that spawned this agent"""
+  sessionId: String
+
+  """When the agent task started"""
+  startedAt: String
 }
 
 """An assistant (Claude) message in a session"""
@@ -100,6 +145,11 @@ type AssistantMessage implements Message {
 
   """Number of tool use blocks in this message"""
   toolUseCount: Int
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 scalar BigInt
@@ -138,54 +188,6 @@ type CacheStats {
 
   """Total number of tracked files"""
   totalFiles: Int
-}
-
-"""A captured checkpoint of file state"""
-type Checkpoint {
-  """Original checkpoint ID"""
-  checkpointId: String
-
-  """When the checkpoint was created"""
-  createdAt: DateTime
-
-  """Number of files in checkpoint"""
-  fileCount: Int
-
-  """Checkpoint ID"""
-  id: ID
-
-  """Path to checkpoint file"""
-  path: String
-
-  """Number of glob patterns used"""
-  patternCount: Int
-
-  """Glob patterns used to capture files"""
-  patterns: [String!]
-
-  """Checkpoint type"""
-  type: CheckpointType
-}
-
-"""Aggregate checkpoint statistics"""
-type CheckpointStats {
-  """Number of agent checkpoints"""
-  agentCheckpoints: Int
-
-  """Number of session checkpoints"""
-  sessionCheckpoints: Int
-
-  """Total number of checkpoints"""
-  totalCheckpoints: Int
-
-  """Total files tracked across all checkpoints"""
-  totalFiles: Int
-}
-
-"""Type of checkpoint"""
-enum CheckpointType {
-  AGENT
-  SESSION
 }
 
 """Citation from memory search"""
@@ -231,6 +233,46 @@ type ClaudeSettingsSummary {
 
   """Number of enabled plugins"""
   pluginCount: Int
+}
+
+"""A slash command message in a session"""
+type CommandUserMessage implements Message & UserMessage {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Name of the slash command (e.g., 'commit', 'review')"""
+  commandName: String
+
+  """Command message text content (including command name)"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Sentiment analysis for this message (if available)"""
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the command was sent"""
+  timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Confidence level in search results"""
@@ -306,24 +348,6 @@ enum EventAction {
   UPDATED
 }
 
-"""Exposed tool call (proxied from backend MCP server)"""
-type ExposedToolCallEvent implements HanEvent {
-  """Tool arguments as JSON string"""
-  arguments: String
-  eventType: String
-  id: ID
-
-  """Full prefixed tool name"""
-  prefixedName: String
-
-  """Backend server name"""
-  server: String
-  timestamp: DateTime
-
-  """Tool name"""
-  tool: String
-}
-
 """An exposed tool call event"""
 type ExposedToolCallMessage implements Message {
   """
@@ -364,6 +388,11 @@ type ExposedToolCallMessage implements Message {
 
   """Name of the exposed tool"""
   tool: String
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Exposed tool result (inline, not a separate event)"""
@@ -388,36 +417,6 @@ type ExposedToolResult {
 
   """When the result was recorded"""
   timestamp: DateTime
-}
-
-"""Exposed tool result returned"""
-type ExposedToolResultEvent implements HanEvent {
-  """Call ID for correlation"""
-  callId: String
-
-  """Execution duration in milliseconds"""
-  durationMs: Int
-
-  """Error message (if failed)"""
-  error: String
-  eventType: String
-  id: ID
-
-  """Full prefixed tool name"""
-  prefixedName: String
-
-  """Result as JSON string (if success)"""
-  result: String
-
-  """Backend server name"""
-  server: String
-
-  """Whether call succeeded"""
-  success: Boolean
-  timestamp: DateTime
-
-  """Tool name"""
-  tool: String
 }
 
 """An exposed tool result event"""
@@ -461,6 +460,11 @@ type ExposedToolResultMessage implements Message {
 
   """Name of the exposed tool"""
   tool: String
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A file change that occurred during a session"""
@@ -483,6 +487,9 @@ type FileChange {
   """Whether this file has been validated by any hook"""
   isValidated: Boolean
 
+  """Hooks whose patterns match this file but haven't validated it (yellow)"""
+  missingValidations: [FileValidation!]
+
   """When the change was recorded"""
   recordedAt: DateTime
 
@@ -492,7 +499,7 @@ type FileChange {
   """The tool that made the change (Edit, Write, Bash)"""
   toolName: String
 
-  """Hook validations for this file"""
+  """Hook validations for this file (validated = green)"""
   validations: [FileValidation!]
 }
 
@@ -506,6 +513,27 @@ enum FileChangeAction {
 
   """File was modified"""
   MODIFIED
+}
+
+"""A paginated list of file changes"""
+type FileChangeConnection {
+  """List of file change edges"""
+  edges: [FileChangeEdge!]
+
+  """Pagination information"""
+  pageInfo: PageInfo
+
+  """Total number of file changes"""
+  totalCount: Int
+}
+
+"""An edge in a file change connection"""
+type FileChangeEdge {
+  """Cursor for this edge"""
+  cursor: String
+
+  """The file change at this edge"""
+  node: FileChange
 }
 
 """A file history snapshot message tracking file state changes"""
@@ -543,6 +571,11 @@ type FileHistorySnapshotMessage implements Message {
 
   """When the snapshot was taken"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A hook validation for a file"""
@@ -561,6 +594,30 @@ type FileValidation {
 
   """When the file was validated"""
   validatedAt: DateTime
+}
+
+"""Aggregated frustration metrics for a session"""
+type FrustrationSummary {
+  """Average frustration score (0-10)"""
+  averageScore: Float
+
+  """Count of high frustration events"""
+  highCount: Int
+
+  """Count of moderate frustration events"""
+  moderateCount: Int
+
+  """Overall frustration level: none, low, moderate, or high"""
+  overallLevel: String
+
+  """Peak frustration score in the session"""
+  peakScore: Float
+
+  """Most common frustration signals"""
+  topSignals: [String!]
+
+  """Total messages analyzed for sentiment"""
+  totalAnalyzed: Int
 }
 
 """Summary of Han user configuration"""
@@ -585,31 +642,6 @@ type HanConfigSummary {
 
   """Number of plugins with custom configuration"""
   pluginConfigCount: Int
-}
-
-"""A Han event (hook execution, MCP call, memory operation)"""
-interface HanEvent {
-  """Event type discriminator (hook_run, mcp_tool_call, etc.)"""
-  eventType: String
-
-  """Global event ID in format {EventTypename}:{uuid}"""
-  id: ID
-
-  """When the event occurred"""
-  timestamp: DateTime
-}
-
-"""Type of Han event"""
-enum HanEventType {
-  EXPOSED_TOOL_CALL
-  EXPOSED_TOOL_RESULT
-  HOOK_RESULT
-  HOOK_RUN
-  MCP_TOOL_CALL
-  MCP_TOOL_RESULT
-  MEMORY_LEARN
-  MEMORY_QUERY
-  SENTIMENT_ANALYSIS
 }
 
 """A datetime injection event"""
@@ -644,10 +676,21 @@ type HookDatetimeMessage implements Message {
 
   """When the datetime was injected"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A single hook execution record"""
 type HookExecution {
+  """The command that was executed"""
+  command: String
+
+  """Directory where the hook executed"""
+  directory: String
+
   """Duration in milliseconds"""
   durationMs: Int
 
@@ -669,6 +712,9 @@ type HookExecution {
   """Hook execution ID"""
   id: String
 
+  """Glob patterns that trigger this hook (for file validation tracking)"""
+  ifChanged: [String!]
+
   """Hook output (truncated if long)"""
   output: String
 
@@ -678,11 +724,43 @@ type HookExecution {
   """Session ID this hook ran in"""
   sessionId: String
 
+  """Execution status (RUNNING, PASSED, FAILED, KILLED)"""
+  status: HookExecutionStatus
+
   """Task ID this hook ran for"""
   taskId: String
 
   """When the hook executed"""
   timestamp: String
+}
+
+"""A paginated list of hook executions"""
+type HookExecutionConnection {
+  """List of hook execution edges"""
+  edges: [HookExecutionEdge!]
+
+  """Pagination information"""
+  pageInfo: PageInfo
+
+  """Total number of hook executions"""
+  totalCount: Int
+}
+
+"""An edge in a hook execution connection"""
+type HookExecutionEdge {
+  """Cursor for this edge"""
+  cursor: String
+
+  """The hook execution at this edge"""
+  node: HookExecution
+}
+
+"""Status of a hook execution"""
+enum HookExecutionStatus {
+  FAILED
+  KILLED
+  PASSED
+  RUNNING
 }
 
 """A file change recording event"""
@@ -717,6 +795,11 @@ type HookFileChangeMessage implements Message {
 
   """When the file change was recorded"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A hook reference injection event (must-read-first files)"""
@@ -757,6 +840,11 @@ type HookReferenceMessage implements Message {
 
   """When the reference was injected"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Hook execution result (inline, not a separate event)"""
@@ -783,37 +871,25 @@ type HookResult {
   timestamp: DateTime
 }
 
-"""Hook execution result (success or failure)"""
-type HookResultEvent implements HanEvent {
-  """Whether result was cached"""
-  cached: Boolean
-
-  """Working directory"""
-  directory: String
-
-  """Execution duration in milliseconds"""
+"""Payload for hook result added events"""
+type HookResultAddedPayload {
+  """Duration of the hook execution in milliseconds"""
   durationMs: Int
 
-  """Error message (if failed)"""
-  error: String
-  eventType: String
+  """Name of the hook that was executed"""
+  hookName: String
 
-  """Process exit code"""
-  exitCode: Int
+  """UUID of the parent hook_run event for correlation"""
+  hookRunId: String
 
-  """Hook name"""
-  hook: String
-  id: ID
+  """Plugin that executed the hook"""
+  pluginName: String
 
-  """Hook output (if success)"""
-  output: String
+  """ID of the session containing the hook run"""
+  sessionId: String
 
-  """Plugin name"""
-  plugin: String
-
-  """Whether hook succeeded"""
+  """Whether the hook succeeded"""
   success: Boolean
-  timestamp: DateTime
 }
 
 """A hook execution result event with success/failure status"""
@@ -866,29 +942,11 @@ type HookResultMessage implements Message {
 
   """When the hook completed"""
   timestamp: DateTime
-}
-
-"""Hook execution started"""
-type HookRunEvent implements HanEvent {
-  """Whether result was cached"""
-  cached: Boolean
-
-  """Working directory"""
-  directory: String
-  eventType: String
-
-  """Hook name"""
-  hook: String
-  id: ID
-
-  """Plugin name"""
-  plugin: String
 
   """
-  Hook result (if available). Loaded via DataLoader from the session's paired events.
+  Raw message UUID. Use this for URLs and links instead of the global ID.
   """
-  result: HookResult
-  timestamp: DateTime
+  uuid: String
 }
 
 """A hook execution start event"""
@@ -907,6 +965,9 @@ type HookRunMessage implements Message {
   """Name of the hook being executed"""
   hook: String
 
+  """UUID of this hook run (used to correlate with result)"""
+  hookRunId: String
+
   """Message global ID"""
   id: ID
 
@@ -919,6 +980,9 @@ type HookRunMessage implements Message {
   plugin: String
   rawJson: String
 
+  """Hook result (null if still pending)"""
+  result: HookResult
+
   """
   Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
   """
@@ -926,6 +990,11 @@ type HookRunMessage implements Message {
 
   """When the hook started execution"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A generic script execution event (bash/cat commands)"""
@@ -969,6 +1038,11 @@ type HookScriptMessage implements Message {
 
   """When the script executed"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Hook execution statistics"""
@@ -1039,6 +1113,11 @@ type HookValidationCacheMessage implements Message {
 
   """When the cache was written"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A per-directory validation hook result event"""
@@ -1091,6 +1170,11 @@ type HookValidationMessage implements Message {
 
   """When the validation completed"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Activity metrics for an hour of the day"""
@@ -1130,6 +1214,43 @@ type IndexingResult {
   totalMessages: Int
 }
 
+"""An interrupt message in a session (user interrupted the assistant)"""
+type InterruptUserMessage implements Message & UserMessage {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Interrupt message text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Sentiment analysis for this message (if available)"""
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the interrupt occurred"""
+  timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
+}
+
 """An MCP server configuration"""
 type McpServer {
   """Number of command arguments"""
@@ -1152,18 +1273,6 @@ type McpServer {
 
   """URL for HTTP servers"""
   url: String
-}
-
-"""MCP tool call initiated"""
-type McpToolCallEvent implements HanEvent {
-  """Tool arguments as JSON string"""
-  arguments: String
-  eventType: String
-  id: ID
-  timestamp: DateTime
-
-  """Tool name"""
-  tool: String
 }
 
 """An MCP tool call event"""
@@ -1209,6 +1318,11 @@ type McpToolCallMessage implements Message {
 
   """Name of the MCP tool being called"""
   tool: String
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """MCP tool result (inline, not a separate event)"""
@@ -1233,30 +1347,6 @@ type McpToolResult {
 
   """When the result was recorded"""
   timestamp: DateTime
-}
-
-"""MCP tool result returned"""
-type McpToolResultEvent implements HanEvent {
-  """Call ID for correlation"""
-  callId: String
-
-  """Execution duration in milliseconds"""
-  durationMs: Int
-
-  """Error message (if failed)"""
-  error: String
-  eventType: String
-  id: ID
-
-  """Result as JSON string (if success)"""
-  result: String
-
-  """Whether call succeeded"""
-  success: Boolean
-  timestamp: DateTime
-
-  """Tool name"""
-  tool: String
 }
 
 """An MCP tool result event"""
@@ -1303,6 +1393,11 @@ type McpToolResultMessage implements Message {
 
   """Name of the MCP tool"""
   tool: String
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Progress update from Memory Agent during search"""
@@ -1392,21 +1487,6 @@ enum MemoryLayer {
   TRANSCRIPTS
 }
 
-"""Memory learn operation"""
-type MemoryLearnEvent implements HanEvent {
-  """Learning domain"""
-  domain: String
-  eventType: String
-  id: ID
-
-  """Scope (project or user)"""
-  scope: String
-
-  """Whether learn succeeded"""
-  success: Boolean
-  timestamp: DateTime
-}
-
 """A memory learn event"""
 type MemoryLearnMessage implements Message {
   """
@@ -1442,6 +1522,11 @@ type MemoryLearnMessage implements Message {
 
   """When the learning was captured"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Memory query interface"""
@@ -1459,24 +1544,6 @@ type MemoryQuery {
     projectPath: String!
     query: String!
   ): MemorySearchResult
-}
-
-"""Memory query operation"""
-type MemoryQueryEvent implements HanEvent {
-  """Query duration in milliseconds"""
-  durationMs: Int
-  eventType: String
-  id: ID
-
-  """Query question"""
-  question: String
-
-  """Memory route (personal, team, rules)"""
-  route: String
-
-  """Whether query succeeded"""
-  success: Boolean
-  timestamp: DateTime
 }
 
 """A memory query event"""
@@ -1514,6 +1581,11 @@ type MemoryQueryMessage implements Message {
 
   """When the memory was queried"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """Result of starting a memory query with streaming"""
@@ -1569,7 +1641,7 @@ interface Message {
   """
   agentId: String
 
-  """Message global ID"""
+  """Message global ID (Message:{uuid})"""
   id: ID
 
   """
@@ -1587,6 +1659,11 @@ interface Message {
 
   """When the message was sent"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A paginated list of messages"""
@@ -1625,6 +1702,43 @@ type MessageSearchResult {
   preview: String
 }
 
+"""A system-injected meta message in a session"""
+type MetaUserMessage implements Message & UserMessage {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Meta message text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """Sentiment analysis (typically null for meta messages)"""
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the message was sent"""
+  timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
+}
+
 """Aggregate metrics for a time period"""
 type MetricsData {
   """Average confidence score (0-1)"""
@@ -1638,9 +1752,6 @@ type MetricsData {
 
   """Number of completed tasks"""
   completedTasks: Int
-
-  """Most recent tasks"""
-  recentTasks(first: Int = 10): [Task!]
 
   """Significant frustrations per task"""
   significantFrustrationRate: Float
@@ -1705,8 +1816,16 @@ type ModelUsageStats {
 }
 
 type Mutation {
+  """
+  Acquire a global execution slot. Returns slot ID if granted, -1 if no slots available.
+  """
+  acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
+
   """Trigger full indexing of all Claude Code sessions from JSONL files"""
   indexSessions: IndexingResult
+
+  """Release a previously acquired slot"""
+  releaseSlot(pid: Int!, slotId: Int!): SlotReleaseResult
 
   """Remove a plugin from settings"""
   removePlugin(marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
@@ -1907,14 +2026,11 @@ type Query {
   """Aggregate cache statistics"""
   cacheStats: CacheStats
 
-  """Aggregate checkpoint statistics"""
-  checkpointStats: CheckpointStats
-
-  """All checkpoints for the current project"""
-  checkpoints: [Checkpoint!]
-
   """Memory query interface"""
   memory: MemoryQuery
+
+  """Get a message by its UUID (optionally prefixed with 'Message:')"""
+  message(id: String!): Message
 
   """Task metrics for a time period"""
   metrics(period: MetricsPeriod): MetricsData
@@ -1970,6 +2086,9 @@ type Query {
 
   """Settings summary with all configuration locations"""
   settings(projectId: String): SettingsSummary
+
+  """Global slot pool status for cross-session resource management"""
+  slots: SlotStatus
 }
 
 """A queue state change operation"""
@@ -2001,6 +2120,50 @@ type QueueOperationMessage implements Message {
 
   """When the queue operation occurred"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
+}
+
+"""A regular user input message in a session"""
+type RegularUserMessage implements Message & UserMessage {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """User message text content"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """
+  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+  """
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the message was sent"""
+  timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A git repository containing projects and sessions"""
@@ -2099,8 +2262,8 @@ type SentimentAnalysis {
   """Frustration score (0-10) if frustration detected"""
   frustrationScore: Float
 
-  """Event ID"""
-  id: String
+  """Message global ID"""
+  id: ID
 
   """Categorized sentiment level (positive, neutral, negative)"""
   sentimentLevel: String
@@ -2115,34 +2278,6 @@ type SentimentAnalysis {
   taskId: String
 
   """When the analysis occurred"""
-  timestamp: DateTime
-}
-
-"""Sentiment analysis of user message"""
-type SentimentAnalysisEvent implements HanEvent {
-  eventType: String
-
-  """Frustration level if detected (low, moderate, high)"""
-  frustrationLevel: String
-
-  """Frustration score (0-10) if frustration detected"""
-  frustrationScore: Float
-  id: ID
-
-  """ID of the user message being analyzed"""
-  messageId: String
-
-  """Categorized sentiment level (positive, neutral, negative)"""
-  sentimentLevel: String
-
-  """Raw sentiment score (typically -5 to +5)"""
-  sentimentScore: Float
-
-  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
-  signals: [String!]
-
-  """Optional link to current task ID"""
-  taskId: String
   timestamp: DateTime
 }
 
@@ -2187,21 +2322,47 @@ type SentimentAnalysisMessage implements Message {
 
   """When the analysis was performed"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A Claude Code session"""
 type Session implements Node {
   """Active (in-progress) tasks in this session"""
-  activeTasks: [Task!]
+  activeTasks(
+    """Cursor to fetch active tasks after"""
+    after: String
+
+    """Cursor to fetch active tasks before"""
+    before: String
+
+    """Number of active tasks from the start"""
+    first: Int
+
+    """Number of active tasks from the end"""
+    last: Int
+  ): TaskConnection
 
   """Non-completed todos (pending or in-progress)"""
-  activeTodos: [Todo!]
+  activeTodos(
+    """Cursor to fetch todos after"""
+    after: String
+
+    """Cursor to fetch todos before"""
+    before: String
+
+    """Number of todos from the start"""
+    first: Int
+
+    """Number of todos from the end"""
+    last: Int
+  ): TodoConnection
 
   """IDs of agent tasks spawned during this session"""
   agentTaskIds: [String!]
-
-  """Checkpoints associated with this session"""
-  checkpoints: [Checkpoint!]
 
   """The most recently started active task, if any"""
   currentTask: Task
@@ -2212,17 +2373,46 @@ type Session implements Node {
   """Session date"""
   date: String
 
-  """Number of file changes in this session"""
+  """Number of unique files changed in this session"""
   fileChangeCount: Int
 
-  """Files that were changed during this session"""
-  fileChanges: [FileChange!]
+  """
+  Files that were changed during this session (deduplicated by path, paginated)
+  """
+  fileChanges(
+    """Cursor to fetch file changes after"""
+    after: String
+
+    """Cursor to fetch file changes before"""
+    before: String
+
+    """Number of file changes from the start"""
+    first: Int
+
+    """Number of file changes from the end"""
+    last: Int
+  ): FileChangeConnection
+
+  """Aggregated frustration metrics for this session"""
+  frustrationSummary: FrustrationSummary
 
   """Git branch active during session"""
   gitBranch: String
 
-  """Hook executions that occurred during this session"""
-  hookExecutions: [HookExecution!]
+  """Hook executions that occurred during this session (paginated)"""
+  hookExecutions(
+    """Cursor to fetch hook executions after"""
+    after: String
+
+    """Cursor to fetch hook executions before"""
+    before: String
+
+    """Number of hook executions from the start"""
+    first: Int
+
+    """Number of hook executions from the end"""
+    last: Int
+  ): HookExecutionConnection
 
   """Hook execution statistics for this session"""
   hookStats: HookStats
@@ -2287,13 +2477,37 @@ type Session implements Node {
   summary: String
 
   """All tasks tracked in this session via start_task MCP tool"""
-  tasks: [Task!]
+  tasks(
+    """Cursor to fetch tasks after"""
+    after: String
+
+    """Cursor to fetch tasks before"""
+    before: String
+
+    """Number of tasks from the start"""
+    first: Int
+
+    """Number of tasks from the end"""
+    last: Int
+  ): TaskConnection
 
   """Counts of todos by status"""
   todoCounts: TodoCounts
 
   """All todos from the most recent TodoWrite in this session"""
-  todos: [Todo!]
+  todos(
+    """Cursor to fetch todos after"""
+    after: String
+
+    """Cursor to fetch todos before"""
+    before: String
+
+    """Number of todos from the start"""
+    first: Int
+
+    """Number of todos from the end"""
+    last: Int
+  ): TodoConnection
 
   """
   All tool results from this session, for inline display under tool use blocks
@@ -2340,6 +2554,33 @@ type SessionEdge {
   node: Session
 }
 
+"""Payload for session files changed events"""
+type SessionFilesChangedPayload {
+  """Count of file changes"""
+  fileCount: Int
+
+  """ID of the session whose files changed"""
+  sessionId: String
+
+  """Name of the tool that triggered the change"""
+  toolName: String
+}
+
+"""Payload for session hooks changed events"""
+type SessionHooksChangedPayload {
+  """Whether this is a new run or a result update"""
+  eventType: String
+
+  """Name of the hook"""
+  hookName: String
+
+  """Plugin name of the hook"""
+  pluginName: String
+
+  """ID of the session whose hooks changed"""
+  sessionId: String
+}
+
 """Payload for session message added events"""
 type SessionMessageAddedPayload {
   """Index of the new message in the session"""
@@ -2352,6 +2593,21 @@ type SessionMessageAddedPayload {
 
   """ID of the session the message was added to"""
   sessionId: String
+}
+
+"""Payload for session todos changed events"""
+type SessionTodosChangedPayload {
+  """Count of completed todos"""
+  completedCount: Int
+
+  """Count of in-progress todos"""
+  inProgressCount: Int
+
+  """ID of the session whose todos changed"""
+  sessionId: String
+
+  """Total count of todos after the change"""
+  todoCount: Int
 }
 
 """A settings file with source information"""
@@ -2396,6 +2652,39 @@ type SettingsSummary {
   permissions: Permissions
 }
 
+"""Result of slot acquisition attempt"""
+type SlotAcquireResult {
+  """Whether the slot was granted"""
+  granted: Boolean
+
+  """Slot ID if granted, -1 otherwise"""
+  slotId: Int
+
+  """Number of slots currently in use (if not granted)"""
+  waitingCount: Int
+}
+
+"""Result of slot release"""
+type SlotReleaseResult {
+  """Result message"""
+  message: String
+
+  """Whether the slot was released"""
+  success: Boolean
+}
+
+"""Global slot pool status"""
+type SlotStatus {
+  """Currently active slots"""
+  active: [ActiveSlot!]
+
+  """Number of available slots"""
+  available: Int
+
+  """Total number of slots"""
+  total: Int
+}
+
 """A subdirectory within a worktree"""
 type Subdir {
   """Full path to subdirectory"""
@@ -2409,6 +2698,12 @@ type Subdir {
 }
 
 type Subscription {
+  """Subscribe to hook result for a specific hook run ID"""
+  hookResultAdded(
+    """Hook run UUID to watch for result"""
+    hookRunId: String!
+  ): HookResultAddedPayload
+
   """Subscribe to Memory Agent progress updates during a query"""
   memoryAgentProgress(
     """Memory Agent session ID to watch for progress updates"""
@@ -2451,11 +2746,29 @@ type Subscription {
     parentId: ID
   ): SessionAddedPayload
 
+  """Subscribe to file changes for a session"""
+  sessionFilesChanged(
+    """Session ID to watch for file changes"""
+    sessionId: ID!
+  ): SessionFilesChangedPayload
+
+  """Subscribe to hook run and result events for a session"""
+  sessionHooksChanged(
+    """Session ID to watch for hook changes"""
+    sessionId: ID!
+  ): SessionHooksChangedPayload
+
   """Subscribe to new messages in a session"""
   sessionMessageAdded(
     """Session ID to watch for new messages"""
     sessionId: ID!
   ): SessionMessageAddedPayload
+
+  """Subscribe to todo changes for a session"""
+  sessionTodosChanged(
+    """Session ID to watch for todo changes"""
+    sessionId: ID!
+  ): SessionTodosChangedPayload
 
   """Subscribe to tool result for a specific call ID"""
   toolResultAdded(
@@ -2496,6 +2809,11 @@ type SummaryMessage implements Message {
 
   """When the summary was created"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A system notification message with subtype and level"""
@@ -2533,6 +2851,11 @@ type SystemMessage implements Message {
 
   """When the system message was sent"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A tracked task"""
@@ -2575,6 +2898,27 @@ type Task {
 
   """Type of task"""
   type: TaskType
+}
+
+"""A paginated list of tasks"""
+type TaskConnection {
+  """List of task edges"""
+  edges: [TaskEdge!]
+
+  """Pagination information"""
+  pageInfo: PageInfo
+
+  """Total number of tasks"""
+  totalCount: Int
+}
+
+"""An edge in a task connection"""
+type TaskEdge {
+  """Cursor for this edge"""
+  cursor: String
+
+  """The task at this edge"""
+  node: Task
 }
 
 """Outcome of a completed task"""
@@ -2646,6 +2990,18 @@ type Todo {
   status: TodoStatus
 }
 
+"""A paginated list of todo items"""
+type TodoConnection {
+  """List of todo edges"""
+  edges: [TodoEdge!]
+
+  """Pagination information"""
+  pageInfo: PageInfo
+
+  """Total number of todos"""
+  totalCount: Int
+}
+
 """Counts of todos by status"""
 type TodoCounts {
   """Number of completed todos"""
@@ -2659,6 +3015,15 @@ type TodoCounts {
 
   """Total number of todos"""
   total: Int
+}
+
+"""An edge in a todo connection"""
+type TodoEdge {
+  """Cursor for pagination"""
+  cursor: String
+
+  """The todo item"""
+  node: Todo
 }
 
 """Status of a todo item"""
@@ -2743,8 +3108,58 @@ type ToolResultBlock implements ContentBlock {
   type: ContentBlockType
 }
 
+"""
+A user message containing only tool_result blocks (internal API structure)
+"""
+type ToolResultUserMessage implements Message & UserMessage {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Tool result content (usually empty for display)"""
+  content: String
+  contentBlocks: [ContentBlock!]
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """
+  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+  """
+  sentimentAnalysis: SentimentAnalysis
+
+  """When the tool result was recorded"""
+  timestamp: DateTime
+
+  """Number of tool_result blocks in this message"""
+  toolResultCount: Int
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
+}
+
 """A tool use request from Claude"""
 type ToolUseBlock implements ContentBlock {
+  """For Task tool calls, the spawned agent task with details"""
+  agentTask: AgentTask
+
+  """For Task tool calls, the ID of the spawned agent task"""
+  agentTaskId: String
+
   """Category of tool (FILE, SEARCH, SHELL, etc.)"""
   category: ToolCategory
 
@@ -2762,6 +3177,9 @@ type ToolUseBlock implements ContentBlock {
 
   """Name of the tool being called"""
   name: String
+
+  """Result of this tool call (resolved via DataLoader)"""
+  result: ToolResultBlock
 
   """Unique ID for this tool call"""
   toolCallId: String
@@ -2801,17 +3219,21 @@ type UnknownEventMessage implements Message {
 
   """When the event occurred"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
-"""A user message in a session"""
-type UserMessage implements Message {
+"""
+Base interface for all user message types. Subtypes include regular messages, meta/system messages, commands, and interrupts.
+"""
+interface UserMessage implements Message {
   """
   Agent ID if this message is from a subagent. NULL for main conversation.
   """
   agentId: String
-
-  """Name of the slash command if isCommand is true"""
-  commandName: String
 
   """User message text content"""
   content: String
@@ -2820,19 +3242,12 @@ type UserMessage implements Message {
   """Message global ID"""
   id: ID
 
-  """Whether this is a slash command"""
-  isCommand: Boolean
-
-  """Whether this message is an interrupt"""
-  isInterrupt: Boolean
-
-  """Whether this is a meta/system message"""
-  isMeta: Boolean
-
   """
   For result messages, references the call message ID (e.g., tool_result -> tool_use)
   """
   parentId: String
+
+  """Original JSONL line content for debugging"""
   rawJson: String
 
   """
@@ -2847,6 +3262,11 @@ type UserMessage implements Message {
 
   """When the message was sent"""
   timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
 }
 
 """A git worktree within a project"""

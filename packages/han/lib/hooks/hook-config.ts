@@ -12,6 +12,24 @@ import { getPluginNameFromRoot } from "../shared/index.ts";
 import { findDirectoriesWithMarkers } from "./hook-cache.ts";
 
 /**
+ * Claude Code hook event types that can trigger han hooks
+ */
+export type HookEventType =
+	| "Stop"
+	| "SubagentStop"
+	| "PreToolUse"
+	| "PostToolUse"
+	| "SessionStart"
+	| "UserPromptSubmit"
+	| "SubagentStart";
+
+/**
+ * Default events for hooks that don't specify an event field.
+ * Most hooks are validation hooks that should run on both Stop and SubagentStop.
+ */
+export const DEFAULT_HOOK_EVENTS: HookEventType[] = ["Stop", "SubagentStop"];
+
+/**
  * Hook dependency declaration
  * Allows a hook to depend on another plugin's hook to run first
  */
@@ -31,6 +49,18 @@ export interface HookDependency {
  * Plugin hook configuration (from han-plugin.yml)
  */
 export interface PluginHookDefinition {
+	/**
+	 * Claude Code event(s) that trigger this hook.
+	 * Can be a single event or an array of events.
+	 * Default: ["Stop", "SubagentStop"] for backwards compatibility.
+	 */
+	event?: HookEventType | HookEventType[];
+	/**
+	 * For PreToolUse/PostToolUse hooks: filter by tool names.
+	 * Only run when the tool matches one of these names.
+	 * Example: ["Edit", "Write", "Bash"]
+	 */
+	toolFilter?: string[];
 	dirsWith?: string[];
 	dirTest?: string;
 	command: string;
@@ -64,6 +94,11 @@ export interface PluginHookDefinition {
 	 * Dependencies must be within the same hook type (Stop→Stop, etc.)
 	 */
 	dependsOn?: HookDependency[];
+	/**
+	 * Whether this hook should be exposed as an MCP tool.
+	 * Default: true. Set to false to hide from MCP server.
+	 */
+	mcp?: boolean;
 }
 
 /**
@@ -81,6 +116,8 @@ interface YamlHookDependency {
  * (from han-plugin.yml)
  */
 interface YamlPluginHookDefinition {
+	event?: HookEventType | HookEventType[];
+	tool_filter?: string[];
 	dirs_with?: string[];
 	dir_test?: string;
 	command: string;
@@ -89,6 +126,7 @@ interface YamlPluginHookDefinition {
 	idle_timeout?: number;
 	tip?: string;
 	depends_on?: YamlHookDependency[];
+	mcp?: boolean;
 }
 
 /**
@@ -102,6 +140,30 @@ export interface PluginMemoryConfig {
 	allowed_tools?: string[];
 	/** System prompt for the memory extraction agent */
 	system_prompt?: string;
+	/** Memory-only MCP servers (not exposed to Claude Code) */
+	mcp_servers?: Record<string, PluginMcpConfig>;
+}
+
+/**
+ * MCP server configuration from plugin
+ */
+export interface PluginMcpConfig {
+	/** MCP server name */
+	name?: string;
+	/** Description of the MCP server */
+	description?: string;
+	/** Command to run the MCP server */
+	command: string;
+	/** Command arguments */
+	args?: string[];
+	/** Environment variables */
+	env?: Record<string, string>;
+	/** Capabilities exposed by this server */
+	capabilities?: Array<{
+		category?: string;
+		summary?: string;
+		examples?: string[];
+	}>;
 }
 
 /**
@@ -114,6 +176,7 @@ interface YamlPluginConfig {
 	keywords?: string[];
 	hooks: Record<string, YamlPluginHookDefinition>;
 	memory?: PluginMemoryConfig;
+	mcp_servers?: Record<string, PluginMcpConfig>;
 }
 
 /**
@@ -124,6 +187,8 @@ function convertYamlHook(
 ): PluginHookDefinition {
 	return {
 		command: yamlHook.command,
+		...(yamlHook.event && { event: yamlHook.event }),
+		...(yamlHook.tool_filter && { toolFilter: yamlHook.tool_filter }),
 		...(yamlHook.dirs_with && { dirsWith: yamlHook.dirs_with }),
 		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),
 		...(yamlHook.description && { description: yamlHook.description }),
@@ -133,6 +198,7 @@ function convertYamlHook(
 		}),
 		...(yamlHook.tip && { tip: yamlHook.tip }),
 		...(yamlHook.depends_on && { dependsOn: yamlHook.depends_on }),
+		...(yamlHook.mcp !== undefined && { mcp: yamlHook.mcp }),
 	};
 }
 
@@ -147,12 +213,36 @@ function convertYamlPluginConfig(yamlConfig: YamlPluginConfig): PluginConfig {
 	return {
 		hooks,
 		...(yamlConfig.memory && { memory: yamlConfig.memory }),
+		...(yamlConfig.mcp_servers && { mcp_servers: yamlConfig.mcp_servers }),
 	};
 }
 
 export interface PluginConfig {
 	hooks: Record<string, PluginHookDefinition>;
 	memory?: PluginMemoryConfig;
+	mcp_servers?: Record<string, PluginMcpConfig>;
+}
+
+/**
+ * Get the events that a hook responds to.
+ * Returns an array of event types, using defaults if not specified.
+ */
+export function getHookEvents(hook: PluginHookDefinition): HookEventType[] {
+	if (!hook.event) {
+		return DEFAULT_HOOK_EVENTS;
+	}
+	return Array.isArray(hook.event) ? hook.event : [hook.event];
+}
+
+/**
+ * Check if a hook matches a given event type.
+ */
+export function hookMatchesEvent(
+	hook: PluginHookDefinition,
+	eventType: string,
+): boolean {
+	const events = getHookEvents(hook);
+	return events.includes(eventType as HookEventType);
 }
 
 /**

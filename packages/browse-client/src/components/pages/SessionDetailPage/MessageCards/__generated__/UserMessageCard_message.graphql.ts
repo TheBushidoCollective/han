@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<fc1ddd8c246634b2f843e12d95da32cc>>
+ * @generated SignedSource<<5e87c94ed3fb8c62821446b1f9e791aa>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,22 +13,27 @@ export type ContentBlockType = "IMAGE" | "TEXT" | "THINKING" | "TOOL_RESULT" | "
 export type ToolCategory = "FILE" | "MCP" | "OTHER" | "SEARCH" | "SHELL" | "TASK" | "WEB" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type UserMessageCard_message$data = {
-  readonly commandName: string | null | undefined;
+  readonly __typename: string;
+  readonly commandName?: string | null | undefined;
   readonly content: string | null | undefined;
   readonly contentBlocks: ReadonlyArray<{
     readonly category?: ToolCategory | null | undefined;
     readonly color?: string | null | undefined;
-    readonly content?: string | null | undefined;
     readonly dataUrl?: string | null | undefined;
     readonly displayName?: string | null | undefined;
-    readonly hasImage?: boolean | null | undefined;
     readonly icon?: string | null | undefined;
     readonly input?: string | null | undefined;
-    readonly isError?: boolean | null | undefined;
-    readonly isLong?: boolean | null | undefined;
     readonly mediaType?: string | null | undefined;
     readonly name?: string | null | undefined;
     readonly preview?: string | null | undefined;
+    readonly result?: {
+      readonly content: string | null | undefined;
+      readonly hasImage: boolean | null | undefined;
+      readonly isError: boolean | null | undefined;
+      readonly isLong: boolean | null | undefined;
+      readonly preview: string | null | undefined;
+      readonly toolCallId: string | null | undefined;
+    } | null | undefined;
     readonly signature?: string | null | undefined;
     readonly text?: string | null | undefined;
     readonly thinking?: string | null | undefined;
@@ -36,9 +41,6 @@ export type UserMessageCard_message$data = {
     readonly type: ContentBlockType | null | undefined;
   }> | null | undefined;
   readonly id: string | null | undefined;
-  readonly isCommand: boolean | null | undefined;
-  readonly isInterrupt: boolean | null | undefined;
-  readonly isMeta: boolean | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly sentimentAnalysis: {
     readonly frustrationLevel: string | null | undefined;
@@ -83,6 +85,13 @@ return {
   "metadata": null,
   "name": "UserMessageCard_message",
   "selections": [
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "__typename",
+      "storageKey": null
+    },
     {
       "alias": null,
       "args": null,
@@ -201,40 +210,44 @@ return {
               "kind": "ScalarField",
               "name": "color",
               "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "ToolResultBlock",
+              "kind": "LinkedField",
+              "name": "result",
+              "plural": false,
+              "selections": [
+                (v2/*: any*/),
+                (v0/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "isError",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "isLong",
+                  "storageKey": null
+                },
+                (v1/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "hasImage",
+                  "storageKey": null
+                }
+              ],
+              "storageKey": null
             }
           ],
           "type": "ToolUseBlock",
-          "abstractKey": null
-        },
-        {
-          "kind": "InlineFragment",
-          "selections": [
-            (v2/*: any*/),
-            (v0/*: any*/),
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "isError",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "isLong",
-              "storageKey": null
-            },
-            (v1/*: any*/),
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "hasImage",
-              "storageKey": null
-            }
-          ],
-          "type": "ToolResultBlock",
           "abstractKey": null
         },
         {
@@ -259,34 +272,6 @@ return {
           "abstractKey": null
         }
       ],
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "isMeta",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "isInterrupt",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "isCommand",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "commandName",
       "storageKey": null
     },
     {
@@ -334,13 +319,27 @@ return {
         }
       ],
       "storageKey": null
+    },
+    {
+      "kind": "InlineFragment",
+      "selections": [
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "commandName",
+          "storageKey": null
+        }
+      ],
+      "type": "CommandUserMessage",
+      "abstractKey": null
     }
   ],
   "type": "UserMessage",
-  "abstractKey": null
+  "abstractKey": "__isUserMessage"
 };
 })();
 
-(node as any).hash = "807c432947e9904adacd87181e4fd223";
+(node as any).hash = "69cd43b77a8b636eef691c562f6912b4";
 
 export default node;

@@ -246,11 +246,14 @@ CREATE TABLE IF NOT EXISTS hook_executions (
     hook_type TEXT NOT NULL,
     hook_name TEXT NOT NULL,
     hook_source TEXT,
+    directory TEXT,
     duration_ms INTEGER NOT NULL,
     exit_code INTEGER NOT NULL,
     passed INTEGER NOT NULL DEFAULT 1,
     output TEXT,
     error TEXT,
+    if_changed TEXT,  -- JSON array of glob patterns
+    command TEXT,     -- The command that was executed
     executed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

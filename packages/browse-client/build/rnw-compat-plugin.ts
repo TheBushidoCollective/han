@@ -1,21 +1,34 @@
 /**
- * Bun plugin to fix CommonJS/ESM interop issues with inline-style-prefixer
- * and css-in-js-utils packages.
+ * Bun plugin for react-native-web compatibility.
  *
- * The problem: Bun's __toESM wrapper with isNodeMode=1 creates a default export
- * that wraps the entire module object instead of the actual default export.
- *
- * Solution: Transform imports from /lib/ paths to /es/ paths to use the
- * proper ESM versions that don't have this issue.
+ * Handles two issues:
+ * 1. Aliases 'react-native' imports to 'react-native-web'
+ * 2. Fixes CommonJS/ESM interop issues with inline-style-prefixer/css-in-js-utils
  */
 
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { BunPlugin } from 'bun';
 
 export function rnwCompatPlugin(): BunPlugin {
   return {
     name: 'rnw-compat',
     setup(build) {
+      // Alias 'react-native' to 'react-native-web'
+      // This is needed for libraries like @shopify/flash-list that import from react-native
+      build.onResolve({ filter: /^react-native$/ }, () => {
+        // Resolve react-native-web from browse-client's node_modules
+        // import.meta.dir = build/
+        // Parent = browse-client/
+        const browseClientRoot = dirname(import.meta.dir);
+        return {
+          path: join(
+            browseClientRoot,
+            'node_modules/react-native-web/dist/index.js'
+          ),
+        };
+      });
+
       // Transform files that import from inline-style-prefixer/lib or css-in-js-utils/lib
       // This includes react-native-web's prefixStyles and inline-style-prefixer's own plugins
       build.onLoad(

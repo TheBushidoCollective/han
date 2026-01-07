@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8ce92a6afeaa2085d5f4ba281e40d492>>
+ * @generated SignedSource<<0a609c9d8ad88393e603ee4777335427>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -232,34 +232,63 @@ return {
                   {
                     "alias": null,
                     "args": null,
-                    "concreteType": "Task",
+                    "concreteType": "TaskConnection",
                     "kind": "LinkedField",
                     "name": "activeTasks",
-                    "plural": true,
+                    "plural": false,
                     "selections": [
-                      (v2/*: any*/),
                       {
                         "alias": null,
                         "args": null,
                         "kind": "ScalarField",
-                        "name": "taskId",
+                        "name": "totalCount",
                         "storageKey": null
                       },
                       {
                         "alias": null,
                         "args": null,
-                        "kind": "ScalarField",
-                        "name": "description",
+                        "concreteType": "TaskEdge",
+                        "kind": "LinkedField",
+                        "name": "edges",
+                        "plural": true,
+                        "selections": [
+                          {
+                            "alias": null,
+                            "args": null,
+                            "concreteType": "Task",
+                            "kind": "LinkedField",
+                            "name": "node",
+                            "plural": false,
+                            "selections": [
+                              (v2/*: any*/),
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "taskId",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "description",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "type",
+                                "storageKey": null
+                              },
+                              (v3/*: any*/)
+                            ],
+                            "storageKey": null
+                          }
+                        ],
                         "storageKey": null
-                      },
-                      {
-                        "alias": null,
-                        "args": null,
-                        "kind": "ScalarField",
-                        "name": "type",
-                        "storageKey": null
-                      },
-                      (v3/*: any*/)
+                      }
                     ],
                     "storageKey": null
                   },
@@ -315,12 +344,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "a82a8a6cb3d2cabf106e96884e98d452",
+    "cacheID": "288ef7eefa8d2824f7adcf1ebedba9ab",
     "id": null,
     "metadata": {},
     "name": "SessionListItemSubscription",
     "operationKind": "subscription",
-    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    id\n    taskId\n    description\n    type\n    status\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
+    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
   }
 };
 })();

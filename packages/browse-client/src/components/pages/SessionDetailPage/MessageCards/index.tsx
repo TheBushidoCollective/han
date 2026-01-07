@@ -9,6 +9,7 @@
  */
 
 import type React from 'react';
+import { useMemo } from 'react';
 import { graphql, useFragment } from 'react-relay';
 import type { ContentBlock } from '../types.ts';
 import type { MessageCards_message$key } from './__generated__/MessageCards_message.graphql.ts';
@@ -110,6 +111,31 @@ interface MessageCardProps {
   toolResultsMap?: Map<string, ContentBlock>;
 }
 
+const componentMap = {
+  UserMessageCard,
+  AssistantMessageCard,
+  SummaryMessageCard,
+  SystemMessageCard,
+  FileHistorySnapshotMessageCard,
+  HookRunMessageCard,
+  HookResultMessageCard,
+  HookReferenceMessageCard,
+  HookValidationMessageCard,
+  HookValidationCacheMessageCard,
+  HookScriptMessageCard,
+  HookDatetimeMessageCard,
+  HookFileChangeMessageCard,
+  QueueOperationMessageCard,
+  McpToolCallMessageCard,
+  McpToolResultMessageCard,
+  ExposedToolCallMessageCard,
+  ExposedToolResultMessageCard,
+  MemoryQueryMessageCard,
+  MemoryLearnMessageCard,
+  SentimentAnalysisMessageCard,
+  UnknownEventMessageCard,
+};
+
 /**
  * MessageCard - Unified component that dispatches to the appropriate
  * card component based on __typename discrimination.
@@ -119,102 +145,23 @@ interface MessageCardProps {
  */
 export function MessageCard({
   fragmentRef,
-  toolResultsMap,
 }: MessageCardProps): React.ReactElement | null {
   const data = useFragment(MessageCardsFragment, fragmentRef);
+  const CardComponent = useMemo(
+    () => componentMap[`${data.__typename}Card` as keyof typeof componentMap],
+    [data.__typename]
+  );
 
-  // Get the card component based on typename
-  const cardElement = (() => {
-    switch (data.__typename) {
-      case 'UserMessage':
-        return (
-          <UserMessageCard fragmentRef={data} toolResultsMap={toolResultsMap} />
-        );
-
-      case 'AssistantMessage':
-        return (
-          <AssistantMessageCard
-            fragmentRef={data}
-            toolResultsMap={toolResultsMap}
-          />
-        );
-
-      case 'SummaryMessage':
-        return <SummaryMessageCard fragmentRef={data} />;
-
-      case 'SystemMessage':
-        return <SystemMessageCard fragmentRef={data} />;
-
-      case 'FileHistorySnapshotMessage':
-        return <FileHistorySnapshotMessageCard fragmentRef={data} />;
-
-      case 'HookRunMessage':
-        return <HookRunMessageCard fragmentRef={data} />;
-
-      case 'HookResultMessage':
-        return <HookResultMessageCard fragmentRef={data} />;
-
-      case 'HookReferenceMessage':
-        return <HookReferenceMessageCard fragmentRef={data} />;
-
-      case 'HookValidationMessage':
-        return <HookValidationMessageCard fragmentRef={data} />;
-
-      case 'HookValidationCacheMessage':
-        return <HookValidationCacheMessageCard fragmentRef={data} />;
-
-      case 'HookScriptMessage':
-        return <HookScriptMessageCard fragmentRef={data} />;
-
-      case 'HookDatetimeMessage':
-        return <HookDatetimeMessageCard fragmentRef={data} />;
-
-      case 'HookFileChangeMessage':
-        return <HookFileChangeMessageCard fragmentRef={data} />;
-
-      case 'QueueOperationMessage':
-        return <QueueOperationMessageCard fragmentRef={data} />;
-
-      case 'McpToolCallMessage':
-        return <McpToolCallMessageCard fragmentRef={data} />;
-
-      case 'McpToolResultMessage':
-        return <McpToolResultMessageCard fragmentRef={data} />;
-
-      case 'ExposedToolCallMessage':
-        return <ExposedToolCallMessageCard fragmentRef={data} />;
-
-      case 'ExposedToolResultMessage':
-        return <ExposedToolResultMessageCard fragmentRef={data} />;
-
-      case 'MemoryQueryMessage':
-        return <MemoryQueryMessageCard fragmentRef={data} />;
-
-      case 'MemoryLearnMessage':
-        return <MemoryLearnMessageCard fragmentRef={data} />;
-
-      case 'SentimentAnalysisMessage':
-        return <SentimentAnalysisMessageCard fragmentRef={data} />;
-
-      case 'UnknownEventMessage':
-        return <UnknownEventMessageCard fragmentRef={data} />;
-
-      default:
-        // Handle %other (future types) gracefully
-        console.warn(`Unknown message type: ${data.__typename}`);
-        return null;
-    }
-  })();
-
-  // Return null for unknown types
-  if (!cardElement) {
+  if (!CardComponent) {
+    // Handle %other (future types) gracefully
+    console.warn(`Unknown message type: ${data.__typename}`);
     return null;
   }
 
   // Wrap with context provider to share messageId with all children
   return (
     <MessageContextProvider messageId={data.id ?? null}>
-      {cardElement}
+      <CardComponent fragmentRef={data} />
     </MessageContextProvider>
   );
 }

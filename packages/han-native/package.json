@@ -25,7 +25,7 @@
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release && npm run copy-to-han",
-    "copy-to-han": "mkdir -p ../han/native && cp *.node ../han/native/han-native.node",
+    "copy-to-han": "mkdir -p ../han/native && cp *.node ../han/native/han-native.node && (xattr -c ../han/native/han-native.node 2>/dev/null || true)",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm",
     "universal": "napi universal",

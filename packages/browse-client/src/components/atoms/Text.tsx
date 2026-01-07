@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Text as RNText, type TextStyle } from 'react-native-web';
 import {
   colors,
@@ -20,9 +20,12 @@ type TextColorKey =
   | 'warning'
   | 'danger';
 
+/** Extended style type allowing both TextStyle and web CSSProperties */
+type TextStyleExtended = TextStyle | CSSProperties;
+
 export interface TextProps {
   children?: ReactNode;
-  style?: TextStyle;
+  style?: TextStyleExtended;
   className?: string;
   size?: FontSizeKey;
   color?: TextColorKey;
@@ -33,6 +36,7 @@ export interface TextProps {
   italic?: boolean;
   lineHeight?: TextStyle['lineHeight'];
   numberOfLines?: number;
+  accessibilityLabel?: string;
 }
 
 const colorMap: Record<TextColorKey, string> = {
@@ -59,6 +63,7 @@ export function Text({
   italic,
   lineHeight,
   numberOfLines,
+  accessibilityLabel,
 }: TextProps) {
   // Handle both string keys and numeric weights
   const resolvedWeight =
@@ -76,7 +81,7 @@ export function Text({
       italic && { fontStyle: 'italic' },
       lineHeight && { lineHeight },
       style,
-    ].filter(Boolean) as TextStyle[]
+    ].filter(Boolean) as unknown as TextStyle[]
   );
 
   return (
@@ -86,6 +91,7 @@ export function Text({
       title={title}
       numberOfLines={truncate ? 1 : numberOfLines}
       ellipsizeMode={truncate ? 'tail' : undefined}
+      accessibilityLabel={accessibilityLabel}
     >
       {children}
     </RNText>

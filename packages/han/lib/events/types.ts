@@ -45,6 +45,8 @@ export interface HookRunEvent extends BaseEvent {
 	data: {
 		plugin: string;
 		hook: string;
+		/** Hook type (e.g., "Stop", "SessionStart") */
+		hook_type: string;
 		directory: string;
 		cached: boolean;
 	};

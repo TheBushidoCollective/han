@@ -1,7 +1,7 @@
 import { Box, Text } from "ink";
 import type React from "react";
 import type { SettingsScope } from "./config/claude-settings.ts";
-import type { HookDependency } from "./hook-config.ts";
+import type { HookDependency } from "./hooks/hook-config.ts";
 
 /**
  * Hook entry - can be from han-plugin.yml (new) or legacy format

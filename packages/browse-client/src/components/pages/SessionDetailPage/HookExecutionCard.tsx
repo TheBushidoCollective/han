@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
+import { Pressable } from '@/components/atoms/Pressable.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { colors, fonts, radii, spacing } from '@/theme.ts';
@@ -43,7 +44,7 @@ const statusIconBase: CSSProperties = {
   flexShrink: 0,
 };
 
-const preStyle: CSSProperties = {
+const codeBlockStyle: CSSProperties = {
   margin: 0,
   padding: spacing.md,
   backgroundColor: colors.bg.primary,
@@ -58,13 +59,9 @@ const preStyle: CSSProperties = {
 };
 
 const toggleButtonStyle: CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: colors.text.muted,
-  fontSize: 11,
-  cursor: 'pointer',
+  backgroundColor: 'transparent',
   padding: `${spacing.xs}px 0`,
-  display: 'flex',
+  flexDirection: 'row',
   alignItems: 'center',
   gap: spacing.xs,
 };
@@ -97,16 +94,18 @@ export function HookExecutionCard({
   };
 
   return (
-    <div style={cardStyle}>
+    <Box style={cardStyle}>
       <HStack gap="xs" align="stretch">
         {/* Status indicator bar */}
-        <div style={statusIndicatorStyle} />
+        <Box style={statusIndicatorStyle} />
 
-        <VStack p="md" gap="sm" flex={1}>
+        <VStack p="sm" gap="sm" flex={1}>
           {/* Header row */}
           <HStack justify="space-between" align="center">
             <HStack gap="sm" align="center">
-              <div style={statusIconStyle}>{hook.passed ? '✓' : '✗'}</div>
+              <Box style={statusIconStyle}>
+                <Text size="xs">{hook.passed ? '✓' : '✗'}</Text>
+              </Box>
               <Text weight="medium">{hook.hookName}</Text>
             </HStack>
             <Badge variant={getHookTypeBadgeVariant(hook.hookType)}>
@@ -146,25 +145,41 @@ export function HookExecutionCard({
             </Text>
           </HStack>
 
+          {/* Directory row */}
+          {hook.directory && (
+            <Text size="sm" color="muted">
+              dir{' '}
+              <Text
+                size="sm"
+                style={{ color: colors.text.primary, fontWeight: 500 }}
+              >
+                {hook.directory}
+              </Text>
+            </Text>
+          )}
+
           {/* Expandable output section */}
           {(hook.output || hook.error) && (
             <VStack gap="sm">
-              <button
-                type="button"
+              <Pressable
+                onPress={() => setShowDetails(!showDetails)}
                 style={toggleButtonStyle}
-                onClick={() => setShowDetails(!showDetails)}
               >
-                <span
+                <Box
                   style={{
-                    transform: showDetails ? 'rotate(90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.15s',
-                    display: 'inline-block',
+                    transform: showDetails
+                      ? [{ rotate: '90deg' }]
+                      : [{ rotate: '0deg' }],
                   }}
                 >
-                  ▶
-                </span>
-                {showDetails ? 'Hide output' : 'Show output'}
-              </button>
+                  <Text size="sm" color="muted">
+                    ▶
+                  </Text>
+                </Box>
+                <Text size="sm" color="muted">
+                  {showDetails ? 'Hide output' : 'Show output'}
+                </Text>
+              </Pressable>
 
               {showDetails && (
                 <VStack gap="sm">
@@ -177,7 +192,17 @@ export function HookExecutionCard({
                       >
                         Error
                       </Text>
-                      <pre style={preStyle}>{hook.error}</pre>
+                      <Box style={codeBlockStyle}>
+                        <Text
+                          size="sm"
+                          style={{
+                            fontFamily: fonts.mono,
+                            color: colors.text.primary,
+                          }}
+                        >
+                          {hook.error}
+                        </Text>
+                      </Box>
                     </VStack>
                   )}
                   {hook.output && (
@@ -185,7 +210,17 @@ export function HookExecutionCard({
                       <Text size="sm" weight="semibold" color="muted">
                         Output
                       </Text>
-                      <pre style={preStyle}>{hook.output}</pre>
+                      <Box style={codeBlockStyle}>
+                        <Text
+                          size="sm"
+                          style={{
+                            fontFamily: fonts.mono,
+                            color: colors.text.primary,
+                          }}
+                        >
+                          {hook.output}
+                        </Text>
+                      </Box>
                     </VStack>
                   )}
                 </VStack>
@@ -194,6 +229,6 @@ export function HookExecutionCard({
           )}
         </VStack>
       </HStack>
-    </div>
+    </Box>
   );
 }

@@ -5,12 +5,18 @@
  * Uses the message query to fetch by UUID directly.
  */
 
-import type { CSSProperties } from 'react';
 import React, { Component, Suspense } from 'react';
 import { graphql, useLazyLoadQuery } from 'react-relay';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Box } from '@/components/atoms/Box.tsx';
+import { Center } from '@/components/atoms/Center.tsx';
+import { Heading } from '@/components/atoms/Heading.tsx';
+import { Pressable } from '@/components/atoms/Pressable.tsx';
+import { Spinner } from '@/components/atoms/Spinner.tsx';
+import { Text } from '@/components/atoms/Text.tsx';
+import { VStack } from '@/components/atoms/VStack.tsx';
 import { MessageCard } from '@/components/pages/SessionDetailPage/MessageCards';
-import { colors } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { MessageDetailPageQuery } from './__generated__/MessageDetailPageQuery.graphql.ts';
 
 // Error boundary to catch and display errors
@@ -39,73 +45,42 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '2rem', color: 'red' }}>
-          <h2>Something went wrong</h2>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {this.state.error?.message}
-          </pre>
-          <pre
+        <Box style={{ padding: spacing.lg }}>
+          <Heading
+            size="md"
+            style={{ color: colors.danger, marginBottom: spacing.sm }}
+          >
+            Something went wrong
+          </Heading>
+          <Box
             style={{
+              fontFamily: fonts.mono,
+              fontSize: 12,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              fontSize: '12px',
-              marginTop: '1rem',
+              color: colors.danger,
             }}
           >
-            {this.state.error?.stack}
-          </pre>
-        </div>
+            <Text>{this.state.error?.message}</Text>
+          </Box>
+          <Box
+            style={{
+              fontFamily: fonts.mono,
+              fontSize: 10,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              marginTop: spacing.md,
+              color: colors.text.muted,
+            }}
+          >
+            <Text size="xs">{this.state.error?.stack}</Text>
+          </Box>
+        </Box>
       );
     }
     return this.props.children;
   }
 }
-
-const styles: Record<string, CSSProperties> = {
-  container: {
-    padding: 24,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 600,
-    color: colors.text.primary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.text.muted,
-  },
-  backLink: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    color: colors.text.accent,
-    textDecoration: 'none',
-    marginBottom: 16,
-    fontSize: 14,
-    cursor: 'pointer',
-  },
-  loading: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-    color: colors.text.muted,
-  },
-  error: {
-    padding: 24,
-    textAlign: 'center' as const,
-    color: colors.danger,
-  },
-  notFound: {
-    padding: 48,
-    textAlign: 'center' as const,
-    color: colors.text.muted,
-  },
-};
 
 const MessageDetailPageQueryDef = graphql`
   query MessageDetailPageQuery($id: String!) {
@@ -127,48 +102,63 @@ function MessageContent({ messageId }: { messageId: string }) {
 
   if (!data.message) {
     return (
-      <div style={styles.notFound}>
-        <h2>Message Not Found</h2>
-        <p>The message with ID "{messageId}" could not be found.</p>
-      </div>
+      <Center style={{ padding: spacing.xl }}>
+        <VStack gap="md" align="center">
+          <Heading size="md">Message Not Found</Heading>
+          <Text color="muted">
+            The message with ID "{messageId}" could not be found.
+          </Text>
+        </VStack>
+      </Center>
     );
   }
 
-  return (
-    <div>
-      <MessageCard fragmentRef={data.message} />
-    </div>
-  );
+  return <MessageCard fragmentRef={data.message} />;
 }
 
 export function MessageDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
   if (!id) {
     return (
-      <div style={styles.error}>
-        <p>No message ID provided.</p>
-      </div>
+      <Center style={{ padding: spacing.lg }}>
+        <Text color="danger">No message ID provided.</Text>
+      </Center>
     );
   }
 
   return (
     <ErrorBoundary>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <a href="/" style={styles.backLink}>
-            Back to Dashboard
-          </a>
-          <h1 style={styles.title}>Message Detail</h1>
-          <p style={styles.subtitle}>ID: {id}</p>
-        </div>
+      <Box style={{ padding: spacing.lg }}>
+        <VStack gap="md" align="stretch">
+          <Pressable
+            onPress={() => navigate('/')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+            }}
+          >
+            <Text color="accent">Back to Dashboard</Text>
+          </Pressable>
 
-        <Suspense
-          fallback={<div style={styles.loading}>Loading message...</div>}
-        >
-          <MessageContent messageId={id} />
-        </Suspense>
-      </div>
+          <Heading size="lg">Message Detail</Heading>
+          <Text size="sm" color="muted" style={{ fontFamily: fonts.mono }}>
+            ID: {id}
+          </Text>
+
+          <Suspense
+            fallback={
+              <Center style={{ minHeight: 200 }}>
+                <Spinner />
+              </Center>
+            }
+          >
+            <MessageContent messageId={id} />
+          </Suspense>
+        </VStack>
+      </Box>
     </ErrorBoundary>
   );
 }

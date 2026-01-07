@@ -7,31 +7,8 @@
  * import { testHooks, loadPluginConfig, checkForChanges } from './hooks';
  */
 
-// Checkpoint management
-export {
-	type Checkpoint,
-	type CheckpointInfo,
-	captureCheckpoint,
-	captureCheckpointAsync,
-	cleanupOldCheckpoints,
-	cleanupOrphanedBlobs,
-	collectIfChangedPatterns,
-	getBlobDir,
-	getBlobPath,
-	getCheckpointAsync,
-	getCheckpointDir,
-	getCheckpointPath,
-	getProjectSlug,
-	getProjectsBaseDir,
-	hasChangedSinceCheckpoint,
-	hasChangedSinceCheckpointAsync,
-	listCheckpoints,
-	listCheckpointsAsync,
-	loadCheckpoint,
-	readBlob,
-	restoreFromCheckpointAsync,
-	storeBlob,
-} from "./checkpoint.ts";
+// UI Components
+export { HookExplainUI, type HookSource } from "../hook-explain-ui.tsx";
 // Cache management
 export {
 	buildManifest,
@@ -53,20 +30,24 @@ export {
 } from "./hook-cache.ts";
 // Hook configuration
 export {
+	DEFAULT_HOOK_EVENTS,
 	getHookConfigs,
 	getHookDefinition,
+	getHookEvents,
+	type HookDependency,
+	type HookEventType,
+	hookMatchesEvent,
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
 	type PluginConfig,
 	type PluginHookDefinition,
+	type PluginMcpConfig,
 	type PluginMemoryConfig,
 	type ResolvedHookConfig,
 	type UserConfig,
 	type UserHookOverride,
 } from "./hook-config.ts";
-// UI Components
-export { HookExplainUI, type HookSource } from "./hook-explain-ui.tsx";
 // Locking
 export {
 	acquireSlot,
@@ -93,6 +74,7 @@ export {
 	buildCommandWithFiles,
 	clearTranscriptCache,
 	commandUsesSessionFiles,
+	getProjectsBaseDir,
 	getSessionFilteredFiles,
 	getTranscriptModifiedFiles,
 	HAN_FILES_TEMPLATE,

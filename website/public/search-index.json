@@ -1075,6 +1075,24 @@
     ]
   },
   {
+    "id": "jutsu-graphql-inspector",
+    "name": "jutsu-graphql-inspector",
+    "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
+    "category": "jutsu",
+    "tags": [
+      "graphql",
+      "graphql-inspector",
+      "schema",
+      "validation",
+      "breaking-changes",
+      "diff"
+    ],
+    "path": "/plugins/jutsu/jutsu-graphql-inspector",
+    "components": [
+      "skill"
+    ]
+  },
+  {
     "id": "jutsu-helm",
     "name": "jutsu-helm",
     "description": "Helm chart validation and best practices",

@@ -7,18 +7,12 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 } from "./config/claude-settings.ts";
-import { getEventLogger } from "./events/logger.ts";
 import {
 	getPluginHookSettings,
 	isCacheEnabled,
-	isCheckpointsEnabled,
 	isFailFastEnabled,
-} from "./han-settings.ts";
-import {
-	getHookConfigs,
-	getHookDefinition,
-	type ResolvedHookConfig,
-} from "./hook-config.ts";
+} from "./config/han-settings.ts";
+import { getEventLogger } from "./events/logger.ts";
 import {
 	checkFailureSignal,
 	clearFailureSignal,
@@ -29,7 +23,6 @@ import {
 	withGlobalSlot,
 	withSlot,
 } from "./hook-lock.ts";
-import { hasChangedSinceCheckpointAsync } from "./hooks/checkpoint.ts";
 import {
 	checkForChangesAsync,
 	computeFileHash,
@@ -37,6 +30,11 @@ import {
 	findFilesWithGlob,
 	trackFilesAsync,
 } from "./hooks/hook-cache.ts";
+import {
+	getHookConfigs,
+	getHookDefinition,
+	type ResolvedHookConfig,
+} from "./hooks/hook-config.ts";
 import { getPluginNameFromRoot, isDebugMode } from "./shared.ts";
 
 /**
@@ -670,8 +668,7 @@ export async function runConfiguredHook(
 		hookName,
 		only,
 		verbose,
-		checkpointType,
-		checkpointId,
+		// checkpointType and checkpointId are no longer used - checkpoints feature removed
 		skipDeps,
 	} = options;
 
@@ -698,14 +695,7 @@ export async function runConfiguredHook(
 			? false
 			: (options.cache ?? isCacheEnabled());
 
-	// Resolve checkpoints setting
-	// Priority: HAN_NO_CHECKPOINTS env > checkpointType presence > han.yml default
-	// Note: If checkpointType is not provided, checkpoints are effectively disabled
-	const checkpointsEnabled =
-		process.env.HAN_NO_CHECKPOINTS === "1" ||
-		process.env.HAN_NO_CHECKPOINTS === "true"
-			? false
-			: isCheckpointsEnabled();
+	// Checkpoints feature has been removed - now using ifChanged + transcript filtering
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -879,7 +869,6 @@ export async function runConfiguredHook(
 	let totalFound = 0;
 	let disabledCount = 0;
 	let skippedCount = 0;
-	let checkpointSkippedCount = 0;
 
 	for (const config of configs) {
 		totalFound++;
@@ -909,31 +898,6 @@ export async function runConfiguredHook(
 				skippedCount++;
 				continue;
 			}
-
-			// NEW: Also check checkpoint if available (uses DB-backed storage)
-			if (hasChanges && checkpointType && checkpointId && checkpointsEnabled) {
-				const changedSinceCheckpoint = await hasChangedSinceCheckpointAsync(
-					checkpointId,
-					config.ifChanged,
-					config.directory,
-				);
-				if (!changedSinceCheckpoint) {
-					// File changed since last hook run, but NOT since checkpoint
-					// Skip this hook
-					if (verbose) {
-						const relativePath =
-							config.directory === projectRoot
-								? "."
-								: config.directory.replace(`${projectRoot}/`, "");
-						console.log(
-							`[${pluginName}/${hookName}] Skipping ${relativePath}: Changed since last run, but not since ${checkpointType} checkpoint`,
-						);
-					}
-					checkpointSkippedCount++;
-					continue;
-				}
-				// If hasChangedSinceCheckpointAsync returns true (or fails), run hook
-			}
 		}
 
 		// This config needs to run
@@ -955,20 +919,10 @@ export async function runConfiguredHook(
 		process.exit(0);
 	}
 
-	if (
-		configsToRun.length === 0 &&
-		(skippedCount > 0 || checkpointSkippedCount > 0)
-	) {
-		if (skippedCount > 0) {
-			console.log(
-				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
-			);
-		}
-		if (checkpointSkippedCount > 0) {
-			console.log(
-				`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
-			);
-		}
+	if (configsToRun.length === 0 && skippedCount > 0) {
+		console.log(
+			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
+		);
 		console.log("No changes detected in any directories. Nothing to run.");
 		process.exit(0);
 	}
@@ -1021,7 +975,7 @@ export async function runConfiguredHook(
 				`[validate] eventLogger=${eventLogger ? "exists" : "null"}, about to log hook_run`,
 			);
 		}
-		eventLogger?.logHookRun(pluginName, hookName, relativePath, false);
+		eventLogger?.logHookRun(pluginName, hookName, "Stop", relativePath, false);
 		const hookStartTime = Date.now();
 
 		// Acquire slot, run command, release slot (per directory)
@@ -1105,11 +1059,6 @@ export async function runConfiguredHook(
 	if (skippedCount > 0) {
 		console.log(
 			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
-		);
-	}
-	if (checkpointSkippedCount > 0) {
-		console.log(
-			`Skipped ${checkpointSkippedCount} director${checkpointSkippedCount === 1 ? "y" : "ies"} (no changes since ${checkpointType} checkpoint)`,
 		);
 	}
 

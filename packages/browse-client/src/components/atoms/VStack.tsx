@@ -1,10 +1,13 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { View, type ViewStyle } from 'react-native-web';
 import { type SpacingKey, StyleSheet, spacing } from '../../theme.ts';
 
+/** Extended style type allowing both ViewStyle and web CSSProperties */
+type StackStyle = ViewStyle | CSSProperties;
+
 export interface VStackProps {
   children?: ReactNode;
-  style?: ViewStyle;
+  style?: StackStyle;
   className?: string;
   gap?: SpacingKey;
   align?: ViewStyle['alignItems'];
@@ -51,7 +54,7 @@ export function VStack({
       px && { paddingHorizontal: spacing[px] },
       py && { paddingVertical: spacing[py] },
       style,
-    ].filter(Boolean) as ViewStyle[]
+    ].filter(Boolean) as unknown as ViewStyle[]
   );
 
   return (

@@ -7,6 +7,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
+import { isMetricsEnabled } from "../../config/han-settings.ts";
 import { tasks } from "../../db/index.ts";
 import { getOrCreateEventLogger } from "../../events/logger.ts";
 import type {
@@ -14,7 +15,6 @@ import type {
 	TaskOutcome,
 	TaskType,
 } from "../../events/types.ts";
-import { isMetricsEnabled } from "../../han-settings.ts";
 import { recordTaskCompletion } from "../../telemetry/index.ts";
 
 interface JsonRpcRequest {

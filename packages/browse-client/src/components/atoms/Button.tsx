@@ -11,6 +11,7 @@ export interface ButtonProps {
   active?: boolean;
   onClick?: () => void;
   type?: 'button' | 'submit' | 'reset';
+  accessibilityLabel?: string;
 }
 
 const sizeStyles: Record<string, CSSProperties> = {
@@ -69,6 +70,7 @@ export function Button({
   active,
   onClick,
   type = 'button',
+  accessibilityLabel,
 }: ButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -97,6 +99,7 @@ export function Button({
       disabled={disabled}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      aria-label={accessibilityLabel}
     >
       {children}
     </button>

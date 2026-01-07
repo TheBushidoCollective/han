@@ -14,11 +14,11 @@ import {
 	getMergedHanConfigForDirectory,
 	getPluginHookSettings,
 	isCacheEnabled,
-	isCheckpointsEnabled,
 	isFailFastEnabled,
 	isHooksEnabled,
 	isMemoryEnabled,
 	isMetricsEnabled,
+	isSessionFilteringEnabled,
 	loadHanConfigFile,
 } from "../lib/config/index.ts";
 
@@ -263,30 +263,30 @@ describe.serial("han-settings.ts", () => {
 		});
 	});
 
-	describe("isCheckpointsEnabled", () => {
+	describe("isSessionFilteringEnabled", () => {
 		test("returns true by default when no config exists", () => {
-			expect(isCheckpointsEnabled()).toBe(true);
+			expect(isSessionFilteringEnabled()).toBe(true);
 		});
 
 		test("returns true when hooks.checkpoints is explicitly true", () => {
 			const configPath = join(tempUserDir, "han.yml");
 			writeFileSync(configPath, "hooks:\n  checkpoints: true\n");
 
-			expect(isCheckpointsEnabled()).toBe(true);
+			expect(isSessionFilteringEnabled()).toBe(true);
 		});
 
 		test("returns false when hooks.checkpoints is false", () => {
 			const configPath = join(tempUserDir, "han.yml");
 			writeFileSync(configPath, "hooks:\n  checkpoints: false\n");
 
-			expect(isCheckpointsEnabled()).toBe(false);
+			expect(isSessionFilteringEnabled()).toBe(false);
 		});
 
 		test("returns true when hooks section exists but checkpoints is undefined", () => {
 			const configPath = join(tempUserDir, "han.yml");
 			writeFileSync(configPath, "hooks:\n  enabled: true\n");
 
-			expect(isCheckpointsEnabled()).toBe(true);
+			expect(isSessionFilteringEnabled()).toBe(true);
 		});
 
 		test("respects config precedence (project overrides user)", () => {
@@ -296,7 +296,7 @@ describe.serial("han-settings.ts", () => {
 			writeFileSync(userConfigPath, "hooks:\n  checkpoints: true\n");
 			writeFileSync(projectConfigPath, "hooks:\n  checkpoints: false\n");
 
-			expect(isCheckpointsEnabled()).toBe(false);
+			expect(isSessionFilteringEnabled()).toBe(false);
 		});
 
 		test("returns false when hooks are globally disabled", () => {
@@ -306,8 +306,8 @@ describe.serial("han-settings.ts", () => {
 				"hooks:\n  enabled: false\n  checkpoints: true\n",
 			);
 
-			// When hooks are disabled globally, checkpoints should also be disabled
-			expect(isCheckpointsEnabled()).toBe(false);
+			// When hooks are disabled globally, session filtering should also be disabled
+			expect(isSessionFilteringEnabled()).toBe(false);
 		});
 	});
 

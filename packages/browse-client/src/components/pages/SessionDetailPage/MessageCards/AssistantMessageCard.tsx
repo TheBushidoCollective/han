@@ -54,14 +54,14 @@ const AssistantMessageCardFragment = graphql`
         icon
         displayName
         color
-      }
-      ... on ToolResultBlock {
-        toolCallId
-        content
-        isError
-        isLong
-        preview
-        hasImage
+        result {
+          toolCallId
+          content
+          isError
+          isLong
+          preview
+          hasImage
+        }
       }
       ... on ImageBlock {
         mediaType
@@ -82,7 +82,6 @@ const AssistantMessageCardFragment = graphql`
 
 interface AssistantMessageCardProps {
   fragmentRef: AssistantMessageCard_message$key;
-  toolResultsMap?: Map<string, ContentBlockType>;
 }
 
 const ASSISTANT_ROLE_INFO: MessageRoleInfo = {
@@ -93,11 +92,11 @@ const ASSISTANT_ROLE_INFO: MessageRoleInfo = {
 
 /**
  * Render content blocks for assistant messages
+ * Note: Tool results are now fetched inline via GraphQL result field on ToolUseBlock
  */
 function renderContentBlock(
   block: ContentBlockType,
-  index: number,
-  toolResultsMap?: Map<string, ContentBlockType>
+  index: number
 ): React.ReactElement | null {
   switch (block.type) {
     case 'THINKING':
@@ -128,7 +127,18 @@ function renderContentBlock(
         )
           ? category
           : 'OTHER';
-      const result = toolResultsMap?.get(block.toolCallId ?? '');
+      // Result is now fetched via GraphQL result field on ToolUseBlock
+      const result = block.result
+        ? {
+            type: 'TOOL_RESULT' as const,
+            toolCallId: block.result.toolCallId ?? '',
+            content: block.result.content ?? '',
+            isError: block.result.isError ?? false,
+            isLong: block.result.isLong ?? false,
+            preview: block.result.preview ?? '',
+            hasImage: block.result.hasImage ?? false,
+          }
+        : undefined;
       return (
         <ToolUseBlock
           key={`tool-use-${index}`}
@@ -144,6 +154,7 @@ function renderContentBlock(
       );
     }
     case 'TOOL_RESULT':
+      // Tool results are now rendered inline with their parent ToolUseBlock
       return null;
     case 'IMAGE':
       return (
@@ -182,19 +193,11 @@ function AssistantBadges({
 }): React.ReactElement {
   return (
     <>
-      {hasThinking && (
-        <span title={`${thinkingCount} thinking blocks`}>
-          <Badge variant="info">🧠 {thinkingCount}</Badge>
-        </span>
-      )}
-      {hasToolUse && (
-        <span title={`${toolUseCount} tool calls`}>
-          <Badge variant="warning">🔧 {toolUseCount}</Badge>
-        </span>
-      )}
+      {hasThinking && <Badge variant="info">🧠 {thinkingCount}</Badge>}
+      {hasToolUse && <Badge variant="warning">🔧 {toolUseCount}</Badge>}
       {model && <Badge variant="purple">{model}</Badge>}
       {(inputTokens || outputTokens) && (
-        <Text size="xs" color="muted" title="Token usage">
+        <Text size="xs" color="muted">
           {inputTokens?.toLocaleString() ?? 0}↓{' '}
           {outputTokens?.toLocaleString() ?? 0}↑
           {cachedTokens ? ` (${cachedTokens.toLocaleString()} cached)` : ''}
@@ -206,7 +209,6 @@ function AssistantBadges({
 
 export function AssistantMessageCard({
   fragmentRef,
-  toolResultsMap,
 }: AssistantMessageCardProps): React.ReactElement {
   const data = useFragment(AssistantMessageCardFragment, fragmentRef);
   const { showRawJson, toggleRawJson } = useRawJsonToggle();
@@ -245,11 +247,7 @@ export function AssistantMessageCard({
         <VStack gap="md" align="stretch">
           {hasContentBlocks ? (
             contentBlocks.map((block, index) =>
-              renderContentBlock(
-                block as ContentBlockType,
-                index,
-                toolResultsMap
-              )
+              renderContentBlock(block as ContentBlockType, index)
             )
           ) : (
             <MarkdownContent>{data.content ?? ''}</MarkdownContent>

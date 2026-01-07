@@ -8,21 +8,18 @@ import {
 	getMergedPluginsAndMarketplaces,
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
+import { getPluginHookSettings } from "../../config/han-settings.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
 	initEventLogger,
 } from "../../events/logger.ts";
-import { getPluginHookSettings } from "../../han-settings.ts";
-import { findDirectoriesWithMarkers } from "../../hook-cache.ts";
 import {
+	checkForChangesAsync,
+	findDirectoriesWithMarkers,
 	hookMatchesEvent,
 	loadPluginConfig,
 	type PluginHookDefinition,
-} from "../../hook-config.ts";
-import {
-	checkForChangesAsync,
-	hasChangedSinceCheckpointAsync,
 	trackFilesAsync,
 } from "../../hooks/index.ts";
 import { isDebugMode } from "../../shared.ts";
@@ -467,6 +464,10 @@ async function executeHookInDirectory(
 			0,
 			true,
 			"[skipped: disabled by user config]",
+			undefined, // error
+			undefined, // hookRunId
+			task.hookDef.ifChanged,
+			task.hookDef.command,
 		);
 		return {
 			plugin: task.plugin,
@@ -512,6 +513,10 @@ async function executeHookInDirectory(
 				0,
 				true,
 				"[skipped: no changes detected]",
+				undefined, // error
+				undefined, // hookRunId
+				task.hookDef.ifChanged,
+				task.hookDef.command,
 			);
 			return {
 				plugin: task.plugin,
@@ -523,40 +528,6 @@ async function executeHookInDirectory(
 				duration,
 			};
 		}
-
-		// Check checkpoint if available
-		if (options.checkpoints && payload.session_id) {
-			const changedSinceCheckpoint = await hasChangedSinceCheckpointAsync(
-				payload.session_id,
-				task.hookDef.ifChanged,
-				directory,
-			);
-			if (!changedSinceCheckpoint) {
-				const duration = Date.now() - startTime;
-				// Log checkpoint skip
-				const logger = getOrCreateEventLogger();
-				logger?.logHookResult(
-					task.plugin,
-					task.hookName,
-					options.hookType,
-					relativePath,
-					true, // cached via checkpoint
-					duration,
-					0,
-					true,
-					"[skipped: no changes since checkpoint]",
-				);
-				return {
-					plugin: task.plugin,
-					hook: task.hookName,
-					directory: relativePath,
-					success: true,
-					skipped: true,
-					skipReason: "no changes since checkpoint",
-					duration,
-				};
-			}
-		}
 	}
 
 	// Get resolved command (with user overrides)
@@ -565,12 +536,16 @@ async function executeHookInDirectory(
 	const command = resolveHanCommand(rawCommand);
 
 	// Log hook_run event and capture UUID for correlation with result
+	// Include ifChanged patterns and command to enable per-file validation tracking
 	const logger = getOrCreateEventLogger();
 	const hookRunId = logger?.logHookRun(
 		task.plugin,
 		task.hookName,
+		options.hookType,
 		relativePath,
 		false,
+		task.hookDef.ifChanged,
+		command,
 	);
 	cliLog(
 		`🪝 hook_run: ${task.plugin}/${task.hookName} in ${relativePath}`,
@@ -643,6 +618,8 @@ async function executeHookInDirectory(
 			output.trim(),
 			undefined, // error
 			hookRunId, // correlate with hook_run
+			task.hookDef.ifChanged,
+			command,
 		);
 		cliLog(
 			`✅ hook_result: ${task.plugin}/${task.hookName} passed in ${relativePath} (${formatDuration(duration)})`,
@@ -676,6 +653,8 @@ async function executeHookInDirectory(
 			stdout.trim(),
 			stderr.trim(),
 			hookRunId, // correlate with hook_run
+			task.hookDef.ifChanged,
+			command,
 		);
 		cliLog(
 			`❌ hook_result: ${task.plugin}/${task.hookName} failed in ${relativePath} (${formatDuration(duration)})`,

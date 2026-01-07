@@ -21,6 +21,15 @@ export interface ContentBlock {
   icon?: string | null;
   displayName?: string | null;
   color?: string | null;
+  // ToolUseBlock nested result (fetched via GraphQL)
+  result?: {
+    toolCallId?: string | null;
+    content?: string | null;
+    isError?: boolean | null;
+    isLong?: boolean | null;
+    preview?: string | null;
+    hasImage?: boolean | null;
+  } | null;
   // ToolResultBlock fields
   content?: string | null;
   isError?: boolean | null;
@@ -72,26 +81,33 @@ export interface Message {
   sentimentAnalysis?: SentimentAnalysis | null;
 }
 
-export interface Checkpoint {
-  id: string;
-  checkpointId: string;
-  type: 'SESSION' | 'AGENT';
-  createdAt: string;
-  fileCount: number;
-  patternCount: number;
-  patterns: string[];
-}
-
 export interface HookExecution {
   id: string;
   hookType: string;
   hookName: string;
   hookSource: string | null;
+  directory: string | null;
   durationMs: number;
   passed: boolean;
   output: string | null;
   error: string | null;
   timestamp: string;
+}
+
+export interface HookExecutionEdge {
+  node: HookExecution;
+  cursor: string;
+}
+
+export interface HookExecutionConnection {
+  edges: HookExecutionEdge[];
+  pageInfo: {
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: string | null;
+    endCursor: string | null;
+  };
+  totalCount: number;
 }
 
 export interface HookTypeStat {
@@ -135,8 +151,7 @@ export interface Session {
   updatedAt: string | null;
   gitBranch: string | null;
   version: string | null;
-  checkpoints: Checkpoint[];
-  hookExecutions: HookExecution[];
+  hookExecutions: HookExecutionConnection;
   hookStats: HookStats;
   tasks: Task[];
 }

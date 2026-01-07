@@ -2,7 +2,7 @@
  * Session Detail Page
  *
  * Displays full session details including messages.
- * Uses PageLoader for query preloading with @defer and pagination.
+ * Uses PageLoader for query preloading with pagination.
  */
 
 import React, { Component } from 'react';
@@ -11,10 +11,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Center } from '@/components/atoms/Center.tsx';
+import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { VStack } from '@/components/atoms/VStack.tsx';
 import { PageLoader } from '@/components/helpers';
-import { spacing } from '@/theme.ts';
+import { colors, fonts, spacing } from '@/theme.ts';
 import type { SessionDetailPageQuery as SessionDetailPageQueryType } from './__generated__/SessionDetailPageQuery.graphql.ts';
 import { SessionDetailContent } from './SessionDetailContent.tsx';
 
@@ -44,21 +46,34 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <Box style={{ padding: '2rem', color: 'red' }}>
-          <h2>Something went wrong</h2>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {this.state.error?.message}
-          </pre>
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontSize: '12px',
-              marginTop: '1rem',
-            }}
-          >
-            {this.state.error?.stack}
-          </pre>
+        <Box style={{ padding: spacing.lg }}>
+          <VStack gap="md" align="stretch">
+            <Heading size="md" style={{ color: colors.danger }}>
+              Something went wrong
+            </Heading>
+            <Box
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: 12,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                color: colors.danger,
+              }}
+            >
+              <Text>{this.state.error?.message}</Text>
+            </Box>
+            <Box
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: 10,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                color: colors.text.muted,
+              }}
+            >
+              <Text size="xs">{this.state.error?.stack}</Text>
+            </Box>
+          </VStack>
         </Box>
       );
     }
@@ -89,7 +104,7 @@ export const SessionDetailPageQuery = graphql`
         gitBranch
         version
         ...SessionMessages_session
-        ...SessionExpensiveFields_session
+        ...SessionSidebar_session
       }
     }
   }

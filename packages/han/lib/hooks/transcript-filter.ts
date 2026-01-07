@@ -10,10 +10,17 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import { parseTranscript, pathToSlug } from "../memory/transcript-search.ts";
 import { getNativeModule } from "../native.ts";
-import { getProjectsBaseDir } from "./checkpoint.ts";
 import { findFilesWithGlob } from "./hook-cache.ts";
+
+/**
+ * Get the base directory for Claude projects (~/.claude/projects)
+ */
+export function getProjectsBaseDir(): string {
+	return join(getClaudeConfigDir(), "projects");
+}
 
 /**
  * Result of extracting modified files from a transcript
