@@ -59,15 +59,8 @@ const terminalHeaderStyle: CSSProperties = {
   borderBottom: '1px solid #414868',
 };
 
-const trafficLightStyle = (color: string): CSSProperties => ({
-  width: 12,
-  height: 12,
-  borderRadius: '50%',
-  backgroundColor: color,
-});
-
 const terminalContentStyle: CSSProperties = {
-  padding: '12px 16px',
+  padding: '16px 20px',
 };
 
 const diffRemoveStyle: CSSProperties = {
@@ -283,19 +276,11 @@ export function ToolUseBlock({
             )}
             {/* Terminal-style container */}
             <Box style={terminalStyle}>
-              {/* Terminal title bar */}
+              {/* Terminal header */}
               <Box style={terminalHeaderStyle}>
-                {/* Traffic lights */}
-                <HStack gap="xs">
-                  <Box style={trafficLightStyle('#ff5f57')} />
-                  <Box style={trafficLightStyle('#febc2e')} />
-                  <Box style={trafficLightStyle('#28c840')} />
-                </HStack>
                 <Text
                   size="xs"
                   style={{
-                    flex: 1,
-                    textAlign: 'center',
                     color: '#565f89',
                     fontFamily: fonts.mono,
                   }}

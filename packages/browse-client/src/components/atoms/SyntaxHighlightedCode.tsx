@@ -41,7 +41,7 @@ export interface SyntaxHighlightedCodeProps {
 const defaultContainerStyle: ViewStyle = {
   backgroundColor: colors.bg.tertiary,
   borderRadius: radii.md,
-  padding: spacing.sm,
+  padding: spacing.md,
   borderWidth: 1,
   borderColor: colors.border.subtle,
 };
