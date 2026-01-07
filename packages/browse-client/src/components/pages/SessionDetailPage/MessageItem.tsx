@@ -5,8 +5,6 @@
  * Uses MarkdownContent organism for centralized content rendering.
  */
 
-import hljs from 'highlight.js/lib/core';
-import bash from 'highlight.js/lib/languages/bash';
 import type React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +14,7 @@ import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Link } from '@/components/atoms/Link.tsx';
+import { SyntaxHighlightedCode } from '@/components/atoms/SyntaxHighlightedCode.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
@@ -32,9 +31,6 @@ export interface MessageItemMessage {
   timestamp: string | null;
   isToolOnly: boolean;
 }
-
-// Register bash language for syntax highlighting (used in tool content)
-hljs.registerLanguage('bash', bash);
 
 /**
  * Tool metadata for enhanced display
@@ -503,21 +499,21 @@ function formatToolContent(
                 {meta.label}
               </Text>
             </HStack>
-            <pre className="bash-command">
-              {hasAnsiCodes ? (
-                // Render ANSI codes with proper colors
-                <AnsiText className="hljs">{code}</AnsiText>
-              ) : (
-                // Apply syntax highlighting for plain bash commands
-                <code
-                  className="hljs language-bash"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting
-                  dangerouslySetInnerHTML={{
-                    __html: hljs.highlight(code, { language: 'bash' }).value,
-                  }}
-                />
-              )}
-            </pre>
+            {hasAnsiCodes ? (
+              // Render ANSI codes with proper colors (already RN-compatible)
+              <Box
+                style={{
+                  backgroundColor: '#161b22',
+                  padding: 8,
+                  borderRadius: 6,
+                }}
+              >
+                <AnsiText>{code}</AnsiText>
+              </Box>
+            ) : (
+              // Apply syntax highlighting for plain bash commands
+              <SyntaxHighlightedCode code={code} language="bash" />
+            )}
           </VStack>
         );
         i = j;
