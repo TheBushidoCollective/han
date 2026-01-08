@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -54,6 +54,109 @@ function resolveHanCommand(command: string): string {
 		return hanBinary + command.slice(3);
 	}
 	return command;
+}
+
+/**
+ * Result of running a command with timeout
+ */
+interface CommandWithTimeoutResult {
+	completed: boolean;
+	success: boolean;
+	output: string;
+	error: string;
+	exitCode: number;
+	duration: number;
+}
+
+/**
+ * Run a command with a timeout. If the command doesn't complete within the timeout,
+ * returns { completed: false } so the caller can defer to background execution.
+ *
+ * @param command - The shell command to run
+ * @param cwd - Working directory
+ * @param env - Environment variables
+ * @param payloadJson - JSON payload to pass via stdin
+ * @param timeoutMs - Maximum time to wait before returning (default: 5000ms)
+ * @returns Result with completed flag indicating if finished within timeout
+ */
+async function runCommandWithTimeout(
+	command: string,
+	cwd: string,
+	env: Record<string, string | undefined>,
+	payloadJson: string,
+	timeoutMs = 5000,
+): Promise<CommandWithTimeoutResult> {
+	const startTime = Date.now();
+
+	return new Promise((resolve) => {
+		let stdout = "";
+		let stderr = "";
+		let resolved = false;
+
+		const proc = spawn("/bin/bash", ["-c", command], {
+			cwd,
+			env: { ...process.env, ...env },
+		});
+
+		// Write payload to stdin
+		proc.stdin.write(payloadJson);
+		proc.stdin.end();
+
+		proc.stdout.on("data", (data) => {
+			stdout += data.toString();
+		});
+
+		proc.stderr.on("data", (data) => {
+			stderr += data.toString();
+		});
+
+		// Set up timeout
+		const timer = setTimeout(() => {
+			if (!resolved) {
+				resolved = true;
+				// Don't kill the process - it will continue running
+				// The coordinator will pick it up via pendingHooks
+				resolve({
+					completed: false,
+					success: false,
+					output: stdout,
+					error: "timeout - deferred to background",
+					exitCode: -1,
+					duration: Date.now() - startTime,
+				});
+			}
+		}, timeoutMs);
+
+		proc.on("close", (code) => {
+			clearTimeout(timer);
+			if (!resolved) {
+				resolved = true;
+				resolve({
+					completed: true,
+					success: code === 0,
+					output: stdout,
+					error: stderr,
+					exitCode: code ?? 1,
+					duration: Date.now() - startTime,
+				});
+			}
+		});
+
+		proc.on("error", (err) => {
+			clearTimeout(timer);
+			if (!resolved) {
+				resolved = true;
+				resolve({
+					completed: true,
+					success: false,
+					output: stdout,
+					error: err.message,
+					exitCode: 1,
+					duration: Date.now() - startTime,
+				});
+			}
+		});
+	});
 }
 
 /**
@@ -630,21 +733,180 @@ async function executeHookInDirectory(
 		console.log(`  $ ${command}\n`);
 	}
 
-	try {
-		// Serialize payload to pass via stdin to child process
-		const payloadJson = JSON.stringify(payload);
+	// Serialize payload to pass via stdin to child process
+	const payloadJson = JSON.stringify(payload);
+	const hookEnv = {
+		CLAUDE_PLUGIN_ROOT: task.pluginRoot,
+		CLAUDE_PROJECT_DIR: projectRoot,
+		HAN_SESSION_ID: options.sessionId,
+	};
 
+	// For Stop hooks: Use timeout-based execution (5 seconds)
+	// If hook doesn't complete in time, defer to background and return immediately
+	if (options.isStopHook) {
+		const STOP_HOOK_TIMEOUT_MS = 5000; // 5 seconds before deferring
+
+		const result = await runCommandWithTimeout(
+			command,
+			directory,
+			hookEnv,
+			payloadJson,
+			STOP_HOOK_TIMEOUT_MS,
+		);
+
+		// Release slot early if we acquired one (before any deferral)
+		if (slotHandle) {
+			await slotHandle.release();
+			slotHandle = null;
+		}
+
+		if (!result.completed) {
+			// Hook didn't complete in time - queue for background execution
+			pendingHooks.queue({
+				sessionId: options.sessionId,
+				hookType: options.hookType,
+				hookName: task.hookName,
+				plugin: task.plugin,
+				directory,
+				command,
+				ifChanged: task.hookDef.ifChanged
+					? JSON.stringify(task.hookDef.ifChanged)
+					: undefined,
+			});
+
+			logger?.logHookResult(
+				task.plugin,
+				task.hookName,
+				options.hookType,
+				relativePath,
+				false,
+				result.duration,
+				0,
+				true, // Mark as success so Claude can continue
+				"[deferred to background - took too long]",
+				undefined,
+				hookRunId,
+				task.hookDef.ifChanged,
+				command,
+			);
+			cliLog(
+				`⏳ hook_deferred: ${task.plugin}/${task.hookName} in ${relativePath} (exceeded ${STOP_HOOK_TIMEOUT_MS}ms)`,
+				"yellow",
+			);
+
+			return {
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				success: true, // Report success so Claude can continue
+				skipped: true,
+				skipReason: "deferred to background (timeout)",
+				duration: result.duration,
+				deferred: true,
+			};
+		}
+
+		// Hook completed in time
+		if (result.success) {
+			// Update cache on success
+			if (
+				options.cache &&
+				task.hookDef.ifChanged &&
+				task.hookDef.ifChanged.length > 0
+			) {
+				const cacheKey = getCacheKeyForDirectory(
+					task.hookName,
+					directory,
+					projectRoot,
+				);
+				const commandHash = createHash("sha256").update(command).digest("hex");
+				await trackFilesAsync(
+					task.plugin,
+					cacheKey,
+					directory,
+					task.hookDef.ifChanged,
+					task.pluginRoot,
+					{
+						logger: logger ?? undefined,
+						directory: relativePath,
+						commandHash,
+					},
+				);
+			}
+
+			logger?.logHookResult(
+				task.plugin,
+				task.hookName,
+				options.hookType,
+				relativePath,
+				false,
+				result.duration,
+				0,
+				true,
+				result.output.trim(),
+				undefined,
+				hookRunId,
+				task.hookDef.ifChanged,
+				command,
+			);
+			cliLog(
+				`✅ hook_result: ${task.plugin}/${task.hookName} passed in ${relativePath} (${formatDuration(result.duration)})`,
+				"green",
+			);
+
+			return {
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				success: true,
+				output: result.output.trim(),
+				duration: result.duration,
+			};
+		}
+
+		// Hook completed but failed
+		logger?.logHookResult(
+			task.plugin,
+			task.hookName,
+			options.hookType,
+			relativePath,
+			false,
+			result.duration,
+			result.exitCode,
+			false,
+			result.output.trim(),
+			result.error.trim(),
+			hookRunId,
+			task.hookDef.ifChanged,
+			command,
+		);
+		cliLog(
+			`❌ hook_result: ${task.plugin}/${task.hookName} failed in ${relativePath} (${formatDuration(result.duration)})`,
+			"red",
+		);
+
+		return {
+			plugin: task.plugin,
+			hook: task.hookName,
+			directory: relativePath,
+			success: false,
+			output: result.output.trim(),
+			error: result.error.trim(),
+			duration: result.duration,
+		};
+	}
+
+	// For non-Stop hooks: Use synchronous execution (blocking is fine)
+	try {
 		const output = execSync(command, {
 			cwd: directory,
 			encoding: "utf-8",
 			timeout: 300000, // 5 minute timeout
-			input: payloadJson, // Pass payload via stdin
+			input: payloadJson,
 			shell: "/bin/bash",
 			env: {
 				...process.env,
-				CLAUDE_PLUGIN_ROOT: task.pluginRoot,
-				CLAUDE_PROJECT_DIR: projectRoot,
-				HAN_SESSION_ID: options.sessionId,
+				...hookEnv,
 			},
 		});
 
@@ -676,7 +938,6 @@ async function executeHookInDirectory(
 
 		const duration = Date.now() - startTime;
 
-		// Log hook_result event (success)
 		logger?.logHookResult(
 			task.plugin,
 			task.hookName,
@@ -687,8 +948,8 @@ async function executeHookInDirectory(
 			0,
 			true,
 			output.trim(),
-			undefined, // error
-			hookRunId, // correlate with hook_run
+			undefined,
+			hookRunId,
 			task.hookDef.ifChanged,
 			command,
 		);
@@ -711,7 +972,6 @@ async function executeHookInDirectory(
 		const exitCode = (error as { status?: number })?.status ?? 1;
 		const duration = Date.now() - startTime;
 
-		// Log hook_result event (failure)
 		logger?.logHookResult(
 			task.plugin,
 			task.hookName,
@@ -723,7 +983,7 @@ async function executeHookInDirectory(
 			false,
 			stdout.trim(),
 			stderr.trim(),
-			hookRunId, // correlate with hook_run
+			hookRunId,
 			task.hookDef.ifChanged,
 			command,
 		);
@@ -742,7 +1002,6 @@ async function executeHookInDirectory(
 			duration,
 		};
 	} finally {
-		// Release the slot if we acquired one
 		if (slotHandle) {
 			await slotHandle.release();
 		}
