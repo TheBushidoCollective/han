@@ -19,7 +19,6 @@ import {
 import {
 	buildCommandWithFiles,
 	checkFailureSignal,
-	checkForChangesAsync,
 	clearFailureSignal,
 	commandUsesSessionFiles,
 	computeFileHash,
@@ -29,7 +28,6 @@ import {
 	getHookConfigs,
 	type ResolvedHookConfig,
 	signalFailure,
-	trackFilesAsync,
 	withGlobalSlot,
 } from "../hooks/index.ts";
 import { getPluginNameFromRoot } from "../shared/index.ts";
@@ -56,67 +54,6 @@ function computeCommandHash(command: string): string {
  */
 function getSessionIdFromEnv(): string | undefined {
 	return process.env.HAN_SESSION_ID || process.env.CLAUDE_SESSION_ID;
-}
-
-/**
- * Check if any files from ifChanged patterns were modified in this session.
- *
- * @param modifiedFiles - Files from session_file_changes table
- * @param directory - Hook target directory
- * @param patterns - ifChanged glob patterns from hook config
- * @returns true if session modified any files matching patterns
- */
-function hasSessionModifiedPatternFiles(
-	modifiedFiles: SessionModifiedFiles,
-	directory: string,
-	patterns: string[],
-): boolean {
-	if (modifiedFiles.allModified.length === 0) {
-		return false;
-	}
-
-	if (!patterns || patterns.length === 0) {
-		// No patterns = run on all changes
-		return true;
-	}
-
-	// Get files matching patterns in target directory
-	const patternFiles = findFilesWithGlob(directory, patterns);
-
-	// Convert pattern files to relative paths for comparison
-	const patternFilesSet = new Set(
-		patternFiles.map((f) => {
-			const { relative } = require("node:path");
-			return relative(directory, f);
-		}),
-	);
-
-	// Check if any session-modified files match pattern files
-	for (const modifiedPath of modifiedFiles.allModified) {
-		const { relative } = require("node:path");
-
-		// Normalize the modified path (may be relative or absolute)
-		let normalizedPath = modifiedPath;
-
-		if (modifiedPath.startsWith("/")) {
-			// Absolute path - make relative to directory
-			normalizedPath = relative(directory, modifiedPath);
-		}
-
-		// Direct match
-		if (patternFilesSet.has(normalizedPath)) {
-			return true;
-		}
-
-		// Also check if any pattern file ends with the modified path
-		for (const patternFile of patternFilesSet) {
-			if (patternFile.endsWith(normalizedPath)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 /**
@@ -961,18 +898,20 @@ export async function runConfiguredHook(
 	let totalFound = 0;
 	let disabledCount = 0;
 	let skippedCount = 0;
-	let sessionSkippedCount = 0;
+	let staleSkippedCount = 0;
 
-	// Get session ID for session-scoped filtering
+	// Get session ID for session-scoped validation
 	const sessionId = options.sessionId ?? getSessionIdFromEnv();
 
 	// Force-index the current session to ensure session_file_changes is up to date
-	// This replaces transcript parsing with SQLite queries
-	let sessionModifiedFiles: SessionModifiedFiles | undefined;
-	if (sessionId && isSessionFilteringEnabled()) {
+	if (sessionId) {
 		await ensureSessionIndexed(sessionId, projectRoot);
-		sessionModifiedFiles = await getSessionModifiedFiles(sessionId);
 	}
+
+	// Get session-modified files for ${HAN_FILES} substitution
+	const sessionModifiedFiles = sessionId
+		? await getSessionModifiedFiles(sessionId)
+		: null;
 
 	for (const config of configs) {
 		totalFound++;
@@ -983,62 +922,45 @@ export async function runConfiguredHook(
 			continue;
 		}
 
-		// If --cache is enabled, check for changes (no lock needed for this)
-		if (cache && config.ifChanged && config.ifChanged.length > 0) {
-			const cacheKey = getCacheKeyForDirectory(
-				hookName,
-				config.directory,
-				projectRoot,
-			);
-			const hasChanges = await checkForChangesAsync(
-				pluginName,
-				cacheKey,
-				config.directory,
-				config.ifChanged,
-				pluginRoot,
-			);
+		// If --cache is enabled and we have a session ID, use session-based validation with stale detection
+		if (cache && config.ifChanged && config.ifChanged.length > 0 && sessionId) {
+			const commandHash = computeCommandHash(config.command);
 
-			if (!hasChanges) {
-				skippedCount++;
+			// Check which files need validation using stale detection
+			const validationResult =
+				await sessionFileValidations.checkFilesNeedValidation(
+					sessionId,
+					pluginName,
+					hookName,
+					config.directory,
+					commandHash,
+					computeFileHash,
+				);
+
+			if (validationResult.staleFiles.length > 0 && verbose) {
+				const relativePath =
+					config.directory === projectRoot
+						? "."
+						: config.directory.replace(`${projectRoot}/`, "");
+				console.log(
+					`[${pluginName}/${hookName}] ${relativePath}: Skipping ${validationResult.staleFiles.length} stale file(s) modified by another session`,
+				);
+			}
+
+			if (!validationResult.needsValidation) {
+				if (validationResult.staleFiles.length > 0) {
+					// All files were stale (modified by another session)
+					staleSkippedCount++;
+				} else {
+					// All files already validated
+					skippedCount++;
+				}
 				continue;
 			}
-
-			// Check session-modified files filter (from SQLite session_file_changes)
-			// Only applies when cache is enabled and session filter is enabled
-			if (sessionModifiedFiles && isSessionFilteringEnabled()) {
-				// Only apply filter if we have modifications
-				if (
-					sessionModifiedFiles.success &&
-					sessionModifiedFiles.allModified.length > 0
-				) {
-					const hasPatternFiles = hasSessionModifiedPatternFiles(
-						sessionModifiedFiles,
-						config.directory,
-						config.ifChanged,
-					);
-
-					if (!hasPatternFiles) {
-						// Files changed since last hook run, but not by THIS session
-						if (verbose) {
-							const relativePath =
-								config.directory === projectRoot
-									? "."
-									: config.directory.replace(`${projectRoot}/`, "");
-							console.log(
-								`[${pluginName}/${hookName}] Skipping ${relativePath}: Pattern files not modified by this session`,
-							);
-						}
-						sessionSkippedCount++;
-						continue;
-					}
-				}
-				// If success=false or allModified is empty, fall through to run hook
-			}
 		}
+		// If no session ID or cache disabled, fall through to run the hook
 
 		// This config needs to run
-		// If command uses ${HAN_FILES} template and we have transcript data,
-		// compute the session-filtered files for substitution
 		configsToRun.push(config);
 	}
 
@@ -1059,16 +981,16 @@ export async function runConfiguredHook(
 
 	if (
 		configsToRun.length === 0 &&
-		(skippedCount > 0 || sessionSkippedCount > 0)
+		(skippedCount > 0 || staleSkippedCount > 0)
 	) {
 		if (skippedCount > 0) {
 			console.log(
 				`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 			);
 		}
-		if (sessionSkippedCount > 0) {
+		if (staleSkippedCount > 0) {
 			console.log(
-				`Skipped ${sessionSkippedCount} director${sessionSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this session)`,
+				`Skipped ${staleSkippedCount} director${staleSkippedCount === 1 ? "y" : "ies"} (files modified by another session)`,
 			);
 		}
 		console.log("No changes detected in any directories. Nothing to run.");
@@ -1226,59 +1148,41 @@ export async function runConfiguredHook(
 			`Skipped ${skippedCount} director${skippedCount === 1 ? "y" : "ies"} (no changes detected)`,
 		);
 	}
-	if (sessionSkippedCount > 0) {
+	if (staleSkippedCount > 0) {
 		console.log(
-			`Skipped ${sessionSkippedCount} director${sessionSkippedCount === 1 ? "y" : "ies"} (pattern files not modified by this session)`,
+			`Skipped ${staleSkippedCount} director${staleSkippedCount === 1 ? "y" : "ies"} (files modified by another session)`,
 		);
 	}
 
-	// Update cache manifest and record file validations for successful executions
+	// Record file validations for successful executions
 	// Only hooks WITH ifChanged patterns record file validations (they validate specific files)
 	// Hooks without ifChanged validate the entire codebase, not specific files
-	if (cache && successfulConfigs.length > 0) {
-		const sessionId = options.sessionId ?? getSessionIdFromEnv();
-
+	if (cache && successfulConfigs.length > 0 && sessionId) {
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
-				const cacheKey = getCacheKeyForDirectory(
-					hookName,
-					config.directory,
-					projectRoot,
-				);
-				await trackFilesAsync(
-					pluginName,
-					cacheKey,
+				const commandHash = computeCommandHash(config.command);
+				const matchedFiles = findFilesWithGlob(
 					config.directory,
 					config.ifChanged,
-					pluginRoot,
 				);
 
-				// Record file validations for matched files
-				if (sessionId) {
-					const commandHash = computeCommandHash(config.command);
-					const matchedFiles = findFilesWithGlob(
-						config.directory,
-						config.ifChanged,
-					);
-
-					for (const filePath of matchedFiles) {
-						const fileHash = computeFileHash(filePath);
-						try {
-							await sessionFileValidations.record({
-								sessionId,
-								filePath,
-								fileHash,
-								pluginName,
-								hookName,
-								directory: config.directory,
-								commandHash,
-							});
-						} catch (err) {
-							if (verbose) {
-								console.warn(
-									`[${pluginName}/${hookName}] Failed to record validation for ${filePath}: ${err}`,
-								);
-							}
+				for (const filePath of matchedFiles) {
+					const fileHash = computeFileHash(filePath);
+					try {
+						await sessionFileValidations.record({
+							sessionId,
+							filePath,
+							fileHash,
+							pluginName,
+							hookName,
+							directory: config.directory,
+							commandHash,
+						});
+					} catch (err) {
+						if (verbose) {
+							console.warn(
+								`[${pluginName}/${hookName}] Failed to record validation for ${filePath}: ${err}`,
+							);
 						}
 					}
 				}

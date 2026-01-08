@@ -237,6 +237,66 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         conn.execute("ALTER TABLE messages ADD COLUMN frustration_level TEXT", [])?;
     }
 
+    // Migration 5: Add deferred execution columns to hook_executions table
+    // Check if hook_executions table exists before trying to add columns
+    let hook_executions_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='hook_executions'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if hook_executions_exists {
+        // Add status column if not exists
+        let has_status: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'status'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_status {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN status TEXT DEFAULT 'completed'",
+                [],
+            )?;
+        }
+
+        // Add consecutive_failures column if not exists
+        let has_consecutive_failures: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'consecutive_failures'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_consecutive_failures {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN consecutive_failures INTEGER DEFAULT 0",
+                [],
+            )?;
+        }
+
+        // Add max_attempts column if not exists
+        let has_max_attempts: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'max_attempts'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_max_attempts {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN max_attempts INTEGER DEFAULT 3",
+                [],
+            )?;
+        }
+    }
+
     Ok(())
 }
 

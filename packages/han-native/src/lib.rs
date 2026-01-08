@@ -30,7 +30,6 @@ pub use db::{FtsDocument, FtsSearchResult, VectorSearchResult};
 pub use schema::{
     Repo, RepoInput, Project, ProjectInput, Session, SessionInput,
     Task, TaskInput, TaskCompletion, TaskFailure, TaskMetrics,
-    HookCacheEntry, HookCacheInput,
     Message, MessageInput, MessageBatch,
     // Hook execution tracking
     HookExecution, HookExecutionInput, HookStats,
@@ -40,6 +39,8 @@ pub use schema::{
     SessionFileChange, SessionFileChangeInput,
     // Session file validations
     SessionFileValidation, SessionFileValidationInput,
+    // File validation status (for stale detection)
+    FileValidationStatus,
     // Session summaries and compacts (event-sourced)
     SessionSummary, SessionSummaryInput,
     SessionCompact, SessionCompactInput,
@@ -811,34 +812,7 @@ pub fn query_task_metrics(
 }
 
 // ============================================================================
-// Hook Cache Operations
-// ============================================================================
-
-/// Set a hook cache entry
-#[napi]
-pub fn set_hook_cache(_db_path: String, input: HookCacheInput) -> napi::Result<bool> {
-    crud::set_hook_cache(input)
-}
-
-/// Get a hook cache entry by cache_key
-#[napi]
-pub fn get_hook_cache(_db_path: String, cache_key: String) -> napi::Result<Option<HookCacheEntry>> {
-    crud::get_hook_cache(&cache_key)
-}
-
-/// Invalidate a hook cache entry by cache_key
-#[napi]
-pub fn invalidate_hook_cache(_db_path: String, cache_key: String) -> napi::Result<bool> {
-    crud::invalidate_hook_cache(&cache_key)
-}
-
-/// Clean up expired cache entries
-#[napi]
-pub fn cleanup_expired_cache(_db_path: String) -> napi::Result<u32> {
-    crud::cleanup_expired_cache()
-}
-
-// ============================================================================
+// NOTE: Hook Cache Operations removed - replaced by session_file_validations
 // NOTE: Marketplace Cache Operations removed - not used
 // ============================================================================
 
@@ -953,6 +927,20 @@ pub fn needs_validation(
 #[napi]
 pub fn get_all_session_validations(_db_path: String, session_id: String) -> napi::Result<Vec<SessionFileValidation>> {
     crud::get_all_session_validations(&session_id)
+}
+
+/// Get files this session modified along with their validation status.
+/// Used for stale detection: compare current disk hash against modification_hash
+/// and validation_hash to determine if validation is needed.
+#[napi]
+pub fn get_files_for_validation(
+    _db_path: String,
+    session_id: String,
+    plugin_name: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<Vec<FileValidationStatus>> {
+    crud::get_files_for_validation(&session_id, &plugin_name, &hook_name, &directory)
 }
 
 // ============================================================================
@@ -1109,3 +1097,16 @@ pub use git::{
     git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list,
     GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
 };
+
+// ============================================================================
+// Database Reset Functions
+// ============================================================================
+
+/// Truncate all derived tables (those populated from JSONL logs).
+/// This is used during reindex to rebuild the database from scratch.
+/// Preserves: repos, projects (discovered from disk/git, not from logs)
+/// Returns: Number of rows deleted across all tables
+#[napi]
+pub fn truncate_derived_tables(_db_path: String) -> napi::Result<u32> {
+    crud::truncate_derived_tables()
+}

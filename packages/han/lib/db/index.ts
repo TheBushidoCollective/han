@@ -39,10 +39,8 @@ export type {
 	FrustrationMetrics,
 	// Search
 	FtsSearchResult,
-	// Hook cache
-	HookCacheEntry,
-	HookCacheInput,
 	// Hook execution tracking
+	HookAttemptInfo,
 	HookExecution,
 	HookExecutionInput,
 	HookStats,
@@ -50,6 +48,8 @@ export type {
 	Message,
 	MessageBatch,
 	MessageInput,
+	// Pending hook operations
+	PendingHookInput,
 	Project,
 	ProjectInput,
 	// Core entities
@@ -618,53 +618,42 @@ export const tasks = {
 };
 
 // ============================================================================
-// Hook Cache Operations
-// Stores manifest of file hashes per plugin/hook combination
+// Hook Cache Operations (Legacy - for backward compatibility with hook-cache.ts)
+// These are stubs that always return cache miss - real caching uses sessionFileValidations
 // ============================================================================
 
-export const hookCache = {
-	/**
-	 * Set a hook cache entry
-	 */
-	async set(
-		input: import("../../../han-native").HookCacheInput,
-	): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.setHookCache(dbPath, input);
-	},
+export interface HookCacheEntry {
+	cacheKey: string;
+	fileHash: string;
+	result: string;
+}
 
-	/**
-	 * Get a hook cache entry by cache_key
-	 * @param cacheKey - Composite key like "{pluginName}_{hookName}"
-	 */
-	async get(
-		cacheKey: string,
-	): Promise<import("../../../han-native").HookCacheEntry | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getHookCache(dbPath, cacheKey);
-	},
+export interface HookCacheInput {
+	cacheKey: string;
+	fileHash: string;
+	result: string;
+	ttlSeconds: number;
+}
 
-	/**
-	 * Invalidate a hook cache entry by cache_key
-	 * @param cacheKey - Composite key like "{pluginName}_{hookName}"
-	 */
-	async invalidate(cacheKey: string): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.invalidateHookCache(dbPath, cacheKey);
-	},
+/**
+ * Get hook cache entry by key
+ * @deprecated Use sessionFileValidations for caching - this always returns null
+ */
+export async function getHookCache(
+	_cacheKey: string,
+): Promise<HookCacheEntry | null> {
+	// Stub - always returns cache miss, caching handled by sessionFileValidations
+	return null;
+}
 
-	/**
-	 * Clean up expired cache entries
-	 */
-	async cleanupExpired(): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.cleanupExpiredCache(dbPath);
-	},
-};
+/**
+ * Set hook cache entry
+ * @deprecated Use sessionFileValidations for caching - this is a no-op
+ */
+export async function setHookCache(_input: HookCacheInput): Promise<boolean> {
+	// Stub - no-op, caching handled by sessionFileValidations
+	return false;
+}
 
 // ============================================================================
 // NOTE: Marketplace Cache Operations removed - not used
@@ -695,6 +684,136 @@ export const hookExecutions = {
 		const dbPath = await ensureInitialized();
 		const native = getNativeModule();
 		return native.queryHookStats(dbPath, period ?? null);
+	},
+};
+
+// ============================================================================
+// Hook Attempt Tracking Operations (for deferred execution)
+// ============================================================================
+
+export const hookAttempts = {
+	/**
+	 * Get or create hook attempt info for tracking consecutive failures
+	 * Uses (session_id, plugin, hook_name, directory) as the unique key
+	 */
+	getOrCreate(
+		sessionId: string,
+		plugin: string,
+		hookName: string,
+		directory: string,
+	): import("../../../han-native").HookAttemptInfo {
+		const native = getNativeModule();
+		return native.getOrCreateHookAttempt(
+			sessionId,
+			plugin,
+			hookName,
+			directory,
+		);
+	},
+
+	/**
+	 * Increment consecutive_failures for a hook, returns updated info with is_stuck flag
+	 */
+	increment(
+		sessionId: string,
+		plugin: string,
+		hookName: string,
+		directory: string,
+	): import("../../../han-native").HookAttemptInfo {
+		const native = getNativeModule();
+		return native.incrementHookFailures(sessionId, plugin, hookName, directory);
+	},
+
+	/**
+	 * Reset consecutive_failures to 0 (on success)
+	 */
+	reset(
+		sessionId: string,
+		plugin: string,
+		hookName: string,
+		directory: string,
+	): void {
+		const native = getNativeModule();
+		native.resetHookFailures(sessionId, plugin, hookName, directory);
+	},
+
+	/**
+	 * Increase max_attempts for a hook (user override via MCP tool)
+	 */
+	increaseMaxAttempts(
+		sessionId: string,
+		plugin: string,
+		hookName: string,
+		directory: string,
+		increase: number,
+	): void {
+		const native = getNativeModule();
+		native.increaseHookMaxAttempts(
+			sessionId,
+			plugin,
+			hookName,
+			directory,
+			increase,
+		);
+	},
+};
+
+// ============================================================================
+// Pending Hook Operations (for deferred execution)
+// ============================================================================
+
+export const pendingHooks = {
+	/**
+	 * Queue a pending hook for background execution
+	 * Returns the new hook execution ID
+	 */
+	queue(input: import("../../../han-native").PendingHookInput): string {
+		const native = getNativeModule();
+		return native.queuePendingHook(input);
+	},
+
+	/**
+	 * Get all pending hooks ready to run (coordinator picks these up)
+	 */
+	getAll(): import("../../../han-native").HookExecution[] {
+		const native = getNativeModule();
+		return native.getPendingHooks();
+	},
+
+	/**
+	 * Get pending/running/failed hooks for a specific session
+	 * Used by MCP hook_wait tool to poll status
+	 */
+	getForSession(
+		sessionId: string,
+	): import("../../../han-native").HookExecution[] {
+		const native = getNativeModule();
+		return native.getSessionPendingHooks(sessionId);
+	},
+
+	/**
+	 * Update hook execution status
+	 */
+	updateStatus(
+		id: string,
+		status: "pending" | "running" | "completed" | "failed",
+	): void {
+		const native = getNativeModule();
+		native.updateHookStatus(id, status);
+	},
+
+	/**
+	 * Complete a hook execution (update status, output, error, duration)
+	 */
+	complete(
+		id: string,
+		success: boolean,
+		output: string | null,
+		error: string | null,
+		durationMs: number,
+	): void {
+		const native = getNativeModule();
+		native.completeHookExecution(id, success, output, error, durationMs);
 	},
 };
 
@@ -862,6 +981,105 @@ export const sessionFileValidations = {
 		const dbPath = await ensureInitialized();
 		const native = getNativeModule();
 		return native.getAllSessionValidations(dbPath, sessionId);
+	},
+
+	/**
+	 * Get files this session modified along with their validation status.
+	 * Used for stale detection in checkFilesNeedValidation.
+	 */
+	async getFilesForValidation(
+		sessionId: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+	): Promise<import("../../../han-native").FileValidationStatus[]> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getFilesForValidation(
+			dbPath,
+			sessionId,
+			pluginName,
+			hookName,
+			directory,
+		);
+	},
+
+	/**
+	 * Check which files need validation using stale detection.
+	 * Returns list of files that need validation, filtering out:
+	 * 1. Files that are stale (modified by another session)
+	 * 2. Files that have already been validated in current state
+	 *
+	 * @param sessionId - The current session ID
+	 * @param pluginName - Plugin name
+	 * @param hookName - Hook name
+	 * @param directory - Directory being validated
+	 * @param commandHash - Hash of the command being run
+	 * @param computeHash - Function to compute current file hash from disk
+	 * @returns Array of file paths that need validation
+	 */
+	async checkFilesNeedValidation(
+		sessionId: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+		commandHash: string,
+		computeHash: (filePath: string) => string,
+	): Promise<{
+		needsValidation: boolean;
+		files: string[];
+		staleFiles: string[];
+	}> {
+		const files = await this.getFilesForValidation(
+			sessionId,
+			pluginName,
+			hookName,
+			directory,
+		);
+
+		const filesNeedingValidation: string[] = [];
+		const staleFiles: string[] = [];
+
+		for (const file of files) {
+			const currentHash = computeHash(file.filePath);
+
+			// Skip files that no longer exist (empty hash)
+			if (!currentHash) {
+				continue;
+			}
+
+			// Check if file is stale (modified by another session)
+			// Stale = current hash doesn't match our modification AND doesn't match our validation
+			const matchesModification = currentHash === file.modificationHash;
+			const matchesValidation =
+				file.validationHash && currentHash === file.validationHash;
+
+			if (!matchesModification && !matchesValidation) {
+				// File was modified by another session - not our responsibility
+				staleFiles.push(file.filePath);
+				continue;
+			}
+
+			// Check if validation is needed
+			// Needs validation if:
+			// 1. No validation exists (validationHash is null)
+			// 2. Current hash doesn't match validation hash
+			// 3. Command changed (different command hash)
+			const needsValidation =
+				!file.validationHash ||
+				currentHash !== file.validationHash ||
+				file.validationCommandHash !== commandHash;
+
+			if (needsValidation) {
+				filesNeedingValidation.push(file.filePath);
+			}
+		}
+
+		return {
+			needsValidation: filesNeedingValidation.length > 0,
+			files: filesNeedingValidation,
+			staleFiles,
+		};
 	},
 };
 
@@ -1377,25 +1595,17 @@ export async function queryTaskMetrics(options?: {
 	return tasks.queryMetrics(options);
 }
 
-// Hook cache operations
-export async function setHookCache(
-	input: import("../../../han-native").HookCacheInput,
-): Promise<boolean> {
-	return hookCache.set(input);
-}
+// NOTE: Hook cache operations removed - replaced by session_file_validations
 
-export async function getHookCache(
-	cacheKey: string,
-): Promise<import("../../../han-native").HookCacheEntry | null> {
-	return hookCache.get(cacheKey);
-}
-
-export async function invalidateHookCache(cacheKey: string): Promise<boolean> {
-	return hookCache.invalidate(cacheKey);
-}
-
-export async function cleanupExpiredCache(): Promise<number> {
-	return hookCache.cleanupExpired();
+/**
+ * Truncate all derived tables (those populated from JSONL logs).
+ * This is used during reindex to rebuild the database from scratch.
+ * Preserves: repos, projects (discovered from disk/git, not from logs)
+ * Returns: Number of rows deleted across all tables
+ */
+export function truncateDerivedTables(): number {
+	const native = getNativeModule();
+	return native.truncateDerivedTables(getDbPath());
 }
 
 // NOTE: Marketplace operations removed - not used

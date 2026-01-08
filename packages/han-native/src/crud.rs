@@ -7,6 +7,7 @@
 
 use crate::db;
 use crate::schema::*;
+use napi_derive::napi;
 use rusqlite::params;
 use uuid::Uuid;
 
@@ -1593,89 +1594,7 @@ fn get_tasks_by_outcome(conn: &rusqlite::Connection, time_filter: &str) -> napi:
 }
 
 // ============================================================================
-// Hook Cache Operations
-// Similar structure to session_file_validations for consistency
-// ============================================================================
-
-pub fn set_hook_cache(input: HookCacheInput) -> napi::Result<bool> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let id = Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-    let expires_at = input.ttl_seconds.map(|ttl| {
-        (chrono::Utc::now() + chrono::Duration::seconds(ttl)).to_rfc3339()
-    });
-
-    conn.execute(
-        "INSERT INTO hook_cache (id, cache_key, file_hash, result, cached_at, expires_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-         ON CONFLICT(cache_key) DO UPDATE SET
-             file_hash = excluded.file_hash,
-             result = excluded.result,
-             cached_at = excluded.cached_at,
-             expires_at = excluded.expires_at",
-        params![id, input.cache_key, input.file_hash, input.result, now, expires_at],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to set hook cache: {}", e)))?;
-
-    Ok(true)
-}
-
-pub fn get_hook_cache(cache_key: &str) -> napi::Result<Option<HookCacheEntry>> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, cache_key, file_hash, result, cached_at, expires_at
-         FROM hook_cache
-         WHERE cache_key = ?1
-         AND (expires_at IS NULL OR expires_at > datetime('now'))
-         LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let result = stmt.query_row(params![cache_key], |row| {
-        Ok(HookCacheEntry {
-            id: Some(row.get(0)?),
-            cache_key: row.get(1)?,
-            file_hash: row.get(2)?,
-            result: row.get(3)?,
-            cached_at: row.get(4)?,
-            expires_at: row.get(5)?,
-        })
-    });
-
-    match result {
-        Ok(entry) => Ok(Some(entry)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get cache: {}", e))),
-    }
-}
-
-pub fn invalidate_hook_cache(cache_key: &str) -> napi::Result<bool> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    conn.execute(
-        "DELETE FROM hook_cache WHERE cache_key = ?1",
-        params![cache_key],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to invalidate cache: {}", e)))?;
-
-    Ok(true)
-}
-
-pub fn cleanup_expired_cache() -> napi::Result<u32> {
-    let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let count = conn.execute(
-        "DELETE FROM hook_cache WHERE expires_at < datetime('now')",
-        [],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to cleanup cache: {}", e)))?;
-
-    Ok(count as u32)
-}
-
-// ============================================================================
+// NOTE: Hook Cache Operations removed - replaced by session_file_validations
 // NOTE: Marketplace Cache Operations removed - not used
 // ============================================================================
 
@@ -1691,9 +1610,9 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
     let now = chrono::Utc::now().to_rfc3339();
 
     let mut stmt = conn.prepare(
-        "INSERT INTO hook_executions (id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
-         RETURNING id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at"
+        "INSERT INTO hook_executions (id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 'completed', 0, 3)
+         RETURNING id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
@@ -1715,6 +1634,9 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
                 if_changed: row.get(12)?,
                 command: row.get(13)?,
                 executed_at: row.get(14)?,
+                status: row.get(15)?,
+                consecutive_failures: row.get(16)?,
+                max_attempts: row.get(17)?,
             })
         }
     ).map_err(|e| napi::Error::from_reason(format!("Failed to record hook execution: {}", e)))
@@ -2086,6 +2008,51 @@ pub fn needs_validation(
     Ok(count > 0)
 }
 
+/// Get files this session modified along with their validation status.
+/// This is used for stale detection: TypeScript will compare current disk hash
+/// against modification_hash and validation_hash to determine:
+/// 1. If the file is stale (modified by another session)
+/// 2. If the file needs validation
+pub fn get_files_for_validation(
+    session_id: &str,
+    plugin_name: &str,
+    hook_name: &str,
+    directory: &str,
+) -> napi::Result<Vec<FileValidationStatus>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Get all files this session modified, with their latest validation status (if any)
+    let mut stmt = conn.prepare(
+        "SELECT
+            fc.file_path,
+            fc.file_hash_after as modification_hash,
+            fv.file_hash as validation_hash,
+            fv.command_hash as validation_command_hash
+         FROM session_file_changes fc
+         LEFT JOIN session_file_validations fv
+           ON fc.session_id = fv.session_id
+           AND fc.file_path = fv.file_path
+           AND fv.plugin_name = ?2
+           AND fv.hook_name = ?3
+           AND fv.directory = ?4
+         WHERE fc.session_id = ?1
+         GROUP BY fc.file_path
+         ORDER BY fc.file_path"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map(params![session_id, plugin_name, hook_name, directory], |row| {
+        Ok(FileValidationStatus {
+            file_path: row.get(0)?,
+            modification_hash: row.get(1)?,
+            validation_hash: row.get(2).ok(),
+            validation_command_hash: row.get(3).ok(),
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get files for validation: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
 /// Get ALL validations for a session (not filtered by plugin/hook)
 /// Useful for showing validation status across all hooks for file changes
 pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<SessionFileValidation>> {
@@ -2114,4 +2081,317 @@ pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<Session
     }).map_err(|e| napi::Error::from_reason(format!("Failed to get session validations: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+// ============================================================================
+// Database Reset Operations
+// ============================================================================
+
+/// Truncate all derived tables (those populated from JSONL logs).
+/// This is used during reindex to rebuild the database from scratch.
+/// Preserves: repos, projects (discovered from disk/git, not from logs)
+/// Truncates: sessions, session_files, session_summaries, session_compacts,
+///            messages, tasks, hook_executions, frustration_events,
+///            session_file_changes, session_file_validations, session_todos
+pub fn truncate_derived_tables() -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Order matters due to foreign key constraints - delete children before parents
+    let tables = [
+        "session_todos",
+        "session_file_validations",
+        "session_file_changes",
+        "frustration_events",
+        "hook_executions",
+        "tasks",
+        "messages",
+        "session_compacts",
+        "session_summaries",
+        "session_files",
+        "sessions",
+    ];
+
+    let mut total_deleted: u32 = 0;
+
+    for table in tables {
+        let deleted = conn.execute(&format!("DELETE FROM {}", table), [])
+            .map_err(|e| napi::Error::from_reason(format!("Failed to truncate {}: {}", table, e)))?;
+        total_deleted += deleted as u32;
+    }
+
+    // Rebuild FTS index after deleting messages
+    conn.execute("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')", [])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to rebuild FTS index: {}", e)))?;
+
+    Ok(total_deleted)
+}
+
+// ============================================================================
+// Hook Attempt Tracking Operations
+// ============================================================================
+
+/// Get or create a hook execution entry for attempt tracking
+/// Uses (session_id, hook_name, directory) as the hook key
+#[napi]
+pub fn get_or_create_hook_attempt(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<HookAttemptInfo> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Try to find existing record
+    let mut stmt = conn.prepare(
+        "SELECT consecutive_failures, max_attempts FROM hook_executions
+         WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
+         ORDER BY executed_at DESC LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id, plugin, hook_name, directory], |row| {
+        let consecutive_failures: i32 = row.get(0)?;
+        let max_attempts: i32 = row.get(1)?;
+        Ok(HookAttemptInfo {
+            consecutive_failures,
+            max_attempts,
+            is_stuck: consecutive_failures >= max_attempts,
+        })
+    });
+
+    match result {
+        Ok(info) => Ok(info),
+        Err(rusqlite::Error::QueryReturnedNoRows) => {
+            // No existing record - return defaults
+            Ok(HookAttemptInfo {
+                consecutive_failures: 0,
+                max_attempts: 3,
+                is_stuck: false,
+            })
+        }
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get hook attempt: {}", e))),
+    }
+}
+
+/// Increment consecutive_failures for a hook, returns updated info with is_stuck flag
+#[napi]
+pub fn increment_hook_failures(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<HookAttemptInfo> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Update the most recent hook execution for this session/plugin/hook/directory
+    conn.execute(
+        "UPDATE hook_executions SET consecutive_failures = consecutive_failures + 1
+         WHERE id = (
+             SELECT id FROM hook_executions
+             WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
+             ORDER BY executed_at DESC LIMIT 1
+         )",
+        params![session_id, plugin, hook_name, directory],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to increment failures: {}", e)))?;
+
+    // Get the updated values
+    let mut stmt = conn.prepare(
+        "SELECT consecutive_failures, max_attempts FROM hook_executions
+         WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
+         ORDER BY executed_at DESC LIMIT 1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    stmt.query_row(params![session_id, plugin, hook_name, directory], |row| {
+        let consecutive_failures: i32 = row.get(0)?;
+        let max_attempts: i32 = row.get(1)?;
+        Ok(HookAttemptInfo {
+            consecutive_failures,
+            max_attempts,
+            is_stuck: consecutive_failures >= max_attempts,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get updated attempt info: {}", e)))
+}
+
+/// Reset consecutive_failures to 0 (on success)
+#[napi]
+pub fn reset_hook_failures(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE hook_executions SET consecutive_failures = 0
+         WHERE id = (
+             SELECT id FROM hook_executions
+             WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
+             ORDER BY executed_at DESC LIMIT 1
+         )",
+        params![session_id, plugin, hook_name, directory],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to reset failures: {}", e)))?;
+
+    Ok(())
+}
+
+/// Increase max_attempts for a hook (user override)
+#[napi]
+pub fn increase_hook_max_attempts(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+    increase: i32,
+) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE hook_executions SET max_attempts = max_attempts + ?5
+         WHERE id = (
+             SELECT id FROM hook_executions
+             WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
+             ORDER BY executed_at DESC LIMIT 1
+         )",
+        params![session_id, plugin, hook_name, directory, increase],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to increase max attempts: {}", e)))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Pending Hook Operations (for deferred execution)
+// ============================================================================
+
+/// Queue a pending hook for background execution
+#[napi]
+pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    conn.execute(
+        "INSERT INTO hook_executions (id, session_id, hook_type, hook_name, hook_source, directory, command, if_changed, executed_at, status, consecutive_failures, max_attempts, duration_ms, exit_code, passed)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, 3, 0, 0, 0)",
+        params![id, input.session_id, input.hook_type, input.hook_name, input.plugin, input.directory, input.command, input.if_changed, now],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to queue pending hook: {}", e)))?;
+
+    Ok(id)
+}
+
+/// Get all pending hooks ready to run
+#[napi]
+pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts
+         FROM hook_executions WHERE status = 'pending' ORDER BY executed_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(HookExecution {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            task_id: row.get(2)?,
+            hook_type: row.get(3)?,
+            hook_name: row.get(4)?,
+            hook_source: row.get(5)?,
+            directory: row.get(6)?,
+            duration_ms: row.get(7)?,
+            exit_code: row.get(8)?,
+            passed: row.get::<_, i32>(9)? != 0,
+            output: row.get(10)?,
+            error: row.get(11)?,
+            if_changed: row.get(12)?,
+            command: row.get(13)?,
+            executed_at: row.get(14)?,
+            status: row.get(15)?,
+            consecutive_failures: row.get(16)?,
+            max_attempts: row.get(17)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get pending hooks: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Update hook execution status
+#[napi]
+pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE hook_executions SET status = ?2 WHERE id = ?1",
+        params![id, status],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to update hook status: {}", e)))?;
+
+    Ok(())
+}
+
+/// Get pending/running hooks for a session
+#[napi]
+pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExecution>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts
+         FROM hook_executions WHERE session_id = ?1 AND status IN ('pending', 'running', 'failed') ORDER BY executed_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map(params![session_id], |row| {
+        Ok(HookExecution {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            task_id: row.get(2)?,
+            hook_type: row.get(3)?,
+            hook_name: row.get(4)?,
+            hook_source: row.get(5)?,
+            directory: row.get(6)?,
+            duration_ms: row.get(7)?,
+            exit_code: row.get(8)?,
+            passed: row.get::<_, i32>(9)? != 0,
+            output: row.get(10)?,
+            error: row.get(11)?,
+            if_changed: row.get(12)?,
+            command: row.get(13)?,
+            executed_at: row.get(14)?,
+            status: row.get(15)?,
+            consecutive_failures: row.get(16)?,
+            max_attempts: row.get(17)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session pending hooks: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Complete a hook execution (update status, output, error, duration)
+#[napi]
+pub fn complete_hook_execution(
+    id: String,
+    success: bool,
+    output: Option<String>,
+    error: Option<String>,
+    duration_ms: i32,
+) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let status = if success { "completed" } else { "failed" };
+    let exit_code = if success { 0 } else { 1 };
+
+    conn.execute(
+        "UPDATE hook_executions SET status = ?2, passed = ?3, exit_code = ?4, output = ?5, error = ?6, duration_ms = ?7 WHERE id = ?1",
+        params![id, status, success as i32, exit_code, output, error, duration_ms],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to complete hook execution: {}", e)))?;
+
+    Ok(())
 }

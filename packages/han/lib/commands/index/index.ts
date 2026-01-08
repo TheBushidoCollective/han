@@ -1,15 +1,12 @@
 /**
  * Han Reindex Command
  *
- * CLI command for reindexing memory content into FTS.
+ * Clears all derived database tables and re-indexes from JSONL logs.
+ * All data is event-sourced from logs, so this is a safe operation.
  *
  * Usage:
- *   han reindex                      # Reindex all content for current project
- *   han reindex --layer observations # Reindex only observations
- *   han reindex --layer summaries    # Reindex only summaries
- *   han reindex --layer transcripts  # Reindex only transcripts
- *   han reindex --layer team         # Reindex only team memory
- *   han reindex --all                # Full reindex of all projects
+ *   han reindex              # Clear tables and reindex
+ *   han reindex -v           # With verbose output
  */
 
 import type { Command } from "commander";
@@ -22,106 +19,83 @@ import { getGitRemote } from "../../memory/paths.ts";
 export function registerReindexCommand(program: Command): void {
 	const reindexCommand = program
 		.command("reindex")
-		.description("Reindex memory content for semantic search");
+		.description("Clear database and reindex from JSONL logs");
 
 	// Main reindex action (default)
 	reindexCommand
 		.command("run", { isDefault: true })
-		.description("Run indexing on memory content")
-		.option(
-			"--layer <layer>",
-			"Index specific layer (observations, summaries, transcripts, team)",
-		)
-		.option("--session <id>", "Index specific session only")
-		.option("--all", "Index all projects (not just current)")
+		.description("Clear tables and reindex from logs")
 		.option("-v, --verbose", "Show detailed progress")
-		.action(
-			async (options: {
-				layer?: string;
-				session?: string;
-				all?: boolean;
-				verbose?: boolean;
-			}) => {
-				try {
-					// Lazy import to avoid loading native module until needed
-					const { runIndex } = await import("../../memory/indexer.ts");
-					type IndexLayer = import("../../memory/indexer.ts").IndexLayer;
-					type IndexOptions = import("../../memory/indexer.ts").IndexOptions;
+		.action(async (options: { verbose?: boolean }) => {
+			try {
+				// Lazy import to avoid loading native module until needed
+				const { runIndex } = await import("../../memory/indexer.ts");
+				type IndexOptions = import("../../memory/indexer.ts").IndexOptions;
 
-					// Validate layer if provided
-					const validLayers: IndexLayer[] = [
-						"observations",
-						"summaries",
-						"transcripts",
-						"team",
-					];
-					if (
-						options.layer &&
-						!validLayers.includes(options.layer as IndexLayer)
-					) {
-						console.error(
-							`Invalid layer: ${options.layer}. Valid options: ${validLayers.join(", ")}`,
-						);
-						process.exit(1);
-					}
-
-					const gitRemote = getGitRemote() || undefined;
-
-					const indexOptions: IndexOptions = {
-						layer: options.layer as IndexLayer | undefined,
-						sessionId: options.session,
-						gitRemote,
-						verbose: options.verbose,
-					};
-
-					if (options.verbose) {
-						console.log("Starting indexing...");
-						if (gitRemote) {
-							console.log(`Project: ${gitRemote}`);
-						}
-						if (options.layer) {
-							console.log(`Layer: ${options.layer}`);
-						}
-					}
-
-					const results = await runIndex(indexOptions);
-
-					// Print summary
-					const totalIndexed =
-						results.observations +
-						results.summaries +
-						results.team +
-						results.transcripts;
-
-					if (options.verbose || totalIndexed > 0) {
-						console.log("\nIndexing complete:");
-						if (results.observations > 0) {
-							console.log(`  Observations: ${results.observations} documents`);
-						}
-						if (results.summaries > 0) {
-							console.log(`  Summaries: ${results.summaries} documents`);
-						}
-						if (results.team > 0) {
-							console.log(`  Team memory: ${results.team} documents`);
-						}
-						if (results.transcripts > 0) {
-							console.log(`  Transcripts: ${results.transcripts} documents`);
-						}
-						if (totalIndexed === 0) {
-							console.log("  No new documents to index");
-						}
-					}
-
-					process.exit(0);
-				} catch (error: unknown) {
-					console.error(
-						"Error during indexing:",
-						error instanceof Error ? error.message : error,
-					);
-					process.exit(1);
+				// Always truncate derived tables first (all data comes from logs)
+				const { truncateDerivedTables } = await import("../../db/index.ts");
+				if (options.verbose) {
+					console.log("Clearing derived tables...");
 				}
-			},
-		);
+				const deleted = truncateDerivedTables();
+				console.log(`Cleared ${deleted} rows from database`);
+				if (options.verbose) {
+					console.log(
+						"  (repos and projects preserved, sessions/messages cleared)",
+					);
+				}
+
+				const gitRemote = getGitRemote() || undefined;
+
+				const indexOptions: IndexOptions = {
+					gitRemote,
+					verbose: options.verbose,
+				};
+
+				if (options.verbose) {
+					console.log("Starting indexing...");
+					if (gitRemote) {
+						console.log(`Project: ${gitRemote}`);
+					}
+				}
+
+				const results = await runIndex(indexOptions);
+
+				// Print summary
+				const totalIndexed =
+					results.observations +
+					results.summaries +
+					results.team +
+					results.transcripts;
+
+				if (options.verbose || totalIndexed > 0) {
+					console.log("\nIndexing complete:");
+					if (results.observations > 0) {
+						console.log(`  Observations: ${results.observations} documents`);
+					}
+					if (results.summaries > 0) {
+						console.log(`  Summaries: ${results.summaries} documents`);
+					}
+					if (results.team > 0) {
+						console.log(`  Team memory: ${results.team} documents`);
+					}
+					if (results.transcripts > 0) {
+						console.log(`  Transcripts: ${results.transcripts} documents`);
+					}
+					if (totalIndexed === 0) {
+						console.log("  No new documents to index");
+					}
+				}
+
+				process.exit(0);
+			} catch (error: unknown) {
+				console.error(
+					"Error during indexing:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
 
 	// Search command for testing the index
 	reindexCommand

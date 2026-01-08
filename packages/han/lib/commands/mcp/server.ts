@@ -3,6 +3,7 @@ import {
 	isMemoryEnabled,
 	isMetricsEnabled,
 } from "../../config/han-settings.ts";
+import { hookAttempts, pendingHooks } from "../../db/index.ts";
 import { getOrCreateEventLogger } from "../../events/logger.ts";
 import {
 	formatMemoryAgentResult,
@@ -347,6 +348,80 @@ const LEARN_TOOLS: McpTool[] = [
 	},
 ];
 
+// Hook management tools for deferred execution
+const HOOK_TOOLS: McpTool[] = [
+	{
+		name: "hook_wait",
+		description:
+			"Wait for pending/running hooks in a session to complete. Polls the hook execution status and returns when all hooks are done or failed. Use this in a subagent to monitor deferred hook execution.",
+		annotations: {
+			title: "Wait for Hooks",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				session_id: {
+					type: "string",
+					description: "The Claude session ID to monitor hooks for",
+				},
+				timeout_ms: {
+					type: "number",
+					description:
+						"Maximum time to wait in milliseconds (default: 300000 = 5 minutes)",
+				},
+				poll_interval_ms: {
+					type: "number",
+					description:
+						"How often to poll for status updates in milliseconds (default: 2000 = 2 seconds)",
+				},
+			},
+			required: ["session_id"],
+		},
+	},
+	{
+		name: "increase_max_attempts",
+		description:
+			"Increase the maximum retry attempts for a stuck hook. Use this when a hook keeps failing and you want to give it more chances after fixing the underlying issue.",
+		annotations: {
+			title: "Increase Hook Retries",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				session_id: {
+					type: "string",
+					description: "The Claude session ID",
+				},
+				plugin: {
+					type: "string",
+					description: "Plugin name (e.g., 'jutsu-biome')",
+				},
+				hook_name: {
+					type: "string",
+					description: "Hook name (e.g., 'lint')",
+				},
+				directory: {
+					type: "string",
+					description: "Directory where the hook runs",
+				},
+				increase: {
+					type: "number",
+					description: "Number of additional attempts to allow (default: 1)",
+				},
+			},
+			required: ["session_id", "plugin", "hook_name", "directory"],
+		},
+	},
+];
+
 // Lazy-load orchestrator for han_workflow tool
 let orchestratorInstance: Orchestrator | null = null;
 let orchestratorInitPromise: Promise<Orchestrator> | null = null;
@@ -479,6 +554,8 @@ async function handleToolsList(): Promise<unknown> {
 		// Two tools: `memory` (query) and `learn` (write)
 		...(memoryEnabled ? UNIFIED_MEMORY_TOOLS : []),
 		...(memoryEnabled ? LEARN_TOOLS : []),
+		// Hook management tools (always available)
+		...HOOK_TOOLS,
 	];
 	return {
 		tools: allTools,
@@ -744,6 +821,175 @@ async function handleToolsCall(params: {
 					{
 						type: "text",
 						text: `Error executing learn: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Handle hook management tools (hook_wait, increase_max_attempts)
+	const isHookTool = HOOK_TOOLS.some((t) => t.name === params.name);
+
+	if (isHookTool) {
+		try {
+			switch (params.name) {
+				case "hook_wait": {
+					const sessionId = args.session_id as string;
+					const timeoutMs = (args.timeout_ms as number) || 300000; // 5 minutes default
+					const pollIntervalMs = (args.poll_interval_ms as number) || 2000; // 2 seconds default
+
+					if (!sessionId) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameter: session_id",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					const startTime = Date.now();
+					let lastStatus = "";
+
+					// Poll until all hooks are done or timeout
+					while (Date.now() - startTime < timeoutMs) {
+						const hooks = pendingHooks.getForSession(sessionId);
+						const pendingOrRunning = hooks.filter(
+							(h) => h.status === "pending" || h.status === "running",
+						);
+
+						if (pendingOrRunning.length === 0) {
+							// All hooks are done
+							const failed = hooks.filter((h) => h.status === "failed");
+							const completed = hooks.filter((h) => h.status === "completed");
+
+							return {
+								content: [
+									{
+										type: "text",
+										text: JSON.stringify(
+											{
+												status: "done",
+												completed: completed.length,
+												failed: failed.length,
+												failedHooks: failed.map((h) => ({
+													plugin: h.hookSource,
+													hook: h.hookName,
+													error: h.error,
+												})),
+											},
+											null,
+											2,
+										),
+									},
+								],
+								isError: failed.length > 0,
+							};
+						}
+
+						// Report status change
+						const currentStatus = pendingOrRunning
+							.map((h) => `${h.hookSource}/${h.hookName}: ${h.status}`)
+							.join(", ");
+						if (currentStatus !== lastStatus) {
+							lastStatus = currentStatus;
+							// Log to stderr for visibility
+							process.stderr.write(`[hook_wait] Waiting: ${currentStatus}\n`);
+						}
+
+						// Wait before next poll
+						await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+					}
+
+					// Timeout reached
+					const hooks = pendingHooks.getForSession(sessionId);
+					const pendingOrRunning = hooks.filter(
+						(h) => h.status === "pending" || h.status === "running",
+					);
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(
+									{
+										status: "timeout",
+										message: `Timeout after ${timeoutMs}ms`,
+										stillPending: pendingOrRunning.map((h) => ({
+											plugin: h.hookSource,
+											hook: h.hookName,
+											status: h.status,
+										})),
+									},
+									null,
+									2,
+								),
+							},
+						],
+						isError: true,
+					};
+				}
+
+				case "increase_max_attempts": {
+					const sessionId = args.session_id as string;
+					const plugin = args.plugin as string;
+					const hookName = args.hook_name as string;
+					const directory = args.directory as string;
+					const increase = (args.increase as number) || 1;
+
+					if (!sessionId || !plugin || !hookName || !directory) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameters: session_id, plugin, hook_name, directory",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					hookAttempts.increaseMaxAttempts(
+						sessionId,
+						plugin,
+						hookName,
+						directory,
+						increase,
+					);
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(
+									{
+										success: true,
+										message: `Increased max attempts by ${increase} for ${plugin}/${hookName}`,
+										plugin,
+										hook_name: hookName,
+										directory,
+									},
+									null,
+									2,
+								),
+							},
+						],
+					};
+				}
+
+				default:
+					throw new Error(`Unknown hook tool: ${params.name}`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
 					},
 				],
 				isError: true,

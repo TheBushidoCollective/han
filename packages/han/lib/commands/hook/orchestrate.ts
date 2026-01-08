@@ -9,6 +9,7 @@ import {
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import { getPluginHookSettings } from "../../config/han-settings.ts";
+import { hookAttempts, pendingHooks } from "../../db/index.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
@@ -22,6 +23,7 @@ import {
 	type PluginHookDefinition,
 	trackFilesAsync,
 } from "../../hooks/index.ts";
+import { acquireGlobalSlot } from "../../hooks/slot-client.ts";
 import { isDebugMode } from "../../shared.ts";
 import { getCacheKeyForDirectory } from "../../validate.ts";
 
@@ -100,6 +102,10 @@ interface HookPayload {
 	agent_id?: string;
 	agent_type?: string;
 	tool_name?: string;
+
+	// Stop hook specific - indicates this is a retry after a previous stop hook failure
+	// When true, we track consecutive failures for attempt tracking
+	stop_hook_active?: boolean;
 }
 
 /**
@@ -146,6 +152,8 @@ interface HookResult {
 	duration: number;
 	skipped?: boolean;
 	skipReason?: string;
+	/** Hook was deferred to background execution */
+	deferred?: boolean;
 }
 
 /**
@@ -428,6 +436,7 @@ async function executeHookInDirectory(
 		cliMode: boolean;
 		sessionId: string;
 		hookType: string;
+		isStopHook: boolean;
 	},
 ): Promise<HookResult> {
 	const startTime = Date.now();
@@ -534,6 +543,68 @@ async function executeHookInDirectory(
 	// Also resolve 'han ' prefix to use the current binary for inner commands
 	const rawCommand = hookSettings?.command || task.hookDef.command;
 	const command = resolveHanCommand(rawCommand);
+
+	// For Stop hooks: acquire a slot with short timeout, defer if unavailable
+	// This prevents resource exhaustion and enables background execution
+	let slotHandle: Awaited<ReturnType<typeof acquireGlobalSlot>> | null = null;
+	if (options.isStopHook) {
+		// Try to acquire slot with 2 second timeout
+		slotHandle = await acquireGlobalSlot(
+			options.sessionId,
+			task.hookName,
+			task.plugin,
+			2000, // Short timeout - defer if no slot available quickly
+		);
+
+		if (!slotHandle) {
+			// No slot available - queue for background execution
+			const duration = Date.now() - startTime;
+
+			pendingHooks.queue({
+				sessionId: options.sessionId,
+				hookType: options.hookType,
+				hookName: task.hookName,
+				plugin: task.plugin,
+				directory,
+				command,
+				ifChanged: task.hookDef.ifChanged
+					? JSON.stringify(task.hookDef.ifChanged)
+					: undefined,
+			});
+
+			const logger = getOrCreateEventLogger();
+			logger?.logHookResult(
+				task.plugin,
+				task.hookName,
+				options.hookType,
+				relativePath,
+				false,
+				duration,
+				0,
+				true,
+				"[deferred to background execution]",
+				undefined,
+				undefined,
+				task.hookDef.ifChanged,
+				command,
+			);
+			cliLog(
+				`⏳ hook_deferred: ${task.plugin}/${task.hookName} in ${relativePath}`,
+				"yellow",
+			);
+
+			return {
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				success: true,
+				skipped: true,
+				skipReason: "deferred to background",
+				duration,
+				deferred: true,
+			};
+		}
+	}
 
 	// Log hook_run event and capture UUID for correlation with result
 	// Include ifChanged patterns and command to enable per-file validation tracking
@@ -670,6 +741,11 @@ async function executeHookInDirectory(
 			error: stderr.trim(),
 			duration,
 		};
+	} finally {
+		// Release the slot if we acquired one
+		if (slotHandle) {
+			await slotHandle.release();
+		}
 	}
 }
 
@@ -844,6 +920,7 @@ async function orchestrate(
 						cliMode,
 						sessionId,
 						hookType: eventType,
+						isStopHook: eventType === "Stop",
 					},
 				);
 
@@ -952,6 +1029,93 @@ async function orchestrate(
 		console.log(outputs.join("\n\n"));
 	}
 
+	// For Stop hooks only: handle deferred execution and attempt tracking
+	if (eventType === "Stop") {
+		const deferredHooks = allResults.filter((r) => r.deferred);
+		const failedHooks = allResults.filter((r) => !r.success && !r.skipped);
+		const isRetryRun = payload.stop_hook_active === true;
+
+		// If this is a retry run, increment attempts for failed hooks and check if stuck
+		if (isRetryRun && failedHooks.length > 0) {
+			const stuckHooks: Array<{
+				plugin: string;
+				hookName: string;
+				directory: string;
+				attempts: number;
+				maxAttempts: number;
+			}> = [];
+
+			for (const hook of failedHooks) {
+				const attemptInfo = hookAttempts.increment(
+					sessionId,
+					hook.plugin,
+					hook.hook,
+					hook.directory,
+				);
+
+				if (attemptInfo.isStuck) {
+					stuckHooks.push({
+						plugin: hook.plugin,
+						hookName: hook.hook,
+						directory: hook.directory,
+						attempts: attemptInfo.consecutiveFailures,
+						maxAttempts: attemptInfo.maxAttempts,
+					});
+				}
+			}
+
+			// If any hooks are stuck, ask user before continuing
+			if (stuckHooks.length > 0) {
+				console.error(`The following hooks have failed ${stuckHooks[0].maxAttempts} times:
+${stuckHooks.map((h) => `  - ${h.plugin}/${h.hookName} in ${h.directory}`).join("\n")}
+
+Use AskUserQuestion to ask the user: "Would you like to continue trying to fix these hooks?"
+If yes, call mcp__plugin_core_han__increase_max_attempts for each stuck hook:
+${stuckHooks.map((h) => `  - session_id: "${sessionId}", plugin: "${h.plugin}", hook_name: "${h.hookName}", directory: "${h.directory}"`).join("\n")}
+Then retry fixing the issues.`);
+				process.exit(2);
+			}
+		}
+
+		// If we have deferred hooks (queued for background), tell agent to spawn subagent
+		if (deferredHooks.length > 0) {
+			console.error(`Hooks deferred to background execution:
+${deferredHooks.map((h) => `  - ${h.plugin}/${h.hook} (${h.directory})`).join("\n")}
+
+Spawn a subagent to call mcp__plugin_core_han__hook_wait with session_id="${sessionId}".
+This is a BLOCKING operation - the subagent will wait until all hooks complete.
+After hooks complete, if any failed, the subagent should attempt to fix the issues.`);
+			process.exit(2);
+		}
+
+		// If we have failed hooks (but not stuck), tell agent to fix them
+		if (failedHooks.length > 0) {
+			console.error(`Hook validation failed:
+${failedHooks.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}: ${h.error || h.output || "(no output)"}`).join("\n")}
+
+Spawn a subagent to fix these issues. The subagent should:
+1. Fix the reported errors
+2. When done, the Stop hook will run again to verify the fixes`);
+			process.exit(2);
+		}
+
+		// All hooks passed - reset attempt counters for any hooks that previously failed
+		for (const result of allResults) {
+			if (result.success && !result.skipped) {
+				hookAttempts.reset(
+					sessionId,
+					result.plugin,
+					result.hook,
+					result.directory,
+				);
+			}
+		}
+
+		// All hooks passed - allow stop (exit 0)
+		return;
+	}
+
+	// For non-Stop hooks, original behavior
 	if (hasFailures) {
 		process.exit(2);
 	}

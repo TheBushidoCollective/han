@@ -206,22 +206,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_outcome ON tasks(outcome);
 CREATE INDEX IF NOT EXISTS idx_tasks_started ON tasks(started_at);
 
 -- ============================================================================
--- Hook Cache (project-scoped caching for hook results)
--- Similar structure to session_file_validations for consistency
--- ============================================================================
-CREATE TABLE IF NOT EXISTS hook_cache (
-    id TEXT PRIMARY KEY,
-    cache_key TEXT NOT NULL UNIQUE,  -- Composite key: "{pluginName}_{hookName}"
-    file_hash TEXT NOT NULL,  -- SHA256 hash of manifest content
-    result TEXT NOT NULL,  -- JSON manifest of file hashes
-    cached_at TEXT NOT NULL DEFAULT (datetime('now')),
-    expires_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_hook_cache_key ON hook_cache(cache_key);
-CREATE INDEX IF NOT EXISTS idx_hook_cache_expires ON hook_cache(expires_at);
-
--- ============================================================================
+-- NOTE: hook_cache table removed - replaced by session_file_validations
 -- NOTE: marketplace_plugins table removed - not used
 -- ============================================================================
 
@@ -254,13 +239,19 @@ CREATE TABLE IF NOT EXISTS hook_executions (
     error TEXT,
     if_changed TEXT,  -- JSON array of glob patterns
     command TEXT,     -- The command that was executed
-    executed_at TEXT NOT NULL DEFAULT (datetime('now'))
+    executed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Deferred execution fields
+    status TEXT DEFAULT 'completed',  -- 'pending', 'running', 'completed', 'failed'
+    consecutive_failures INTEGER DEFAULT 0,
+    max_attempts INTEGER DEFAULT 3
 );
 
 CREATE INDEX IF NOT EXISTS idx_hook_executions_session ON hook_executions(session_id);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_task ON hook_executions(task_id);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_name ON hook_executions(hook_name);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_executed ON hook_executions(executed_at);
+CREATE INDEX IF NOT EXISTS idx_hook_executions_status ON hook_executions(status);
+CREATE INDEX IF NOT EXISTS idx_hook_executions_session_hook ON hook_executions(session_id, hook_name, directory);
 
 -- ============================================================================
 -- Frustration Events (user frustration tracking for metrics)

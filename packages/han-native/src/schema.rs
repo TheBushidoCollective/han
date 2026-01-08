@@ -315,31 +315,7 @@ pub struct TaskFailure {
 }
 
 // ============================================================================
-// Data Structures - Hook Cache
-// Similar structure to session_file_validations for consistency
-// ============================================================================
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HookCacheEntry {
-    pub id: Option<String>,
-    pub cache_key: String,     // Composite key: "{pluginName}_{hookName}"
-    pub file_hash: String,     // SHA256 hash of manifest content
-    pub result: String,        // JSON manifest of file hashes
-    pub cached_at: Option<String>,
-    pub expires_at: Option<String>,
-}
-
-#[napi(object)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HookCacheInput {
-    pub cache_key: String,     // Composite key: "{pluginName}_{hookName}"
-    pub file_hash: String,     // SHA256 hash of manifest content
-    pub result: String,        // JSON manifest of file hashes
-    pub ttl_seconds: Option<i64>,
-}
-
-// ============================================================================
+// NOTE: HookCache structs removed - replaced by session_file_validations
 // NOTE: Marketplace structs removed - not used
 // ============================================================================
 
@@ -385,6 +361,10 @@ pub struct HookExecution {
     pub if_changed: Option<String>,  // JSON array of glob patterns
     pub command: Option<String>,
     pub executed_at: Option<String>,
+    // Deferred execution fields
+    pub status: Option<String>,  // 'pending', 'running', 'completed', 'failed'
+    pub consecutive_failures: Option<i32>,
+    pub max_attempts: Option<i32>,
 }
 
 #[napi(object)]
@@ -403,6 +383,32 @@ pub struct HookExecutionInput {
     pub error: Option<String>,
     pub if_changed: Option<String>,  // JSON array of glob patterns
     pub command: Option<String>,
+}
+
+// ============================================================================
+// Data Structures - Hook Attempt Tracking
+// ============================================================================
+
+/// Information about hook attempt status for deferred execution
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookAttemptInfo {
+    pub consecutive_failures: i32,
+    pub max_attempts: i32,
+    pub is_stuck: bool,  // consecutive_failures >= max_attempts
+}
+
+/// Input for queuing a pending hook
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PendingHookInput {
+    pub session_id: String,
+    pub hook_type: String,
+    pub hook_name: String,
+    pub plugin: String,
+    pub directory: String,
+    pub command: String,
+    pub if_changed: Option<String>,  // JSON array of glob patterns
 }
 
 #[napi(object)]
@@ -517,4 +523,19 @@ pub struct SessionFileValidationInput {
     pub hook_name: String,
     pub directory: String,
     pub command_hash: String,
+}
+
+/// Represents a file that this session modified, along with its validation status.
+/// Used for determining which files need validation with stale detection.
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FileValidationStatus {
+    /// The file path
+    pub file_path: String,
+    /// Hash after this session's modification (from session_file_changes)
+    pub modification_hash: String,
+    /// Hash after last validation by this hook (from session_file_validations), if any
+    pub validation_hash: Option<String>,
+    /// Command hash used in last validation, if any
+    pub validation_command_hash: Option<String>,
 }

@@ -5,6 +5,7 @@
  * This is the central server that all clients connect to.
  */
 
+import { execSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { parse } from "node:url";
 import { makeServer } from "graphql-ws";
@@ -12,15 +13,18 @@ import { createYoga } from "graphql-yoga";
 import { WebSocketServer } from "ws";
 import {
 	coordinator,
+	hookAttempts,
 	type IndexResult,
 	initDb,
 	messages,
+	pendingHooks,
 	watcher,
 } from "../../db/index.ts";
 import { createLoaders } from "../../graphql/loaders.ts";
 import {
 	type MessageEdgeData,
 	publishSessionAdded,
+	publishSessionHooksChanged,
 	publishSessionMessageAdded,
 	publishSessionUpdated,
 } from "../../graphql/pubsub.ts";
@@ -40,7 +44,9 @@ interface ServerState {
 	startedAt: Date | null;
 	heartbeatInterval: NodeJS.Timeout | null;
 	watchdogInterval: NodeJS.Timeout | null;
+	pendingHooksInterval: NodeJS.Timeout | null;
 	lastActivity: number;
+	processingHooks: boolean;
 }
 
 const state: ServerState = {
@@ -49,18 +55,136 @@ const state: ServerState = {
 	startedAt: null,
 	heartbeatInterval: null,
 	watchdogInterval: null,
+	pendingHooksInterval: null,
 	lastActivity: Date.now(),
+	processingHooks: false,
 };
 
 // Watchdog constants
 const WATCHDOG_INTERVAL_MS = 30000; // Check every 30 seconds
 const WATCHDOG_TIMEOUT_MS = 120000; // Consider stuck after 2 minutes of no activity
 
+// Pending hooks processing
+const PENDING_HOOKS_INTERVAL_MS = 5000; // Poll every 5 seconds
+
 /**
  * Update the last activity timestamp (called on any request/event)
  */
 function recordActivity(): void {
 	state.lastActivity = Date.now();
+}
+
+/**
+ * Process pending hooks in the background
+ * This runs hooks that were deferred due to resource constraints
+ */
+async function processPendingHooks(): Promise<void> {
+	// Prevent concurrent processing
+	if (state.processingHooks) {
+		return;
+	}
+
+	try {
+		state.processingHooks = true;
+
+		// Get all pending hooks
+		const pending = pendingHooks.getAll();
+		if (pending.length === 0) {
+			return;
+		}
+
+		log.debug(`Processing ${pending.length} pending hooks`);
+
+		for (const hook of pending) {
+			// Skip hooks with missing required fields
+			if (!hook.id || !hook.sessionId || !hook.directory || !hook.command) {
+				log.warn(`Skipping hook with missing fields: ${hook.hookName}`);
+				continue;
+			}
+
+			const hookId = hook.id;
+			const sessionId = hook.sessionId;
+			const directory = hook.directory;
+			const command = hook.command;
+			const hookSource = hook.hookSource ?? "";
+			const startTime = Date.now();
+
+			// Update status to running
+			pendingHooks.updateStatus(hookId, "running");
+			publishSessionHooksChanged(sessionId, hookSource, hook.hookName, "run");
+
+			try {
+				// Execute the hook command
+				const output = execSync(command, {
+					cwd: directory,
+					encoding: "utf-8",
+					timeout: 300000, // 5 minute timeout
+					shell: "/bin/bash",
+					env: {
+						...process.env,
+						CLAUDE_PROJECT_DIR: directory,
+						HAN_SESSION_ID: sessionId,
+					},
+				});
+
+				const duration = Date.now() - startTime;
+
+				// Mark as completed
+				pendingHooks.complete(hookId, true, output.trim(), null, duration);
+
+				// Reset failure counter on success
+				hookAttempts.reset(sessionId, hookSource, hook.hookName, directory);
+
+				log.info(
+					`Hook ${hookSource}/${hook.hookName} completed in ${duration}ms`,
+				);
+				publishSessionHooksChanged(
+					sessionId,
+					hookSource,
+					hook.hookName,
+					"result",
+				);
+			} catch (error: unknown) {
+				const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+				const stdout = (error as { stdout?: Buffer })?.stdout?.toString() || "";
+				const duration = Date.now() - startTime;
+
+				// Mark as failed
+				pendingHooks.complete(
+					hookId,
+					false,
+					stdout.trim(),
+					stderr.trim(),
+					duration,
+				);
+
+				// Increment failure counter
+				const attemptInfo = hookAttempts.increment(
+					sessionId,
+					hookSource,
+					hook.hookName,
+					directory,
+				);
+
+				log.warn(
+					`Hook ${hookSource}/${hook.hookName} failed (${attemptInfo.consecutiveFailures}/${attemptInfo.maxAttempts}): ${stderr.slice(0, 100)}`,
+				);
+				publishSessionHooksChanged(
+					sessionId,
+					hookSource,
+					hook.hookName,
+					"result",
+				);
+			}
+
+			// Record activity to keep watchdog happy
+			recordActivity();
+		}
+	} catch (error) {
+		log.error("Error processing pending hooks:", error);
+	} finally {
+		state.processingHooks = false;
+	}
 }
 
 /**
@@ -307,6 +431,12 @@ export async function startServer(
 	globalSlotManager.start();
 	log.info("Global slot manager started");
 
+	// Start pending hooks processor for deferred hook execution
+	state.pendingHooksInterval = setInterval(() => {
+		void processPendingHooks();
+	}, PENDING_HOOKS_INTERVAL_MS);
+	log.info("Pending hooks processor started");
+
 	// Skip initial index to keep server responsive during startup
 	// Sessions are indexed incrementally via file watcher
 	// A full reindex can be triggered with: han index run --all
@@ -325,6 +455,11 @@ export function stopServer(): void {
 	if (state.watchdogInterval) {
 		clearInterval(state.watchdogInterval);
 		state.watchdogInterval = null;
+	}
+
+	if (state.pendingHooksInterval) {
+		clearInterval(state.pendingHooksInterval);
+		state.pendingHooksInterval = null;
 	}
 
 	// Callback is cleared automatically by watcher.stop()
