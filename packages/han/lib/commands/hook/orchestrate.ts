@@ -1,6 +1,13 @@
 import { execSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	realpathSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import {
@@ -9,7 +16,7 @@ import {
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import { getPluginHookSettings } from "../../config/han-settings.ts";
-import { hookAttempts, pendingHooks } from "../../db/index.ts";
+import { hookAttempts, messages, orchestrations } from "../../db/index.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
@@ -69,9 +76,78 @@ interface CommandWithTimeoutResult {
 }
 
 /**
+ * Run a command synchronously and wait for it to complete.
+ * Logs output in real-time to stderr for immediate visibility.
+ *
+ * @param command - The shell command to run
+ * @param cwd - Working directory
+ * @param env - Environment variables
+ * @param payloadJson - JSON payload to pass via stdin
+ * @returns Result with success/failure status
+ */
+async function runCommandSync(
+	command: string,
+	cwd: string,
+	env: Record<string, string | undefined>,
+	payloadJson: string,
+): Promise<CommandWithTimeoutResult> {
+	const startTime = Date.now();
+
+	return new Promise((resolve) => {
+		let stdout = "";
+		let stderr = "";
+
+		const proc = spawn("/bin/bash", ["-c", command], {
+			cwd,
+			env: { ...process.env, ...env },
+		});
+
+		// Write payload to stdin
+		proc.stdin.write(payloadJson);
+		proc.stdin.end();
+
+		// Stream output to stderr in real-time for visibility
+		proc.stdout.on("data", (data) => {
+			const text = data.toString();
+			stdout += text;
+			process.stderr.write(text);
+		});
+
+		proc.stderr.on("data", (data) => {
+			const text = data.toString();
+			stderr += text;
+			process.stderr.write(text);
+		});
+
+		proc.on("close", (code) => {
+			resolve({
+				completed: true,
+				success: code === 0,
+				output: stdout,
+				error: stderr,
+				exitCode: code ?? 1,
+				duration: Date.now() - startTime,
+			});
+		});
+
+		proc.on("error", (err) => {
+			resolve({
+				completed: true,
+				success: false,
+				output: stdout,
+				error: err.message,
+				exitCode: 1,
+				duration: Date.now() - startTime,
+			});
+		});
+	});
+}
+
+/**
  * Run a command with a timeout. If the command doesn't complete within the timeout,
  * returns { completed: false } so the caller can defer to background execution.
  *
+ * @deprecated This function is no longer used. Wait mode now uses runCommandSync for fully synchronous execution.
  * @param command - The shell command to run
  * @param cwd - Working directory
  * @param env - Environment variables
@@ -79,7 +155,7 @@ interface CommandWithTimeoutResult {
  * @param timeoutMs - Maximum time to wait before returning (default: 5000ms)
  * @returns Result with completed flag indicating if finished within timeout
  */
-async function runCommandWithTimeout(
+async function _runCommandWithTimeout(
 	command: string,
 	cwd: string,
 	env: Record<string, string | undefined>,
@@ -187,6 +263,45 @@ function formatDuration(ms: number): string {
 	const minutes = Math.floor(seconds / 60);
 	const remainingSeconds = seconds % 60;
 	return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+}
+
+/**
+ * Get the log file path for an orchestration
+ */
+function getOrchestrationLogPath(orchestrationId: string): string {
+	const configDir =
+		getClaudeConfigDir() || join(process.env.HOME || "", ".claude");
+	const logsDir = join(configDir, "han", "logs");
+	mkdirSync(logsDir, { recursive: true });
+	return join(logsDir, `${orchestrationId}.log`);
+}
+
+/**
+ * Initialize orchestration log file
+ */
+function initOrchestrationLog(
+	orchestrationId: string,
+	eventType: string,
+	projectRoot: string,
+): string {
+	const logPath = getOrchestrationLogPath(orchestrationId);
+	const header = `Han Hook Orchestration Log
+========================
+Orchestration ID: ${orchestrationId}
+Event Type: ${eventType}
+Project Root: ${projectRoot}
+Started: ${new Date().toISOString()}
+
+`;
+	writeFileSync(logPath, header);
+	return logPath;
+}
+
+/**
+ * Append to orchestration log file
+ */
+function appendToOrchestrationLog(logPath: string, content: string): void {
+	appendFileSync(logPath, content);
 }
 
 /**
@@ -300,13 +415,18 @@ function findPluginInMarketplace(
 	marketplaceRoot: string,
 	pluginName: string,
 ): string | null {
+	// Build potential paths - core is a special case since it's not in a subdirectory
 	const potentialPaths = [
 		join(marketplaceRoot, "jutsu", pluginName),
 		join(marketplaceRoot, "do", pluginName),
 		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, "core"),
 		join(marketplaceRoot, pluginName),
 	];
+
+	// Only add core path if we're actually looking for the core plugin
+	if (pluginName === "core") {
+		potentialPaths.push(join(marketplaceRoot, "core"));
+	}
 
 	for (const path of potentialPaths) {
 		if (existsSync(path)) {
@@ -538,22 +658,32 @@ async function executeHookInDirectory(
 		verbose: boolean;
 		cliMode: boolean;
 		sessionId: string;
+		orchestrationId: string;
 		hookType: string;
 		isStopHook: boolean;
+		logPath: string;
 	},
 ): Promise<HookResult> {
 	const startTime = Date.now();
 	const relativePath =
 		directory === projectRoot ? "." : directory.replace(`${projectRoot}/`, "");
 
-	// Helper for CLI mode verbose output
+	// Helper for CLI mode verbose output (always logs to file, optionally to console)
 	const cliLog = (message: string, color: keyof typeof colors = "reset") => {
+		const time = new Date().toLocaleTimeString();
+		// Always log to file (without colors)
+		appendToOrchestrationLog(options.logPath, `[${time}] ${message}\n`);
+		// Log to console if in CLI mode
 		if (options.cliMode) {
-			const time = new Date().toLocaleTimeString();
 			console.error(
 				`${colors.dim}[${time}]${colors.reset} ${colors[color]}${message}${colors.reset}`,
 			);
 		}
+	};
+
+	// Helper to log detailed output to file only
+	const logToFile = (content: string) => {
+		appendToOrchestrationLog(options.logPath, content);
 	};
 
 	// Check user overrides for enabled state
@@ -647,66 +777,17 @@ async function executeHookInDirectory(
 	const rawCommand = hookSettings?.command || task.hookDef.command;
 	const command = resolveHanCommand(rawCommand);
 
-	// For Stop hooks: acquire a slot with short timeout, defer if unavailable
-	// This prevents resource exhaustion and enables background execution
+	// For Stop hooks: acquire a slot and wait for it (no timeout)
+	// Wait mode is fully synchronous - no background deferral
 	let slotHandle: Awaited<ReturnType<typeof acquireGlobalSlot>> | null = null;
 	if (options.isStopHook) {
-		// Try to acquire slot with 2 second timeout
+		// Acquire slot and wait indefinitely
 		slotHandle = await acquireGlobalSlot(
 			options.sessionId,
 			task.hookName,
 			task.plugin,
-			2000, // Short timeout - defer if no slot available quickly
+			0, // No timeout - wait indefinitely
 		);
-
-		if (!slotHandle) {
-			// No slot available - queue for background execution
-			const duration = Date.now() - startTime;
-
-			pendingHooks.queue({
-				sessionId: options.sessionId,
-				hookType: options.hookType,
-				hookName: task.hookName,
-				plugin: task.plugin,
-				directory,
-				command,
-				ifChanged: task.hookDef.ifChanged
-					? JSON.stringify(task.hookDef.ifChanged)
-					: undefined,
-			});
-
-			const logger = getOrCreateEventLogger();
-			logger?.logHookResult(
-				task.plugin,
-				task.hookName,
-				options.hookType,
-				relativePath,
-				false,
-				duration,
-				0,
-				true,
-				"[deferred to background execution]",
-				undefined,
-				undefined,
-				task.hookDef.ifChanged,
-				command,
-			);
-			cliLog(
-				`⏳ hook_deferred: ${task.plugin}/${task.hookName} in ${relativePath}`,
-				"yellow",
-			);
-
-			return {
-				plugin: task.plugin,
-				hook: task.hookName,
-				directory: relativePath,
-				success: true,
-				skipped: true,
-				skipReason: "deferred to background",
-				duration,
-				deferred: true,
-			};
-		}
 	}
 
 	// Log hook_run event and capture UUID for correlation with result
@@ -725,6 +806,8 @@ async function executeHookInDirectory(
 		`🪝 hook_run: ${task.plugin}/${task.hookName} in ${relativePath}`,
 		"cyan",
 	);
+	// Log the command to file for debugging
+	logToFile(`  Command: ${command}\n`);
 
 	if (options.verbose) {
 		console.log(
@@ -741,72 +824,23 @@ async function executeHookInDirectory(
 		HAN_SESSION_ID: options.sessionId,
 	};
 
-	// For Stop hooks: Use timeout-based execution (5 seconds)
-	// If hook doesn't complete in time, defer to background and return immediately
+	// For Stop hooks: Wait mode is fully synchronous - run command and wait for completion
+	// Log output in real-time for visibility
 	if (options.isStopHook) {
-		const STOP_HOOK_TIMEOUT_MS = 5000; // 5 seconds before deferring
-
-		const result = await runCommandWithTimeout(
+		const result = await runCommandSync(
 			command,
 			directory,
 			hookEnv,
 			payloadJson,
-			STOP_HOOK_TIMEOUT_MS,
 		);
 
-		// Release slot early if we acquired one (before any deferral)
+		// Release slot after hook completes
 		if (slotHandle) {
 			await slotHandle.release();
 			slotHandle = null;
 		}
 
-		if (!result.completed) {
-			// Hook didn't complete in time - queue for background execution
-			pendingHooks.queue({
-				sessionId: options.sessionId,
-				hookType: options.hookType,
-				hookName: task.hookName,
-				plugin: task.plugin,
-				directory,
-				command,
-				ifChanged: task.hookDef.ifChanged
-					? JSON.stringify(task.hookDef.ifChanged)
-					: undefined,
-			});
-
-			logger?.logHookResult(
-				task.plugin,
-				task.hookName,
-				options.hookType,
-				relativePath,
-				false,
-				result.duration,
-				0,
-				true, // Mark as success so Claude can continue
-				"[deferred to background - took too long]",
-				undefined,
-				hookRunId,
-				task.hookDef.ifChanged,
-				command,
-			);
-			cliLog(
-				`⏳ hook_deferred: ${task.plugin}/${task.hookName} in ${relativePath} (exceeded ${STOP_HOOK_TIMEOUT_MS}ms)`,
-				"yellow",
-			);
-
-			return {
-				plugin: task.plugin,
-				hook: task.hookName,
-				directory: relativePath,
-				success: true, // Report success so Claude can continue
-				skipped: true,
-				skipReason: "deferred to background (timeout)",
-				duration: result.duration,
-				deferred: true,
-			};
-		}
-
-		// Hook completed in time
+		// Process result
 		if (result.success) {
 			// Update cache on success
 			if (
@@ -853,6 +887,16 @@ async function executeHookInDirectory(
 				`✅ hook_result: ${task.plugin}/${task.hookName} passed in ${relativePath} (${formatDuration(result.duration)})`,
 				"green",
 			);
+			// Log output to file
+			if (result.output.trim()) {
+				logToFile(
+					`  Output:\n${result.output
+						.trim()
+						.split("\n")
+						.map((l) => `    ${l}`)
+						.join("\n")}\n`,
+				);
+			}
 
 			return {
 				plugin: task.plugin,
@@ -884,6 +928,25 @@ async function executeHookInDirectory(
 			`❌ hook_result: ${task.plugin}/${task.hookName} failed in ${relativePath} (${formatDuration(result.duration)})`,
 			"red",
 		);
+		// Log output/error to file
+		if (result.output.trim()) {
+			logToFile(
+				`  Output:\n${result.output
+					.trim()
+					.split("\n")
+					.map((l) => `    ${l}`)
+					.join("\n")}\n`,
+			);
+		}
+		if (result.error.trim()) {
+			logToFile(
+				`  Error:\n${result.error
+					.trim()
+					.split("\n")
+					.map((l) => `    ${l}`)
+					.join("\n")}\n`,
+			);
+		}
 
 		return {
 			plugin: task.plugin,
@@ -957,6 +1020,16 @@ async function executeHookInDirectory(
 			`✅ hook_result: ${task.plugin}/${task.hookName} passed in ${relativePath} (${formatDuration(duration)})`,
 			"green",
 		);
+		// Log output to file
+		if (output.trim()) {
+			logToFile(
+				`  Output:\n${output
+					.trim()
+					.split("\n")
+					.map((l) => `    ${l}`)
+					.join("\n")}\n`,
+			);
+		}
 
 		return {
 			plugin: task.plugin,
@@ -991,6 +1064,25 @@ async function executeHookInDirectory(
 			`❌ hook_result: ${task.plugin}/${task.hookName} failed in ${relativePath} (${formatDuration(duration)})`,
 			"red",
 		);
+		// Log output/error to file
+		if (stdout.trim()) {
+			logToFile(
+				`  Output:\n${stdout
+					.trim()
+					.split("\n")
+					.map((l) => `    ${l}`)
+					.join("\n")}\n`,
+			);
+		}
+		if (stderr.trim()) {
+			logToFile(
+				`  Error:\n${stderr
+					.trim()
+					.split("\n")
+					.map((l) => `    ${l}`)
+					.join("\n")}\n`,
+			);
+		}
 
 		return {
 			plugin: task.plugin,
@@ -1009,6 +1101,266 @@ async function executeHookInDirectory(
 }
 
 /**
+ * Read the last hook check state from the event log
+ * Returns the most recent check state event for the given hook type
+ */
+/**
+ * Check if Stop hook orchestration is currently active.
+ * This indicates we're in a recursive scenario where a Stop hook triggered another Stop hook.
+ */
+function isStopHookActive(): boolean {
+	// Check if HAN_STOP_ORCHESTRATING environment variable is set
+	// This is set during wait mode execution to prevent recursion
+	return process.env.HAN_STOP_ORCHESTRATING === "1";
+}
+
+async function getLastHookCheckState(
+	sessionId: string,
+	hookType: string,
+): Promise<{
+	fingerprint: string;
+	timestamp: string;
+	hooks_count: number;
+} | null> {
+	try {
+		// Query the DB for han_events for this session
+		const hanEvents = await messages.list({
+			sessionId,
+			messageType: "han_event",
+			limit: 1000, // Get recent events
+		});
+
+		// Filter and find most recent hook_check_state for this hook type
+		// Events are returned newest first, so we iterate forward
+		for (const msg of hanEvents) {
+			if (!msg.content) continue;
+			try {
+				const event = JSON.parse(msg.content);
+				if (
+					event.type === "hook_check_state" &&
+					event.data?.hook_type === hookType
+				) {
+					return {
+						fingerprint: event.data.fingerprint,
+						timestamp: event.timestamp || msg.timestamp,
+						hooks_count: event.data.hooks_count,
+					};
+				}
+			} catch {
+				// Skip invalid JSON
+			}
+		}
+	} catch (_err) {
+		// Error querying DB - treat as no previous state
+	}
+
+	return null;
+}
+
+/**
+ * Check mode: Discover hooks and report what would run without executing.
+ * This allows the agent to see what validation will happen and explicitly run it.
+ *
+ * To prevent spamming the same message on every turn, this function tracks the last
+ * check state and only outputs if something has changed or enough time has passed.
+ */
+async function performCheckMode(
+	tasks: HookTask[],
+	eventType: string,
+	projectRoot: string,
+	cacheEnabled: boolean,
+	sessionId: string,
+): Promise<void> {
+	// Build list of hooks that would run (checking cache/changes)
+	const hooksToRun: Array<{
+		plugin: string;
+		hook: string;
+		directory: string;
+		reason: string;
+	}> = [];
+	const hooksSkipped: Array<{
+		plugin: string;
+		hook: string;
+		directory: string;
+		reason: string;
+	}> = [];
+
+	for (const task of tasks) {
+		for (const directory of task.directories) {
+			const relativePath =
+				directory === projectRoot
+					? "."
+					: directory.replace(`${projectRoot}/`, "");
+
+			// Check user overrides for enabled state
+			const hookSettings = getPluginHookSettings(
+				task.plugin,
+				task.hookName,
+				directory,
+			);
+			if (hookSettings?.enabled === false) {
+				hooksSkipped.push({
+					plugin: task.plugin,
+					hook: task.hookName,
+					directory: relativePath,
+					reason: "disabled by user config",
+				});
+				continue;
+			}
+
+			// Check cache if enabled
+			if (
+				cacheEnabled &&
+				task.hookDef.ifChanged &&
+				task.hookDef.ifChanged.length > 0
+			) {
+				const cacheKey = getCacheKeyForDirectory(
+					task.hookName,
+					directory,
+					projectRoot,
+				);
+				const hasChanges = await checkForChangesAsync(
+					task.plugin,
+					cacheKey,
+					directory,
+					task.hookDef.ifChanged,
+					task.pluginRoot,
+				);
+
+				if (!hasChanges) {
+					hooksSkipped.push({
+						plugin: task.plugin,
+						hook: task.hookName,
+						directory: relativePath,
+						reason: "no changes detected (cached)",
+					});
+					continue;
+				}
+			}
+
+			// This hook will run
+			hooksToRun.push({
+				plugin: task.plugin,
+				hook: task.hookName,
+				directory: relativePath,
+				reason: task.hookDef.ifChanged?.length
+					? "files changed"
+					: "always runs",
+			});
+		}
+	}
+
+	// Compute a fingerprint of the current check state (for deduplication)
+	const checkFingerprint = JSON.stringify(
+		hooksToRun.map((h) => `${h.plugin}/${h.hook}@${h.directory}`).sort(),
+	);
+
+	// Recursion detection: Check if Stop hooks are already active
+	// This prevents infinite loops when hooks trigger themselves
+	if (
+		(eventType === "Stop" || eventType === "SubagentStop") &&
+		isStopHookActive() &&
+		hooksToRun.length > 0
+	) {
+		console.error(`
+${colors.red}⚠️  Recursion detected${colors.reset} - Stop hooks are already running, but validation is needed again.
+
+This usually means a hook triggered file changes that need validation.
+
+${colors.bold}Hooks that need to run:${colors.reset}
+${hooksToRun.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}`).join("\n")}
+
+${colors.cyan}IMPORTANT:${colors.reset} To break the recursion loop:
+1. Use the AskUserQuestion tool to ask: "Stop hook recursion detected. Continue with validation?"
+2. If user approves, run: ${colors.bold}han hook orchestrate ${eventType} --wait${colors.reset}
+
+${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 to prevent further recursion.${colors.reset}
+`);
+		process.exit(2);
+	}
+
+	// Get the event logger to check/log state
+	const logger = getEventLogger();
+	let shouldOutput = true;
+	const now = Date.now();
+	const RECHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+	if (logger) {
+		// Query DB for last check state
+		const lastCheckState = await getLastHookCheckState(sessionId, eventType);
+		if (lastCheckState) {
+			// Only suppress output if:
+			// 1. Fingerprint matches (same hooks need validation)
+			// 2. Less than 5 minutes have passed
+			if (
+				lastCheckState.fingerprint === checkFingerprint &&
+				now - new Date(lastCheckState.timestamp).getTime() < RECHECK_INTERVAL_MS
+			) {
+				shouldOutput = false;
+			}
+		}
+	}
+
+	// Output summary
+	if (hooksToRun.length === 0) {
+		// Log empty check state
+		if (logger) {
+			logger.logHookCheckState(eventType, "", 0);
+		}
+
+		console.error(
+			`${colors.green}✓ No validation needed${colors.reset} - all hooks cached or disabled`,
+		);
+		if (hooksSkipped.length > 0 && isDebugMode()) {
+			console.error(`${colors.dim}Skipped hooks:${colors.reset}`);
+			for (const h of hooksSkipped) {
+				console.error(
+					`  ${colors.dim}- ${h.plugin}/${h.hook} in ${h.directory}: ${h.reason}${colors.reset}`,
+				);
+			}
+		}
+		return;
+	}
+
+	// Only output if state has changed or enough time has passed
+	if (shouldOutput) {
+		// Log current check state
+		if (logger) {
+			logger.logHookCheckState(eventType, checkFingerprint, hooksToRun.length);
+		}
+
+		// Report hooks that need to run
+		console.error(
+			`${colors.yellow}Validation required${colors.reset} - ${hooksToRun.length} hook(s) need to run:`,
+		);
+		for (const h of hooksToRun) {
+			console.error(
+				`  - ${h.plugin}/${h.hook} in ${h.directory} (${h.reason})`,
+			);
+		}
+
+		if (hooksSkipped.length > 0) {
+			console.error(
+				`${colors.dim}(${hooksSkipped.length} hook(s) skipped - no changes)${colors.reset}`,
+			);
+		}
+
+		// Tell agent to run the hooks
+		console.error(`
+${colors.cyan}To run validation, execute:${colors.reset}
+  ${colors.bold}han hook orchestrate ${eventType} --wait${colors.reset}
+
+${colors.dim}The wait command automatically prevents recursion during execution.${colors.reset}`);
+
+		// Exit with code 2 to indicate action needed (same as validation failures)
+		process.exit(2);
+	}
+
+	// State unchanged - exit silently (no output spam)
+	process.exit(0);
+}
+
+/**
  * Main orchestration function
  */
 async function orchestrate(
@@ -1018,9 +1370,32 @@ async function orchestrate(
 		checkpoints: boolean;
 		verbose: boolean;
 		failFast: boolean;
+		wait: boolean;
+		check: boolean;
 	},
 ): Promise<void> {
-	const projectRoot = process.cwd();
+	// Recursion prevention: If we're already orchestrating Stop hooks, don't trigger again
+	// This prevents infinite loops when user approves Bash commands during Stop execution.
+	// BUT: Allow explicit --wait calls through (that's the user-initiated execution command)
+	if (
+		(eventType === "Stop" || eventType === "SubagentStop") &&
+		process.env.HAN_STOP_ORCHESTRATING === "1" &&
+		!options.wait
+	) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[orchestrate]${colors.reset} Skipping ${eventType} - already orchestrating (recursion prevention)`,
+			);
+		}
+		return;
+	}
+
+	// Canonicalize projectRoot to match paths from native module (which uses fs::canonicalize)
+	// This ensures path comparison works correctly on macOS where /var -> /private/var
+	const rawProjectRoot = process.cwd();
+	const projectRoot = existsSync(rawProjectRoot)
+		? realpathSync(rawProjectRoot)
+		: rawProjectRoot;
 
 	// Read stdin payload or generate CLI payload
 	const stdinPayload = readStdinPayload();
@@ -1047,6 +1422,21 @@ async function orchestrate(
 	const sessionId = payload.session_id || `cli-${randomUUID()}`;
 	initEventLogger(sessionId, {}, projectRoot);
 
+	// Set HAN_STOP_ORCHESTRATING=1 automatically for wait mode on Stop events
+	// This prevents any hooks triggered during execution from recursing
+	if (
+		options.wait &&
+		(eventType === "Stop" || eventType === "SubagentStop") &&
+		process.env.HAN_STOP_ORCHESTRATING !== "1"
+	) {
+		process.env.HAN_STOP_ORCHESTRATING = "1";
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[orchestrate]${colors.reset} Set HAN_STOP_ORCHESTRATING=1 for recursion prevention`,
+			);
+		}
+	}
+
 	if (isDebugMode()) {
 		console.error(
 			`${colors.dim}[orchestrate]${colors.reset} eventType=${colors.cyan}${eventType}${colors.reset} session_id=${colors.magenta}${sessionId || "(none)"}${colors.reset}`,
@@ -1057,13 +1447,45 @@ async function orchestrate(
 	const tasks = discoverHookTasks(eventType, payload, projectRoot);
 
 	if (tasks.length === 0) {
-		if (cliMode) {
+		if (cliMode || options.check) {
 			console.error(
 				`${colors.yellow}No hooks found for event type "${eventType}"${colors.reset}`,
 			);
 		}
 		return;
 	}
+
+	// Check mode: Just report what would run and tell agent to execute
+	if (options.check) {
+		await performCheckMode(
+			tasks,
+			eventType,
+			projectRoot,
+			options.cache,
+			sessionId,
+		);
+		return;
+	}
+
+	// Create an orchestration record (cancels any existing running orchestration for this session)
+	const orchestration = orchestrations.create({
+		sessionId: sessionId.startsWith("cli-") ? undefined : sessionId,
+		hookType: eventType,
+		projectRoot,
+	});
+	const orchestrationId = orchestration.id;
+
+	// Initialize log file for this orchestration
+	const logPath = initOrchestrationLog(orchestrationId, eventType, projectRoot);
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[orchestrate]${colors.reset} Created orchestration ${colors.magenta}${orchestrationId}${colors.reset}`,
+		);
+	}
+
+	// Print orchestration ID so user can run `han hook wait <id>` if needed
+	console.error(`[orchestration:${orchestrationId}]`);
 
 	if (isDebugMode()) {
 		console.error(
@@ -1178,8 +1600,10 @@ async function orchestrate(
 						...options,
 						cliMode,
 						sessionId,
+						orchestrationId,
 						hookType: eventType,
 						isStopHook: eventType === "Stop",
+						logPath,
 					},
 				);
 
@@ -1232,26 +1656,6 @@ async function orchestrate(
 		const failures = batchResults.filter((r) => !r.success && !r.skipped);
 		if (failures.length > 0) {
 			hasFailures = true;
-
-			// Report failures
-			for (const failure of failures) {
-				console.error(
-					`\n❌ Hook \`${failure.plugin}/${failure.hook}\` failed in \`${failure.directory}\``,
-				);
-				// Include stdout if present (some tools output errors to stdout)
-				if (failure.output) {
-					console.error(failure.output);
-				}
-				// Include stderr if present
-				if (failure.error) {
-					console.error(failure.error);
-				}
-				// If neither, note that there was no output
-				if (!failure.output && !failure.error) {
-					console.error("(no output)");
-				}
-			}
-
 			// Fail fast: abort and stop executing remaining batches
 			if (options.failFast) {
 				aborted = true;
@@ -1328,6 +1732,8 @@ async function orchestrate(
 				console.error(`The following hooks have failed ${stuckHooks[0].maxAttempts} times:
 ${stuckHooks.map((h) => `  - ${h.plugin}/${h.hookName} in ${h.directory}`).join("\n")}
 
+📄 Full output logged to: ${logPath}
+
 Use AskUserQuestion to ask the user: "Would you like to continue trying to fix these hooks?"
 If yes, call mcp__plugin_core_han__increase_max_attempts for each stuck hook:
 ${stuckHooks.map((h) => `  - session_id: "${sessionId}", plugin: "${h.plugin}", hook_name: "${h.hookName}", directory: "${h.directory}"`).join("\n")}
@@ -1336,25 +1742,48 @@ Then retry fixing the issues.`);
 			}
 		}
 
-		// If we have deferred hooks (queued for background), tell agent to spawn subagent
+		// If we have deferred hooks (queued for background), handle wait
 		if (deferredHooks.length > 0) {
-			console.error(`Hooks deferred to background execution:
+			// Update orchestration with deferred count
+			orchestrations.update({
+				id: orchestrationId,
+				deferredHooks: deferredHooks.length,
+			});
+
+			if (options.wait) {
+				// Wait inline for deferred hooks
+				console.error(`Hooks deferred to background execution:
 ${deferredHooks.map((h) => `  - ${h.plugin}/${h.hook} (${h.directory})`).join("\n")}
 
-Spawn a subagent to call mcp__plugin_core_han__hook_wait with session_id="${sessionId}".
-This is a BLOCKING operation - the subagent will wait until all hooks complete.
-After hooks complete, if any failed, the subagent should attempt to fix the issues.`);
-			process.exit(2);
+Waiting for hooks to complete...`);
+				// Import and call wait logic
+				const { waitForOrchestration } = await import("./wait.ts");
+				await waitForOrchestration(orchestrationId, {
+					pollInterval: 1000,
+					timeout: 300000,
+				});
+				// waitForOrchestration will process.exit() with appropriate code
+			} else {
+				console.error(`[han hook orchestrate ${eventType}]: [orchestration:${orchestrationId}]
+Hooks deferred to background execution:
+${deferredHooks.map((h) => `  - ${h.plugin}/${h.hook} (${h.directory})`).join("\n")}
+
+Run \`han hook wait ${orchestrationId}\` to wait for hooks and see their output.
+If hooks fail, you will be notified and should fix the issues.`);
+				process.exit(2);
+			}
 		}
 
 		// If we have failed hooks (but not stuck), tell agent to fix them
 		if (failedHooks.length > 0) {
-			console.error(`Hook validation failed:
-${failedHooks.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}: ${h.error || h.output || "(no output)"}`).join("\n")}
+			console.error(`
+❌ Hook validation failed:
+${failedHooks.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}`).join("\n")}
 
-Spawn a subagent to fix these issues. The subagent should:
-1. Fix the reported errors
-2. When done, the Stop hook will run again to verify the fixes`);
+📄 Full output logged to: ${logPath}
+
+Read the log file to see error details, then spawn a subagent to fix the issues.
+When done, the Stop hook will run again to verify the fixes.`);
 			process.exit(2);
 		}
 
@@ -1370,14 +1799,48 @@ Spawn a subagent to fix these issues. The subagent should:
 			}
 		}
 
+		// Update orchestration as completed
+		const completedCount = allResults.filter(
+			(r) => r.success && !r.skipped,
+		).length;
+		orchestrations.update({
+			id: orchestrationId,
+			status: "completed",
+			totalHooks: allResults.length,
+			completedHooks: completedCount,
+		});
+
 		// All hooks passed - allow stop (exit 0)
 		return;
 	}
 
 	// For non-Stop hooks, original behavior
 	if (hasFailures) {
+		const failedHooks = allResults.filter((r) => !r.success && !r.skipped);
+		console.error(`
+❌ Hook validation failed:
+${failedHooks.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}`).join("\n")}
+
+📄 Full output logged to: ${logPath}
+
+Read the log file to see error details.`);
+		orchestrations.update({
+			id: orchestrationId,
+			status: "failed",
+			totalHooks: allResults.length,
+			completedHooks: allResults.filter((r) => r.success && !r.skipped).length,
+			failedHooks: failedHooks.length,
+		});
 		process.exit(2);
 	}
+
+	// Mark orchestration as completed
+	orchestrations.update({
+		id: orchestrationId,
+		status: "completed",
+		totalHooks: allResults.length,
+		completedHooks: allResults.filter((r) => r.success && !r.skipped).length,
+	});
 }
 
 /**
@@ -1400,6 +1863,14 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 		.option("--no-checkpoints", "Disable checkpoint filtering")
 		.option("--no-fail-fast", "Continue executing even after failures")
 		.option("-v, --verbose", "Show detailed execution output")
+		.option(
+			"-w, --wait",
+			"Wait for deferred hooks to complete (tail logs inline)",
+		)
+		.option(
+			"-c, --check",
+			"Check mode: report what hooks would run without executing them",
+		)
 		.action(
 			async (
 				eventType: string,
@@ -1408,6 +1879,8 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					checkpoints?: boolean;
 					failFast?: boolean;
 					verbose?: boolean;
+					wait?: boolean;
+					check?: boolean;
 				},
 			) => {
 				await orchestrate(eventType, {
@@ -1415,6 +1888,8 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					checkpoints: opts.checkpoints !== false,
 					failFast: opts.failFast !== false,
 					verbose: opts.verbose ?? false,
+					check: opts.check ?? false,
+					wait: opts.wait ?? false,
 				});
 			},
 		);
