@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 /**
  * Marketplace source configuration
@@ -53,10 +53,32 @@ export function getClaudeConfigDir(): string {
 }
 
 /**
- * Get project directory (current working directory)
+ * Get project directory by walking up from CWD to find .claude/settings.json or .git
+ * Falls back to CWD if not found.
  */
 export function getProjectDir(): string {
-	return process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	if (process.env.CLAUDE_PROJECT_DIR) {
+		return process.env.CLAUDE_PROJECT_DIR;
+	}
+
+	let dir = process.cwd();
+	const { root } = require("node:path").parse(dir);
+
+	// Walk up directory tree looking for .claude/settings.json or .git
+	while (dir !== root) {
+		if (
+			existsSync(join(dir, ".claude", "settings.json")) ||
+			existsSync(join(dir, ".git"))
+		) {
+			return dir;
+		}
+		const parent = dirname(dir);
+		if (parent === dir) break; // Reached root
+		dir = parent;
+	}
+
+	// Fall back to CWD if no project markers found
+	return process.cwd();
 }
 
 /**

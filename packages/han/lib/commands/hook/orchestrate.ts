@@ -13,6 +13,7 @@ import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
+	getProjectDir,
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import { getPluginHookSettings } from "../../config/han-settings.ts";
@@ -448,18 +449,19 @@ function getPluginDir(
 	if (marketplaceConfig?.source?.source === "directory") {
 		const directoryPath = marketplaceConfig.source.path;
 		if (directoryPath) {
+			const projectDir = getProjectDir();
 			const absolutePath = directoryPath.startsWith("/")
 				? directoryPath
-				: join(process.cwd(), directoryPath);
+				: join(projectDir, directoryPath);
 			const found = findPluginInMarketplace(absolutePath, pluginName);
 			if (found) return found;
 		}
 	}
 
 	// Check if we're in the marketplace repo (development)
-	const cwd = process.cwd();
-	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
-		const found = findPluginInMarketplace(cwd, pluginName);
+	const projectDir = getProjectDir();
+	if (existsSync(join(projectDir, ".claude-plugin", "marketplace.json"))) {
+		const found = findPluginInMarketplace(projectDir, pluginName);
 		if (found) return found;
 	}
 
@@ -1392,7 +1394,7 @@ async function orchestrate(
 
 	// Canonicalize projectRoot to match paths from native module (which uses fs::canonicalize)
 	// This ensures path comparison works correctly on macOS where /var -> /private/var
-	const rawProjectRoot = process.cwd();
+	const rawProjectRoot = getProjectDir();
 	const projectRoot = existsSync(rawProjectRoot)
 		? realpathSync(rawProjectRoot)
 		: rawProjectRoot;
