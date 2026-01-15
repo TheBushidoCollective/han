@@ -655,8 +655,7 @@ async function executeHookInDirectory(
 	projectRoot: string,
 	payload: HookPayload,
 	options: {
-		cache: boolean;
-		checkpoints: boolean;
+		onlyChanged: boolean;
 		verbose: boolean;
 		cliMode: boolean;
 		sessionId: string;
@@ -724,9 +723,9 @@ async function executeHookInDirectory(
 		};
 	}
 
-	// Check cache if enabled
+	// Check cache if only checking changed files
 	if (
-		options.cache &&
+		options.onlyChanged &&
 		task.hookDef.ifChanged &&
 		task.hookDef.ifChanged.length > 0
 	) {
@@ -844,12 +843,8 @@ async function executeHookInDirectory(
 
 		// Process result
 		if (result.success) {
-			// Update cache on success
-			if (
-				options.cache &&
-				task.hookDef.ifChanged &&
-				task.hookDef.ifChanged.length > 0
-			) {
+			// Always update cache on success (for next run with --only-changed)
+			if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
 				const cacheKey = getCacheKeyForDirectory(
 					task.hookName,
 					directory,
@@ -975,12 +970,8 @@ async function executeHookInDirectory(
 			},
 		});
 
-		// Update cache on success
-		if (
-			options.cache &&
-			task.hookDef.ifChanged &&
-			task.hookDef.ifChanged.length > 0
-		) {
+		// Always update cache on success (for next run with --only-changed)
+		if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
 			const cacheKey = getCacheKeyForDirectory(
 				task.hookName,
 				directory,
@@ -1170,7 +1161,7 @@ async function performCheckMode(
 	tasks: HookTask[],
 	eventType: string,
 	projectRoot: string,
-	cacheEnabled: boolean,
+	onlyChanged: boolean,
 	sessionId: string,
 ): Promise<void> {
 	// Build list of hooks that would run (checking cache/changes)
@@ -1210,9 +1201,9 @@ async function performCheckMode(
 				continue;
 			}
 
-			// Check cache if enabled
+			// Check cache if only checking changed files
 			if (
-				cacheEnabled &&
+				onlyChanged &&
 				task.hookDef.ifChanged &&
 				task.hookDef.ifChanged.length > 0
 			) {
@@ -1368,8 +1359,7 @@ ${colors.dim}The wait command automatically prevents recursion during execution.
 async function orchestrate(
 	eventType: string,
 	options: {
-		cache: boolean;
-		checkpoints: boolean;
+		onlyChanged: boolean;
 		verbose: boolean;
 		failFast: boolean;
 		wait: boolean;
@@ -1463,7 +1453,7 @@ async function orchestrate(
 			tasks,
 			eventType,
 			projectRoot,
-			options.cache,
+			options.onlyChanged,
 			sessionId,
 		);
 		return;
@@ -1861,8 +1851,10 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 				"Event types: Stop, SubagentStop, PreToolUse, PostToolUse,\n" +
 				"             SessionStart, UserPromptSubmit, SubagentStart",
 		)
-		.option("--no-cache", "Disable caching - force all hooks to run")
-		.option("--no-checkpoints", "Disable checkpoint filtering")
+		.option(
+			"--all-files",
+			"Check all files, not just changed files (ignores cache)",
+		)
 		.option("--no-fail-fast", "Continue executing even after failures")
 		.option("-v, --verbose", "Show detailed execution output")
 		.option(
@@ -1877,8 +1869,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 			async (
 				eventType: string,
 				opts: {
-					cache?: boolean;
-					checkpoints?: boolean;
+					allFiles?: boolean;
 					failFast?: boolean;
 					verbose?: boolean;
 					wait?: boolean;
@@ -1886,8 +1877,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 				},
 			) => {
 				await orchestrate(eventType, {
-					cache: opts.cache !== false,
-					checkpoints: opts.checkpoints !== false,
+					onlyChanged: !opts.allFiles, // default true (only changed files)
 					failFast: opts.failFast !== false,
 					verbose: opts.verbose ?? false,
 					check: opts.check ?? false,
