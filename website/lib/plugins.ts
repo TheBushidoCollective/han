@@ -399,8 +399,10 @@ function getPluginHooksFromHanPlugin(pluginPath: string): HookSection[] {
 		}
 
 		// Group hooks by event (or "Stop" as default for validation hooks)
-		const hooksByEvent: Record<string, { name: string; hook: HanPluginHook }[]> =
-			{};
+		const hooksByEvent: Record<
+			string,
+			{ name: string; hook: HanPluginHook }[]
+		> = {};
 
 		for (const [hookName, hook] of Object.entries(hanPlugin.hooks)) {
 			const event = hook.event || "Stop";
@@ -415,7 +417,7 @@ function getPluginHooksFromHanPlugin(pluginPath: string): HookSection[] {
 			const commands: HookEntry[] = [];
 			const referencedFiles: HookFile[] = [];
 
-			for (const { name: hookName, hook } of hooks) {
+			for (const { hook } of hooks) {
 				commands.push({
 					command: hook.command,
 					prompt: hook.description,
@@ -458,7 +460,10 @@ function getPluginHooksFromHanPlugin(pluginPath: string): HookSection[] {
 			}
 		}
 	} catch (error) {
-		console.error(`Error reading hooks from han-plugin.yml at ${pluginPath}:`, error);
+		console.error(
+			`Error reading hooks from han-plugin.yml at ${pluginPath}:`,
+			error,
+		);
 	}
 
 	return hookSections;
