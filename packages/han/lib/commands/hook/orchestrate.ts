@@ -1035,7 +1035,7 @@ async function executeHookInDirectory(
 				directory: relativePath,
 				commandHash,
 				sessionId: options.sessionId,
-				trackSessionChangesOnly: true, // Only track files the session touched
+				trackSessionChangesOnly: false, // Track all files the hook validated
 			},
 		);
 
