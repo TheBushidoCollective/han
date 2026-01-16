@@ -11,4 +11,17 @@ packages/han-native/*.node
 playwright-report
 .features-gen
 test-results
-outtsconfig.tsbuildinfo
+out/
+tsconfig.tsbuildinfo
+
+# Backup and temporary files
+*.bak
+*.bak*
+*.backup
+*.tmp
+
+# Session data
+.claude/sessions/
+
+# Build output
+packages/han/out/
