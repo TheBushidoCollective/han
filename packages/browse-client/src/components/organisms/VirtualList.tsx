@@ -112,23 +112,12 @@ function VirtualListInner<T>(
   }));
 
   // FlatList renderItem adapter
-  // When using CSS transform for inverted, each item needs to be flipped back
   const flatListRenderItem = useCallback(
     ({ item, index }: { item: T; index: number }) => {
       const rendered = renderItem(item, index);
-      return (
-        <View
-          style={[
-            { width: '100%' },
-            // Flip item back when container is inverted via CSS transform
-            inverted ? { transform: [{ scaleY: -1 }] } : {},
-          ]}
-        >
-          {rendered}
-        </View>
-      );
+      return <View style={{ width: '100%' }}>{rendered}</View>;
     },
-    [renderItem, inverted]
+    [renderItem]
   );
 
   // FlatList keyExtractor adapter
@@ -189,11 +178,6 @@ function VirtualListInner<T>(
   // Effective initial scroll index (handle deprecated prop)
   const effectiveInitialScrollIndex = initialScrollIndex ?? initialRenderIndex;
 
-  // For web, react-native-web's inverted prop is buggy
-  // Use CSS transform instead for chat-style scrolling
-  // See: https://github.com/necolas/react-native-web/issues/1254
-  const useWebInvertedStyle = inverted;
-
   return (
     <View
       style={[
@@ -202,8 +186,6 @@ function VirtualListInner<T>(
           height: typeof height === 'number' ? height : '100%',
           flex: 1,
         },
-        // Apply scaleY(-1) to container for inverted scroll on web
-        useWebInvertedStyle ? { transform: [{ scaleY: -1 }] } : {},
         style as object,
       ]}
     >
@@ -215,8 +197,8 @@ function VirtualListInner<T>(
         getItemLayout={
           typeof itemHeight === 'number' ? getItemLayout : undefined
         }
-        // Don't use inverted prop on web - it's buggy
-        // inverted={inverted}
+        // Use FlatList's built-in inverted prop for chat UX
+        inverted={inverted}
         onEndReached={onEndReached}
         onEndReachedThreshold={endReachedThreshold}
         onScroll={handleScroll}

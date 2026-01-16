@@ -1,0 +1,5 @@
+{
+  "name": "jutsu-han-plugins",
+  "version": "1.0.0",
+  "description": "Validates Han plugin structure and configuration files"
+}

@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
+import { registerBlueprintsCommands } from "./commands/blueprints/index.ts";
 import { browse } from "./commands/browse/index.ts";
 import {
 	handleGetCompletions,
@@ -200,6 +201,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerPluginCommands(program);
 	registerHookCommands(program);
 	registerMcpCommands(program);
+	registerBlueprintsCommands(program);
 	registerMemoryCommand(program);
 	registerReindexCommand(program);
 	registerAliasCommands(program);

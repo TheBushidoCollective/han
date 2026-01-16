@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
+import type { ViewStyle } from 'react-native-web';
 
 export interface PressableProps {
   children?: ReactNode;
-  style?: CSSProperties;
+  style?: ViewStyle | CSSProperties;
   className?: string;
   onPress?: () => void;
   disabled?: boolean;
@@ -24,7 +25,7 @@ export function Pressable({
     font: 'inherit',
     color: 'inherit',
     opacity: disabled ? 0.6 : 1,
-    ...style,
+    ...(style as CSSProperties),
   };
 
   return (

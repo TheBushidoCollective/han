@@ -254,6 +254,27 @@ CREATE INDEX IF NOT EXISTS idx_hook_executions_status ON hook_executions(status)
 CREATE INDEX IF NOT EXISTS idx_hook_executions_session_hook ON hook_executions(session_id, hook_name, directory);
 
 -- ============================================================================
+-- Pending Hooks Queue (for --check mode orchestrations)
+-- When --check mode detects hooks that need validation, they are queued here
+-- with a reference to their orchestration. The --wait command then looks up
+-- these queued hooks and executes them.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS pending_hooks (
+    id TEXT PRIMARY KEY,
+    orchestration_id TEXT NOT NULL REFERENCES orchestrations(id) ON DELETE CASCADE,
+    plugin TEXT NOT NULL,
+    hook_name TEXT NOT NULL,
+    directory TEXT NOT NULL,
+    if_changed TEXT,  -- JSON array of glob patterns
+    command TEXT NOT NULL,     -- The command to execute
+    queued_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_hooks_orchestration ON pending_hooks(orchestration_id);
+CREATE INDEX IF NOT EXISTS idx_pending_hooks_queued ON pending_hooks(queued_at);
+
+
+-- ============================================================================
 -- Frustration Events (user frustration tracking for metrics)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS frustration_events (

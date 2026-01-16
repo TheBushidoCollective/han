@@ -1,13 +1,14 @@
 /**
  * Tests for Deferred Hook Execution System
  *
- * Tests the database layer (hookAttempts, pendingHooks), MCP tools
+ * Tests the database layer (hookAttempts, deferredHooks), MCP tools
  * (hook_wait, increase_max_attempts), and coordinator background processing.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { _resetDbState } from "../lib/db/index.ts";
 
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -20,6 +21,8 @@ const testDir = join(
 const configDir = join(testDir, "config");
 
 beforeAll(() => {
+	// Reset database state to pick up new CLAUDE_CONFIG_DIR
+	_resetDbState();
 	// Create test directories
 	mkdirSync(join(configDir, "han"), { recursive: true });
 	// Set isolated config dir for database
@@ -27,6 +30,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+	// Reset database state before restoring environment
+	_resetDbState();
 	// Restore original environment
 	if (originalClaudeConfigDir) {
 		process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
@@ -48,6 +53,17 @@ async function createTestSession(sessionId: string) {
 	return sessions.upsert({
 		id: sessionId,
 		status: "active",
+	});
+}
+
+// Helper to create an orchestration for testing
+async function createTestOrchestration(sessionId?: string) {
+	const { orchestrations, initDb } = await import("../lib/db/index.ts");
+	await initDb();
+	return orchestrations.create({
+		sessionId,
+		hookType: "Stop",
+		projectRoot: "/test/project",
 	});
 }
 
@@ -290,14 +306,15 @@ describe("Deferred Hook Execution System", () => {
 		});
 	});
 
-	describe("pendingHooks namespace", () => {
+	describe("deferredHooks namespace", () => {
 		test("queue creates pending hook execution", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session first (FK constraint)
-			await createTestSession("pending-session-1");
+			// Create orchestration (hooks now link to orchestrations, not sessions directly)
+			const orch = await createTestOrchestration("pending-session-1");
 
-			const id = pendingHooks.queue({
+			const id = deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "pending-session-1",
 				hookType: "Stop",
 				hookName: "lint",
@@ -312,13 +329,14 @@ describe("Deferred Hook Execution System", () => {
 		});
 
 		test("getAll returns all pending hooks", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session
-			await createTestSession("pending-session-2");
+			// Create orchestration
+			const orch = await createTestOrchestration("pending-session-2");
 
 			// Queue a hook
-			pendingHooks.queue({
+			deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "pending-session-2",
 				hookType: "Stop",
 				hookName: "typecheck",
@@ -327,7 +345,7 @@ describe("Deferred Hook Execution System", () => {
 				command: "bun run typecheck",
 			});
 
-			const all = pendingHooks.getAll();
+			const all = deferredHooks.getAll();
 			expect(Array.isArray(all)).toBe(true);
 			// Should include our queued hook
 			const found = all.find(
@@ -339,14 +357,15 @@ describe("Deferred Hook Execution System", () => {
 		});
 
 		test("getForSession filters by session", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create sessions
-			await createTestSession("pending-session-3a");
-			await createTestSession("pending-session-3b");
+			// Create orchestrations for different sessions
+			const orchA = await createTestOrchestration("pending-session-3a");
+			const orchB = await createTestOrchestration("pending-session-3b");
 
 			// Queue hooks for different sessions
-			pendingHooks.queue({
+			deferredHooks.queue({
+				orchestrationId: orchA.id,
 				sessionId: "pending-session-3a",
 				hookType: "Stop",
 				hookName: "build",
@@ -355,7 +374,8 @@ describe("Deferred Hook Execution System", () => {
 				command: "bun run build",
 			});
 
-			pendingHooks.queue({
+			deferredHooks.queue({
+				orchestrationId: orchB.id,
 				sessionId: "pending-session-3b",
 				hookType: "Stop",
 				hookName: "test",
@@ -364,8 +384,8 @@ describe("Deferred Hook Execution System", () => {
 				command: "bun test",
 			});
 
-			const sessionA = pendingHooks.getForSession("pending-session-3a");
-			const sessionB = pendingHooks.getForSession("pending-session-3b");
+			const sessionA = deferredHooks.getForSession("pending-session-3a");
+			const sessionB = deferredHooks.getForSession("pending-session-3b");
 
 			expect(sessionA.every((h) => h.sessionId === "pending-session-3a")).toBe(
 				true,
@@ -376,12 +396,13 @@ describe("Deferred Hook Execution System", () => {
 		});
 
 		test("updateStatus changes hook status", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session
-			await createTestSession("pending-session-4");
+			// Create orchestration
+			const orch = await createTestOrchestration("pending-session-4");
 
-			const id = pendingHooks.queue({
+			const id = deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "pending-session-4",
 				hookType: "Stop",
 				hookName: "format",
@@ -391,20 +412,21 @@ describe("Deferred Hook Execution System", () => {
 			});
 
 			// Update to running
-			pendingHooks.updateStatus(id, "running");
+			deferredHooks.updateStatus(id, "running");
 
-			const hooks = pendingHooks.getForSession("pending-session-4");
+			const hooks = deferredHooks.getForSession("pending-session-4");
 			const hook = hooks.find((h) => h.id === id);
 			expect(hook?.status).toBe("running");
 		});
 
 		test("complete marks hook as finished and removes from pending list", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session
-			await createTestSession("pending-session-5");
+			// Create orchestration
+			const orch = await createTestOrchestration("pending-session-5");
 
-			const id = pendingHooks.queue({
+			const id = deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "pending-session-5",
 				hookType: "Stop",
 				hookName: "test",
@@ -414,26 +436,27 @@ describe("Deferred Hook Execution System", () => {
 			});
 
 			// Verify hook is pending
-			const beforeComplete = pendingHooks.getForSession("pending-session-5");
+			const beforeComplete = deferredHooks.getForSession("pending-session-5");
 			const hookBefore = beforeComplete.find((h) => h.id === id);
 			expect(hookBefore?.status).toBe("pending");
 
 			// Complete successfully
-			pendingHooks.complete(id, true, "All tests passed", null, 5000);
+			deferredHooks.complete(id, true, "All tests passed", null, 5000);
 
 			// Completed hooks are filtered out of getForSession (only pending/running/failed)
-			const afterComplete = pendingHooks.getForSession("pending-session-5");
+			const afterComplete = deferredHooks.getForSession("pending-session-5");
 			const hookAfter = afterComplete.find((h) => h.id === id);
 			expect(hookAfter).toBeUndefined(); // No longer in pending list
 		});
 
 		test("complete handles failures", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session
-			await createTestSession("pending-session-6");
+			// Create orchestration
+			const orch = await createTestOrchestration("pending-session-6");
 
-			const id = pendingHooks.queue({
+			const id = deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "pending-session-6",
 				hookType: "Stop",
 				hookName: "lint",
@@ -443,9 +466,9 @@ describe("Deferred Hook Execution System", () => {
 			});
 
 			// Complete with failure
-			pendingHooks.complete(id, false, "", "lint errors found", 1500);
+			deferredHooks.complete(id, false, "", "lint errors found", 1500);
 
-			const hooks = pendingHooks.getForSession("pending-session-6");
+			const hooks = deferredHooks.getForSession("pending-session-6");
 			const hook = hooks.find((h) => h.id === id);
 			expect(hook?.status).toBe("failed");
 			expect(hook?.error).toBe("lint errors found");
@@ -484,12 +507,13 @@ describe("Deferred Hook Execution System", () => {
 
 	describe("HookExecution structure", () => {
 		test("queued hook has expected fields", async () => {
-			const { pendingHooks } = await import("../lib/db/index.ts");
+			const { deferredHooks } = await import("../lib/db/index.ts");
 
-			// Create session
-			await createTestSession("structure-test-session");
+			// Create orchestration
+			const orch = await createTestOrchestration("structure-test-session");
 
-			const id = pendingHooks.queue({
+			const id = deferredHooks.queue({
+				orchestrationId: orch.id,
 				sessionId: "structure-test-session",
 				hookType: "Stop",
 				hookName: "test-hook",
@@ -498,7 +522,7 @@ describe("Deferred Hook Execution System", () => {
 				command: "echo test",
 			});
 
-			const hooks = pendingHooks.getForSession("structure-test-session");
+			const hooks = deferredHooks.getForSession("structure-test-session");
 			const hook = hooks.find((h) => h.id === id);
 
 			expect(hook).toBeDefined();
@@ -516,10 +540,10 @@ describe("Deferred Hook Execution System", () => {
 
 describe("Edge Cases", () => {
 	test("handles empty session gracefully", async () => {
-		const { pendingHooks, initDb } = await import("../lib/db/index.ts");
+		const { deferredHooks, initDb } = await import("../lib/db/index.ts");
 		await initDb();
 
-		const hooks = pendingHooks.getForSession("nonexistent-session-xyz");
+		const hooks = deferredHooks.getForSession("nonexistent-session-xyz");
 		expect(Array.isArray(hooks)).toBe(true);
 		expect(hooks.length).toBe(0);
 	});

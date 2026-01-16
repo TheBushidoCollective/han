@@ -1,4 +1,7 @@
 hooks:
   check_commits:
-    command: "git diff --stat --quiet 2>/dev/null && git diff --cached --stat --quiet 2>/dev/null && echo 'No uncommitted changes' || echo '⚠️ Uncommitted changes detected. Consider committing to tell the story of your development.'"
+    command: "bash ${HAN_PLUGIN_DIR}/scripts/check-commits.sh"
     description: "Commit work early and often for git storytelling"
+    depends_on:
+      - plugin: "*"
+        hook: "*"

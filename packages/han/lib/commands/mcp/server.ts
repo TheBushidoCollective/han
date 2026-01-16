@@ -3,7 +3,7 @@ import {
 	isMemoryEnabled,
 	isMetricsEnabled,
 } from "../../config/han-settings.ts";
-import { hookAttempts, pendingHooks } from "../../db/index.ts";
+import { hookAttempts } from "../../db/index.ts";
 import { getOrCreateEventLogger } from "../../events/logger.ts";
 import {
 	formatMemoryAgentResult,
@@ -21,9 +21,9 @@ import {
 import { handleToolsCall as handleTaskToolsCall, TASK_TOOLS } from "./task.ts";
 import {
 	type AvailableHook,
+	checkHookNeedsRun,
 	discoverAvailableHooks,
 	discoverPluginTools,
-	executeHookByName,
 	executePluginTool,
 	generateHookRunDescription,
 	type PluginTool,
@@ -122,6 +122,11 @@ export function getHookRunTool(): McpTool | null {
 					description: `Hook name. Available: ${hookNames.join(", ")}`,
 					enum: hookNames,
 				},
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Pass the value of CLAUDE_SESSION_ID from your session.",
+				},
 				cache: {
 					type: "boolean",
 					description:
@@ -138,7 +143,7 @@ export function getHookRunTool(): McpTool | null {
 						"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false.",
 				},
 			},
-			required: ["plugin", "hook"],
+			required: ["plugin", "hook", "session_id"],
 		},
 	};
 }
@@ -349,39 +354,8 @@ const LEARN_TOOLS: McpTool[] = [
 ];
 
 // Hook management tools for deferred execution
+// Note: hook_wait was removed - use `han hook wait <orchestration-id>` CLI command instead
 const HOOK_TOOLS: McpTool[] = [
-	{
-		name: "hook_wait",
-		description:
-			"Wait for pending/running hooks in a session to complete. Polls the hook execution status and returns when all hooks are done or failed. Use this in a subagent to monitor deferred hook execution.",
-		annotations: {
-			title: "Wait for Hooks",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				session_id: {
-					type: "string",
-					description: "The Claude session ID to monitor hooks for",
-				},
-				timeout_ms: {
-					type: "number",
-					description:
-						"Maximum time to wait in milliseconds (default: 300000 = 5 minutes)",
-				},
-				poll_interval_ms: {
-					type: "number",
-					description:
-						"How often to poll for status updates in milliseconds (default: 2000 = 2 seconds)",
-				},
-			},
-			required: ["session_id"],
-		},
-	},
 	{
 		name: "increase_max_attempts",
 		description:
@@ -828,111 +802,12 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Handle hook management tools (hook_wait, increase_max_attempts)
+	// Handle hook management tools (increase_max_attempts)
 	const isHookTool = HOOK_TOOLS.some((t) => t.name === params.name);
 
 	if (isHookTool) {
 		try {
 			switch (params.name) {
-				case "hook_wait": {
-					const sessionId = args.session_id as string;
-					const timeoutMs = (args.timeout_ms as number) || 300000; // 5 minutes default
-					const pollIntervalMs = (args.poll_interval_ms as number) || 2000; // 2 seconds default
-
-					if (!sessionId) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: "Missing required parameter: session_id",
-								},
-							],
-							isError: true,
-						};
-					}
-
-					const startTime = Date.now();
-					let lastStatus = "";
-
-					// Poll until all hooks are done or timeout
-					while (Date.now() - startTime < timeoutMs) {
-						const hooks = pendingHooks.getForSession(sessionId);
-						const pendingOrRunning = hooks.filter(
-							(h) => h.status === "pending" || h.status === "running",
-						);
-
-						if (pendingOrRunning.length === 0) {
-							// All hooks are done
-							const failed = hooks.filter((h) => h.status === "failed");
-							const completed = hooks.filter((h) => h.status === "completed");
-
-							return {
-								content: [
-									{
-										type: "text",
-										text: JSON.stringify(
-											{
-												status: "done",
-												completed: completed.length,
-												failed: failed.length,
-												failedHooks: failed.map((h) => ({
-													plugin: h.hookSource,
-													hook: h.hookName,
-													error: h.error,
-												})),
-											},
-											null,
-											2,
-										),
-									},
-								],
-								isError: failed.length > 0,
-							};
-						}
-
-						// Report status change
-						const currentStatus = pendingOrRunning
-							.map((h) => `${h.hookSource}/${h.hookName}: ${h.status}`)
-							.join(", ");
-						if (currentStatus !== lastStatus) {
-							lastStatus = currentStatus;
-							// Log to stderr for visibility
-							process.stderr.write(`[hook_wait] Waiting: ${currentStatus}\n`);
-						}
-
-						// Wait before next poll
-						await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-					}
-
-					// Timeout reached
-					const hooks = pendingHooks.getForSession(sessionId);
-					const pendingOrRunning = hooks.filter(
-						(h) => h.status === "pending" || h.status === "running",
-					);
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(
-									{
-										status: "timeout",
-										message: `Timeout after ${timeoutMs}ms`,
-										stillPending: pendingOrRunning.map((h) => ({
-											plugin: h.hookSource,
-											hook: h.hookName,
-											status: h.status,
-										})),
-									},
-									null,
-									2,
-								),
-							},
-						],
-						isError: true,
-					};
-				}
-
 				case "increase_max_attempts": {
 					const sessionId = args.session_id as string;
 					const plugin = args.plugin as string;
@@ -997,11 +872,13 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Handle consolidated hook_run tool
+	// Handle consolidated hook_run tool - checks cache first, returns CLI command if execution needed
 	if (params.name === "hook_run") {
 		const plugin = args.plugin as string | undefined;
 		const hook = args.hook as string | undefined;
-		const cache = args.cache !== false; // Default to true for MCP
+		// Get session_id from args (MCP servers don't have access to Claude Code environment)
+		const sessionId = args.session_id as string | undefined;
+		const cache = args.cache !== false; // Default to true
 		const verbose = args.verbose === true;
 		const directory =
 			typeof args.directory === "string" ? args.directory : undefined;
@@ -1025,53 +902,72 @@ async function handleToolsCall(params: {
 			};
 		}
 
-		try {
-			const result = await executeHookByName(plugin, hook, {
-				cache,
-				verbose,
-				failFast: false,
-				directory,
-			});
+		// If caching is enabled, check if we can skip execution
+		if (cache && sessionId) {
+			try {
+				const checkResult = await checkHookNeedsRun(plugin, hook, {
+					sessionId,
+					directory,
+					checkSessionChangesOnly: true,
+				});
 
-			let outputText = result.output;
-
-			// If caching is enabled and output suggests no changes/skipped,
-			// add a helpful suggestion to retry without cache
-			if (cache && result.success) {
-				const lowerOutput = outputText.toLowerCase();
-				const hasNoChanges =
-					lowerOutput.includes("skipped") ||
-					lowerOutput.includes("no changes") ||
-					lowerOutput.includes("unchanged") ||
-					lowerOutput.includes("up to date");
-
-				if (hasNoChanges) {
-					outputText +=
-						"\n\n💡 Tip: Files appear unchanged. To force re-run, use cache=false.";
+				// If no changes needed, return fast feedback
+				if (!checkResult.needsRun) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: checkResult.message,
+							},
+						],
+					};
 				}
+			} catch (error) {
+				// On error, fall through to return CLI command
+				console.debug(
+					`Cache check failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
-
-			return {
-				content: [
-					{
-						type: "text",
-						text: outputText,
-					},
-				],
-				isError: !result.success,
-			};
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${plugin}/${hook}: ${message}`,
-					},
-				],
-				isError: true,
-			};
 		}
+
+		// Build the CLI command for execution
+		const cmdParts = ["han", "hook", "run", plugin, hook];
+		if (sessionId) {
+			cmdParts.push(`--session-id=${sessionId}`);
+		}
+		if (!cache) {
+			cmdParts.push("--no-cache");
+		}
+		if (verbose) {
+			cmdParts.push("--verbose");
+		}
+		if (directory) {
+			cmdParts.push(`--only=${directory}`);
+		}
+		const cliCommand = cmdParts.join(" ");
+
+		// Get hook metadata for context
+		const hookInfo = discoverHooks().find(
+			(h) => h.plugin === plugin && h.hook === hook,
+		);
+		const hookDesc = hookInfo?.description.split(".")[0] || `${plugin}/${hook}`;
+
+		return {
+			content: [
+				{
+					type: "text",
+					text: `**Run this command via Bash tool for real-time output:**
+
+\`\`\`bash
+${cliCommand}
+\`\`\`
+
+**Hook:** ${hookDesc}
+
+Execute the command above using the Bash tool to see live output and allow the user to follow progress.`,
+				},
+			],
+		};
 	}
 
 	// Handle legacy hook tools (for backwards compatibility during transition)

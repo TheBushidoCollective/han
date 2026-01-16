@@ -33,7 +33,6 @@ import {
 } from "../../hooks/index.ts";
 import { acquireGlobalSlot } from "../../hooks/slot-client.ts";
 import { isDebugMode } from "../../shared.ts";
-import { getCacheKeyForDirectory } from "../../validate.ts";
 
 /**
  * Get the han binary invocation string.
@@ -1024,9 +1023,9 @@ async function executeHookInDirectory(
 		// Always update cache on success (for next run with --only-changed)
 		// Track session-changed files after successful validation
 		const commandHash = createHash("sha256").update(command).digest("hex");
-				await trackFilesAsync(
-					task.plugin,
-					task.hookName,
+		await trackFilesAsync(
+			task.plugin,
+			task.hookName,
 			directory,
 			task.hookDef.ifChanged || ["**/*"],
 			task.pluginRoot,
@@ -1570,9 +1569,31 @@ async function orchestrate(
 		process.exit(1);
 	}
 
-	// Session ID is always available (from stdin or generated CLI payload)
-	// Fallback to generating one if somehow missing (shouldn't happen)
+	// Session ID resolution priority:
+	// 1. From orchestration (if --orchestration-id provided) - ensures cache consistency
+	// 2. From stdin payload (from Claude Code)
+	// 3. From environment variables
+	// 4. Generated CLI session ID
 	let sessionId = payload.session_id || `cli-${randomUUID()}`;
+
+	// Import orchestrations for session ID lookup and later use
+	const { orchestrations } = require("../../db/index.ts");
+
+	// If orchestration ID is provided, load it FIRST to get the correct sessionId
+	// This ensures cache reads/writes use the same sessionId that was used during --check
+	if (options.orchestrationId) {
+		const orch = orchestrations.get(options.orchestrationId);
+		if (orch?.sessionId) {
+			sessionId = orch.sessionId;
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[orchestrate]${colors.reset} Using session ID from orchestration: ${sessionId}`,
+				);
+			}
+		}
+	}
+
+	// Initialize event logger with the correct sessionId
 	initEventLogger(sessionId, {}, projectRoot);
 
 	// Set HAN_STOP_ORCHESTRATING=1 automatically for wait mode on Stop events
@@ -1618,9 +1639,17 @@ async function orchestrate(
 		}
 
 		// Convert queued hooks to HookTask format
-		// This is a simplified version since we already have the command and directory
+		// Resolve actual plugin root for each hook (needed for CLAUDE_PLUGIN_ROOT env var)
+		const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 		tasks = queuedHooks.map(
 			(qh: import("../../../../han-native").QueuedHook) => {
+				// Resolve the actual plugin root directory
+				const marketplace = plugins.get(qh.plugin) || "han";
+				const marketplaceConfig = marketplaces.get(marketplace);
+				const resolvedPluginRoot =
+					getPluginDir(qh.plugin, marketplace, marketplaceConfig) ||
+					projectRoot;
+
 				return {
 					plugin: qh.plugin,
 					hookName: qh.hookName,
@@ -1629,7 +1658,7 @@ async function orchestrate(
 						ifChanged: qh.ifChanged ? JSON.parse(qh.ifChanged) : undefined,
 					},
 					directories: [qh.directory],
-					pluginRoot: projectRoot, // Simplified - may need actual plugin root
+					pluginRoot: resolvedPluginRoot,
 					dependsOn: [],
 				};
 			},
@@ -1669,23 +1698,11 @@ async function orchestrate(
 	}
 
 	// Use provided orchestration ID or create new one
-	const { orchestrations } = require("../../db/index.ts");
+	// Note: If orchestrationId was provided, sessionId was already loaded from it earlier
 	let orchestrationId: string;
 	if (options.orchestrationId) {
 		// Reuse the orchestration created by --check
 		orchestrationId = options.orchestrationId;
-
-		// CRITICAL: Load orchestration to get the session ID used during --check
-		// This ensures cache writes use the same session ID as cache reads
-		const orch = orchestrations.get(orchestrationId);
-		if (orch?.sessionId) {
-			sessionId = orch.sessionId;
-			if (isDebugMode()) {
-				console.error(
-					`${colors.dim}[orchestrate]${colors.reset} Using session ID from orchestration: ${sessionId}`,
-				);
-			}
-		}
 	} else {
 		// Create an orchestration record (cancels any existing running orchestration for this session)
 		const orchestration = orchestrations.create({
@@ -2023,7 +2040,6 @@ When done, the Stop hook will run again to verify the fixes.`);
 		// Run wildcard dependency hooks inline after validation passes
 		// These hooks were filtered out during queueing and need to run after all validation
 		if (options.orchestrationId && options.wait) {
-			const { orchestrations } = require("../../db/index.ts");
 			const orch = orchestrations.get(options.orchestrationId);
 
 			if (orch) {

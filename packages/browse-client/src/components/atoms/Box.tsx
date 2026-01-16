@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   forwardRef,
   type KeyboardEvent,
   type ReactNode,
@@ -22,7 +21,7 @@ import {
  * This is needed because react-native-web handles CSS properties at runtime,
  * but ViewStyle doesn't include web-only properties like wordBreak, whiteSpace, etc.
  */
-type BoxStyle = ViewStyle | CSSProperties;
+type BoxStyle = ViewStyle;
 
 export interface BoxProps {
   children?: ReactNode;

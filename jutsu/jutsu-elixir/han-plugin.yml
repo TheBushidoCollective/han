@@ -46,3 +46,25 @@ hooks:
       - "**/*.heex"
       - "mix.exs"
       - "mix.lock"
+  coverage:
+    dirs_with:
+      - "coveralls.json"
+    # Only enforces coverage if minimum_coverage is set in coveralls.json
+    command: |
+      if ! grep -q '"minimum_coverage"' coveralls.json 2>/dev/null; then
+        echo "No minimum_coverage threshold in coveralls.json, skipping coverage ratchet"
+        exit 0
+      fi
+      THRESHOLD=$(grep -o '"minimum_coverage"[[:space:]]*:[[:space:]]*[0-9.]*' coveralls.json | grep -o '[0-9.]*$')
+      if [ -z "$THRESHOLD" ]; then
+        echo "Could not parse minimum_coverage, skipping"
+        exit 0
+      fi
+      echo "Enforcing minimum coverage: ${THRESHOLD}%"
+      mix coveralls --threshold "$THRESHOLD"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "mix.exs"
+      - "mix.lock"
+      - "coveralls.json"

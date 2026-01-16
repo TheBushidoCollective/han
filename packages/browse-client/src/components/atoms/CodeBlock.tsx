@@ -9,15 +9,20 @@
  */
 
 import type { CSSProperties, ReactNode } from 'react';
-import { Text as RNText, type TextStyle, View, type ViewStyle } from 'react-native-web';
+import {
+  Text as RNText,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from 'react-native-web';
 import {
   colors,
   type FontSizeKey,
   fontSizes,
   fonts,
   radii,
-  spacing,
   StyleSheet,
+  spacing,
 } from '../../theme.ts';
 
 /** Extended style type allowing both styles and web CSSProperties */
@@ -56,7 +61,7 @@ export function CodeBlock({
       showBackground && {
         backgroundColor: colors.bg.tertiary,
         borderRadius: radii.md,
-        padding: spacing.sm,
+        padding: spacing.xs,
         borderWidth: 1,
         borderColor: colors.border.subtle,
       },

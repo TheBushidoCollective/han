@@ -1,6 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -499,7 +499,12 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		verbose,
 	} = options;
 
-	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	// Canonicalize rootDir to match paths from native module (which uses fs::canonicalize)
+	// This ensures path comparison works correctly on macOS where /var -> /private/var
+	const rawRootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	const rootDir = existsSync(rawRootDir)
+		? realpathSync(rawRootDir)
+		: rawRootDir;
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
@@ -838,7 +843,12 @@ export async function runConfiguredHook(
 			: (options.cache ?? isCacheEnabled());
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	// Canonicalize projectRoot to match paths from native module (which uses fs::canonicalize)
+	// This ensures path comparison works correctly on macOS where /var -> /private/var
+	const rawProjectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	const projectRoot = existsSync(rawProjectRoot)
+		? realpathSync(rawProjectRoot)
+		: rawProjectRoot;
 
 	// If CLAUDE_PLUGIN_ROOT is not set, try to discover it from settings
 	if (!pluginRoot) {

@@ -39,9 +39,13 @@ function findPluginInMarketplace(
 		join(marketplaceRoot, "jutsu", pluginName),
 		join(marketplaceRoot, "do", pluginName),
 		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, "core"),
 		join(marketplaceRoot, pluginName),
 	];
+
+	// Only add core path if we're actually looking for the core plugin
+	if (pluginName === "core") {
+		potentialPaths.push(join(marketplaceRoot, "core"));
+	}
 
 	for (const path of potentialPaths) {
 		if (existsSync(path)) {

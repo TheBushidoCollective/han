@@ -13,11 +13,11 @@ import { createYoga } from "graphql-yoga";
 import { WebSocketServer } from "ws";
 import {
 	coordinator,
+	deferredHooks,
 	hookAttempts,
 	type IndexResult,
 	initDb,
 	messages,
-	pendingHooks,
 	watcher,
 } from "../../db/index.ts";
 import { createLoaders } from "../../graphql/loaders.ts";
@@ -88,7 +88,7 @@ async function processPendingHooks(): Promise<void> {
 		state.processingHooks = true;
 
 		// Get all pending hooks
-		const pending = pendingHooks.getAll();
+		const pending = deferredHooks.getAll();
 		if (pending.length === 0) {
 			return;
 		}
@@ -110,11 +110,12 @@ async function processPendingHooks(): Promise<void> {
 			const startTime = Date.now();
 
 			// Update status to running
-			pendingHooks.updateStatus(hookId, "running");
+			deferredHooks.updateStatus(hookId, "running");
 			publishSessionHooksChanged(sessionId, hookSource, hook.hookName, "run");
 
 			try {
 				// Execute the hook command
+				const pluginRoot = hook.pluginRoot ?? "";
 				const output = execSync(command, {
 					cwd: directory,
 					encoding: "utf-8",
@@ -124,13 +125,14 @@ async function processPendingHooks(): Promise<void> {
 						...process.env,
 						CLAUDE_PROJECT_DIR: directory,
 						HAN_SESSION_ID: sessionId,
+						...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: pluginRoot } : {}),
 					},
 				});
 
 				const duration = Date.now() - startTime;
 
 				// Mark as completed
-				pendingHooks.complete(hookId, true, output.trim(), null, duration);
+				deferredHooks.complete(hookId, true, output.trim(), null, duration);
 
 				// Reset failure counter on success
 				hookAttempts.reset(sessionId, hookSource, hook.hookName, directory);
@@ -150,7 +152,7 @@ async function processPendingHooks(): Promise<void> {
 				const duration = Date.now() - startTime;
 
 				// Mark as failed
-				pendingHooks.complete(
+				deferredHooks.complete(
 					hookId,
 					false,
 					stdout.trim(),

@@ -201,6 +201,8 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			"toolFilter",
 			"tool_filter",
 			"mcp",
+			"silent",
+			"test_dir",
 		];
 		for (const key of Object.keys(hook)) {
 			if (!validProperties.includes(key)) {
@@ -212,8 +214,9 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 		}
 	}
 
-	// Check for unknown top-level properties
-	const validTopLevel = ["hooks"];
+	// Check for unknown top-level properties - strict validation
+	// Valid properties: hooks (required), mcp_servers, memory
+	const validTopLevel = ["hooks", "mcp_servers", "memory"];
 	for (const key of Object.keys(configObj)) {
 		if (!validTopLevel.includes(key)) {
 			errors.push({ path: key, message: `Unknown property '${key}'` });

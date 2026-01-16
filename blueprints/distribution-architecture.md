@@ -1,3 +1,8 @@
+---
+name: distribution-architecture
+summary: NPM wrapper + platform-specific Bun binaries distribution model
+---
+
 # Distribution Architecture
 
 ## Overview

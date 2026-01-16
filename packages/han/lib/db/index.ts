@@ -759,10 +759,90 @@ export const hookAttempts = {
 };
 
 // ============================================================================
-// Pending Hook Operations (for deferred execution)
+// Orchestration Operations (group hook executions by orchestrate run)
+// ============================================================================
+
+export const orchestrations = {
+	/**
+	 * Create a new orchestration, cancelling any existing running orchestration for the same session
+	 */
+	create(
+		input: import("../../../han-native").OrchestrationInput,
+	): import("../../../han-native").Orchestration {
+		const native = getNativeModule();
+		return native.createOrchestration(input);
+	},
+
+	/**
+	 * Get an orchestration by ID
+	 */
+	get(id: string): import("../../../han-native").Orchestration | null {
+		const native = getNativeModule();
+		return native.getOrchestration(id) ?? null;
+	},
+
+	/**
+	 * Update an orchestration's counters and status
+	 */
+	update(update: import("../../../han-native").OrchestrationUpdate): void {
+		const native = getNativeModule();
+		native.updateOrchestration(update);
+	},
+
+	/**
+	 * Cancel an orchestration and all its pending/running hooks
+	 */
+	cancel(id: string): void {
+		const native = getNativeModule();
+		native.cancelOrchestration(id);
+	},
+
+	/**
+	 * Get all hooks for an orchestration
+	 */
+	getHooks(
+		orchestrationId: string,
+	): import("../../../han-native").HookExecution[] {
+		const native = getNativeModule();
+		return native.getOrchestrationHooks(orchestrationId);
+	},
+};
+
+// ============================================================================
+// Pending Hooks Queue (for --check mode orchestrations)
 // ============================================================================
 
 export const pendingHooks = {
+	/**
+	 * Queue a hook for later execution during --wait
+	 */
+	queue(input: import("../../../han-native").QueuedHookInput): string {
+		const native = getNativeModule();
+		return native.queueHook(input);
+	},
+
+	/**
+	 * Get all queued hooks for an orchestration
+	 */
+	list(orchestrationId: string): import("../../../han-native").QueuedHook[] {
+		const native = getNativeModule();
+		return native.getQueuedHooks(orchestrationId);
+	},
+
+	/**
+	 * Delete queued hooks after they've been executed
+	 */
+	delete(orchestrationId: string): number {
+		const native = getNativeModule();
+		return native.deleteQueuedHooks(orchestrationId);
+	},
+};
+
+// ============================================================================
+// Deferred Hook Operations (for background execution)
+// ============================================================================
+
+export const deferredHooks = {
 	/**
 	 * Queue a pending hook for background execution
 	 * Returns the new hook execution ID
@@ -781,8 +861,7 @@ export const pendingHooks = {
 	},
 
 	/**
-	 * Get pending/running/failed hooks for a specific session
-	 * Used by MCP hook_wait tool to poll status
+	 * Get pending/running/failed hooks for a specific session (legacy)
 	 */
 	getForSession(
 		sessionId: string,
@@ -796,7 +875,7 @@ export const pendingHooks = {
 	 */
 	updateStatus(
 		id: string,
-		status: "pending" | "running" | "completed" | "failed",
+		status: "pending" | "running" | "completed" | "failed" | "cancelled",
 	): void {
 		const native = getNativeModule();
 		native.updateHookStatus(id, status);
@@ -813,7 +892,23 @@ export const pendingHooks = {
 		durationMs: number,
 	): void {
 		const native = getNativeModule();
-		native.completeHookExecution(id, success, output, error, durationMs);
+		// Convert null to undefined for Rust Option<String>
+		native.completeHookExecution(
+			id,
+			success,
+			output ?? undefined,
+			error ?? undefined,
+			durationMs,
+		);
+	},
+
+	/**
+	 * Mark a hook as failed with an error message
+	 * Used for stale hook detection when the owning process is no longer running
+	 */
+	fail(id: string, errorMessage: string): void {
+		const native = getNativeModule();
+		native.failHookExecution(id, errorMessage);
 	},
 };
 
@@ -1520,6 +1615,41 @@ export async function listSessions(options?: {
 	limit?: number;
 }): Promise<import("../../../han-native").Session[]> {
 	return sessions.list(options);
+}
+
+/**
+ * Get the active session for a project by its path.
+ * Returns null if no active session exists.
+ */
+export function getActiveSessionForProject(
+	projectPath: string,
+): import("../../../han-native").Session | null {
+	try {
+		// Ensure database is initialized
+		if (!_initialized) {
+			getDbPath();
+		}
+
+		const native = getNativeModule();
+		const dbPath = getDbPath();
+
+		// Query for project by path
+		// Slug replaces both / and . with - (e.g., "/path/to/dir.name" -> "-path-to-dir-name")
+		const projectSlug = projectPath.replace(/[/.]/g, "-");
+		const projects = native.listProjects(dbPath);
+		const project = projects.find((p) => p.slug === projectSlug);
+
+		if (!project) {
+			return null;
+		}
+
+		// Query for active session in this project
+		const sessions = native.listSessions(dbPath, project.id, "active", 1);
+		return sessions[0] || null;
+	} catch (error) {
+		console.error(`Failed to get active session for project: ${error}`);
+		return null;
+	}
 }
 
 // Message operations

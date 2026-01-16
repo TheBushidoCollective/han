@@ -4,12 +4,9 @@
  * Displays hooks, tasks, todos, and file changes for a session.
  */
 
-import React, {
-  type CSSProperties,
-  type ReactElement,
-  Suspense,
-  useState,
-} from 'react';
+import type { CSSProperties } from 'react';
+import React, { type ReactElement, Suspense, useState } from 'react';
+import type { ViewStyle } from 'react-native-web';
 import { graphql, useFragment, usePaginationFragment } from 'react-relay';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
@@ -210,7 +207,7 @@ interface HookTypeChipProps {
   total: number;
 }
 
-const hookTypeChipStyle: CSSProperties = {
+const hookTypeChipStyle: ViewStyle = {
   backgroundColor: colors.bg.tertiary,
   borderRadius: radii.lg,
   padding: `${spacing.xs}px ${spacing.sm}px`,
@@ -239,7 +236,7 @@ function HookTypeChip({
   );
 }
 
-const tabBarStyle: CSSProperties = {
+const tabBarStyle: ViewStyle = {
   display: 'flex',
   borderBottom: `1px solid ${colors.border.default}`,
   marginBottom: spacing.md,

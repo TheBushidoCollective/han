@@ -436,9 +436,26 @@ export type FrustrationDetectedEvents = FrustrationDetectedEvent;
 /**
  * Union of all Han event types
  */
+/**
+ * Hook check state event - for tracking check mode deduplication
+ * Records the fingerprint of hooks that need validation to avoid spam
+ */
+export interface HookCheckStateEvent extends BaseEvent {
+	type: "hook_check_state";
+	data: {
+		/** Hook type being checked (e.g., "Stop", "SubagentStop") */
+		hook_type: string;
+		/** Fingerprint of hooks needing validation (sorted JSON of hook identifiers) */
+		fingerprint: string;
+		/** Number of hooks that need to run */
+		hooks_count: number;
+	};
+}
+
 export type HanEvent =
 	| HookEvent
 	| SpecificHookEvent
+	| HookCheckStateEvent
 	| McpToolEvent
 	| ExposedToolEvent
 	| MemoryEvent

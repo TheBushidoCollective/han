@@ -21,16 +21,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/scripts/lint-plugins.sh"
-          }
-        ]
-      }
     ]
   },
   "enabledPlugins": {

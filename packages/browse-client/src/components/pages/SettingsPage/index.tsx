@@ -271,8 +271,8 @@ function SettingsContent({
               {!hanConfig?.exists && (
                 <Box bg="tertiary" p="md" borderRadius="md">
                   <Text size="sm" color="secondary">
-                    Create <InlineCode>~/.claude/han.yml</InlineCode> to configure Han
-                    settings.
+                    Create <InlineCode>~/.claude/han.yml</InlineCode> to
+                    configure Han settings.
                   </Text>
                 </Box>
               )}
@@ -375,7 +375,8 @@ function SettingsContent({
             >
               <Text color="secondary">No MCP servers configured.</Text>
               <Text size="sm" color="muted">
-                Add MCP servers to <InlineCode>~/.claude/settings.json</InlineCode> under
+                Add MCP servers to{' '}
+                <InlineCode>~/.claude/settings.json</InlineCode> under
                 "mcpServers"
               </Text>
             </VStack>
@@ -492,16 +493,20 @@ function SettingsContent({
           </Heading>
           <VStack gap="xs">
             <Text size="sm">
-              <InlineCode>~/.claude/settings.json</InlineCode> - Claude Code user settings
+              <InlineCode>~/.claude/settings.json</InlineCode> - Claude Code
+              user settings
             </Text>
             <Text size="sm">
-              <InlineCode>~/.claude/han.yml</InlineCode> - Han global configuration
+              <InlineCode>~/.claude/han.yml</InlineCode> - Han global
+              configuration
             </Text>
             <Text size="sm">
-              <InlineCode>.claude/settings.json</InlineCode> - Project-level Claude settings
+              <InlineCode>.claude/settings.json</InlineCode> - Project-level
+              Claude settings
             </Text>
             <Text size="sm">
-              <InlineCode>.claude/han.yml</InlineCode> - Project-level Han configuration
+              <InlineCode>.claude/han.yml</InlineCode> - Project-level Han
+              configuration
             </Text>
           </VStack>
         </VStack>

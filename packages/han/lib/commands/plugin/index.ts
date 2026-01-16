@@ -4,6 +4,7 @@ import { registerPluginList } from "./list.ts";
 import { registerPluginSearch } from "./search.ts";
 import { registerPluginUninstall } from "./uninstall.ts";
 import { registerPluginUpdateMarketplace } from "./update.ts";
+import { registerPluginValidate } from "./validate.ts";
 
 /**
  * Register all plugin management commands under `han plugin`
@@ -18,4 +19,5 @@ export function registerPluginCommands(program: Command): void {
 	registerPluginUninstall(pluginCommand);
 	registerPluginSearch(pluginCommand);
 	registerPluginUpdateMarketplace(pluginCommand);
+	registerPluginValidate(pluginCommand);
 }

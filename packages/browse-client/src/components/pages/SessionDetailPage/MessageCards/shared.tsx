@@ -6,14 +6,15 @@
  */
 
 import type React from 'react';
-import type { CSSProperties } from 'react';
 import {
+  type CSSProperties,
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
 } from 'react';
+import type { ViewStyle } from 'react-native-web';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
@@ -241,7 +242,7 @@ const styles = createStyles({
   },
 });
 
-const messageTypeStyles: Record<string, React.CSSProperties> = {
+const messageTypeStyles: Record<string, ViewStyle> = {
   user: {
     backgroundColor: colors.bg.tertiary,
     borderLeft: `3px solid ${colors.primary}`,
@@ -327,6 +328,7 @@ function MessageDetailLink({
 }): React.ReactElement {
   const [hovered, setHovered] = useState(false);
 
+  // Use CSSProperties for react-router-dom Link which renders a native anchor element
   const linkStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -366,7 +368,7 @@ export function MessageWrapper({
   isToolOnly = false,
   children,
 }: MessageWrapperProps): React.ReactElement {
-  const baseStyle: CSSProperties = {
+  const baseStyle: ViewStyle = {
     padding: spacing.md,
     borderRadius: radii.md,
     border: `1px solid ${colors.border.subtle}`,

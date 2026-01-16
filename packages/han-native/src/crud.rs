@@ -320,6 +320,17 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
     }
 }
 
+/// Ensure a session exists in the database (INSERT OR IGNORE).
+/// This is called before inserting records that reference sessions (hook executions, file validations)
+/// to avoid foreign key constraint violations.
+fn ensure_session_exists(conn: &rusqlite::Connection, session_id: &str) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "INSERT OR IGNORE INTO sessions (id, status) VALUES (?1, 'active')",
+        params![session_id],
+    )?;
+    Ok(())
+}
+
 pub fn list_sessions(
     project_id: Option<String>,
     status: Option<String>,
@@ -1606,6 +1617,12 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
     let db = db::get_db()?;
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    // Ensure session exists before inserting (avoids FK constraint violation)
+    if let Some(ref session_id) = input.session_id {
+        ensure_session_exists(&conn, session_id)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to ensure session exists: {}", e)))?;
+    }
+
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1620,6 +1637,7 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
         |row| {
             Ok(HookExecution {
                 id: Some(row.get(0)?),
+                orchestration_id: None,  // Legacy hook executions don't have orchestration
                 session_id: row.get(1)?,
                 task_id: row.get(2)?,
                 hook_type: row.get(3)?,
@@ -1637,6 +1655,8 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
                 status: row.get(15)?,
                 consecutive_failures: row.get(16)?,
                 max_attempts: row.get(17)?,
+                pid: None,  // Completed hooks don't track PID
+                plugin_root: None,  // Completed hooks don't need plugin_root stored
             })
         }
     ).map_err(|e| napi::Error::from_reason(format!("Failed to record hook execution: {}", e)))
@@ -1870,6 +1890,10 @@ pub fn record_file_validation(input: SessionFileValidationInput) -> napi::Result
     let db = db::get_db()?;
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    // Ensure session exists before inserting (avoids FK constraint violation)
+    ensure_session_exists(&conn, &input.session_id)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to ensure session exists: {}", e)))?;
+
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -2097,6 +2121,10 @@ pub fn truncate_derived_tables() -> napi::Result<u32> {
     let db = db::get_db()?;
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    // Temporarily disable foreign keys for bulk deletion
+    conn.execute("PRAGMA foreign_keys=OFF", [])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to disable foreign keys: {}", e)))?;
+
     // Order matters due to foreign key constraints - delete children before parents
     let tables = [
         "session_todos",
@@ -2110,6 +2138,7 @@ pub fn truncate_derived_tables() -> napi::Result<u32> {
         "session_summaries",
         "session_files",
         "sessions",
+        "orchestrations", // Also clear orchestrations (has session_id but no FK)
     ];
 
     let mut total_deleted: u32 = 0;
@@ -2123,6 +2152,10 @@ pub fn truncate_derived_tables() -> napi::Result<u32> {
     // Rebuild FTS index after deleting messages
     conn.execute("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')", [])
         .map_err(|e| napi::Error::from_reason(format!("Failed to rebuild FTS index: {}", e)))?;
+
+    // Re-enable foreign keys
+    conn.execute("PRAGMA foreign_keys=ON", [])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to re-enable foreign keys: {}", e)))?;
 
     Ok(total_deleted)
 }
@@ -2264,6 +2297,166 @@ pub fn increase_hook_max_attempts(
 }
 
 // ============================================================================
+// Orchestration Operations
+// ============================================================================
+
+/// Create a new orchestration, cancelling any existing running orchestration for the same session
+#[napi]
+pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestration> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Cancel any existing running orchestration for the same session (if session_id provided)
+    if let Some(ref session_id) = input.session_id {
+        conn.execute(
+            "UPDATE orchestrations SET status = 'cancelled', completed_at = datetime('now')
+             WHERE session_id = ?1 AND status = 'running'",
+            params![session_id],
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel existing orchestration: {}", e)))?;
+
+        // Also cancel any pending/running hooks from cancelled orchestrations
+        conn.execute(
+            "UPDATE hook_executions SET status = 'cancelled'
+             WHERE orchestration_id IN (
+                 SELECT id FROM orchestrations WHERE session_id = ?1 AND status = 'cancelled'
+             ) AND status IN ('pending', 'running')",
+            params![session_id],
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+    }
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    conn.execute(
+        "INSERT INTO orchestrations (id, session_id, hook_type, project_root, status, total_hooks, completed_hooks, failed_hooks, deferred_hooks, created_at)
+         VALUES (?1, ?2, ?3, ?4, 'running', 0, 0, 0, 0, ?5)",
+        params![id, input.session_id, input.hook_type, input.project_root, now],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to create orchestration: {}", e)))?;
+
+    Ok(Orchestration {
+        id,
+        session_id: input.session_id,
+        hook_type: input.hook_type,
+        project_root: input.project_root,
+        status: "running".to_string(),
+        total_hooks: 0,
+        completed_hooks: 0,
+        failed_hooks: 0,
+        deferred_hooks: 0,
+        created_at: Some(now),
+        completed_at: None,
+    })
+}
+
+/// Get an orchestration by ID
+#[napi]
+pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, hook_type, project_root, status, total_hooks, completed_hooks, failed_hooks, deferred_hooks, created_at, completed_at
+         FROM orchestrations WHERE id = ?1"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![id], |row| {
+        Ok(Orchestration {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            hook_type: row.get(2)?,
+            project_root: row.get(3)?,
+            status: row.get(4)?,
+            total_hooks: row.get(5)?,
+            completed_hooks: row.get(6)?,
+            failed_hooks: row.get(7)?,
+            deferred_hooks: row.get(8)?,
+            created_at: row.get(9)?,
+            completed_at: row.get(10)?,
+        })
+    });
+
+    match result {
+        Ok(orch) => Ok(Some(orch)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!("Failed to get orchestration: {}", e))),
+    }
+}
+
+/// Update an orchestration's counters and status
+#[napi]
+pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut sql_parts = vec![];
+    let mut param_values: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+    if let Some(status) = &update.status {
+        sql_parts.push(format!("status = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(status.clone()));
+
+        // Set completed_at if status is terminal
+        if status == "completed" || status == "failed" || status == "cancelled" {
+            sql_parts.push(format!("completed_at = datetime('now')"));
+        }
+    }
+    if let Some(total) = update.total_hooks {
+        sql_parts.push(format!("total_hooks = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(total));
+    }
+    if let Some(completed) = update.completed_hooks {
+        sql_parts.push(format!("completed_hooks = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(completed));
+    }
+    if let Some(failed) = update.failed_hooks {
+        sql_parts.push(format!("failed_hooks = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(failed));
+    }
+    if let Some(deferred) = update.deferred_hooks {
+        sql_parts.push(format!("deferred_hooks = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(deferred));
+    }
+
+    if sql_parts.is_empty() {
+        return Ok(());
+    }
+
+    let sql = format!(
+        "UPDATE orchestrations SET {} WHERE id = ?{}",
+        sql_parts.join(", "),
+        param_values.len() + 1
+    );
+    param_values.push(Box::new(update.id));
+
+    let params: Vec<&dyn rusqlite::ToSql> = param_values.iter().map(|v| v.as_ref()).collect();
+    conn.execute(&sql, params.as_slice())
+        .map_err(|e| napi::Error::from_reason(format!("Failed to update orchestration: {}", e)))?;
+
+    Ok(())
+}
+
+/// Cancel an orchestration and all its pending/running hooks
+#[napi]
+pub fn cancel_orchestration(id: String) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Cancel the orchestration
+    conn.execute(
+        "UPDATE orchestrations SET status = 'cancelled', completed_at = datetime('now') WHERE id = ?1 AND status = 'running'",
+        params![id],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel orchestration: {}", e)))?;
+
+    // Cancel all pending/running hooks in this orchestration
+    conn.execute(
+        "UPDATE hook_executions SET status = 'cancelled' WHERE orchestration_id = ?1 AND status IN ('pending', 'running')",
+        params![id],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel hooks: {}", e)))?;
+
+    Ok(())
+}
+
+// ============================================================================
 // Pending Hook Operations (for deferred execution)
 // ============================================================================
 
@@ -2273,13 +2466,19 @@ pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
     let db = db::get_db()?;
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    // Ensure session exists before inserting (avoids FK constraint violation)
+    if let Some(ref session_id) = input.session_id {
+        ensure_session_exists(&conn, session_id)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to ensure session exists: {}", e)))?;
+    }
+
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT INTO hook_executions (id, session_id, hook_type, hook_name, hook_source, directory, command, if_changed, executed_at, status, consecutive_failures, max_attempts, duration_ms, exit_code, passed)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, 3, 0, 0, 0)",
-        params![id, input.session_id, input.hook_type, input.hook_name, input.plugin, input.directory, input.command, input.if_changed, now],
+        "INSERT INTO hook_executions (id, orchestration_id, session_id, hook_type, hook_name, hook_source, directory, command, if_changed, executed_at, status, consecutive_failures, max_attempts, duration_ms, exit_code, passed, pid, plugin_root)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'pending', 0, 3, 0, 0, 0, ?11, ?12)",
+        params![id, input.orchestration_id, input.session_id, input.hook_type, input.hook_name, input.plugin, input.directory, input.command, input.if_changed, now, input.pid, input.plugin_root],
     ).map_err(|e| napi::Error::from_reason(format!("Failed to queue pending hook: {}", e)))?;
 
     Ok(id)
@@ -2292,30 +2491,33 @@ pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts
+        "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
          FROM hook_executions WHERE status = 'pending' ORDER BY executed_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let rows = stmt.query_map([], |row| {
         Ok(HookExecution {
             id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            task_id: row.get(2)?,
-            hook_type: row.get(3)?,
-            hook_name: row.get(4)?,
-            hook_source: row.get(5)?,
-            directory: row.get(6)?,
-            duration_ms: row.get(7)?,
-            exit_code: row.get(8)?,
-            passed: row.get::<_, i32>(9)? != 0,
-            output: row.get(10)?,
-            error: row.get(11)?,
-            if_changed: row.get(12)?,
-            command: row.get(13)?,
-            executed_at: row.get(14)?,
-            status: row.get(15)?,
-            consecutive_failures: row.get(16)?,
-            max_attempts: row.get(17)?,
+            orchestration_id: row.get(1)?,
+            session_id: row.get(2)?,
+            task_id: row.get(3)?,
+            hook_type: row.get(4)?,
+            hook_name: row.get(5)?,
+            hook_source: row.get(6)?,
+            directory: row.get(7)?,
+            duration_ms: row.get(8)?,
+            exit_code: row.get(9)?,
+            passed: row.get::<_, i32>(10)? != 0,
+            output: row.get(11)?,
+            error: row.get(12)?,
+            if_changed: row.get(13)?,
+            command: row.get(14)?,
+            executed_at: row.get(15)?,
+            status: row.get(16)?,
+            consecutive_failures: row.get(17)?,
+            max_attempts: row.get(18)?,
+            pid: row.get(19)?,
+            plugin_root: row.get(20)?,
         })
     }).map_err(|e| napi::Error::from_reason(format!("Failed to get pending hooks: {}", e)))?;
 
@@ -2336,41 +2538,98 @@ pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
     Ok(())
 }
 
-/// Get pending/running hooks for a session
+/// Get pending/running/failed hooks for an orchestration
+#[napi]
+pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<HookExecution>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
+         FROM hook_executions WHERE orchestration_id = ?1 ORDER BY executed_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map(params![orchestration_id], |row| {
+        Ok(HookExecution {
+            id: Some(row.get(0)?),
+            orchestration_id: row.get(1)?,
+            session_id: row.get(2)?,
+            task_id: row.get(3)?,
+            hook_type: row.get(4)?,
+            hook_name: row.get(5)?,
+            hook_source: row.get(6)?,
+            directory: row.get(7)?,
+            duration_ms: row.get(8)?,
+            exit_code: row.get(9)?,
+            passed: row.get::<_, i32>(10)? != 0,
+            output: row.get(11)?,
+            error: row.get(12)?,
+            if_changed: row.get(13)?,
+            command: row.get(14)?,
+            executed_at: row.get(15)?,
+            status: row.get(16)?,
+            consecutive_failures: row.get(17)?,
+            max_attempts: row.get(18)?,
+            pid: row.get(19)?,
+            plugin_root: row.get(20)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to get orchestration hooks: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Get pending/running hooks for a session (legacy support)
 #[napi]
 pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
     let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts
+        "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
          FROM hook_executions WHERE session_id = ?1 AND status IN ('pending', 'running', 'failed') ORDER BY executed_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let rows = stmt.query_map(params![session_id], |row| {
         Ok(HookExecution {
             id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            task_id: row.get(2)?,
-            hook_type: row.get(3)?,
-            hook_name: row.get(4)?,
-            hook_source: row.get(5)?,
-            directory: row.get(6)?,
-            duration_ms: row.get(7)?,
-            exit_code: row.get(8)?,
-            passed: row.get::<_, i32>(9)? != 0,
-            output: row.get(10)?,
-            error: row.get(11)?,
-            if_changed: row.get(12)?,
-            command: row.get(13)?,
-            executed_at: row.get(14)?,
-            status: row.get(15)?,
-            consecutive_failures: row.get(16)?,
-            max_attempts: row.get(17)?,
+            orchestration_id: row.get(1)?,
+            session_id: row.get(2)?,
+            task_id: row.get(3)?,
+            hook_type: row.get(4)?,
+            hook_name: row.get(5)?,
+            hook_source: row.get(6)?,
+            directory: row.get(7)?,
+            duration_ms: row.get(8)?,
+            exit_code: row.get(9)?,
+            passed: row.get::<_, i32>(10)? != 0,
+            output: row.get(11)?,
+            error: row.get(12)?,
+            if_changed: row.get(13)?,
+            command: row.get(14)?,
+            executed_at: row.get(15)?,
+            status: row.get(16)?,
+            consecutive_failures: row.get(17)?,
+            max_attempts: row.get(18)?,
+            pid: row.get(19)?,
+            plugin_root: row.get(20)?,
         })
     }).map_err(|e| napi::Error::from_reason(format!("Failed to get session pending hooks: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Mark a hook as failed with a given error message
+#[napi]
+pub fn fail_hook_execution(id: String, error_message: String) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE hook_executions SET status = 'failed', error = ?2, passed = 0 WHERE id = ?1",
+        params![id, error_message],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to fail hook: {}", e)))?;
+
+    Ok(())
 }
 
 /// Complete a hook execution (update status, output, error, duration)
@@ -2394,4 +2653,79 @@ pub fn complete_hook_execution(
     ).map_err(|e| napi::Error::from_reason(format!("Failed to complete hook execution: {}", e)))?;
 
     Ok(())
+}
+
+// ============================================================================
+// Pending Hooks Queue (for --check mode orchestrations)
+// ============================================================================
+
+/// Queue a hook for later execution during --wait
+#[napi]
+pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+
+    conn.execute(
+        "INSERT INTO pending_hooks (id, orchestration_id, plugin, hook_name, directory, if_changed, command)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            id,
+            input.orchestration_id,
+            input.plugin,
+            input.hook_name,
+            input.directory,
+            input.if_changed,
+            input.command
+        ],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to queue hook: {}", e)))?;
+
+    Ok(id)
+}
+
+/// Get all queued hooks for an orchestration
+#[napi]
+pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook>> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, orchestration_id, plugin, hook_name, directory, if_changed, command, queued_at
+         FROM pending_hooks WHERE orchestration_id = ?1 ORDER BY queued_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt.query_map([orchestration_id], |row| {
+        Ok(QueuedHook {
+            id: row.get(0)?,
+            orchestration_id: row.get(1)?,
+            plugin: row.get(2)?,
+            hook_name: row.get(3)?,
+            directory: row.get(4)?,
+            if_changed: row.get(5)?,
+            command: row.get(6)?,
+            queued_at: row.get(7)?,
+        })
+    }).map_err(|e| napi::Error::from_reason(format!("Failed to query queued hooks: {}", e)))?;
+
+    let mut hooks = Vec::new();
+    for row in rows {
+        hooks.push(row.map_err(|e| napi::Error::from_reason(format!("Failed to map row: {}", e)))?);
+    }
+
+    Ok(hooks)
+}
+
+/// Delete queued hooks after they've been executed
+#[napi]
+pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let deleted = conn.execute(
+        "DELETE FROM pending_hooks WHERE orchestration_id = ?1",
+        params![orchestration_id],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to delete queued hooks: {}", e)))?;
+
+    Ok(deleted as u32)
 }

@@ -340,6 +340,45 @@ pub struct TaskMetrics {
 }
 
 // ============================================================================
+// Data Structures - Orchestrations (group hook executions by orchestrate run)
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Orchestration {
+    pub id: String,
+    pub session_id: Option<String>,  // Optional link to Claude session
+    pub hook_type: String,  // 'Stop', 'SessionStart', etc.
+    pub project_root: String,
+    pub status: String,  // 'running', 'completed', 'failed'
+    pub total_hooks: i32,
+    pub completed_hooks: i32,
+    pub failed_hooks: i32,
+    pub deferred_hooks: i32,
+    pub created_at: Option<String>,
+    pub completed_at: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrchestrationInput {
+    pub session_id: Option<String>,  // Optional link to Claude session
+    pub hook_type: String,  // 'Stop', 'SessionStart', etc.
+    pub project_root: String,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrchestrationUpdate {
+    pub id: String,
+    pub status: Option<String>,
+    pub total_hooks: Option<i32>,
+    pub completed_hooks: Option<i32>,
+    pub failed_hooks: Option<i32>,
+    pub deferred_hooks: Option<i32>,
+}
+
+// ============================================================================
 // Data Structures - Hook Executions
 // ============================================================================
 
@@ -347,7 +386,8 @@ pub struct TaskMetrics {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HookExecution {
     pub id: Option<String>,
-    pub session_id: Option<String>,
+    pub orchestration_id: Option<String>,  // Links to orchestration run
+    pub session_id: Option<String>,  // Optional: for backwards compat
     pub task_id: Option<String>,
     pub hook_type: String,
     pub hook_name: String,
@@ -365,6 +405,8 @@ pub struct HookExecution {
     pub status: Option<String>,  // 'pending', 'running', 'completed', 'failed'
     pub consecutive_failures: Option<i32>,
     pub max_attempts: Option<i32>,
+    pub pid: Option<i32>,  // Process ID for stale hook detection
+    pub plugin_root: Option<String>,  // Plugin root path for CLAUDE_PLUGIN_ROOT
 }
 
 #[napi(object)]
@@ -402,13 +444,42 @@ pub struct HookAttemptInfo {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PendingHookInput {
-    pub session_id: String,
+    pub orchestration_id: String,  // Links to orchestration run
+    pub session_id: Option<String>,  // Optional: for backwards compat
     pub hook_type: String,
     pub hook_name: String,
     pub plugin: String,
     pub directory: String,
     pub command: String,
     pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub pid: Option<i32>,  // Process ID for stale hook detection
+    pub plugin_root: Option<String>,  // Plugin root path for CLAUDE_PLUGIN_ROOT
+}
+
+/// Input for queueing a hook in pending_hooks table (for --check mode)
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueuedHookInput {
+    pub orchestration_id: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub directory: String,
+    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub command: String,
+}
+
+/// Queued hook record from pending_hooks table
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueuedHook {
+    pub id: String,
+    pub orchestration_id: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub directory: String,
+    pub if_changed: Option<String>,
+    pub command: String,
+    pub queued_at: String,
 }
 
 #[napi(object)]

@@ -23,7 +23,7 @@ import {
 /**
  * Default coordinator port
  */
-const COORDINATOR_PORT = 41957;
+const COORDINATOR_PORT = 41900;
 
 /**
  * Build-time injected URLs (replaced by Bun.build define)

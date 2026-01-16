@@ -4,8 +4,9 @@
  * Displays details of a single hook execution with expandable output/error.
  */
 
-import type { CSSProperties, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
+import type { ViewStyle } from 'react-native-web';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
@@ -20,19 +21,19 @@ interface HookExecutionCardProps {
   hook: HookExecution;
 }
 
-const cardStyle: CSSProperties = {
+const cardStyle: ViewStyle = {
   backgroundColor: colors.bg.secondary,
   borderRadius: radii.md,
   overflow: 'hidden',
 };
 
-const statusIndicatorBase: CSSProperties = {
+const statusIndicatorBase: ViewStyle = {
   width: 4,
   alignSelf: 'stretch',
   flexShrink: 0,
 };
 
-const statusIconBase: CSSProperties = {
+const statusIconBase: ViewStyle = {
   width: 20,
   height: 20,
   borderRadius: radii.full,
@@ -44,7 +45,7 @@ const statusIconBase: CSSProperties = {
   flexShrink: 0,
 };
 
-const codeBlockStyle: CSSProperties = {
+const codeBlockStyle: ViewStyle = {
   margin: 0,
   padding: spacing.md,
   backgroundColor: colors.bg.primary,
@@ -58,7 +59,7 @@ const codeBlockStyle: CSSProperties = {
   wordBreak: 'break-word',
 };
 
-const toggleButtonStyle: CSSProperties = {
+const toggleButtonStyle: ViewStyle = {
   backgroundColor: 'transparent',
   padding: `${spacing.xs}px 0`,
   flexDirection: 'row',
@@ -80,12 +81,12 @@ export function HookExecutionCard({
 }: HookExecutionCardProps): ReactElement {
   const [showDetails, setShowDetails] = useState(false);
 
-  const statusIndicatorStyle: CSSProperties = {
+  const statusIndicatorStyle: ViewStyle = {
     ...statusIndicatorBase,
     backgroundColor: hook.passed ? colors.success : colors.danger,
   };
 
-  const statusIconStyle: CSSProperties = {
+  const statusIconStyle: ViewStyle = {
     ...statusIconBase,
     backgroundColor: hook.passed
       ? 'rgba(63, 185, 80, 0.15)'

@@ -5,6 +5,7 @@ import { registerHookExplain } from "./explain.tsx";
 import { registerHookOrchestrate } from "./orchestrate.ts";
 import { createReferenceCommand } from "./reference/index.ts";
 import { registerHookRun } from "./run.ts";
+import { registerHookWait } from "./wait.ts";
 
 /**
  * Register all hook-related commands under `han hook`
@@ -17,5 +18,6 @@ export function registerHookCommands(program: Command): void {
 	registerHookExplain(hookCommand);
 	registerHookOrchestrate(hookCommand);
 	registerHookRun(hookCommand);
+	registerHookWait(hookCommand);
 	hookCommand.addCommand(createReferenceCommand());
 }

@@ -295,6 +295,59 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
                 [],
             )?;
         }
+
+        // Add pid column if not exists (for stale hook detection)
+        let has_pid: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'pid'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_pid {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN pid INTEGER",
+                [],
+            )?;
+        }
+
+        // Add plugin_root column if not exists (for deferred hook CLAUDE_PLUGIN_ROOT)
+        let has_plugin_root: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'plugin_root'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_plugin_root {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN plugin_root TEXT",
+                [],
+            )?;
+        }
+
+        // Add orchestration_id column if not exists (links to orchestrations table)
+        let has_orchestration_id: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('hook_executions') WHERE name = 'orchestration_id'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_orchestration_id {
+            conn.execute(
+                "ALTER TABLE hook_executions ADD COLUMN orchestration_id TEXT",
+                [],
+            )?;
+            // Create index for the new column
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_hook_executions_orchestration ON hook_executions(orchestration_id)",
+                [],
+            )?;
+        }
     }
 
     Ok(())

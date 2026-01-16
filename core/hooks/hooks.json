@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook orchestrate Stop",
-            "timeout": 300000
+            "command": "han hook orchestrate Stop --check",
+            "timeout": 30000
           }
         ]
       }
@@ -17,8 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook orchestrate SubagentStop",
-            "timeout": 300000
+            "command": "han hook orchestrate SubagentStop --check",
+            "timeout": 30000
           }
         ]
       }

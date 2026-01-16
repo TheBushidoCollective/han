@@ -848,6 +848,24 @@ export class EventLogger {
 	// =========================================================================
 
 	/**
+	 * Log hook check state event (for check mode deduplication)
+	 */
+	logHookCheckState(
+		hookType: string,
+		fingerprint: string,
+		hooksCount: number,
+	): void {
+		this.writeEvent({
+			...this.createBaseEvent("hook_check_state"),
+			data: {
+				hook_type: hookType,
+				fingerprint,
+				hooks_count: hooksCount,
+			},
+		});
+	}
+
+	/**
 	 * Log frustration detected event
 	 */
 	logFrustrationDetected(

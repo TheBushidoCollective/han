@@ -97,6 +97,10 @@ export function registerHookRun(hookCommand: Command): void {
 			"--skip-deps",
 			"Skip dependency checks (for recheck/retry scenarios)",
 		)
+		.option(
+			"--session-id <id>",
+			"Claude session ID for event logging and cache tracking",
+		)
 		.allowUnknownOption()
 		.action(
 			async (
@@ -112,6 +116,7 @@ export function registerHookRun(hookCommand: Command): void {
 					checkpointType?: string;
 					checkpointId?: string;
 					skipDeps?: boolean;
+					sessionId?: string;
 				},
 			) => {
 				// Allow global disable of all hooks via environment variable
@@ -123,21 +128,26 @@ export function registerHookRun(hookCommand: Command): void {
 				}
 
 				// Initialize event logger for this session
-				// Session ID comes from stdin (piped from Claude or dispatch)
+				// Session ID can come from: CLI option, stdin payload, or environment
 				const payload = getStdinPayload();
-				const sessionId = payload?.session_id;
+				const sessionId =
+					options.sessionId ||
+					payload?.session_id ||
+					process.env.CLAUDE_SESSION_ID;
 				if (isDebugMode()) {
 					console.error(
 						`[han hook run] stdin payload: ${JSON.stringify(payload)}`,
 					);
-					console.error(`[han hook run] session_id: ${sessionId || "(none)"}`);
+					console.error(
+						`[han hook run] session_id: ${sessionId || "(none)"} (source: ${options.sessionId ? "cli" : payload?.session_id ? "stdin" : process.env.CLAUDE_SESSION_ID ? "env" : "none"})`,
+					);
 				}
 				if (sessionId) {
 					// Events are stored alongside Claude transcripts in the project directory
 					initEventLogger(sessionId, {}, process.cwd());
 				} else if (isDebugMode()) {
 					console.error(
-						"[han hook run] No session_id in stdin, event logging disabled",
+						"[han hook run] No session_id found, event logging disabled",
 					);
 				}
 
@@ -240,6 +250,7 @@ export function registerHookRun(hookCommand: Command): void {
 						checkpointType,
 						checkpointId,
 						skipDeps: options.skipDeps,
+						sessionId, // Pass sessionId for cache tracking
 					});
 				}
 			},

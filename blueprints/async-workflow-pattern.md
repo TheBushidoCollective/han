@@ -1,3 +1,8 @@
+---
+name: async-workflow-pattern
+summary: Background workflow execution with monitor agent for progress narration
+---
+
 # Async Workflow Pattern
 
 ## Overview

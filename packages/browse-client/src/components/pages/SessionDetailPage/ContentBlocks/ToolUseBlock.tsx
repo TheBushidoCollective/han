@@ -9,8 +9,8 @@ import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import json from 'highlight.js/lib/languages/json';
 import type React from 'react';
-import type { CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
+import type { ViewStyle } from 'react-native-web';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
@@ -35,7 +35,7 @@ interface ToolUseBlockProps {
   result?: ContentBlock;
 }
 
-const codeBlockStyle: CSSProperties = {
+const codeBlockStyle: ViewStyle = {
   margin: 0,
   fontFamily: fonts.mono,
   fontSize: '0.8rem',
@@ -43,27 +43,39 @@ const codeBlockStyle: CSSProperties = {
   wordBreak: 'break-word',
 };
 
-const terminalStyle: CSSProperties = {
+// CSS version of codeBlockStyle for native div elements (e.g., dangerouslySetInnerHTML)
+const codeBlockCssStyle: CSSProperties = {
+  margin: 0,
+  fontFamily: fonts.mono,
+  fontSize: '0.8rem',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+};
+
+const terminalStyle: ViewStyle = {
   backgroundColor: '#1a1b26',
   borderRadius: 8,
   overflow: 'hidden',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
 };
 
-const terminalHeaderStyle: CSSProperties = {
+const terminalHeaderStyle: ViewStyle = {
   backgroundColor: '#24283b',
-  padding: '12px 24px',
+  paddingLeft: 24,
+  paddingRight: 24,
+  paddingTop: 6,
+  paddingBottom: 6,
   display: 'flex',
   alignItems: 'center',
   gap: 8,
   borderBottom: '1px solid #414868',
 };
 
-const terminalContentStyle: CSSProperties = {
-  padding: 24,
+const terminalContentStyle: ViewStyle = {
+  padding: 8,
 };
 
-const diffRemoveStyle: CSSProperties = {
+const diffRemoveStyle: ViewStyle = {
   backgroundColor: 'rgba(248, 81, 73, 0.15)',
   borderLeftWidth: 3,
   borderLeftColor: '#f85149',
@@ -71,7 +83,7 @@ const diffRemoveStyle: CSSProperties = {
   padding: '8px 12px',
 };
 
-const diffAddStyle: CSSProperties = {
+const diffAddStyle: ViewStyle = {
   backgroundColor: 'rgba(63, 185, 80, 0.15)',
   borderLeftWidth: 3,
   borderLeftColor: '#3fb950',
@@ -98,7 +110,7 @@ function CodeBlock({
   style,
 }: {
   children: React.ReactNode;
-  style?: CSSProperties;
+  style?: ViewStyle;
 }): React.ReactElement {
   return (
     <Box style={{ ...codeBlockStyle, ...style }}>
@@ -110,7 +122,8 @@ function CodeBlock({
 /**
  * HighlightedCode for syntax-highlighted content
  * Note: Uses raw div since dangerouslySetInnerHTML is required for hljs output
- * and is not supported by React Native View components
+ * and is not supported by React Native View components.
+ * highlight.js escapes HTML in the source code, making this safe.
  */
 function HighlightedCode({
   code,
@@ -124,8 +137,8 @@ function HighlightedCode({
   const highlighted = hljs.highlight(code, { language }).value;
   return (
     <div
-      style={{ ...codeBlockStyle, ...style }}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: syntax highlighting requires innerHTML
+      style={{ ...codeBlockCssStyle, ...style }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight.js escapes HTML entities, safe for syntax highlighting
       dangerouslySetInnerHTML={{ __html: highlighted }}
     />
   );

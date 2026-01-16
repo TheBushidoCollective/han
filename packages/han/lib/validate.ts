@@ -895,14 +895,25 @@ export async function runConfiguredHook(
 			continue;
 		}
 
+		// Compute relative path for consistent cache keys
+		// CRITICAL: Must use relative path to match trackFilesAsync and orchestrate.ts
+		const relativePath =
+			config.directory === projectRoot
+				? "."
+				: config.directory.replace(`${projectRoot}/`, "");
+
 		// If --cache is enabled, check for changes (no lock needed for this)
 		if (cache && config.ifChanged && config.ifChanged.length > 0) {
 			const hasChanges = await checkForChangesAsync(
-			pluginName,
-			hookName,
+				pluginName,
+				hookName,
 				config.directory,
 				config.ifChanged,
 				pluginRoot,
+				{
+					sessionId,
+					directory: relativePath, // Use relative path to match cache entries
+				},
 			);
 
 			if (!hasChanges) {
@@ -1079,29 +1090,36 @@ export async function runConfiguredHook(
 
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
+				// Compute relative path for consistent cache keys
+				// CRITICAL: Must use relative path to match orchestrate.ts checkForChangesAsync queries
+				const relativePath =
+					config.directory === projectRoot
+						? "."
+						: config.directory.replace(`${projectRoot}/`, "");
+
 				// Build manifest of file hashes for this config
-			const matchedFiles = findFilesWithGlob(
-				config.directory,
-				config.ifChanged,
-			);
-			const manifest: Record<string, string> = {};
-			for (const filePath of matchedFiles) {
-				manifest[filePath] = computeFileHash(filePath);
-			}
+				const matchedFiles = findFilesWithGlob(
+					config.directory,
+					config.ifChanged,
+				);
+				const manifest: Record<string, string> = {};
+				for (const filePath of matchedFiles) {
+					manifest[filePath] = computeFileHash(filePath);
+				}
 
-			const commandHash = computeCommandHash(config.command);
+				const commandHash = computeCommandHash(config.command);
 
-			// Track files in cache (uses hook_cache table)
-			// Also logs hook_validation_cache event if logger is available
-			await trackFilesAsync(
-				pluginName,
-				hookName,
+				// Track files in cache (uses hook_cache table)
+				// Also logs hook_validation_cache event if logger is available
+				await trackFilesAsync(
+					pluginName,
+					hookName,
 					config.directory,
 					config.ifChanged,
 					pluginRoot,
 					{
 						logger: logger ?? undefined,
-						directory: config.directory,
+						directory: relativePath, // Use relative path for consistent cache keys
 						commandHash,
 						sessionId,
 					},

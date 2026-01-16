@@ -5,8 +5,9 @@
  * content preview, and image display.
  */
 
-import type { CSSProperties, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
+import type { ViewStyle } from 'react-native-web';
 import { AnsiText, containsAnsi } from '@/components/atoms/AnsiText.tsx';
 import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
@@ -25,7 +26,7 @@ interface ToolResultBlockProps {
   hasImage: boolean;
 }
 
-const codeBlockStyle: CSSProperties = {
+const codeBlockStyle: ViewStyle = {
   backgroundColor: colors.bg.primary,
   borderRadius: radii.sm,
   padding: spacing.sm,
@@ -61,7 +62,7 @@ export function ToolResultBlock({
 
   const indicator = getResultIndicator();
 
-  const containerStyle: CSSProperties = {
+  const containerStyle: ViewStyle = {
     borderLeft: `3px solid ${isError ? colors.danger : colors.success}`,
     paddingLeft: spacing.sm,
   };

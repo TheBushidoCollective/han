@@ -87,6 +87,7 @@
 		"graphql-relay": "^0.10.2",
 		"graphql-ws": "^5.16.0",
 		"graphql-yoga": "^5.10.11",
+		"gray-matter": "^4.0.3",
 		"ink": "6.5.1",
 		"ink-select-input": "^6.2.0",
 		"ink-spinner": "5.0.0",

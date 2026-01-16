@@ -6,6 +6,11 @@ import {
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import {
+	checkForChangesAsync,
+	findDirectoriesWithMarkers,
+	getProjectRoot,
+} from "../../hooks/hook-cache.ts";
+import {
 	loadPluginConfig,
 	type PluginConfig,
 } from "../../hooks/hook-config.ts";
@@ -261,6 +266,124 @@ export function findHook(
 }
 
 /**
+ * Result of checking if a hook needs to run
+ */
+export interface HookCheckResult {
+	/** Whether the hook needs to run (false = all cached) */
+	needsRun: boolean;
+	/** Directories that need to run (empty if all cached) */
+	directoriesNeedingRun: string[];
+	/** Total number of matching directories */
+	totalDirectories: number;
+	/** Message describing the result */
+	message: string;
+}
+
+/**
+ * Check if a hook needs to run by checking the cache for all matching directories.
+ * Returns quickly if all directories are cached (no changes needed).
+ */
+export async function checkHookNeedsRun(
+	pluginName: string,
+	hookName: string,
+	options: {
+		sessionId?: string;
+		directory?: string;
+		checkSessionChangesOnly?: boolean;
+	},
+): Promise<HookCheckResult> {
+	const hookInfo = findHook(pluginName, hookName);
+	if (!hookInfo) {
+		return {
+			needsRun: true,
+			directoriesNeedingRun: [],
+			totalDirectories: 0,
+			message: `Unknown hook: ${pluginName}/${hookName}`,
+		};
+	}
+
+	// Load plugin config to get hook definition
+	const pluginConfig = loadPluginConfig(hookInfo.pluginRoot, false);
+	if (!pluginConfig?.hooks?.[hookName]) {
+		return {
+			needsRun: true,
+			directoriesNeedingRun: [],
+			totalDirectories: 0,
+			message: `Hook config not found for ${pluginName}/${hookName}`,
+		};
+	}
+
+	const hookDef = pluginConfig.hooks[hookName];
+	const patterns = hookDef.ifChanged || ["**/*"];
+	const projectRoot = getProjectRoot();
+
+	// Find directories to check
+	let directories: string[];
+	if (options.directory) {
+		// Single directory specified
+		directories = [join(projectRoot, options.directory)];
+	} else if (hookDef.dirsWith && hookDef.dirsWith.length > 0) {
+		// Find all matching directories
+		directories = findDirectoriesWithMarkers(projectRoot, hookDef.dirsWith);
+	} else {
+		// No dirsWith - run in project root
+		directories = [projectRoot];
+	}
+
+	if (directories.length === 0) {
+		return {
+			needsRun: false,
+			directoriesNeedingRun: [],
+			totalDirectories: 0,
+			message: `No directories found matching ${hookDef.dirsWith?.join(", ") || "project root"}`,
+		};
+	}
+
+	// Check each directory for changes
+	const directoriesNeedingRun: string[] = [];
+	for (const dir of directories) {
+		const hasChanges = await checkForChangesAsync(
+			pluginName,
+			hookName,
+			dir,
+			patterns,
+			hookInfo.pluginRoot,
+			{
+				sessionId: options.sessionId,
+				directory: dir,
+				checkSessionChangesOnly: options.checkSessionChangesOnly,
+			},
+		);
+
+		if (hasChanges) {
+			// Convert to relative path for display
+			const relativePath =
+				dir === projectRoot ? "." : dir.replace(`${projectRoot}/`, "");
+			directoriesNeedingRun.push(relativePath);
+		}
+	}
+
+	const needsRun = directoriesNeedingRun.length > 0;
+	const cachedCount = directories.length - directoriesNeedingRun.length;
+
+	let message: string;
+	if (!needsRun) {
+		message = `✅ All ${directories.length} director${directories.length === 1 ? "y" : "ies"} passed`;
+	} else if (cachedCount > 0) {
+		message = `${directoriesNeedingRun.length} director${directoriesNeedingRun.length === 1 ? "y needs" : "ies need"} validation (${cachedCount} cached)`;
+	} else {
+		message = `${directoriesNeedingRun.length} director${directoriesNeedingRun.length === 1 ? "y needs" : "ies need"} validation`;
+	}
+
+	return {
+		needsRun,
+		directoriesNeedingRun,
+		totalDirectories: directories.length,
+		message,
+	};
+}
+
+/**
  * Generate dynamic description for the consolidated hook_run tool
  */
 export function generateHookRunDescription(hooks: AvailableHook[]): string {
@@ -282,7 +405,9 @@ export function generateHookRunDescription(hooks: AvailableHook[]): string {
 	}
 
 	const lines: string[] = [
-		"Execute a plugin hook. Available hooks by category:",
+		"Execute a plugin hook. Checks cache first - if no files changed, returns immediate success. Otherwise, returns the CLI command to run via Bash for real-time output.",
+		"",
+		"Available hooks by category:",
 		"",
 	];
 

@@ -1,4 +1,10 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 
@@ -172,6 +178,69 @@ function searchBlueprints(keyword?: string): {
 	blueprints.sort((a, b) => a.name.localeCompare(b.name));
 
 	return { blueprints };
+}
+
+/**
+ * Sync blueprints index to .claude/rules/hashi-blueprints/blueprints-index.md
+ * This generates a lightweight index for session context injection.
+ */
+export function syncBlueprintsIndex(): { success: boolean; count: number } {
+	const { blueprints } = searchBlueprints();
+
+	if (blueprints.length === 0) {
+		// No blueprints - nothing to sync
+		return { success: true, count: 0 };
+	}
+
+	// Find project root (where blueprints/ exists)
+	const cwd = process.cwd();
+	const outputDir = join(cwd, ".claude", "rules", "hashi-blueprints");
+	const outputFile = join(outputDir, "blueprints-index.md");
+
+	// Generate the index content
+	const output = `# Blueprints
+
+Technical documentation for this project's architecture and systems.
+
+## When to Consult Blueprints
+
+Before modifying system architecture, use \`search_blueprints\` and \`read_blueprint\` to understand:
+- Current design decisions and rationale
+- Integration points and dependencies
+- Established patterns to follow
+
+## Key Triggers
+
+Consult blueprints when working on:
+- GraphQL schema changes
+- CLI command modifications
+- MCP server integrations
+- Plugin architecture changes
+- Database schema updates
+- Hook system modifications
+
+## After Modifications
+
+Update blueprints via \`write_blueprint\` when you:
+- Add new systems or major features
+- Change architectural patterns
+- Discover undocumented conventions
+
+## Available Blueprints
+
+<!-- AUTO-GENERATED INDEX - DO NOT EDIT BELOW THIS LINE -->
+| Blueprint | Summary |
+|-----------|---------|
+${blueprints.map((b) => `| ${b.name} | ${b.summary} |`).join("\n")}
+`;
+
+	// Ensure output directory exists
+	mkdirSync(outputDir, { recursive: true });
+
+	// Write the file
+	writeFileSync(outputFile, output, "utf-8");
+
+	return { success: true, count: blueprints.length };
 }
 
 /**

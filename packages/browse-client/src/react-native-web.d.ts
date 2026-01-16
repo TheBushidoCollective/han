@@ -204,6 +204,7 @@ declare module 'react-native-web' {
     outline?: string;
     textAlign?: 'left' | 'center' | 'right' | 'justify';
     whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-wrap' | 'pre-line';
+    wordBreak?: 'normal' | 'break-all' | 'keep-all' | 'break-word';
     color?: string;
 
     // Text properties (also available on ViewStyle for web)
@@ -227,6 +228,15 @@ declare module 'react-native-web' {
 
     // Web scroll behavior
     scrollBehavior?: 'auto' | 'smooth';
+
+    // Web-specific text properties (also available on ViewStyle for web compatibility)
+    textDecoration?: string;
+    textOverflow?: 'clip' | 'ellipsis';
+    wordBreak?: 'normal' | 'break-all' | 'keep-all' | 'break-word';
+    overflowWrap?: 'normal' | 'break-word' | 'anywhere';
+
+    // Allow any additional CSS properties for web compatibility
+    [key: string]: unknown;
   }
 
   export interface TextStyle extends ViewStyle {
