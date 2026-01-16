@@ -439,19 +439,26 @@ export async function checkForChangesAsync(
 	let currentManifest: CacheManifest;
 
 	if (options.checkSessionChangesOnly) {
-		// Only check files that the session has changed
+		// Only check files that the session has changed AND are within this directory
 		const { getSessionFileChanges } = await import("../../../han-native");
 		const { getDbPath } = await import("../db/index.ts");
 		const dbPath = getDbPath();
 
-		const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+		const allSessionChanges = getSessionFileChanges(dbPath, options.sessionId);
 
-		// If no session changes, nothing to validate
+		// Filter to only changes within this hook's directory
+		const sessionChanges = allSessionChanges.filter(
+			(change) =>
+				change.filePath.startsWith(`${rootDir}/`) ||
+				change.filePath === rootDir,
+		);
+
+		// If no session changes in this directory, nothing to validate
 		if (sessionChanges.length === 0) {
 			return false;
 		}
 
-		// Build manifest only for session-changed files
+		// Build manifest only for session-changed files in this directory
 		const changedFiles = sessionChanges.map((change) => change.filePath);
 		currentManifest = buildManifest(changedFiles, rootDir);
 	} else {
@@ -469,9 +476,36 @@ export async function checkForChangesAsync(
 			options.directory ?? rootDir,
 		);
 
-		// If no validations exist yet, this is the first validation run
-		// Establish baseline without reporting "files changed"
+		// If no validations exist yet, we need to check if any files in the manifest
+		// were actually changed by the session. If checkSessionChangesOnly was true,
+		// currentManifest already contains only session-changed files. Otherwise,
+		// we need to cross-reference with session file changes.
 		if (validations.length === 0) {
+			if (options.checkSessionChangesOnly) {
+				// currentManifest contains only session-changed files, so if it has files, need validation
+				return Object.keys(currentManifest).length > 0;
+			}
+
+			// For pattern-based checks, see if any manifest files were changed in the session
+			const { getSessionFileChanges } = await import("../../../han-native");
+			const { getDbPath } = await import("../db/index.ts");
+			const dbPath = getDbPath();
+			const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+			const sessionChangedPaths = new Set(
+				sessionChanges.map((c) => c.filePath),
+			);
+
+			// Check if any files in the manifest were changed by the session
+			for (const filePath of Object.keys(currentManifest)) {
+				const absolutePath = filePath.startsWith("/")
+					? filePath
+					: `${rootDir}/${filePath}`;
+				if (sessionChangedPaths.has(absolutePath)) {
+					return true; // A session-changed file matches this hook's patterns
+				}
+			}
+
+			// No session-changed files match this hook's patterns - skip validation
 			return false;
 		}
 
