@@ -1,6 +1,6 @@
 hooks:
   build:
-    command: "grep -q '\"build\"' package.json 2>/dev/null && bun run build || echo 'No build script found, skipping'"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/build.sh\""
     dirs_with:
       - "bun.lock"
       - "bun.lockb"

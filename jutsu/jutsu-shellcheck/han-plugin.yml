@@ -1,5 +1,5 @@
 hooks:
   lint:
-    command: "git ls-files | grep '.*.sh$' | xargs -I{} sh -c 'test -f \"{}\" && echo \"{}\"' | xargs -r shellcheck"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\""
     if_changed:
       - "**/*.sh"

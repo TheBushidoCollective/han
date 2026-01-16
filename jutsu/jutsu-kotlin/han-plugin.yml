@@ -1,6 +1,6 @@
 hooks:
   test:
-    command: "./gradlew test || han hook run --fail-fast --dirs-with pom.xml -- mvn test"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/test.sh\""
     dirs_with:
       - "build.gradle.kts"
     if_changed:
