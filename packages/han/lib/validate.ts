@@ -1,6 +1,6 @@
 import { execSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -357,7 +357,12 @@ export async function validate(options: ValidateOptions): Promise<void> {
 		verbose,
 	} = options;
 
-	const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	// Canonicalize rootDir to match paths from native module (which uses fs::canonicalize)
+	// This ensures path comparison works correctly on macOS where /var -> /private/var
+	const rawRootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	const rootDir = existsSync(rawRootDir)
+		? realpathSync(rawRootDir)
+		: rawRootDir;
 
 	// No dirsWith specified - run in current directory only
 	if (!dirsWith) {
@@ -600,6 +605,11 @@ export interface RunConfiguredHookOptions {
 	 * when dependencies have already been satisfied.
 	 */
 	skipDeps?: boolean;
+	/**
+	 * Claude session ID for cache tracking.
+	 * Required for hooks to be cached properly.
+	 */
+	sessionId?: string;
 }
 
 /**
@@ -670,6 +680,7 @@ export async function runConfiguredHook(
 		verbose,
 		// checkpointType and checkpointId are no longer used - checkpoints feature removed
 		skipDeps,
+		sessionId,
 	} = options;
 
 	// Settings resolution priority (highest to lowest):
@@ -698,7 +709,12 @@ export async function runConfiguredHook(
 	// Checkpoints feature has been removed - now using ifChanged + transcript filtering
 
 	let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-	const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	// Canonicalize projectRoot to match paths from native module (which uses fs::canonicalize)
+	// This ensures path comparison works correctly on macOS where /var -> /private/var
+	const rawProjectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	const projectRoot = existsSync(rawProjectRoot)
+		? realpathSync(rawProjectRoot)
+		: rawProjectRoot;
 
 	// If CLAUDE_PLUGIN_ROOT is not set, try to discover it from settings
 	if (!pluginRoot) {
@@ -881,14 +897,9 @@ export async function runConfiguredHook(
 
 		// If --cache is enabled, check for changes (no lock needed for this)
 		if (cache && config.ifChanged && config.ifChanged.length > 0) {
-			const cacheKey = getCacheKeyForDirectory(
-				hookName,
-				config.directory,
-				projectRoot,
-			);
 			const hasChanges = await checkForChangesAsync(
-				pluginName,
-				cacheKey,
+			pluginName,
+			hookName,
 				config.directory,
 				config.ifChanged,
 				pluginRoot,
@@ -1068,29 +1079,23 @@ export async function runConfiguredHook(
 
 		for (const config of successfulConfigs) {
 			if (config.ifChanged && config.ifChanged.length > 0) {
-				const cacheKey = getCacheKeyForDirectory(
-					hookName,
-					config.directory,
-					projectRoot,
-				);
-
 				// Build manifest of file hashes for this config
-				const matchedFiles = findFilesWithGlob(
-					config.directory,
-					config.ifChanged,
-				);
-				const manifest: Record<string, string> = {};
-				for (const filePath of matchedFiles) {
-					manifest[filePath] = computeFileHash(filePath);
-				}
+			const matchedFiles = findFilesWithGlob(
+				config.directory,
+				config.ifChanged,
+			);
+			const manifest: Record<string, string> = {};
+			for (const filePath of matchedFiles) {
+				manifest[filePath] = computeFileHash(filePath);
+			}
 
-				const commandHash = computeCommandHash(config.command);
+			const commandHash = computeCommandHash(config.command);
 
-				// Track files in cache (uses hook_cache table)
-				// Also logs hook_validation_cache event if logger is available
-				await trackFilesAsync(
-					pluginName,
-					cacheKey,
+			// Track files in cache (uses hook_cache table)
+			// Also logs hook_validation_cache event if logger is available
+			await trackFilesAsync(
+				pluginName,
+				hookName,
 					config.directory,
 					config.ifChanged,
 					pluginRoot,
@@ -1098,6 +1103,7 @@ export async function runConfiguredHook(
 						logger: logger ?? undefined,
 						directory: config.directory,
 						commandHash,
+						sessionId,
 					},
 				);
 			}

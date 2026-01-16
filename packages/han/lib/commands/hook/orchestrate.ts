@@ -8,7 +8,7 @@ import {
 	realpathSync,
 	writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
@@ -17,7 +17,7 @@ import {
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import { getPluginHookSettings } from "../../config/han-settings.ts";
-import { hookAttempts, messages, orchestrations } from "../../db/index.ts";
+import { hookAttempts, messages } from "../../db/index.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
@@ -328,6 +328,28 @@ interface HookPayload {
 }
 
 /**
+ * Get the active session ID for the current project from the database.
+ * This is used when hooks run without stdin payload (e.g., Stop hook).
+ */
+function getActiveSessionId(projectRoot: string): string | null {
+	try {
+		const { getActiveSessionForProject } = require("../../db/index.ts");
+		const session = getActiveSessionForProject(projectRoot);
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[orchestrate]${colors.reset} getActiveSessionId: projectRoot=${projectRoot}, session=${session?.id || "null"}`,
+			);
+		}
+		return session?.id || null;
+	} catch (error) {
+		console.error(
+			`${colors.dim}[orchestrate]${colors.reset} Failed to get active session: ${error}`,
+		);
+		return null;
+	}
+}
+
+/**
  * Generate a CLI payload when running orchestrate directly from command line.
  * This mimics the payload structure that Claude Code would send.
  */
@@ -335,7 +357,22 @@ function generateCliPayload(
 	eventType: string,
 	projectRoot: string,
 ): HookPayload {
-	const sessionId = `cli-${randomUUID()}`;
+	// Use current session ID from multiple sources (in order of preference):
+	// 1. HAN_SESSION_ID - explicit override from hook dispatch
+	// 2. CLAUDE_SESSION_ID - may be set by Claude Code environment
+	// 3. Active session from database - lookup current active session for this project
+	// 4. Generate new CLI session ID - fallback for standalone CLI usage
+	const sessionId =
+		process.env.HAN_SESSION_ID ||
+		process.env.CLAUDE_SESSION_ID ||
+		getActiveSessionId(projectRoot) ||
+		`cli-${randomUUID()}`;
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[generateCliPayload]${colors.reset} sessionId=${sessionId} (source: ${process.env.HAN_SESSION_ID ? "HAN_SESSION_ID" : process.env.CLAUDE_SESSION_ID ? "CLAUDE_SESSION_ID" : "db/generated"})`,
+		);
+	}
 
 	return {
 		session_id: sessionId,
@@ -378,6 +415,9 @@ interface HookResult {
 /**
  * Read stdin payload from Claude Code.
  * Handles various stdin types: files, FIFOs, pipes, and sockets.
+ *
+ * IMPORTANT: Anonymous pipes (how Claude Code passes stdin) don't match
+ * isFile/isFIFO/isSocket checks. We must try reading any non-TTY stdin.
  */
 function readStdinPayload(): HookPayload | null {
 	try {
@@ -386,25 +426,14 @@ function readStdinPayload(): HookPayload | null {
 			return null;
 		}
 
-		const { fstatSync } = require("node:fs");
-		const stat = fstatSync(0);
-
-		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
-		if (!stat.isFile() && !stat.isFIFO() && !stat.isSocket()) {
-			return null;
-		}
-
-		// For files, check if there's content before reading
-		if (stat.isFile() && stat.size === 0) {
-			return null;
-		}
-
+		// Try to read stdin directly - don't check stat types because
+		// anonymous pipes (from Claude Code) don't match isFile/isFIFO/isSocket
 		const stdin = readFileSync(0, "utf-8");
 		if (stdin.trim()) {
 			return JSON.parse(stdin) as HookPayload;
 		}
 	} catch {
-		// stdin not available
+		// stdin not available or empty
 	}
 	return null;
 }
@@ -581,6 +610,33 @@ function resolveDependencies(tasks: HookTask[]): HookTask[][] {
 	for (const task of tasks) {
 		const key = `${task.plugin}/${task.hookName}`;
 		for (const dep of task.dependsOn) {
+			// Handle wildcard dependencies: { plugin: "*", hook: "*" }
+			if (dep.plugin === "*" || dep.hook === "*") {
+				// Match all tasks except self
+				for (const [depKey, depTask] of taskMap.entries()) {
+					if (depKey === key) continue; // Don't depend on self
+
+					// Check if pattern matches
+					const matches =
+						(dep.plugin === "*" || depTask.plugin === dep.plugin) &&
+						(dep.hook === "*" || depTask.hookName === dep.hook);
+
+					if (matches) {
+						// Wildcard dependencies are implicitly optional
+						if (!taskMap.has(depKey)) continue;
+						// Add edge: depTask -> task (depTask must run before task)
+						const edges = graph.get(depKey) || [];
+						edges.push(key);
+						graph.set(depKey, edges);
+
+						// Increment in-degree
+						inDegree.set(key, (inDegree.get(key) || 0) + 1);
+					}
+				}
+				continue;
+			}
+
+			// Regular dependency (no wildcard)
 			const depKey = `${dep.plugin}/${dep.hook}`;
 
 			// Check if dependency exists
@@ -729,17 +785,16 @@ async function executeHookInDirectory(
 		task.hookDef.ifChanged &&
 		task.hookDef.ifChanged.length > 0
 	) {
-		const cacheKey = getCacheKeyForDirectory(
-			task.hookName,
-			directory,
-			projectRoot,
-		);
 		const hasChanges = await checkForChangesAsync(
 			task.plugin,
-			cacheKey,
+			task.hookName,
 			directory,
 			task.hookDef.ifChanged,
 			task.pluginRoot,
+			{
+				sessionId: options.sessionId,
+				directory: relativePath,
+			},
 		);
 
 		if (!hasChanges) {
@@ -845,15 +900,10 @@ async function executeHookInDirectory(
 		if (result.success) {
 			// Always update cache on success (for next run with --only-changed)
 			if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
-				const cacheKey = getCacheKeyForDirectory(
-					task.hookName,
-					directory,
-					projectRoot,
-				);
 				const commandHash = createHash("sha256").update(command).digest("hex");
 				await trackFilesAsync(
 					task.plugin,
-					cacheKey,
+					task.hookName,
 					directory,
 					task.hookDef.ifChanged,
 					task.pluginRoot,
@@ -861,6 +911,7 @@ async function executeHookInDirectory(
 						logger: logger ?? undefined,
 						directory: relativePath,
 						commandHash,
+						sessionId: options.sessionId,
 					},
 				);
 			}
@@ -971,26 +1022,22 @@ async function executeHookInDirectory(
 		});
 
 		// Always update cache on success (for next run with --only-changed)
-		if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
-			const cacheKey = getCacheKeyForDirectory(
-				task.hookName,
-				directory,
-				projectRoot,
-			);
-			const commandHash = createHash("sha256").update(command).digest("hex");
-			await trackFilesAsync(
-				task.plugin,
-				cacheKey,
-				directory,
-				task.hookDef.ifChanged,
-				task.pluginRoot,
-				{
-					logger: logger ?? undefined,
-					directory: relativePath,
-					commandHash,
-				},
-			);
-		}
+		// Track session-changed files after successful validation
+		const commandHash = createHash("sha256").update(command).digest("hex");
+				await trackFilesAsync(
+					task.plugin,
+					task.hookName,
+			directory,
+			task.hookDef.ifChanged || ["**/*"],
+			task.pluginRoot,
+			{
+				logger: logger ?? undefined,
+				directory: relativePath,
+				commandHash,
+				sessionId: options.sessionId,
+				trackSessionChangesOnly: true, // Only track files the session touched
+			},
+		);
 
 		const duration = Date.now() - startTime;
 
@@ -1202,22 +1249,24 @@ async function performCheckMode(
 			}
 
 			// Check cache if only checking changed files
-			if (
-				onlyChanged &&
-				task.hookDef.ifChanged &&
-				task.hookDef.ifChanged.length > 0
-			) {
-				const cacheKey = getCacheKeyForDirectory(
-					task.hookName,
-					directory,
-					projectRoot,
-				);
+			if (onlyChanged) {
+				// If ifChanged is not specified or empty, check against all session-changed files
+				const patternsToCheck =
+					task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0
+						? task.hookDef.ifChanged
+						: undefined; // undefined means "check all session changes"
+
 				const hasChanges = await checkForChangesAsync(
 					task.plugin,
-					cacheKey,
+					task.hookName,
 					directory,
-					task.hookDef.ifChanged,
+					patternsToCheck || ["**/*"], // Match all files if no patterns specified
 					task.pluginRoot,
+					{
+						sessionId,
+						directory: relativePath,
+						checkSessionChangesOnly: !patternsToCheck, // Only check session-changed files
+					},
 				);
 
 				if (!hasChanges) {
@@ -1238,9 +1287,51 @@ async function performCheckMode(
 				directory: relativePath,
 				reason: task.hookDef.ifChanged?.length
 					? "files changed"
-					: "always runs",
+					: "session has changes",
 			});
 		}
+	}
+
+	// Filter out wildcard dependency hooks if no validation hooks need to run
+	// These advisory hooks only make sense when there's actual validation happening
+	const validationHookCount = hooksToRun.filter((h) => {
+		const task = tasks.find(
+			(t) => t.plugin === h.plugin && t.hookName === h.hook,
+		);
+		if (!task) return true;
+		const hasWildcardDep = task.dependsOn?.some(
+			(dep) => dep.plugin === "*" || dep.hook === "*",
+		);
+		return !hasWildcardDep;
+	}).length;
+
+	if (validationHookCount === 0) {
+		// No validation hooks need to run, so skip wildcard dependency hooks too
+		const filteredHooksToRun: typeof hooksToRun = [];
+		for (const h of hooksToRun) {
+			const task = tasks.find(
+				(t) => t.plugin === h.plugin && t.hookName === h.hook,
+			);
+			if (!task) {
+				filteredHooksToRun.push(h);
+				continue;
+			}
+			const hasWildcardDep = task.dependsOn?.some(
+				(dep) => dep.plugin === "*" || dep.hook === "*",
+			);
+			if (hasWildcardDep) {
+				hooksSkipped.push({
+					plugin: h.plugin,
+					hook: h.hook,
+					directory: h.directory,
+					reason: "no validation hooks need to run",
+				});
+			} else {
+				filteredHooksToRun.push(h);
+			}
+		}
+		hooksToRun.length = 0;
+		hooksToRun.push(...filteredHooksToRun);
 	}
 
 	// Compute a fingerprint of the current check state (for deduplication)
@@ -1322,14 +1413,83 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 			logger.logHookCheckState(eventType, checkFingerprint, hooksToRun.length);
 		}
 
-		// Report hooks that need to run
-		console.error(
-			`${colors.yellow}Validation required${colors.reset} - ${hooksToRun.length} hook(s) need to run:`,
-		);
+		// Create orchestration and queue hooks
+		const { orchestrations, pendingHooks } = require("../../db/index.ts");
+		const orchestration = orchestrations.create({
+			sessionId: sessionId.startsWith("cli-") ? undefined : sessionId,
+			hookType: eventType,
+			projectRoot,
+		});
+		const orchestrationId = orchestration.id;
+
+		// Separate validation hooks from advisory hooks (wildcard dependencies)
+		const validationHooks: typeof hooksToRun = [];
+		const advisoryHooks: typeof hooksToRun = [];
+
 		for (const h of hooksToRun) {
-			console.error(
-				`  - ${h.plugin}/${h.hook} in ${h.directory} (${h.reason})`,
+			const task = tasks.find(
+				(t) => t.plugin === h.plugin && t.hookName === h.hook,
 			);
+			if (!task) continue;
+
+			const hasWildcardDep = task.dependsOn?.some(
+				(dep) => dep.plugin === "*" || dep.hook === "*",
+			);
+
+			if (hasWildcardDep) {
+				advisoryHooks.push(h);
+			} else {
+				validationHooks.push(h);
+			}
+		}
+
+		// Queue validation hooks for later execution
+		for (const h of validationHooks) {
+			const task = tasks.find(
+				(t) => t.plugin === h.plugin && t.hookName === h.hook,
+			);
+			if (!task) continue;
+
+			// Get directory path
+			const directory =
+				h.directory === "." ? projectRoot : `${projectRoot}/${h.directory}`;
+
+			// Build command
+			const command = resolveHanCommand(task.hookDef.command);
+
+			// Queue the hook
+			pendingHooks.queue({
+				orchestrationId,
+				plugin: h.plugin,
+				hookName: h.hook,
+				directory,
+				ifChanged: task.hookDef.ifChanged
+					? JSON.stringify(task.hookDef.ifChanged)
+					: undefined,
+				command,
+			});
+		}
+
+		// Report validation hooks
+		if (validationHooks.length > 0) {
+			console.error(
+				`${colors.yellow}Validation required${colors.reset} - ${validationHooks.length} hook(s) need to run:`,
+			);
+			for (const h of validationHooks) {
+				console.error(
+					`  - ${h.plugin}/${h.hook} in ${h.directory} (${h.reason})`,
+				);
+			}
+		}
+
+		// Report advisory hooks separately
+		if (advisoryHooks.length > 0) {
+			console.error(
+				`${colors.dim}Advisory hooks (run after validation):${colors.reset}`,
+			);
+			for (const h of advisoryHooks) {
+				console.error(`  - ${h.plugin}/${h.hook} in ${h.directory}`);
+			}
 		}
 
 		if (hooksSkipped.length > 0) {
@@ -1338,10 +1498,10 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 			);
 		}
 
-		// Tell agent to run the hooks
+		// Tell agent to run the queued hooks with orchestration ID
 		console.error(`
 ${colors.cyan}To run validation, execute:${colors.reset}
-  ${colors.bold}han hook orchestrate ${eventType} --wait${colors.reset}
+  ${colors.bold}han hook orchestrate ${eventType} --wait --orchestration-id=${orchestrationId}${colors.reset}
 
 ${colors.dim}The wait command automatically prevents recursion during execution.${colors.reset}`);
 
@@ -1364,6 +1524,7 @@ async function orchestrate(
 		failFast: boolean;
 		wait: boolean;
 		check: boolean;
+		orchestrationId?: string;
 	},
 ): Promise<void> {
 	// Recursion prevention: If we're already orchestrating Stop hooks, don't trigger again
@@ -1411,7 +1572,7 @@ async function orchestrate(
 
 	// Session ID is always available (from stdin or generated CLI payload)
 	// Fallback to generating one if somehow missing (shouldn't happen)
-	const sessionId = payload.session_id || `cli-${randomUUID()}`;
+	let sessionId = payload.session_id || `cli-${randomUUID()}`;
 	initEventLogger(sessionId, {}, projectRoot);
 
 	// Set HAN_STOP_ORCHESTRATING=1 automatically for wait mode on Stop events
@@ -1435,8 +1596,56 @@ async function orchestrate(
 		);
 	}
 
-	// Discover all hook tasks for this event
-	const tasks = discoverHookTasks(eventType, payload, projectRoot);
+	// If orchestration ID provided, load and execute queued hooks instead of discovering
+	let tasks: HookTask[];
+	if (options.orchestrationId) {
+		const { pendingHooks } = require("../../db/index.ts");
+
+		// Get queued hooks
+		const queuedHooks = pendingHooks.list(options.orchestrationId);
+
+		if (queuedHooks.length === 0) {
+			console.error(
+				`${colors.yellow}No queued hooks found for orchestration ${options.orchestrationId}${colors.reset}`,
+			);
+			return;
+		}
+
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[orchestrate]${colors.reset} Found ${queuedHooks.length} queued hooks for orchestration ${options.orchestrationId}`,
+			);
+		}
+
+		// Convert queued hooks to HookTask format
+		// This is a simplified version since we already have the command and directory
+		tasks = queuedHooks.map(
+			(qh: import("../../../../han-native").QueuedHook) => {
+				return {
+					plugin: qh.plugin,
+					hookName: qh.hookName,
+					hookDef: {
+						command: qh.command,
+						ifChanged: qh.ifChanged ? JSON.parse(qh.ifChanged) : undefined,
+					},
+					directories: [qh.directory],
+					pluginRoot: projectRoot, // Simplified - may need actual plugin root
+					dependsOn: [],
+				};
+			},
+		);
+
+		// Validate that this is a wait command
+		if (!options.wait) {
+			console.error(
+				`${colors.yellow}Warning: orchestration-id requires --wait flag${colors.reset}`,
+			);
+			options.wait = true;
+		}
+	} else {
+		// Discover all hook tasks for this event
+		tasks = discoverHookTasks(eventType, payload, projectRoot);
+	}
 
 	if (tasks.length === 0) {
 		if (cliMode || options.check) {
@@ -1459,13 +1668,33 @@ async function orchestrate(
 		return;
 	}
 
-	// Create an orchestration record (cancels any existing running orchestration for this session)
-	const orchestration = orchestrations.create({
-		sessionId: sessionId.startsWith("cli-") ? undefined : sessionId,
-		hookType: eventType,
-		projectRoot,
-	});
-	const orchestrationId = orchestration.id;
+	// Use provided orchestration ID or create new one
+	const { orchestrations } = require("../../db/index.ts");
+	let orchestrationId: string;
+	if (options.orchestrationId) {
+		// Reuse the orchestration created by --check
+		orchestrationId = options.orchestrationId;
+
+		// CRITICAL: Load orchestration to get the session ID used during --check
+		// This ensures cache writes use the same session ID as cache reads
+		const orch = orchestrations.get(orchestrationId);
+		if (orch?.sessionId) {
+			sessionId = orch.sessionId;
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[orchestrate]${colors.reset} Using session ID from orchestration: ${sessionId}`,
+				);
+			}
+		}
+	} else {
+		// Create an orchestration record (cancels any existing running orchestration for this session)
+		const orchestration = orchestrations.create({
+			sessionId: sessionId.startsWith("cli-") ? undefined : sessionId,
+			hookType: eventType,
+			projectRoot,
+		});
+		orchestrationId = orchestration.id;
+	}
 
 	// Initialize log file for this orchestration
 	const logPath = initOrchestrationLog(orchestrationId, eventType, projectRoot);
@@ -1791,6 +2020,76 @@ When done, the Stop hook will run again to verify the fixes.`);
 			}
 		}
 
+		// Run wildcard dependency hooks inline after validation passes
+		// These hooks were filtered out during queueing and need to run after all validation
+		if (options.orchestrationId && options.wait) {
+			const { orchestrations } = require("../../db/index.ts");
+			const orch = orchestrations.get(options.orchestrationId);
+
+			if (orch) {
+				// Discover all tasks for the original event type
+				const allTasks = discoverHookTasks(
+					orch.hookType,
+					payload,
+					orch.projectRoot,
+				);
+
+				// Filter to only tasks with wildcard dependencies
+				const wildcardTasks = allTasks.filter((task) =>
+					task.dependsOn?.some((dep) => dep.plugin === "*" || dep.hook === "*"),
+				);
+
+				if (wildcardTasks.length > 0) {
+					if (isDebugMode()) {
+						console.error(
+							`${colors.dim}[orchestrate]${colors.reset} Running ${wildcardTasks.length} wildcard dependency hooks inline`,
+						);
+					}
+
+					// Execute wildcard dependency hooks sequentially
+					for (const task of wildcardTasks) {
+						for (const directory of task.directories) {
+							const relativePath = relative(projectRoot, directory);
+							const displayDir = relativePath || ".";
+
+							if (isDebugMode()) {
+								console.error(
+									`${colors.dim}[orchestrate]${colors.reset} Executing ${task.plugin}/${task.hookName} in ${displayDir}`,
+								);
+							}
+
+							const result = await executeHookInDirectory(
+								task,
+								directory,
+								orch.projectRoot,
+								payload,
+								{
+									onlyChanged: false, // Always run wildcard hooks
+									verbose: options.verbose,
+									cliMode: options.wait || false,
+									sessionId,
+									orchestrationId,
+									hookType: orch.hookType,
+									isStopHook: orch.hookType === "Stop",
+									logPath,
+								},
+							);
+
+							allResults.push(result);
+
+							// If a wildcard hook fails, report it but don't block
+							// (these are typically advisory hooks like check_commits)
+							if (!result.success && !result.skipped) {
+								console.error(
+									`${colors.yellow}⚠️  Advisory hook failed: ${task.plugin}/${task.hookName} in ${displayDir}${colors.reset}`,
+								);
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// Update orchestration as completed
 		const completedCount = allResults.filter(
 			(r) => r.success && !r.skipped,
@@ -1801,6 +2100,17 @@ When done, the Stop hook will run again to verify the fixes.`);
 			totalHooks: allResults.length,
 			completedHooks: completedCount,
 		});
+
+		// Clean up queued hooks if this was a --wait execution
+		if (options.orchestrationId) {
+			const { pendingHooks } = require("../../db/index.ts");
+			const deleted = pendingHooks.delete(options.orchestrationId);
+			if (isDebugMode() && deleted > 0) {
+				console.error(
+					`${colors.dim}[orchestrate]${colors.reset} Deleted ${deleted} queued hooks for orchestration ${options.orchestrationId}`,
+				);
+			}
+		}
 
 		// All hooks passed - allow stop (exit 0)
 		return;
@@ -1865,6 +2175,10 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 			"-c, --check",
 			"Check mode: report what hooks would run without executing them",
 		)
+		.option(
+			"--orchestration-id <id>",
+			"Run queued hooks from a specific orchestration (use with --wait)",
+		)
 		.action(
 			async (
 				eventType: string,
@@ -1874,6 +2188,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					verbose?: boolean;
 					wait?: boolean;
 					check?: boolean;
+					orchestrationId?: string;
 				},
 			) => {
 				await orchestrate(eventType, {
@@ -1882,6 +2197,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					verbose: opts.verbose ?? false,
 					check: opts.check ?? false,
 					wait: opts.wait ?? false,
+					orchestrationId: opts.orchestrationId,
 				});
 			},
 		);
