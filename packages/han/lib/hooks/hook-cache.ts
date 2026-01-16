@@ -1,9 +1,19 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	realpathSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { getGitRemoteUrl } from "../../../han-native";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
-import { getHookCache, setHookCache } from "../db/index.ts";
+import {
+	getHookCache,
+	sessionFileValidations,
+	setHookCache,
+} from "../db/index.ts";
 import type { EventLogger } from "../events/logger.ts";
 import { getNativeModule } from "../native.ts";
 
@@ -17,9 +27,14 @@ export interface CacheManifest {
 
 /**
  * Get the project root directory
+ * Canonicalizes the path to match native module paths (which use fs::canonicalize)
+ * This ensures path comparison works correctly on macOS where /var -> /private/var
  */
 export function getProjectRoot(): string {
-	return process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	const rawProjectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+	return existsSync(rawProjectRoot)
+		? realpathSync(rawProjectRoot)
+		: rawProjectRoot;
 }
 
 /**
@@ -315,50 +330,80 @@ export async function trackFilesAsync(
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
-	pluginRoot?: string,
+	_pluginRoot?: string,
 	options?: {
 		logger?: EventLogger;
 		directory?: string;
 		commandHash?: string;
+		sessionId?: string;
+		trackSessionChangesOnly?: boolean;
 	},
 ): Promise<boolean> {
-	// Always include han-config.yml (can override command or disable hook)
-	const patternsWithConfig = [...patterns, "han-config.yml"];
-
-	// Track project files
-	const files = findFilesWithGlob(rootDir, patternsWithConfig);
-	const manifest = buildManifest(files, rootDir);
-	const projectSaved = await saveCacheManifestAsync(
-		pluginName,
-		hookName,
-		manifest,
-	);
-
-	// Log validation cache event if logger is provided
-	if (options?.logger && options?.commandHash) {
-		options.logger.logHookValidationCache(
-			pluginName,
-			hookName,
-			options.directory ?? rootDir,
-			options.commandHash,
-			manifest,
+	// Require sessionId and commandHash for sessionFileValidations
+	if (!options?.sessionId || !options?.commandHash) {
+		console.debug(
+			"trackFilesAsync: sessionId and commandHash required for caching",
 		);
+		return false;
 	}
 
-	// Track plugin files if pluginRoot provided
-	let pluginSaved = true;
-	if (pluginRoot) {
-		const pluginCacheKey = "__plugin__";
-		const pluginFiles = findFilesWithGlob(pluginRoot, ["**/*"]);
-		const pluginManifest = buildManifest(pluginFiles, pluginRoot);
-		pluginSaved = await saveCacheManifestAsync(
-			pluginName,
-			pluginCacheKey,
-			pluginManifest,
-		);
+	let manifest: CacheManifest;
+
+	if (options.trackSessionChangesOnly) {
+		// Only track files that the session has changed
+		const { getSessionFileChanges } = await import("../../../han-native");
+		const { getDbPath } = await import("../db/index.ts");
+		const dbPath = getDbPath();
+
+		const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+
+		// If no session changes, nothing to track
+		if (sessionChanges.length === 0) {
+			return true;
+		}
+
+		// Build manifest only for session-changed files
+		const changedFiles = sessionChanges.map((change) => change.filePath);
+		manifest = buildManifest(changedFiles, rootDir);
+	} else {
+		// Always include han-config.yml (can override command or disable hook)
+		const patternsWithConfig = [...patterns, "han-config.yml"];
+
+		// Track all files matching patterns
+		const files = findFilesWithGlob(rootDir, patternsWithConfig);
+		manifest = buildManifest(files, rootDir);
 	}
 
-	return projectSaved && pluginSaved;
+	// Record each file validation in the database
+	try {
+		for (const [filePath, fileHash] of Object.entries(manifest)) {
+			await sessionFileValidations.record({
+				sessionId: options.sessionId,
+				filePath,
+				fileHash,
+				pluginName,
+				hookName,
+				directory: options.directory ?? rootDir,
+				commandHash: options.commandHash,
+			});
+		}
+
+		// Log validation cache event if logger is provided
+		if (options?.logger) {
+			options.logger.logHookValidationCache(
+				pluginName,
+				hookName,
+				options.directory ?? rootDir,
+				options.commandHash,
+				manifest,
+			);
+		}
+
+		return true;
+	} catch (error) {
+		console.debug(`Failed to record file validations: ${error}`);
+		return false;
+	}
 }
 
 /**
@@ -376,30 +421,86 @@ export async function checkForChangesAsync(
 	hookName: string,
 	rootDir: string,
 	patterns: string[],
-	pluginRoot?: string,
+	_pluginRoot?: string,
+	options?: {
+		sessionId?: string;
+		directory?: string;
+		checkSessionChangesOnly?: boolean;
+	},
 ): Promise<boolean> {
-	// Always include han-config.yml (can override command or disable hook)
-	const patternsWithConfig = [...patterns, "han-config.yml"];
-
-	// Check project files
-	const cachedManifest = await loadCacheManifestAsync(pluginName, hookName);
-	if (hasChanges(rootDir, patternsWithConfig, cachedManifest)) {
+	// Without sessionId, we can't check validations - assume changes
+	if (!options?.sessionId) {
 		return true;
 	}
 
-	// Check plugin files if pluginRoot provided
-	if (pluginRoot) {
-		const pluginCacheKey = "__plugin__";
-		const cachedPluginManifest = await loadCacheManifestAsync(
-			pluginName,
-			pluginCacheKey,
-		);
-		if (hasChanges(pluginRoot, ["**/*"], cachedPluginManifest)) {
-			return true;
+	// Always include han-config.yml (can override command or disable hook)
+	const patternsWithConfig = [...patterns, "han-config.yml"];
+
+	let currentManifest: CacheManifest;
+
+	if (options.checkSessionChangesOnly) {
+		// Only check files that the session has changed
+		const { getSessionFileChanges } = await import("../../../han-native");
+		const { getDbPath } = await import("../db/index.ts");
+		const dbPath = getDbPath();
+
+		const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+
+		// If no session changes, nothing to validate
+		if (sessionChanges.length === 0) {
+			return false;
 		}
+
+		// Build manifest only for session-changed files
+		const changedFiles = sessionChanges.map((change) => change.filePath);
+		currentManifest = buildManifest(changedFiles, rootDir);
+	} else {
+		// Check all files matching patterns
+		const files = findFilesWithGlob(rootDir, patternsWithConfig);
+		currentManifest = buildManifest(files, rootDir);
 	}
 
-	return false;
+	// Get cached validations from database
+	try {
+		const validations = await sessionFileValidations.list(
+			options.sessionId,
+			pluginName,
+			hookName,
+			options.directory ?? rootDir,
+		);
+
+		// If no validations exist yet, this is the first validation run
+		// Establish baseline without reporting "files changed"
+		if (validations.length === 0) {
+			return false;
+		}
+
+		// Build map of validated file paths to their hashes
+		const validatedFiles = new Map<string, string>();
+		for (const validation of validations) {
+			validatedFiles.set(validation.filePath, validation.fileHash);
+		}
+
+		// Check if any current files differ from validated files
+		for (const [filePath, currentHash] of Object.entries(currentManifest)) {
+			const validatedHash = validatedFiles.get(filePath);
+			if (!validatedHash || validatedHash !== currentHash) {
+				return true; // File changed or never validated
+			}
+		}
+
+		// Check if any validated files were deleted
+		for (const filePath of validatedFiles.keys()) {
+			if (!(filePath in currentManifest)) {
+				return true; // File was deleted
+			}
+		}
+
+		return false; // No changes detected
+	} catch (error) {
+		console.debug(`Failed to check file validations: ${error}`);
+		return true; // On error, assume changes to be safe
+	}
 }
 
 /**
