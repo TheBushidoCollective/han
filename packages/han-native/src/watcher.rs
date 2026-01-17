@@ -106,7 +106,11 @@ fn extract_session_id(path: &std::path::Path) -> Option<String> {
         filename
     };
     // Validate it looks like a UUID (basic check)
-    if session_id.len() >= 32 && session_id.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+    if session_id.len() >= 32
+        && session_id
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() || c == '-')
+    {
         Some(session_id.to_string())
     } else {
         None
@@ -186,9 +190,9 @@ fn get_watcher_state() -> &'static std::sync::Mutex<Option<WatcherHandle>> {
 #[napi]
 pub fn start_file_watcher(watch_path: Option<String>) -> Result<bool> {
     let state = get_watcher_state();
-    let mut guard = state.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e))
-    })?;
+    let mut guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
 
     // Already running
     if guard.is_some() {
@@ -265,7 +269,12 @@ pub fn start_file_watcher(watch_path: Option<String>) -> Result<bool> {
                             let project_path = file_event.project_path.clone();
 
                             // Run indexing synchronously - errors are logged but don't stop the watcher
-                            match indexer::handle_file_event(event_type, path.clone(), session_id, project_path) {
+                            match indexer::handle_file_event(
+                                event_type,
+                                path.clone(),
+                                session_id,
+                                project_path,
+                            ) {
                                 Ok(Some(result)) => {
                                     // Push result to queue for TypeScript to poll
                                     push_result(result);
@@ -309,9 +318,9 @@ pub fn stop_file_watcher() -> Result<bool> {
     }
 
     let state = get_watcher_state();
-    let mut guard = state.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e))
-    })?;
+    let mut guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
 
     if let Some(handle) = guard.take() {
         handle.running.store(false, Ordering::Relaxed);
@@ -326,14 +335,12 @@ pub fn stop_file_watcher() -> Result<bool> {
 /// The callback receives IndexResult objects directly
 #[napi(ts_args_type = "callback: (result: IndexResult) => void")]
 pub fn set_index_callback(callback: JsFunction) -> Result<()> {
-    let tsfn: IndexCallback = callback.create_threadsafe_function(0, |ctx| {
-        Ok(vec![ctx.value])
-    })?;
+    let tsfn: IndexCallback = callback.create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))?;
 
     let holder = get_callback_holder();
-    let mut guard = holder.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e))
-    })?;
+    let mut guard = holder
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e)))?;
     *guard = Some(tsfn);
 
     Ok(())
@@ -343,9 +350,9 @@ pub fn set_index_callback(callback: JsFunction) -> Result<()> {
 #[napi]
 pub fn clear_index_callback() -> Result<()> {
     let holder = get_callback_holder();
-    let mut guard = holder.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e))
-    })?;
+    let mut guard = holder
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire callback lock: {}", e)))?;
     *guard = None;
     Ok(())
 }
@@ -354,9 +361,9 @@ pub fn clear_index_callback() -> Result<()> {
 #[napi]
 pub fn is_watcher_running() -> Result<bool> {
     let state = get_watcher_state();
-    let guard = state.lock().map_err(|e| {
-        napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e))
-    })?;
+    let guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
     Ok(guard.is_some())
 }
 
@@ -377,13 +384,23 @@ mod tests {
 
     #[test]
     fn test_extract_session_id() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl");
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl",
+        );
         let session_id = extract_session_id(path);
-        assert_eq!(session_id, Some("abc12345-1234-5678-9abc-def012345678".to_string()));
+        assert_eq!(
+            session_id,
+            Some("abc12345-1234-5678-9abc-def012345678".to_string())
+        );
 
-        let path2 = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl");
+        let path2 = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl",
+        );
         let session_id2 = extract_session_id(path2);
-        assert_eq!(session_id2, Some("abc12345-1234-5678-9abc-def012345678".to_string()));
+        assert_eq!(
+            session_id2,
+            Some("abc12345-1234-5678-9abc-def012345678".to_string())
+        );
 
         // Invalid session ID (too short)
         let path3 = Path::new("/home/user/.claude/projects/test/short.jsonl");

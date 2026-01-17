@@ -306,10 +306,7 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
             .unwrap_or(false);
 
         if !has_pid {
-            conn.execute(
-                "ALTER TABLE hook_executions ADD COLUMN pid INTEGER",
-                [],
-            )?;
+            conn.execute("ALTER TABLE hook_executions ADD COLUMN pid INTEGER", [])?;
         }
 
         // Add plugin_root column if not exists (for deferred hook CLAUDE_PLUGIN_ROOT)
@@ -410,8 +407,9 @@ pub struct VectorSearchResult {
 pub fn init(db_path: &str) -> napi::Result<bool> {
     // For custom paths, we need to open a new connection
     if db_path != get_db_path() {
-        open_database(db_path)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to initialize database: {}", e)))?;
+        open_database(db_path).map_err(|e| {
+            napi::Error::from_reason(format!("Failed to initialize database: {}", e))
+        })?;
     } else {
         // Ensure default DB is initialized
         get_db()?;
@@ -428,12 +426,17 @@ pub fn cleanup_legacy_database() -> napi::Result<bool> {
     })?;
 
     // Old SurrealDB location: ~/.claude/han/memory/index/
-    let legacy_dir = home.join(".claude").join("han").join("memory").join("index");
+    let legacy_dir = home
+        .join(".claude")
+        .join("han")
+        .join("memory")
+        .join("index");
 
     if legacy_dir.exists() {
         // Remove the entire directory
-        std::fs::remove_dir_all(&legacy_dir)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to remove legacy database: {}", e)))?;
+        std::fs::remove_dir_all(&legacy_dir).map_err(|e| {
+            napi::Error::from_reason(format!("Failed to remove legacy database: {}", e))
+        })?;
         tracing::info!("Removed legacy SurrealDB database at {:?}", legacy_dir);
         return Ok(true);
     }
@@ -445,7 +448,11 @@ pub fn cleanup_legacy_database() -> napi::Result<bool> {
 #[napi]
 pub fn has_legacy_database() -> bool {
     if let Some(home) = dirs::home_dir() {
-        let legacy_dir = home.join(".claude").join("han").join("memory").join("index");
+        let legacy_dir = home
+            .join(".claude")
+            .join("han")
+            .join("memory")
+            .join("index");
         legacy_dir.exists()
     } else {
         false
@@ -463,7 +470,9 @@ pub fn fts_index(
     }
 
     let db = get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let count = documents.len() as u32;
 
@@ -518,7 +527,9 @@ pub fn fts_search(
 ) -> napi::Result<Vec<FtsSearchResult>> {
     let limit = limit.unwrap_or(10);
     let db = get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Escape the query to prevent FTS5 syntax errors
     let escaped_query = escape_fts5_query(query);
@@ -532,37 +543,37 @@ pub fn fts_search(
         table_name, table_name, table_name
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare search: {}", e)))?;
 
-    let results = stmt.query_map(params![escaped_query, limit], |row| {
-        Ok(FtsSearchResult {
-            id: row.get(0)?,
-            content: row.get(1)?,
-            metadata: row.get(2)?,
-            score: row.get::<_, f64>(3)?.abs(), // BM25 returns negative scores
+    let results = stmt
+        .query_map(params![escaped_query, limit], |row| {
+            Ok(FtsSearchResult {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                metadata: row.get(2)?,
+                score: row.get::<_, f64>(3)?.abs(), // BM25 returns negative scores
+            })
         })
-    })
-    .map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
-    .filter_map(|r| r.ok())
-    .collect();
+        .map_err(|e| napi::Error::from_reason(format!("Failed to search: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
 
     Ok(results)
 }
 
 /// Delete documents by ID
-pub fn fts_delete(
-    _db_path: &str,
-    table_name: &str,
-    ids: Vec<String>,
-) -> napi::Result<u32> {
+pub fn fts_delete(_db_path: &str, table_name: &str, ids: Vec<String>) -> napi::Result<u32> {
     if ids.is_empty() {
         return Ok(0);
     }
 
     let count = ids.len() as u32;
     let db = get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     for id in ids {
         conn.execute(
@@ -587,7 +598,9 @@ pub fn vector_index(
 
     let count = documents.len() as u32;
     let db = get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Get embedding dimension from first document
     let dim = documents.first().map(|d| d.vector.len()).unwrap_or(384);
@@ -609,9 +622,7 @@ pub fn vector_index(
     // Insert documents
     for doc in documents {
         // Convert vector to blob format for sqlite-vec
-        let vec_blob: Vec<u8> = doc.vector.iter()
-            .flat_map(|f| f.to_le_bytes())
-            .collect();
+        let vec_blob: Vec<u8> = doc.vector.iter().flat_map(|f| f.to_le_bytes()).collect();
 
         conn.execute(
             &format!(
@@ -636,12 +647,12 @@ pub fn vector_search(
 ) -> napi::Result<Vec<VectorSearchResult>> {
     let limit = limit.unwrap_or(10);
     let db = get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Convert query vector to blob
-    let vec_blob: Vec<u8> = query_vector.iter()
-        .flat_map(|f| f.to_le_bytes())
-        .collect();
+    let vec_blob: Vec<u8> = query_vector.iter().flat_map(|f| f.to_le_bytes()).collect();
 
     // sqlite-vec KNN search
     let sql = format!(
@@ -653,21 +664,23 @@ pub fn vector_search(
         table_name
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare vector search: {}", e)))?;
 
-    let results = stmt.query_map(params![vec_blob, limit], |row| {
-        let distance: f64 = row.get(3)?;
-        Ok(VectorSearchResult {
-            id: row.get(0)?,
-            content: row.get(1)?,
-            metadata: row.get(2)?,
-            score: 1.0 - distance, // Convert distance to similarity
+    let results = stmt
+        .query_map(params![vec_blob, limit], |row| {
+            let distance: f64 = row.get(3)?;
+            Ok(VectorSearchResult {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                metadata: row.get(2)?,
+                score: 1.0 - distance, // Convert distance to similarity
+            })
         })
-    })
-    .map_err(|e| napi::Error::from_reason(format!("Failed to search vectors: {}", e)))?
-    .filter_map(|r| r.ok())
-    .collect();
+        .map_err(|e| napi::Error::from_reason(format!("Failed to search vectors: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
 
     Ok(results)
 }

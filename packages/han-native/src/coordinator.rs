@@ -175,10 +175,7 @@ pub fn try_acquire_coordinator_lock() -> Result<bool> {
         }
 
         // Lock is stale, we can take over
-        tracing::info!(
-            "Taking over stale coordinator lock from PID {}",
-            info.pid
-        );
+        tracing::info!("Taking over stale coordinator lock from PID {}", info.pid);
     }
 
     // Acquire the lock
@@ -190,9 +187,8 @@ pub fn try_acquire_coordinator_lock() -> Result<bool> {
         is_coordinator: true,
     };
 
-    write_lock_file(&lock_path, &lock_info).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to write lock file: {}", e))
-    })?;
+    write_lock_file(&lock_path, &lock_info)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to write lock file: {}", e)))?;
 
     get_coordinator_flag().store(true, Ordering::SeqCst);
     tracing::info!("Acquired coordinator lock (PID: {})", current_pid);

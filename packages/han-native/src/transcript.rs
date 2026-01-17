@@ -154,10 +154,7 @@ pub fn extract_file_operations(content: String) -> ExtractionResult {
 /// Extract file operations from multiple messages (batch processing)
 #[napi]
 pub fn extract_file_operations_batch(contents: Vec<String>) -> Vec<ExtractionResult> {
-    contents
-        .into_iter()
-        .map(extract_file_operations)
-        .collect()
+    contents.into_iter().map(extract_file_operations).collect()
 }
 
 /// Check if a string looks like a valid file path

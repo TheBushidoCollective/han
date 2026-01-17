@@ -28,32 +28,52 @@ pub use db::{FtsDocument, FtsSearchResult, VectorSearchResult};
 
 // Re-export schema types for unified data store
 pub use schema::{
-    Repo, RepoInput, Project, ProjectInput, Session, SessionInput,
-    Task, TaskInput, TaskCompletion, TaskFailure, TaskMetrics,
-    Message, MessageInput, MessageBatch,
-    // Hook execution tracking
-    HookExecution, HookExecutionInput, HookStats,
-    // Frustration tracking
-    FrustrationEvent, FrustrationEventInput, FrustrationMetrics,
-    // Session file changes
-    SessionFileChange, SessionFileChangeInput,
-    // Session file validations
-    SessionFileValidation, SessionFileValidationInput,
     // File validation status (for stale detection)
     FileValidationStatus,
+    // Frustration tracking
+    FrustrationEvent,
+    FrustrationEventInput,
+    FrustrationMetrics,
+    // Hook execution tracking
+    HookExecution,
+    HookExecutionInput,
+    HookStats,
+    Message,
+    MessageBatch,
+    MessageInput,
+    Project,
+    ProjectInput,
+    Repo,
+    RepoInput,
+    Session,
+    SessionCompact,
+    SessionCompactInput,
+    // Session file changes
+    SessionFileChange,
+    SessionFileChangeInput,
+    // Session file validations
+    SessionFileValidation,
+    SessionFileValidationInput,
+    SessionInput,
     // Session summaries and compacts (event-sourced)
-    SessionSummary, SessionSummaryInput,
-    SessionCompact, SessionCompactInput,
+    SessionSummary,
+    SessionSummaryInput,
     // Session todos (event-sourced)
-    SessionTodos, SessionTodosInput, TodoItem,
+    SessionTodos,
+    SessionTodosInput,
+    Task,
+    TaskCompletion,
+    TaskFailure,
+    TaskInput,
+    TaskMetrics,
+    TodoItem,
 };
 
 // Re-export JSONL types and functions
 pub use jsonl::{
-    jsonl_build_index, jsonl_count_lines, jsonl_filter, jsonl_filter_time_range,
-    jsonl_load_index, jsonl_read_indexed, jsonl_read_page, jsonl_read_reverse,
-    jsonl_save_index, jsonl_stats, jsonl_stream, FilterResult, JsonlFilter, JsonlIndex,
-    JsonlLine, JsonlStats, PaginatedResult,
+    jsonl_build_index, jsonl_count_lines, jsonl_filter, jsonl_filter_time_range, jsonl_load_index,
+    jsonl_read_indexed, jsonl_read_page, jsonl_read_reverse, jsonl_save_index, jsonl_stats,
+    jsonl_stream, FilterResult, JsonlFilter, JsonlIndex, JsonlLine, JsonlStats, PaginatedResult,
 };
 
 // Re-export transcript processing functions
@@ -478,7 +498,11 @@ pub fn db_init(db_path: String) -> napi::Result<bool> {
 
 /// Index documents for FTS
 #[napi]
-pub fn fts_index(db_path: String, table_name: String, documents: Vec<FtsDocument>) -> napi::Result<u32> {
+pub fn fts_index(
+    db_path: String,
+    table_name: String,
+    documents: Vec<FtsDocument>,
+) -> napi::Result<u32> {
     db::fts_index(&db_path, &table_name, documents)
 }
 
@@ -702,7 +726,7 @@ pub fn list_session_messages(
     _db_path: String,
     session_id: String,
     message_type: Option<String>,
-    agent_id_filter: Option<String>,  // "" = main only, Some(id) = specific agent, None = all
+    agent_id_filter: Option<String>, // "" = main only, Some(id) = specific agent, None = all
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> napi::Result<Vec<Message>> {
@@ -710,13 +734,7 @@ pub fn list_session_messages(
     // None (undefined/null in JS) -> None (all messages)
     // Some("") -> Some(None) (main conversation only, where agent_id IS NULL)
     // Some("xyz") -> Some(Some("xyz")) (specific agent only)
-    let agent_filter = agent_id_filter.map(|s| {
-        if s.is_empty() {
-            None
-        } else {
-            Some(s)
-        }
-    });
+    let agent_filter = agent_id_filter.map(|s| if s.is_empty() { None } else { Some(s) });
     crud::list_session_messages(&session_id, message_type, agent_filter, limit, offset)
 }
 
@@ -729,7 +747,10 @@ pub fn get_message_count(_db_path: String, session_id: String) -> napi::Result<u
 /// Get message counts for multiple sessions in a single query
 /// Returns a map of session_id -> count
 #[napi]
-pub fn get_message_counts_batch(_db_path: String, session_ids: Vec<String>) -> napi::Result<std::collections::HashMap<String, u32>> {
+pub fn get_message_counts_batch(
+    _db_path: String,
+    session_ids: Vec<String>,
+) -> napi::Result<std::collections::HashMap<String, u32>> {
     crud::get_message_counts_batch(session_ids)
 }
 
@@ -750,15 +771,24 @@ pub struct SessionTimestamps {
 /// Get first/last message timestamps for multiple sessions in a single query
 /// Returns a map of session_id -> SessionTimestamps
 #[napi]
-pub fn get_session_timestamps_batch(_db_path: String, session_ids: Vec<String>) -> napi::Result<std::collections::HashMap<String, SessionTimestamps>> {
+pub fn get_session_timestamps_batch(
+    _db_path: String,
+    session_ids: Vec<String>,
+) -> napi::Result<std::collections::HashMap<String, SessionTimestamps>> {
     let result = crud::get_session_timestamps_batch(session_ids)?;
-    Ok(result.into_iter().map(|(k, v)| {
-        (k, SessionTimestamps {
-            session_id: v.session_id,
-            started_at: v.started_at,
-            ended_at: v.ended_at,
+    Ok(result
+        .into_iter()
+        .map(|(k, v)| {
+            (
+                k,
+                SessionTimestamps {
+                    session_id: v.session_id,
+                    started_at: v.started_at,
+                    ended_at: v.ended_at,
+                },
+            )
         })
-    }).collect())
+        .collect())
 }
 
 /// Search messages using FTS
@@ -822,7 +852,10 @@ pub fn query_task_metrics(
 
 /// Record a hook execution
 #[napi]
-pub fn record_hook_execution(_db_path: String, input: HookExecutionInput) -> napi::Result<HookExecution> {
+pub fn record_hook_execution(
+    _db_path: String,
+    input: HookExecutionInput,
+) -> napi::Result<HookExecution> {
     crud::record_hook_execution(input)
 }
 
@@ -838,13 +871,20 @@ pub fn query_hook_stats(_db_path: String, period: Option<String>) -> napi::Resul
 
 /// Record a frustration event
 #[napi]
-pub fn record_frustration(_db_path: String, input: FrustrationEventInput) -> napi::Result<FrustrationEvent> {
+pub fn record_frustration(
+    _db_path: String,
+    input: FrustrationEventInput,
+) -> napi::Result<FrustrationEvent> {
     crud::record_frustration(input)
 }
 
 /// Query frustration metrics
 #[napi]
-pub fn query_frustration_metrics(_db_path: String, period: Option<String>, total_tasks: i64) -> napi::Result<FrustrationMetrics> {
+pub fn query_frustration_metrics(
+    _db_path: String,
+    period: Option<String>,
+    total_tasks: i64,
+) -> napi::Result<FrustrationMetrics> {
     crud::query_frustration_metrics(period, total_tasks)
 }
 
@@ -858,13 +898,19 @@ pub fn query_frustration_metrics(_db_path: String, period: Option<String>, total
 
 /// Record a file change in a session
 #[napi]
-pub fn record_file_change(_db_path: String, input: SessionFileChangeInput) -> napi::Result<SessionFileChange> {
+pub fn record_file_change(
+    _db_path: String,
+    input: SessionFileChangeInput,
+) -> napi::Result<SessionFileChange> {
     crud::record_file_change(input)
 }
 
 /// Get file changes for a session
 #[napi]
-pub fn get_session_file_changes(_db_path: String, session_id: String) -> napi::Result<Vec<SessionFileChange>> {
+pub fn get_session_file_changes(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<SessionFileChange>> {
     crud::get_session_file_changes(&session_id)
 }
 
@@ -880,7 +926,10 @@ pub fn has_session_changes(_db_path: String, session_id: String) -> napi::Result
 
 /// Record a file validation (upserts based on session/file/plugin/hook)
 #[napi]
-pub fn record_file_validation(_db_path: String, input: SessionFileValidationInput) -> napi::Result<SessionFileValidation> {
+pub fn record_file_validation(
+    _db_path: String,
+    input: SessionFileValidationInput,
+) -> napi::Result<SessionFileValidation> {
     crud::record_file_validation(input)
 }
 
@@ -894,7 +943,13 @@ pub fn get_file_validation(
     hook_name: String,
     directory: String,
 ) -> napi::Result<Option<SessionFileValidation>> {
-    crud::get_file_validation(&session_id, &file_path, &plugin_name, &hook_name, &directory)
+    crud::get_file_validation(
+        &session_id,
+        &file_path,
+        &plugin_name,
+        &hook_name,
+        &directory,
+    )
 }
 
 /// Get all validations for a session and plugin/hook/directory combo
@@ -919,13 +974,22 @@ pub fn needs_validation(
     directory: String,
     command_hash: String,
 ) -> napi::Result<bool> {
-    crud::needs_validation(&session_id, &plugin_name, &hook_name, &directory, &command_hash)
+    crud::needs_validation(
+        &session_id,
+        &plugin_name,
+        &hook_name,
+        &directory,
+        &command_hash,
+    )
 }
 
 /// Get ALL file validations for a session (not filtered by plugin/hook)
 /// Useful for showing validation status across all hooks for file changes
 #[napi]
-pub fn get_all_session_validations(_db_path: String, session_id: String) -> napi::Result<Vec<SessionFileValidation>> {
+pub fn get_all_session_validations(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<SessionFileValidation>> {
     crud::get_all_session_validations(&session_id)
 }
 
@@ -949,13 +1013,19 @@ pub fn get_files_for_validation(
 
 /// Upsert a session summary (keeps the latest by timestamp)
 #[napi]
-pub fn upsert_session_summary(_db_path: String, input: SessionSummaryInput) -> napi::Result<SessionSummary> {
+pub fn upsert_session_summary(
+    _db_path: String,
+    input: SessionSummaryInput,
+) -> napi::Result<SessionSummary> {
     crud::upsert_session_summary(input)
 }
 
 /// Get session summary by session ID
 #[napi]
-pub fn get_session_summary(_db_path: String, session_id: String) -> napi::Result<Option<SessionSummary>> {
+pub fn get_session_summary(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Option<SessionSummary>> {
     crud::get_session_summary(&session_id)
 }
 
@@ -965,25 +1035,37 @@ pub fn get_session_summary(_db_path: String, session_id: String) -> napi::Result
 
 /// Upsert a session compact (keeps the latest by timestamp)
 #[napi]
-pub fn upsert_session_compact(_db_path: String, input: SessionCompactInput) -> napi::Result<SessionCompact> {
+pub fn upsert_session_compact(
+    _db_path: String,
+    input: SessionCompactInput,
+) -> napi::Result<SessionCompact> {
     crud::upsert_session_compact(input)
 }
 
 /// Get session compact by session ID
 #[napi]
-pub fn get_session_compact(_db_path: String, session_id: String) -> napi::Result<Option<SessionCompact>> {
+pub fn get_session_compact(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Option<SessionCompact>> {
     crud::get_session_compact(&session_id)
 }
 
 /// Upsert session todos (keeps the latest by timestamp)
 #[napi]
-pub fn upsert_session_todos(_db_path: String, input: SessionTodosInput) -> napi::Result<SessionTodos> {
+pub fn upsert_session_todos(
+    _db_path: String,
+    input: SessionTodosInput,
+) -> napi::Result<SessionTodos> {
     crud::upsert_session_todos(input)
 }
 
 /// Get session todos by session ID
 #[napi]
-pub fn get_session_todos(_db_path: String, session_id: String) -> napi::Result<Option<SessionTodos>> {
+pub fn get_session_todos(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Option<SessionTodos>> {
     crud::get_session_todos(&session_id)
 }
 
@@ -1042,9 +1124,8 @@ pub fn get_stale_lock_timeout() -> u32 {
 
 // Re-export watcher types and functions (they have #[napi] in watcher.rs)
 pub use watcher::{
-    FileEvent, FileEventType,
-    start_file_watcher, stop_file_watcher, is_watcher_running, get_default_watch_path,
-    poll_index_results, set_index_callback, clear_index_callback
+    clear_index_callback, get_default_watch_path, is_watcher_running, poll_index_results,
+    set_index_callback, start_file_watcher, stop_file_watcher, FileEvent, FileEventType,
 };
 
 // ============================================================================
@@ -1058,13 +1139,19 @@ pub use indexer::IndexResult;
 /// Only processes lines after the last indexed line
 /// Task association for sentiment events is loaded from SQLite automatically
 #[napi]
-pub fn index_session_file(_db_path: String, file_path: String) -> napi::Result<indexer::IndexResult> {
+pub fn index_session_file(
+    _db_path: String,
+    file_path: String,
+) -> napi::Result<indexer::IndexResult> {
     indexer::index_session_file(file_path)
 }
 
 /// Index all JSONL files in a project directory
 #[napi]
-pub fn index_project_directory(_db_path: String, project_dir: String) -> napi::Result<Vec<indexer::IndexResult>> {
+pub fn index_project_directory(
+    _db_path: String,
+    project_dir: String,
+) -> napi::Result<Vec<indexer::IndexResult>> {
     indexer::index_project_directory(project_dir)
 }
 
@@ -1094,8 +1181,8 @@ pub fn full_scan_and_index(_db_path: String) -> napi::Result<Vec<indexer::IndexR
 // Re-export git types and functions from git module
 pub use git::{
     get_git_branch, get_git_common_dir, get_git_info, get_git_remote_url, get_git_root,
-    git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list,
-    GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
+    git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list, GitDiffStat, GitInfo,
+    GitLogEntry, GitWorktree,
 };
 
 // ============================================================================

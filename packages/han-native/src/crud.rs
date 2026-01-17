@@ -17,42 +17,54 @@ use uuid::Uuid;
 
 pub fn upsert_repo(input: RepoInput) -> napi::Result<Repo> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
     // Use RETURNING to get the inserted/updated row in one query (avoids re-entrancy deadlock)
-    let mut stmt = conn.prepare(
-        "INSERT INTO repos (id, remote, name, default_branch, created_at, updated_at)
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO repos (id, remote, name, default_branch, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?5)
          ON CONFLICT(remote) DO UPDATE SET
              name = excluded.name,
              default_branch = excluded.default_branch,
              updated_at = excluded.updated_at
-         RETURNING id, remote, name, default_branch, created_at, updated_at"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+         RETURNING id, remote, name, default_branch, created_at, updated_at",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
-    stmt.query_row(params![id, input.remote, input.name, input.default_branch, now], |row| {
-        Ok(Repo {
-            id: Some(row.get(0)?),
-            remote: row.get(1)?,
-            name: row.get(2)?,
-            default_branch: row.get(3)?,
-            created_at: row.get(4)?,
-            updated_at: row.get(5)?,
-        })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to upsert repo: {}", e)))
+    stmt.query_row(
+        params![id, input.remote, input.name, input.default_branch, now],
+        |row| {
+            Ok(Repo {
+                id: Some(row.get(0)?),
+                remote: row.get(1)?,
+                name: row.get(2)?,
+                default_branch: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert repo: {}", e)))
 }
 
 pub fn get_repo_by_remote(remote: &str) -> napi::Result<Option<Repo>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, remote, name, default_branch, created_at, updated_at
-         FROM repos WHERE remote = ?1 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, remote, name, default_branch, created_at, updated_at
+         FROM repos WHERE remote = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![remote], |row| {
         Ok(Repo {
@@ -68,29 +80,38 @@ pub fn get_repo_by_remote(remote: &str) -> napi::Result<Option<Repo>> {
     match result {
         Ok(repo) => Ok(Some(repo)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get repo: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get repo: {}",
+            e
+        ))),
     }
 }
 
 pub fn list_repos() -> napi::Result<Vec<Repo>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, remote, name, default_branch, created_at, updated_at
-         FROM repos ORDER BY name ASC"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, remote, name, default_branch, created_at, updated_at
+         FROM repos ORDER BY name ASC",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok(Repo {
-            id: Some(row.get(0)?),
-            remote: row.get(1)?,
-            name: row.get(2)?,
-            default_branch: row.get(3)?,
-            created_at: row.get(4)?,
-            updated_at: row.get(5)?,
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(Repo {
+                id: Some(row.get(0)?),
+                remote: row.get(1)?,
+                name: row.get(2)?,
+                default_branch: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to list repos: {}", e)))?;
+        .map_err(|e| napi::Error::from_reason(format!("Failed to list repos: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -101,7 +122,9 @@ pub fn list_repos() -> napi::Result<Vec<Repo>> {
 
 pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -122,7 +145,16 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.repo_id, input.slug, input.path, input.relative_path, input.name, is_worktree, now],
+        params![
+            id,
+            input.repo_id,
+            input.slug,
+            input.path,
+            input.relative_path,
+            input.name,
+            is_worktree,
+            now
+        ],
         |row| {
             Ok(Project {
                 id: Some(row.get(0)?),
@@ -135,13 +167,16 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
                 created_at: row.get(7)?,
                 updated_at: row.get(8)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert project: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert project: {}", e)))
 }
 
 pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
@@ -165,13 +200,18 @@ pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
     match result {
         Ok(project) => Ok(Some(project)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get project: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get project: {}",
+            e
+        ))),
     }
 }
 
 pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
@@ -195,13 +235,18 @@ pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
     match result {
         Ok(project) => Ok(Some(project)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get project: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get project: {}",
+            e
+        ))),
     }
 }
 
 pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Use a helper function to map rows to Projects
     fn map_row(row: &rusqlite::Row) -> rusqlite::Result<Project> {
@@ -224,7 +269,8 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
              FROM projects WHERE repo_id = ?1 ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-        let rows: Vec<Project> = stmt.query_map(params![rid], map_row)
+        let rows: Vec<Project> = stmt
+            .query_map(params![rid], map_row)
             .map_err(|e| napi::Error::from_reason(format!("Failed to list projects: {}", e)))?
             .filter_map(|r| r.ok())
             .collect();
@@ -235,7 +281,8 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
              FROM projects ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-        let rows: Vec<Project> = stmt.query_map([], map_row)
+        let rows: Vec<Project> = stmt
+            .query_map([], map_row)
             .map_err(|e| napi::Error::from_reason(format!("Failed to list projects: {}", e)))?
             .filter_map(|r| r.ok())
             .collect();
@@ -249,25 +296,35 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
 
 pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let status = input.status.unwrap_or_else(|| "active".to_string());
 
     // id IS the session UUID - no separate session_id column
     // No timestamps stored - derived from messages
-    let mut stmt = conn.prepare(
-        "INSERT INTO sessions (id, project_id, status, transcript_path, slug)
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO sessions (id, project_id, status, transcript_path, slug)
          VALUES (?1, ?2, ?3, ?4, ?5)
          ON CONFLICT(id) DO UPDATE SET
              project_id = COALESCE(excluded.project_id, sessions.project_id),
              status = excluded.status,
              transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path),
              slug = COALESCE(excluded.slug, sessions.slug)
-         RETURNING id, project_id, status, transcript_path, slug, last_indexed_line"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+         RETURNING id, project_id, status, transcript_path, slug, last_indexed_line",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![input.id, input.project_id, status, input.transcript_path, input.slug],
+        params![
+            input.id,
+            input.project_id,
+            status,
+            input.transcript_path,
+            input.slug
+        ],
         |row| {
             Ok(Session {
                 id: row.get(0)?,
@@ -277,33 +334,41 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
                 slug: row.get(4)?,
                 last_indexed_line: row.get(5)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert session: {}", e)))
 }
 
 pub fn end_session(session_id: &str) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Sessions table uses 'id' as primary key and has 'status' column
     // Timestamps are derived from messages table, not stored in sessions
     conn.execute(
         "UPDATE sessions SET status = 'completed' WHERE id = ?1",
         params![session_id],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to end session: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to end session: {}", e)))?;
 
     Ok(true)
 }
 
 pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // id IS the session UUID - query by id directly
-    let mut stmt = conn.prepare(
-        "SELECT id, project_id, status, transcript_path, slug, last_indexed_line
-         FROM sessions WHERE id = ?1 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, project_id, status, transcript_path, slug, last_indexed_line
+         FROM sessions WHERE id = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![session_id], |row| {
         Ok(Session {
@@ -319,14 +384,20 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
     match result {
         Ok(session) => Ok(Some(session)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get session: {}",
+            e
+        ))),
     }
 }
 
 /// Ensure a session exists in the database (INSERT OR IGNORE).
 /// This is called before inserting records that reference sessions (hook executions, file validations)
 /// to avoid foreign key constraint violations.
-fn ensure_session_exists(conn: &rusqlite::Connection, session_id: &str) -> Result<(), rusqlite::Error> {
+fn ensure_session_exists(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+) -> Result<(), rusqlite::Error> {
     conn.execute(
         "INSERT OR IGNORE INTO sessions (id, status) VALUES (?1, 'active')",
         params![session_id],
@@ -340,7 +411,9 @@ pub fn list_sessions(
     limit: Option<u32>,
 ) -> napi::Result<Vec<Session>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let limit_val = limit.unwrap_or(100);
 
     // Join with messages to get max timestamp for sorting
@@ -383,7 +456,8 @@ pub fn list_sessions(
         }
     };
 
-    let mut stmt = conn.prepare(sql)
+    let mut stmt = conn
+        .prepare(sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let map_row = |row: &rusqlite::Row| -> rusqlite::Result<Session> {
@@ -398,30 +472,26 @@ pub fn list_sessions(
     };
 
     let rows: Vec<Session> = match (&project_id, &status) {
-        (Some(pid), Some(s)) => {
-            stmt.query_map(params![pid, s, limit_val], map_row)
-                .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
-                .filter_map(|r| r.ok())
-                .collect()
-        }
-        (Some(pid), None) => {
-            stmt.query_map(params![pid, limit_val], map_row)
-                .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
-                .filter_map(|r| r.ok())
-                .collect()
-        }
-        (None, Some(s)) => {
-            stmt.query_map(params![s, limit_val], map_row)
-                .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
-                .filter_map(|r| r.ok())
-                .collect()
-        }
-        (None, None) => {
-            stmt.query_map(params![limit_val], map_row)
-                .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
-                .filter_map(|r| r.ok())
-                .collect()
-        }
+        (Some(pid), Some(s)) => stmt
+            .query_map(params![pid, s, limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect(),
+        (Some(pid), None) => stmt
+            .query_map(params![pid, limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect(),
+        (None, Some(s)) => stmt
+            .query_map(params![s, limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect(),
+        (None, None) => stmt
+            .query_map(params![limit_val], map_row)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect(),
     };
 
     Ok(rows)
@@ -430,13 +500,16 @@ pub fn list_sessions(
 /// Update the last indexed line for a session
 pub fn update_last_indexed_line(session_id: &str, line_number: i32) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // session_id IS the id (primary key)
     conn.execute(
         "UPDATE sessions SET last_indexed_line = ?1 WHERE id = ?2",
         params![line_number, session_id],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to update last indexed line: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to update last indexed line: {}", e)))?;
 
     Ok(true)
 }
@@ -445,12 +518,13 @@ pub fn update_last_indexed_line(session_id: &str, line_number: i32) -> napi::Res
 /// Sets last_indexed_line to 0 so all messages will be re-processed
 pub fn reset_all_sessions_for_reindex() -> napi::Result<u32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let count = conn.execute(
-        "UPDATE sessions SET last_indexed_line = 0",
-        [],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to reset sessions: {}", e)))?;
+    let count = conn
+        .execute("UPDATE sessions SET last_indexed_line = 0", [])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to reset sessions: {}", e)))?;
 
     Ok(count as u32)
 }
@@ -467,7 +541,9 @@ pub fn upsert_session_file(
     agent_id: Option<&str>,
 ) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -489,7 +565,9 @@ pub fn upsert_session_file(
 /// Get session files for a session
 pub fn get_session_files(session_id: &str) -> napi::Result<Vec<SessionFile>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn
         .prepare(
@@ -519,7 +597,9 @@ pub fn get_session_files(session_id: &str) -> napi::Result<Vec<SessionFile>> {
 /// Get session file by path
 pub fn get_session_file_by_path(file_path: &str) -> napi::Result<Option<SessionFile>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn
         .prepare(
@@ -554,7 +634,9 @@ pub fn get_session_file_by_path(file_path: &str) -> napi::Result<Option<SessionF
 /// Update last indexed line for a session file
 pub fn update_session_file_indexed_line(file_path: &str, line_number: u32) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -570,7 +652,9 @@ pub fn update_session_file_indexed_line(file_path: &str, line_number: u32) -> na
 /// Reset all session files for re-indexing
 pub fn reset_all_session_files_for_reindex() -> napi::Result<u32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let count = conn
         .execute("UPDATE session_files SET last_indexed_line = 0", [])
@@ -583,7 +667,9 @@ pub fn reset_all_session_files_for_reindex() -> napi::Result<u32> {
 /// Returns file paths only - caller should check file line counts
 pub fn list_unindexed_session_files() -> napi::Result<Vec<SessionFile>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn
         .prepare(
@@ -617,7 +703,9 @@ pub fn list_unindexed_session_files() -> napi::Result<Vec<SessionFile>> {
 /// Upsert a session summary - only if this one is newer than existing
 pub fn upsert_session_summary(input: SessionSummaryInput) -> napi::Result<SessionSummary> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -637,7 +725,15 @@ pub fn upsert_session_summary(input: SessionSummaryInput) -> napi::Result<Sessio
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![input.message_id, input.session_id, input.content, input.raw_json, input.timestamp, input.line_number, now],
+        params![
+            input.message_id,
+            input.session_id,
+            input.content,
+            input.raw_json,
+            input.timestamp,
+            input.line_number,
+            now
+        ],
         |row| {
             Ok(SessionSummary {
                 id: row.get(0)?,
@@ -649,14 +745,17 @@ pub fn upsert_session_summary(input: SessionSummaryInput) -> napi::Result<Sessio
                 line_number: row.get(6)?,
                 indexed_at: row.get(7)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session summary: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert session summary: {}", e)))
 }
 
 /// Get session summary by session ID
 pub fn get_session_summary(session_id: &str) -> napi::Result<Option<SessionSummary>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, message_id, content, raw_json, timestamp, line_number, indexed_at
@@ -679,7 +778,10 @@ pub fn get_session_summary(session_id: &str) -> napi::Result<Option<SessionSumma
     match result {
         Ok(summary) => Ok(Some(summary)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session summary: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get session summary: {}",
+            e
+        ))),
     }
 }
 
@@ -690,7 +792,9 @@ pub fn get_session_summary(session_id: &str) -> napi::Result<Option<SessionSumma
 /// Upsert a session compact - only if this one is newer than existing
 pub fn upsert_session_compact(input: SessionCompactInput) -> napi::Result<SessionCompact> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -711,7 +815,16 @@ pub fn upsert_session_compact(input: SessionCompactInput) -> napi::Result<Sessio
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![input.message_id, input.session_id, input.content, input.raw_json, input.timestamp, input.line_number, input.compact_type, now],
+        params![
+            input.message_id,
+            input.session_id,
+            input.content,
+            input.raw_json,
+            input.timestamp,
+            input.line_number,
+            input.compact_type,
+            now
+        ],
         |row| {
             Ok(SessionCompact {
                 id: row.get(0)?,
@@ -724,14 +837,17 @@ pub fn upsert_session_compact(input: SessionCompactInput) -> napi::Result<Sessio
                 compact_type: row.get(7)?,
                 indexed_at: row.get(8)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session compact: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert session compact: {}", e)))
 }
 
 /// Get session compact by session ID
 pub fn get_session_compact(session_id: &str) -> napi::Result<Option<SessionCompact>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, message_id, content, raw_json, timestamp, line_number, compact_type, indexed_at
@@ -755,7 +871,10 @@ pub fn get_session_compact(session_id: &str) -> napi::Result<Option<SessionCompa
     match result {
         Ok(compact) => Ok(Some(compact)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session compact: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get session compact: {}",
+            e
+        ))),
     }
 }
 
@@ -766,7 +885,9 @@ pub fn get_session_compact(session_id: &str) -> napi::Result<Option<SessionCompa
 /// Upsert session todos - only if this one is newer than existing
 pub fn upsert_session_todos(input: SessionTodosInput) -> napi::Result<SessionTodos> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
     let id = uuid::Uuid::new_v4().to_string();
@@ -786,7 +907,15 @@ pub fn upsert_session_todos(input: SessionTodosInput) -> napi::Result<SessionTod
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.message_id, input.todos_json, input.timestamp, input.line_number, now],
+        params![
+            id,
+            input.session_id,
+            input.message_id,
+            input.todos_json,
+            input.timestamp,
+            input.line_number,
+            now
+        ],
         |row| {
             Ok(SessionTodos {
                 id: row.get(0)?,
@@ -797,19 +926,24 @@ pub fn upsert_session_todos(input: SessionTodosInput) -> napi::Result<SessionTod
                 line_number: row.get(5)?,
                 indexed_at: row.get(6)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session todos: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert session todos: {}", e)))
 }
 
 /// Get session todos by session ID
 pub fn get_session_todos(session_id: &str) -> napi::Result<Option<SessionTodos>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, session_id, message_id, todos_json, timestamp, line_number, indexed_at
-         FROM session_todos WHERE session_id = ?1 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, message_id, todos_json, timestamp, line_number, indexed_at
+         FROM session_todos WHERE session_id = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![session_id], |row| {
         Ok(SessionTodos {
@@ -826,7 +960,10 @@ pub fn get_session_todos(session_id: &str) -> napi::Result<Option<SessionTodos>>
     match result {
         Ok(todos) => Ok(Some(todos)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get session todos: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get session todos: {}",
+            e
+        ))),
     }
 }
 
@@ -841,7 +978,9 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
     }
 
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // session_id IS the id (primary key) - no lookup needed
@@ -902,16 +1041,20 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
 /// Get a message by ID (id IS the message UUID from JSONL)
 pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // id IS the message UUID - no separate message_id column
-    let mut stmt = conn.prepare(
-        "SELECT id, session_id, agent_id, parent_id, message_type, role, content,
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, agent_id, parent_id, message_type, role, content,
                 tool_name, tool_input, tool_result, raw_json, timestamp, line_number,
                 source_file_name, source_file_type, sentiment_score, sentiment_level,
                 frustration_score, frustration_level, indexed_at
-         FROM messages WHERE id = ?1 LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+         FROM messages WHERE id = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![message_id], |row| {
         Ok(Message {
@@ -941,7 +1084,10 @@ pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
     match result {
         Ok(message) => Ok(Some(message)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get message: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get message: {}",
+            e
+        ))),
     }
 }
 
@@ -953,12 +1099,14 @@ pub fn get_message(message_id: &str) -> napi::Result<Option<Message>> {
 pub fn list_session_messages(
     session_id: &str,
     message_type: Option<String>,
-    agent_id_filter: Option<Option<String>>,  // None = all, Some(None) = main only, Some(Some(id)) = specific agent
+    agent_id_filter: Option<Option<String>>, // None = all, Some(None) = main only, Some(Some(id)) = specific agent
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> napi::Result<Vec<Message>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     // Default to very high limit when not specified - caller should paginate if needed
     let limit_val = limit.unwrap_or(100_000);
     let offset_val = offset.unwrap_or(0);
@@ -1027,7 +1175,8 @@ pub fn list_session_messages(
         ),
     };
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let map_row = |row: &rusqlite::Row| -> rusqlite::Result<Message> {
@@ -1058,7 +1207,8 @@ pub fn list_session_messages(
     // Convert params to references for query_map
     let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
 
-    let rows: Vec<Message> = stmt.query_map(params_refs.as_slice(), map_row)
+    let rows: Vec<Message> = stmt
+        .query_map(params_refs.as_slice(), map_row)
         .map_err(|e| napi::Error::from_reason(format!("Failed to list messages: {}", e)))?
         .filter_map(|r| r.ok())
         .collect();
@@ -1069,33 +1219,39 @@ pub fn list_session_messages(
 /// Get message count for a session (only user and assistant messages)
 pub fn get_message_count(session_id: &str) -> napi::Result<u32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // session_id IS the primary key (id) in the new schema - no JOIN needed
-    let count: u32 = conn.query_row(
-        "SELECT COUNT(*) FROM messages
+    let count: u32 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM messages
          WHERE session_id = ?1 AND message_type IN ('user', 'assistant')",
-        params![session_id],
-        |row| row.get(0),
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to count messages: {}", e)))?;
+            params![session_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to count messages: {}", e)))?;
 
     Ok(count)
 }
 
 /// Get message counts for multiple sessions in a single query
-pub fn get_message_counts_batch(session_ids: Vec<String>) -> napi::Result<std::collections::HashMap<String, u32>> {
+pub fn get_message_counts_batch(
+    session_ids: Vec<String>,
+) -> napi::Result<std::collections::HashMap<String, u32>> {
     if session_ids.is_empty() {
         return Ok(std::collections::HashMap::new());
     }
 
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Initialize all to 0
-    let mut result: std::collections::HashMap<String, u32> = session_ids
-        .iter()
-        .map(|id| (id.clone(), 0))
-        .collect();
+    let mut result: std::collections::HashMap<String, u32> =
+        session_ids.iter().map(|id| (id.clone(), 0)).collect();
 
     // Build placeholders for IN clause
     // session_id in messages table IS the session's id (primary key) - no JOIN needed
@@ -1109,15 +1265,21 @@ pub fn get_message_counts_batch(session_ids: Vec<String>) -> napi::Result<std::c
         placeholders.join(", ")
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     // Convert session_ids to rusqlite params
-    let params: Vec<&dyn rusqlite::ToSql> = session_ids.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+    let params: Vec<&dyn rusqlite::ToSql> = session_ids
+        .iter()
+        .map(|s| s as &dyn rusqlite::ToSql)
+        .collect();
 
-    let rows = stmt.query_map(params.as_slice(), |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to count messages batch: {}", e)))?;
+    let rows = stmt
+        .query_map(params.as_slice(), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to count messages batch: {}", e)))?;
 
     for row in rows.flatten() {
         result.insert(row.0, row.1);
@@ -1129,14 +1291,18 @@ pub fn get_message_counts_batch(session_ids: Vec<String>) -> napi::Result<std::c
 /// Get the highest line number indexed for a session
 pub fn get_last_indexed_line(session_id: &str) -> napi::Result<i32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // session_id IS the primary key (id) in the new schema
-    let line: Option<i32> = conn.query_row(
-        "SELECT last_indexed_line FROM sessions WHERE id = ?1",
-        params![session_id],
-        |row| row.get(0),
-    ).ok();
+    let line: Option<i32> = conn
+        .query_row(
+            "SELECT last_indexed_line FROM sessions WHERE id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )
+        .ok();
 
     Ok(line.unwrap_or(0))
 }
@@ -1150,22 +1316,31 @@ pub struct SessionTimestamps {
 }
 
 /// Get first/last message timestamps for multiple sessions in a single query
-pub fn get_session_timestamps_batch(session_ids: Vec<String>) -> napi::Result<std::collections::HashMap<String, SessionTimestamps>> {
+pub fn get_session_timestamps_batch(
+    session_ids: Vec<String>,
+) -> napi::Result<std::collections::HashMap<String, SessionTimestamps>> {
     if session_ids.is_empty() {
         return Ok(std::collections::HashMap::new());
     }
 
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Initialize all to empty timestamps
     let mut result: std::collections::HashMap<String, SessionTimestamps> = session_ids
         .iter()
-        .map(|id| (id.clone(), SessionTimestamps {
-            session_id: id.clone(),
-            started_at: None,
-            ended_at: None,
-        }))
+        .map(|id| {
+            (
+                id.clone(),
+                SessionTimestamps {
+                    session_id: id.clone(),
+                    started_at: None,
+                    ended_at: None,
+                },
+            )
+        })
         .collect();
 
     // Build placeholders for IN clause
@@ -1178,26 +1353,35 @@ pub fn get_session_timestamps_batch(session_ids: Vec<String>) -> napi::Result<st
         placeholders.join(", ")
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     // Convert session_ids to rusqlite params
-    let params: Vec<&dyn rusqlite::ToSql> = session_ids.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+    let params: Vec<&dyn rusqlite::ToSql> = session_ids
+        .iter()
+        .map(|s| s as &dyn rusqlite::ToSql)
+        .collect();
 
-    let rows = stmt.query_map(params.as_slice(), |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, Option<String>>(1)?,
-            row.get::<_, Option<String>>(2)?
-        ))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get timestamps batch: {}", e)))?;
+    let rows = stmt
+        .query_map(params.as_slice(), |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to get timestamps batch: {}", e)))?;
 
     for row in rows.flatten() {
-        result.insert(row.0.clone(), SessionTimestamps {
-            session_id: row.0,
-            started_at: row.1,
-            ended_at: row.2,
-        });
+        result.insert(
+            row.0.clone(),
+            SessionTimestamps {
+                session_id: row.0,
+                started_at: row.1,
+                ended_at: row.2,
+            },
+        );
     }
 
     Ok(result)
@@ -1226,7 +1410,9 @@ pub fn search_messages(
     limit: Option<u32>,
 ) -> napi::Result<Vec<Message>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let limit_val = limit.unwrap_or(50);
 
     // Escape the query to prevent FTS5 syntax errors
@@ -1254,7 +1440,8 @@ pub fn search_messages(
          LIMIT ?2"
     };
 
-    let mut stmt = conn.prepare(sql)
+    let mut stmt = conn
+        .prepare(sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare search: {}", e)))?;
 
     let map_row = |row: &rusqlite::Row| -> rusqlite::Result<Message> {
@@ -1303,7 +1490,9 @@ pub fn search_messages(
 
 pub fn create_task(input: TaskInput) -> napi::Result<Task> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -1316,7 +1505,14 @@ pub fn create_task(input: TaskInput) -> napi::Result<Task> {
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.task_id, input.description, input.task_type, now],
+        params![
+            id,
+            input.session_id,
+            input.task_id,
+            input.description,
+            input.task_type,
+            now
+        ],
         |row| {
             let files_json: Option<String> = row.get(8)?;
             Ok(Task {
@@ -1333,16 +1529,21 @@ pub fn create_task(input: TaskInput) -> napi::Result<Task> {
                 started_at: row.get(10)?,
                 completed_at: row.get(11)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to create task: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to create task: {}", e)))
 }
 
 pub fn complete_task(completion: TaskCompletion) -> napi::Result<Task> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
-    let files_json = completion.files_modified.as_ref()
+    let files_json = completion
+        .files_modified
+        .as_ref()
         .map(|f| serde_json::to_string(f).unwrap_or_default());
 
     // Use RETURNING to get the updated row (avoids re-entrancy deadlock)
@@ -1384,20 +1585,29 @@ pub fn complete_task(completion: TaskCompletion) -> napi::Result<Task> {
                 started_at: row.get(10)?,
                 completed_at: row.get(11)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to complete task: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to complete task: {}", e)))
 }
 
 pub fn fail_task(failure: TaskFailure) -> napi::Result<Task> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let now = chrono::Utc::now().to_rfc3339();
     let notes = format!(
         "Failure reason: {}\n{}{}",
         failure.reason,
-        failure.notes.as_deref().map(|n| format!("\nNotes: {}", n)).unwrap_or_default(),
-        failure.attempted_solutions.as_ref()
+        failure
+            .notes
+            .as_deref()
+            .map(|n| format!("\nNotes: {}", n))
+            .unwrap_or_default(),
+        failure
+            .attempted_solutions
+            .as_ref()
             .map(|sols| format!("\nAttempted solutions:\n- {}", sols.join("\n- ")))
             .unwrap_or_default()
     );
@@ -1431,13 +1641,16 @@ pub fn fail_task(failure: TaskFailure) -> napi::Result<Task> {
                 started_at: row.get(10)?,
                 completed_at: row.get(11)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to fail task: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to fail task: {}", e)))
 }
 
 pub fn get_task(task_id: &str) -> napi::Result<Option<Task>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, task_id, description, task_type, outcome, confidence, notes, files_modified, tests_added, started_at, completed_at
@@ -1446,8 +1659,7 @@ pub fn get_task(task_id: &str) -> napi::Result<Option<Task>> {
 
     let result = stmt.query_row(params![task_id], |row| {
         let files_json: Option<String> = row.get(8)?;
-        let files_modified = files_json
-            .and_then(|j| serde_json::from_str::<Vec<String>>(&j).ok());
+        let files_modified = files_json.and_then(|j| serde_json::from_str::<Vec<String>>(&j).ok());
 
         Ok(Task {
             id: Some(row.get(0)?),
@@ -1468,7 +1680,10 @@ pub fn get_task(task_id: &str) -> napi::Result<Option<Task>> {
     match result {
         Ok(task) => Ok(Some(task)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get task: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get task: {}",
+            e
+        ))),
     }
 }
 
@@ -1478,7 +1693,9 @@ pub fn query_task_metrics(
     period: Option<String>,
 ) -> napi::Result<TaskMetrics> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Calculate time filter based on period
     let time_filter = match period.as_deref() {
@@ -1501,25 +1718,99 @@ pub fn query_task_metrics(
             ELSE NULL END) as avg_duration
          FROM tasks
          WHERE 1=1 {} {} {}",
-        if task_type.is_some() { "AND task_type = ?1" } else { "" },
-        if outcome.is_some() { if task_type.is_some() { "AND outcome = ?2" } else { "AND outcome = ?1" } } else { "" },
+        if task_type.is_some() {
+            "AND task_type = ?1"
+        } else {
+            ""
+        },
+        if outcome.is_some() {
+            if task_type.is_some() {
+                "AND outcome = ?2"
+            } else {
+                "AND outcome = ?1"
+            }
+        } else {
+            ""
+        },
         time_filter
     );
 
-    let mut stmt = conn.prepare(&base_sql)
+    let mut stmt = conn
+        .prepare(&base_sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let map_err = |e: rusqlite::Error| napi::Error::from_reason(format!("Failed to query metrics: {}", e));
+    let map_err =
+        |e: rusqlite::Error| napi::Error::from_reason(format!("Failed to query metrics: {}", e));
 
-    let (total, completed, successful, partial, failed, avg_conf, avg_duration): (i64, i64, i64, i64, i64, Option<f64>, Option<f64>) = match (&task_type, &outcome) {
-        (Some(tt), Some(o)) => stmt.query_row(params![tt, o], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?))).map_err(map_err)?,
-        (Some(tt), None) => stmt.query_row(params![tt], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?))).map_err(map_err)?,
-        (None, Some(o)) => stmt.query_row(params![o], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?))).map_err(map_err)?,
-        (None, None) => stmt.query_row([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?))).map_err(map_err)?,
+    let (total, completed, successful, partial, failed, avg_conf, avg_duration): (
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+        Option<f64>,
+        Option<f64>,
+    ) = match (&task_type, &outcome) {
+        (Some(tt), Some(o)) => stmt
+            .query_row(params![tt, o], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .map_err(map_err)?,
+        (Some(tt), None) => stmt
+            .query_row(params![tt], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .map_err(map_err)?,
+        (None, Some(o)) => stmt
+            .query_row(params![o], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .map_err(map_err)?,
+        (None, None) => stmt
+            .query_row([], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .map_err(map_err)?,
     };
 
     // Calculate success rate
-    let success_rate = if completed > 0 { successful as f64 / completed as f64 } else { 0.0 };
+    let success_rate = if completed > 0 {
+        successful as f64 / completed as f64
+    } else {
+        0.0
+    };
 
     // Calculate calibration score (how well confidence predicts outcomes)
     let calibration = calculate_calibration_score(&conn, &time_filter)?;
@@ -1545,18 +1836,24 @@ pub fn query_task_metrics(
     })
 }
 
-fn calculate_calibration_score(conn: &rusqlite::Connection, time_filter: &str) -> napi::Result<f64> {
+fn calculate_calibration_score(
+    conn: &rusqlite::Connection,
+    time_filter: &str,
+) -> napi::Result<f64> {
     let sql = format!(
         "SELECT confidence, outcome FROM tasks WHERE confidence IS NOT NULL AND outcome IS NOT NULL {}",
         time_filter
     );
 
-    let mut stmt = conn.prepare(&sql)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare calibration query: {}", e)))?;
+    let mut stmt = conn.prepare(&sql).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to prepare calibration query: {}", e))
+    })?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query calibration: {}", e)))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query calibration: {}", e)))?;
 
     let mut total_error = 0.0;
     let mut count = 0;
@@ -1576,34 +1873,46 @@ fn calculate_calibration_score(conn: &rusqlite::Connection, time_filter: &str) -
     Ok((1.0 - avg_error).max(0.0))
 }
 
-fn get_tasks_by_type(conn: &rusqlite::Connection, time_filter: &str) -> napi::Result<std::collections::HashMap<String, i64>> {
+fn get_tasks_by_type(
+    conn: &rusqlite::Connection,
+    time_filter: &str,
+) -> napi::Result<std::collections::HashMap<String, i64>> {
     let sql = format!(
         "SELECT task_type, COUNT(*) as count FROM tasks WHERE 1=1 {} GROUP BY task_type",
         time_filter
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare type query: {}", e)))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query task types: {}", e)))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query task types: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-fn get_tasks_by_outcome(conn: &rusqlite::Connection, time_filter: &str) -> napi::Result<std::collections::HashMap<String, i64>> {
+fn get_tasks_by_outcome(
+    conn: &rusqlite::Connection,
+    time_filter: &str,
+) -> napi::Result<std::collections::HashMap<String, i64>> {
     let sql = format!(
         "SELECT outcome, COUNT(*) as count FROM tasks WHERE outcome IS NOT NULL {} GROUP BY outcome",
         time_filter
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare outcome query: {}", e)))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query task outcomes: {}", e)))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query task outcomes: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -1619,12 +1928,15 @@ fn get_tasks_by_outcome(conn: &rusqlite::Connection, time_filter: &str) -> napi:
 
 pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExecution> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Ensure session exists before inserting (avoids FK constraint violation)
     if let Some(ref session_id) = input.session_id {
-        ensure_session_exists(&conn, session_id)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to ensure session exists: {}", e)))?;
+        ensure_session_exists(&conn, session_id).map_err(|e| {
+            napi::Error::from_reason(format!("Failed to ensure session exists: {}", e))
+        })?;
     }
 
     let id = Uuid::new_v4().to_string();
@@ -1637,11 +1949,27 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.task_id, input.hook_type, input.hook_name, input.hook_source, input.directory, input.duration_ms, input.exit_code, input.passed as i32, input.output, input.error, input.if_changed, input.command, now],
+        params![
+            id,
+            input.session_id,
+            input.task_id,
+            input.hook_type,
+            input.hook_name,
+            input.hook_source,
+            input.directory,
+            input.duration_ms,
+            input.exit_code,
+            input.passed as i32,
+            input.output,
+            input.error,
+            input.if_changed,
+            input.command,
+            now
+        ],
         |row| {
             Ok(HookExecution {
                 id: Some(row.get(0)?),
-                orchestration_id: None,  // Legacy hook executions don't have orchestration
+                orchestration_id: None, // Legacy hook executions don't have orchestration
                 session_id: row.get(1)?,
                 task_id: row.get(2)?,
                 hook_type: row.get(3)?,
@@ -1659,16 +1987,19 @@ pub fn record_hook_execution(input: HookExecutionInput) -> napi::Result<HookExec
                 status: row.get(15)?,
                 consecutive_failures: row.get(16)?,
                 max_attempts: row.get(17)?,
-                pid: None,  // Completed hooks don't track PID
-                plugin_root: None,  // Completed hooks don't need plugin_root stored
+                pid: None,         // Completed hooks don't track PID
+                plugin_root: None, // Completed hooks don't need plugin_root stored
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to record hook execution: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to record hook execution: {}", e)))
 }
 
 pub fn query_hook_stats(period: Option<String>) -> napi::Result<HookStats> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let time_filter = match period.as_deref() {
         Some("day") => "AND executed_at > datetime('now', '-1 day')",
@@ -1687,28 +2018,39 @@ pub fn query_hook_stats(period: Option<String>) -> napi::Result<HookStats> {
         time_filter
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let (total, passed, failed, unique_hooks): (i64, i64, i64, i64) = stmt.query_row([], |row| {
-        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query hook stats: {}", e)))?;
+    let (total, passed, failed, unique_hooks): (i64, i64, i64, i64) = stmt
+        .query_row([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query hook stats: {}", e)))?;
 
-    let pass_rate = if total > 0 { passed as f64 / total as f64 } else { 0.0 };
+    let pass_rate = if total > 0 {
+        passed as f64 / total as f64
+    } else {
+        0.0
+    };
 
     // Get by hook type breakdown
     let type_sql = format!(
         "SELECT hook_type, COUNT(*) as count FROM hook_executions WHERE 1=1 {} GROUP BY hook_type",
         time_filter
     );
-    let mut type_stmt = conn.prepare(&type_sql)
+    let mut type_stmt = conn
+        .prepare(&type_sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare type query: {}", e)))?;
 
-    let type_rows = type_stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query hook types: {}", e)))?;
+    let type_rows = type_stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query hook types: {}", e)))?;
 
-    let by_hook_type: std::collections::HashMap<String, i64> = type_rows.filter_map(|r| r.ok()).collect();
+    let by_hook_type: std::collections::HashMap<String, i64> =
+        type_rows.filter_map(|r| r.ok()).collect();
 
     Ok(HookStats {
         total_executions: total,
@@ -1726,11 +2068,15 @@ pub fn query_hook_stats(period: Option<String>) -> napi::Result<HookStats> {
 
 pub fn record_frustration(input: FrustrationEventInput) -> napi::Result<FrustrationEvent> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let signals_json = input.detected_signals.map(|s| serde_json::to_string(&s).unwrap_or_default());
+    let signals_json = input
+        .detected_signals
+        .map(|s| serde_json::to_string(&s).unwrap_or_default());
 
     let mut stmt = conn.prepare(
         "INSERT INTO frustration_events (id, session_id, task_id, frustration_level, frustration_score, user_message, detected_signals, context, recorded_at)
@@ -1739,7 +2085,17 @@ pub fn record_frustration(input: FrustrationEventInput) -> napi::Result<Frustrat
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.task_id, input.frustration_level, input.frustration_score, input.user_message, signals_json, input.context, now],
+        params![
+            id,
+            input.session_id,
+            input.task_id,
+            input.frustration_level,
+            input.frustration_score,
+            input.user_message,
+            signals_json,
+            input.context,
+            now
+        ],
         |row| {
             Ok(FrustrationEvent {
                 id: Some(row.get(0)?),
@@ -1752,13 +2108,19 @@ pub fn record_frustration(input: FrustrationEventInput) -> napi::Result<Frustrat
                 context: row.get(7)?,
                 recorded_at: row.get(8)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to record frustration: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to record frustration: {}", e)))
 }
 
-pub fn query_frustration_metrics(period: Option<String>, total_tasks: i64) -> napi::Result<FrustrationMetrics> {
+pub fn query_frustration_metrics(
+    period: Option<String>,
+    total_tasks: i64,
+) -> napi::Result<FrustrationMetrics> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let time_filter = match period.as_deref() {
         Some("day") => "AND recorded_at > datetime('now', '-1 day')",
@@ -1776,29 +2138,52 @@ pub fn query_frustration_metrics(period: Option<String>, total_tasks: i64) -> na
         time_filter
     );
 
-    let mut stmt = conn.prepare(&sql)
+    let mut stmt = conn
+        .prepare(&sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let (total, significant, weighted): (i64, i64, f64) = stmt.query_row([], |row| {
-        Ok((row.get(0)?, row.get(1)?, row.get::<_, f64>(2).unwrap_or(0.0)))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query frustration metrics: {}", e)))?;
+    let (total, significant, weighted): (i64, i64, f64) = stmt
+        .query_row([], |row| {
+            Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get::<_, f64>(2).unwrap_or(0.0),
+            ))
+        })
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to query frustration metrics: {}", e))
+        })?;
 
-    let frustration_rate = if total_tasks > 0 { total as f64 / total_tasks as f64 } else { 0.0 };
-    let significant_rate = if total_tasks > 0 { significant as f64 / total_tasks as f64 } else { 0.0 };
+    let frustration_rate = if total_tasks > 0 {
+        total as f64 / total_tasks as f64
+    } else {
+        0.0
+    };
+    let significant_rate = if total_tasks > 0 {
+        significant as f64 / total_tasks as f64
+    } else {
+        0.0
+    };
 
     // Get by level breakdown
     let level_sql = format!(
         "SELECT frustration_level, COUNT(*) as count FROM frustration_events WHERE 1=1 {} GROUP BY frustration_level",
         time_filter
     );
-    let mut level_stmt = conn.prepare(&level_sql)
+    let mut level_stmt = conn
+        .prepare(&level_sql)
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare level query: {}", e)))?;
 
-    let level_rows = level_stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query frustration levels: {}", e)))?;
+    let level_rows = level_stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to query frustration levels: {}", e))
+        })?;
 
-    let by_level: std::collections::HashMap<String, i64> = level_rows.filter_map(|r| r.ok()).collect();
+    let by_level: std::collections::HashMap<String, i64> =
+        level_rows.filter_map(|r| r.ok()).collect();
 
     Ok(FrustrationMetrics {
         total_frustrations: total,
@@ -1820,7 +2205,9 @@ pub fn query_frustration_metrics(period: Option<String>, total_tasks: i64) -> na
 
 pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<SessionFileChange> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -1832,7 +2219,16 @@ pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<Session
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.file_path, input.action, input.file_hash_before, input.file_hash_after, input.tool_name, now],
+        params![
+            id,
+            input.session_id,
+            input.file_path,
+            input.action,
+            input.file_hash_before,
+            input.file_hash_after,
+            input.tool_name,
+            now
+        ],
         |row| {
             Ok(SessionFileChange {
                 id: Some(row.get(0)?),
@@ -1844,44 +2240,53 @@ pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<Session
                 tool_name: row.get(6)?,
                 recorded_at: row.get(7)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to record file change: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to record file change: {}", e)))
 }
 
 pub fn get_session_file_changes(session_id: &str) -> napi::Result<Vec<SessionFileChange>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, recorded_at
          FROM session_file_changes WHERE session_id = ?1 ORDER BY recorded_at DESC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![session_id], |row| {
-        Ok(SessionFileChange {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            file_path: row.get(2)?,
-            action: row.get(3)?,
-            file_hash_before: row.get(4)?,
-            file_hash_after: row.get(5)?,
-            tool_name: row.get(6)?,
-            recorded_at: row.get(7)?,
+    let rows = stmt
+        .query_map(params![session_id], |row| {
+            Ok(SessionFileChange {
+                id: Some(row.get(0)?),
+                session_id: row.get(1)?,
+                file_path: row.get(2)?,
+                action: row.get(3)?,
+                file_hash_before: row.get(4)?,
+                file_hash_after: row.get(5)?,
+                tool_name: row.get(6)?,
+                recorded_at: row.get(7)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get file changes: {}", e)))?;
+        .map_err(|e| napi::Error::from_reason(format!("Failed to get file changes: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
 pub fn has_session_changes(session_id: &str) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM session_file_changes WHERE session_id = ?1",
-        params![session_id],
-        |row| row.get(0)
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to check session changes: {}", e)))?;
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM session_file_changes WHERE session_id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to check session changes: {}", e)))?;
 
     Ok(count > 0)
 }
@@ -1890,9 +2295,13 @@ pub fn has_session_changes(session_id: &str) -> napi::Result<bool> {
 // Session File Validation Operations
 // ============================================================================
 
-pub fn record_file_validation(input: SessionFileValidationInput) -> napi::Result<SessionFileValidation> {
+pub fn record_file_validation(
+    input: SessionFileValidationInput,
+) -> napi::Result<SessionFileValidation> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Ensure session exists before inserting (avoids FK constraint violation)
     ensure_session_exists(&conn, &input.session_id)
@@ -1913,7 +2322,17 @@ pub fn record_file_validation(input: SessionFileValidationInput) -> napi::Result
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
-        params![id, input.session_id, input.file_path, input.file_hash, input.plugin_name, input.hook_name, input.directory, input.command_hash, now],
+        params![
+            id,
+            input.session_id,
+            input.file_path,
+            input.file_hash,
+            input.plugin_name,
+            input.hook_name,
+            input.directory,
+            input.command_hash,
+            now
+        ],
         |row| {
             Ok(SessionFileValidation {
                 id: Some(row.get(0)?),
@@ -1926,8 +2345,9 @@ pub fn record_file_validation(input: SessionFileValidationInput) -> napi::Result
                 command_hash: row.get(7)?,
                 validated_at: row.get(8)?,
             })
-        }
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to record file validation: {}", e)))
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to record file validation: {}", e)))
 }
 
 pub fn get_file_validation(
@@ -1938,7 +2358,9 @@ pub fn get_file_validation(
     directory: &str,
 ) -> napi::Result<Option<SessionFileValidation>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
@@ -1947,24 +2369,30 @@ pub fn get_file_validation(
          LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let result = stmt.query_row(params![session_id, file_path, plugin_name, hook_name, directory], |row| {
-        Ok(SessionFileValidation {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            file_path: row.get(2)?,
-            file_hash: row.get(3)?,
-            plugin_name: row.get(4)?,
-            hook_name: row.get(5)?,
-            directory: row.get(6)?,
-            command_hash: row.get(7)?,
-            validated_at: row.get(8)?,
-        })
-    });
+    let result = stmt.query_row(
+        params![session_id, file_path, plugin_name, hook_name, directory],
+        |row| {
+            Ok(SessionFileValidation {
+                id: Some(row.get(0)?),
+                session_id: row.get(1)?,
+                file_path: row.get(2)?,
+                file_hash: row.get(3)?,
+                plugin_name: row.get(4)?,
+                hook_name: row.get(5)?,
+                directory: row.get(6)?,
+                command_hash: row.get(7)?,
+                validated_at: row.get(8)?,
+            })
+        },
+    );
 
     match result {
         Ok(validation) => Ok(Some(validation)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get file validation: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get file validation: {}",
+            e
+        ))),
     }
 }
 
@@ -1977,7 +2405,9 @@ pub fn get_session_validations(
     directory: &str,
 ) -> napi::Result<Vec<SessionFileValidation>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
@@ -1986,19 +2416,26 @@ pub fn get_session_validations(
          ORDER BY validated_at DESC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![session_id, plugin_name, hook_name, directory], |row| {
-        Ok(SessionFileValidation {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            file_path: row.get(2)?,
-            file_hash: row.get(3)?,
-            plugin_name: row.get(4)?,
-            hook_name: row.get(5)?,
-            directory: row.get(6)?,
-            command_hash: row.get(7)?,
-            validated_at: row.get(8)?,
-        })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session validations: {}", e)))?;
+    let rows = stmt
+        .query_map(
+            params![session_id, plugin_name, hook_name, directory],
+            |row| {
+                Ok(SessionFileValidation {
+                    id: Some(row.get(0)?),
+                    session_id: row.get(1)?,
+                    file_path: row.get(2)?,
+                    file_hash: row.get(3)?,
+                    plugin_name: row.get(4)?,
+                    hook_name: row.get(5)?,
+                    directory: row.get(6)?,
+                    command_hash: row.get(7)?,
+                    validated_at: row.get(8)?,
+                })
+            },
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to get session validations: {}", e))
+        })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2014,12 +2451,15 @@ pub fn needs_validation(
     command_hash: &str,
 ) -> napi::Result<bool> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Check if there are any file changes in this session that don't have
     // a matching validation with the same file_hash AND command_hash
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(DISTINCT fc.file_path)
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT fc.file_path)
          FROM session_file_changes fc
          LEFT JOIN session_file_validations fv
            ON fc.session_id = fv.session_id
@@ -2029,9 +2469,12 @@ pub fn needs_validation(
            AND fv.directory = ?4
          WHERE fc.session_id = ?1
            AND (fv.id IS NULL OR fv.file_hash != fc.file_hash_after OR fv.command_hash != ?5)",
-        params![session_id, plugin_name, hook_name, directory, command_hash],
-        |row| row.get(0)
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to check validation needs: {}", e)))?;
+            params![session_id, plugin_name, hook_name, directory, command_hash],
+            |row| row.get(0),
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to check validation needs: {}", e))
+        })?;
 
     Ok(count > 0)
 }
@@ -2048,11 +2491,14 @@ pub fn get_files_for_validation(
     directory: &str,
 ) -> napi::Result<Vec<FileValidationStatus>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Get all files this session modified, with their latest validation status (if any)
-    let mut stmt = conn.prepare(
-        "SELECT
+    let mut stmt = conn
+        .prepare(
+            "SELECT
             fc.file_path,
             fc.file_hash_after as modification_hash,
             fv.file_hash as validation_hash,
@@ -2066,17 +2512,25 @@ pub fn get_files_for_validation(
            AND fv.directory = ?4
          WHERE fc.session_id = ?1
          GROUP BY fc.file_path
-         ORDER BY fc.file_path"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+         ORDER BY fc.file_path",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![session_id, plugin_name, hook_name, directory], |row| {
-        Ok(FileValidationStatus {
-            file_path: row.get(0)?,
-            modification_hash: row.get(1)?,
-            validation_hash: row.get(2).ok(),
-            validation_command_hash: row.get(3).ok(),
-        })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get files for validation: {}", e)))?;
+    let rows = stmt
+        .query_map(
+            params![session_id, plugin_name, hook_name, directory],
+            |row| {
+                Ok(FileValidationStatus {
+                    file_path: row.get(0)?,
+                    modification_hash: row.get(1)?,
+                    validation_hash: row.get(2).ok(),
+                    validation_command_hash: row.get(3).ok(),
+                })
+            },
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to get files for validation: {}", e))
+        })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2085,7 +2539,9 @@ pub fn get_files_for_validation(
 /// Useful for showing validation status across all hooks for file changes
 pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<SessionFileValidation>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, file_path, file_hash, plugin_name, hook_name, directory, command_hash, validated_at
@@ -2094,19 +2550,23 @@ pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<Session
          ORDER BY file_path, validated_at DESC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![session_id], |row| {
-        Ok(SessionFileValidation {
-            id: Some(row.get(0)?),
-            session_id: row.get(1)?,
-            file_path: row.get(2)?,
-            file_hash: row.get(3)?,
-            plugin_name: row.get(4)?,
-            hook_name: row.get(5)?,
-            directory: row.get(6)?,
-            command_hash: row.get(7)?,
-            validated_at: row.get(8)?,
+    let rows = stmt
+        .query_map(params![session_id], |row| {
+            Ok(SessionFileValidation {
+                id: Some(row.get(0)?),
+                session_id: row.get(1)?,
+                file_path: row.get(2)?,
+                file_hash: row.get(3)?,
+                plugin_name: row.get(4)?,
+                hook_name: row.get(5)?,
+                directory: row.get(6)?,
+                command_hash: row.get(7)?,
+                validated_at: row.get(8)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session validations: {}", e)))?;
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to get session validations: {}", e))
+        })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2123,7 +2583,9 @@ pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<Session
 ///            session_file_changes, session_file_validations, session_todos
 pub fn truncate_derived_tables() -> napi::Result<u32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Temporarily disable foreign keys for bulk deletion
     conn.execute("PRAGMA foreign_keys=OFF", [])
@@ -2148,18 +2610,25 @@ pub fn truncate_derived_tables() -> napi::Result<u32> {
     let mut total_deleted: u32 = 0;
 
     for table in tables {
-        let deleted = conn.execute(&format!("DELETE FROM {}", table), [])
-            .map_err(|e| napi::Error::from_reason(format!("Failed to truncate {}: {}", table, e)))?;
+        let deleted = conn
+            .execute(&format!("DELETE FROM {}", table), [])
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to truncate {}: {}", table, e))
+            })?;
         total_deleted += deleted as u32;
     }
 
     // Rebuild FTS index after deleting messages
-    conn.execute("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')", [])
-        .map_err(|e| napi::Error::from_reason(format!("Failed to rebuild FTS index: {}", e)))?;
+    conn.execute(
+        "INSERT INTO messages_fts(messages_fts) VALUES('rebuild')",
+        [],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to rebuild FTS index: {}", e)))?;
 
     // Re-enable foreign keys
-    conn.execute("PRAGMA foreign_keys=ON", [])
-        .map_err(|e| napi::Error::from_reason(format!("Failed to re-enable foreign keys: {}", e)))?;
+    conn.execute("PRAGMA foreign_keys=ON", []).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to re-enable foreign keys: {}", e))
+    })?;
 
     Ok(total_deleted)
 }
@@ -2178,14 +2647,18 @@ pub fn get_or_create_hook_attempt(
     directory: String,
 ) -> napi::Result<HookAttemptInfo> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Try to find existing record
-    let mut stmt = conn.prepare(
-        "SELECT consecutive_failures, max_attempts FROM hook_executions
+    let mut stmt = conn
+        .prepare(
+            "SELECT consecutive_failures, max_attempts FROM hook_executions
          WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
-         ORDER BY executed_at DESC LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+         ORDER BY executed_at DESC LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt.query_row(params![session_id, plugin, hook_name, directory], |row| {
         let consecutive_failures: i32 = row.get(0)?;
@@ -2207,7 +2680,10 @@ pub fn get_or_create_hook_attempt(
                 is_stuck: false,
             })
         }
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get hook attempt: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get hook attempt: {}",
+            e
+        ))),
     }
 }
 
@@ -2220,7 +2696,9 @@ pub fn increment_hook_failures(
     directory: String,
 ) -> napi::Result<HookAttemptInfo> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Update the most recent hook execution for this session/plugin/hook/directory
     conn.execute(
@@ -2231,14 +2709,17 @@ pub fn increment_hook_failures(
              ORDER BY executed_at DESC LIMIT 1
          )",
         params![session_id, plugin, hook_name, directory],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to increment failures: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to increment failures: {}", e)))?;
 
     // Get the updated values
-    let mut stmt = conn.prepare(
-        "SELECT consecutive_failures, max_attempts FROM hook_executions
+    let mut stmt = conn
+        .prepare(
+            "SELECT consecutive_failures, max_attempts FROM hook_executions
          WHERE session_id = ?1 AND hook_source = ?2 AND hook_name = ?3 AND directory = ?4
-         ORDER BY executed_at DESC LIMIT 1"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+         ORDER BY executed_at DESC LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
     stmt.query_row(params![session_id, plugin, hook_name, directory], |row| {
         let consecutive_failures: i32 = row.get(0)?;
@@ -2248,7 +2729,8 @@ pub fn increment_hook_failures(
             max_attempts,
             is_stuck: consecutive_failures >= max_attempts,
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get updated attempt info: {}", e)))
+    })
+    .map_err(|e| napi::Error::from_reason(format!("Failed to get updated attempt info: {}", e)))
 }
 
 /// Reset consecutive_failures to 0 (on success)
@@ -2260,7 +2742,9 @@ pub fn reset_hook_failures(
     directory: String,
 ) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     conn.execute(
         "UPDATE hook_executions SET consecutive_failures = 0
@@ -2270,7 +2754,8 @@ pub fn reset_hook_failures(
              ORDER BY executed_at DESC LIMIT 1
          )",
         params![session_id, plugin, hook_name, directory],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to reset failures: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to reset failures: {}", e)))?;
 
     Ok(())
 }
@@ -2285,7 +2770,9 @@ pub fn increase_hook_max_attempts(
     increase: i32,
 ) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     conn.execute(
         "UPDATE hook_executions SET max_attempts = max_attempts + ?5
@@ -2295,7 +2782,8 @@ pub fn increase_hook_max_attempts(
              ORDER BY executed_at DESC LIMIT 1
          )",
         params![session_id, plugin, hook_name, directory, increase],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to increase max attempts: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to increase max attempts: {}", e)))?;
 
     Ok(())
 }
@@ -2308,7 +2796,9 @@ pub fn increase_hook_max_attempts(
 #[napi]
 pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestration> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Cancel any existing running orchestration for the same session (if session_id provided)
     if let Some(ref session_id) = input.session_id {
@@ -2316,7 +2806,10 @@ pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestra
             "UPDATE orchestrations SET status = 'cancelled', completed_at = datetime('now')
              WHERE session_id = ?1 AND status = 'running'",
             params![session_id],
-        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel existing orchestration: {}", e)))?;
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to cancel existing orchestration: {}", e))
+        })?;
 
         // Also cancel any pending/running hooks from cancelled orchestrations
         conn.execute(
@@ -2325,7 +2818,8 @@ pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestra
                  SELECT id FROM orchestrations WHERE session_id = ?1 AND status = 'cancelled'
              ) AND status IN ('pending', 'running')",
             params![session_id],
-        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
     }
 
     let id = Uuid::new_v4().to_string();
@@ -2356,7 +2850,9 @@ pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestra
 #[napi]
 pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, session_id, hook_type, project_root, status, total_hooks, completed_hooks, failed_hooks, deferred_hooks, created_at, completed_at
@@ -2382,7 +2878,10 @@ pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
     match result {
         Ok(orch) => Ok(Some(orch)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(napi::Error::from_reason(format!("Failed to get orchestration: {}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get orchestration: {}",
+            e
+        ))),
     }
 }
 
@@ -2390,7 +2889,9 @@ pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
 #[napi]
 pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut sql_parts = vec![];
     let mut param_values: Vec<Box<dyn rusqlite::ToSql>> = vec![];
@@ -2443,7 +2944,9 @@ pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
 #[napi]
 pub fn cancel_orchestration(id: String) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Cancel the orchestration
     conn.execute(
@@ -2468,12 +2971,15 @@ pub fn cancel_orchestration(id: String) -> napi::Result<()> {
 #[napi]
 pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     // Ensure session exists before inserting (avoids FK constraint violation)
     if let Some(ref session_id) = input.session_id {
-        ensure_session_exists(&conn, session_id)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to ensure session exists: {}", e)))?;
+        ensure_session_exists(&conn, session_id).map_err(|e| {
+            napi::Error::from_reason(format!("Failed to ensure session exists: {}", e))
+        })?;
     }
 
     let id = Uuid::new_v4().to_string();
@@ -2492,38 +2998,42 @@ pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
 #[napi]
 pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
          FROM hook_executions WHERE status = 'pending' ORDER BY executed_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok(HookExecution {
-            id: Some(row.get(0)?),
-            orchestration_id: row.get(1)?,
-            session_id: row.get(2)?,
-            task_id: row.get(3)?,
-            hook_type: row.get(4)?,
-            hook_name: row.get(5)?,
-            hook_source: row.get(6)?,
-            directory: row.get(7)?,
-            duration_ms: row.get(8)?,
-            exit_code: row.get(9)?,
-            passed: row.get::<_, i32>(10)? != 0,
-            output: row.get(11)?,
-            error: row.get(12)?,
-            if_changed: row.get(13)?,
-            command: row.get(14)?,
-            executed_at: row.get(15)?,
-            status: row.get(16)?,
-            consecutive_failures: row.get(17)?,
-            max_attempts: row.get(18)?,
-            pid: row.get(19)?,
-            plugin_root: row.get(20)?,
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(HookExecution {
+                id: Some(row.get(0)?),
+                orchestration_id: row.get(1)?,
+                session_id: row.get(2)?,
+                task_id: row.get(3)?,
+                hook_type: row.get(4)?,
+                hook_name: row.get(5)?,
+                hook_source: row.get(6)?,
+                directory: row.get(7)?,
+                duration_ms: row.get(8)?,
+                exit_code: row.get(9)?,
+                passed: row.get::<_, i32>(10)? != 0,
+                output: row.get(11)?,
+                error: row.get(12)?,
+                if_changed: row.get(13)?,
+                command: row.get(14)?,
+                executed_at: row.get(15)?,
+                status: row.get(16)?,
+                consecutive_failures: row.get(17)?,
+                max_attempts: row.get(18)?,
+                pid: row.get(19)?,
+                plugin_root: row.get(20)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get pending hooks: {}", e)))?;
+        .map_err(|e| napi::Error::from_reason(format!("Failed to get pending hooks: {}", e)))?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2532,12 +3042,15 @@ pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
 #[napi]
 pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     conn.execute(
         "UPDATE hook_executions SET status = ?2 WHERE id = ?1",
         params![id, status],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to update hook status: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to update hook status: {}", e)))?;
 
     Ok(())
 }
@@ -2546,38 +3059,44 @@ pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
 #[napi]
 pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
          FROM hook_executions WHERE orchestration_id = ?1 ORDER BY executed_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![orchestration_id], |row| {
-        Ok(HookExecution {
-            id: Some(row.get(0)?),
-            orchestration_id: row.get(1)?,
-            session_id: row.get(2)?,
-            task_id: row.get(3)?,
-            hook_type: row.get(4)?,
-            hook_name: row.get(5)?,
-            hook_source: row.get(6)?,
-            directory: row.get(7)?,
-            duration_ms: row.get(8)?,
-            exit_code: row.get(9)?,
-            passed: row.get::<_, i32>(10)? != 0,
-            output: row.get(11)?,
-            error: row.get(12)?,
-            if_changed: row.get(13)?,
-            command: row.get(14)?,
-            executed_at: row.get(15)?,
-            status: row.get(16)?,
-            consecutive_failures: row.get(17)?,
-            max_attempts: row.get(18)?,
-            pid: row.get(19)?,
-            plugin_root: row.get(20)?,
+    let rows = stmt
+        .query_map(params![orchestration_id], |row| {
+            Ok(HookExecution {
+                id: Some(row.get(0)?),
+                orchestration_id: row.get(1)?,
+                session_id: row.get(2)?,
+                task_id: row.get(3)?,
+                hook_type: row.get(4)?,
+                hook_name: row.get(5)?,
+                hook_source: row.get(6)?,
+                directory: row.get(7)?,
+                duration_ms: row.get(8)?,
+                exit_code: row.get(9)?,
+                passed: row.get::<_, i32>(10)? != 0,
+                output: row.get(11)?,
+                error: row.get(12)?,
+                if_changed: row.get(13)?,
+                command: row.get(14)?,
+                executed_at: row.get(15)?,
+                status: row.get(16)?,
+                consecutive_failures: row.get(17)?,
+                max_attempts: row.get(18)?,
+                pid: row.get(19)?,
+                plugin_root: row.get(20)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get orchestration hooks: {}", e)))?;
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to get orchestration hooks: {}", e))
+        })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2586,38 +3105,44 @@ pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<Hoo
 #[napi]
 pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, orchestration_id, session_id, task_id, hook_type, hook_name, hook_source, directory, duration_ms, exit_code, passed, output, error, if_changed, command, executed_at, status, consecutive_failures, max_attempts, pid, plugin_root
          FROM hook_executions WHERE session_id = ?1 AND status IN ('pending', 'running', 'failed') ORDER BY executed_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map(params![session_id], |row| {
-        Ok(HookExecution {
-            id: Some(row.get(0)?),
-            orchestration_id: row.get(1)?,
-            session_id: row.get(2)?,
-            task_id: row.get(3)?,
-            hook_type: row.get(4)?,
-            hook_name: row.get(5)?,
-            hook_source: row.get(6)?,
-            directory: row.get(7)?,
-            duration_ms: row.get(8)?,
-            exit_code: row.get(9)?,
-            passed: row.get::<_, i32>(10)? != 0,
-            output: row.get(11)?,
-            error: row.get(12)?,
-            if_changed: row.get(13)?,
-            command: row.get(14)?,
-            executed_at: row.get(15)?,
-            status: row.get(16)?,
-            consecutive_failures: row.get(17)?,
-            max_attempts: row.get(18)?,
-            pid: row.get(19)?,
-            plugin_root: row.get(20)?,
+    let rows = stmt
+        .query_map(params![session_id], |row| {
+            Ok(HookExecution {
+                id: Some(row.get(0)?),
+                orchestration_id: row.get(1)?,
+                session_id: row.get(2)?,
+                task_id: row.get(3)?,
+                hook_type: row.get(4)?,
+                hook_name: row.get(5)?,
+                hook_source: row.get(6)?,
+                directory: row.get(7)?,
+                duration_ms: row.get(8)?,
+                exit_code: row.get(9)?,
+                passed: row.get::<_, i32>(10)? != 0,
+                output: row.get(11)?,
+                error: row.get(12)?,
+                if_changed: row.get(13)?,
+                command: row.get(14)?,
+                executed_at: row.get(15)?,
+                status: row.get(16)?,
+                consecutive_failures: row.get(17)?,
+                max_attempts: row.get(18)?,
+                pid: row.get(19)?,
+                plugin_root: row.get(20)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to get session pending hooks: {}", e)))?;
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to get session pending hooks: {}", e))
+        })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
@@ -2626,12 +3151,15 @@ pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExe
 #[napi]
 pub fn fail_hook_execution(id: String, error_message: String) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     conn.execute(
         "UPDATE hook_executions SET status = 'failed', error = ?2, passed = 0 WHERE id = ?1",
         params![id, error_message],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to fail hook: {}", e)))?;
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to fail hook: {}", e)))?;
 
     Ok(())
 }
@@ -2646,7 +3174,9 @@ pub fn complete_hook_execution(
     duration_ms: i32,
 ) -> napi::Result<()> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let status = if success { "completed" } else { "failed" };
     let exit_code = if success { 0 } else { 1 };
@@ -2667,7 +3197,9 @@ pub fn complete_hook_execution(
 #[napi]
 pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let id = Uuid::new_v4().to_string();
 
@@ -2692,25 +3224,29 @@ pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
 #[napi]
 pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook>> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
         "SELECT id, orchestration_id, plugin, hook_name, directory, if_changed, command, queued_at
          FROM pending_hooks WHERE orchestration_id = ?1 ORDER BY queued_at ASC"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
-    let rows = stmt.query_map([orchestration_id], |row| {
-        Ok(QueuedHook {
-            id: row.get(0)?,
-            orchestration_id: row.get(1)?,
-            plugin: row.get(2)?,
-            hook_name: row.get(3)?,
-            directory: row.get(4)?,
-            if_changed: row.get(5)?,
-            command: row.get(6)?,
-            queued_at: row.get(7)?,
+    let rows = stmt
+        .query_map([orchestration_id], |row| {
+            Ok(QueuedHook {
+                id: row.get(0)?,
+                orchestration_id: row.get(1)?,
+                plugin: row.get(2)?,
+                hook_name: row.get(3)?,
+                directory: row.get(4)?,
+                if_changed: row.get(5)?,
+                command: row.get(6)?,
+                queued_at: row.get(7)?,
+            })
         })
-    }).map_err(|e| napi::Error::from_reason(format!("Failed to query queued hooks: {}", e)))?;
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query queued hooks: {}", e)))?;
 
     let mut hooks = Vec::new();
     for row in rows {
@@ -2724,12 +3260,16 @@ pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook
 #[napi]
 pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
     let db = db::get_db()?;
-    let conn = db.lock().map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let deleted = conn.execute(
-        "DELETE FROM pending_hooks WHERE orchestration_id = ?1",
-        params![orchestration_id],
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to delete queued hooks: {}", e)))?;
+    let deleted = conn
+        .execute(
+            "DELETE FROM pending_hooks WHERE orchestration_id = ?1",
+            params![orchestration_id],
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to delete queued hooks: {}", e)))?;
 
     Ok(deleted as u32)
 }

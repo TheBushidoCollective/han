@@ -50,8 +50,7 @@ pub fn get_git_branch(directory: String) -> Option<String> {
         return None;
     }
 
-    head.referent_name()
-        .map(|name| name.shorten().to_string())
+    head.referent_name().map(|name| name.shorten().to_string())
 }
 
 /// Get git repository root (equivalent to `git rev-parse --show-toplevel`)
@@ -68,9 +67,7 @@ pub fn get_git_root(directory: String) -> Option<String> {
 #[napi]
 pub fn get_git_common_dir(directory: String) -> Option<String> {
     let repo = open_repo(&directory).ok()?;
-    repo.common_dir()
-        .to_str()
-        .map(|s| s.to_string())
+    repo.common_dir().to_str().map(|s| s.to_string())
 }
 
 /// Get remote origin URL
@@ -78,7 +75,8 @@ pub fn get_git_common_dir(directory: String) -> Option<String> {
 pub fn get_git_remote_url(directory: String) -> Option<String> {
     let repo = open_repo(&directory).ok()?;
     let remote = repo.find_remote("origin").ok()?;
-    remote.url(gix::remote::Direction::Fetch)
+    remote
+        .url(gix::remote::Direction::Fetch)
         .and_then(|url| url.to_bstring().to_str().ok().map(|s| s.to_string()))
 }
 
@@ -106,26 +104,19 @@ pub fn get_git_info(directory: String) -> GitInfo {
     };
 
     // Get current branch
-    let branch = repo
-        .head()
-        .ok()
-        .and_then(|head| {
-            if head.is_detached() {
-                None
-            } else {
-                head.referent_name()
-                    .map(|name| name.shorten().to_string())
-            }
-        });
+    let branch = repo.head().ok().and_then(|head| {
+        if head.is_detached() {
+            None
+        } else {
+            head.referent_name().map(|name| name.shorten().to_string())
+        }
+    });
 
     // Get remote URL
-    let remote = repo
-        .find_remote("origin")
-        .ok()
-        .and_then(|r| {
-            r.url(gix::remote::Direction::Fetch)
-                .and_then(|url| url.to_bstring().to_str().ok().map(|s| s.to_string()))
-        });
+    let remote = repo.find_remote("origin").ok().and_then(|r| {
+        r.url(gix::remote::Direction::Fetch)
+            .and_then(|url| url.to_bstring().to_str().ok().map(|s| s.to_string()))
+    });
 
     // Extract repo name from remote URL
     let repo_name: Option<String> = remote.as_ref().and_then(|r: &String| {
@@ -148,7 +139,8 @@ pub fn git_ls_files(directory: String) -> napi::Result<Vec<String>> {
     let repo = open_repo(&directory)
         .map_err(|e| napi::Error::from_reason(format!("Not a git repository: {}", e)))?;
 
-    let index = repo.index()
+    let index = repo
+        .index()
         .map_err(|e| napi::Error::from_reason(format!("Failed to read index: {}", e)))?;
 
     let files: Vec<String> = index
@@ -179,16 +171,13 @@ pub fn git_worktree_list(directory: String) -> napi::Result<Vec<GitWorktree>> {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "main".to_string());
 
-        let head = repo
-            .head()
-            .ok()
-            .and_then(|h| {
-                if h.is_detached() {
-                    h.id().map(|id| id.to_hex().to_string())
-                } else {
-                    h.referent_name().map(|n| n.shorten().to_string())
-                }
-            });
+        let head = repo.head().ok().and_then(|h| {
+            if h.is_detached() {
+                h.id().map(|id| id.to_hex().to_string())
+            } else {
+                h.referent_name().map(|n| n.shorten().to_string())
+            }
+        });
 
         worktrees.push(GitWorktree {
             path: path_str,
@@ -220,20 +209,18 @@ pub fn git_worktree_list(directory: String) -> napi::Result<Vec<GitWorktree>> {
 
                         // Read HEAD to get current branch/commit
                         let head_file = wt_git_dir.join("HEAD");
-                        let head = std::fs::read_to_string(&head_file)
-                            .ok()
-                            .map(|content| {
-                                let content = content.trim();
-                                if content.starts_with("ref: ") {
-                                    content
-                                        .strip_prefix("ref: refs/heads/")
-                                        .unwrap_or(content.strip_prefix("ref: ").unwrap_or(content))
-                                        .to_string()
-                                } else {
-                                    // Detached HEAD - show short hash
-                                    content.chars().take(8).collect()
-                                }
-                            });
+                        let head = std::fs::read_to_string(&head_file).ok().map(|content| {
+                            let content = content.trim();
+                            if content.starts_with("ref: ") {
+                                content
+                                    .strip_prefix("ref: refs/heads/")
+                                    .unwrap_or(content.strip_prefix("ref: ").unwrap_or(content))
+                                    .to_string()
+                            } else {
+                                // Detached HEAD - show short hash
+                                content.chars().take(8).collect()
+                            }
+                        });
 
                         // Check if locked
                         let is_locked = wt_git_dir.join("locked").exists();
@@ -277,10 +264,12 @@ pub fn git_log(directory: String, max_count: Option<u32>) -> napi::Result<Vec<Gi
     let repo = open_repo(&directory)
         .map_err(|e| napi::Error::from_reason(format!("Not a git repository: {}", e)))?;
 
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get HEAD: {}", e)))?;
 
-    let head_id = head.id()
+    let head_id = head
+        .id()
         .ok_or_else(|| napi::Error::from_reason("HEAD has no commit"))?;
 
     let limit = max_count.unwrap_or(100) as usize;
@@ -294,22 +283,27 @@ pub fn git_log(directory: String, max_count: Option<u32>) -> napi::Result<Vec<Gi
         .map_err(|e| napi::Error::from_reason(format!("Failed to walk commits: {}", e)))?;
 
     for info in walk.by_ref().take(limit) {
-        let info = info.map_err(|e| napi::Error::from_reason(format!("Failed to read commit: {}", e)))?;
-        let commit = info.id().object()
+        let info =
+            info.map_err(|e| napi::Error::from_reason(format!("Failed to read commit: {}", e)))?;
+        let commit = info
+            .id()
+            .object()
             .map_err(|e| napi::Error::from_reason(format!("Failed to get commit object: {}", e)))?
             .into_commit();
 
         let hash = info.id().to_hex().to_string();
         let short_hash: String = hash.chars().take(8).collect();
 
-        let message = commit.message_raw()
+        let message = commit
+            .message_raw()
             .map_err(|e| napi::Error::from_reason(format!("Failed to read message: {}", e)))?
             .to_str()
             .ok()
             .map(|s| s.lines().next().unwrap_or("").to_string())
             .unwrap_or_default();
 
-        let author = commit.author()
+        let author = commit
+            .author()
             .map_err(|e| napi::Error::from_reason(format!("Failed to read author: {}", e)))?;
 
         let author_name = author.name.to_str().ok().unwrap_or("").to_string();
@@ -339,23 +333,28 @@ pub fn git_show_file(directory: String, commit: String, file_path: String) -> na
         .map_err(|e| napi::Error::from_reason(format!("Not a git repository: {}", e)))?;
 
     // Parse commit reference
-    let rev = repo.rev_parse_single(commit.as_str())
+    let rev = repo
+        .rev_parse_single(commit.as_str())
         .map_err(|e| napi::Error::from_reason(format!("Invalid commit reference: {}", e)))?;
 
-    let commit_obj = rev.object()
+    let commit_obj = rev
+        .object()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get object: {}", e)))?
         .peel_to_kind(gix::object::Kind::Commit)
         .map_err(|e| napi::Error::from_reason(format!("Not a commit: {}", e)))?
         .into_commit();
 
-    let tree = commit_obj.tree()
+    let tree = commit_obj
+        .tree()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get tree: {}", e)))?;
 
-    let entry = tree.lookup_entry_by_path(file_path.as_str())
+    let entry = tree
+        .lookup_entry_by_path(file_path.as_str())
         .map_err(|e| napi::Error::from_reason(format!("Failed to lookup path: {}", e)))?
         .ok_or_else(|| napi::Error::from_reason(format!("File not found: {}", file_path)))?;
 
-    let blob = entry.object()
+    let blob = entry
+        .object()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get blob: {}", e)))?;
 
     String::from_utf8(blob.data.to_vec())
@@ -389,12 +388,15 @@ pub fn git_diff_stat(
         .map_err(|e| napi::Error::from_reason(format!("Not a git repository: {}", e)))?;
 
     // Parse commit references
-    let from_rev = repo.rev_parse_single(from_commit.as_str())
+    let from_rev = repo
+        .rev_parse_single(from_commit.as_str())
         .map_err(|e| napi::Error::from_reason(format!("Invalid from commit: {}", e)))?;
-    let to_rev = repo.rev_parse_single(to_commit.as_str())
+    let to_rev = repo
+        .rev_parse_single(to_commit.as_str())
         .map_err(|e| napi::Error::from_reason(format!("Invalid to commit: {}", e)))?;
 
-    let from_tree = from_rev.object()
+    let from_tree = from_rev
+        .object()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get from object: {}", e)))?
         .peel_to_kind(gix::object::Kind::Commit)
         .map_err(|e| napi::Error::from_reason(format!("From is not a commit: {}", e)))?
@@ -402,7 +404,8 @@ pub fn git_diff_stat(
         .tree()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get from tree: {}", e)))?;
 
-    let to_tree = to_rev.object()
+    let to_tree = to_rev
+        .object()
         .map_err(|e| napi::Error::from_reason(format!("Failed to get to object: {}", e)))?
         .peel_to_kind(gix::object::Kind::Commit)
         .map_err(|e| napi::Error::from_reason(format!("To is not a commit: {}", e)))?
@@ -423,8 +426,12 @@ pub fn git_diff_stat(
         paths: &mut std::collections::HashSet<String>,
     ) -> Result<(), napi::Error> {
         for entry in tree.iter() {
-            let entry = entry.map_err(|e| napi::Error::from_reason(format!("Failed to read entry: {}", e)))?;
-            let name = entry.filename().to_str().ok()
+            let entry = entry
+                .map_err(|e| napi::Error::from_reason(format!("Failed to read entry: {}", e)))?;
+            let name = entry
+                .filename()
+                .to_str()
+                .ok()
                 .ok_or_else(|| napi::Error::from_reason("Invalid UTF-8 in filename"))?;
             let path = if prefix.is_empty() {
                 name.to_string()
@@ -435,7 +442,8 @@ pub fn git_diff_stat(
             if entry.mode().is_blob() {
                 paths.insert(path);
             } else if entry.mode().is_tree() {
-                let subtree = entry.object()
+                let subtree = entry
+                    .object()
                     .map_err(|e| napi::Error::from_reason(format!("Failed to get subtree: {}", e)))?
                     .into_tree();
                 collect_blob_paths(repo, &subtree, &path, paths)?;
@@ -455,8 +463,12 @@ pub fn git_diff_stat(
         paths: &mut std::collections::HashMap<String, gix::ObjectId>,
     ) -> Result<(), napi::Error> {
         for entry in tree.iter() {
-            let entry = entry.map_err(|e| napi::Error::from_reason(format!("Failed to read entry: {}", e)))?;
-            let name = entry.filename().to_str().ok()
+            let entry = entry
+                .map_err(|e| napi::Error::from_reason(format!("Failed to read entry: {}", e)))?;
+            let name = entry
+                .filename()
+                .to_str()
+                .ok()
                 .ok_or_else(|| napi::Error::from_reason("Invalid UTF-8 in filename"))?;
             let path = if prefix.is_empty() {
                 name.to_string()
@@ -467,7 +479,8 @@ pub fn git_diff_stat(
             if entry.mode().is_blob() {
                 paths.insert(path, entry.oid().to_owned());
             } else if entry.mode().is_tree() {
-                let subtree = entry.object()
+                let subtree = entry
+                    .object()
                     .map_err(|e| napi::Error::from_reason(format!("Failed to get subtree: {}", e)))?
                     .into_tree();
                 collect_blob_paths_with_oids(repo, &subtree, &path, paths)?;

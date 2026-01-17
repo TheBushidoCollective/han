@@ -147,7 +147,10 @@ pub fn analyze_sentiment(message: &str) -> Option<SentimentResult> {
     // Add negative words signal if sentiment is negative
     let neg_score = scores.get("neg").copied().unwrap_or(0.0);
     if neg_score > 0.1 {
-        signals.push(format!("Negative sentiment (score: {:.2})", sentiment_score));
+        signals.push(format!(
+            "Negative sentiment (score: {:.2})",
+            sentiment_score
+        ));
     }
 
     // Calculate frustration score
@@ -161,18 +164,19 @@ pub fn analyze_sentiment(message: &str) -> Option<SentimentResult> {
 
     // Determine if frustration was detected
     const FRUSTRATION_THRESHOLD: f64 = 2.0;
-    let (frustration_score, frustration_level) = if total_frustration >= FRUSTRATION_THRESHOLD || sentiment_score <= -2.0 {
-        let level = if total_frustration >= 6.0 || sentiment_score <= -4.0 {
-            FrustrationLevel::High
-        } else if total_frustration >= 3.0 || sentiment_score <= -3.0 {
-            FrustrationLevel::Moderate
+    let (frustration_score, frustration_level) =
+        if total_frustration >= FRUSTRATION_THRESHOLD || sentiment_score <= -2.0 {
+            let level = if total_frustration >= 6.0 || sentiment_score <= -4.0 {
+                FrustrationLevel::High
+            } else if total_frustration >= 3.0 || sentiment_score <= -3.0 {
+                FrustrationLevel::Moderate
+            } else {
+                FrustrationLevel::Low
+            };
+            (Some(total_frustration), Some(level))
         } else {
-            FrustrationLevel::Low
+            (None, None)
         };
-        (Some(total_frustration), Some(level))
-    } else {
-        (None, None)
-    };
 
     Some(SentimentResult {
         sentiment_score,
@@ -216,7 +220,10 @@ mod tests {
     #[test]
     fn test_negative_command() {
         let result = analyze_sentiment("Just stop. Forget it.").unwrap();
-        assert!(result.signals.iter().any(|s| s.contains("negative command")));
+        assert!(result
+            .signals
+            .iter()
+            .any(|s| s.contains("negative command")));
         assert!(result.frustration_level.is_some());
     }
 

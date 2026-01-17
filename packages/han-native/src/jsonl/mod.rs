@@ -191,7 +191,11 @@ pub fn jsonl_read_page(
                 let remaining_newlines = bytecount::count(&mmap[i + 1..], b'\n');
                 let total_lines = line_number + remaining_newlines as u32;
                 let has_trailing = mmap.last().map(|&b| b == b'\n').unwrap_or(true);
-                let total = if has_trailing { total_lines } else { total_lines + 1 };
+                let total = if has_trailing {
+                    total_lines
+                } else {
+                    total_lines + 1
+                };
 
                 return Ok(PaginatedResult {
                     lines,

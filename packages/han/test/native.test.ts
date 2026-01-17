@@ -6,7 +6,19 @@ import { describe, expect, test } from "bun:test";
 // We need to test the module behavior, but we can't easily mock require()
 // So we'll test the exported functions and their error handling
 
-describe("native module loader", () => {
+// Check if native module is available (not built in CI without full release build)
+let nativeAvailable = false;
+try {
+	const { getNativeModule } = await import("../lib/native.ts");
+	getNativeModule();
+	nativeAvailable = true;
+} catch {
+	// Native module not available - skip native-dependent tests
+}
+
+const describeNative = nativeAvailable ? describe : describe.skip;
+
+describeNative("native module loader", () => {
 	describe("getNativeModule", () => {
 		test(
 			"returns native module when available",

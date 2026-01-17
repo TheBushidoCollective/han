@@ -160,6 +160,12 @@ function loadNativeModule(): NativeModule | null {
 	// If we've already tried and failed permanently, return null
 	if (_loadError) return null;
 
+	// Skip native module loading in CI when not built
+	if (process.env.SKIP_NATIVE === "true") {
+		_loadError = new Error("Native module skipped (SKIP_NATIVE=true)");
+		return null;
+	}
+
 	// In dev mode, check if rebuild is needed
 	ensureNativeBuilt();
 

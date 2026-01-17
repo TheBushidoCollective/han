@@ -60,9 +60,9 @@ pub fn build_task_timeline() -> TaskTimeline {
     };
 
     // Query all tasks with their time ranges
-    let mut stmt = match conn.prepare(
-        "SELECT task_id, started_at, completed_at FROM tasks ORDER BY started_at ASC"
-    ) {
+    let mut stmt = match conn
+        .prepare("SELECT task_id, started_at, completed_at FROM tasks ORDER BY started_at ASC")
+    {
         Ok(s) => s,
         Err(_) => return timeline,
     };

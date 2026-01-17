@@ -72,22 +72,22 @@ pub struct ProjectInput {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Session {
-    pub id: String,  // This IS the session UUID from JSONL
+    pub id: String, // This IS the session UUID from JSONL
     pub project_id: Option<String>,
     pub status: String,
     pub transcript_path: Option<String>,
-    pub slug: Option<String>,  // Human-readable session name (e.g., "snug-dreaming-knuth")
+    pub slug: Option<String>, // Human-readable session name (e.g., "snug-dreaming-knuth")
     pub last_indexed_line: Option<i32>,
 }
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionInput {
-    pub id: String,  // The session UUID from JSONL filename
+    pub id: String, // The session UUID from JSONL filename
     pub project_id: Option<String>,
     pub status: Option<String>,
     pub transcript_path: Option<String>,
-    pub slug: Option<String>,  // Human-readable session name (e.g., "snug-dreaming-knuth")
+    pub slug: Option<String>, // Human-readable session name (e.g., "snug-dreaming-knuth")
 }
 
 // ============================================================================
@@ -100,9 +100,9 @@ pub struct SessionInput {
 pub struct SessionFile {
     pub id: String,
     pub session_id: String,
-    pub file_type: String,  // 'main', 'agent', 'han_events'
+    pub file_type: String, // 'main', 'agent', 'han_events'
     pub file_path: String,
-    pub agent_id: Option<String>,  // For agent files, the 8-char agent ID
+    pub agent_id: Option<String>, // For agent files, the 8-char agent ID
     pub last_indexed_line: Option<i32>,
     pub last_indexed_at: Option<String>,
     pub created_at: Option<String>,
@@ -150,7 +150,7 @@ pub struct SessionCompact {
     pub raw_json: Option<String>,
     pub timestamp: String,
     pub line_number: i32,
-    pub compact_type: Option<String>,  // 'auto_compact', 'compact', 'continuation'
+    pub compact_type: Option<String>, // 'auto_compact', 'compact', 'continuation'
     pub indexed_at: Option<String>,
 }
 
@@ -175,8 +175,8 @@ pub struct SessionCompactInput {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TodoItem {
     pub content: String,
-    pub status: String,  // 'pending', 'in_progress', 'completed'
-    pub active_form: String,  // The "...ing" form shown when active
+    pub status: String,      // 'pending', 'in_progress', 'completed'
+    pub active_form: String, // The "...ing" form shown when active
 }
 
 #[napi(object)]
@@ -185,7 +185,7 @@ pub struct SessionTodos {
     pub id: String,
     pub session_id: String,
     pub message_id: String,
-    pub todos_json: String,  // JSON array of TodoItem
+    pub todos_json: String, // JSON array of TodoItem
     pub timestamp: String,
     pub line_number: i32,
     pub indexed_at: Option<String>,
@@ -196,7 +196,7 @@ pub struct SessionTodos {
 pub struct SessionTodosInput {
     pub session_id: String,
     pub message_id: String,
-    pub todos_json: String,  // JSON array of TodoItem
+    pub todos_json: String, // JSON array of TodoItem
     pub timestamp: String,
     pub line_number: i32,
 }
@@ -209,10 +209,10 @@ pub struct SessionTodosInput {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
-    pub id: String,  // This IS the message UUID from JSONL
+    pub id: String, // This IS the message UUID from JSONL
     pub session_id: String,
-    pub agent_id: Option<String>,  // NULL for main conversation, agent ID for agent messages
-    pub parent_id: Option<String>,  // For result messages, references the call message id
+    pub agent_id: Option<String>, // NULL for main conversation, agent ID for agent messages
+    pub parent_id: Option<String>, // For result messages, references the call message id
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
@@ -222,23 +222,23 @@ pub struct Message {
     pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
-    pub source_file_name: Option<String>,  // Basename of source file
-    pub source_file_type: Option<String>,  // Type: 'main', 'agent', 'han_events'
+    pub source_file_name: Option<String>, // Basename of source file
+    pub source_file_type: Option<String>, // Type: 'main', 'agent', 'han_events'
     // Sentiment analysis (computed during indexing for user messages)
-    pub sentiment_score: Option<f64>,  // Raw sentiment score (typically -5 to +5)
-    pub sentiment_level: Option<String>,  // 'positive', 'neutral', 'negative'
-    pub frustration_score: Option<f64>,  // Frustration score (0-10) if detected
-    pub frustration_level: Option<String>,  // 'low', 'moderate', 'high' if detected
+    pub sentiment_score: Option<f64>, // Raw sentiment score (typically -5 to +5)
+    pub sentiment_level: Option<String>, // 'positive', 'neutral', 'negative'
+    pub frustration_score: Option<f64>, // Frustration score (0-10) if detected
+    pub frustration_level: Option<String>, // 'low', 'moderate', 'high' if detected
     pub indexed_at: Option<String>,
 }
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessageInput {
-    pub id: String,  // The message UUID from JSONL
+    pub id: String, // The message UUID from JSONL
     pub session_id: String,
-    pub agent_id: Option<String>,  // NULL for main conversation, agent ID for agent messages
-    pub parent_id: Option<String>,  // For result messages, references the call message id
+    pub agent_id: Option<String>, // NULL for main conversation, agent ID for agent messages
+    pub parent_id: Option<String>, // For result messages, references the call message id
     pub message_type: String,
     pub role: Option<String>,
     pub content: Option<String>,
@@ -248,8 +248,8 @@ pub struct MessageInput {
     pub raw_json: Option<String>, // Original JSONL line for raw view
     pub timestamp: String,
     pub line_number: i32,
-    pub source_file_name: Option<String>,  // Basename of source file
-    pub source_file_type: Option<String>,  // Type: 'main', 'agent', 'han_events'
+    pub source_file_name: Option<String>, // Basename of source file
+    pub source_file_type: Option<String>, // Type: 'main', 'agent', 'han_events'
     // Sentiment analysis (computed by TypeScript during indexing)
     pub sentiment_score: Option<f64>,
     pub sentiment_level: Option<String>,
@@ -349,10 +349,10 @@ pub struct TaskMetrics {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Orchestration {
     pub id: String,
-    pub session_id: Option<String>,  // Optional link to Claude session
-    pub hook_type: String,  // 'Stop', 'SessionStart', etc.
+    pub session_id: Option<String>, // Optional link to Claude session
+    pub hook_type: String,          // 'Stop', 'SessionStart', etc.
     pub project_root: String,
-    pub status: String,  // 'running', 'completed', 'failed'
+    pub status: String, // 'running', 'completed', 'failed'
     pub total_hooks: i32,
     pub completed_hooks: i32,
     pub failed_hooks: i32,
@@ -364,8 +364,8 @@ pub struct Orchestration {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OrchestrationInput {
-    pub session_id: Option<String>,  // Optional link to Claude session
-    pub hook_type: String,  // 'Stop', 'SessionStart', etc.
+    pub session_id: Option<String>, // Optional link to Claude session
+    pub hook_type: String,          // 'Stop', 'SessionStart', etc.
     pub project_root: String,
 }
 
@@ -388,8 +388,8 @@ pub struct OrchestrationUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HookExecution {
     pub id: Option<String>,
-    pub orchestration_id: Option<String>,  // Links to orchestration run
-    pub session_id: Option<String>,  // Optional: for backwards compat
+    pub orchestration_id: Option<String>, // Links to orchestration run
+    pub session_id: Option<String>,       // Optional: for backwards compat
     pub task_id: Option<String>,
     pub hook_type: String,
     pub hook_name: String,
@@ -400,15 +400,15 @@ pub struct HookExecution {
     pub passed: bool,
     pub output: Option<String>,
     pub error: Option<String>,
-    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub if_changed: Option<String>, // JSON array of glob patterns
     pub command: Option<String>,
     pub executed_at: Option<String>,
     // Deferred execution fields
-    pub status: Option<String>,  // 'pending', 'running', 'completed', 'failed'
+    pub status: Option<String>, // 'pending', 'running', 'completed', 'failed'
     pub consecutive_failures: Option<i32>,
     pub max_attempts: Option<i32>,
-    pub pid: Option<i32>,  // Process ID for stale hook detection
-    pub plugin_root: Option<String>,  // Plugin root path for CLAUDE_PLUGIN_ROOT
+    pub pid: Option<i32>,            // Process ID for stale hook detection
+    pub plugin_root: Option<String>, // Plugin root path for CLAUDE_PLUGIN_ROOT
 }
 
 #[napi(object)]
@@ -425,7 +425,7 @@ pub struct HookExecutionInput {
     pub passed: bool,
     pub output: Option<String>,
     pub error: Option<String>,
-    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub if_changed: Option<String>, // JSON array of glob patterns
     pub command: Option<String>,
 }
 
@@ -439,23 +439,23 @@ pub struct HookExecutionInput {
 pub struct HookAttemptInfo {
     pub consecutive_failures: i32,
     pub max_attempts: i32,
-    pub is_stuck: bool,  // consecutive_failures >= max_attempts
+    pub is_stuck: bool, // consecutive_failures >= max_attempts
 }
 
 /// Input for queuing a pending hook
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PendingHookInput {
-    pub orchestration_id: String,  // Links to orchestration run
-    pub session_id: Option<String>,  // Optional: for backwards compat
+    pub orchestration_id: String,   // Links to orchestration run
+    pub session_id: Option<String>, // Optional: for backwards compat
     pub hook_type: String,
     pub hook_name: String,
     pub plugin: String,
     pub directory: String,
     pub command: String,
     pub if_changed: Option<String>,  // JSON array of glob patterns
-    pub pid: Option<i32>,  // Process ID for stale hook detection
-    pub plugin_root: Option<String>,  // Plugin root path for CLAUDE_PLUGIN_ROOT
+    pub pid: Option<i32>,            // Process ID for stale hook detection
+    pub plugin_root: Option<String>, // Plugin root path for CLAUDE_PLUGIN_ROOT
 }
 
 /// Input for queueing a hook in pending_hooks table (for --check mode)
@@ -466,7 +466,7 @@ pub struct QueuedHookInput {
     pub plugin: String,
     pub hook_name: String,
     pub directory: String,
-    pub if_changed: Option<String>,  // JSON array of glob patterns
+    pub if_changed: Option<String>, // JSON array of glob patterns
     pub command: String,
 }
 
