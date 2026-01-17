@@ -2438,7 +2438,7 @@ type Session implements Node {
     last: Int
   ): MessageConnection
 
-  """Session name for URL routing (default is UUID, can be renamed)"""
+  """Display name for session (slug if available, otherwise sessionId)"""
   name: String
 
   """The project this session belongs to"""
@@ -2469,6 +2469,9 @@ type Session implements Node {
 
   """Session ID"""
   sessionId: String
+
+  """Human-readable session name (e.g., 'snug-dreaming-knuth')"""
+  slug: String
 
   """Session start time"""
   startedAt: DateTime

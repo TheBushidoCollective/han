@@ -12,7 +12,6 @@ import { graphql, useFragment, useSubscription } from 'react-relay';
 import { Link } from 'react-router-dom';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
 import { Badge, HStack, Text, theme, VStack } from '../atoms/index.ts';
-import { formatRepoUrl } from '../pages/RepoListPage/utils.ts';
 import type { SessionListItem_session$key } from './__generated__/SessionListItem_session.graphql.ts';
 import type { SessionListItemSubscription } from './__generated__/SessionListItemSubscription.graphql.ts';
 
@@ -218,16 +217,14 @@ export function SessionListItem({
         <VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
           <HStack gap="sm" align="center">
             <Text size="md" weight="medium" truncate>
+              {session.name}
+            </Text>
+            <Text size="sm" color="secondary" truncate>
               {session.projectName}
             </Text>
             {session.worktreeName && (
-              <Text size="xs" color="secondary">
+              <Text size="xs" color="muted">
                 {session.worktreeName}
-              </Text>
-            )}
-            {session.projectId && (
-              <Text size="xs" color="muted" style={{ fontFamily: 'monospace' }}>
-                {formatRepoUrl(session.projectId)}
               </Text>
             )}
           </HStack>
@@ -259,15 +256,6 @@ export function SessionListItem({
             </Text>
           )}
           <HStack gap="sm" align="center">
-            {session.sessionId && (
-              <Text
-                size="xs"
-                color="muted"
-                style={{ fontFamily: 'monospace', opacity: 0.7 }}
-              >
-                {session.sessionId}
-              </Text>
-            )}
             <Badge variant="default">{session.messageCount} msgs</Badge>
             {todoProgress !== null && (
               <Badge variant={todoProgress === 100 ? 'success' : 'default'}>

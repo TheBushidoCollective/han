@@ -5,7 +5,8 @@ PreToolUse safety hook for Claude Code.
 Multi-tiered protection against dangerous operations:
 1. Blocks Write/Edit operations outside project directory
 2. Blocks dangerous Bash patterns (rm -rf /, system file modifications, etc.)
-3. Provides clear feedback to Claude about why operations were blocked
+3. Blocks bash file write workarounds (cat/echo/tee redirects) outside project
+4. Provides clear feedback to Claude about why operations were blocked
 
 Note: Due to known Claude Code bugs, Write/Edit blocking may not work reliably.
 This hook provides defense-in-depth and Claude-facing feedback regardless.
@@ -69,6 +70,14 @@ DANGEROUS_BASH_PATTERNS = [
     (r'\bfind\s+/\s+.*-exec\s+rm', "Cannot use find / with -exec rm"),
 ]
 
+# Patterns for file writing via bash (cat, echo, printf, tee with redirection)
+# These need project directory checking, handled separately
+BASH_WRITE_PATTERNS = [
+    (r'>\s*([^\s;|&><]+)', "redirect output"),  # > file
+    (r'>>\s*([^\s;|&><]+)', "append output"),   # >> file
+    (r'\btee\s+(?:-a\s+)?([^\s;|&><]+)', "tee"),  # tee file
+]
+
 # Protected directories that files should not be written to
 PROTECTED_DIRECTORIES = [
     '/etc',
@@ -90,8 +99,10 @@ PROTECTED_DIRECTORIES = [
 
 
 def get_project_root() -> str:
-    """Get the project root from environment or cwd."""
-    return os.environ.get('CLAUDE_PROJECT_DIR', os.getcwd())
+    """Get the project root from CLAUDE_PROJECT_DIR environment variable.
+    Falls back to cwd only if CLAUDE_PROJECT_DIR is not set.
+    """
+    return os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd()
 
 
 def is_path_outside_project(file_path: str, project_root: str) -> bool:
@@ -134,6 +145,30 @@ def check_bash_command(command: str) -> tuple[bool, str]:
     return False, ""
 
 
+def check_bash_write_paths(command: str, project_root: str) -> tuple[bool, str]:
+    """
+    Check if a bash command writes to files outside the project directory.
+    Returns (is_blocked, reason).
+    """
+    for pattern, desc in BASH_WRITE_PATTERNS:
+        for match in re.finditer(pattern, command, re.IGNORECASE):
+            target_path = match.group(1)
+            # Skip /dev/null and other /dev paths (allowed for discarding output)
+            if target_path.startswith('/dev/'):
+                continue
+            # Skip if not an absolute path (relative paths are within project)
+            if not target_path.startswith('/'):
+                continue
+            # Check for protected paths
+            is_protected, reason = is_protected_path(target_path)
+            if is_protected:
+                return True, f"Cannot {desc} to protected path: {target_path}"
+            # Check if outside project
+            if is_path_outside_project(target_path, project_root):
+                return True, f"Cannot {desc} to '{target_path}' - path is outside project directory"
+    return False, ""
+
+
 def deny_tool(reason: str) -> None:
     """Output JSON to deny the tool execution."""
     output = {
@@ -162,7 +197,9 @@ def main():
 
     tool_name = input_data.get("tool_name", "")
     tool_input = input_data.get("tool_input", {})
-    project_root = input_data.get("cwd", get_project_root())
+    # Prioritize CLAUDE_PROJECT_DIR over input cwd for accurate project boundary
+    env_project_dir = os.environ.get('CLAUDE_PROJECT_DIR')
+    project_root = env_project_dir or input_data.get("cwd") or os.getcwd()
 
     # Check Write/Edit tools for path safety
     if tool_name in ("Write", "Edit"):
@@ -192,6 +229,11 @@ def main():
 
         is_dangerous, reason = check_bash_command(command)
         if is_dangerous:
+            deny_tool(f"🛡️ BLOCKED: {reason}\nCommand: {command}")
+
+        # Check for bash write operations outside project
+        is_blocked, reason = check_bash_write_paths(command, project_root)
+        if is_blocked:
             deny_tool(f"🛡️ BLOCKED: {reason}\nCommand: {command}")
 
     # All checks passed - allow normal permission flow

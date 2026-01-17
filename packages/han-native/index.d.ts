@@ -385,6 +385,7 @@ export interface Session {
   projectId?: string;
   status: string;
   transcriptPath?: string;
+  slug?: string;
   lastIndexedLine?: number;
 }
 export interface SessionInput {
@@ -392,6 +393,7 @@ export interface SessionInput {
   projectId?: string;
   status?: string;
   transcriptPath?: string;
+  slug?: string;
 }
 export interface SessionFile {
   id: string;

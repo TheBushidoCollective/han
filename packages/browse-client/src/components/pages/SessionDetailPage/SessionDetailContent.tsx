@@ -17,7 +17,7 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
-import { colors, fonts, spacing } from '@/theme.ts';
+import { colors, spacing } from '@/theme.ts';
 import type { SessionDetailContentFilesSubscription } from './__generated__/SessionDetailContentFilesSubscription.graphql.ts';
 import type { SessionDetailContentHooksSubscription } from './__generated__/SessionDetailContentHooksSubscription.graphql.ts';
 import type { SessionDetailContentSubscription } from './__generated__/SessionDetailContentSubscription.graphql.ts';
@@ -264,19 +264,12 @@ export function SessionDetailContent({
           style={{ marginBottom: spacing.xs }}
         >
           <HStack gap="sm" align="center" style={{ flexWrap: 'wrap', flex: 1 }}>
-            <Heading size="sm">{session.projectName}</Heading>
+            <Heading size="sm">{session.name}</Heading>
             <Text color="muted" size="sm">
               |
             </Text>
-            <Text
-              size="xs"
-              color="muted"
-              style={{ fontFamily: fonts.mono }}
-              title={session.projectPath ?? ''}
-            >
-              {(session.projectPath?.length ?? 0) > 50
-                ? `...${session.projectPath?.slice(-47)}`
-                : session.projectPath}
+            <Text size="sm" color="secondary">
+              {session.projectName}
             </Text>
             <Text color="muted" size="sm">
               |

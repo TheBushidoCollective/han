@@ -256,24 +256,26 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
     // id IS the session UUID - no separate session_id column
     // No timestamps stored - derived from messages
     let mut stmt = conn.prepare(
-        "INSERT INTO sessions (id, project_id, status, transcript_path)
-         VALUES (?1, ?2, ?3, ?4)
+        "INSERT INTO sessions (id, project_id, status, transcript_path, slug)
+         VALUES (?1, ?2, ?3, ?4, ?5)
          ON CONFLICT(id) DO UPDATE SET
              project_id = COALESCE(excluded.project_id, sessions.project_id),
              status = excluded.status,
-             transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path)
-         RETURNING id, project_id, status, transcript_path, last_indexed_line"
+             transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path),
+             slug = COALESCE(excluded.slug, sessions.slug)
+         RETURNING id, project_id, status, transcript_path, slug, last_indexed_line"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
-        params![input.id, input.project_id, status, input.transcript_path],
+        params![input.id, input.project_id, status, input.transcript_path, input.slug],
         |row| {
             Ok(Session {
                 id: row.get(0)?,
                 project_id: row.get(1)?,
                 status: row.get(2)?,
                 transcript_path: row.get(3)?,
-                last_indexed_line: row.get(4)?,
+                slug: row.get(4)?,
+                last_indexed_line: row.get(5)?,
             })
         }
     ).map_err(|e| napi::Error::from_reason(format!("Failed to upsert session: {}", e)))
@@ -299,7 +301,7 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
 
     // id IS the session UUID - query by id directly
     let mut stmt = conn.prepare(
-        "SELECT id, project_id, status, transcript_path, last_indexed_line
+        "SELECT id, project_id, status, transcript_path, slug, last_indexed_line
          FROM sessions WHERE id = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -309,7 +311,8 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
             project_id: row.get(1)?,
             status: row.get(2)?,
             transcript_path: row.get(3)?,
-            last_indexed_line: row.get(4)?,
+            slug: row.get(4)?,
+            last_indexed_line: row.get(5)?,
         })
     });
 
@@ -344,7 +347,7 @@ pub fn list_sessions(
     // Sessions are ordered by most recent message timestamp (descending)
     let sql = match (&project_id, &status) {
         (Some(_), Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -353,7 +356,7 @@ pub fn list_sessions(
              LIMIT ?3"
         }
         (Some(_), None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -362,7 +365,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -371,7 +374,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -389,7 +392,8 @@ pub fn list_sessions(
             project_id: row.get(1)?,
             status: row.get(2)?,
             transcript_path: row.get(3)?,
-            last_indexed_line: row.get(4)?,
+            slug: row.get(4)?,
+            last_indexed_line: row.get(5)?,
         })
     };
 

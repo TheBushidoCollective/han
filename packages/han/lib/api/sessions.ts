@@ -118,6 +118,8 @@ export interface ProjectGroup {
 export interface SessionListItem {
 	sessionId: string;
 	date: string;
+	/** Human-readable session name (e.g., "snug-dreaming-knuth") */
+	slug?: string;
 	project: string;
 	projectPath: string;
 	/** Encoded project directory name as stored by Claude Code (e.g., -Volumes-dev-src-...) */
@@ -140,6 +142,8 @@ export interface SessionListItem {
 export interface SessionDetail {
 	sessionId: string;
 	date: string;
+	/** Human-readable session name (e.g., "snug-dreaming-knuth") */
+	slug?: string;
 	project: string;
 	projectPath: string;
 	/** Encoded project directory name as stored by Claude Code (e.g., -Volumes-dev-src-...) */
@@ -1320,6 +1324,7 @@ export async function listSessionsAsync(
 			date:
 				sessionTimestamps?.startedAt?.split("T")[0] ??
 				new Date().toISOString().split("T")[0],
+			slug: session.slug ?? undefined, // Human-readable session name from CC
 			project: projectName,
 			projectPath,
 			projectDir,
@@ -1510,8 +1515,23 @@ export async function getSessionAsync(
 		}
 	}
 
+	// Extract slug from first message with a slug field
+	let sessionSlug: string | undefined;
+	for (const msg of messages) {
+		if (msg.rawJson) {
+			try {
+				const parsed = JSON.parse(msg.rawJson);
+				if (parsed.slug) {
+					sessionSlug = parsed.slug;
+					break;
+				}
+			} catch {}
+		}
+	}
+
 	const session: SessionDetail = {
 		sessionId,
+		slug: sessionSlug,
 		date: firstMsg?.timestamp
 			? new Date(firstMsg.timestamp).toISOString().split("T")[0]
 			: new Date().toISOString().split("T")[0],
@@ -1565,6 +1585,7 @@ export function getSession(sessionId: string): SessionDetail | null {
 	// Build session from file info without messages (messages loaded separately)
 	const session: SessionDetail = {
 		sessionId: fileInfo.sessionId,
+		slug: undefined, // Sync version cannot extract slug without loading messages
 		date: fileInfo.mtime.toISOString().split("T")[0],
 		project: fileInfo.projectName,
 		projectPath: fileInfo.projectPath,

@@ -261,9 +261,15 @@ export const SessionType = SessionRef.implement({
 			},
 		}),
 		sessionId: t.exposeString("sessionId", { description: "Session ID" }),
-		name: t.exposeString("sessionId", {
+		slug: t.string({
+			nullable: true,
+			description: "Human-readable session name (e.g., 'snug-dreaming-knuth')",
+			resolve: (s) => ("slug" in s ? s.slug : null) ?? null,
+		}),
+		name: t.string({
 			description:
-				"Session name for URL routing (default is UUID, can be renamed)",
+				"Display name for session (slug if available, otherwise sessionId)",
+			resolve: (s) => ("slug" in s && s.slug ? s.slug : s.sessionId),
 		}),
 		date: t.exposeString("date", { description: "Session date" }),
 		projectName: t.exposeString("project", {

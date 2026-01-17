@@ -42,6 +42,8 @@ const categoryLabels = {
 } as const;
 
 const hookDescriptions: Record<string, string> = {
+	Setup:
+		"Runs when Claude Code is invoked with --init, --init-only, or --maintenance flags. Used for repository setup, maintenance tasks, and one-time initialization workflows.",
 	SessionStart:
 		"Runs when Claude Code starts a new session or resumes an existing session. Can inject project context, set up environment, or provide important reminders at the start of work.",
 	UserPromptSubmit:
@@ -64,6 +66,7 @@ const hookDescriptions: Record<string, string> = {
 };
 
 const hookEmojis: Record<string, string> = {
+	Setup: "🔧",
 	SessionStart: "▶️",
 	UserPromptSubmit: "💬",
 	PreToolUse: "🔧",
@@ -78,6 +81,7 @@ const hookEmojis: Record<string, string> = {
 
 // Hook lifecycle order for sorting
 const hookLifecycleOrder = [
+	"Setup",
 	"SessionStart",
 	"UserPromptSubmit",
 	"PreToolUse",

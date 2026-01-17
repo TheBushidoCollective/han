@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,  -- This IS the session UUID from JSONL
     project_id TEXT REFERENCES projects(id),
     status TEXT DEFAULT 'active',
+    slug TEXT,  -- Human-readable session name (e.g., "snug-dreaming-knuth")
     transcript_path TEXT,
     last_indexed_line INTEGER DEFAULT 0
 );
@@ -145,6 +146,10 @@ CREATE TABLE IF NOT EXISTS messages (
     sentiment_level TEXT,  -- 'positive', 'neutral', 'negative'
     frustration_score REAL,  -- Frustration score (0-10) if detected
     frustration_level TEXT,  -- 'low', 'moderate', 'high' if detected
+    input_tokens INTEGER,  -- Input tokens for this message
+    output_tokens INTEGER,  -- Output tokens for this message  
+    cache_read_tokens INTEGER,  -- Cache read tokens
+    cache_creation_tokens INTEGER,  -- Cache creation tokens
     indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

@@ -53,8 +53,14 @@ export function getClaudeConfigDir(): string {
 }
 
 /**
- * Get project directory by walking up from CWD to find .claude/settings.json or .git
+ * Get project directory by walking up from CWD to find project markers.
  * Falls back to CWD if not found.
+ *
+ * Project markers (in order of precedence):
+ * 1. .git directory
+ * 2. .claude/settings.json
+ * 3. .claude/han.yml
+ * 4. han.yml (root config)
  */
 export function getProjectDir(): string {
 	if (process.env.CLAUDE_PROJECT_DIR) {
@@ -64,11 +70,13 @@ export function getProjectDir(): string {
 	let dir = process.cwd();
 	const { root } = require("node:path").parse(dir);
 
-	// Walk up directory tree looking for .claude/settings.json or .git
+	// Walk up directory tree looking for project markers
 	while (dir !== root) {
 		if (
+			existsSync(join(dir, ".git")) ||
 			existsSync(join(dir, ".claude", "settings.json")) ||
-			existsSync(join(dir, ".git"))
+			existsSync(join(dir, ".claude", "han.yml")) ||
+			existsSync(join(dir, "han.yml"))
 		) {
 			return dir;
 		}

@@ -61,6 +61,7 @@ pub enum MessageType {
     Assistant,
     ToolUse,
     ToolResult,
+    Progress,
     System,
     FileHistorySnapshot,
     HanEvent,
@@ -75,6 +76,7 @@ impl MessageType {
             "assistant" => MessageType::Assistant,
             "tool_use" => MessageType::ToolUse,
             "tool_result" => MessageType::ToolResult,
+            "progress" => MessageType::Progress,
             "system" => MessageType::System,
             "file-history-snapshot" => MessageType::FileHistorySnapshot,
             "han_event" => MessageType::HanEvent,
@@ -89,6 +91,7 @@ impl MessageType {
             MessageType::Assistant => "assistant",
             MessageType::ToolUse => "tool_use",
             MessageType::ToolResult => "tool_result",
+            MessageType::Progress => "progress",
             MessageType::System => "system",
             MessageType::FileHistorySnapshot => "file-history-snapshot",
             MessageType::HanEvent => "han_event",
@@ -276,6 +279,10 @@ fn finalize_parsed_message(
         MessageType::ToolResult => json
             .get("toolUseId")
             .or_else(|| json.get("tool_use_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        MessageType::Progress => json
+            .get("parentToolUseID")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
         _ => None,
@@ -1223,11 +1230,13 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     };
 
     // Upsert session (id IS the session UUID from filename)
+    // Slug will be extracted during Pass 1 and updated after indexing
     crud::upsert_session(SessionInput {
         id: session_id.clone(),
         project_id: project_id.clone(),
         status: Some("active".to_string()),
         transcript_path: Some(file_path.clone()),
+        slug: None,
     })?;
 
     // Read new lines from JSONL file
@@ -1246,6 +1255,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
     let mut intermediate_lines: Vec<IntermediateParsedLine> = Vec::new();
     let mut uuid_to_timestamp: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     let mut max_line = last_line;
+    let mut session_slug: Option<String> = None;
 
     // Pass 1: Read and parse all lines, build timestamp map
     loop {
@@ -1269,6 +1279,12 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
                         .and_then(|t| t.as_str())
                     {
                         uuid_to_timestamp.insert(parsed.uuid.clone(), ts.to_string());
+                    }
+                }
+                // Extract session slug from first message that has it
+                if session_slug.is_none() {
+                    if let Some(slug) = parsed.json.get("slug").and_then(|s| s.as_str()) {
+                        session_slug = Some(slug.to_string());
                     }
                 }
                 if line.line_number as i32 > max_line {
@@ -1495,6 +1511,17 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
         crud::update_last_indexed_line(&session_id, max_line)?;
     }
 
+    // Update session with slug if we found one during indexing
+    if session_slug.is_some() {
+        crud::upsert_session(SessionInput {
+            id: session_id.clone(),
+            project_id: project_id.clone(),
+            status: Some("active".to_string()),
+            transcript_path: Some(file_path.clone()),
+            slug: session_slug,
+        })?;
+    }
+
     // Get total message count
     let total_messages = crud::get_message_count(&session_id)?;
 
@@ -1525,6 +1552,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                 project_id,
                 status: Some("active".to_string()),
                 transcript_path: Some(file_path_str.clone()),
+                slug: None,
             })?;
 
             // Register the file
@@ -1547,6 +1575,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                         project_id,
                         status: Some("active".to_string()),
                         transcript_path: None,
+                        slug: None,
                     })?;
                 }
 

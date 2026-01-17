@@ -76,6 +76,7 @@ pub struct Session {
     pub project_id: Option<String>,
     pub status: String,
     pub transcript_path: Option<String>,
+    pub slug: Option<String>,  // Human-readable session name (e.g., "snug-dreaming-knuth")
     pub last_indexed_line: Option<i32>,
 }
 
@@ -86,6 +87,7 @@ pub struct SessionInput {
     pub project_id: Option<String>,
     pub status: Option<String>,
     pub transcript_path: Option<String>,
+    pub slug: Option<String>,  // Human-readable session name (e.g., "snug-dreaming-knuth")
 }
 
 // ============================================================================

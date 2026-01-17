@@ -30,6 +30,7 @@ export const SessionDetailPageQuery = graphql`
       ... on Session {
         id
         sessionId
+        name
         date
         projectName
         projectPath
