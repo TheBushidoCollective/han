@@ -24,15 +24,32 @@ This hierarchy allows you to:
 
 ## Basic Configuration Structure
 
-A typical `han.yml` file has two main sections:
+A typical `han.yml` file has these main sections:
 
 ```yaml
 # Global hook settings
 hooks:
-  enabled: true       # Master switch for all hooks (default: true)
-  checkpoints: true   # Session/agent checkpoint filtering (default: true)
-  cache: true         # Smart caching - skip if no changes (default: true)
-  fail_fast: true     # Stop on first hook failure (default: true)
+  enabled: true            # Master switch for all hooks (default: true)
+  checkpoints: true        # Session/agent checkpoint filtering (default: true)
+  cache: true              # Smart caching - skip if no changes (default: true)
+  fail_fast: true          # Stop on first hook failure (default: true)
+  transcript_filter: true  # Multi-session conflict prevention (default: true, v2.3.0)
+
+# Orchestrator settings (controls MCP tool exposure)
+orchestrator:
+  enabled: true       # Use unified workflow interface (default: true)
+  workflow:
+    enabled: true     # Enable han_workflow tool
+    max_steps: 20     # Maximum workflow steps
+    timeout: 300      # Workflow timeout in seconds
+
+# Memory system
+memory:
+  enabled: true       # Enable memory and learning (default: true)
+
+# Metrics tracking
+metrics:
+  enabled: true       # Enable task metrics (default: true)
 
 # Plugin-specific settings
 plugins:
@@ -49,7 +66,7 @@ plugins:
         command: npx tsc --noEmit
 ```
 
-**Note:** As of v2.0.0, all hook settings default to **enabled** (`true`). This means hooks are active by default unless explicitly disabled.
+**Note:** As of v2.0.0, all settings default to **enabled** (`true`). This means features are active by default unless explicitly disabled.
 
 ## Global Hook Settings
 
@@ -57,10 +74,11 @@ The `hooks` section controls behavior for all hooks across all plugins:
 
 ```yaml
 hooks:
-  enabled: true       # Master switch - disable all hooks
-  checkpoints: true   # Filter hooks by session/agent context
-  cache: true         # Skip hooks when files haven't changed
-  fail_fast: true     # Stop execution on first hook failure
+  enabled: true            # Master switch - disable all hooks
+  checkpoints: true        # Filter hooks by session/agent context
+  cache: true              # Skip hooks when files haven't changed
+  fail_fast: true          # Stop execution on first hook failure
+  transcript_filter: true  # Filter by session's modified files (v2.3.0)
 ```
 
 ### Global Hook Options
@@ -71,6 +89,7 @@ hooks:
 | `checkpoints` | boolean | `true` | Enable session-scoped filtering (only run relevant hooks) |
 | `cache` | boolean | `true` | Enable smart caching to skip unchanged files |
 | `fail_fast` | boolean | `true` | Stop on first hook failure instead of running all |
+| `transcript_filter` | boolean | `true` | Filter hooks to files THIS session modified (prevents multi-session conflicts) |
 
 ### Configuration Priority
 
@@ -123,16 +142,14 @@ plugins:
 
 ## Plugin Configuration Keys
 
-Han supports both YAML (snake_case) and legacy JSON (camelCase) formats:
+Han uses YAML configuration with snake_case keys:
 
-| YAML (Preferred) | JSON (Legacy) | Description |
-|------------------|---------------|-------------|
-| `dirs_with` | `dirsWith` | Directory detection patterns |
-| `dir_test` | `dirTest` | Directory test command |
-| `if_changed` | `ifChanged` | File change patterns |
-| `idle_timeout` | `idleTimeout` | File stability timeout |
-
-**Note:** When both `han.yml` and `han-config.json` exist, YAML takes precedence.
+| Key | Description |
+|-----|-------------|
+| `dirs_with` | Directory detection patterns |
+| `dir_test` | Directory test command |
+| `if_changed` | File change patterns |
+| `idle_timeout` | File stability timeout |
 
 ## Example Configurations
 
@@ -152,12 +169,13 @@ plugins:
 ### Full Configuration
 
 ```yaml
-# Global hook settings (all default to true in v2.0.0)
+# Global hook settings (all default to true in v2.0.0+)
 hooks:
-  enabled: true       # Master switch
-  checkpoints: true   # Session filtering
-  cache: true         # Smart caching
-  fail_fast: true     # Stop on first failure
+  enabled: true            # Master switch
+  checkpoints: true        # Session filtering
+  cache: true              # Smart caching
+  fail_fast: true          # Stop on first failure
+  transcript_filter: true  # Multi-session conflict prevention (v2.3.0)
 
 plugins:
   jutsu-biome:
@@ -230,9 +248,10 @@ You can also disable specific features:
 
 ```yaml
 hooks:
-  cache: false       # Always run hooks, never use cache
-  fail_fast: false   # Continue running all hooks even if one fails
-  checkpoints: false # Run all hooks regardless of context
+  cache: false              # Always run hooks, never use cache
+  fail_fast: false          # Continue running all hooks even if one fails
+  checkpoints: false        # Run all hooks regardless of context
+  transcript_filter: false  # Ignore session transcript, use checkpoint-only filtering
 ```
 
 Or via CLI for one-off runs:
@@ -244,6 +263,45 @@ han hook run jutsu-biome lint --cache=false
 # Run all hooks even if some fail
 han hook run --no-fail-fast
 ```
+
+## Orchestrator Configuration
+
+The orchestrator controls how hashi plugin tools are exposed to Claude Code.
+
+### Orchestrator Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enable unified workflow interface |
+| `workflow.enabled` | boolean | `true` | Expose the `han_workflow` tool |
+| `workflow.max_steps` | number | `20` | Maximum steps in a workflow |
+| `workflow.timeout` | number | `300` | Workflow timeout in seconds |
+
+### How It Works
+
+When orchestrator is **enabled** (default):
+
+- Hashi MCP servers return no tools (stub mode)
+- Han exposes a unified `han_workflow` tool
+- Reduces context from 50+ tools to ~5
+- Workflows can invoke any backend capability
+
+When orchestrator is **disabled**:
+
+- Hashi MCP servers proxy to actual backends
+- All individual MCP tools are exposed
+- Full access to service-specific tools
+- Higher context usage
+
+### Switching Modes
+
+```yaml
+# han.yml - disable orchestrator for direct MCP access
+orchestrator:
+  enabled: false
+```
+
+This is useful when you need direct access to specific MCP tools rather than the unified workflow interface.
 
 ## Best Practices
 

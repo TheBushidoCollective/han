@@ -3,7 +3,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { render } from "ink-testing-library";
-import { HookTestUI } from "../lib/hook-test-ui.tsx";
+import { HookTestUI } from "../lib/hooks/index.ts";
 
 interface HookResult {
 	plugin: string;

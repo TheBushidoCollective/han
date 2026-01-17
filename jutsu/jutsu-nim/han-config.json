@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "lint": {
-      "command": "nim check *.nim",
-      "dirsWith": ["*.nimble"],
-      "ifChanged": ["**/*.nim", "**/*.nimble", "nim.cfg"]
-    }
-  }
-}

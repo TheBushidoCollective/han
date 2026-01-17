@@ -69,7 +69,7 @@ describe("CLI integration tests", () => {
 			expect(result.status).toBe(0);
 			expect(result.stdout).toContain("dispatch");
 			expect(result.stdout).toContain("run");
-			expect(result.stdout).toContain("verify");
+			expect(result.stdout).toContain("explain");
 		});
 	});
 
@@ -191,47 +191,6 @@ describe("CLI integration tests", () => {
 		});
 	});
 
-	describe("han hook verify", () => {
-		test("exits cleanly when no hooks to verify", () => {
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "hook", "verify", "Stop"],
-				{
-					encoding: "utf-8",
-					timeout: 30000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: join(testDir, "config"),
-						HOME: testDir,
-					},
-				},
-			);
-
-			// Should report no hooks found
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("No Stop hooks found to verify");
-		});
-
-		test("respects HAN_DISABLE_HOOKS", () => {
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "hook", "verify", "Stop"],
-				{
-					encoding: "utf-8",
-					timeout: 10000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						HAN_DISABLE_HOOKS: "true",
-					},
-				},
-			);
-
-			expect(result.status).toBe(0);
-		});
-	});
-
 	describe("han plugin", () => {
 		test("shows plugin subcommands in help", () => {
 			const result = spawnSync(
@@ -247,119 +206,6 @@ describe("CLI integration tests", () => {
 			expect(result.status).toBe(0);
 			expect(result.stdout).toContain("install");
 			expect(result.stdout).toContain("list");
-		});
-	});
-
-	describe("han metrics", () => {
-		test("shows metrics subcommands in help", () => {
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "metrics", "--help"],
-				{
-					encoding: "utf-8",
-					timeout: 10000,
-					cwd: packageRoot,
-				},
-			);
-
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("show");
-			expect(result.stdout).toContain("session-start");
-			expect(result.stdout).toContain("session-end");
-		});
-	});
-
-	describe("han metrics session-start", () => {
-		test("starts a new session", () => {
-			// Create the metrics directory structure
-			mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
-				recursive: true,
-			});
-
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "metrics", "session-start"],
-				{
-					encoding: "utf-8",
-					timeout: 30000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: join(testDir, "config"),
-					},
-				},
-			);
-
-			expect(result.status).toBe(0);
-			const output = JSON.parse(result.stdout);
-			expect(output.session_id).toMatch(/^session-/);
-			expect(output.resumed).toBe(false);
-		});
-	});
-
-	describe("han metrics session-end", () => {
-		test("reports when no active session", () => {
-			// Create the metrics directory structure
-			mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
-				recursive: true,
-			});
-
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "metrics", "session-end"],
-				{
-					encoding: "utf-8",
-					timeout: 30000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: join(testDir, "config"),
-					},
-				},
-			);
-
-			// Exits 1 when no session to end
-			expect(result.status).toBe(1);
-			// Message goes to stderr on error
-			expect(result.stderr || result.stdout).toContain("No active session");
-		});
-
-		test("ends active session", () => {
-			// Create the metrics directory structure
-			mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {
-				recursive: true,
-			});
-
-			// First start a session
-			spawnSync("bun", ["run", "lib/main.ts", "metrics", "session-start"], {
-				encoding: "utf-8",
-				timeout: 30000,
-				cwd: packageRoot,
-				env: {
-					...process.env,
-					CLAUDE_CONFIG_DIR: join(testDir, "config"),
-				},
-			});
-
-			// Then end it
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "metrics", "session-end"],
-				{
-					encoding: "utf-8",
-					timeout: 30000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: join(testDir, "config"),
-					},
-				},
-			);
-
-			expect(result.status).toBe(0);
-			const output = JSON.parse(result.stdout);
-			expect(output.success).toBe(true);
-			expect(output.session_id).toMatch(/^session-/);
 		});
 	});
 

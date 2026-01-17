@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "shards install && crystal tool format --check"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/format.sh\""
     dirs_with:
       - "shard.yml"
     if_changed:
@@ -9,7 +9,7 @@ hooks:
       - "shard.yml"
       - "shard.lock"
   test:
-    command: "shards install && crystal spec"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/test.sh\""
     dirs_with:
       - "shard.yml"
     if_changed:

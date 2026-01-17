@@ -112,23 +112,22 @@ Jutsu plugins include validation hooks that run automatically during your Claude
 
 ### Hook Configuration
 
-Each jutsu plugin has a `han-config.json` that defines its hooks:
+Each jutsu plugin has a `han-plugin.yml` that defines its hooks:
 
-```json
-{
-  "hooks": {
-    "lint": {
-      "command": "npx -y eslint --fix .",
-      "dirsWith": ["eslint.config.js", ".eslintrc.js"],
-      "ifChanged": ["**/*.{js,jsx,ts,tsx}"]
-    }
-  }
-}
+```yaml
+hooks:
+  lint:
+    command: "npx -y eslint --fix ."
+    dirs_with:
+      - eslint.config.js
+      - .eslintrc.js
+    if_changed:
+      - "**/*.{js,jsx,ts,tsx}"
 ```
 
 - **command**: The validation command to run
-- **dirsWith**: Only run in directories containing these files
-- **ifChanged**: Glob patterns for change detection (enables caching)
+- **dirs_with**: Only run in directories containing these files
+- **if_changed**: Glob patterns for change detection (enables caching)
 
 ### Smart Caching
 

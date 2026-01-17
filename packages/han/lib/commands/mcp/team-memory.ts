@@ -4,6 +4,9 @@
  * Provides an MCP tool for querying team memory using the research engine.
  * Answers questions about the codebase by searching indexed observations
  * from git commits, PRs, and other sources.
+ *
+ * Always searches ALL sources (git history + vector store) in parallel
+ * for consistent, reliable results.
  */
 
 import {
@@ -14,6 +17,7 @@ import {
 	type ResearchResult,
 	type SearchResult,
 } from "../../memory/index.ts";
+import { gitProvider } from "../../memory/providers/git.ts";
 
 export interface TeamQueryParams {
 	/** The question to research */
@@ -37,25 +41,85 @@ export interface TeamQueryResult {
 }
 
 /**
- * Create a search function that queries the vector store
+ * Search git history directly using text matching
  */
-function createSearchFunction(
+async function searchGitHistory(
+	query: string,
+	limit: number,
+): Promise<SearchResult[]> {
+	// Get recent commits (last 100)
+	const observations = await gitProvider.extract({
+		limit: 100,
+	});
+
+	if (observations.length === 0) {
+		return [];
+	}
+
+	// Simple text matching on commit messages
+	const queryLower = query.toLowerCase();
+	const queryWords = queryLower.split(/\s+/).filter((w) => w.length > 2);
+
+	const results: SearchResult[] = [];
+
+	for (const obs of observations) {
+		const searchText =
+			`${obs.summary} ${obs.detail} ${obs.files.join(" ")}`.toLowerCase();
+
+		// Count matching words
+		let matchCount = 0;
+		for (const word of queryWords) {
+			if (searchText.includes(word)) {
+				matchCount++;
+			}
+		}
+
+		if (matchCount > 0) {
+			const score = matchCount / queryWords.length;
+			results.push({
+				observation: {
+					id: obs.source,
+					source: obs.source,
+					type: obs.type,
+					timestamp: obs.timestamp,
+					author: obs.author,
+					summary: obs.summary,
+					detail: obs.detail || "",
+					files: obs.files,
+					patterns: obs.patterns || [],
+					pr_context: obs.pr_context,
+				},
+				score,
+				excerpt: obs.summary,
+			});
+		}
+	}
+
+	// Sort by score and limit
+	return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+/**
+ * Search vector store for indexed observations
+ */
+async function searchVectorStore(
 	dbPath: string,
 	tableName: string,
+	query: string,
 	limit: number,
-): (query: string) => Promise<SearchResult[]> {
-	return async (query: string): Promise<SearchResult[]> => {
+): Promise<SearchResult[]> {
+	try {
 		const vectorStore = await getVectorStore(dbPath);
-
-		// Search for relevant observations
-		const results = await vectorStore.search(tableName, query, limit);
-
-		return results;
-	};
+		return await vectorStore.search(tableName, query, limit);
+	} catch {
+		// Vector store not available
+		return [];
+	}
 }
 
 /**
  * Query team memory with a question
+ * Searches ALL sources (git history + indexed observations) and combines results
  */
 export async function queryTeamMemory(
 	params: TeamQueryParams,
@@ -75,7 +139,7 @@ export async function queryTeamMemory(
 	}
 
 	try {
-		// Get git remote for vector store
+		// Get git remote for project context
 		const gitRemote = getGitRemote();
 		if (!gitRemote) {
 			return {
@@ -90,9 +154,41 @@ export async function queryTeamMemory(
 
 		const dbPath = getProjectIndexPath(gitRemote);
 		const tableName = "observations";
+		const searchedSources: string[] = [];
 
-		// Create search function with the vector store
-		const searchFn = createSearchFunction(dbPath, tableName, limit);
+		// Search ALL sources in parallel - no fallbacks, always consistent
+		const [gitResults, vectorResults] = await Promise.all([
+			searchGitHistory(question, limit),
+			searchVectorStore(dbPath, tableName, question, limit),
+		]);
+
+		// Track what sources were searched
+		searchedSources.push("git:commits");
+		if (vectorResults.length > 0) {
+			searchedSources.push("indexed:observations");
+		}
+
+		// Combine and deduplicate results by source
+		const seenSources = new Set<string>();
+		const combinedResults: SearchResult[] = [];
+
+		// Add all results, preferring higher scores for duplicates
+		for (const result of [...vectorResults, ...gitResults]) {
+			if (!seenSources.has(result.observation.source)) {
+				seenSources.add(result.observation.source);
+				combinedResults.push(result);
+			}
+		}
+
+		// Sort by score and limit
+		const finalResults = combinedResults
+			.sort((a, b) => b.score - a.score)
+			.slice(0, limit);
+
+		// Create search function that returns our combined results
+		const searchFn = async (_query: string): Promise<SearchResult[]> => {
+			return finalResults;
+		};
 
 		// Create research engine and run research
 		const engine = createResearchEngine(searchFn);
@@ -112,7 +208,7 @@ export async function queryTeamMemory(
 			confidence: result.confidence,
 			citations: formattedCitations,
 			caveats: result.caveats,
-			searched_sources: result.searched_sources,
+			searched_sources: searchedSources,
 		};
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);

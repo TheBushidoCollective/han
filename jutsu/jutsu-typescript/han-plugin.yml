@@ -6,4 +6,3 @@ hooks:
     if_changed:
       - "**/*.{ts,tsx,mts,cts}"
       - "tsconfig*.json"
-    tip: "Use the `jutsu_typescript_typecheck` MCP tool during development, not just at completion."

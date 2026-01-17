@@ -13,7 +13,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-absinthe-graphql",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -184,6 +185,24 @@
     ]
   },
   {
+    "id": "jutsu-atomic-design",
+    "name": "jutsu-atomic-design",
+    "description": "Validation and quality enforcement for Atomic Design methodology in component-based projects.",
+    "category": "jutsu",
+    "tags": [
+      "atomic-design",
+      "components",
+      "design-system",
+      "atoms",
+      "molecules",
+      "organisms"
+    ],
+    "path": "/plugins/jutsu/jutsu-atomic-design",
+    "components": [
+      "skill"
+    ]
+  },
+  {
     "id": "do-backend-development",
     "name": "do-backend-development",
     "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
@@ -269,7 +288,8 @@
     "components": [
       "skill",
       "command",
-      "hook"
+      "hook",
+      "mcp"
     ]
   },
   {
@@ -390,8 +410,7 @@
     ],
     "path": "/plugins/hashi/hashi-clickup",
     "components": [
-      "command",
-      "hook"
+      "command"
     ]
   },
   {
@@ -467,7 +486,7 @@
   {
     "id": "core",
     "name": "core",
-    "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics), Context7 + DeepWiki documentation, project memory learning, and universal programming principles.",
+    "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics + Context7/DeepWiki proxying), project memory learning, and universal programming principles.",
     "category": "core",
     "tags": [
       "infrastructure",
@@ -659,10 +678,16 @@
     "name": "jutsu-ecto",
     "description": "Ecto skills for database interactions in Elixir",
     "category": "jutsu",
-    "tags": [],
+    "tags": [
+      "ecto",
+      "elixir",
+      "database",
+      "orm"
+    ],
     "path": "/plugins/jutsu/jutsu-ecto",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -901,25 +926,22 @@
     ],
     "path": "/plugins/jutsu/jutsu-git-storytelling",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
     "id": "hashi-github",
     "name": "hashi-github",
-    "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
+    "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
     "category": "hashi",
     "tags": [
-      "mcp",
       "github",
       "git",
       "repository",
       "issues",
       "pull-requests",
       "actions",
-      "code-search",
-      "server"
+      "code-search"
     ],
     "path": "/plugins/hashi/hashi-github",
     "components": [
@@ -985,6 +1007,28 @@
     ]
   },
   {
+    "id": "jutsu-gluestack",
+    "name": "jutsu-gluestack",
+    "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, and theming skills. Includes MCP server for component discovery and source code retrieval.",
+    "category": "jutsu",
+    "tags": [
+      "gluestack",
+      "gluestack-ui",
+      "react",
+      "react-native",
+      "nativewind",
+      "tailwind",
+      "ui-components",
+      "accessibility",
+      "mcp"
+    ],
+    "path": "/plugins/jutsu/jutsu-gluestack",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
     "id": "jutsu-go",
     "name": "jutsu-go",
     "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
@@ -1026,6 +1070,24 @@
       "schema"
     ],
     "path": "/plugins/jutsu/jutsu-graphql",
+    "components": [
+      "skill"
+    ]
+  },
+  {
+    "id": "jutsu-graphql-inspector",
+    "name": "jutsu-graphql-inspector",
+    "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
+    "category": "jutsu",
+    "tags": [
+      "graphql",
+      "graphql-inspector",
+      "schema",
+      "validation",
+      "breaking-changes",
+      "diff"
+    ],
+    "path": "/plugins/jutsu/jutsu-graphql-inspector",
     "components": [
       "skill"
     ]
@@ -1151,7 +1213,7 @@
     "path": "/plugins/hashi/hashi-jira",
     "components": [
       "command",
-      "hook"
+      "mcp"
     ]
   },
   {
@@ -1253,8 +1315,7 @@
     ],
     "path": "/plugins/hashi/hashi-linear",
     "components": [
-      "command",
-      "hook"
+      "command"
     ]
   },
   {
@@ -1270,7 +1331,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-lua",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -1478,6 +1540,24 @@
     ]
   },
   {
+    "id": "hashi-notion",
+    "name": "hashi-notion",
+    "description": "Notion integration providing workspace search, page management, database operations, and AI-optimized content access via Notion's hosted MCP server.",
+    "category": "hashi",
+    "tags": [
+      "notion",
+      "mcp",
+      "knowledge-management",
+      "pages",
+      "databases",
+      "workspace",
+      "documentation",
+      "productivity"
+    ],
+    "path": "/plugins/hashi/hashi-notion",
+    "components": []
+  },
+  {
     "id": "jutsu-npm",
     "name": "jutsu-npm",
     "description": "NPM package manager skills with dependency validation hooks.",
@@ -1561,10 +1641,16 @@
     "name": "jutsu-phoenix",
     "description": "Phoenix Framework skills for building web applications",
     "category": "jutsu",
-    "tags": [],
+    "tags": [
+      "phoenix",
+      "elixir",
+      "web",
+      "framework"
+    ],
     "path": "/plugins/jutsu/jutsu-phoenix",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -1611,20 +1697,43 @@
     ],
     "path": "/plugins/jutsu/jutsu-playwright",
     "components": [
-      "skill"
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-playwright-bdd",
+    "name": "jutsu-playwright-bdd",
+    "description": "Validation and quality enforcement for Playwright BDD projects with Gherkin feature files and step definitions.",
+    "category": "jutsu",
+    "tags": [
+      "playwright-bdd",
+      "bdd",
+      "gherkin",
+      "cucumber",
+      "testing",
+      "playwright",
+      "validation"
+    ],
+    "path": "/plugins/jutsu/jutsu-playwright-bdd",
+    "components": [
+      "skill",
+      "hook"
     ]
   },
   {
     "id": "hashi-playwright-mcp",
     "name": "hashi-playwright-mcp",
-    "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
+    "description": "Playwright browser automation via MCP. Includes test-generator and ui-debugger agents that return concise summaries instead of verbose Playwright output. IMPORTANT: Always delegate to these agents instead of calling Playwright tools directly.",
     "category": "hashi",
     "tags": [
       "mcp",
       "playwright",
       "testing",
       "automation",
-      "server"
+      "server",
+      "agents",
+      "subagent"
     ],
     "path": "/plugins/hashi/hashi-playwright-mcp",
     "components": [
@@ -1847,6 +1956,24 @@
     ]
   },
   {
+    "id": "hashi-reddit",
+    "name": "hashi-reddit",
+    "description": "MCP server configuration for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+    "category": "hashi",
+    "tags": [
+      "mcp",
+      "reddit",
+      "social-media",
+      "content",
+      "posts",
+      "comments",
+      "subreddits",
+      "server"
+    ],
+    "path": "/plugins/hashi/hashi-reddit",
+    "components": []
+  },
+  {
     "id": "jutsu-relay",
     "name": "jutsu-relay",
     "description": "Advanced Relay GraphQL framework skills for React applications",
@@ -1859,7 +1986,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-relay",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -2147,6 +2275,27 @@
       "concurrency"
     ],
     "path": "/plugins/jutsu/jutsu-swift",
+    "components": [
+      "skill",
+      "hook"
+    ]
+  },
+  {
+    "id": "jutsu-syncpack",
+    "name": "jutsu-syncpack",
+    "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
+    "category": "jutsu",
+    "tags": [
+      "syncpack",
+      "monorepo",
+      "dependencies",
+      "version-management",
+      "npm",
+      "yarn",
+      "pnpm",
+      "workspaces"
+    ],
+    "path": "/plugins/jutsu/jutsu-syncpack",
     "components": [
       "skill",
       "hook"

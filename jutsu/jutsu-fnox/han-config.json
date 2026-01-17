@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "doctor": {
-      "command": "fnox doctor",
-      "dirsWith": ["fnox.toml"],
-      "ifChanged": ["fnox.toml", "fnox.*.toml", "fnox.local.toml"]
-    }
-  }
-}

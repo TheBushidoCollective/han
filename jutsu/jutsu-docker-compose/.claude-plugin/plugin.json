@@ -8,6 +8,16 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["docker", "docker-compose", "containers", "devops"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["docker", "docker-compose", "containers", "devops"],
+  "lspServers": {
+    "docker-compose-langserver": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".yaml": "dockercompose",
+        ".yml": "dockercompose"
+      }
+    }
+  }
 }

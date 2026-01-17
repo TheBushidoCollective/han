@@ -1,0 +1,57 @@
+name: Validate Han Native
+
+on:
+  pull_request:
+    paths:
+      - "packages/han-native/**"
+      - ".github/workflows/validate-han-native.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/han-native/**"
+      - ".github/workflows/validate-han-native.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            packages/han-native/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/han-native/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        working-directory: ./packages/han-native
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        working-directory: ./packages/han-native
+        run: cargo clippy --all-features -- -D warnings
+
+      - name: Build check
+        working-directory: ./packages/han-native
+        run: cargo check --all-features
+
+      - name: Run tests
+        working-directory: ./packages/han-native
+        run: cargo test --all-features

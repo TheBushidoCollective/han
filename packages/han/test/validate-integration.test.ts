@@ -166,7 +166,7 @@ describe("validate.ts helper functions", () => {
 			writeFileSync(join(pkg2, "package.json"), "{}");
 
 			// Import and test
-			const { findDirectoriesWithMarkers } = require("../lib/hook-cache.ts");
+			const { findDirectoriesWithMarkers } = require("../lib/hooks/index.ts");
 			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
 
 			expect(result.length).toBe(2);
@@ -182,7 +182,7 @@ describe("validate.ts helper functions", () => {
 			mkdirSync(nodeModules, { recursive: true });
 			writeFileSync(join(nodeModules, "package.json"), "{}");
 
-			const { findDirectoriesWithMarkers } = require("../lib/hook-cache.ts");
+			const { findDirectoriesWithMarkers } = require("../lib/hooks/index.ts");
 			const result = findDirectoriesWithMarkers(projectDir, ["package.json"]);
 
 			expect(result.length).toBe(0);
@@ -328,13 +328,13 @@ describe("validate.ts helper functions", () => {
 	describe("success message formatting", () => {
 		test("formats single success message", () => {
 			const count = 1;
-			const message = `\n✅ All ${count} director${count === 1 ? "y" : "ies"} passed validation`;
+			const message = `\n✅ ${count} director${count === 1 ? "y" : "ies"} passed`;
 			expect(message).toContain("1 directory passed");
 		});
 
 		test("formats multiple success message", () => {
 			const count: number = 5;
-			const message = `\n✅ All ${count} director${count === 1 ? "y" : "ies"} passed validation`;
+			const message = `\n✅ ${count} director${count === 1 ? "y" : "ies"} passed`;
 			expect(message).toContain("5 directories passed");
 		});
 	});
@@ -554,7 +554,7 @@ describe("validate.ts helper functions", () => {
 
 	describe("plugin name extraction", () => {
 		test("extracts plugin name from CLAUDE_PLUGIN_ROOT", () => {
-			const { getPluginNameFromRoot } = require("../lib/shared.ts");
+			const { getPluginNameFromRoot } = require("../lib/shared/index.ts");
 			const pluginRoot = "/path/to/plugins/marketplaces/han/jutsu/jutsu-biome";
 			const name = getPluginNameFromRoot(pluginRoot);
 			expect(name).toBe("jutsu-biome");

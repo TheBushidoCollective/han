@@ -494,7 +494,7 @@ describe("completion", () => {
 
 			const completions = await getCompletionsForContext([
 				"metrics",
-				"detect-frustration",
+				"detect-patterns",
 				"--min-severity",
 				"",
 			]);

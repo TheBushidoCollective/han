@@ -54,11 +54,11 @@ When Claude thinks "I see this project uses..." or "The pattern here is..." - th
 
 Three MCP tools power the system:
 
-| Tool | Purpose |
-|------|---------|
-| `learn` | Write a learning to `.claude/rules/<domain>.md` |
-| `memory_list` | Check what domains already exist |
-| `memory_read` | Read existing content (avoid duplicates) |
+| Tool          | Purpose                                         |
+| ------------- | ----------------------------------------------- |
+| `learn`       | Write a learning to `.claude/rules/<domain>.md` |
+| `memory_list` | Check what domains already exist                |
+| `memory_read` | Read existing content (avoid duplicates)        |
 
 Claude uses `memory_list` and `memory_read` to check before writing, preventing redundant entries.
 
@@ -78,7 +78,7 @@ Creates `.claude/rules/api.md` with YAML frontmatter:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules

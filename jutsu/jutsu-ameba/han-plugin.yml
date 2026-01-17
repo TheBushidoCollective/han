@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "shards install && ameba"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\""
     dirs_with:
       - "shard.yml"
     dir_test: "grep -qE 'ameba' shard.yml"

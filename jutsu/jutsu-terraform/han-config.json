@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "format": {
-      "command": "terraform init && terraform fmt -check && terraform validate",
-      "dirsWith": ["*.tf"],
-      "ifChanged": ["**/*.tf", "**/*.tfvars"]
-    }
-  }
-}

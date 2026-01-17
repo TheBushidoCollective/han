@@ -1,0 +1,23 @@
+# jutsu-graphql-inspector plugin configuration
+# Provides validation hooks for GraphQL schema diffing and operation validation
+
+hooks:
+  validate:
+    command: "npx -y @graphql-inspector/cli validate './**/*.graphql' './schema.graphql'"
+    dirs_with:
+      - "schema.graphql"
+      - "*.graphql"
+    if_changed:
+      - "**/*.graphql"
+      - "**/*.gql"
+
+  diff:
+    command: "npx -y @graphql-inspector/cli diff 'git:origin/main:schema.graphql' 'schema.graphql'"
+    dirs_with:
+      - "schema.graphql"
+    if_changed:
+      - "schema.graphql"
+      - "**/schema.graphql"
+
+mcp: null
+memory: null

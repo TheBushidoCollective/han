@@ -46,3 +46,14 @@ hooks:
       - "**/*.heex"
       - "mix.exs"
       - "mix.lock"
+  coverage:
+    dirs_with:
+      - "coveralls.json"
+    # Only enforces coverage if minimum_coverage is set in coveralls.json
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/coverage-ratchet.sh\""
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "mix.exs"
+      - "mix.lock"
+      - "coveralls.json"

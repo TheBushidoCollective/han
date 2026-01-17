@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "helm lint . && helm template . --debug > /dev/null"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\""
     dirs_with:
       - "Chart.yaml"
     if_changed:

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Safe wrapper for rm command
+# Blocks removal of files outside project directory or in protected paths
+
+set -euo pipefail
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Get the real rm command
+REAL_RM="$(get_real_command rm)"
+if [[ -z "$REAL_RM" ]]; then
+    echo "Error: Could not find real rm command" >&2
+    exit 1
+fi
+
+# Parse arguments to find file paths
+files=()
+flags=()
+skip_next=false
+
+for arg in "$@"; do
+    if $skip_next; then
+        skip_next=false
+        flags+=("$arg")
+        continue
+    fi
+
+    case "$arg" in
+        -*)
+            flags+=("$arg")
+            # Some flags take an argument
+            case "$arg" in
+                --interactive=*|--one-file-system|--no-preserve-root|--preserve-root)
+                    # These don't take separate arguments
+                    ;;
+            esac
+            ;;
+        *)
+            files+=("$arg")
+            ;;
+    esac
+done
+
+# Check each file path
+for file in "${files[@]}"; do
+    # Block protected paths
+    if is_protected_path "$file"; then
+        safe_error "Cannot remove files in protected system directory: $file"
+    fi
+
+    # Block paths outside project (if CLAUDE_PROJECT_DIR is set)
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        if ! is_in_project "$file"; then
+            safe_error "Cannot remove files outside project directory: $file (project: $CLAUDE_PROJECT_DIR)"
+        fi
+    fi
+done
+
+# All checks passed - run real rm
+exec "$REAL_RM" "$@"

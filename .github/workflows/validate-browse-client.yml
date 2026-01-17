@@ -1,0 +1,53 @@
+name: Validate Browse Client
+
+on:
+  pull_request:
+    paths:
+      - "packages/browse-client/**"
+      - ".github/workflows/validate-browse-client.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/browse-client/**"
+      - ".github/workflows/validate-browse-client.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: ./packages/browse-client
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run Biome lint
+        run: biome lint --files-ignore-unknown=true .
+        working-directory: ./packages/browse-client
+
+      - name: Relay compiler check
+        run: bun run relay
+        working-directory: ./packages/browse-client
+
+      - name: TypeScript type check
+        run: bun run typecheck
+        working-directory: ./packages/browse-client
+
+      - name: Build check
+        run: bun run build
+        working-directory: ./packages/browse-client

@@ -8,6 +8,17 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"],
+  "lspServers": {
+    "helm_ls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["serve"],
+      "extensionToLanguage": {
+        ".yaml": "helm",
+        ".yml": "helm",
+        ".tpl": "helm"
+      }
+    }
+  }
 }

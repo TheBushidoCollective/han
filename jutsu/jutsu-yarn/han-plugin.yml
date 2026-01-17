@@ -2,7 +2,7 @@ hooks:
   install:
     dirs_with:
       - "yarn.lock"
-    command: "yarn install --check-files --frozen-lockfile 2>/dev/null || yarn install"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install.sh\""
     if_changed:
       - "**/package.json"
       - "yarn.lock"

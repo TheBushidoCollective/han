@@ -11,7 +11,7 @@ const version = packageJson.version;
 
 // Read the detect-plugins prompt
 const detectPluginsPrompt = readFileSync(
-	join(__dirname, "..", "lib", "detect-plugins-prompt.md"),
+	join(__dirname, "..", "lib", "analyze", "detect-plugins-prompt.md"),
 	"utf-8",
 );
 

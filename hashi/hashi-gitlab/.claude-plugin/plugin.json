@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "mcp",
     "gitlab",
@@ -18,11 +18,5 @@
     "ci-cd",
     "devops",
     "server"
-  ],
-  "mcpServers": {
-    "gitlab": {
-      "type": "http",
-      "url": "https://gitlab.com/api/v4/mcp"
-    }
-  }
+  ]
 }

@@ -13,8 +13,10 @@
       "**/*.jsx",
       "**/*.json",
       "!**/.next",
+      "!**/out",
       "!**/node_modules",
       "!**/dist",
+      "!**/.browse-out",
       "!**/__generated__"
     ],
     "ignoreUnknown": true
@@ -51,6 +53,26 @@
           },
           "correctness": {
             "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/__generated__/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/han-native/index.d.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
           }
         }
       }

@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "if command -v ansible-lint >/dev/null 2>&1; then ansible-lint *.yml *.yaml 2>/dev/null || true; fi"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\""
     dirs_with:
       - "*.yml,*.yaml"
     if_changed:

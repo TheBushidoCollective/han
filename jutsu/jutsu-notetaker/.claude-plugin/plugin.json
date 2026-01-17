@@ -5,15 +5,7 @@
   "author": {
     "name": "The Bushido Collective"
   },
-  "license": "MIT",
-  "tags": [
-    "documentation",
-    "notes",
-    "annotations",
-    "comments",
-    "todo",
-    "ai-assistance"
-  ],
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "notes",
     "comments",

@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "install": {
-      "dirsWith": ["yarn.lock"],
-      "command": "yarn install --check-files --frozen-lockfile 2>/dev/null || yarn install",
-      "ifChanged": ["**/package.json", "yarn.lock"]
-    }
-  }
-}

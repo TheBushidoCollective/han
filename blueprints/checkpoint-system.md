@@ -19,7 +19,7 @@ The checkpoint system solves a critical problem in large monorepos: hooks runnin
 
 ```
 SessionStart:
-  1. Load enabled plugins and their ifChanged patterns
+  1. Load enabled plugins and their if_changed patterns
   2. Hash all matching files
   3. Save checkpoint to ~/.claude/projects/{slug}/han/checkpoints/session-{id}.json
 
@@ -30,7 +30,7 @@ SubagentStart:
 
 Stop (hook execution):
   1. Load session checkpoint (fallback to no filtering if missing)
-  2. For each file in ifChanged patterns:
+  2. For each file in if_changed patterns:
      - If file changed since checkpoint AND since last hook run → run hook
      - Otherwise → skip
   3. Update cache manifest (existing behavior)
@@ -91,7 +91,7 @@ getCheckpointDir(): string
 // Get path for specific checkpoint
 getCheckpointPath(type: 'session' | 'agent', id: string): string
 
-// Gather all ifChanged patterns from enabled plugins
+// Gather all if_changed patterns from enabled plugins
 collectIfChangedPatterns(): string[]
 
 // Capture current file state as checkpoint

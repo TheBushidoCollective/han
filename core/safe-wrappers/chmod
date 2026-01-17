@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Safe wrapper for chmod command
+# Blocks changing permissions outside project directory or on protected paths
+
+set -euo pipefail
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Get the real chmod command
+REAL_CHMOD="$(get_real_command chmod)"
+if [[ -z "$REAL_CHMOD" ]]; then
+    echo "Error: Could not find real chmod command" >&2
+    exit 1
+fi
+
+# Parse arguments to find file paths
+files=()
+mode=""
+flags=()
+
+for arg in "$@"; do
+    case "$arg" in
+        -*)
+            flags+=("$arg")
+            ;;
+        *)
+            # First non-flag is mode, rest are files
+            if [[ -z "$mode" ]]; then
+                mode="$arg"
+            else
+                files+=("$arg")
+            fi
+            ;;
+    esac
+done
+
+# Check each file path
+for file in "${files[@]}"; do
+    # Block protected paths
+    if is_protected_path "$file"; then
+        safe_error "Cannot change permissions on protected system path: $file"
+    fi
+
+    # Block paths outside project (if CLAUDE_PROJECT_DIR is set)
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        if ! is_in_project "$file"; then
+            safe_error "Cannot change permissions outside project directory: $file (project: $CLAUDE_PROJECT_DIR)"
+        fi
+    fi
+done
+
+# All checks passed - run real chmod
+exec "$REAL_CHMOD" "$@"

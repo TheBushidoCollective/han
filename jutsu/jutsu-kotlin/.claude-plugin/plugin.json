@@ -8,6 +8,16 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["kotlin", "coroutines", "android", "jvm"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["kotlin", "coroutines", "android", "jvm"],
+  "lspServers": {
+    "kotlin-language-server": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".kt": "kotlin",
+        ".kts": "kotlin"
+      }
+    }
+  }
 }

@@ -123,14 +123,19 @@ export function validatePluginConfig(config: unknown): ValidationResult {
 			}
 		}
 
-		// Check for unknown properties
+		// Check for unknown properties (support both camelCase and snake_case)
 		const validProperties = [
 			"command",
 			"dirsWith",
+			"dirs_with",
 			"dirTest",
+			"dir_test",
 			"description",
 			"ifChanged",
+			"if_changed",
 			"idleTimeout",
+			"idle_timeout",
+			"tip",
 		];
 		for (const key of Object.keys(hook)) {
 			if (!validProperties.includes(key)) {

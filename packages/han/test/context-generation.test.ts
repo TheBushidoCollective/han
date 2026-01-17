@@ -7,10 +7,11 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 describe("context-generation.ts helper functions", () => {
-	const testDir = `/tmp/test-context-gen-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: string | undefined;
 
 	beforeEach(() => {
+		testDir = `/tmp/test-context-gen-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		originalEnv = process.env.CLAUDE_CONFIG_DIR;
 		process.env.CLAUDE_CONFIG_DIR = join(testDir, "config");
 		mkdirSync(join(testDir, "config", "han", "metrics", "jsonldb"), {

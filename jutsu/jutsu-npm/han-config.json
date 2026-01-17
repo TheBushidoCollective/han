@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "install": {
-      "dirsWith": ["package-lock.json"],
-      "command": "npm ci 2>/dev/null || npm install",
-      "ifChanged": ["**/package.json", "package-lock.json"]
-    }
-  }
-}

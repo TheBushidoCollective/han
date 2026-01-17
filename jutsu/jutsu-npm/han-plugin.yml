@@ -2,7 +2,7 @@ hooks:
   install:
     dirs_with:
       - "package-lock.json"
-    command: "npm ci 2>/dev/null || npm install"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install.sh\""
     if_changed:
       - "**/package.json"
       - "package-lock.json"

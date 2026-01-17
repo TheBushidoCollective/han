@@ -10,8 +10,8 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir as osHomedir } from "node:os";
 import { dirname, join } from "node:path";
+import { getClaudeConfigDir } from "../../config/claude-settings.ts";
 
 export type MemoryScope = "project" | "user";
 
@@ -43,18 +43,6 @@ function getProjectRoot(): string {
 }
 
 /**
- * Get the Claude config directory
- * Uses CLAUDE_CONFIG_DIR if set, otherwise defaults to ~/.claude
- */
-function getClaudeConfigDir(): string {
-	if (process.env.CLAUDE_CONFIG_DIR) {
-		return process.env.CLAUDE_CONFIG_DIR;
-	}
-	const home = process.env.HOME || osHomedir();
-	return join(home, ".claude");
-}
-
-/**
  * Get the rules directory based on scope
  */
 function getRulesDir(scope: MemoryScope): string {
@@ -74,7 +62,7 @@ function generateFrontmatter(paths?: string[]): string {
 
 	const pathsJson = JSON.stringify(paths);
 	return `---
-globs: ${pathsJson}
+paths: ${pathsJson}
 ---
 
 `;

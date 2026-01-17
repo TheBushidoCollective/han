@@ -8,12 +8,22 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "markdown",
     "markdownlint",
     "documentation",
     "linting",
     "formatting"
-  ]
+  ],
+  "lspServers": {
+    "markdown": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".md": "markdown",
+        ".mdx": "markdown"
+      }
+    }
+  }
 }

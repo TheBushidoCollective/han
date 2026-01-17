@@ -5,7 +5,7 @@
  * without AI - uses simple heuristics and pattern matching.
  */
 
-import { isMemoryEnabled } from "../han-settings.ts";
+import { isMemoryEnabled } from "../config/han-settings.ts";
 import { getGitRemote } from "./paths.ts";
 import type { MemoryStore } from "./storage.ts";
 import type {

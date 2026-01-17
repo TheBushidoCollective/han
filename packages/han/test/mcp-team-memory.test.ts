@@ -3,7 +3,11 @@
  *
  * NOTE: This test file carefully mocks only specific functions to avoid
  * leaking mocks to other test files. Do NOT use mock.module() for modules
- * that are also tested elsewhere (like research.ts).
+ * that are also tested elsewhere (like research.ts or git.ts).
+ *
+ * The git provider is NOT mocked - it uses real git history from the test
+ * environment, which is fine since we're testing the parallel search and
+ * combination logic, not the git provider itself.
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
@@ -14,6 +18,7 @@ import type { SearchResult } from "../lib/memory/types.ts";
 
 // Mock the memory module - only mock path helpers and vector store, NOT createResearchEngine
 // This allows the real research engine to run with mocked data
+// We do NOT mock the git provider - it uses real git history
 const mockSearch = mock(() => Promise.resolve([] as SearchResult[]));
 
 mock.module("../lib/memory/index.ts", () => {
@@ -61,11 +66,29 @@ describe("Team Memory MCP Tool", () => {
 		});
 
 		test("queries vector store with question", async () => {
-			mockSearch.mockResolvedValueOnce([]);
+			// Vector store returns results
+			mockSearch.mockResolvedValueOnce([
+				{
+					observation: {
+						id: "test-id",
+						source: "git:commit:test",
+						author: "test@example.com",
+						timestamp: 1700000000000,
+						summary: "Test",
+						detail: "Test detail",
+						files: [],
+						patterns: [],
+						type: "commit",
+					},
+					score: 0.5,
+					excerpt: "Test",
+				},
+			]);
 
 			await queryTeamMemory({ question: "who knows about auth?" });
 
-			// Search is called with tableName, query, limit
+			// Vector store should be searched once with the question
+			expect(mockSearch).toHaveBeenCalledTimes(1);
 			expect(mockSearch).toHaveBeenCalledWith(
 				"observations",
 				"who knows about auth?",
@@ -78,6 +101,7 @@ describe("Team Memory MCP Tool", () => {
 
 			await queryTeamMemory({ question: "what changed?", limit: 20 });
 
+			expect(mockSearch).toHaveBeenCalledTimes(1);
 			expect(mockSearch).toHaveBeenCalledWith(
 				"observations",
 				"what changed?",
@@ -85,22 +109,25 @@ describe("Team Memory MCP Tool", () => {
 			);
 		});
 
-		test("returns low confidence when no results", async () => {
+		test("always searches git history in parallel with vector store", async () => {
+			// Vector store returns nothing
 			mockSearch.mockResolvedValueOnce([]);
 
 			const result = await queryTeamMemory({
-				question: "who knows about xyz?",
+				question: "who knows about something?",
 			});
 
+			// Should always search git commits regardless of vector store results
 			expect(result.success).toBe(true);
-			expect(result.confidence).toBe("low");
+			expect(result.searched_sources).toContain("git:commits");
 		});
 
-		test("formats citations from search results", async () => {
+		test("deduplicates results from vector store and git by source", async () => {
+			// Vector store returns a result
 			mockSearch.mockResolvedValueOnce([
 				{
 					observation: {
-						id: "test-1",
+						id: "git:commit:abc123",
 						source: "git:commit:abc123",
 						author: "alice@example.com",
 						timestamp: 1700000000000,
@@ -108,9 +135,9 @@ describe("Team Memory MCP Tool", () => {
 						detail: "Implemented JWT auth",
 						files: ["src/auth.ts"],
 						patterns: ["auth", "jwt"],
-						type: "commit",
+						type: "commit" as const,
 					},
-					score: 0.85,
+					score: 0.9,
 					excerpt: "JWT implementation",
 				},
 			]);
@@ -120,9 +147,43 @@ describe("Team Memory MCP Tool", () => {
 			});
 
 			expect(result.success).toBe(true);
-			expect(result.citations).toHaveLength(1);
-			expect(result.citations[0].source).toBe("git:commit:abc123");
-			expect(result.citations[0].author).toBe("alice@example.com");
+			// Results should be deduplicated - no duplicate sources
+			const sourceSet = new Set(result.citations.map((c) => c.source));
+			expect(sourceSet.size).toBe(result.citations.length);
+		});
+
+		test("formats citations from search results", async () => {
+			const authResult = {
+				observation: {
+					id: "test-1",
+					source: "git:commit:abc123",
+					author: "alice@example.com",
+					timestamp: 1700000000000,
+					summary: "Added authentication",
+					detail: "Implemented JWT auth",
+					files: ["src/auth.ts"],
+					patterns: ["auth", "jwt"],
+					type: "commit" as const,
+				},
+				score: 0.85,
+				excerpt: "JWT implementation",
+			};
+
+			mockSearch.mockResolvedValueOnce([authResult]);
+
+			const result = await queryTeamMemory({
+				question: "who knows about auth?",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.citations.length).toBeGreaterThanOrEqual(1);
+
+			// Find the auth citation (might have git history citations too)
+			const authCitation = result.citations.find(
+				(c) => c.source === "git:commit:abc123",
+			);
+			expect(authCitation).toBeDefined();
+			expect(authCitation?.author).toBe("alice@example.com");
 		});
 	});
 

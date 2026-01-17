@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { type LiveOutputState, makeLiveOutputKey } from "../lib/hook-test.ts";
+import { type LiveOutputState, makeLiveOutputKey } from "../lib/hooks/index.ts";
 
 describe("hook-test.ts unit tests", () => {
 	describe("makeLiveOutputKey", () => {

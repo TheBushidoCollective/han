@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import { formatToolUsage, parseMarkdown } from "../lib/install-interactive.tsx";
+import { formatToolUsage, parseMarkdown } from "../lib/install/index.ts";
 
 describe("install-interactive.tsx helper functions", () => {
 	describe("formatToolUsage", () => {

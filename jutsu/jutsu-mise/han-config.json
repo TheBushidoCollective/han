@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "validate": {
-      "command": "mise tasks validate",
-      "dirsWith": ["mise.toml", ".mise.toml"],
-      "ifChanged": ["mise.toml", ".mise.toml", "mise/**/*", ".mise/**/*"]
-    }
-  }
-}
