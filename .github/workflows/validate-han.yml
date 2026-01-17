@@ -1,0 +1,49 @@
+name: Validate Han CLI
+
+on:
+  pull_request:
+    paths:
+      - "packages/han/**"
+      - ".github/workflows/validate-han.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/han/**"
+      - ".github/workflows/validate-han.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: ./packages/han
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run Biome lint
+        run: biome lint --files-ignore-unknown=true .
+        working-directory: ./packages/han
+
+      - name: TypeScript type check
+        run: bun run tsc --noEmit
+        working-directory: ./packages/han
+
+      - name: Run tests
+        run: bun run test
+        working-directory: ./packages/han
