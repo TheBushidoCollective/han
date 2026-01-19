@@ -48,6 +48,7 @@
     "jutsu-playwright-bdd@han": true,
     "jutsu-react@han": true,
     "jutsu-relay@han": true,
+    "jutsu-rust@han": true,
     "jutsu-shellcheck@han": true,
     "jutsu-typescript@han": true
   },
