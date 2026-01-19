@@ -263,7 +263,7 @@ pub fn start_file_watcher(watch_path: Option<String>) -> Result<bool> {
                             last_event_time = now;
 
                             // Process the file event by triggering indexing
-                            let event_type = file_event.event_type.clone();
+                            let event_type = file_event.event_type;
                             let path = file_event.path.clone();
                             let session_id = file_event.session_id.clone();
                             let project_path = file_event.project_path.clone();

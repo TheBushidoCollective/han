@@ -95,6 +95,7 @@ pub struct SessionInput {
 // Tracks JSONL files belonging to sessions (main, agent, han_events)
 // ============================================================================
 
+#[allow(dead_code)] // Reserved for future session file tracking API
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionFile {

@@ -33,6 +33,19 @@ const RepoDetailPageQueryDef = graphql`
       path
       totalSessions
       lastActivity
+      projects {
+        id
+        projectId
+        name
+        totalSessions
+        lastActivity
+        worktrees {
+          name
+          path
+          isWorktree
+          sessionCount
+        }
+      }
     }
   }
 `;
@@ -107,6 +120,49 @@ function RepoDetailContent({ repoId }: { repoId: string }): React.ReactElement {
           centered
         />
       </Box>
+
+      {/* Projects List */}
+      {repo.projects && repo.projects.length > 0 && (
+        <VStack gap="md">
+          <Heading size="sm" as="h3">
+            Projects
+          </Heading>
+          <VStack gap="sm">
+            {repo.projects.map((project) => (
+              <Box
+                key={project.id}
+                onClick={() => navigate(`/projects/${project.projectId}`)}
+                style={{
+                  padding: theme.spacing.md,
+                  backgroundColor: theme.colors.bg.secondary,
+                  borderRadius: theme.radii.md,
+                  cursor: 'pointer',
+                  border: `1px solid ${theme.colors.border.default}`,
+                }}
+              >
+                <VStack gap="xs">
+                  <HStack justify="space-between" align="center">
+                    <Text weight="semibold">{project.name}</Text>
+                    <Text size="sm" color="muted">
+                      {project.totalSessions ?? 0} sessions
+                    </Text>
+                  </HStack>
+                  {project.worktrees && project.worktrees.length > 0 && (
+                    <Text size="sm" color="muted">
+                      {project.worktrees[0].path}
+                    </Text>
+                  )}
+                  {project.lastActivity && (
+                    <Text size="sm" color="muted">
+                      Last: {formatRelativeTime(project.lastActivity)}
+                    </Text>
+                  )}
+                </VStack>
+              </Box>
+            ))}
+          </VStack>
+        </VStack>
+      )}
 
       {/* Navigation Cards */}
       <VStack gap="md">

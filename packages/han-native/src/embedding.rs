@@ -145,7 +145,7 @@ pub async fn ensure_available() -> napi::Result<String> {
     // Download ONNX Runtime if needed
     let lib_path = download::ensure_onnxruntime()
         .await
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
 
     // Set environment variable for ort to find the library
     std::env::set_var("ORT_DYLIB_PATH", &lib_path);
@@ -153,7 +153,7 @@ pub async fn ensure_available() -> napi::Result<String> {
     // Download model if needed
     download::ensure_model()
         .await
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
 
     Ok(lib_path.to_string_lossy().to_string())
 }
@@ -188,7 +188,7 @@ async fn get_session() -> napi::Result<tokio::sync::MutexGuard<'static, Option<E
         // Load tokenizer
         let tokenizer_path = download::get_tokenizer_path();
         let tokenizer = Tokenizer::from_file(&tokenizer_path.to_string_lossy())
-            .map_err(|e| napi::Error::from_reason(e))?;
+            .map_err(napi::Error::from_reason)?;
 
         *guard = Some(EmbeddingSession { session, tokenizer });
     }

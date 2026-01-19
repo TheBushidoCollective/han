@@ -35,8 +35,8 @@ pub struct GitWorktree {
 }
 
 /// Open a git repository at the given path
-fn open_repo(path: &str) -> Result<gix::Repository, DiscoverError> {
-    gix::discover(path)
+fn open_repo(path: &str) -> Result<gix::Repository, Box<DiscoverError>> {
+    gix::discover(path).map_err(Box::new)
 }
 
 /// Get current git branch for a directory
@@ -420,7 +420,7 @@ pub fn git_diff_stat(
 
     // Helper to recursively collect blob paths from a tree
     fn collect_blob_paths(
-        repo: &gix::Repository,
+        _repo: &gix::Repository,
         tree: &gix::Tree,
         prefix: &str,
         paths: &mut std::collections::HashSet<String>,
@@ -446,7 +446,7 @@ pub fn git_diff_stat(
                     .object()
                     .map_err(|e| napi::Error::from_reason(format!("Failed to get subtree: {}", e)))?
                     .into_tree();
-                collect_blob_paths(repo, &subtree, &path, paths)?;
+                collect_blob_paths(_repo, &subtree, &path, paths)?;
             }
         }
         Ok(())
@@ -457,7 +457,7 @@ pub fn git_diff_stat(
 
     // Collect paths from to_tree (with oids for comparison)
     fn collect_blob_paths_with_oids(
-        repo: &gix::Repository,
+        _repo: &gix::Repository,
         tree: &gix::Tree,
         prefix: &str,
         paths: &mut std::collections::HashMap<String, gix::ObjectId>,
@@ -483,7 +483,7 @@ pub fn git_diff_stat(
                     .object()
                     .map_err(|e| napi::Error::from_reason(format!("Failed to get subtree: {}", e)))?
                     .into_tree();
-                collect_blob_paths_with_oids(repo, &subtree, &path, paths)?;
+                collect_blob_paths_with_oids(_repo, &subtree, &path, paths)?;
             }
         }
         Ok(())
@@ -492,7 +492,7 @@ pub fn git_diff_stat(
     collect_blob_paths_with_oids(&repo, &to_tree, "", &mut to_paths)?;
 
     // Find additions (in to_tree but not in from_tree)
-    for (path, _) in &to_paths {
+    for path in to_paths.keys() {
         if !from_paths.contains(path) {
             stats.push(GitDiffStat {
                 path: path.clone(),

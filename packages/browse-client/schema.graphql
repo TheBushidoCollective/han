@@ -2179,6 +2179,9 @@ type Repo implements Node {
   """Path to the repository root"""
   path: String
 
+  """All projects (worktrees) belonging to this repository"""
+  projects: [Project!]
+
   """Git remote-based repository identifier (e.g., github-com-org-repo)"""
   repoId: String
 

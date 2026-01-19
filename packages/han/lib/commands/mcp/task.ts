@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
 import { isMetricsEnabled } from "../../config/han-settings.ts";
 import { tasks } from "../../db/index.ts";
-import { getOrCreateEventLogger } from "../../events/logger.ts";
+import { initEventLogger } from "../../events/logger.ts";
 import type {
 	TaskComplexity,
 	TaskOutcome,
@@ -293,15 +293,13 @@ export async function handleToolsCall(params: {
 				});
 
 				// Log Han event for task start
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					logger.logTaskStart(
-						task.taskId,
-						description,
-						taskType as TaskType,
-						complexity as TaskComplexity | undefined,
-					);
-				}
+				const logger = initEventLogger(sessionId, {}, process.cwd());
+				logger.logTaskStart(
+					task.taskId,
+					description,
+					taskType as TaskType,
+					complexity as TaskComplexity | undefined,
+				);
 
 				return {
 					content: [
@@ -324,6 +322,7 @@ export async function handleToolsCall(params: {
 			}
 
 			case "update_task": {
+				const sessionId = args.session_id as string;
 				const taskId = args.task_id as string;
 				const status = args.status as string | undefined;
 				const notes = args.notes as string | undefined;
@@ -343,10 +342,8 @@ export async function handleToolsCall(params: {
 				}
 
 				// Log Han event for task update
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					logger.logTaskUpdate(taskId, status, notes);
-				}
+				const logger = initEventLogger(sessionId, {}, process.cwd());
+				logger.logTaskUpdate(taskId, status, notes);
 
 				return {
 					content: [
@@ -367,6 +364,7 @@ export async function handleToolsCall(params: {
 			}
 
 			case "complete_task": {
+				const sessionId = args.session_id as string;
 				const taskId = args.task_id as string;
 				const outcome = args.outcome as string;
 				const confidence = args.confidence as number;
@@ -395,18 +393,16 @@ export async function handleToolsCall(params: {
 						: 0;
 
 				// Log Han event for task complete
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					logger.logTaskComplete(
-						taskId,
-						outcome as TaskOutcome,
-						confidence,
-						durationSeconds,
-						filesModified,
-						testsAdded,
-						notes,
-					);
-				}
+				const logger = initEventLogger(sessionId, {}, process.cwd());
+				logger.logTaskComplete(
+					taskId,
+					outcome as TaskOutcome,
+					confidence,
+					durationSeconds,
+					filesModified,
+					testsAdded,
+					notes,
+				);
 
 				// Record OTEL telemetry
 				recordTaskCompletion(
@@ -436,6 +432,7 @@ export async function handleToolsCall(params: {
 			}
 
 			case "fail_task": {
+				const sessionId = args.session_id as string;
 				const taskId = args.task_id as string;
 				const reason = args.reason as string;
 				const confidence = args.confidence as number | undefined;
@@ -464,17 +461,15 @@ export async function handleToolsCall(params: {
 						: 0;
 
 				// Log Han event for task fail
-				const logger = getOrCreateEventLogger();
-				if (logger) {
-					logger.logTaskFail(
-						taskId,
-						reason,
-						durationSeconds,
-						confidence,
-						attemptedSolutions,
-						notes,
-					);
-				}
+				const logger = initEventLogger(sessionId, {}, process.cwd());
+				logger.logTaskFail(
+					taskId,
+					reason,
+					durationSeconds,
+					confidence,
+					attemptedSolutions,
+					notes,
+				);
 
 				// Record OTEL telemetry
 				recordTaskCompletion(

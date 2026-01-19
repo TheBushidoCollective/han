@@ -563,6 +563,7 @@ pub fn upsert_session_file(
 }
 
 /// Get session files for a session
+#[allow(dead_code)] // Reserved for future session file tracking API
 pub fn get_session_files(session_id: &str) -> napi::Result<Vec<SessionFile>> {
     let db = db::get_db()?;
     let conn = db
@@ -595,6 +596,7 @@ pub fn get_session_files(session_id: &str) -> napi::Result<Vec<SessionFile>> {
 }
 
 /// Get session file by path
+#[allow(dead_code)] // Reserved for future session file tracking API
 pub fn get_session_file_by_path(file_path: &str) -> napi::Result<Option<SessionFile>> {
     let db = db::get_db()?;
     let conn = db
@@ -632,6 +634,7 @@ pub fn get_session_file_by_path(file_path: &str) -> napi::Result<Option<SessionF
 }
 
 /// Update last indexed line for a session file
+#[allow(dead_code)] // Reserved for future session file tracking API
 pub fn update_session_file_indexed_line(file_path: &str, line_number: u32) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -1813,13 +1816,13 @@ pub fn query_task_metrics(
     };
 
     // Calculate calibration score (how well confidence predicts outcomes)
-    let calibration = calculate_calibration_score(&conn, &time_filter)?;
+    let calibration = calculate_calibration_score(&conn, time_filter)?;
 
     // Get tasks by type breakdown
-    let by_type = get_tasks_by_type(&conn, &time_filter)?;
+    let by_type = get_tasks_by_type(&conn, time_filter)?;
 
     // Get tasks by outcome breakdown
-    let by_outcome = get_tasks_by_outcome(&conn, &time_filter)?;
+    let by_outcome = get_tasks_by_outcome(&conn, time_filter)?;
 
     Ok(TaskMetrics {
         total_tasks: total,
@@ -2902,7 +2905,7 @@ pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
 
         // Set completed_at if status is terminal
         if status == "completed" || status == "failed" || status == "cancelled" {
-            sql_parts.push(format!("completed_at = datetime('now')"));
+            sql_parts.push("completed_at = datetime('now')".to_string());
         }
     }
     if let Some(total) = update.total_hooks {

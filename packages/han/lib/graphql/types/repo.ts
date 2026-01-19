@@ -9,10 +9,12 @@
  * hierarchy: Repo > Project > Session.
  */
 
+import { getGitRemoteUrl } from "../../../../han-native";
 import type { ProjectGroup } from "../../api/sessions.ts";
+import { projects, repos } from "../../db/index.ts";
 import { builder } from "../builder.ts";
 import { registerNodeLoader } from "../node-registry.ts";
-import { getAllProjects } from "./project.ts";
+import { getAllProjects, ProjectType } from "./project.ts";
 // Import session connection type - safe because session-connection.ts doesn't import from here
 import { SessionConnectionType } from "./session-connection.ts";
 
@@ -68,6 +70,56 @@ export const RepoType = RepoRef.implement({
 			nullable: true,
 			description: "Most recent session timestamp",
 			resolve: (repo) => repo.lastActivity ?? null,
+		}),
+		projects: t.field({
+			type: [ProjectType],
+			description: "All projects (worktrees) belonging to this repository",
+			resolve: async (repo) => {
+				// Get the git root path from the repo's main worktree
+				const mainWorktree = repo.worktrees.find((w) => !w.isWorktree);
+				const repoPath = mainWorktree?.path || repo.worktrees[0]?.path;
+
+				if (!repoPath) {
+					return [];
+				}
+
+				// Get git remote for this path to look up database repo
+				const remote = getGitRemoteUrl(repoPath);
+
+				if (!remote) {
+					return [];
+				}
+
+				// Look up database repo by remote URL
+				const dbRepo = await repos.getByRemote(remote);
+
+				if (!dbRepo || !dbRepo.id) {
+					return [];
+				}
+
+				// Get all projects for this database repo UUID
+				const projectList = await projects.list(dbRepo.id);
+
+				// Convert database Project objects to ProjectGroup format
+				return projectList.map(
+					(p): ProjectGroup => ({
+						projectId: p.slug,
+						repoId: dbRepo.id || "",
+						displayName: p.name,
+						worktrees: [
+							{
+								name: p.name,
+								path: p.path,
+								sessionCount: 0,
+								isWorktree: p.isWorktree,
+								subdirs: undefined,
+							},
+						],
+						totalSessions: 0,
+						lastActivity: undefined,
+					}),
+				);
+			},
 		}),
 		sessions: t.field({
 			type: SessionConnectionType,

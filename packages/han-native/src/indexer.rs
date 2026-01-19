@@ -696,13 +696,9 @@ fn read_han_events(han_file: &Path, session_id: &str) -> Vec<ParsedHanEvent> {
     // Ref files are stored in {han_file_dir}/{session-id}/
     let ref_base_dir = han_file.parent().map(|p| p.join(session_id));
 
-    loop {
-        let result =
-            match jsonl_read_page(han_file.to_string_lossy().to_string(), offset, batch_size) {
-                Ok(r) => r,
-                Err(_) => break,
-            };
-
+    while let Ok(result) =
+        jsonl_read_page(han_file.to_string_lossy().to_string(), offset, batch_size)
+    {
         if result.lines.is_empty() {
             break;
         }
@@ -811,7 +807,7 @@ fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &
         // Compute hash of the file after the change
         let file_hash_after = std::fs::File::open(&file_path)
             .ok()
-            .map(|mut file| {
+            .and_then(|mut file| {
                 use sha2::{Digest, Sha256};
                 use std::io::Read;
                 let mut hasher = Sha256::new();
@@ -824,8 +820,7 @@ fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &
                     }
                 }
                 Some(format!("{:x}", hasher.finalize()))
-            })
-            .flatten();
+            });
 
         let input = SessionFileChangeInput {
             session_id: session_id.to_string(),
@@ -1153,7 +1148,7 @@ fn generate_sentiment_event(
     // Create event ID
     let event_id = format!(
         "evt_{}",
-        Uuid::new_v4().to_string().replace('-', "")[..12].to_string()
+        &Uuid::new_v4().to_string().replace('-', "")[..12]
     );
 
     // Create timestamp just after the message (add 1 millisecond)

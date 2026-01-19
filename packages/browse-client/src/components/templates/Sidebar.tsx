@@ -36,10 +36,7 @@ const navItems: { id: string; path: string; label: string; icon: string }[] = [
   { id: 'repos', path: '/repos', label: 'Repos', icon: '🗂️' },
   { id: 'sessions', path: '/sessions', label: 'Sessions', icon: '📋' },
   { id: 'metrics', path: '/metrics', label: 'Metrics', icon: '📊' },
-  { id: 'plugins', path: '/plugins', label: 'Plugins', icon: '🔌' },
-  { id: 'cache', path: '/cache', label: 'Cache', icon: '💾' },
   { id: 'memory', path: '/memory', label: 'Memory', icon: '🧠' },
-  { id: 'settings', path: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
 const styles = createStyles({
