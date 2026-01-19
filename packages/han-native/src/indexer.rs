@@ -1898,9 +1898,10 @@ mod tests {
     #[test]
     fn test_decode_project_path() {
         // Slugs have a leading dash that represents the root /
+        // Domain patterns like github-com should decode to github.com
         assert_eq!(
             decode_project_path("-Volumes-dev-src-github-com-user-project"),
-            "/Volumes/dev/src/github/com/user/project"
+            "/Volumes/dev/src/github.com/user/project"
         );
     }
 
