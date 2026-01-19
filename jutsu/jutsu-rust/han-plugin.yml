@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "cargo fmt --check"
+    command: "cargo fmt"
     dirs_with:
       - "Cargo.toml"
     if_changed:

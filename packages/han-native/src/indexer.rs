@@ -805,22 +805,20 @@ fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &
         };
 
         // Compute hash of the file after the change
-        let file_hash_after = std::fs::File::open(&file_path)
-            .ok()
-            .and_then(|mut file| {
-                use sha2::{Digest, Sha256};
-                use std::io::Read;
-                let mut hasher = Sha256::new();
-                let mut buffer = [0u8; 8192];
-                loop {
-                    match file.read(&mut buffer) {
-                        Ok(0) => break,
-                        Ok(n) => hasher.update(&buffer[..n]),
-                        Err(_) => return None,
-                    }
+        let file_hash_after = std::fs::File::open(&file_path).ok().and_then(|mut file| {
+            use sha2::{Digest, Sha256};
+            use std::io::Read;
+            let mut hasher = Sha256::new();
+            let mut buffer = [0u8; 8192];
+            loop {
+                match file.read(&mut buffer) {
+                    Ok(0) => break,
+                    Ok(n) => hasher.update(&buffer[..n]),
+                    Err(_) => return None,
                 }
-                Some(format!("{:x}", hasher.finalize()))
-            });
+            }
+            Some(format!("{:x}", hasher.finalize()))
+        });
 
         let input = SessionFileChangeInput {
             session_id: session_id.to_string(),
@@ -1146,10 +1144,7 @@ fn generate_sentiment_event(
     let result = sentiment::analyze_sentiment(message_content)?;
 
     // Create event ID
-    let event_id = format!(
-        "evt_{}",
-        &Uuid::new_v4().to_string().replace('-', "")[..12]
-    );
+    let event_id = format!("evt_{}", &Uuid::new_v4().to_string().replace('-', "")[..12]);
 
     // Create timestamp just after the message (add 1 millisecond)
     let event_timestamp = if let Ok(parsed) = DateTime::parse_from_rfc3339(message_timestamp) {

@@ -652,53 +652,6 @@ pub fn update_session_file_indexed_line(file_path: &str, line_number: u32) -> na
     Ok(true)
 }
 
-/// Reset all session files for re-indexing
-pub fn reset_all_session_files_for_reindex() -> napi::Result<u32> {
-    let db = db::get_db()?;
-    let conn = db
-        .lock()
-        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let count = conn
-        .execute("UPDATE session_files SET last_indexed_line = 0", [])
-        .map_err(|e| napi::Error::from_reason(format!("Failed to reset session files: {}", e)))?;
-
-    Ok(count as u32)
-}
-
-/// List all session files that need indexing (where file has more lines than last_indexed_line)
-/// Returns file paths only - caller should check file line counts
-pub fn list_unindexed_session_files() -> napi::Result<Vec<SessionFile>> {
-    let db = db::get_db()?;
-    let conn = db
-        .lock()
-        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, session_id, file_type, file_path, agent_id, last_indexed_line, last_indexed_at, created_at
-             FROM session_files ORDER BY created_at ASC",
-        )
-        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(SessionFile {
-                id: row.get(0)?,
-                session_id: row.get(1)?,
-                file_type: row.get(2)?,
-                file_path: row.get(3)?,
-                agent_id: row.get(4)?,
-                last_indexed_line: row.get(5)?,
-                last_indexed_at: row.get(6)?,
-                created_at: row.get(7)?,
-            })
-        })
-        .map_err(|e| napi::Error::from_reason(format!("Failed to query session files: {}", e)))?;
-
-    Ok(rows.filter_map(|r| r.ok()).collect())
-}
-
 // ============================================================================
 // Session Summary Operations (event-sourced)
 // ============================================================================
