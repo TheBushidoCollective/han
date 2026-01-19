@@ -1,20 +1,6 @@
 # hashi-linear plugin configuration
 # This plugin provides Linear integration via MCP server
-
-# MCP server definition (managed by Han, not exposed to Claude Code)
-mcp_servers:
-  linear:
-    name: linear
-    description: Linear issue tracking and project management
-    type: http
-    url: https://mcp.linear.app/mcp
-    capabilities:
-      - category: Project Management
-        summary: Issue management, project tracking, workflow automation
-        examples:
-          - List issues assigned to me
-          - Create a new issue for the bug
-          - Update issue status
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

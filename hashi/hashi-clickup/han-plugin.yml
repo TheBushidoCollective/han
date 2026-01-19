@@ -1,20 +1,6 @@
 # hashi-clickup plugin configuration
 # This plugin provides ClickUp integration via MCP server
-
-# MCP server definition (managed by Han, not exposed to Claude Code)
-mcp_servers:
-  clickup:
-    name: clickup
-    description: ClickUp project management with task tracking and acceptance criteria
-    type: http
-    url: https://mcp.clickup.com/mcp
-    capabilities:
-      - category: Project Management
-        summary: Task management, acceptance criteria validation, workspace access
-        examples:
-          - List tasks in the current sprint
-          - Check acceptance criteria for a task
-          - Update task status
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

@@ -1,15 +1,7 @@
 # hashi-blueprints plugin configuration
 # Blueprint tools are provided by Han's built-in blueprints MCP server
 
-hooks:
-  # Sync blueprints index to .claude/rules at session start
-  sync-index:
-    event: SessionStart
-    command: han blueprints sync-index
-    description: Generate blueprints index in .claude/rules
-    silent: true
-
-# Blueprints MCP server (shared with MCP orchestrator AND memory system)
+# Blueprints MCP server exposed through Han's main MCP server
 mcp_servers:
   blueprints:
     expose: true
@@ -17,6 +9,14 @@ mcp_servers:
     description: Project blueprint documentation search and retrieval
     command: han
     args: ["mcp", "blueprints"]
+
+hooks:
+  # Sync blueprints index to .claude/rules at session start
+  sync-index:
+    event: SessionStart
+    command: han blueprints sync-index
+    description: Generate blueprints index in .claude/rules
+    silent: true
 
 # Memory provider config - defines which tools the Memory Agent can use
 memory:

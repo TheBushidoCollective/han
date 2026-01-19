@@ -1,20 +1,6 @@
 # hashi-sentry plugin configuration
 # This plugin provides Sentry integration via MCP server
-
-# MCP server definition (managed by Han, not exposed to Claude Code)
-mcp_servers:
-  sentry:
-    name: sentry
-    description: Sentry error tracking and incident response
-    type: http
-    url: https://mcp.sentry.dev/mcp
-    capabilities:
-      - category: Observability
-        summary: Error tracking, performance monitoring, incident response
-        examples:
-          - List recent error events
-          - Get issue details and stack traces
-          - Monitor performance metrics
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

@@ -1,20 +1,6 @@
 # hashi-gitlab plugin configuration
 # This plugin provides GitLab integration via MCP server
-
-# MCP server definition (managed by Han, not exposed to Claude Code)
-mcp_servers:
-  gitlab:
-    name: gitlab
-    description: GitLab integration for merge requests, issues, and code search
-    type: http
-    url: https://gitlab.com/api/v4/mcp
-    capabilities:
-      - category: Git/GitLab
-        summary: Merge request management, issue tracking, code search
-        examples:
-          - Create a merge request with current changes
-          - List open merge requests
-          - Search for issues mentioning authentication
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

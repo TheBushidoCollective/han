@@ -2,7 +2,7 @@
 # The main Han MCP server is defined in plugin.json (must be visible to Claude Code)
 # context7 and deepwiki are exposed through Han's tool proxying
 
-# MCP servers - used by MCP orchestrator AND available to memory system
+# MCP servers - exposed through main Han MCP server (han mcp)
 mcp_servers:
   context7:
     name: context7

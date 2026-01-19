@@ -1,22 +1,6 @@
 # hashi-notion plugin configuration
 # This plugin provides Notion integration via Notion's hosted MCP server
-
-# MCP server definition (managed by Han MCP orchestrator)
-mcp_servers:
-  notion:
-    name: notion
-    description: Notion workspace integration for page management, database operations, and AI-optimized content access
-    type: http
-    url: https://mcp.notion.com/mcp
-    capabilities:
-      - category: Knowledge Management
-        summary: Search, create, and manage Notion pages and databases
-        examples:
-          - Search my Notion workspace for project documentation
-          - Create a new page with meeting notes
-          - Query a database for open tasks
-          - Update page content with new information
-          - Get comments from a page discussion
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
