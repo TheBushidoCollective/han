@@ -85,7 +85,6 @@ export type {
 	DiscoveredProvider,
 	LoadedProvider,
 	MCPClient,
-	PluginMcpConfig,
 	ProviderFactory,
 	ProviderType,
 } from "./provider-discovery.ts";
