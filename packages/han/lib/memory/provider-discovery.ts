@@ -2,18 +2,22 @@
  * Memory Provider Discovery
  *
  * Discovers and loads memory providers from installed plugins.
- * Convention-based: plugins declare required MCP tools, everything else is derived.
+ * Memory sub-agents inherit enabled plugins from Claude Code settings,
+ * so MCP servers are available automatically with OAuth.
  *
  * ```yaml
  * # han-plugin.yml
  * memory:
- *   tools:
- *     - mcp__plugin_hashi-github_github__list_pull_requests
+ *   allowed_tools:
+ *     - mcp__github__list_pull_requests
+ *   system_prompt: |
+ *     Search GitHub for PRs and issues relevant to the query.
  * ```
  *
  * Conventions:
  * - Provider name = plugin name (strip jutsu-/do-/hashi- prefix)
- * - Script location = memory-provider.ts in plugin root
+ * - Script location = memory-provider.ts in plugin root (optional)
+ * - MCP servers inherited from enabled plugins via .mcp.json files
  */
 
 import { existsSync } from "node:fs";
@@ -46,20 +50,6 @@ export type ProviderFactory = (
 ) => MemoryProvider;
 
 /**
- * MCP server configuration from plugin
- */
-export interface PluginMcpConfig {
-	/** MCP server name */
-	name: string;
-	/** Command to run */
-	command: string;
-	/** Command arguments */
-	args?: string[];
-	/** Environment variables */
-	env?: Record<string, string>;
-}
-
-/**
  * Provider type - script-based or MCP-based
  */
 export type ProviderType = "script" | "mcp";
@@ -74,12 +64,10 @@ export interface DiscoveredProvider {
 	pluginName: string;
 	/** Path to plugin root */
 	pluginRoot: string;
-	/** Provider type: 'script' for memory-provider.ts, 'mcp' for MCP server */
+	/** Provider type: 'script' for memory-provider.ts, 'mcp' for MCP-based (inherits from enabled plugins) */
 	type: ProviderType;
 	/** Path to provider script (for script-based providers) */
 	scriptPath?: string;
-	/** MCP server config (for MCP-based providers) */
-	mcpConfig?: PluginMcpConfig;
 	/** MCP tools the memory agent is allowed to use */
 	allowedTools: string[];
 	/** System prompt for the memory extraction agent */
@@ -248,77 +236,16 @@ export async function discoverProviders(
 			continue;
 		}
 
-		// Collect MCP servers from BOTH sources:
-		// 1. Root mcp_servers - shared with MCP orchestrator AND memory
-		// 2. memory.mcp_servers - memory-only MCP servers
-		const allMcpServers: Record<string, PluginMcpConfig> = {};
-
-		// Add root mcp_servers
-		if (config.mcp_servers && typeof config.mcp_servers === "object") {
-			for (const [serverKey, serverConfig] of Object.entries(
-				config.mcp_servers,
-			)) {
-				const server = serverConfig as unknown as Record<string, unknown>;
-				if (server.command && typeof server.command === "string") {
-					allMcpServers[serverKey] = {
-						name: (server.name as string) || serverKey,
-						command: server.command,
-						args: Array.isArray(server.args) ? server.args : undefined,
-						env: (server.env as Record<string, string>) || undefined,
-					};
-				}
-			}
-		}
-
-		// Add memory.mcp_servers (memory-only servers)
-		if (
-			config.memory.mcp_servers &&
-			typeof config.memory.mcp_servers === "object"
-		) {
-			for (const [serverKey, serverConfig] of Object.entries(
-				config.memory.mcp_servers,
-			)) {
-				const server = serverConfig as unknown as Record<string, unknown>;
-				if (server.command && typeof server.command === "string") {
-					allMcpServers[serverKey] = {
-						name: (server.name as string) || serverKey,
-						command: server.command,
-						args: Array.isArray(server.args) ? server.args : undefined,
-						env: (server.env as Record<string, string>) || undefined,
-					};
-				}
-			}
-		}
-
-		// Create a provider for each MCP server that has matching allowed_tools
-		for (const [serverKey, mcpConfig] of Object.entries(allMcpServers)) {
-			// Find tools that belong to this server (mcp__<serverName>__<toolName>)
-			const serverName = mcpConfig.name || serverKey;
-			const serverTools = config.memory.allowed_tools.filter(
-				(tool: string) =>
-					tool.startsWith(`mcp__${serverName}__`) ||
-					tool.startsWith(`mcp__${serverKey}__`),
-			);
-
-			if (serverTools.length > 0) {
-				discovered.push({
-					name: deriveProviderName(pluginName),
-					pluginName,
-					pluginRoot,
-					type: "mcp",
-					mcpConfig,
-					allowedTools: serverTools,
-					systemPrompt: config.memory.system_prompt,
-				});
-			}
-		}
-
-		// If no MCP servers found, log error
-		if (Object.keys(allMcpServers).length === 0) {
-			console.error(
-				`Memory provider for ${pluginName} requires either memory-provider.ts or mcp_servers in han-plugin.yml`,
-			);
-		}
+		// MCP-based provider - sub-agents inherit enabled plugins and their MCP servers
+		// No need to collect MCP server configs, just register the allowed tools
+		discovered.push({
+			name: deriveProviderName(pluginName),
+			pluginName,
+			pluginRoot,
+			type: "mcp",
+			allowedTools: config.memory.allowed_tools,
+			systemPrompt: config.memory.system_prompt,
+		});
 	}
 
 	return discovered;

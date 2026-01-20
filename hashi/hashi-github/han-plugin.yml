@@ -5,17 +5,8 @@
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
 
-# Memory provider for team memory extraction
-# Convention: provider name = plugin name, script = memory-provider.ts
+# Memory provider - uses main agent's GitHub MCP server (already OAuth authenticated)
 memory:
-  # MCP server for memory-only use (spawned by Memory Agent)
-  mcp_servers:
-    github:
-      name: github
-      command: sh
-      args:
-        - -c
-        - GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
   allowed_tools:
     - mcp__github__list_pull_requests
     - mcp__github__get_pull_request

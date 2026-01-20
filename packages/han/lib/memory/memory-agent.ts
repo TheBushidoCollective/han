@@ -204,51 +204,38 @@ interface MemoryAgentMcpConfig {
 async function buildMemoryAgentMcpConfig(
 	projectPath?: string,
 ): Promise<MemoryAgentMcpConfig> {
-	const mcpServers: Record<string, McpServerConfig> = {};
 	const allowedTools: string[] = [];
 	const systemPrompts: string[] = [];
 
-	// Discover ALL Memory Provider MCPs from installed plugins
-	// This includes core DAL (from core/han-plugin.yml) and external providers
-	// Plugins must have BOTH `mcp_servers` (or memory.mcp_servers) AND `memory.allowed_tools`
+	// Discover memory providers from installed plugins
+	// MCP servers are automatically available from enabled plugins via .mcp.json
+	// We just need to collect allowed_tools and system_prompts
 	try {
 		const providers = await discoverProviders(projectPath);
 
 		for (const provider of providers) {
-			if (provider.type === "mcp" && provider.mcpConfig) {
-				const config = provider.mcpConfig;
-				// Use the mcp.name from config, or fallback to provider name
-				const serverName = config.name || provider.name;
+			// Add allowed tools from plugin's memory.allowed_tools
+			allowedTools.push(...provider.allowedTools);
 
-				// Add MCP server from plugin's mcp_servers (root) or memory.mcp_servers
-				mcpServers[serverName] = {
-					command: config.command,
-					args: config.args,
-					env: config.env,
-				};
-
-				// Add allowed tools from plugin's memory.allowed_tools
-				allowedTools.push(...provider.allowedTools);
-
-				// Add system prompt from plugin's memory.system_prompt
-				if (provider.systemPrompt) {
-					systemPrompts.push(
-						`## ${provider.pluginName} (${serverName})\n${provider.systemPrompt}`,
-					);
-				}
+			// Add system prompt from plugin's memory.system_prompt
+			if (provider.systemPrompt) {
+				systemPrompts.push(
+					`## ${provider.pluginName}\n${provider.systemPrompt}`,
+				);
 			}
 		}
 
-		if (Object.keys(mcpServers).length === 0) {
+		if (allowedTools.length === 0) {
 			console.warn(
-				"[Memory Agent] No memory providers discovered. Ensure core plugin is installed with mcp_servers and memory.allowed_tools.",
+				"[Memory Agent] No memory providers discovered. Ensure plugins have memory.allowed_tools defined.",
 			);
 		}
 	} catch (error) {
 		console.error("[Memory Agent] Error discovering providers:", error);
 	}
 
-	return { mcpServers, allowedTools, systemPrompts };
+	// MCP servers are inherited from enabled plugins - no need to specify them
+	return { mcpServers: {}, allowedTools, systemPrompts };
 }
 
 /**
