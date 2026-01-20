@@ -279,12 +279,15 @@ memory:
 			expect(providers).toHaveLength(0);
 		});
 
-		test("skips plugins without memory-provider.ts script", async () => {
+		test("discovers MCP-based providers without memory-provider.ts script", async () => {
 			createTestPlugin("hashi-no-script", "han", { createScript: false });
 
 			const providers = await discoverProviders(testDir);
 
-			expect(providers).toHaveLength(0);
+			// MCP-based providers inherit MCP servers from enabled plugins - no script needed
+			expect(providers).toHaveLength(1);
+			expect(providers[0].type).toBe("mcp");
+			expect(providers[0].scriptPath).toBeUndefined();
 		});
 
 		test("discovers multiple plugins", async () => {
@@ -551,9 +554,10 @@ memory:
 			expect(providers[0].name).toBe("custom-plugin");
 		});
 
-		test("script path is always memory-provider.ts", async () => {
+		test("script path is set for script-based providers", async () => {
 			createTestPlugin("hashi-github", "han");
 			const providers = await discoverProviders(testDir);
+			expect(providers[0].type).toBe("script");
 			expect(providers[0].scriptPath).toContain("memory-provider.ts");
 		});
 	});
