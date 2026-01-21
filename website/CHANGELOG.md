@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-01-21
+
+### Added
+
+- add Mermaid diagram rendering to papers ([67ef7be1](../../commit/67ef7be1))
+- publish AI-DLC 2026 research paper ([ce6366b4](../../commit/ce6366b4))
+- add RSS/Atom/JSON feeds and AI-friendly SEO ([79205d4c](../../commit/79205d4c))
+
+### Fixed
+
+- use bun lockfile instead of npm ([ecc0f001](../../commit/ecc0f001))
+- restore dark mode by adding Tailwind v4 source paths ([2a9de300](../../commit/2a9de300))
+- update e2e tests to match current UI ([02a54054](../../commit/02a54054))
+
+### Other
+
+- Change plugin add command to install ([f509fad5](../../commit/f509fad5))
+- add comprehensive tests for critical untested systems ([23b61742](../../commit/23b61742))
+- Remove fluff from checkpoint blog post ([8713db58](../../commit/8713db58))
+
 ## [1.25.1] - 2026-01-21
 
 ### Added
