@@ -16,6 +16,13 @@ export const metadata: Metadata = {
 		"development",
 		"quality",
 	],
+	alternates: {
+		types: {
+			"application/rss+xml": "https://han.guru/rss.xml",
+			"application/atom+xml": "https://han.guru/atom.xml",
+			"application/json": "https://han.guru/feed.json",
+		},
+	},
 };
 
 export default function RootLayout({

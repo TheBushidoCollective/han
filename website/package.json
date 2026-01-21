@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun run --bun next dev",
-		"prebuild": "bun run scripts/generate-marketplace.ts && bun run scripts/generate-search-index.ts",
+		"prebuild": "bun run scripts/generate-marketplace.ts && bun run scripts/generate-search-index.ts && bun run scripts/generate-rss.ts && bun run scripts/generate-sitemap.ts",
 		"build": "bun run --bun next build",
 		"start": "bun run --bun serve out -p 3000",
 		"test": "bun test",
@@ -13,6 +13,7 @@
 		"test:e2e:debug": "bun run playwright test --debug"
 	},
 	"dependencies": {
+		"feed": "^4.2.2",
 		"fuse.js": "7.1.0",
 		"gray-matter": "4.0.3",
 		"next": "^16.0.7",
