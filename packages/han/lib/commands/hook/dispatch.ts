@@ -9,7 +9,11 @@ import {
 	type MarketplaceConfig,
 	readSettingsFile,
 } from "../../claude-settings.ts";
-import { getHanBinary, isCheckpointsEnabled } from "../../han-settings.ts";
+import {
+	getHanBinary,
+	isCheckpointsEnabled,
+	isHooksEnabled,
+} from "../../han-settings.ts";
 import { getPluginNameFromRoot } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
 
@@ -496,6 +500,11 @@ function dispatchHooks(
 		process.env.HAN_DISABLE_HOOKS === "true" ||
 		process.env.HAN_DISABLE_HOOKS === "1"
 	) {
+		process.exit(0);
+	}
+
+	// Check if hooks are disabled via han.yml config
+	if (!isHooksEnabled()) {
 		process.exit(0);
 	}
 
