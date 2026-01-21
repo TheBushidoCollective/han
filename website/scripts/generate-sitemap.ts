@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getAllBlogPosts } from "../lib/blog";
+import { getAllPapers } from "../lib/papers";
 import { buildSearchIndex } from "../lib/search";
 
 const SITE_URL = "https://han.guru";
@@ -34,6 +35,12 @@ entries.push(
 		changefreq: "weekly",
 		priority: 0.8,
 	},
+	{
+		url: `${SITE_URL}/papers`,
+		lastmod: new Date().toISOString(),
+		changefreq: "monthly",
+		priority: 0.8,
+	},
 );
 
 // Add blog posts
@@ -44,6 +51,17 @@ for (const post of posts) {
 		lastmod: post.date,
 		changefreq: "monthly",
 		priority: 0.7,
+	});
+}
+
+// Add papers
+const papers = getAllPapers();
+for (const paper of papers) {
+	entries.push({
+		url: `${SITE_URL}/papers/${paper.slug}`,
+		lastmod: paper.date,
+		changefreq: "yearly",
+		priority: 0.8,
 	});
 }
 

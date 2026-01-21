@@ -1611,7 +1611,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-playwright",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
@@ -1859,7 +1860,8 @@
     ],
     "path": "/plugins/jutsu/jutsu-relay",
     "components": [
-      "skill"
+      "skill",
+      "hook"
     ]
   },
   {
