@@ -37,55 +37,29 @@ export function Mermaid({ chart }: MermaidProps) {
 		if (!chart || isDark === null) return;
 
 		// Initialize mermaid with theme-aware configuration
-		const theme = isDark ? "dark" : "default";
-		const themeVariables = isDark
-			? {
-					primaryColor: "#3b82f6",
-					primaryTextColor: "#e5e7eb",
-					primaryBorderColor: "#60a5fa",
-					lineColor: "#9ca3af",
-					secondaryColor: "#1f2937",
-					tertiaryColor: "#374151",
-					background: "transparent",
-					mainBkg: "#1f2937",
-					secondBkg: "#374151",
-					tertiaryBkg: "#4b5563",
-					clusterBkg: "#1f2937",
-					clusterBorder: "#4b5563",
-					edgeLabelBackground: "transparent",
-					fontFamily: "ui-sans-serif, system-ui, sans-serif",
-					fontSize: "14px",
-				}
-			: {
-					primaryColor: "#3b82f6",
-					primaryTextColor: "#1f2937",
-					primaryBorderColor: "#60a5fa",
-					lineColor: "#6b7280",
-					secondaryColor: "#e5e7eb",
-					tertiaryColor: "#d1d5db",
-					background: "transparent",
-					mainBkg: "#f3f4f6",
-					secondBkg: "#e5e7eb",
-					tertiaryBkg: "#d1d5db",
-					clusterBkg: "#f9fafb",
-					clusterBorder: "#d1d5db",
-					edgeLabelBackground: "transparent",
-					fontFamily: "ui-sans-serif, system-ui, sans-serif",
-					fontSize: "14px",
-				};
+		const themeVariables = {
+			primaryColor: "#3b82f6",
+			primaryTextColor: isDark ? "#e5e7eb" : "#1f2937",
+			primaryBorderColor: "#60a5fa",
+			lineColor: isDark ? "#9ca3af" : "#6b7280",
+			secondaryColor: isDark ? "#1f2937" : "#e5e7eb",
+			tertiaryColor: isDark ? "#374151" : "#d1d5db",
+			background: "transparent",
+			mainBkg: isDark ? "#1f2937" : "#f3f4f6",
+			secondBkg: isDark ? "#374151" : "#e5e7eb",
+			tertiaryBkg: isDark ? "#4b5563" : "#d1d5db",
+			clusterBkg: "transparent",
+			clusterBorder: isDark ? "#4b5563" : "#d1d5db",
+			edgeLabelBackground: "transparent",
+			fontFamily: "ui-sans-serif, system-ui, sans-serif",
+			fontSize: "14px",
+		};
 
 		// Re-initialize mermaid each time to pick up theme changes
 		mermaid.initialize({
 			startOnLoad: false,
-			theme,
+			theme: "base",
 			themeVariables,
-			themeCSS: `
-				.cluster rect,
-				.cluster-label rect,
-				svg {
-					fill: transparent !important;
-				}
-			`,
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
@@ -103,11 +77,14 @@ export function Mermaid({ chart }: MermaidProps) {
 				const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 				const { svg } = await mermaid.render(id, chart);
 
-				// Remove any background rectangles from the SVG
-				const cleanedSvg = svg.replace(
-					/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g,
-					''
-				);
+				// Remove any background elements and set SVG to transparent
+				let cleanedSvg = svg
+					// Remove background rectangles
+					.replace(/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g, '')
+					// Remove any rect with white or colored fill that spans the whole SVG
+					.replace(/<rect[^>]*class="[^"]*backgroundRect[^"]*"[^>]*>/g, '')
+					// Add transparent background style to the SVG element
+					.replace(/<svg/, '<svg style="background: transparent;"');
 
 				setSvg(cleanedSvg);
 				setError(null);
