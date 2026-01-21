@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { formatDate, getAllPapers, getPaper } from "../../../lib/papers";
 import Header from "../../components/Header";
+import { Mermaid } from "../../components/Mermaid";
 
 export async function generateStaticParams() {
 	const papers = getAllPapers();
@@ -33,6 +35,27 @@ export async function generateMetadata({
 		description: paper.description,
 	};
 }
+
+// Custom components for ReactMarkdown
+const markdownComponents: Components = {
+	code(props) {
+		const { children, className, node, ...rest } = props;
+		const match = /language-(\w+)/.exec(className || "");
+		const language = match ? match[1] : "";
+
+		// Render Mermaid diagrams
+		if (language === "mermaid") {
+			return <Mermaid chart={String(children).replace(/\n$/, "")} />;
+		}
+
+		// Regular code blocks
+		return (
+			<code className={className} {...rest}>
+				{children}
+			</code>
+		);
+	},
+};
 
 export default async function PaperPage({
 	params,
@@ -107,6 +130,7 @@ export default async function PaperPage({
 						<ReactMarkdown
 							remarkPlugins={[remarkGfm]}
 							rehypePlugins={[rehypeRaw]}
+							components={markdownComponents}
 						>
 							{paper.content}
 						</ReactMarkdown>
