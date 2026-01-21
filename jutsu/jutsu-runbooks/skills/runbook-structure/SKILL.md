@@ -197,9 +197,13 @@ kubectl rollout status deployment/api-server -n production
 
 ## Related Runbooks
 
+Example format:
+
+```markdown
 - [Database Connection Troubleshooting](./database-connections.md)
 - [Pod Restart Procedures](./pod-restart.md)
 - [Incident Response Guide](./incident-response.md)
+```
 
 ## Contact Information
 

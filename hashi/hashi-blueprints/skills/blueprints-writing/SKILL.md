@@ -142,7 +142,11 @@ Key files and their roles:
 
 ## Related Systems
 
+Example format:
+
+```markdown
 - [Related System](./related-system.md) - How they interact
+```
 
 ```
 
