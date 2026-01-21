@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Analytics from "./components/Analytics";
 import Footer from "./components/Footer";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 export const metadata: Metadata = {
 	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",
@@ -33,9 +35,12 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className="antialiased flex flex-col min-h-screen">
-				<main className="flex-1">{children}</main>
-				<Footer />
-				<Analytics />
+				<ThemeProvider>
+					<main className="flex-1">{children}</main>
+					<Footer />
+					<Analytics />
+					<ThemeToggle />
+				</ThemeProvider>
 			</body>
 		</html>
 	);

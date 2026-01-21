@@ -39,16 +39,46 @@ export function Mermaid({ chart }: MermaidProps) {
 		// Re-initialize mermaid each time to pick up theme changes
 		mermaid.initialize({
 			startOnLoad: false,
-			theme: isDark ? "dark" : "default",
-			themeVariables: {
-				// Force all backgrounds to transparent
-				background: "transparent",
-				mainBkg: "transparent",
-				secondBkg: "transparent",
-				tertiaryBkg: "transparent",
-				clusterBkg: "transparent",
-				edgeLabelBackground: "transparent",
-			},
+			theme: "base",
+			themeVariables: isDark
+				? {
+						// Dark mode: light text on transparent backgrounds
+						primaryColor: "#3b82f6",
+						primaryTextColor: "#f3f4f6",
+						primaryBorderColor: "#60a5fa",
+						lineColor: "#9ca3af",
+						secondaryColor: "#1e293b",
+						tertiaryColor: "#334155",
+						background: "transparent",
+						mainBkg: "#1e293b",
+						secondBkg: "#334155",
+						tertiaryBkg: "#475569",
+						nodeBorder: "#60a5fa",
+						clusterBkg: "transparent",
+						clusterBorder: "#60a5fa",
+						edgeLabelBackground: "transparent",
+						textColor: "#f3f4f6",
+						fontSize: "16px",
+					}
+				: {
+						// Light mode: dark text on transparent backgrounds
+						primaryColor: "#3b82f6",
+						primaryTextColor: "#1f2937",
+						primaryBorderColor: "#2563eb",
+						lineColor: "#6b7280",
+						secondaryColor: "#e5e7eb",
+						tertiaryColor: "#d1d5db",
+						background: "transparent",
+						mainBkg: "#f3f4f6",
+						secondBkg: "#e5e7eb",
+						tertiaryBkg: "#d1d5db",
+						nodeBorder: "#2563eb",
+						clusterBkg: "transparent",
+						clusterBorder: "#2563eb",
+						edgeLabelBackground: "transparent",
+						textColor: "#1f2937",
+						fontSize: "16px",
+					},
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
