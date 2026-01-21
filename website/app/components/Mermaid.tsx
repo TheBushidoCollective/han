@@ -40,6 +40,15 @@ export function Mermaid({ chart }: MermaidProps) {
 		mermaid.initialize({
 			startOnLoad: false,
 			theme: isDark ? "dark" : "default",
+			themeVariables: {
+				// Force all backgrounds to transparent
+				background: "transparent",
+				mainBkg: "transparent",
+				secondBkg: "transparent",
+				tertiaryBkg: "transparent",
+				clusterBkg: "transparent",
+				edgeLabelBackground: "transparent",
+			},
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
@@ -88,7 +97,7 @@ export function Mermaid({ chart }: MermaidProps) {
 	return (
 		<div
 			ref={containerRef}
-			className="my-6 flex justify-center overflow-x-auto [&_svg]:!bg-transparent [&_rect.background]:!fill-transparent"
+			className="my-6 flex justify-center overflow-x-auto"
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid generates safe SVG
 			dangerouslySetInnerHTML={{ __html: svg }}
 		/>
