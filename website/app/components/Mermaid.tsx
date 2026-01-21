@@ -11,14 +11,16 @@ export function Mermaid({ chart }: MermaidProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [svg, setSvg] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
-	const [isDark, setIsDark] = useState(false);
+	const [isDark, setIsDark] = useState<boolean | null>(null);
 
 	// Detect dark mode
 	useEffect(() => {
 		const checkDarkMode = () => {
-			setIsDark(document.documentElement.classList.contains("dark"));
+			const isDarkMode = document.documentElement.classList.contains("dark");
+			setIsDark(isDarkMode);
 		};
 
+		// Initial check
 		checkDarkMode();
 
 		// Watch for theme changes
@@ -32,6 +34,8 @@ export function Mermaid({ chart }: MermaidProps) {
 	}, []);
 
 	useEffect(() => {
+		if (!chart || isDark === null) return;
+
 		// Initialize mermaid with theme-aware configuration
 		const theme = isDark ? "dark" : "default";
 		const themeVariables = isDark
@@ -70,6 +74,7 @@ export function Mermaid({ chart }: MermaidProps) {
 					fontSize: "14px",
 				};
 
+		// Re-initialize mermaid each time to pick up theme changes
 		mermaid.initialize({
 			startOnLoad: false,
 			theme,
@@ -114,6 +119,11 @@ export function Mermaid({ chart }: MermaidProps) {
 
 		renderDiagram();
 	}, [chart, isDark]);
+
+	// Don't render anything until we've detected the theme
+	if (isDark === null) {
+		return null;
+	}
 
 	if (error) {
 		return (
