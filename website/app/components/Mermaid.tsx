@@ -74,6 +74,13 @@ export function Mermaid({ chart }: MermaidProps) {
 			startOnLoad: false,
 			theme,
 			themeVariables,
+			themeCSS: `
+				.cluster rect,
+				.cluster-label rect,
+				svg {
+					fill: transparent !important;
+				}
+			`,
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
@@ -90,7 +97,14 @@ export function Mermaid({ chart }: MermaidProps) {
 			try {
 				const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 				const { svg } = await mermaid.render(id, chart);
-				setSvg(svg);
+
+				// Remove any background rectangles from the SVG
+				const cleanedSvg = svg.replace(
+					/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g,
+					''
+				);
+
+				setSvg(cleanedSvg);
 				setError(null);
 			} catch (err) {
 				console.error("Mermaid rendering error:", err);
