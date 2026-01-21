@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.8] - 2026-01-21
+
+### Added
+
+- add Mermaid diagram rendering to papers ([67ef7be1](../../commit/67ef7be1))
+- publish AI-DLC 2026 research paper ([ce6366b4](../../commit/ce6366b4))
+- add RSS/Atom/JSON feeds and AI-friendly SEO ([79205d4c](../../commit/79205d4c))
+
+### Fixed
+
+- add themeVariables to force transparent Mermaid backgrounds ([7af56138](../../commit/7af56138))
+- simplify Mermaid with Tailwind transparent backgrounds ([5d1c5835](../../commit/5d1c5835))
+- fix Mermaid diagram readability, size, and transparency ([b3c07f49](../../commit/b3c07f49))
+- make Mermaid diagram backgrounds fully transparent ([69164ec7](../../commit/69164ec7))
+- make Mermaid diagrams dynamically respond to theme changes ([284329b1](../../commit/284329b1))
+- force transparent backgrounds in Mermaid diagrams ([cde4d7e5](../../commit/cde4d7e5))
+- remove duplicate title from paper content ([d0ef18b4](../../commit/d0ef18b4))
+- improve Mermaid diagram rendering ([c689006a](../../commit/c689006a))
+- use bun lockfile instead of npm ([ecc0f001](../../commit/ecc0f001))
+- restore dark mode by adding Tailwind v4 source paths ([2a9de300](../../commit/2a9de300))
+
+### Other
+
+- Change plugin add command to install ([f509fad5](../../commit/f509fad5))
+
 ## [1.26.7] - 2026-01-21
 
 ### Added
