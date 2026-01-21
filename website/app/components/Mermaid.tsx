@@ -42,13 +42,13 @@ export function Mermaid({ chart }: MermaidProps) {
 					lineColor: "#9ca3af",
 					secondaryColor: "#1f2937",
 					tertiaryColor: "#374151",
-					background: "#111827",
+					background: "transparent",
 					mainBkg: "#1f2937",
 					secondBkg: "#374151",
 					tertiaryBkg: "#4b5563",
 					clusterBkg: "#1f2937",
 					clusterBorder: "#4b5563",
-					edgeLabelBackground: "#1f2937",
+					edgeLabelBackground: "transparent",
 					fontFamily: "ui-sans-serif, system-ui, sans-serif",
 					fontSize: "14px",
 				}
@@ -59,13 +59,13 @@ export function Mermaid({ chart }: MermaidProps) {
 					lineColor: "#6b7280",
 					secondaryColor: "#e5e7eb",
 					tertiaryColor: "#d1d5db",
-					background: "#ffffff",
+					background: "transparent",
 					mainBkg: "#f3f4f6",
 					secondBkg: "#e5e7eb",
 					tertiaryBkg: "#d1d5db",
 					clusterBkg: "#f9fafb",
 					clusterBorder: "#d1d5db",
-					edgeLabelBackground: "#ffffff",
+					edgeLabelBackground: "transparent",
 					fontFamily: "ui-sans-serif, system-ui, sans-serif",
 					fontSize: "14px",
 				};
@@ -77,7 +77,7 @@ export function Mermaid({ chart }: MermaidProps) {
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
-				curve: "basis",
+				curve: "linear",
 			},
 			sequence: {
 				useMaxWidth: true,
@@ -117,7 +117,7 @@ export function Mermaid({ chart }: MermaidProps) {
 	return (
 		<div
 			ref={containerRef}
-			className="my-6 flex justify-center overflow-x-auto p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
+			className="my-6 flex justify-center overflow-x-auto"
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid generates safe SVG
 			dangerouslySetInnerHTML={{ __html: svg }}
 		/>
