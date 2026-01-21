@@ -36,37 +36,35 @@ export function Mermaid({ chart }: MermaidProps) {
 	useEffect(() => {
 		if (!chart || isDark === null) return;
 
-		// Initialize mermaid with theme-aware configuration
-		const themeVariables = {
-			primaryColor: "#3b82f6",
-			primaryTextColor: isDark ? "#e5e7eb" : "#1f2937",
-			primaryBorderColor: "#60a5fa",
-			lineColor: isDark ? "#9ca3af" : "#6b7280",
-			secondaryColor: isDark ? "#1f2937" : "#e5e7eb",
-			tertiaryColor: isDark ? "#374151" : "#d1d5db",
-			background: "transparent",
-			mainBkg: isDark ? "#1f2937" : "#f3f4f6",
-			secondBkg: isDark ? "#374151" : "#e5e7eb",
-			tertiaryBkg: isDark ? "#4b5563" : "#d1d5db",
-			clusterBkg: "transparent",
-			clusterBorder: isDark ? "#4b5563" : "#d1d5db",
-			edgeLabelBackground: "transparent",
-			fontFamily: "ui-sans-serif, system-ui, sans-serif",
-			fontSize: "14px",
-		};
-
 		// Re-initialize mermaid each time to pick up theme changes
 		mermaid.initialize({
 			startOnLoad: false,
-			theme: "base",
-			themeVariables,
+			theme: isDark ? "dark" : "default",
+			themeVariables: isDark
+				? {
+						darkMode: true,
+						background: "transparent",
+						mainBkg: "transparent",
+						secondBkg: "transparent",
+						tertiaryBkg: "transparent",
+						clusterBkg: "transparent",
+						edgeLabelBackground: "transparent",
+					}
+				: {
+						background: "transparent",
+						mainBkg: "transparent",
+						secondBkg: "transparent",
+						tertiaryBkg: "transparent",
+						clusterBkg: "transparent",
+						edgeLabelBackground: "transparent",
+					},
 			flowchart: {
-				useMaxWidth: true,
+				useMaxWidth: false,
 				htmlLabels: true,
 				curve: "linear",
 			},
 			sequence: {
-				useMaxWidth: true,
+				useMaxWidth: false,
 				wrap: true,
 			},
 		});
@@ -77,14 +75,19 @@ export function Mermaid({ chart }: MermaidProps) {
 				const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 				const { svg } = await mermaid.render(id, chart);
 
-				// Remove any background elements and set SVG to transparent
+				// More aggressive background removal and styling
 				let cleanedSvg = svg
-					// Remove background rectangles
-					.replace(/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g, '')
-					// Remove any rect with white or colored fill that spans the whole SVG
-					.replace(/<rect[^>]*class="[^"]*backgroundRect[^"]*"[^>]*>/g, '')
-					// Add transparent background style to the SVG element
-					.replace(/<svg/, '<svg style="background: transparent;"');
+					// Remove all rect elements with fill (backgrounds)
+					.replace(/<rect[^>]*fill="[^"]*"[^>]*><\/rect>/g, "")
+					.replace(/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g, "")
+					.replace(/<rect[^>]*class="[^"]*backgroundRect[^"]*"[^>]*>/g, "")
+					// Remove style tags that might set backgrounds
+					.replace(/<style>[\s\S]*?<\/style>/g, "")
+					// Force transparent background and constrain width
+					.replace(
+						/<svg/,
+						'<svg style="background: transparent; max-width: 800px; width: 100%;"'
+					);
 
 				setSvg(cleanedSvg);
 				setError(null);
