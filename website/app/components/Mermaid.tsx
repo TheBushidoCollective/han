@@ -40,31 +40,13 @@ export function Mermaid({ chart }: MermaidProps) {
 		mermaid.initialize({
 			startOnLoad: false,
 			theme: isDark ? "dark" : "default",
-			themeVariables: isDark
-				? {
-						darkMode: true,
-						background: "transparent",
-						mainBkg: "transparent",
-						secondBkg: "transparent",
-						tertiaryBkg: "transparent",
-						clusterBkg: "transparent",
-						edgeLabelBackground: "transparent",
-					}
-				: {
-						background: "transparent",
-						mainBkg: "transparent",
-						secondBkg: "transparent",
-						tertiaryBkg: "transparent",
-						clusterBkg: "transparent",
-						edgeLabelBackground: "transparent",
-					},
 			flowchart: {
-				useMaxWidth: false,
+				useMaxWidth: true,
 				htmlLabels: true,
 				curve: "linear",
 			},
 			sequence: {
-				useMaxWidth: false,
+				useMaxWidth: true,
 				wrap: true,
 			},
 		});
@@ -74,22 +56,7 @@ export function Mermaid({ chart }: MermaidProps) {
 			try {
 				const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 				const { svg } = await mermaid.render(id, chart);
-
-				// More aggressive background removal and styling
-				let cleanedSvg = svg
-					// Remove all rect elements with fill (backgrounds)
-					.replace(/<rect[^>]*fill="[^"]*"[^>]*><\/rect>/g, "")
-					.replace(/<rect[^>]*class="[^"]*background[^"]*"[^>]*>/g, "")
-					.replace(/<rect[^>]*class="[^"]*backgroundRect[^"]*"[^>]*>/g, "")
-					// Remove style tags that might set backgrounds
-					.replace(/<style>[\s\S]*?<\/style>/g, "")
-					// Force transparent background and constrain width
-					.replace(
-						/<svg/,
-						'<svg style="background: transparent; max-width: 800px; width: 100%;"'
-					);
-
-				setSvg(cleanedSvg);
+				setSvg(svg);
 				setError(null);
 			} catch (err) {
 				console.error("Mermaid rendering error:", err);
@@ -121,7 +88,7 @@ export function Mermaid({ chart }: MermaidProps) {
 	return (
 		<div
 			ref={containerRef}
-			className="my-6 flex justify-center overflow-x-auto"
+			className="my-6 flex justify-center overflow-x-auto [&_svg]:!bg-transparent [&_rect.background]:!fill-transparent"
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid generates safe SVG
 			dangerouslySetInnerHTML={{ __html: svg }}
 		/>
