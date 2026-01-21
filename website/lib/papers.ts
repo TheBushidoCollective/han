@@ -89,6 +89,43 @@ export function getPaper(slug: string): Paper | null {
 		const fileContent = fs.readFileSync(filePath, "utf-8");
 		const { data, content } = matter(fileContent);
 
+		// Strip duplicate title and subtitle from content
+		let processedContent = content;
+		const lines = content.split("\n");
+		let startIndex = 0;
+
+		// Skip leading empty lines
+		while (startIndex < lines.length && lines[startIndex].trim() === "") {
+			startIndex++;
+		}
+
+		// Check if first non-empty line is an H1 heading
+		if (startIndex < lines.length && lines[startIndex].startsWith("# ")) {
+			startIndex++; // Skip the H1
+
+			// Skip any empty lines after H1
+			while (startIndex < lines.length && lines[startIndex].trim() === "") {
+				startIndex++;
+			}
+
+			// Check if next line is an H2 heading (subtitle)
+			if (startIndex < lines.length && lines[startIndex].startsWith("## ")) {
+				startIndex++; // Skip the H2
+
+				// Skip any empty lines after H2
+				while (startIndex < lines.length && lines[startIndex].trim() === "") {
+					startIndex++;
+				}
+
+				// Check if next line is a horizontal rule
+				if (startIndex < lines.length && lines[startIndex].trim() === "---") {
+					startIndex++; // Skip the horizontal rule
+				}
+			}
+
+			processedContent = lines.slice(startIndex).join("\n");
+		}
+
 		return {
 			slug,
 			title: data.title || "",
@@ -97,7 +134,7 @@ export function getPaper(slug: string): Paper | null {
 			date: data.date || "",
 			authors: data.authors || [],
 			tags: data.tags || [],
-			content,
+			content: processedContent,
 			isMdx,
 		};
 	} catch (error) {
