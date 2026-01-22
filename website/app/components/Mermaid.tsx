@@ -82,7 +82,7 @@ export function Mermaid({ chart }: MermaidProps) {
 			flowchart: {
 				useMaxWidth: true,
 				htmlLabels: true,
-				curve: "linear",
+				curve: "basis",
 			},
 			sequence: {
 				useMaxWidth: true,
@@ -107,6 +107,64 @@ export function Mermaid({ chart }: MermaidProps) {
 
 		renderDiagram();
 	}, [chart, isDark]);
+
+	// Add colored backgrounds to edge labels after SVG renders
+	useEffect(() => {
+		if (!containerRef.current || !svg) return;
+
+		const svgElement = containerRef.current.querySelector("svg");
+		if (!svgElement) return;
+
+		// Wait for next frame to ensure text is fully rendered
+		requestAnimationFrame(() => {
+			const edgeLabels = svgElement.querySelectorAll(".edgeLabel");
+
+			edgeLabels.forEach((labelGroup) => {
+				const textElement = labelGroup.querySelector("text");
+				if (!textElement || !(textElement instanceof SVGTextElement)) return;
+
+				const labelText = textElement.textContent?.trim();
+				let bgColor = "";
+				let textColor = "#ffffff";
+
+				if (labelText === "No") {
+					bgColor = "#ef4444";
+					textColor = "#ffffff";
+				} else if (labelText === "Yes") {
+					bgColor = "#22c55e";
+					textColor = "#ffffff";
+				} else if (labelText === "Blocked") {
+					bgColor = "#f59e0b";
+					textColor = "#000000";
+				}
+
+				if (bgColor) {
+					try {
+						const bbox = textElement.getBBox();
+						const padding = 4;
+
+						const rect = document.createElementNS(
+							"http://www.w3.org/2000/svg",
+							"rect",
+						);
+						rect.setAttribute("x", String(bbox.x - padding));
+						rect.setAttribute("y", String(bbox.y - padding));
+						rect.setAttribute("width", String(bbox.width + padding * 2));
+						rect.setAttribute("height", String(bbox.height + padding * 2));
+						rect.setAttribute("fill", bgColor);
+						rect.setAttribute("rx", "3");
+
+						labelGroup.insertBefore(rect, textElement);
+
+						textElement.setAttribute("fill", textColor);
+						textElement.style.fill = textColor;
+					} catch (err) {
+						console.error("Error adding label background:", err);
+					}
+				}
+			});
+		});
+	}, [svg]);
 
 	// Don't render anything until we've detected the theme
 	if (isDark === null) {

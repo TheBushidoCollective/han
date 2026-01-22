@@ -110,26 +110,16 @@ These new dynamics warrant reimagination based on first principles thinking rath
 
 AI-DLC 2026 introduces the concept of AI initiating and directing conversations, using the Google Maps analogy: humans set the destination, AI provides step-by-step directions, humans maintain oversight. This methodology distinguishes **two distinct operating modes**:
 
-```mermaid
-flowchart LR
-    subgraph HITL["🧑‍💻 Human-in-the-Loop (HITL)"]
-        direction TB
-        A1["AI Proposes"] --> A2["Human Validates"]
-        A2 --> A3["AI Executes"]
-        A3 --> A1
-    end
+**Human-in-the-Loop (HITL):** Human judgment is directly involved in decision-making. AI proposes options, human validates, AI executes. The human approves each significant step before proceeding.
 
-    subgraph HOTL["🤖 Human-on-the-Loop (HOTL)"]
-        direction TB
-        B1["Human Defines<br/>Success Criteria"] --> B2["AI Iterates<br/>Autonomously"]
-        B2 --> B3{"Criteria<br/>Met?"}
-        B3 -->|"No"| B2
-        B3 -->|"Yes"| B4["Human Reviews<br/>Output"]
-        B3 -->|"Blocked"| B5["Human<br/>Intervenes"]
-    end
+```mermaid
+flowchart TB
+    A1["🤖 AI Proposes"] --> A2["🕵️ Human Validates"]
+    A2 --> A3["🤖 AI Executes"]
+    A3 --> A1
 ```
 
-**Human-in-the-Loop (HITL):** Human judgment is directly involved in decision-making. AI proposes options, human validates, AI executes. The human approves each significant step before proceeding. This mode is essential for:
+This mode is essential for:
 
 - **Novel domains** or first-time implementations where patterns aren't established
 - **Architectural decisions** with long-term consequences that are difficult to reverse
@@ -137,7 +127,22 @@ flowchart LR
 - **High-risk operations** involving production data, security-sensitive changes, or compliance requirements
 - **Creative work** requiring taste, intuition, or subjective quality assessment
 
-**Human-on-the-Loop (HOTL):** The system operates autonomously while humans monitor and intervene when needed. AI executes within defined boundaries until success criteria are met, alerting humans only when intervention is required. This mode is appropriate for:
+**Human-on-the-Loop (HOTL):** The system operates autonomously while humans monitor and intervene when needed. AI executes within defined boundaries until success criteria are met, alerting humans only when intervention is required.
+
+```mermaid
+flowchart TB
+    B1["🎯 Human Defines Success Criteria"] --> B2["🤖 AI Iterates Autonomously"]
+    B2 --> B3{"❓ Criteria Met?"}
+    B3 -->|"No"| B2
+    B3 -.->|"Yes"| B4["🧐 Human Reviews Output"]
+    B3 -.->|"Blocked"| B5["🦸 Human Intervenes"]
+
+    linkStyle 2 stroke:#ef4444,stroke-width:2px
+    linkStyle 3 stroke:#22c55e,stroke-width:2px
+    linkStyle 4 stroke:#f59e0b,stroke-width:2px
+```
+
+This mode is appropriate for:
 
 - **Well-defined tasks** with clear, measurable acceptance criteria
 - **Programmatically verifiable work** where tests, type checks, and linting can validate correctness
@@ -253,13 +258,14 @@ These artifacts represent institutional memory—decisions made, rationales docu
 
 ```mermaid
 flowchart TB
-    subgraph Filesystem["📁 Filesystem Memory"]
-        F1["Modified files"]
-        F2["Git history"]
-        F3["Agent scratchpads"]
+    subgraph Filesystem["💭 Working Memory"]
+        F1["Rules<br/><i>(like Claude rules)</i>"]
+        F2["Modified files"]
+        F3["Git history"]
+        F4["Agent scratchpads"]
     end
 
-    subgraph Organizational["🏢 Organizational Memory"]
+    subgraph Organizational["🏛️ Institutional Memory"]
         O1["📋 Work Memory<br/><i>Tickets, requirements</i>"]
         O2["📝 Decision Memory<br/><i>PRDs, ADRs, design docs</i>"]
         O3["📚 Knowledge Memory<br/><i>Runbooks, standards</i>"]

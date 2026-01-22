@@ -5,7 +5,7 @@
 
 @plugin "@tailwindcss/typography";
 
-@variant dark (&:where(.dark, .dark *));
+@variant dark (:root.dark &);
 
 :root {
 	--background: #ffffff;
