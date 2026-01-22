@@ -116,7 +116,7 @@ AI-DLC 2026 introduces the concept of AI initiating and directing conversations,
 flowchart TB
     A1["🤖 AI Proposes"] --> A2["🕵️ Human Validates"]
     A2 --> A3["🤖 AI Executes"]
-    A3 --> A4["🔍 Human Reviews"]
+    A3 --> A4["🕵️ Human Reviews"]
     A4 --> A1
 ```
 
@@ -136,15 +136,17 @@ flowchart TB
     B2 --> B3{"✅ Quality Gates Pass?<br/><i>Tests, types, lint, hooks</i>"}
     B3 -->|"No"| B2
     B3 -->|"Yes"| B4{"❓ Criteria Met?<br/><i>Work complete?</i>"}
+    B3 -.->|"Stuck"| B6["🦸 Human Intervenes"]
     B4 -->|"No"| B2
     B4 -.->|"Yes"| B5["🧐 Human Reviews Output"]
-    B4 -.->|"Blocked"| B6["🦸 Human Intervenes"]
+    B4 -.->|"Blocked"| B6
     B6 --> B2
 
     linkStyle 2 stroke:#ef4444,stroke-width:2px
-    linkStyle 4 stroke:#ef4444,stroke-width:2px
-    linkStyle 5 stroke:#22c55e,stroke-width:2px
-    linkStyle 6 stroke:#f59e0b,stroke-width:2px
+    linkStyle 4 stroke:#f59e0b,stroke-width:2px
+    linkStyle 5 stroke:#ef4444,stroke-width:2px
+    linkStyle 6 stroke:#22c55e,stroke-width:2px
+    linkStyle 7 stroke:#f59e0b,stroke-width:2px
 ```
 
 This mode is appropriate for:
