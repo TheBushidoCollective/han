@@ -41,15 +41,15 @@ Software development has undergone a fundamental transformation. What began as A
 
 The landscape of AI-driven development in 2026 differs dramatically from just two years prior:
 
-| Dimension | Jul '25 | Jan '26 |
-|-----------|---------|---------|
-| **Model Capability** | Assist with fine-grained tasks | Sustain multi-hour autonomous reasoning |
-| **Human Role** | Validate each AI output | Define success criteria; AI iterates to convergence |
-| **Iteration Cycles** | Measured in days | Measured in minutes |
-| **Context Windows** | Precious and scarce (32K tokens) | Abundant but quality-sensitive (200K-1M tokens) |
-| **Multi-Agent Orchestration** | Promising theoretical approach | Simple loops outperform complex swarms |
-| **AI Reliability** | "Not yet reliable" for autonomous work | 40,000+ lines written by AI using AI monthly |
-| **Memory Systems** | Conversation-based, ephemeral | File-based persistence, MCP-enabled organizational memory |
+| Dimension | 2024 | Jul '25 | Jan '26 |
+|-----------|------|---------|---------|
+| **Model Capability** | Code completion and simple tasks | Handle complete features with guidance | Sustain multi-hour autonomous reasoning |
+| **Human Role** | Direct every step | Validate major decisions | Define success criteria; AI iterates to convergence |
+| **Iteration Cycles** | Measured in days | Measured in hours | Measured in minutes |
+| **Context Windows** | Limited (8K-32K tokens) | Expanding (100K-200K tokens) | Abundant but quality-sensitive (200K-1M tokens) |
+| **Multi-Agent Orchestration** | Experimental research | Promising theoretical approach | Simple loops outperform complex swarms |
+| **AI Reliability** | Requires constant supervision | Can complete bounded tasks | 40,000+ lines written by AI using AI monthly |
+| **Memory Systems** | Basic conversation history | Conversation-based, ephemeral | File-based persistence, MCP-enabled organizational memory |
 
 AI-DLC 2026 preserves foundational insights while incorporating lessons from production deployments: the Ralph Wiggum autonomous loop methodology, the emerging consensus that traditional SDLC phases are collapsing, the practical realization that simpler AI workflows outperform elaborate orchestrations, and the understanding that organizational knowledge—previously locked in tickets, documents, and runbooks—can now serve as memory for AI agents.
 
