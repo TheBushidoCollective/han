@@ -43,16 +43,16 @@ export function Mermaid({ chart }: MermaidProps) {
 			themeVariables: isDark
 				? {
 						// Dark mode: light text on transparent backgrounds
-						primaryColor: "#3b82f6",
+						primaryColor: "transparent",
 						primaryTextColor: "#f3f4f6",
 						primaryBorderColor: "#60a5fa",
 						lineColor: "#9ca3af",
-						secondaryColor: "#1e293b",
-						tertiaryColor: "#334155",
+						secondaryColor: "transparent",
+						tertiaryColor: "transparent",
 						background: "transparent",
-						mainBkg: "#1e293b",
-						secondBkg: "#334155",
-						tertiaryBkg: "#475569",
+						mainBkg: "transparent",
+						secondBkg: "transparent",
+						tertiaryBkg: "transparent",
 						nodeBorder: "#60a5fa",
 						clusterBkg: "transparent",
 						clusterBorder: "#60a5fa",
@@ -62,21 +62,21 @@ export function Mermaid({ chart }: MermaidProps) {
 					}
 				: {
 						// Light mode: dark text on transparent backgrounds
-						primaryColor: "#3b82f6",
-						primaryTextColor: "#1f2937",
+						primaryColor: "transparent",
+						primaryTextColor: "#171717",
 						primaryBorderColor: "#2563eb",
 						lineColor: "#6b7280",
-						secondaryColor: "#e5e7eb",
-						tertiaryColor: "#d1d5db",
+						secondaryColor: "transparent",
+						tertiaryColor: "transparent",
 						background: "transparent",
-						mainBkg: "#f3f4f6",
-						secondBkg: "#e5e7eb",
-						tertiaryBkg: "#d1d5db",
+						mainBkg: "transparent",
+						secondBkg: "transparent",
+						tertiaryBkg: "transparent",
 						nodeBorder: "#2563eb",
 						clusterBkg: "transparent",
 						clusterBorder: "#2563eb",
 						edgeLabelBackground: "transparent",
-						textColor: "#1f2937",
+						textColor: "#171717",
 						fontSize: "16px",
 					},
 			flowchart: {
@@ -99,7 +99,9 @@ export function Mermaid({ chart }: MermaidProps) {
 				setError(null);
 			} catch (err) {
 				console.error("Mermaid rendering error:", err);
-				setError(err instanceof Error ? err.message : "Failed to render diagram");
+				setError(
+					err instanceof Error ? err.message : "Failed to render diagram",
+				);
 			}
 		};
 
@@ -127,7 +129,8 @@ export function Mermaid({ chart }: MermaidProps) {
 	return (
 		<div
 			ref={containerRef}
-			className="my-6 flex justify-center overflow-x-auto"
+			className="my-6 flex justify-center overflow-x-auto not-prose"
+			style={{ background: "transparent" }}
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid generates safe SVG
 			dangerouslySetInnerHTML={{ __html: svg }}
 		/>

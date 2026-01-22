@@ -5,19 +5,30 @@
 
 @plugin "@tailwindcss/typography";
 
-:root {
-	--background: #0a0a0a;
-	--foreground: #ededed;
-}
+@variant dark (&:where(.dark, .dark *));
 
-.light {
+:root {
 	--background: #ffffff;
 	--foreground: #171717;
 }
 
-.dark {
+:root.dark,
+html.dark {
 	--background: #0a0a0a;
 	--foreground: #ededed;
+}
+
+:root.light,
+html.light {
+	--background: #ffffff;
+	--foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not(.light) {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+	}
 }
 
 body {
@@ -28,10 +39,10 @@ body {
 		"Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 }
 
-/* Custom scrollbar styling */
+/* Custom scrollbar styling - default light */
 .scrollbar-custom {
 	scrollbar-width: thin;
-	scrollbar-color: rgb(75 85 99) transparent;
+	scrollbar-color: rgb(209 213 219) transparent;
 }
 
 .scrollbar-custom::-webkit-scrollbar {
@@ -43,23 +54,40 @@ body {
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb {
-	background-color: rgb(75 85 99);
+	background-color: rgb(209 213 219);
 	border-radius: 3px;
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+	background-color: rgb(156 163 175);
+}
+
+/* Dark mode scrollbar */
+:root.dark .scrollbar-custom,
+html.dark .scrollbar-custom {
+	scrollbar-color: rgb(75 85 99) transparent;
+}
+
+:root.dark .scrollbar-custom::-webkit-scrollbar-thumb,
+html.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+	background-color: rgb(75 85 99);
+}
+
+:root.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover,
+html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 	background-color: rgb(107 114 128);
 }
 
-/* Light mode scrollbar */
-.light .scrollbar-custom {
-	scrollbar-color: rgb(209 213 219) transparent;
-}
+@media (prefers-color-scheme: dark) {
+	:root:not(.light) .scrollbar-custom {
+		scrollbar-color: rgb(75 85 99) transparent;
+	}
 
-.light .scrollbar-custom::-webkit-scrollbar-thumb {
-	background-color: rgb(209 213 219);
-}
+	:root:not(.light) .scrollbar-custom::-webkit-scrollbar-thumb {
+		background-color: rgb(75 85 99);
+	}
 
-.light .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-	background-color: rgb(156 163 175);
+	:root:not(.light) .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+		background-color: rgb(107 114 128);
+	}
 }

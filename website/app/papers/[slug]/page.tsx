@@ -38,6 +38,22 @@ export async function generateMetadata({
 
 // Custom components for ReactMarkdown
 const markdownComponents: Components = {
+	pre(props) {
+		const { children, ...rest } = props;
+		// Check if this pre contains a mermaid code block
+		const child = children as any;
+		const isMermaid =
+			child?.props?.className?.includes("language-mermaid") ||
+			child?.type === Mermaid;
+
+		// If it's a Mermaid diagram, render without the pre wrapper
+		if (isMermaid) {
+			return <>{children}</>;
+		}
+
+		// Regular pre blocks
+		return <pre {...rest}>{children}</pre>;
+	},
 	code(props) {
 		const { children, className, node, ...rest } = props;
 		const match = /language-(\w+)/.exec(className || "");
