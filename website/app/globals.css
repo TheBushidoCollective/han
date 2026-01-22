@@ -91,29 +91,3 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 		background-color: rgb(107 114 128);
 	}
 }
-
-/* Responsive table wrapper */
-.table-wrapper {
-	overflow-x: auto;
-	-webkit-overflow-scrolling: touch;
-	margin: 1.5rem 0;
-	max-width: 100%;
-}
-
-.table-wrapper table {
-	margin: 0;
-}
-
-/* Prevent code blocks from causing overflow */
-.prose pre {
-	max-width: 100%;
-	overflow-x: auto;
-	-webkit-overflow-scrolling: touch;
-}
-
-/* Ensure article content doesn't overflow */
-article.prose {
-	max-width: 100%;
-	overflow-wrap: break-word;
-	word-wrap: break-word;
-}
