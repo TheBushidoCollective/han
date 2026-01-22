@@ -4,6 +4,7 @@ import Fuse from "fuse.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface SearchResult {
 	id: string;
@@ -294,6 +295,7 @@ export default function Header() {
 								/>
 							</a>
 						</div>
+					<ThemeToggle />
 
 						<a
 							href="https://github.com/thebushidocollective/han"
