@@ -1023,9 +1023,6 @@ flowchart TD
 
     H --> J["🧐 Human reviews<br/>output"]
     I --> J
-
-    style C fill:#e3f2fd
-    style G fill:#e8f5e9
 ```
 
 For any new task, follow this decision process:
