@@ -91,3 +91,11 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 		background-color: rgb(107 114 128);
 	}
 }
+
+/* Responsive tables - allow horizontal scroll on mobile */
+@media (max-width: 768px) {
+	.prose {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+}
