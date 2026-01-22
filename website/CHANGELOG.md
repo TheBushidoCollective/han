@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.32.0] - 2026-01-22
+
+### Added
+
+- add GitHub source link at bottom ([17e61657](../../commit/17e61657))
+- clarify quality gates as backpressure mechanism ([2555b5c3](../../commit/2555b5c3))
+- update AI-DLC 2026 post with timeline and Han's backpressure role ([0d8c323a](../../commit/0d8c323a))
+- improve mobile responsiveness for tables and prose content ([3fe1c86d](../../commit/3fe1c86d))
+- add collapsible mobile navigation menu ([ba3a7583](../../commit/ba3a7583))
+- add collapsible mobile navigation and improve responsive design ([ea74cb17](../../commit/ea74cb17))
+- add note about automated backpressure configuration ([643161ec](../../commit/643161ec))
+- add Extensibility row showing post-Aug 2025 innovations ([186e0348](../../commit/186e0348))
+- add 2024 baseline to AI-DLC comparison table ([5a5f78f9](../../commit/5a5f78f9))
+- add specific months to comparison table headers ([197ee42a](../../commit/197ee42a))
+- move theme selector to subtle header icon ([4bb39661](../../commit/4bb39661))
+- add Human Defines Task starting point to HITL diagram ([e16cc863](../../commit/e16cc863))
+- add Stuck path to HOTL diagram and fix HITL emoji ([96d8a329](../../commit/96d8a329))
+- improve Traditional vs Collapsed Flow diagram layout ([4734209c](../../commit/4734209c))
+- improve Bolt modes diagram layout with clear labels ([d2e72d74](../../commit/d2e72d74))
+- add emojis to Core Framework diagrams ([67b12af0](../../commit/67b12af0))
+- enhance HITL/HOTL diagrams with improved layout and emojis ([8521e38c](../../commit/8521e38c))
+- add theme switcher and fix Mermaid diagram contrast ([0de874da](../../commit/0de874da))
+
+### Fixed
+
+- prevent horizontal page overflow on mobile ([1837327d](../../commit/1837327d))
+- prevent horizontal page overflow on mobile ([faa13807](../../commit/faa13807))
+- wrap tables in scrollable containers ([90074b7e](../../commit/90074b7e))
+- prevent page overflow and enable table scrolling ([cb238012](../../commit/cb238012))
+- enable horizontal scroll for wide tables on mobile ([5ebf1a6e](../../commit/5ebf1a6e))
+- make tables independently scrollable on mobile ([bf2ed372](../../commit/bf2ed372))
+- update comparison table from 2024 to 2025 ([362986dd](../../commit/362986dd))
+- update Amazon AI-DLC paper publication date to July 2025 ([4f049600](../../commit/4f049600))
+- add two-stage validation to HOTL diagram ([53e452be](../../commit/53e452be))
+- improve HOTL diagram with quality gates and complete loop ([770757f3](../../commit/770757f3))
+- add human review step to HITL diagram ([42b64347](../../commit/42b64347))
+- remove remaining hard-coded colors from decision tree diagram ([d186e2b5](../../commit/d186e2b5))
+- remove hard-coded diagram colors for better dark theme support ([faf6f613](../../commit/faf6f613))
+- fix Mermaid diagram backgrounds and light mode contrast ([327ac337](../../commit/327ac337))
+- add themeVariables to force transparent Mermaid backgrounds ([7af56138](../../commit/7af56138))
+- simplify Mermaid with Tailwind transparent backgrounds ([5d1c5835](../../commit/5d1c5835))
+- fix Mermaid diagram readability, size, and transparency ([b3c07f49](../../commit/b3c07f49))
+
+### Other
+
+- remove broken table CSS that destroyed table layout ([7a751f31](../../commit/7a751f31))
+
 ## [1.31.0] - 2026-01-22
 
 ### Added
