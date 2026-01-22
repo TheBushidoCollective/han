@@ -1491,3 +1491,5 @@ Mark autonomous-safe actions clearly.
 ---
 
 *AI-DLC 2026 is an open methodology. Contributions and adaptations are welcome.*
+
+**[View source on GitHub →](https://github.com/TheBushidoCollective/han/blob/main/website/content/papers/ai-dlc-2026.md)**
