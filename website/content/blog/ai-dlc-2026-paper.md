@@ -18,7 +18,7 @@ Traditional "human-in-the-loop" (HITL) workflows require humans to validate ever
 AI-DLC 2026 introduces **human-on-the-loop (HOTL)** as a distinct operating mode:
 
 - **HITL**: Human validates each step. AI proposes, human approves, AI executes.
-- **HOTL**: Human defines success criteria. AI iterates autonomously until criteria are met.
+- **HOTL**: Human defines success criteria. AI iterates autonomously through quality gates (tests, types, lint, hooks), then criteria checks, alerting humans only when stuck or blocked.
 
 Think of it like Google Maps navigation:
 - HITL mode: You approve every turn before the GPS proceeds
@@ -57,6 +57,8 @@ Production systems using this pattern have achieved remarkable results — 40,00
 
 Traditional phase boundaries — requirements → design → implementation → testing → deployment — existed because iteration was expensive. When changing requirements meant weeks of rework, sequential phases with approval gates made economic sense.
 
+The evolution has been rapid. In 2024, we had code assistants. By July 2025, AI could handle complete features with guidance. Now in January 2026, we have multi-hour autonomous reasoning and iteration cycles measured in minutes instead of days.
+
 With AI, iteration costs approach zero. You try something, it fails, you adjust, you try again — all in seconds, not weeks.
 
 **The phases aren't being augmented. They're collapsing into continuous flow.**
@@ -82,12 +84,14 @@ The full methodology covers:
 
 AI-DLC 2026 synthesizes insights from:
 
-- **Raja SP** (AWS): Original AI-DLC methodology and core concepts
+- **Raja SP** (AWS): Original AI-DLC methodology (July 2025) and core concepts
 - **Geoffrey Huntley**: Ralph Wiggum pattern and autonomous loop philosophy
 - **Boris Cherny & Anthropic**: Ralph Wiggum plugin demonstrating production viability
 - **Steve Wilson** (OWASP): Human-on-the-loop governance frameworks
 - **paddo.dev**: Analysis of SDLC collapse and multi-agent orchestration pitfalls
 - **HumanLayer**: 12 Factor Agents and context engineering research
+
+A key evolution since the July 2025 publication: the emergence of extensibility mechanisms (skills, sub-agents, hooks, MCP servers) that enable automated quality gates and plugin ecosystems.
 
 ## Read the Full Paper
 
@@ -104,14 +108,17 @@ This is just a glimpse. The full methodology includes:
 
 ## Why This Matters for Han
 
-Han embodies many AI-DLC 2026 principles:
+Han is built specifically to enable AI-DLC 2026's backpressure methodology. Instead of prescribing how AI should work, Han provides quality gates that reject non-conforming work:
 
-- **Backpressure through hooks**: Quality gates that automatically validate work
-- **Autonomous validation**: Stop hooks run without human intervention
-- **File-based memory**: Project rules persist across sessions
-- **Completion criteria**: Plugins define measurable success conditions
+- **Automated quality gates**: Stop hooks automatically run tests, type checks, linting, formatting, and custom validation after every conversation
+- **Technology detection**: The `--auto` flag detects your stack (TypeScript, Python, Rust, etc.) and installs appropriate validation plugins
+- **Zero configuration**: Hooks are automatically configured based on your project tooling (biome.json, tsconfig.json, pytest.ini, etc.)
+- **Smart caching**: Only runs validation when relevant files change, using native Rust hashing for speed
+- **File-based memory**: Project rules in `.claude/rules/` persist across sessions, enabling continuous learning
 
-The methodology provides the theoretical foundation. Han provides the practical implementation.
+The methodology provides the theoretical foundation. Han provides the practical implementation. Every Claude Code conversation ends with validation — linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
+
+**This is backpressure in action**: AI iterates freely, and quality gates provide the feedback signal to converge toward correct solutions.
 
 ---
 
