@@ -132,11 +132,12 @@ This mode is essential for:
 
 ```mermaid
 flowchart TB
-    B1["🎯 Human Defines Success Criteria"] --> B2["🤖 AI Iterates Autonomously"]
-    B2 --> B3{"❓ Criteria Met?"}
+    B1["🎯 Human Defines Criteria"] --> B2["🤖 AI Iterates Autonomously"]
+    B2 --> B3{"✅ Quality Gates Pass?<br/><i>Tests, types, lint, hooks</i>"}
     B3 -->|"No"| B2
     B3 -.->|"Yes"| B4["🧐 Human Reviews Output"]
     B3 -.->|"Blocked"| B5["🦸 Human Intervenes"]
+    B5 --> B2
 
     linkStyle 2 stroke:#ef4444,stroke-width:2px
     linkStyle 3 stroke:#22c55e,stroke-width:2px
