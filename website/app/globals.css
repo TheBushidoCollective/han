@@ -91,3 +91,49 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 		background-color: rgb(107 114 128);
 	}
 }
+
+/* Responsive prose tables */
+.prose table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.prose thead,
+.prose tbody,
+.prose tr {
+	display: table;
+	width: 100%;
+	table-layout: fixed;
+}
+
+/* Ensure tables are readable on mobile */
+@media (max-width: 640px) {
+	.prose table {
+		font-size: 0.875rem;
+	}
+
+	.prose th,
+	.prose td {
+		padding: 0.5rem 0.75rem;
+	}
+}
+
+/* Prevent code blocks from causing overflow */
+.prose pre {
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Ensure long URLs and text wrap properly */
+.prose {
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	word-break: break-word;
+}
+
+.prose a {
+	word-break: break-word;
+}
