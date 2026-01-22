@@ -484,11 +484,12 @@ A **Bolt** is the smallest iteration cycle in AI-DLC 2026, designed for rapid im
 Human validates each major step before proceeding. AI proposes, human reviews, AI implements, human validates. Used for judgment-heavy, high-risk, or novel work.
 
 ```mermaid
-flowchart LR
-    S1["📝 Plan"] --> S2["✅ Human Approves"]
-    S2 --> S3["⚡ Execute Step"]
-    S3 --> S4["🔍 Human Reviews"]
-    S4 --> S1
+flowchart TB
+    A0["🎯 Human Defines Task"] --> A1["🤖 AI Proposes"]
+    A1 --> A2["🕵️ Human Validates"]
+    A2 --> A3["🤖 AI Executes"]
+    A3 --> A4["🕵️ Human Reviews"]
+    A4 --> A1
 ```
 
 #### 🤖 Autonomous Bolt (HOTL)
@@ -496,16 +497,22 @@ flowchart LR
 AI iterates until completion criteria are met, using test results and quality gates as feedback. Human reviews final output. Used for well-defined tasks with programmatic verification.
 
 ```mermaid
-flowchart LR
-    A1["🎯 Define Criteria"] --> A2["🔄 AI Executes Loop"]
-    A2 --> A3{"❓ Criteria<br/>Met?"}
-    A3 -->|"No"| A2
-    A3 -->|"Yes"| A4["🧐 Human Reviews<br/>Final Output"]
-    A3 -->|"Blocked"| A5["📋 Document &<br/>Escalate"]
+flowchart TB
+    B1["🎯 Human Defines Criteria"] --> B2["🤖 AI Iterates Autonomously"]
+    B2 --> B3{"✅ Quality Gates Pass?<br/><i>Tests, types, lint, hooks</i>"}
+    B3 -->|"No"| B2
+    B3 -->|"Yes"| B4{"❓ Criteria Met?<br/><i>Work complete?</i>"}
+    B3 -.->|"Stuck"| B6["🦸 Human Intervenes"]
+    B4 -->|"No"| B2
+    B4 -.->|"Yes"| B5["🧐 Human Reviews Output"]
+    B4 -.->|"Blocked"| B6
+    B6 --> B2
 
     linkStyle 2 stroke:#ef4444,stroke-width:2px
-    linkStyle 3 stroke:#22c55e,stroke-width:2px
     linkStyle 4 stroke:#f59e0b,stroke-width:2px
+    linkStyle 5 stroke:#ef4444,stroke-width:2px
+    linkStyle 6 stroke:#22c55e,stroke-width:2px
+    linkStyle 7 stroke:#f59e0b,stroke-width:2px
 ```
 
 **Autonomous Bolt characteristics:**

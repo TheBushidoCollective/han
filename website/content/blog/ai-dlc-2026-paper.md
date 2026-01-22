@@ -59,11 +59,12 @@ Traditional phase boundaries — requirements → design → implementation → 
 
 The evolution has been rapid. In 2024, we had code assistants. By July 2025, AI could handle complete features with guidance. Now in January 2026, we have multi-hour autonomous reasoning and iteration cycles measured in minutes instead of days.
 
-With AI, iteration costs approach zero. You try something, it fails, you adjust, you try again — all in seconds, not weeks.
+With AI, iteration costs approach zero. You try something, it fails, you adjust, you try again — all in minutes or hours, not weeks.
 
 **The phases aren't being augmented. They're collapsing into continuous flow.**
 
 Checkpoints replace handoffs:
+
 - Work pauses briefly rather than stopping completely
 - The same agent continues with feedback
 - Context is preserved
