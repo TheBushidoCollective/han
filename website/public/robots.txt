@@ -1,0 +1,44 @@
+# Han - Claude Code Plugin Marketplace
+# Welcome AI agents and web crawlers!
+
+User-agent: *
+Allow: /
+
+# Sitemaps for comprehensive discovery
+Sitemap: https://han.guru/sitemap.xml
+
+# RSS/Atom feeds for content ingestion
+# RSS 2.0: https://han.guru/rss.xml
+# Atom 1.0: https://han.guru/atom.xml
+# JSON Feed: https://han.guru/feed.json
+
+# AI-specific agents (explicitly allowed)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /

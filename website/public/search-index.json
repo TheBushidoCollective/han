@@ -48,8 +48,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-act",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -82,8 +81,7 @@
     "tags": [],
     "path": "/plugins/jutsu/jutsu-ameba",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -101,8 +99,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-android",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -133,8 +130,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-ansible",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -251,8 +247,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-biome",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -307,8 +302,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-bun",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -353,8 +347,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-checkstyle",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -373,8 +366,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-claude-agent-sdk",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -425,8 +417,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-clippy",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -447,8 +438,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-cocoapods",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -529,8 +519,7 @@
     "tags": [],
     "path": "/plugins/jutsu/jutsu-credo",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -544,8 +533,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-crystal",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -595,8 +583,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-cypress",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -637,8 +624,7 @@
     "tags": [],
     "path": "/plugins/jutsu/jutsu-dialyzer",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -669,8 +655,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-docker-compose",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -704,8 +689,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-effect",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -768,8 +752,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-erlang",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -785,8 +768,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-eslint",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -859,8 +841,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-fnox",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -985,8 +966,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-gitlab-ci",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1106,8 +1086,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-helm",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1160,8 +1139,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-ios",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1192,8 +1170,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-jest",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1228,8 +1205,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-junit",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1245,8 +1221,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-kotlin",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1278,8 +1253,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-kustomize",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1295,9 +1269,7 @@
       "node"
     ],
     "path": "/plugins/jutsu/jutsu-lerna",
-    "components": [
-      "hook"
-    ]
+    "components": []
   },
   {
     "id": "hashi-linear",
@@ -1364,8 +1336,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-markdown",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1383,8 +1354,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-maven",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1436,8 +1406,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-mocha",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1515,8 +1484,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-nim",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1569,9 +1537,7 @@
       "node"
     ],
     "path": "/plugins/jutsu/jutsu-npm",
-    "components": [
-      "hook"
-    ]
+    "components": []
   },
   {
     "id": "jutsu-objective-c",
@@ -1753,8 +1719,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-prettier",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1817,8 +1782,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-pulumi",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1833,8 +1797,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-pylint",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -1849,8 +1812,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-pytest",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2003,8 +1965,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-rspec",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2019,8 +1980,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-rubocop",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2037,8 +1997,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-ruby",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2058,8 +2017,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-runbooks",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2091,8 +2049,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-scala",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2145,8 +2102,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-sentry",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2185,8 +2141,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-shellcheck",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2204,8 +2159,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-shfmt",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2259,8 +2213,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-storybook",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2276,8 +2229,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-swift",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2317,8 +2269,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-tailwind",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2384,8 +2335,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-terraform",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2402,8 +2352,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-testng",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2420,8 +2369,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-typescript",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2438,8 +2386,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-vitest",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   },
   {
@@ -2505,8 +2452,7 @@
     ],
     "path": "/plugins/jutsu/jutsu-zustand",
     "components": [
-      "skill",
-      "hook"
+      "skill"
     ]
   }
 ]

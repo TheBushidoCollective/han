@@ -12,6 +12,7 @@
 		"isolatedModules": true,
 		"jsx": "react-jsx",
 		"incremental": true,
+		"skipDefaultLibCheck": true,
 		"plugins": [
 			{
 				"name": "next"
@@ -29,5 +30,10 @@
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
-	"exclude": ["node_modules"]
+	"exclude": [
+		"node_modules",
+		"features/**/*",
+		"playwright*.config.ts",
+		"*.test.ts"
+	]
 }
