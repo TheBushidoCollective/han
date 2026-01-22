@@ -379,27 +379,27 @@ This section outlines the core framework of AI-DLC 2026, detailing its artifacts
 ```mermaid
 graph TB
     subgraph "🎯 Inception Phase"
-        I[Intent] --> U1[Unit 1]
-        I --> U2[Unit 2]
-        I --> Un[Unit n]
+        I["💡 Intent"] --> U1["📦 Unit 1"]
+        I --> U2["📦 Unit 2"]
+        I --> Un["📦 Unit n"]
     end
 
     subgraph "🔨 Construction Phase"
-        U1 --> B1[Bolt 1.1]
-        U1 --> B2[Bolt 1.2]
-        U2 --> B3[Bolt 2.1]
-        Un --> Bn[Bolt n.1]
+        U1 --> B1["⚡ Bolt 1.1"]
+        U1 --> B2["⚡ Bolt 1.2"]
+        U2 --> B3["⚡ Bolt 2.1"]
+        Un --> Bn["⚡ Bolt n.1"]
 
-        B1 --> D1[Deployment Unit]
+        B1 --> D1["📦 Deployment Unit"]
         B2 --> D1
-        B3 --> D2[Deployment Unit]
-        Bn --> Dn[Deployment Unit]
+        B3 --> D2["📦 Deployment Unit"]
+        Bn --> Dn["📦 Deployment Unit"]
     end
 
     subgraph "🚀 Operations Phase"
-        D1 --> P1[Production]
-        D2 --> P2[Production]
-        Dn --> Pn[Production]
+        D1 --> P1["🌐 Production"]
+        D2 --> P2["🌐 Production"]
+        Dn --> Pn["🌐 Production"]
     end
 
     style I fill:#e1bee7
@@ -478,18 +478,18 @@ A **Bolt** is the smallest iteration cycle in AI-DLC 2026, designed for rapid im
 ```mermaid
 flowchart LR
     subgraph Supervised["🧑‍💻 Supervised Bolt (HITL)"]
-        S1["Plan"] --> S2["Human Approves"]
-        S2 --> S3["Execute Step"]
-        S3 --> S4["Human Reviews"]
+        S1["📝 Plan"] --> S2["✅ Human Approves"]
+        S2 --> S3["⚡ Execute Step"]
+        S3 --> S4["🔍 Human Reviews"]
         S4 --> S1
     end
 
     subgraph Autonomous["🤖 Autonomous Bolt (HOTL)"]
-        A1["Define Criteria"] --> A2["AI Executes Loop"]
-        A2 --> A3{"Criteria<br/>Met?"}
+        A1["🎯 Define Criteria"] --> A2["🔄 AI Executes Loop"]
+        A2 --> A3{"❓ Criteria<br/>Met?"}
         A3 -->|"No"| A2
-        A3 -->|"Yes"| A4["Human Reviews<br/>Final Output"]
-        A3 -->|"Blocked"| A5["Document &<br/>Escalate"]
+        A3 -->|"Yes"| A4["🧐 Human Reviews<br/>Final Output"]
+        A3 -->|"Blocked"| A5["📋 Document &<br/>Escalate"]
     end
 ```
 
@@ -1016,20 +1016,20 @@ This context informs the Inception phase, ensuring new work aligns with existing
 
 ```mermaid
 flowchart TD
-    A["🆕 New Task"] --> B{"Clear completion<br/>criteria?"}
+    A["🆕 New Task"] --> B{"📋 Clear completion<br/>criteria?"}
     B -->|"No"| C["🧑‍💻 Supervised (HITL)"]
-    B -->|"Yes"| D{"Programmatic<br/>verification?"}
+    B -->|"Yes"| D{"✅ Programmatic<br/>verification?"}
     D -->|"No"| C
-    D -->|"Yes"| E{"High risk?"}
+    D -->|"Yes"| E{"⚠️ High risk?"}
     E -->|"Yes"| C
-    E -->|"No"| F{"Novel domain?"}
+    E -->|"No"| F{"🔬 Novel domain?"}
     F -->|"Yes"| C
     F -->|"No"| G["🤖 Autonomous (HOTL)"]
 
-    C --> H["Human validates<br/>each step"]
-    G --> I["AI iterates until<br/>criteria met"]
+    C --> H["🕵️ Human validates<br/>each step"]
+    G --> I["🔄 AI iterates until<br/>criteria met"]
 
-    H --> J["Human reviews<br/>output"]
+    H --> J["🧐 Human reviews<br/>output"]
     I --> J
 
     style C fill:#e3f2fd
