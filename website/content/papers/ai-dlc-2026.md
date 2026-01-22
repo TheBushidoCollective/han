@@ -41,8 +41,8 @@ Software development has undergone a fundamental transformation. What began as A
 
 The landscape of AI-driven development in 2026 differs dramatically from just two years prior:
 
-| Dimension | Early 2024 | 2026 |
-|-----------|------------|------|
+| Dimension | 2025 | 2026 |
+|-----------|------|------|
 | **Model Capability** | Assist with fine-grained tasks | Sustain multi-hour autonomous reasoning |
 | **Human Role** | Validate each AI output | Define success criteria; AI iterates to convergence |
 | **Iteration Cycles** | Measured in days | Measured in minutes |
