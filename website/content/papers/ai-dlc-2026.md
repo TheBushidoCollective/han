@@ -1128,7 +1128,7 @@ When all criteria pass:
 
 ### Backpressure Configuration
 
-Quality gates provide the backpressure that enables autonomous operation:
+Quality gates are the primary mechanism for implementing backpressure in AI-DLC 2026. Rather than prescribing *how* AI should work, gates define *what* must be satisfied—creating rejection signals that guide autonomous iteration toward correct solutions:
 
 ```yaml
 # .ai-dlc/quality-gates.yaml
