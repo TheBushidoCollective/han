@@ -71,6 +71,13 @@ const markdownComponents: Components = {
 			</code>
 		);
 	},
+	table(props) {
+		return (
+			<div className="table-wrapper">
+				<table>{props.children}</table>
+			</div>
+		);
+	},
 };
 
 export default async function PaperPage({

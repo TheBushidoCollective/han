@@ -37,11 +37,6 @@ body {
 	font-family:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
 		"Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-	overflow-x: hidden;
-}
-
-html {
-	overflow-x: hidden;
 }
 
 /* Custom scrollbar styling - default light */
@@ -97,21 +92,13 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 	}
 }
 
-/* Responsive tables - allow horizontal scroll on mobile */
-.prose {
-	max-width: 100%;
+/* Responsive table wrapper */
+.table-wrapper {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	margin: 1.5rem 0;
 }
 
-@media (max-width: 768px) {
-	.prose {
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-		width: 100%;
-	}
-
-	.prose table {
-		display: table;
-		width: max-content;
-		max-width: none;
-	}
+.table-wrapper table {
+	margin: 0;
 }
