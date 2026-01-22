@@ -114,7 +114,8 @@ AI-DLC 2026 introduces the concept of AI initiating and directing conversations,
 
 ```mermaid
 flowchart TB
-    A1["🤖 AI Proposes"] --> A2["🕵️ Human Validates"]
+    A0["🎯 Human Defines Task"] --> A1["🤖 AI Proposes"]
+    A1 --> A2["🕵️ Human Validates"]
     A2 --> A3["🤖 AI Executes"]
     A3 --> A4["🕵️ Human Reviews"]
     A4 --> A1
