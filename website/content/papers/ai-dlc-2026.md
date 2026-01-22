@@ -185,25 +185,32 @@ The philosophy can be summarized as: **"Better to fail predictably than succeed 
 
 Traditional SDLC phases existed because iteration was expensive. Each handoff between analyst → architect → developer → tester → operations lost context, added latency, and created opportunities for misalignment. Sequential phases with approval gates were an economic optimization for a world of expensive iteration.
 
-With AI, that economic calculus inverts. Iteration is nearly free. Context loss from handoffs becomes the dominant cost. AI-DLC 2026 models development as **continuous flow** with strategic checkpoints rather than discrete phases:
+With AI, that economic calculus inverts. Iteration is nearly free. Context loss from handoffs becomes the dominant cost. AI-DLC 2026 models development as **continuous flow** with strategic checkpoints rather than discrete phases.
+
+#### ❌ Traditional Sequential Phases
 
 ```mermaid
 flowchart LR
-    subgraph Traditional["❌ Traditional Phases"]
-        T1["Requirements"] --> T2["Design"]
-        T2 --> T3["Implementation"]
-        T3 --> T4["Testing"]
-        T4 --> T5["Deployment"]
-    end
-
-    subgraph Collapsed["✅ Collapsed Flow"]
-        C1["🎯 Intent"] --> C2["🔄 Continuous<br/>Loop"]
-        C2 --> C2
-        C2 --> C3["🔍 Checkpoint"]
-        C3 -->|"Continue"| C2
-        C3 -->|"Done"| C4["🚀 Deploy"]
-    end
+    T1["Requirements"] --> T2["Design"]
+    T2 --> T3["Implementation"]
+    T3 --> T4["Testing"]
+    T4 --> T5["Deployment"]
 ```
+
+Work stops completely at each handoff. Context transfers between specialized roles. Each new party must rebuild understanding.
+
+#### ✅ AI-DLC 2026 Collapsed Flow
+
+```mermaid
+flowchart LR
+    C1["🎯 Intent"] --> C2["🔄 Continuous<br/>Loop"]
+    C2 --> C2
+    C2 --> C3["🔍 Checkpoint"]
+    C3 -->|"Continue"| C2
+    C3 -->|"Done"| C4["🚀 Deploy"]
+```
+
+Work pauses briefly at checkpoints. Same agent continues with feedback. Context is preserved throughout.
 
 **Checkpoints differ from handoffs:**
 
