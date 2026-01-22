@@ -1159,6 +1159,8 @@ gates:
     required: true
 ```
 
+**Note:** Modern AI development platforms can automate quality gate configuration through plugin systems and declarative hooks, detecting project tooling (test frameworks, linters, type checkers) and configuring appropriate gates without manual YAML authoring.
+
 ### File-Based Memory
 
 Progress persists in files, enabling resumption across sessions:
