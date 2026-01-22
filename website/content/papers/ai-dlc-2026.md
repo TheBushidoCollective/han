@@ -475,27 +475,34 @@ A **Bolt** is the smallest iteration cycle in AI-DLC 2026, designed for rapid im
 
 **Bolts operate in two modes:**
 
+#### 🧑‍💻 Supervised Bolt (HITL)
+
+Human validates each major step before proceeding. AI proposes, human reviews, AI implements, human validates. Used for judgment-heavy, high-risk, or novel work.
+
 ```mermaid
 flowchart LR
-    subgraph Supervised["🧑‍💻 Supervised Bolt (HITL)"]
-        S1["📝 Plan"] --> S2["✅ Human Approves"]
-        S2 --> S3["⚡ Execute Step"]
-        S3 --> S4["🔍 Human Reviews"]
-        S4 --> S1
-    end
-
-    subgraph Autonomous["🤖 Autonomous Bolt (HOTL)"]
-        A1["🎯 Define Criteria"] --> A2["🔄 AI Executes Loop"]
-        A2 --> A3{"❓ Criteria<br/>Met?"}
-        A3 -->|"No"| A2
-        A3 -->|"Yes"| A4["🧐 Human Reviews<br/>Final Output"]
-        A3 -->|"Blocked"| A5["📋 Document &<br/>Escalate"]
-    end
+    S1["📝 Plan"] --> S2["✅ Human Approves"]
+    S2 --> S3["⚡ Execute Step"]
+    S3 --> S4["🔍 Human Reviews"]
+    S4 --> S1
 ```
 
-**Supervised Bolt (HITL):** Human validates each major step before proceeding. AI proposes, human reviews, AI implements, human validates. Used for judgment-heavy, high-risk, or novel work.
+#### 🤖 Autonomous Bolt (HOTL)
 
-**Autonomous Bolt (HOTL):** AI iterates until completion criteria are met, using test results and quality gates as feedback. Human reviews final output. Used for well-defined tasks with programmatic verification.
+AI iterates until completion criteria are met, using test results and quality gates as feedback. Human reviews final output. Used for well-defined tasks with programmatic verification.
+
+```mermaid
+flowchart LR
+    A1["🎯 Define Criteria"] --> A2["🔄 AI Executes Loop"]
+    A2 --> A3{"❓ Criteria<br/>Met?"}
+    A3 -->|"No"| A2
+    A3 -->|"Yes"| A4["🧐 Human Reviews<br/>Final Output"]
+    A3 -->|"Blocked"| A5["📋 Document &<br/>Escalate"]
+
+    linkStyle 2 stroke:#ef4444,stroke-width:2px
+    linkStyle 3 stroke:#22c55e,stroke-width:2px
+    linkStyle 4 stroke:#f59e0b,stroke-width:2px
+```
 
 **Autonomous Bolt characteristics:**
 - Completion promise signal (e.g., `COMPLETE` or `BLOCKED`)
