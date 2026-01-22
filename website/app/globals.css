@@ -91,3 +91,42 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 		background-color: rgb(107 114 128);
 	}
 }
+
+/* Responsive tables - wrap each table in scrollable container */
+.prose :where(table):not(:where([class~="not-prose"] *)) {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	scrollbar-color: rgb(209 213 219) transparent;
+}
+
+.prose :where(table):not(:where([class~="not-prose"] *))::-webkit-scrollbar {
+	height: 6px;
+}
+
+.prose :where(table):not(:where([class~="not-prose"] *))::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.prose :where(table):not(:where([class~="not-prose"] *))::-webkit-scrollbar-thumb {
+	background-color: rgb(209 213 219);
+	border-radius: 3px;
+}
+
+/* Dark mode table scrollbar */
+:root.dark .prose :where(table):not(:where([class~="not-prose"] *)),
+html.dark .prose :where(table):not(:where([class~="not-prose"] *)) {
+	scrollbar-color: rgb(75 85 99) transparent;
+}
+
+:root.dark .prose :where(table):not(:where([class~="not-prose"] *))::-webkit-scrollbar-thumb,
+html.dark .prose :where(table):not(:where([class~="not-prose"] *))::-webkit-scrollbar-thumb {
+	background-color: rgb(75 85 99);
+}
+
+.prose :where(thead, tbody, tr, th, td):not(:where([class~="not-prose"] *)) {
+	display: table;
+	width: auto;
+}
