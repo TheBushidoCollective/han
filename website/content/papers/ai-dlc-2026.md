@@ -116,7 +116,8 @@ AI-DLC 2026 introduces the concept of AI initiating and directing conversations,
 flowchart TB
     A1["🤖 AI Proposes"] --> A2["🕵️ Human Validates"]
     A2 --> A3["🤖 AI Executes"]
-    A3 --> A1
+    A3 --> A4["🔍 Human Reviews"]
+    A4 --> A1
 ```
 
 This mode is essential for:
