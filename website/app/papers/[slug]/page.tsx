@@ -93,11 +93,11 @@ export default async function PaperPage({
 	}
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-gray-900">
+		<div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden">
 			<Header />
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-				<div className="max-w-4xl mx-auto">
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 overflow-x-hidden">
+				<div className="max-w-4xl mx-auto overflow-x-hidden">
 					{/* Header */}
 					<header className="mb-12">
 						<Link
