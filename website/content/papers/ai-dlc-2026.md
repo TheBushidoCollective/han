@@ -47,6 +47,7 @@ The landscape of AI-driven development in 2026 differs dramatically from just tw
 | **Human Role** | Direct every step | Validate major decisions | Define success criteria; AI iterates to convergence |
 | **Iteration Cycles** | Measured in days | Measured in hours | Measured in minutes |
 | **Context Windows** | Limited (8K-32K tokens) | Expanding (100K-200K tokens) | Abundant but quality-sensitive (200K-1M tokens) |
+| **Extensibility** | None | None | Skills, sub-agents, hooks, MCP servers |
 | **Multi-Agent Orchestration** | Experimental research | Promising theoretical approach | Simple loops outperform complex swarms |
 | **AI Reliability** | Requires constant supervision | Can complete bounded tasks | 40,000+ lines written by AI using AI monthly |
 | **Memory Systems** | Basic conversation history | Conversation-based, ephemeral | File-based persistence, MCP-enabled organizational memory |
