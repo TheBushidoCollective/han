@@ -266,10 +266,10 @@ These artifacts represent institutional memory—decisions made, rationales docu
 ```mermaid
 flowchart TB
     subgraph Filesystem["💭 Working Memory"]
-        F1["Rules<br/><i>(like Claude rules)</i>"]
-        F2["Modified files"]
-        F3["Git history"]
-        F4["Agent scratchpads"]
+        F1["✏️ Rules<br/><i>(i.e. Claude rules)</i>"]
+        F2["📂 Modified files"]
+        F3["🕥 Git history"]
+        F4["📝 Agent scratchpads"]
     end
 
     subgraph Organizational["🏛️ Institutional Memory"]
@@ -408,18 +408,6 @@ graph TB
         D2 --> P2["🌐 Production"]
         Dn --> Pn["🌐 Production"]
     end
-
-    style I fill:#e1bee7
-    style U1 fill:#c8e6c9
-    style U2 fill:#c8e6c9
-    style Un fill:#c8e6c9
-    style B1 fill:#ffecb3
-    style B2 fill:#ffecb3
-    style B3 fill:#ffecb3
-    style Bn fill:#ffecb3
-    style D1 fill:#bbdefb
-    style D2 fill:#bbdefb
-    style Dn fill:#bbdefb
 ```
 
 ### 1. Artifacts
@@ -815,16 +803,6 @@ flowchart TB
     W7 -->|"Ready"| W8
     W8 --> W9
     W9 -.->|"New Intent"| W1
-
-    style W1 fill:#e1bee7
-    style W2 fill:#e1bee7
-    style W3 fill:#e1bee7
-    style W4 fill:#e1bee7
-    style W5 fill:#fff9c4
-    style W6 fill:#fff9c4
-    style W7 fill:#fff9c4
-    style W8 fill:#bbdefb
-    style W9 fill:#bbdefb
 ```
 
 **Key principles of the workflow:**
