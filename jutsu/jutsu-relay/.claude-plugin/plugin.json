@@ -1,6 +1,6 @@
 {
   "name": "jutsu-relay",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced Relay GraphQL framework skills for React applications",
   "author": {
     "name": "The Bushido Collective",

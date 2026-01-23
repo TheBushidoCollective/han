@@ -24,6 +24,12 @@ mcp_servers:
 
 # Core hooks - all hooks go through orchestrator
 hooks:
+  # Setup hook - runs on plugin installation
+  setup:
+    event: Setup
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/setup.sh"
+    description: Ensure han binary is installed and available
+
   # SessionStart hooks - run at session start
   context:
     event: SessionStart

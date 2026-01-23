@@ -49,13 +49,26 @@ export const SessionDetailPageQuery = graphql`
   }
 `;
 
+export interface SessionDetailPageProps {
+  /** Override session ID (for agent tasks) */
+  sessionIdOverride?: string;
+  /** Parent session ID (for agent tasks) */
+  parentSessionId?: string;
+  /** Whether this is an agent task view */
+  isAgentTask?: boolean;
+}
+
 /**
  * Session detail page with PageLoader for query preloading
  */
-export default function SessionDetailPage(): React.ReactElement {
+export default function SessionDetailPage({
+  sessionIdOverride,
+  parentSessionId,
+  isAgentTask = false,
+}: SessionDetailPageProps = {}): React.ReactElement {
   const navigate = useNavigate();
   const params = useParams<{ projectId?: string; id: string }>();
-  const sessionId = params.id;
+  const sessionId = sessionIdOverride || params.id;
 
   // Build global ID for node query
   const globalId = sessionId ? `Session:${sessionId}` : null;
@@ -87,10 +100,17 @@ export default function SessionDetailPage(): React.ReactElement {
       <PageLoader<SessionDetailPageQueryType>
         query={SessionDetailPageQuery}
         variables={{ id: globalId }}
-        loadingMessage="Loading session..."
+        loadingMessage={
+          isAgentTask ? 'Loading agent task...' : 'Loading session...'
+        }
       >
         {(queryRef) => (
-          <SessionDetailContent queryRef={queryRef} sessionId={sessionId} />
+          <SessionDetailContent
+            queryRef={queryRef}
+            sessionId={sessionId}
+            parentSessionId={parentSessionId}
+            isAgentTask={isAgentTask}
+          />
         )}
       </PageLoader>
     </ErrorBoundary>

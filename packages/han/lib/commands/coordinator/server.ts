@@ -6,7 +6,8 @@
  */
 
 import { execSync } from "node:child_process";
-import { createServer, type Server } from "node:http";
+import { createServer as createHttpServer, type Server } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { parse } from "node:url";
 import { makeServer } from "graphql-ws";
 import { createYoga } from "graphql-yoga";
@@ -31,6 +32,7 @@ import {
 import { schema } from "../../graphql/schema.ts";
 import { globalSlotManager } from "../../graphql/types/slot-manager.ts";
 import { createLogger } from "../../logger.ts";
+import { ensureCertificates } from "./tls.ts";
 import { COORDINATOR_PORT, type CoordinatorOptions } from "./types.ts";
 
 const log = createLogger("coordinator");
@@ -302,13 +304,23 @@ export async function startServer(
 	// Record initial activity
 	recordActivity();
 
+	// Try to get TLS certificates for HTTPS support
+	const tls = await ensureCertificates();
+	const protocol = tls ? "https" : "http";
+	const hostPattern = tls ? "coordinator.local.han.guru" : "127.0.0.1";
+
 	// Create GraphQL Yoga handler with DataLoader context
 	const yoga = createYoga({
 		schema,
 		graphqlEndpoint: "/graphql",
 		graphiql: true,
 		cors: {
-			origin: "*",
+			origin: [
+				"http://localhost:41956",
+				"https://dashboard.local.han.guru",
+				"*", // Fallback for development
+			],
+			credentials: true,
 			methods: ["GET", "POST", "OPTIONS"],
 		},
 		context: ({ request }) => ({
@@ -320,49 +332,92 @@ export async function startServer(
 	// Create WebSocket server for subscriptions
 	const wsServer = makeServer({ schema });
 
-	// Create HTTP server
-	const httpServer = createServer(async (req, res) => {
-		// Record activity on every request
-		recordActivity();
+	// Create HTTP or HTTPS server based on TLS availability
+	const httpServer = tls
+		? createHttpsServer({ cert: tls.cert, key: tls.key }, async (req, res) => {
+				// Record activity on every request
+				recordActivity();
 
-		const pathname = parse(req.url || "/").pathname || "/";
+				const pathname = parse(req.url || "/").pathname || "/";
 
-		// Health endpoint
-		if (pathname === "/health") {
-			const uptime = state.startedAt
-				? Math.floor((Date.now() - state.startedAt.getTime()) / 1000)
-				: 0;
+				// Health endpoint
+				if (pathname === "/health") {
+					const uptime = state.startedAt
+						? Math.floor((Date.now() - state.startedAt.getTime()) / 1000)
+						: 0;
 
-			res.setHeader("Content-Type", "application/json");
-			res.end(
-				JSON.stringify({
-					status: "ok",
-					pid: process.pid,
-					uptime,
-					version: process.env.HAN_VERSION || "dev",
-				}),
-			);
-			return;
-		}
+					res.setHeader("Content-Type", "application/json");
+					res.end(
+						JSON.stringify({
+							status: "ok",
+							pid: process.pid,
+							uptime,
+							version: process.env.HAN_VERSION || "dev",
+						}),
+					);
+					return;
+				}
 
-		// GraphQL endpoint
-		if (pathname === "/graphql") {
-			try {
-				const webRequest = await nodeToWebRequest(req);
-				const webResponse = await yoga.fetch(webRequest);
-				await sendWebResponse(res, webResponse);
-			} catch (error) {
-				log.error("GraphQL error:", error);
-				res.statusCode = 500;
-				res.end("Internal Server Error");
-			}
-			return;
-		}
+				// GraphQL endpoint
+				if (pathname === "/graphql") {
+					try {
+						const webRequest = await nodeToWebRequest(req);
+						const webResponse = await yoga.fetch(webRequest);
+						await sendWebResponse(res, webResponse);
+					} catch (error) {
+						log.error("GraphQL error:", error);
+						res.statusCode = 500;
+						res.end("Internal Server Error");
+					}
+					return;
+				}
 
-		// 404 for other routes
-		res.statusCode = 404;
-		res.end("Not Found");
-	});
+				// 404 for other routes
+				res.statusCode = 404;
+				res.end("Not Found");
+			})
+		: createHttpServer(async (req, res) => {
+				// Record activity on every request
+				recordActivity();
+
+				const pathname = parse(req.url || "/").pathname || "/";
+
+				// Health endpoint
+				if (pathname === "/health") {
+					const uptime = state.startedAt
+						? Math.floor((Date.now() - state.startedAt.getTime()) / 1000)
+						: 0;
+
+					res.setHeader("Content-Type", "application/json");
+					res.end(
+						JSON.stringify({
+							status: "ok",
+							pid: process.pid,
+							uptime,
+							version: process.env.HAN_VERSION || "dev",
+						}),
+					);
+					return;
+				}
+
+				// GraphQL endpoint
+				if (pathname === "/graphql") {
+					try {
+						const webRequest = await nodeToWebRequest(req);
+						const webResponse = await yoga.fetch(webRequest);
+						await sendWebResponse(res, webResponse);
+					} catch (error) {
+						log.error("GraphQL error:", error);
+						res.statusCode = 500;
+						res.end("Internal Server Error");
+					}
+					return;
+				}
+
+				// 404 for other routes
+				res.statusCode = 404;
+				res.end("Not Found");
+			});
 
 	// WebSocket handling
 	const wss = new WebSocketServer({ noServer: true });
@@ -403,7 +458,12 @@ export async function startServer(
 	// Start listening
 	await new Promise<void>((resolve) => {
 		httpServer.listen(port, "127.0.0.1", () => {
-			log.info(`GraphQL server listening on http://127.0.0.1:${port}/graphql`);
+			log.info(
+				`GraphQL server listening on ${protocol}://${hostPattern}:${port}/graphql`,
+			);
+			if (tls) {
+				log.info("HTTPS enabled with Let's Encrypt certificate");
+			}
 			resolve();
 		});
 	});

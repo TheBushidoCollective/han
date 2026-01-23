@@ -1,7 +1,7 @@
 {
   "name": "hashi-github",
-  "version": "1.1.6",
-  "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search. Zero configuration - automatically uses GitHub CLI (gh) authentication.",
+  "version": "1.2.0",
+  "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search via GitHub Copilot's hosted MCP server. Zero configuration required.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"

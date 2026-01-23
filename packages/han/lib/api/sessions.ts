@@ -611,7 +611,7 @@ async function getSessionMessages(
  * @deprecated Use getSessionMessages instead - this is for backwards compatibility
  * Parse session messages synchronously (reads from database)
  */
-function parseSessionFile(filePath: string): SessionMessage[] {
+function _parseSessionFile(filePath: string): SessionMessage[] {
 	// Extract sessionId from filePath for database lookup
 	// Format: ~/.claude/projects/{projectDir}/{sessionId}.jsonl
 	const parts = filePath.split("/");
@@ -1631,30 +1631,20 @@ export function getAgentTasksForSession(sessionId: string): string[] {
 }
 
 /**
- * Get agent task detail
+ * Get agent task detail from database (async)
  */
-export function getAgentTask(
+export async function getAgentTask(
 	sessionId: string,
 	agentId: string,
-): SessionDetail | null {
-	const allFiles = getAllSessionFiles();
-	const sessionFile = allFiles.find((f) => f.sessionId === sessionId);
-
-	if (!sessionFile) {
+): Promise<SessionDetail | null> {
+	// Get parent session from database to get project info
+	const dbSession = await dbSessions.get(sessionId);
+	if (!dbSession) {
 		return null;
 	}
 
-	// Construct agent file path
-	const agentFilePath = sessionFile.filePath.replace(
-		`${sessionId}.jsonl`,
-		`agent-${agentId}.jsonl`,
-	);
-
-	if (!existsSync(agentFilePath)) {
-		return null;
-	}
-
-	const messages = parseSessionFile(agentFilePath);
+	// Get messages for this agent using agentIdFilter
+	const messages = await getSessionMessages(sessionId, agentId);
 
 	if (messages.length === 0) {
 		return null;
@@ -1662,21 +1652,44 @@ export function getAgentTask(
 
 	const firstMsg = messages[0];
 	const lastMsg = messages[messages.length - 1];
-	const stats = statSync(agentFilePath);
 
-	return {
-		sessionId: agentId,
-		date: stats.mtime.toISOString().split("T")[0],
-		project: sessionFile.projectName,
-		projectPath: sessionFile.projectPath,
-		projectDir: sessionFile.projectDir,
-		projectId: sessionFile.projectId,
-		startedAt: firstMsg?.timestamp,
-		endedAt: lastMsg?.timestamp,
-		gitBranch: firstMsg?.gitBranch,
-		version: firstMsg?.version,
+	// Extract project info from transcript_path if available
+	// Format: ~/.claude/projects/{projectDir}/{sessionId}.jsonl
+	let projectDir = "";
+	let projectPath = "";
+	let projectName = "";
+	let projectId: string | undefined;
+	let worktreeName: string | undefined;
+
+	if (dbSession.transcriptPath) {
+		const parts = dbSession.transcriptPath.split("/");
+		const projectsIndex = parts.indexOf("projects");
+		if (projectsIndex >= 0 && parts[projectsIndex + 1]) {
+			projectDir = parts[projectsIndex + 1];
+			projectPath = decodeProjectPath(projectDir);
+			projectName = getProjectName(projectPath);
+			projectId = getProjectId(projectPath);
+			const worktreeInfo = getWorktreeInfo(projectPath);
+			worktreeName = worktreeInfo?.name;
+		}
+	}
+
+	const result: SessionDetail = {
+		sessionId: agentId, // Agent ID becomes the virtual session ID
+		date: firstMsg.timestamp.split("T")[0],
+		project: projectName,
+		projectPath,
+		projectDir,
+		projectId,
+		worktreeName,
+		startedAt: firstMsg.timestamp,
+		endedAt: lastMsg.timestamp,
+		gitBranch: firstMsg.gitBranch,
+		version: firstMsg.version,
 		messages,
 	};
+
+	return result;
 }
 
 /**

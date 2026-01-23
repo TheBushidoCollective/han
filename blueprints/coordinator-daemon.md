@@ -229,11 +229,13 @@ cors: {
 
 ---
 
-## Future State: Hosted Dashboard
+## Future Exploration: Hosted Dashboard
 
-### Vision
+### Vision (Not Yet Implemented)
 
-Eliminate the need for local UI serving by hosting the dashboard and using a clever DNS + certificate trick for secure local connections.
+**Note:** This is a potential future direction being explored. The current implementation uses `han browse` to serve the UI locally.
+
+Potential future state: Eliminate the need for local UI serving by hosting the dashboard and using DNS + certificate infrastructure for secure local connections.
 
 ### Architecture
 

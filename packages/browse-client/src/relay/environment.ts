@@ -19,31 +19,7 @@ import {
   Store,
   type SubscribeFunction,
 } from 'relay-runtime';
-
-/**
- * Default coordinator port
- */
-const COORDINATOR_PORT = 41900;
-
-/**
- * Build-time injected URLs (replaced by Bun.build define)
- * These constants are replaced at build time with actual values
- */
-declare const __GRAPHQL_URL__: string | undefined;
-declare const __GRAPHQL_WS_URL__: string | undefined;
-
-/**
- * Get the GraphQL endpoint URL
- * Uses build-time injected URL or falls back to default port
- */
-function getGraphQLUrl(): string {
-  // Build-time injected URL takes priority
-  if (typeof __GRAPHQL_URL__ !== 'undefined') {
-    return __GRAPHQL_URL__;
-  }
-  // Default to coordinator port
-  return `http://127.0.0.1:${COORDINATOR_PORT}/graphql`;
-}
+import { getGraphQLEndpoints } from '../config/urls.ts';
 
 /**
  * Parse a multipart/mixed response for @defer support
@@ -214,7 +190,8 @@ const fetchFn: FetchFunction = (
 
     (async () => {
       try {
-        const response = await fetch(getGraphQLUrl(), {
+        const endpoints = getGraphQLEndpoints();
+        const response = await fetch(endpoints.http, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -271,19 +248,6 @@ const fetchFn: FetchFunction = (
 };
 
 /**
- * Get the GraphQL WebSocket URL
- * Uses build-time injected URL or falls back to default port
- */
-function getGraphQLWsUrl(): string {
-  // Build-time injected URL takes priority
-  if (typeof __GRAPHQL_WS_URL__ !== 'undefined') {
-    return __GRAPHQL_WS_URL__;
-  }
-  // Default to coordinator port
-  return `ws://127.0.0.1:${COORDINATOR_PORT}/graphql`;
-}
-
-/**
  * Singleton WebSocket client for subscriptions
  */
 let wsClient: Client | null = null;
@@ -294,8 +258,9 @@ function getWsClient(): Client {
   }
 
   if (!wsClient) {
+    const endpoints = getGraphQLEndpoints();
     wsClient = createClient({
-      url: getGraphQLWsUrl(),
+      url: endpoints.ws,
       retryAttempts: 5,
       shouldRetry: () => true,
     });

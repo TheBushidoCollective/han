@@ -384,29 +384,31 @@ async function startCoordinating(): Promise<void> {
 		}
 	}, heartbeatMs);
 
-	// Perform initial full scan and index
-	console.log("[coordinator] Starting full scan and index...");
-	try {
-		const results = await indexer.fullScanAndIndex();
-		const totalSessions = results.length;
-		const newSessions = results.filter((r) => r.isNewSession).length;
-		const totalMessages = results.reduce(
-			(sum, r) => sum + r.messagesIndexed,
-			0,
-		);
+	// Perform initial full scan and index in background (non-blocking)
+	console.log("[coordinator] Starting full scan and index in background...");
+	void (async () => {
+		try {
+			const results = await indexer.fullScanAndIndex();
+			const totalSessions = results.length;
+			const newSessions = results.filter((r) => r.isNewSession).length;
+			const totalMessages = results.reduce(
+				(sum, r) => sum + r.messagesIndexed,
+				0,
+			);
 
-		console.log(
-			`[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`,
-		);
+			console.log(
+				`[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`,
+			);
 
-		// Publish events for indexed data
-		for (const result of results) {
-			// Fire and forget - don't block startup
-			void onDataIndexed(result);
+			// Publish events for indexed data
+			for (const result of results) {
+				// Fire and forget - don't block startup
+				void onDataIndexed(result);
+			}
+		} catch (error) {
+			console.error("[coordinator] Full scan failed:", error);
 		}
-	} catch (error) {
-		console.error("[coordinator] Full scan failed:", error);
-	}
+	})();
 
 	// Start the file watcher
 	console.log("[coordinator] Starting file watcher...");

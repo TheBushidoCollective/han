@@ -11,6 +11,7 @@ import type { PreloadedQuery } from 'react-relay';
 import { graphql, usePreloadedQuery, useSubscription } from 'react-relay';
 import { useNavigate } from 'react-router-dom';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
+import { Badge } from '@/components/atoms/Badge.tsx';
 import { Box } from '@/components/atoms/Box.tsx';
 import { Button } from '@/components/atoms/Button.tsx';
 import { Center } from '@/components/atoms/Center.tsx';
@@ -84,11 +85,17 @@ const SessionHooksSubscriptionDef = graphql`
 interface SessionDetailContentProps {
   queryRef: PreloadedQuery<SessionDetailPageQuery>;
   sessionId: string;
+  /** Parent session ID (for agent tasks) */
+  parentSessionId?: string;
+  /** Whether this is an agent task view */
+  isAgentTask?: boolean;
 }
 
 export function SessionDetailContent({
   queryRef,
   sessionId,
+  parentSessionId,
+  isAgentTask = false,
 }: SessionDetailContentProps): React.ReactElement {
   const navigate = useNavigate();
   const [, setRefreshKey] = useState(0);
@@ -206,6 +213,12 @@ export function SessionDetailContent({
   );
 
   const handleBack = () => {
+    // For agent tasks, go back to parent session
+    if (isAgentTask && parentSessionId) {
+      navigate(`/sessions/${parentSessionId}`);
+      return;
+    }
+
     // Navigate back to project sessions if projectId available, else global sessions
     if (session?.projectId) {
       navigate(`/projects/${session.projectId}/sessions`);
@@ -226,7 +239,7 @@ export function SessionDetailContent({
       >
         <HStack style={{ marginBottom: spacing.md }}>
           <Button variant="secondary" onClick={handleBack}>
-            Back to Sessions
+            {isAgentTask ? 'Back to Parent Session' : 'Back to Sessions'}
           </Button>
         </HStack>
         <Center style={{ flex: 1 }}>
@@ -265,6 +278,7 @@ export function SessionDetailContent({
         >
           <HStack gap="sm" align="center" style={{ flexWrap: 'wrap', flex: 1 }}>
             <Heading size="sm">{session.name}</Heading>
+            {isAgentTask && <Badge variant="purple">Agent Task</Badge>}
             <Text color="muted" size="sm">
               |
             </Text>

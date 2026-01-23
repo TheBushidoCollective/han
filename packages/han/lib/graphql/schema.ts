@@ -392,8 +392,8 @@ builder.queryField("agentTask", (t) =>
 			agentId: t.arg.string({ required: true }),
 		},
 		description: "Get an agent task by session ID and agent ID",
-		resolve: (_parent, args) => {
-			return getAgentTaskById(args.sessionId, args.agentId);
+		resolve: async (_parent, args) => {
+			return await getAgentTaskById(args.sessionId, args.agentId);
 		},
 	}),
 );

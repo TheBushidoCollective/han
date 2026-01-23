@@ -112,6 +112,14 @@ def is_path_outside_project(file_path: str, project_root: str) -> bool:
         abs_file = os.path.abspath(os.path.expanduser(file_path))
         abs_project = os.path.abspath(project_root)
 
+        # Allow writes to Claude Config directory (plan files, settings, etc.)
+        claude_config_dir = os.path.expanduser(
+            os.environ.get('CLAUDE_CONFIG_DIR', '~/.claude')
+        )
+        abs_claude_config = os.path.abspath(claude_config_dir)
+        if abs_file.startswith(abs_claude_config + os.sep) or abs_file == abs_claude_config:
+            return False
+
         # Check if file is within project
         return not abs_file.startswith(abs_project + os.sep) and abs_file != abs_project
     except Exception:
@@ -155,6 +163,9 @@ def check_bash_write_paths(command: str, project_root: str) -> tuple[bool, str]:
             target_path = match.group(1)
             # Skip /dev/null and other /dev paths (allowed for discarding output)
             if target_path.startswith('/dev/'):
+                continue
+            # Skip /tmp and /private/tmp (standard temp directories - safe)
+            if target_path.startswith('/tmp/') or target_path.startswith('/private/tmp/'):
                 continue
             # Skip if not an absolute path (relative paths are within project)
             if not target_path.startswith('/'):

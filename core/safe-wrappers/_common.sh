@@ -51,6 +51,17 @@ is_in_project() {
         fi
     fi
 
+    # Allow /tmp and /private/tmp (standard temp directories - safe)
+    if [[ "$abs_path" == /tmp/* || "$abs_path" == /private/tmp/* ]]; then
+        return 0
+    fi
+
+    # Allow Claude Config directory (plan files, settings, etc.)
+    local claude_config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    if [[ "$abs_path" == "$claude_config_dir"* ]]; then
+        return 0
+    fi
+
     # Check if path starts with project root
     if [[ "$abs_path" == "$project_root"* ]]; then
         return 0

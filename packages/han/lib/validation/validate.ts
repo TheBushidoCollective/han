@@ -1119,9 +1119,10 @@ export async function runConfiguredHook(
 					? " (idle timeout - no output received)"
 					: "";
 
-				// Build the MCP tool re-run instruction (preferred over bash)
-				const mcpToolCall = buildMcpToolInstruction(pluginName, hookName, {
+				// Build the re-run command
+				const rerunCommand = buildHookCommand(pluginName, hookName, {
 					only: relativePath === "." ? undefined : relativePath,
+					cached: false, // Always disable cache for re-runs after failures
 				});
 
 				const outputFile = result.outputFile
@@ -1132,13 +1133,12 @@ export async function runConfiguredHook(
 				console.error(`\n⚠ Stopped due to fail fast\n`);
 
 				// Concise, directive error message that emphasizes subagent delegation
-				// Uses MCP tool for re-run (better context control than bash)
 				console.error(
 					`Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n\n` +
 						`**CRITICAL**: You MUST spawn a subagent to fix this. The subagent MUST:\n` +
 						`1. Read the output file: ${outputFile}\n` +
 						`2. Analyze the errors and fix them\n` +
-						`3. Re-run using MCP tool: ${mcpToolCall}\n\n` +
+						`3. Re-run with: ${rerunCommand}\n\n` +
 						`Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`,
 				);
 				process.exit(2);

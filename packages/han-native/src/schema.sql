@@ -209,6 +209,10 @@ CREATE INDEX IF NOT EXISTS idx_tasks_session ON tasks(session_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(task_type);
 CREATE INDEX IF NOT EXISTS idx_tasks_outcome ON tasks(outcome);
 CREATE INDEX IF NOT EXISTS idx_tasks_started ON tasks(started_at);
+-- Composite indexes for metrics queries (time-based filtering with grouping)
+CREATE INDEX IF NOT EXISTS idx_tasks_started_type ON tasks(started_at, task_type);
+CREATE INDEX IF NOT EXISTS idx_tasks_started_outcome ON tasks(started_at, outcome);
+CREATE INDEX IF NOT EXISTS idx_tasks_started_confidence ON tasks(started_at, confidence, outcome) WHERE confidence IS NOT NULL AND outcome IS NOT NULL;
 
 -- ============================================================================
 -- NOTE: hook_cache table removed - replaced by session_file_validations
@@ -257,6 +261,9 @@ CREATE INDEX IF NOT EXISTS idx_hook_executions_name ON hook_executions(hook_name
 CREATE INDEX IF NOT EXISTS idx_hook_executions_executed ON hook_executions(executed_at);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_status ON hook_executions(status);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_session_hook ON hook_executions(session_id, hook_name, directory);
+-- Composite indexes for hook stats queries (time-based filtering with grouping)
+CREATE INDEX IF NOT EXISTS idx_hook_executions_executed_type ON hook_executions(executed_at, hook_type);
+CREATE INDEX IF NOT EXISTS idx_hook_executions_executed_passed ON hook_executions(executed_at, passed);
 
 -- ============================================================================
 -- Pending Hooks Queue (for --check mode orchestrations)
