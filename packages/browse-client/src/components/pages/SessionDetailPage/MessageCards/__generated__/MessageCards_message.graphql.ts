@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<2fa79c9af68eff92a6cf25f6e35543ea>>
+ * @generated SignedSource<<4ba95949749656f3941e9655a0dcdc57>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,7 +13,7 @@ import { FragmentRefs } from "relay-runtime";
 export type MessageCards_message$data = {
   readonly __typename: string;
   readonly id: string | null | undefined;
-  readonly " $fragmentSpreads": FragmentRefs<"AssistantMessageCard_message" | "ExposedToolCallMessageCard_message" | "ExposedToolResultMessageCard_message" | "FileHistorySnapshotMessageCard_message" | "HookDatetimeMessageCard_message" | "HookFileChangeMessageCard_message" | "HookReferenceMessageCard_message" | "HookResultMessageCard_message" | "HookRunMessageCard_message" | "HookScriptMessageCard_message" | "HookValidationCacheMessageCard_message" | "HookValidationMessageCard_message" | "McpToolCallMessageCard_message" | "McpToolResultMessageCard_message" | "MemoryLearnMessageCard_message" | "MemoryQueryMessageCard_message" | "QueueOperationMessageCard_message" | "SentimentAnalysisMessageCard_message" | "SummaryMessageCard_message" | "SystemMessageCard_message" | "UnknownEventMessageCard_message" | "UserMessageCard_message">;
+  readonly " $fragmentSpreads": FragmentRefs<"AssistantMessageCard_message" | "ExposedToolCallMessageCard_message" | "ExposedToolResultMessageCard_message" | "FileHistorySnapshotMessageCard_message" | "HookCheckStateMessageCard_message" | "HookDatetimeMessageCard_message" | "HookFileChangeMessageCard_message" | "HookReferenceMessageCard_message" | "HookResultMessageCard_message" | "HookRunMessageCard_message" | "HookScriptMessageCard_message" | "HookValidationCacheMessageCard_message" | "HookValidationMessageCard_message" | "McpToolCallMessageCard_message" | "McpToolResultMessageCard_message" | "MemoryLearnMessageCard_message" | "MemoryQueryMessageCard_message" | "QueueOperationMessageCard_message" | "SentimentAnalysisMessageCard_message" | "SummaryMessageCard_message" | "SystemMessageCard_message" | "UnknownEventMessageCard_message" | "UserMessageCard_message">;
   readonly " $fragmentType": "MessageCards_message";
 };
 export type MessageCards_message$key = {
@@ -75,6 +75,11 @@ const node: ReaderFragment = {
       "args": null,
       "kind": "FragmentSpread",
       "name": "HookResultMessageCard_message"
+    },
+    {
+      "args": null,
+      "kind": "FragmentSpread",
+      "name": "HookCheckStateMessageCard_message"
     },
     {
       "args": null,
@@ -156,6 +161,6 @@ const node: ReaderFragment = {
   "abstractKey": "__isMessage"
 };
 
-(node as any).hash = "56661191032ed598ca5df91d1d4b21f7";
+(node as any).hash = "c7102b8c6d2119771e599f25abc7d4f2";
 
 export default node;
