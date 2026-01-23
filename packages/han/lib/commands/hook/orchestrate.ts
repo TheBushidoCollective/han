@@ -843,15 +843,14 @@ async function executeHookInDirectory(
 		try {
 			const sessionFiles = await getSessionModifiedFiles(options.sessionId);
 			if (sessionFiles.success && sessionFiles.allModified.length > 0) {
-				// Filter to files in current directory
+				// Files from coordinator are already absolute paths
+				// Filter to files in current directory and make relative
 				const relativeFiles = sessionFiles.allModified
-					.filter((file) => {
-						const absPath = join(projectRoot, file);
+					.filter((absPath) => {
 						return absPath.startsWith(`${directory}/`) || absPath === directory;
 					})
-					.map((file) => {
+					.map((absPath) => {
 						// Make relative to execution directory
-						const absPath = join(projectRoot, file);
 						return relative(directory, absPath);
 					});
 
