@@ -14,44 +14,11 @@ import type { DashboardPageQuery as DashboardPageQueryType } from './__generated
 import { DashboardContent } from './DashboardContent.tsx';
 
 /**
- * Main dashboard query
- * Note: projectId filter is used for repo-specific dashboards
+ * Fragment for deferred activity data
+ * Relay requires @defer to be on fragment spreads, not inline fragments
  */
-export const DashboardPageQuery = graphql`
-  query DashboardPageQuery($projectId: String) {
-    projects(first: 100) {
-      id
-    }
-    sessions(first: 5, projectId: $projectId)
-      @connection(key: "DashboardPage_sessions") {
-      __id
-      edges {
-        node {
-          id
-          ...SessionListItem_session
-        }
-      }
-    }
-    metrics(period: WEEK) {
-      totalTasks
-      completedTasks
-      successRate
-      averageConfidence
-      calibrationScore
-      significantFrustrations
-      significantFrustrationRate
-    }
-    pluginStats {
-      totalPlugins
-      userPlugins
-      projectPlugins
-      localPlugins
-      enabledPlugins
-    }
-    pluginCategories {
-      category
-      count
-    }
+export const DashboardActivityFragment = graphql`
+  fragment DashboardPageActivity_query on Query {
     activity(days: 730) {
       dailyActivity {
         date
@@ -102,6 +69,52 @@ export const DashboardPageQuery = graphql`
       streakDays
       totalActiveDays
     }
+  }
+`;
+
+/**
+ * Main dashboard query
+ * Note: projectId filter is used for repo-specific dashboards
+ */
+export const DashboardPageQuery = graphql`
+  query DashboardPageQuery($projectId: String) {
+    projects(first: 100) {
+      id
+    }
+    sessions(first: 5, projectId: $projectId)
+      @connection(key: "DashboardPage_sessions") {
+      __id
+      edges {
+        node {
+          id
+          ...SessionListItem_session
+        }
+      }
+    }
+    metrics(period: WEEK) {
+      totalTasks
+      completedTasks
+      successRate
+      averageConfidence
+      calibrationScore
+      significantFrustrations
+      significantFrustrationRate
+    }
+    pluginStats {
+      totalPlugins
+      userPlugins
+      projectPlugins
+      localPlugins
+      enabledPlugins
+    }
+    pluginCategories {
+      category
+      count
+    }
+    # Defer heavy activity data (730 days with nested arrays)
+    # This allows the page to render stats/sessions immediately
+    # while charts load progressively
+    ...DashboardPageActivity_query @defer(label: "activityData")
   }
 `;
 

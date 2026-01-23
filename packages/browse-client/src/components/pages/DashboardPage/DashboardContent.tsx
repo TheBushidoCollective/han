@@ -7,7 +7,12 @@
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import type { PreloadedQuery } from 'react-relay';
-import { graphql, usePreloadedQuery, useSubscription } from 'react-relay';
+import {
+  graphql,
+  useFragment,
+  usePreloadedQuery,
+  useSubscription,
+} from 'react-relay';
 import { useNavigate } from 'react-router-dom';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
 import { theme } from '@/components/atoms';
@@ -19,6 +24,7 @@ import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
 import { SessionListItem } from '@/components/organisms/SessionListItem.tsx';
 import type { DashboardContentSubscription } from './__generated__/DashboardContentSubscription.graphql.ts';
+import type { DashboardPageActivity_query$key } from './__generated__/DashboardPageActivity_query.graphql.ts';
 import type { DashboardPageQuery } from './__generated__/DashboardPageQuery.graphql.ts';
 import { ActivityHeatmap } from './ActivityHeatmap.tsx';
 import {
@@ -28,7 +34,10 @@ import {
   StatCard,
   StatusItem,
 } from './components.ts';
-import { DashboardPageQuery as DashboardPageQueryDef } from './index.tsx';
+import {
+  DashboardActivityFragment,
+  DashboardPageQuery as DashboardPageQueryDef,
+} from './index.tsx';
 import { LineChangesChart } from './LineChangesChart.tsx';
 import { ModelUsageChart } from './ModelUsageChart.tsx';
 import { TimeOfDayChart } from './TimeOfDayChart.tsx';
@@ -69,6 +78,13 @@ export function DashboardContent({
   const data = usePreloadedQuery<DashboardPageQuery>(
     DashboardPageQueryDef,
     queryRef
+  );
+
+  // Use fragment for deferred activity data
+  // This will be null initially, then populate when @defer resolves
+  const activityData = useFragment<DashboardPageActivity_query$key>(
+    DashboardActivityFragment,
+    data
   );
 
   // Determine if we're viewing a project-specific dashboard
@@ -135,7 +151,9 @@ export function DashboardContent({
   const frustrationRate = metrics.significantFrustrationRate ?? 0;
 
   // Normalize activity data with defaults for nullable fields from GraphQL
-  const rawActivity = data.activity;
+  // Note: activity may be null initially due to @defer, then populate when ready
+  const rawActivity = activityData.activity;
+  const activityLoaded = rawActivity != null;
   const activity = {
     dailyActivity: (rawActivity?.dailyActivity ?? []).map((d) => ({
       date: d?.date ?? '',
@@ -296,36 +314,101 @@ export function DashboardContent({
 
       {/* Activity Heatmap - full width */}
       <SectionCard title="Activity">
-        <ActivityHeatmap
-          dailyActivity={activity.dailyActivity}
-          streakDays={activity.streakDays}
-          totalActiveDays={activity.totalActiveDays}
-        />
+        {activityLoaded ? (
+          <ActivityHeatmap
+            dailyActivity={activity.dailyActivity}
+            streakDays={activity.streakDays}
+            totalActiveDays={activity.totalActiveDays}
+          />
+        ) : (
+          <Box
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '200px',
+            }}
+          >
+            <Text color="muted">Loading activity data...</Text>
+          </Box>
+        )}
       </SectionCard>
 
       {/* Line Changes Chart - full width */}
       <SectionCard title="Code Changes">
-        <LineChangesChart dailyActivity={activity.dailyActivity} />
+        {activityLoaded ? (
+          <LineChangesChart dailyActivity={activity.dailyActivity} />
+        ) : (
+          <Box
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '200px',
+            }}
+          >
+            <Text color="muted">Loading chart data...</Text>
+          </Box>
+        )}
       </SectionCard>
 
       {/* Model Usage Chart - full width */}
       <SectionCard title="Model Usage (from Claude Code stats)">
-        <ModelUsageChart
-          dailyModelTokens={activity.dailyModelTokens}
-          modelUsage={activity.modelUsage}
-        />
+        {activityLoaded ? (
+          <ModelUsageChart
+            dailyModelTokens={activity.dailyModelTokens}
+            modelUsage={activity.modelUsage}
+          />
+        ) : (
+          <Box
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '200px',
+            }}
+          >
+            <Text color="muted">Loading chart data...</Text>
+          </Box>
+        )}
       </SectionCard>
 
       {/* Token Usage and Time of Day - side by side */}
       <HStack gap="lg" style={{ alignItems: 'flex-start' }}>
         <Box style={{ flex: 1 }}>
           <SectionCard title="Token Usage (30 days)">
-            <TokenUsageCard tokenUsage={activity.tokenUsage} />
+            {activityLoaded ? (
+              <TokenUsageCard tokenUsage={activity.tokenUsage} />
+            ) : (
+              <Box
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '200px',
+                }}
+              >
+                <Text color="muted">Loading token data...</Text>
+              </Box>
+            )}
           </SectionCard>
         </Box>
         <Box style={{ flex: 1 }}>
           <SectionCard title="Time of Day">
-            <TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
+            {activityLoaded ? (
+              <TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
+            ) : (
+              <Box
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '200px',
+                }}
+              >
+                <Text color="muted">Loading chart data...</Text>
+              </Box>
+            )}
           </SectionCard>
         </Box>
       </HStack>
