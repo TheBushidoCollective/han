@@ -1,6 +1,6 @@
 hooks:
   lint:
-    command: "npx -y @biomejs/biome check --write --error-on-warnings"
+    command: "npx -y @biomejs/biome check --write --error-on-warnings ${HAN_FILES}"
     dirs_with:
       - "biome.json"
     if_changed:
