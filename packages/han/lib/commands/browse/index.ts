@@ -263,13 +263,38 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 	// Ensure coordinator is running (lazy start if needed)
 	console.log("[han] Ensuring coordinator is running...");
 	let coordinatorRunning = false;
+	let coordinatorProtocol: "http" | "https" = "http";
+	let coordinatorHost = "127.0.0.1";
 	try {
 		const coordinatorStatus = await ensureCoordinator(coordinatorPort);
 		coordinatorRunning = coordinatorStatus.running;
 		if (coordinatorRunning) {
-			console.log(
-				`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
-			);
+			// Detect if coordinator is using HTTPS by trying health endpoint
+			try {
+				const httpsResponse = await fetch(
+					`https://coordinator.local.han.guru:${coordinatorStatus.port}/health`,
+					{
+						// @ts-expect-error - Node.js fetch rejectUnauthorized option
+						rejectUnauthorized: false,
+					},
+				);
+				if (httpsResponse.ok) {
+					coordinatorProtocol = "https";
+					coordinatorHost = "coordinator.local.han.guru";
+					console.log(
+						`[han] Coordinator ready at https://${coordinatorHost}:${coordinatorStatus.port}/graphql (TLS enabled)`,
+					);
+				} else {
+					console.log(
+						`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
+					);
+				}
+			} catch {
+				// Fallback to HTTP if HTTPS fails
+				console.log(
+					`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
+				);
+			}
 		}
 	} catch (error) {
 		console.error("[han] Failed to start coordinator:", error);
@@ -329,11 +354,12 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 					// Polyfill Node.js globals for React Native libraries
 					global: "globalThis",
 					// Inject GraphQL URLs for the frontend to connect to coordinator
+					// Use detected protocol and host (https://coordinator.local.han.guru if TLS enabled, http://127.0.0.1 otherwise)
 					__GRAPHQL_URL__: JSON.stringify(
-						`http://127.0.0.1:${coordinatorPort}/graphql`,
+						`${coordinatorProtocol}://${coordinatorHost}:${coordinatorPort}/graphql`,
 					),
 					__GRAPHQL_WS_URL__: JSON.stringify(
-						`ws://127.0.0.1:${coordinatorPort}/graphql`,
+						`${coordinatorProtocol === "https" ? "wss" : "ws"}://${coordinatorHost}:${coordinatorPort}/graphql`,
 					),
 				},
 				loader: {
