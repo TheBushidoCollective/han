@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<c7ef37418bf8e2b47e2f2c4c5de013e8>>
+ * @generated SignedSource<<eb1fbc43cab4a23a04b243b605bf3be7>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -15,6 +15,7 @@ export type HookCheckStateMessageCard_message$data = {
   readonly hookType: string | null | undefined;
   readonly hooksCount: number | null | undefined;
   readonly id: string | null | undefined;
+  readonly rawJson: string | null | undefined;
   readonly timestamp: any | null | undefined;
   readonly " $fragmentType": "HookCheckStateMessageCard_message";
 };
@@ -47,6 +48,13 @@ const node: ReaderFragment = {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
+      "name": "rawJson",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
       "name": "hookType",
       "storageKey": null
     },
@@ -69,6 +77,6 @@ const node: ReaderFragment = {
   "abstractKey": null
 };
 
-(node as any).hash = "b84f29607356fcf2a5f74db29314d2e8";
+(node as any).hash = "53e32e036c170125e31842710345d0bf";
 
 export default node;
