@@ -8,9 +8,9 @@
 
 import { quickDiscoverCoordinator } from './discovery.ts';
 import {
+  addEnvironment,
   getActiveEnvironment,
   setActiveEnvironmentId,
-  addEnvironment,
 } from './environments.ts';
 
 /**

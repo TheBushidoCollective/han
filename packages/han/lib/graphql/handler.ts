@@ -8,8 +8,8 @@
  * and efficient batching of database access.
  */
 
-import { makeServer } from "graphql-ws";
 import { useDeferStream } from "@graphql-yoga/plugin-defer-stream";
+import { makeServer } from "graphql-ws";
 import { createYoga } from "graphql-yoga";
 import type { GraphQLContext } from "./builder.ts";
 import { createLoaders } from "./loaders.ts";
