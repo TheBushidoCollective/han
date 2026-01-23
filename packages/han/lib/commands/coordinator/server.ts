@@ -216,7 +216,7 @@ async function processPendingHooks(): Promise<void> {
 				);
 
 				log.warn(
-					`Hook ${hookSource}/${hook.hookName} failed (${attemptInfo.consecutiveFailures}/${attemptInfo.maxAttempts}): ${stderr.slice(0, 100)}`,
+					`Hook ${hookSource}/${hook.hookName} failed (attempt ${attemptInfo.consecutiveFailures}/${attemptInfo.maxAttempts}): ${stderr.slice(0, 100)}`,
 				);
 				publishSessionHooksChanged(
 					sessionId,
