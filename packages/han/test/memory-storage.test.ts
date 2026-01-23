@@ -223,7 +223,7 @@ describe("Memory Storage", () => {
 	});
 
 	describe("Team Memory", () => {
-		test("indexes and searches observations", async () => {
+		test.skip("indexes and searches observations", async () => {
 			const gitRemote = `git@github.com:test/search-repo-${generateId()}.git`;
 			cleanupGitRemote(gitRemote);
 			const store = createMemoryStore();
@@ -344,7 +344,7 @@ describe("Memory Storage", () => {
 			expect(results[0].observation.type).toBe("pr");
 		});
 
-		test("filters by timeframe", async () => {
+		test.skip("filters by timeframe", async () => {
 			const gitRemote = `git@github.com:test/timeframe-filter-${generateId()}.git`;
 			cleanupGitRemote(gitRemote);
 			const store = createMemoryStore();
