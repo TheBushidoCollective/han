@@ -125,7 +125,7 @@ async function generatePerformanceContext(
 			}
 		}
 
-		// Hook failure patterns
+		// Hook failure patterns with actionable guidance
 		if (hookStats.totalExecutions > 0 && hookStats.totalFailed > 0) {
 			const failureRate = Math.round(
 				(hookStats.totalFailed / hookStats.totalExecutions) * 100,
@@ -134,6 +134,24 @@ async function generatePerformanceContext(
 				lines.push(`\n### Hook Status\n`);
 				lines.push(
 					`- ${hookStats.totalFailed}/${hookStats.totalExecutions} hook failures (${failureRate}%)`,
+				);
+
+				// Show general hook failure guidance
+				lines.push(`\n**Common Hook Failure Tips:**\n`);
+				lines.push(
+					`- **Linting/Formatting**: Run \`biome check --write .\` before Stop hooks`,
+				);
+				lines.push(
+					`- **Type Errors**: Fix with \`tsc --noEmit\` to see detailed TypeScript errors`,
+				);
+				lines.push(
+					`- **Test Failures**: Check with \`bun test\` and fix before committing`,
+				);
+				lines.push(
+					`- **Git Storytelling**: Commit work early and often with \`git add\` + \`git commit\``,
+				);
+				lines.push(
+					`\n  Run \`han hook orchestrate Stop --check\` to see which hooks need attention`,
 				);
 			}
 		}
