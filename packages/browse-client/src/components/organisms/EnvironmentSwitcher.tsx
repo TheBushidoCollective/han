@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { discoverCoordinators } from '../../config/discovery';
 import type { Environment } from '../../config/environments';
 import {
   addEnvironment,
@@ -173,6 +174,7 @@ export function EnvironmentSwitcher() {
   const [onlineStatus, setOnlineStatus] = useState<Record<string, boolean>>({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEnv, setEditingEnv] = useState<Environment | undefined>();
+  const [discovering, setDiscovering] = useState(false);
 
   // Load environments and active ID
   useEffect(() => {
@@ -228,6 +230,51 @@ export function EnvironmentSwitcher() {
     setShowAddForm(true);
   };
 
+  const handleAutoDiscover = async () => {
+    setDiscovering(true);
+    try {
+      const discovered = await discoverCoordinators();
+
+      if (discovered.length === 0) {
+        alert(
+          'No running coordinators found in port range 41900-41999.\n\nMake sure your coordinator is running:\n  han coordinator start'
+        );
+        return;
+      }
+
+      // Add discovered environments (avoiding duplicates)
+      const existingPorts = new Set(
+        environments.map((env) => new URL(env.coordinatorUrl).port)
+      );
+
+      const newEnvs = discovered.filter(
+        (env) => !existingPorts.has(new URL(env.coordinatorUrl).port)
+      );
+
+      for (const env of newEnvs) {
+        addEnvironment(env);
+      }
+
+      // Reload environments
+      const updated = getStoredEnvironments();
+      setEnvironments(updated);
+
+      // If only one was discovered and no active environment, activate it
+      if (discovered.length === 1 && !activeId) {
+        const firstEnv = updated.find(
+          (env) =>
+            new URL(env.coordinatorUrl).port ===
+            new URL(discovered[0].coordinatorUrl).port
+        );
+        if (firstEnv) {
+          handleSelectEnvironment(firstEnv.id);
+        }
+      }
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
   return (
     <Box style={{ padding: 16, minWidth: 400 }}>
       <VStack gap="md">
@@ -236,16 +283,26 @@ export function EnvironmentSwitcher() {
           style={{ alignItems: 'center', justifyContent: 'space-between' }}
         >
           <Text style={{ fontSize: 16, fontWeight: '700' }}>Environments</Text>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setEditingEnv(undefined);
-              setShowAddForm(!showAddForm);
-            }}
-          >
-            {showAddForm ? 'Cancel' : 'Add'}
-          </Button>
+          <HStack gap="xs">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAutoDiscover}
+              disabled={discovering}
+            >
+              {discovering ? 'Scanning...' : 'Discover'}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditingEnv(undefined);
+                setShowAddForm(!showAddForm);
+              }}
+            >
+              {showAddForm ? 'Cancel' : 'Add'}
+            </Button>
+          </HStack>
         </HStack>
 
         {showAddForm && (
