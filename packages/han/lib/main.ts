@@ -213,7 +213,6 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 		.command("browse")
 		.description("Start the Han system browser dashboard")
 		.option("-p, --port <port>", "Port to run the server on", "41956")
-		.option("--no-open", "Don't automatically open the browser")
 		.option(
 			"-l, --local",
 			"Run local dev server with HTTP (for offline use; default: open remote dashboard)",
@@ -222,7 +221,6 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 			try {
 				await browse({
 					port: parseInt(opts.port, 10),
-					autoOpen: opts.open !== false,
 					local: opts.local === true,
 				});
 			} catch (error: unknown) {

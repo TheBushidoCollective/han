@@ -8,8 +8,6 @@
 export interface BrowseOptions {
 	/** Port to run the server on (0 for random) */
 	port?: number;
-	/** Whether to automatically open the browser */
-	autoOpen?: boolean;
 	/** Whether to run local dev server with HTTP (true, for offline use) or open remote dashboard (false, default) */
 	local?: boolean;
 }

@@ -242,7 +242,7 @@ function getMimeType(filePath: string): string {
  * for GraphQL.
  */
 export async function browse(options: BrowseOptions = {}): Promise<void> {
-	const { port = getBrowsePort(), autoOpen = true, local = false } = options;
+	const { port = getBrowsePort(), local = false } = options;
 	const coordinatorPort = getCoordinatorPort();
 	const devMode = isDevMode();
 
@@ -301,9 +301,7 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 	if (!local) {
 		const dashboardUrl = `https://dashboard.local.han.guru?coordinatorPort=${coordinatorPort}`;
 		console.log(`[han] Opening remote dashboard at ${dashboardUrl}`);
-		if (autoOpen) {
-			await openBrowser(dashboardUrl);
-		}
+		await openBrowser(dashboardUrl);
 		return;
 	}
 
@@ -620,14 +618,13 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		}
 		console.log("Press Ctrl+C to stop");
 
-		// Open browser if requested
-		if (autoOpen) {
-			openBrowser(serverUrl).then((opened) => {
-				if (opened) {
-					console.log("Browser opened");
-				} else {
-					console.log(
-						`Could not open browser automatically. Visit ${serverUrl} manually.`,
+		// Open browser
+		openBrowser(serverUrl).then((opened) => {
+			if (opened) {
+				console.log("Browser opened");
+			} else {
+				console.log(
+					`Could not open browser automatically. Visit ${serverUrl} manually.`,
 					);
 				}
 			});
