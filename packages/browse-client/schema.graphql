@@ -644,6 +644,45 @@ type HanConfigSummary {
   pluginConfigCount: Int
 }
 
+"""Hook check state event recording when hooks are checked for validation"""
+type HookCheckStateMessage implements Message {
+  """
+  Agent ID if this message is from a subagent. NULL for main conversation.
+  """
+  agentId: String
+
+  """Hash of hooks needing validation (for deduplication)"""
+  fingerprint: String
+
+  """The type of hook being checked (e.g., Stop, PreToolUse)"""
+  hookType: String
+
+  """Number of hooks that need to run"""
+  hooksCount: Int
+
+  """Message global ID"""
+  id: ID
+
+  """
+  For result messages, references the call message ID (e.g., tool_result -> tool_use)
+  """
+  parentId: String
+  rawJson: String
+
+  """
+  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+  """
+  searchText: String
+
+  """When the check occurred"""
+  timestamp: DateTime
+
+  """
+  Raw message UUID. Use this for URLs and links instead of the global ID.
+  """
+  uuid: String
+}
+
 """A datetime injection event"""
 type HookDatetimeMessage implements Message {
   """

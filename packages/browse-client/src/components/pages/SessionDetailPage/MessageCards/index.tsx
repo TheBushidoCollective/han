@@ -17,6 +17,7 @@ import { AssistantMessageCard } from './AssistantMessageCard.tsx';
 import { ExposedToolCallMessageCard } from './ExposedToolCallMessageCard.tsx';
 import { ExposedToolResultMessageCard } from './ExposedToolResultMessageCard.tsx';
 import { FileHistorySnapshotMessageCard } from './FileHistorySnapshotMessageCard.tsx';
+import { HookCheckStateMessageCard } from './HookCheckStateMessageCard.tsx';
 import { HookDatetimeMessageCard } from './HookDatetimeMessageCard.tsx';
 import { HookFileChangeMessageCard } from './HookFileChangeMessageCard.tsx';
 import { HookReferenceMessageCard } from './HookReferenceMessageCard.tsx';
@@ -42,6 +43,7 @@ export { AssistantMessageCard } from './AssistantMessageCard.tsx';
 export { ExposedToolCallMessageCard } from './ExposedToolCallMessageCard.tsx';
 export { ExposedToolResultMessageCard } from './ExposedToolResultMessageCard.tsx';
 export { FileHistorySnapshotMessageCard } from './FileHistorySnapshotMessageCard.tsx';
+export { HookCheckStateMessageCard } from './HookCheckStateMessageCard.tsx';
 export { HookDatetimeMessageCard } from './HookDatetimeMessageCard.tsx';
 export { HookFileChangeMessageCard } from './HookFileChangeMessageCard.tsx';
 export { HookReferenceMessageCard } from './HookReferenceMessageCard.tsx';
@@ -88,6 +90,7 @@ const MessageCardsFragment = graphql`
     ...FileHistorySnapshotMessageCard_message
     ...HookRunMessageCard_message
     ...HookResultMessageCard_message
+    ...HookCheckStateMessageCard_message
     ...HookReferenceMessageCard_message
     ...HookValidationMessageCard_message
     ...HookValidationCacheMessageCard_message
@@ -119,6 +122,7 @@ const componentMap = {
   FileHistorySnapshotMessageCard,
   HookRunMessageCard,
   HookResultMessageCard,
+  HookCheckStateMessageCard,
   HookReferenceMessageCard,
   HookValidationMessageCard,
   HookValidationCacheMessageCard,
@@ -177,6 +181,7 @@ export type MessageTypename =
   | 'FileHistorySnapshotMessage'
   | 'HookRunMessage'
   | 'HookResultMessage'
+  | 'HookCheckStateMessage'
   | 'HookReferenceMessage'
   | 'HookValidationMessage'
   | 'HookValidationCacheMessage'

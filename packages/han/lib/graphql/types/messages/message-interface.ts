@@ -148,6 +148,8 @@ MessageInterface.implement({
 						return "HookRunMessage";
 					case "hook_result":
 						return "HookResultMessage";
+					case "hook_check_state":
+						return "HookCheckStateMessage";
 					case "hook_reference":
 						return "HookReferenceMessage";
 					case "hook_validation":

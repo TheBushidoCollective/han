@@ -10,6 +10,7 @@ export { ExposedToolCallMessageType } from "./exposed-tool-call-message.ts";
 export { ExposedToolResultType } from "./exposed-tool-result.ts";
 export { ExposedToolResultMessageType } from "./exposed-tool-result-message.ts";
 export { FileHistorySnapshotMessageType } from "./file-history-snapshot-message.ts";
+export { HookCheckStateMessage } from "./hook-check-state-message.ts";
 export { HookDatetimeMessageType } from "./hook-datetime-message.ts";
 export { HookFileChangeMessageType } from "./hook-file-change-message.ts";
 export { HookReferenceMessageType } from "./hook-reference-message.ts";
