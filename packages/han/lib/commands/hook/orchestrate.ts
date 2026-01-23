@@ -17,13 +17,18 @@ import {
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import { getPluginHookSettings } from "../../config/han-settings.ts";
-import { hookAttempts, messages } from "../../db/index.ts";
+import {
+	getSessionModifiedFiles,
+	hookAttempts,
+	messages,
+} from "../../db/index.ts";
 import {
 	getEventLogger,
 	getOrCreateEventLogger,
 	initEventLogger,
 } from "../../events/logger.ts";
 import {
+	buildCommandWithFiles,
 	checkForChangesAsync,
 	findDirectoriesWithMarkers,
 	hookMatchesEvent,
@@ -830,7 +835,35 @@ async function executeHookInDirectory(
 	// Get resolved command (with user overrides)
 	// Also resolve 'han ' prefix to use the current binary for inner commands
 	const rawCommand = hookSettings?.command || task.hookDef.command;
-	const command = resolveHanCommand(rawCommand);
+	let command = resolveHanCommand(rawCommand);
+
+	// Substitute ${HAN_FILES} with session-modified files from coordinator
+	if (command.includes("${HAN_FILES}")) {
+		try {
+			const sessionFiles = await getSessionModifiedFiles(options.sessionId);
+			if (sessionFiles.success && sessionFiles.allModified.length > 0) {
+				// Filter to files in current directory
+				const relativeFiles = sessionFiles.allModified
+					.filter((file) => {
+						const absPath = join(projectRoot, file);
+						return absPath.startsWith(directory + "/") || absPath === directory;
+					})
+					.map((file) => {
+						// Make relative to execution directory
+						const absPath = join(projectRoot, file);
+						return relative(directory, absPath);
+					});
+
+				command = buildCommandWithFiles(command, relativeFiles);
+			} else {
+				// No session files or query failed - replace with "." to check all files
+				command = buildCommandWithFiles(command, []);
+			}
+		} catch {
+			// Error getting session files - replace with "." to check all files
+			command = buildCommandWithFiles(command, []);
+		}
+	}
 
 	// For Stop hooks: acquire a slot and wait for it (no timeout)
 	// Wait mode is fully synchronous - no background deferral
