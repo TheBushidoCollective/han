@@ -77,9 +77,20 @@ describe.serial("port-allocation.ts", () => {
 
 	describe("isPortAvailable", () => {
 		test("returns true for unused port", async () => {
-			// Use a high port that's unlikely to be in use
-			const available = await isPortAvailable(49999);
-			expect(available).toBe(true);
+			// Try to find an available port in a high range
+			// Start at a random high port to reduce collision likelihood
+			const startPort = 50000 + Math.floor(Math.random() * 10000);
+			let foundAvailable = false;
+
+			for (let port = startPort; port < startPort + 100; port++) {
+				const available = await isPortAvailable(port);
+				if (available) {
+					foundAvailable = true;
+					break;
+				}
+			}
+
+			expect(foundAvailable).toBe(true);
 		});
 
 		test("returns false for port in use", async () => {
