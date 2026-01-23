@@ -36,40 +36,10 @@ hooks:
     command: han hook context
     description: Consolidated session context (session ID, performance metrics, memory context)
 
-  no-time-estimates-ref:
+  session-references:
     event: SessionStart
-    command: han hook reference hooks/no-time-estimates.md --must-read-first "no time estimates policy"
-    description: Reference no time estimates policy
-
-  metrics-tracking-ref:
-    event: SessionStart
-    command: han hook reference hooks/metrics-tracking.md --must-read-first "metrics tracking guidelines"
-    description: Reference metrics tracking guidelines
-
-  professional-honesty-ref:
-    event: SessionStart
-    command: han hook reference hooks/professional-honesty.md --must-read-first "epistemic rigor and professional honesty"
-    description: Reference professional honesty guidelines
-
-  ensure-subagent-ref:
-    event: SessionStart
-    command: han hook reference hooks/ensure-subagent.md --must-read-first "subagent delegation rules"
-    description: Reference subagent delegation rules
-
-  bash-output-capture-ref:
-    event: SessionStart
-    command: han hook reference hooks/bash-output-capture.md --must-read-first "bash output capture best practices"
-    description: Reference bash output capture practices
-
-  ensure-skill-use-ref:
-    event: SessionStart
-    command: han hook reference hooks/ensure-skill-use.md --must-read-first "skill selection and transparency"
-    description: Reference skill selection guidelines
-
-  date-handling-ref:
-    event: SessionStart
-    command: han hook reference hooks/date-handling.md --must-read-first "date handling best practices"
-    description: Reference date handling guidelines
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/session-references.sh"
+    description: Consolidated SessionStart reference hooks (no-time-estimates, metrics-tracking, professional-honesty, ensure-subagent, bash-output-capture, ensure-skill-use, date-handling)
 
   # UserPromptSubmit hooks - run on each user message
   current-datetime:

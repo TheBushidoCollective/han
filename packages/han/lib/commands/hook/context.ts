@@ -8,7 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Command } from "commander";
-import { hookExecutions, tasks, withFreshData } from "../../db/index.ts";
+import { hookExecutions, tasks } from "../../db/index.ts";
 import { injectSessionContext } from "../../memory/index.ts";
 
 /**
@@ -188,24 +188,17 @@ async function outputContext(): Promise<void> {
 	// Output session ID in XML format
 	console.log(`<session-id>${sessionId}</session-id>\n`);
 
-	// Query fresh data from database with timeout
-	// Don't block SessionStart if coordinator is slow - better to skip metrics than delay startup
+	// Query existing SQLite database directly - DO NOT start coordinator during SessionStart
+	// This prevents 30+ second delays when coordinator is slow to start
+	// The coordinator will start lazily when actually needed
 	try {
-		await Promise.race([
-			withFreshData(async () => {
-				// Output performance context
-				const perfContext = await generatePerformanceContext(sessionId);
-				if (perfContext) {
-					console.log(perfContext);
-					console.log("");
-				}
-			}),
-			new Promise((_, reject) =>
-				setTimeout(() => reject(new Error("Metrics timeout")), 3000),
-			),
-		]);
+		const perfContext = await generatePerformanceContext(sessionId);
+		if (perfContext) {
+			console.log(perfContext);
+			console.log("");
+		}
 	} catch {
-		// Skip metrics on timeout - don't block session start
+		// Skip metrics on error - don't block session start
 	}
 
 	// Output memory context
