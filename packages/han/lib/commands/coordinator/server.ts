@@ -97,7 +97,10 @@ async function shouldStayAlive(): Promise<boolean> {
 	// Check for active sessions (sessions with status != 'completed')
 	try {
 		const { sessions: sessionsDb } = await import("../../db/index.ts");
-		const activeSessions = await sessionsDb.list({ status: "active", limit: 1 });
+		const activeSessions = await sessionsDb.list({
+			status: "active",
+			limit: 1,
+		});
 		if (activeSessions.length > 0) {
 			log.debug(
 				`Keeping coordinator alive: found ${activeSessions.length} active session(s)`,
