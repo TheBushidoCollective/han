@@ -9,6 +9,7 @@
  */
 
 import { makeServer } from "graphql-ws";
+import { useDeferStream } from "@graphql-yoga/plugin-defer-stream";
 import { createYoga } from "graphql-yoga";
 import type { GraphQLContext } from "./builder.ts";
 import { createLoaders } from "./loaders.ts";
@@ -20,12 +21,16 @@ export { schema };
  * Create a GraphQL Yoga instance configured for Next.js
  *
  * Sets up per-request context with fresh DataLoader instances.
+ * Enables @defer and @stream directives for incremental delivery.
  */
 export function createGraphQLHandler() {
 	return createYoga<GraphQLContext>({
 		schema,
 		graphqlEndpoint: "/api/graphql",
 		graphiql: true,
+		plugins: [
+			useDeferStream(), // Enable @defer and @stream directives
+		],
 		cors: {
 			origin: "*",
 			methods: ["GET", "POST", "OPTIONS"],
