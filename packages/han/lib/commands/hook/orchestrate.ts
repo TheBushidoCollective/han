@@ -784,6 +784,7 @@ async function executeHookInDirectory(
 	}
 
 	// Check cache if only checking changed files
+	// Hooks without ifChanged patterns (like PreToolUse security checks) always run
 	if (
 		options.onlyChanged &&
 		task.hookDef.ifChanged &&
@@ -1053,23 +1054,25 @@ async function executeHookInDirectory(
 			},
 		});
 
-		// Always update cache on success (for next run with --only-changed)
-		// Track session-changed files after successful validation
-		const commandHash = createHash("sha256").update(command).digest("hex");
-		await trackFilesAsync(
-			task.plugin,
-			task.hookName,
-			directory,
-			task.hookDef.ifChanged || ["**/*"],
-			task.pluginRoot,
-			{
-				logger: logger ?? undefined,
-				directory: relativePath,
-				commandHash,
-				sessionId: options.sessionId,
-				trackSessionChangesOnly: false, // Track all files the hook validated
-			},
-		);
+		// Only update cache if hook has ifChanged patterns defined
+		// Hooks without ifChanged (like PreToolUse security checks) should run every time
+		if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
+			const commandHash = createHash("sha256").update(command).digest("hex");
+			await trackFilesAsync(
+				task.plugin,
+				task.hookName,
+				directory,
+				task.hookDef.ifChanged,
+				task.pluginRoot,
+				{
+					logger: logger ?? undefined,
+					directory: relativePath,
+					commandHash,
+					sessionId: options.sessionId,
+					trackSessionChangesOnly: false, // Track all files the hook validated
+				},
+			);
+		}
 
 		const duration = Date.now() - startTime;
 
