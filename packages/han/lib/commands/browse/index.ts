@@ -625,10 +625,9 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 			} else {
 				console.log(
 					`Could not open browser automatically. Visit ${serverUrl} manually.`,
-					);
-				}
-			});
-		}
+				);
+			}
+		});
 	});
 
 	// Setup graceful shutdown
