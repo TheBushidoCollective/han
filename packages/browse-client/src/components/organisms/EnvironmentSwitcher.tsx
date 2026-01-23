@@ -44,27 +44,27 @@ function EnvironmentItem({
         style={{
           padding: 12,
           borderRadius: 8,
-          backgroundColor: isActive ? '#f0f9ff' : '#f8f9fa',
+          backgroundColor: isActive ? colors.bg.tertiary : colors.bg.secondary,
           borderWidth: isActive ? 2 : 1,
-          borderColor: isActive ? '#3b82f6' : '#e5e7eb',
+          borderColor: isActive ? colors.primary : colors.border.default,
           marginBottom: 8,
         }}
       >
         <HStack gap="md" style={{ alignItems: 'center' }}>
           <VStack style={{ flex: 1 }}>
             <HStack gap="sm" style={{ alignItems: 'center' }}>
-              <Text style={{ fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ fontWeight: '600', fontSize: 14, color: colors.text.primary }}>
                 {environment.name}
               </Text>
               <Badge variant={isOnline ? 'success' : 'default'}>
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
             </HStack>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.text.muted, marginTop: 4 }}>
               {new URL(environment.coordinatorUrl).host}
             </Text>
             {environment.lastConnected && (
-              <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+              <Text style={{ fontSize: 11, color: colors.text.muted, marginTop: 2 }}>
                 Last connected:{' '}
                 {new Date(environment.lastConnected).toLocaleString()}
               </Text>
@@ -72,11 +72,11 @@ function EnvironmentItem({
           </VStack>
           <HStack gap="xs">
             <Pressable onPress={onEdit}>
-              <Text style={{ color: '#3b82f6', fontSize: 12 }}>Edit</Text>
+              <Text style={{ color: colors.primary, fontSize: 12 }}>Edit</Text>
             </Pressable>
             {!isActive && (
               <Pressable onPress={onDelete}>
-                <Text style={{ color: '#ef4444', fontSize: 12 }}>Delete</Text>
+                <Text style={{ color: colors.danger, fontSize: 12 }}>Delete</Text>
               </Pressable>
             )}
           </HStack>
@@ -119,28 +119,28 @@ function AddEnvironmentForm({
     <Box
       style={{
         padding: 16,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: colors.bg.secondary,
         borderRadius: 8,
         marginBottom: 12,
       }}
     >
       <VStack gap="md">
-        <Text style={{ fontWeight: '600', fontSize: 14 }}>
+        <Text style={{ fontWeight: '600', fontSize: 14, color: colors.text.primary }}>
           {editingEnv ? 'Edit Environment' : 'Add Environment'}
         </Text>
 
         <VStack gap="xs">
-          <Text style={{ fontSize: 12, color: '#6b7280' }}>Name</Text>
+          <Text style={{ fontSize: 12, color: colors.text.muted }}>Name</Text>
           <Input
             value={name}
             onChange={setName}
             placeholder="My Environment"
-            style={{ backgroundColor: '#ffffff' }}
+            style={{ backgroundColor: colors.bg.tertiary }}
           />
         </VStack>
 
         <VStack gap="xs">
-          <Text style={{ fontSize: 12, color: '#6b7280' }}>
+          <Text style={{ fontSize: 12, color: colors.text.muted }}>
             Coordinator Port
           </Text>
           <Input
@@ -148,9 +148,9 @@ function AddEnvironmentForm({
             onChange={setPort}
             placeholder="41957"
             type="number"
-            style={{ backgroundColor: '#ffffff' }}
+            style={{ backgroundColor: colors.bg.tertiary }}
           />
-          <Text style={{ fontSize: 11, color: '#9ca3af' }}>
+          <Text style={{ fontSize: 11, color: colors.text.muted }}>
             Port from ~/.claude/han.yml
           </Text>
         </VStack>
@@ -282,7 +282,7 @@ export function EnvironmentSwitcher() {
           gap="md"
           style={{ alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>Environments</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.heading }}>Environments</Text>
           <HStack gap="xs">
             <Button
               variant="secondary"
@@ -321,11 +321,11 @@ export function EnvironmentSwitcher() {
             style={{
               padding: 24,
               textAlign: 'center',
-              backgroundColor: '#f8f9fa',
+              backgroundColor: colors.bg.secondary,
               borderRadius: 8,
             }}
           >
-            <Text style={{ color: '#6b7280', marginBottom: 12 }}>
+            <Text style={{ color: colors.text.muted, marginBottom: 12 }}>
               No environments configured
             </Text>
             <Button
@@ -362,10 +362,10 @@ export function EnvironmentSwitcher() {
           style={{
             paddingTop: 12,
             borderTopWidth: 1,
-            borderTopColor: '#e5e7eb',
+            borderTopColor: colors.border.default,
           }}
         >
-          <Text style={{ fontSize: 11, color: '#9ca3af' }}>
+          <Text style={{ fontSize: 11, color: colors.text.muted }}>
             Switching environments will reload the page
           </Text>
         </Box>
