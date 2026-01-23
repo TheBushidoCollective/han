@@ -17,5 +17,11 @@
     "pull-requests",
     "actions",
     "code-search"
-  ]
+  ],
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    }
+  }
 }
