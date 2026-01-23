@@ -32,7 +32,8 @@ function generatePlist(hanBinaryPath: string, port: number): string {
     <key>ProgramArguments</key>
     <array>
         <string>${hanBinaryPath}</string>
-        <string>start-coordinator</string>
+        <string>coordinator</string>
+        <string>start</string>
         <string>--foreground</string>
         <string>--port</string>
         <string>${port}</string>

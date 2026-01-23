@@ -179,7 +179,7 @@ export async function startDaemon(
 
 	const child = spawn(
 		process.execPath,
-		[hanBinary, "start-coordinator", "--foreground", "--port", String(port)],
+		[hanBinary, "coordinator", "start", "--foreground", "--port", String(port)],
 		{
 			detached: true,
 			stdio: ["ignore", logFd, logFd],

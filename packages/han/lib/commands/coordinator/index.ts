@@ -5,9 +5,11 @@
  * GraphQL server, database manager, and event publisher.
  *
  * Commands:
- *   han start-coordinator   - Start the coordinator daemon
- *   han stop-coordinator    - Stop the coordinator daemon
- *   han coordinator status  - Check coordinator status
+ *   han coordinator start    - Start the coordinator daemon
+ *   han coordinator stop     - Stop the coordinator daemon
+ *   han coordinator restart  - Restart the coordinator daemon
+ *   han coordinator status   - Check coordinator status
+ *   han coordinator logs     - View coordinator logs
  */
 
 import { spawn } from "node:child_process";
@@ -34,9 +36,14 @@ import { getCoordinatorPort } from "./types.ts";
 export function registerCoordinatorCommands(program: Command): void {
 	const defaultPort = getCoordinatorPort();
 
-	// Top-level start-coordinator command
-	program
-		.command("start-coordinator")
+	// Subcommand group for coordinator operations
+	const coordinator = program
+		.command("coordinator")
+		.description("Manage the coordinator daemon");
+
+	// coordinator start
+	coordinator
+		.command("start")
 		.description("Start the coordinator daemon")
 		.option("-p, --port <port>", `Port number (default: ${defaultPort})`)
 		.option("--foreground", "Run in foreground (don't daemonize)")
@@ -52,8 +59,6 @@ export function registerCoordinatorCommands(program: Command): void {
 						? parseInt(options.port, 10)
 						: getCoordinatorPort();
 
-					// Auto-foreground in dev mode when run from CLI interactively
-					// Skip if --daemon flag is set or if being spawned by the daemon system
 					const isDaemonSpawn = process.env.HAN_COORDINATOR_DAEMON === "1";
 					const isInteractive = process.stdin.isTTY;
 					const autoForeground =
@@ -78,9 +83,9 @@ export function registerCoordinatorCommands(program: Command): void {
 			},
 		);
 
-	// Top-level stop-coordinator command
-	program
-		.command("stop-coordinator")
+	// coordinator stop
+	coordinator
+		.command("stop")
 		.description("Stop the coordinator daemon")
 		.option("-p, --port <port>", `Port number (default: ${defaultPort})`)
 		.action(async (options: { port?: string }) => {
@@ -98,11 +103,39 @@ export function registerCoordinatorCommands(program: Command): void {
 			}
 		});
 
-	// Subcommand group for additional coordinator operations
-	const coordinator = program
-		.command("coordinator")
-		.description("Manage the coordinator daemon");
+	// coordinator restart
+	coordinator
+		.command("restart")
+		.description("Restart the coordinator daemon")
+		.option("-p, --port <port>", `Port number (default: ${defaultPort})`)
+		.action(async (options: { port?: string }) => {
+			try {
+				const port = options.port
+					? parseInt(options.port, 10)
+					: getCoordinatorPort();
 
+				// Stop if running
+				const status = await getStatus(port);
+				if (status.running) {
+					console.log("[coordinator] Stopping...");
+					await stopDaemon(port);
+					// Wait a moment for port to be released
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+				}
+
+				// Start
+				console.log("[coordinator] Starting...");
+				await startDaemon({ port });
+			} catch (error: unknown) {
+				console.error(
+					"Error restarting coordinator:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
+	// coordinator status
 	coordinator
 		.command("status")
 		.description("Check coordinator daemon status")
@@ -145,6 +178,7 @@ export function registerCoordinatorCommands(program: Command): void {
 			}
 		});
 
+	// coordinator ensure
 	coordinator
 		.command("ensure")
 		.description("Ensure coordinator is running (start if needed)")
@@ -182,7 +216,7 @@ export function registerCoordinatorCommands(program: Command): void {
 				console.log("No coordinator logs found.");
 				console.log(`Log file: ${logPath}`);
 				console.log(
-					"\nStart the coordinator to generate logs: han start-coordinator",
+					"\nStart the coordinator to generate logs: han coordinator start",
 				);
 				return;
 			}

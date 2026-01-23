@@ -60,7 +60,7 @@ const COORDINATOR_UNAVAILABLE_HTML = `<!DOCTYPE html>
         <div class="logo pulse">&#128526;</div>
         <h1>Han Dashboard</h1>
         <p class="message">Start a Claude Code session to see the active dashboard</p>
-        <p class="hint">Or run <code>han start-coordinator</code> to start the backend manually</p>
+        <p class="hint">Or run <code>han coordinator start</code> to start the backend manually</p>
     </div>
     <script>
         setInterval(() => {
