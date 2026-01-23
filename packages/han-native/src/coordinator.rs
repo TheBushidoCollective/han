@@ -137,15 +137,15 @@ fn process_exists(_pid: i64) -> bool {
 
 /// Check if lock is stale (process dead or heartbeat too old)
 fn is_lock_stale(info: &LockInfo) -> bool {
+    // Check if process still exists first (immediate staleness detection)
+    if !process_exists(info.pid) {
+        return true;
+    }
+
+    // Process exists, check if heartbeat is too old
     let current_time = now_secs();
     let heartbeat_age = current_time - info.heartbeat_at;
-
-    // If heartbeat is too old, check if process is still alive
-    if heartbeat_age > LOCK_STALE_TIMEOUT as i64 {
-        !process_exists(info.pid)
-    } else {
-        false
-    }
+    heartbeat_age > LOCK_STALE_TIMEOUT as i64
 }
 
 /// Global coordinator state
