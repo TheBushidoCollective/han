@@ -5,10 +5,19 @@
  */
 
 import type React from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getActiveEnvironment } from '../../config/environments.ts';
 import { colors, createStyles } from '../../theme.ts';
-import { Box, Heading, HStack, Text, VStack } from '../atoms/index.ts';
-import { NavItem } from '../organisms/index.ts';
+import {
+  Box,
+  Heading,
+  HStack,
+  Pressable,
+  Text,
+  VStack,
+} from '../atoms/index.ts';
+import { EnvironmentSwitcher, NavItem } from '../organisms/index.ts';
 
 /**
  * Determine if a nav item is active based on the current pathname
@@ -57,11 +66,41 @@ const styles = createStyles({
     flex: 1,
     overflowY: 'auto' as const,
   },
+  footer: {
+    borderTop: `1px solid ${colors.border.default}`,
+    padding: 12,
+  },
+  envButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  modal: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: colors.bg.primary,
+    borderRadius: 12,
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+  },
 });
 
 export function Sidebar(): React.ReactElement {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const [showEnvSwitcher, setShowEnvSwitcher] = useState(false);
+  const activeEnv = getActiveEnvironment();
 
   const handleClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -72,32 +111,78 @@ export function Sidebar(): React.ReactElement {
   };
 
   return (
-    <Box style={styles.sidebar}>
-      <VStack style={{ height: '100%' }}>
-        {/* Header with logo */}
-        <Box px="lg" py="lg" style={styles.header}>
-          <HStack gap="sm" align="center">
-            <Text size="xl">⛩️</Text>
-            <Heading as="h1" size="md">
-              Han
-            </Heading>
-          </HStack>
-        </Box>
+    <>
+      <Box style={styles.sidebar}>
+        <VStack style={{ height: '100%' }}>
+          {/* Header with logo */}
+          <Box px="lg" py="lg" style={styles.header}>
+            <HStack gap="sm" align="center">
+              <Text size="xl">⛩️</Text>
+              <Heading as="h1" size="md">
+                Han
+              </Heading>
+            </HStack>
+          </Box>
 
-        {/* Navigation list */}
-        <Box px="sm" py="md" style={styles.navContainer}>
-          <VStack gap="xs">
-            {navItems.map((item) => (
-              <NavItem
-                key={item.id}
-                item={item}
-                isActive={isNavItemActive(pathname, item.path)}
-                onClick={handleClick}
-              />
-            ))}
-          </VStack>
-        </Box>
-      </VStack>
-    </Box>
+          {/* Navigation list */}
+          <Box px="sm" py="md" style={styles.navContainer}>
+            <VStack gap="xs">
+              {navItems.map((item) => (
+                <NavItem
+                  key={item.id}
+                  item={item}
+                  isActive={isNavItemActive(pathname, item.path)}
+                  onClick={handleClick}
+                />
+              ))}
+            </VStack>
+          </Box>
+
+          {/* Environment Switcher */}
+          <Box style={styles.footer}>
+            <Pressable onPress={() => setShowEnvSwitcher(true)}>
+              <Box style={styles.envButton}>
+                <VStack gap="xs">
+                  <Text size="xs" style={{ color: colors.text.secondary }}>
+                    Environment
+                  </Text>
+                  <Text size="sm" weight="medium">
+                    {activeEnv?.name ?? 'Default Local'}
+                  </Text>
+                  {activeEnv && (
+                    <Text size="xs" style={{ color: colors.text.secondary }}>
+                      {new URL(activeEnv.coordinatorUrl).host}
+                    </Text>
+                  )}
+                </VStack>
+              </Box>
+            </Pressable>
+          </Box>
+        </VStack>
+      </Box>
+
+      {/* Environment Switcher Modal */}
+      {showEnvSwitcher && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={styles.modal}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEnvSwitcher(false);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowEnvSwitcher(false);
+            }
+          }}
+        >
+          <div style={styles.modalContent}>
+            <EnvironmentSwitcher />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
