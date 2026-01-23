@@ -49,6 +49,7 @@ interface ServerState {
 	pendingHooksInterval: NodeJS.Timeout | null;
 	lastActivity: number;
 	processingHooks: boolean;
+	activeWebSocketClients: number;
 }
 
 const state: ServerState = {
@@ -60,6 +61,7 @@ const state: ServerState = {
 	pendingHooksInterval: null,
 	lastActivity: Date.now(),
 	processingHooks: false,
+	activeWebSocketClients: 0,
 };
 
 // Watchdog constants
@@ -74,6 +76,43 @@ const PENDING_HOOKS_INTERVAL_MS = 5000; // Poll every 5 seconds
  */
 function recordActivity(): void {
 	state.lastActivity = Date.now();
+}
+
+/**
+ * Check if the coordinator should stay alive despite inactivity
+ * Returns true if there are reasons to keep the coordinator running:
+ * - Active WebSocket clients (browse UI connected)
+ * - Active sessions (non-completed sessions with recent activity)
+ * - Running MCP servers
+ */
+async function shouldStayAlive(): Promise<boolean> {
+	// Check for active WebSocket clients (browse UI)
+	if (state.activeWebSocketClients > 0) {
+		log.debug(
+			`Keeping coordinator alive: ${state.activeWebSocketClients} WebSocket client(s) connected`,
+		);
+		return true;
+	}
+
+	// Check for active sessions (sessions with status != 'completed')
+	try {
+		const { sessions: sessionsDb } = await import("../../db/index.ts");
+		const activeSessions = await sessionsDb.list({ status: "active", limit: 1 });
+		if (activeSessions.length > 0) {
+			log.debug(
+				`Keeping coordinator alive: found ${activeSessions.length} active session(s)`,
+			);
+			return true;
+		}
+	} catch (error) {
+		log.warn("Failed to check for active sessions:", error);
+	}
+
+	// Check for running MCP servers
+	// TODO: Implement MCP server detection
+	// This would require tracking MCP server processes or checking for active MCP connections
+
+	return false;
 }
 
 /**
@@ -295,16 +334,25 @@ export async function startServer(
 		}
 	}, heartbeatMs);
 
-	// Start watchdog timer to detect hangs
-	state.watchdogInterval = setInterval(() => {
+	// Start watchdog timer to detect hangs and manage inactivity shutdown
+	state.watchdogInterval = setInterval(async () => {
 		const timeSinceActivity = Date.now() - state.lastActivity;
 		if (timeSinceActivity > WATCHDOG_TIMEOUT_MS) {
-			log.error(
-				`Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s, restarting...`,
+			// Check if we should keep coordinator alive despite inactivity
+			const keepAlive = await shouldStayAlive();
+			if (keepAlive) {
+				log.debug(
+					`Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s, but staying alive due to active connections/sessions`,
+				);
+				return;
+			}
+
+			log.info(
+				`Watchdog: No activity for ${Math.round(timeSinceActivity / 1000)}s and no active connections/sessions, shutting down...`,
 			);
-			// Force restart by stopping server - the daemon will restart it
+			// Graceful shutdown - let the daemon restart when needed
 			stopServer();
-			process.exit(1);
+			process.exit(0);
 		}
 	}, WATCHDOG_INTERVAL_MS);
 
@@ -437,6 +485,12 @@ export async function startServer(
 
 		if (pathname === "/graphql") {
 			wss.handleUpgrade(request, socket, head, (ws) => {
+				// Track active WebSocket connections
+				state.activeWebSocketClients++;
+				log.info(
+					`WebSocket client connected (total: ${state.activeWebSocketClients})`,
+				);
+
 				const closed = wsServer.opened(
 					{
 						protocol: ws.protocol,
@@ -444,6 +498,8 @@ export async function startServer(
 						close: (code, reason) => ws.close(code, reason),
 						onMessage: (cb) => {
 							ws.on("message", (data) => {
+								// Record activity on every WebSocket message
+								recordActivity();
 								cb(data.toString());
 							});
 						},
@@ -452,6 +508,14 @@ export async function startServer(
 				);
 
 				ws.on("close", () => {
+					// Untrack WebSocket connection
+					state.activeWebSocketClients = Math.max(
+						0,
+						state.activeWebSocketClients - 1,
+					);
+					log.info(
+						`WebSocket client disconnected (remaining: ${state.activeWebSocketClients})`,
+					);
 					closed();
 				});
 			});
