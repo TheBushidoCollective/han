@@ -242,23 +242,9 @@ function getMimeType(filePath: string): string {
  * for GraphQL.
  */
 export async function browse(options: BrowseOptions = {}): Promise<void> {
-	const { port = getBrowsePort(), autoOpen = true } = options;
+	const { port = getBrowsePort(), autoOpen = true, local = false } = options;
 	const coordinatorPort = getCoordinatorPort();
 	const devMode = isDevMode();
-
-	// Skip per-request coordinator checks in test environments
-	// The coordinator is verified at startup; per-request checks can timeout
-	const skipCoordinatorCheck = process.env.HAN_SKIP_COORDINATOR_CHECK === "1";
-
-	const clientDir = getBrowseClientDir();
-
-	// Check if browse-client exists
-	if (!existsSync(clientDir)) {
-		throw new Error(`browse-client not found at ${clientDir}`);
-	}
-
-	console.log(`[han] Starting browse server...`);
-	console.log(`[han] Mode: ${devMode ? "development" : "production"}`);
 
 	// Ensure coordinator is running (lazy start if needed)
 	console.log("[han] Ensuring coordinator is running...");
@@ -301,6 +287,31 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		console.log(
 			"[han] Dashboard will show placeholder until coordinator is available",
 		);
+	}
+
+	// If not local mode, open remote dashboard with coordinator port and return
+	if (!local) {
+		const dashboardUrl = `https://dashboard.local.han.guru?coordinatorPort=${coordinatorPort}`;
+		console.log(`[han] Opening remote dashboard at ${dashboardUrl}`);
+		if (autoOpen) {
+			await openBrowser(dashboardUrl);
+		}
+		return;
+	}
+
+	// Local mode: Start local dev server
+	console.log(`[han] Starting browse server...`);
+	console.log(`[han] Mode: ${devMode ? "development" : "production"}`);
+
+	// Skip per-request coordinator checks in test environments
+	// The coordinator is verified at startup; per-request checks can timeout
+	const skipCoordinatorCheck = process.env.HAN_SKIP_COORDINATOR_CHECK === "1";
+
+	const clientDir = getBrowseClientDir();
+
+	// Check if browse-client exists
+	if (!existsSync(clientDir)) {
+		throw new Error(`browse-client not found at ${clientDir}`);
 	}
 
 	// Create HTTP server

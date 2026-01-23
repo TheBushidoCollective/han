@@ -214,11 +214,16 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 		.description("Start the Han system browser dashboard")
 		.option("-p, --port <port>", "Port to run the server on", "41956")
 		.option("--no-open", "Don't automatically open the browser")
+		.option(
+			"-l, --local",
+			"Run local dev server (default: open remote dashboard)",
+		)
 		.action(async (opts) => {
 			try {
 				await browse({
 					port: parseInt(opts.port, 10),
 					autoOpen: opts.open !== false,
+					local: opts.local === true,
 				});
 			} catch (error: unknown) {
 				const message = `Error starting browse server: ${error instanceof Error ? error.message : error}`;

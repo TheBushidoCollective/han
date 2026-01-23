@@ -10,6 +10,8 @@ export interface BrowseOptions {
 	port?: number;
 	/** Whether to automatically open the browser */
 	autoOpen?: boolean;
+	/** Whether to run local dev server (true) or open remote dashboard (false, default) */
+	local?: boolean;
 }
 
 /**
