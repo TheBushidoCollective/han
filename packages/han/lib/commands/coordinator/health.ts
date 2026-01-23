@@ -19,11 +19,32 @@ export interface HealthCheckResponse {
 
 /**
  * Check if the coordinator daemon is running and healthy
+ * Tries HTTPS first (for TLS-enabled coordinator), then falls back to HTTP
  */
 export async function checkHealth(
 	port?: number,
 ): Promise<HealthCheckResponse | null> {
 	const effectivePort = port ?? getCoordinatorPort();
+
+	// Try HTTPS first (TLS-enabled coordinator)
+	try {
+		const response = await fetch(
+			`https://coordinator.local.han.guru:${effectivePort}/health`,
+			{
+				signal: AbortSignal.timeout(2000),
+				// @ts-expect-error - Node.js fetch rejectUnauthorized option
+				rejectUnauthorized: false,
+			},
+		);
+
+		if (response.ok) {
+			return (await response.json()) as HealthCheckResponse;
+		}
+	} catch {
+		// Fall through to HTTP attempt
+	}
+
+	// Fallback to HTTP (non-TLS coordinator)
 	try {
 		const response = await fetch(`http://127.0.0.1:${effectivePort}/health`, {
 			signal: AbortSignal.timeout(2000),
