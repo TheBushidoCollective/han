@@ -216,7 +216,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 		.option("--no-open", "Don't automatically open the browser")
 		.option(
 			"-l, --local",
-			"Run local dev server (default: open remote dashboard)",
+			"Run local dev server with HTTP (for offline use; default: open remote dashboard)",
 		)
 		.action(async (opts) => {
 			try {

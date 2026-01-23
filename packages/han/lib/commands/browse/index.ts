@@ -255,31 +255,39 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		const coordinatorStatus = await ensureCoordinator(coordinatorPort);
 		coordinatorRunning = coordinatorStatus.running;
 		if (coordinatorRunning) {
-			// Detect if coordinator is using HTTPS by trying health endpoint
-			try {
-				const httpsResponse = await fetch(
-					`https://coordinator.local.han.guru:${coordinatorStatus.port}/health`,
-					{
-						// @ts-expect-error - Node.js fetch rejectUnauthorized option
-						rejectUnauthorized: false,
-					},
+			// In local mode, always use HTTP (for offline scenarios like planes)
+			// Otherwise, detect HTTPS for remote dashboard
+			if (local) {
+				console.log(
+					`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
 				);
-				if (httpsResponse.ok) {
-					coordinatorProtocol = "https";
-					coordinatorHost = "coordinator.local.han.guru";
-					console.log(
-						`[han] Coordinator ready at https://${coordinatorHost}:${coordinatorStatus.port}/graphql (TLS enabled)`,
+			} else {
+				// Detect if coordinator is using HTTPS by trying health endpoint
+				try {
+					const httpsResponse = await fetch(
+						`https://coordinator.local.han.guru:${coordinatorStatus.port}/health`,
+						{
+							// @ts-expect-error - Node.js fetch rejectUnauthorized option
+							rejectUnauthorized: false,
+						},
 					);
-				} else {
+					if (httpsResponse.ok) {
+						coordinatorProtocol = "https";
+						coordinatorHost = "coordinator.local.han.guru";
+						console.log(
+							`[han] Coordinator ready at https://${coordinatorHost}:${coordinatorStatus.port}/graphql (TLS enabled)`,
+						);
+					} else {
+						console.log(
+							`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
+						);
+					}
+				} catch {
+					// Fallback to HTTP if HTTPS fails
 					console.log(
 						`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
 					);
 				}
-			} catch {
-				// Fallback to HTTP if HTTPS fails
-				console.log(
-					`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
-				);
 			}
 		}
 	} catch (error) {
