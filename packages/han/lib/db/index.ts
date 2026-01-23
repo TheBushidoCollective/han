@@ -232,8 +232,8 @@ export async function startCoordinatorIfNeeded(
  * @returns The result of the operation
  */
 export async function withFreshData<T>(fn: () => Promise<T>): Promise<T> {
-	// Try to ensure coordinator is running (non-blocking)
-	await startCoordinatorIfNeeded();
+	// Try to ensure coordinator is running (2s timeout to prevent slow startups)
+	await startCoordinatorIfNeeded(2000);
 
 	// Execute the operation regardless of coordinator status
 	return fn();
