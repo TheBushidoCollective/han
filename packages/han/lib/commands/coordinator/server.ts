@@ -83,6 +83,7 @@ function recordActivity(): void {
 async function processPendingHooks(): Promise<void> {
 	// Prevent concurrent processing
 	if (state.processingHooks) {
+		log.debug("Pending hooks processor: already processing, skipping");
 		return;
 	}
 
@@ -95,7 +96,9 @@ async function processPendingHooks(): Promise<void> {
 			return;
 		}
 
-		log.debug(`Processing ${pending.length} pending hooks`);
+		log.info(
+			`Processing ${pending.length} pending hooks: ${pending.map((h) => `${h.hookSource}/${h.hookName}`).join(", ")}`,
+		);
 
 		for (const hook of pending) {
 			// Skip hooks with missing required fields
@@ -140,7 +143,7 @@ async function processPendingHooks(): Promise<void> {
 				hookAttempts.reset(sessionId, hookSource, hook.hookName, directory);
 
 				log.info(
-					`Hook ${hookSource}/${hook.hookName} completed in ${duration}ms`,
+					`Hook ${hookSource}/${hook.hookName} in ${directory} completed successfully in ${duration}ms`,
 				);
 				publishSessionHooksChanged(
 					sessionId,
@@ -261,15 +264,19 @@ export async function startServer(
 	options: CoordinatorOptions = {},
 ): Promise<void> {
 	const port = options.port ?? COORDINATOR_PORT;
+	const startupStartTime = Date.now();
 
 	if (state.httpServer) {
 		log.info("Server already running");
 		return;
 	}
 
+	log.info("Coordinator startup beginning...");
+
 	// Initialize database
+	const dbStartTime = Date.now();
 	await initDb();
-	log.info("Database initialized");
+	log.info(`Database initialized in ${Date.now() - dbStartTime}ms`);
 
 	// Acquire coordinator lock
 	const acquired = coordinator.tryAcquire();
@@ -469,12 +476,15 @@ export async function startServer(
 	});
 
 	// Start file watcher first to handle incremental updates
+	const watcherStartTime = Date.now();
 	log.info("Starting file watcher...");
 	const watchPath = watcher.getDefaultPath();
 	const watchStarted = await watcher.start(watchPath);
 
 	if (watchStarted) {
-		log.info(`Watching ${watchPath}`);
+		log.info(
+			`Watching ${watchPath} (started in ${Date.now() - watcherStartTime}ms)`,
+		);
 
 		// Register callback for instant event-driven updates
 		// This is called directly from Rust when new messages are indexed
@@ -502,7 +512,10 @@ export async function startServer(
 	// Skip initial index to keep server responsive during startup
 	// Sessions are indexed incrementally via file watcher
 	// A full reindex can be triggered with: han index run --all
-	log.info("Ready (run 'han index run --all' to index existing sessions)");
+	const totalStartupTime = Date.now() - startupStartTime;
+	log.info(
+		`Coordinator ready in ${totalStartupTime}ms (run 'han index run --all' to index existing sessions)`,
+	);
 }
 
 /**
