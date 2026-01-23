@@ -593,7 +593,7 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 		console.log(`Han Browser running at ${serverUrl}`);
 		if (coordinatorRunning) {
 			console.log(
-				`GraphQL available at http://127.0.0.1:${coordinatorPort}/graphql`,
+				`GraphQL available at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorPort}/graphql`,
 			);
 		}
 		if (devMode) {
