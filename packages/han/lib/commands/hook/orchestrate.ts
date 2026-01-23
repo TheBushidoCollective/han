@@ -838,6 +838,7 @@ async function executeHookInDirectory(
 	let command = resolveHanCommand(rawCommand);
 
 	// Substitute ${HAN_FILES} with session-modified files from coordinator
+	// biome-ignore lint/suspicious/noTemplateCurlyInString: This is intentionally a literal string pattern, not a template
 	if (command.includes("${HAN_FILES}")) {
 		try {
 			const sessionFiles = await getSessionModifiedFiles(options.sessionId);
@@ -846,7 +847,7 @@ async function executeHookInDirectory(
 				const relativeFiles = sessionFiles.allModified
 					.filter((file) => {
 						const absPath = join(projectRoot, file);
-						return absPath.startsWith(directory + "/") || absPath === directory;
+						return absPath.startsWith(`${directory}/`) || absPath === directory;
 					})
 					.map((file) => {
 						// Make relative to execution directory
