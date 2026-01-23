@@ -19,11 +19,39 @@ export interface HealthCheckResponse {
 
 /**
  * Check if the coordinator daemon is running and healthy
- * Tries HTTPS first (for TLS-enabled coordinator), then falls back to HTTP
+ * Defaults to HTTP (localhost) for speed, use checkHealthHttps() for TLS check
  */
 export async function checkHealth(
 	port?: number,
 ): Promise<HealthCheckResponse | null> {
+	const effectivePort = port ?? getCoordinatorPort();
+
+	// Try HTTP on localhost (fast, no DNS lookup)
+	try {
+		const response = await fetch(`http://127.0.0.1:${effectivePort}/health`, {
+			signal: AbortSignal.timeout(2000),
+		});
+
+		if (response.ok) {
+			return (await response.json()) as HealthCheckResponse;
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Check if the coordinator is running with HTTPS/TLS enabled
+ * Returns the protocol and host if successful
+ */
+export async function checkHealthHttps(
+	port?: number,
+): Promise<
+	| { protocol: "https"; host: string; health: HealthCheckResponse }
+	| { protocol: "http"; host: string; health: HealthCheckResponse }
+	| null
+> {
 	const effectivePort = port ?? getCoordinatorPort();
 
 	// Try HTTPS first (TLS-enabled coordinator)
@@ -38,7 +66,12 @@ export async function checkHealth(
 		);
 
 		if (response.ok) {
-			return (await response.json()) as HealthCheckResponse;
+			const health = (await response.json()) as HealthCheckResponse;
+			return {
+				protocol: "https",
+				host: "coordinator.local.han.guru",
+				health,
+			};
 		}
 	} catch {
 		// Fall through to HTTP attempt
@@ -51,7 +84,8 @@ export async function checkHealth(
 		});
 
 		if (response.ok) {
-			return (await response.json()) as HealthCheckResponse;
+			const health = (await response.json()) as HealthCheckResponse;
+			return { protocol: "http", host: "127.0.0.1", health };
 		}
 		return null;
 	} catch {

@@ -262,28 +262,18 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 					`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
 				);
 			} else {
-				// Detect if coordinator is using HTTPS by trying health endpoint
-				try {
-					const httpsResponse = await fetch(
-						`https://coordinator.local.han.guru:${coordinatorStatus.port}/health`,
-						{
-							// @ts-expect-error - Node.js fetch rejectUnauthorized option
-							rejectUnauthorized: false,
-						},
+				// Detect if coordinator is using HTTPS
+				const { checkHealthHttps } = await import("../coordinator/health.ts");
+				const healthCheck = await checkHealthHttps(coordinatorStatus.port);
+				if (healthCheck) {
+					coordinatorProtocol = healthCheck.protocol;
+					coordinatorHost = healthCheck.host;
+					const tlsNote =
+						healthCheck.protocol === "https" ? " (TLS enabled)" : "";
+					console.log(
+						`[han] Coordinator ready at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorStatus.port}/graphql${tlsNote}`,
 					);
-					if (httpsResponse.ok) {
-						coordinatorProtocol = "https";
-						coordinatorHost = "coordinator.local.han.guru";
-						console.log(
-							`[han] Coordinator ready at https://${coordinatorHost}:${coordinatorStatus.port}/graphql (TLS enabled)`,
-						);
-					} else {
-						console.log(
-							`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
-						);
-					}
-				} catch {
-					// Fallback to HTTP if HTTPS fails
+				} else {
 					console.log(
 						`[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`,
 					);
