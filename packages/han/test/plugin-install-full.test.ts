@@ -64,12 +64,12 @@ mock.module("../lib/marketplace-cache.ts", () => ({
 }));
 
 // Mock the plugin-selector-wrapper to avoid Ink UI
-mock.module("../lib/plugin-selector-wrapper.tsx", () => ({
+mock.module("../lib/plugins/plugin-selector-wrapper.tsx", () => ({
 	showPluginSelector: mock(() => Promise.resolve(["jutsu-typescript"])),
 }));
 
 // Import after mocks are set up
-import { installPlugin, installPlugins } from "../lib/plugin-install.ts";
+import { installPlugin, installPlugins } from "../lib/plugins/index.ts";
 
 describe("plugin-install.ts", () => {
 	const testDir = `/tmp/test-plugin-install-full-${Date.now()}`;

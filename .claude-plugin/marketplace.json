@@ -72,6 +72,26 @@
       "keywords": ["apollo", "graphql", "client", "server", "skill"]
     },
     {
+      "name": "jutsu-atomic-design",
+      "description": "Validation and quality enforcement for Atomic Design methodology in component-based projects.",
+      "source": "./jutsu/jutsu-atomic-design",
+      "category": "Technique",
+      "keywords": [
+        "atomic-design",
+        "components",
+        "design-system",
+        "atoms",
+        "molecules",
+        "organisms",
+        "templates",
+        "pages",
+        "ui",
+        "react",
+        "vue",
+        "angular"
+      ]
+    },
+    {
       "name": "jutsu-bdd",
       "description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns",
       "source": "./jutsu/jutsu-bdd",
@@ -391,6 +411,21 @@
       "keywords": ["graphql", "api", "queries"]
     },
     {
+      "name": "jutsu-graphql-inspector",
+      "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
+      "source": "./jutsu/jutsu-graphql-inspector",
+      "category": "Technique",
+      "keywords": [
+        "graphql",
+        "graphql-inspector",
+        "schema",
+        "validation",
+        "breaking-changes",
+        "diff",
+        "operations"
+      ]
+    },
+    {
       "name": "jutsu-helm",
       "description": "Helm chart validation and best practices for Kubernetes package management",
       "source": "./jutsu/jutsu-helm",
@@ -586,6 +621,21 @@
       "keywords": ["playwright", "testing", "e2e", "automation", "skill"]
     },
     {
+      "name": "jutsu-playwright-bdd",
+      "description": "Validation and quality enforcement for Playwright BDD projects with Gherkin feature files and step definitions.",
+      "source": "./jutsu/jutsu-playwright-bdd",
+      "category": "Technique",
+      "keywords": [
+        "playwright-bdd",
+        "bdd",
+        "gherkin",
+        "cucumber",
+        "testing",
+        "playwright",
+        "validation"
+      ]
+    },
+    {
       "name": "jutsu-prettier",
       "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
       "source": "./jutsu/jutsu-prettier",
@@ -764,6 +814,22 @@
       ]
     },
     {
+      "name": "jutsu-syncpack",
+      "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
+      "source": "./jutsu/jutsu-syncpack",
+      "category": "Technique",
+      "keywords": [
+        "syncpack",
+        "monorepo",
+        "dependencies",
+        "version-management",
+        "npm",
+        "yarn",
+        "pnpm",
+        "workspaces"
+      ]
+    },
+    {
       "name": "jutsu-swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
       "source": "./jutsu/jutsu-swift",
@@ -891,6 +957,23 @@
         "pipelines",
         "devops",
         "validation"
+      ]
+    },
+    {
+      "name": "jutsu-gluestack",
+      "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, theming, and MCP server integration for component discovery.",
+      "source": "./jutsu/jutsu-gluestack",
+      "category": "Technique",
+      "keywords": [
+        "gluestack",
+        "gluestack-ui",
+        "react",
+        "react-native",
+        "nativewind",
+        "tailwind",
+        "ui-components",
+        "accessibility",
+        "mcp"
       ]
     },
     {
@@ -1069,6 +1152,39 @@
         "monitoring",
         "incidents",
         "seer-ai",
+        "server"
+      ]
+    },
+    {
+      "name": "hashi-reddit",
+      "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+      "source": "./hashi/hashi-reddit",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "reddit",
+        "social-media",
+        "content",
+        "posts",
+        "comments",
+        "subreddits",
+        "server"
+      ]
+    },
+    {
+      "name": "hashi-notion",
+      "description": "MCP server for Notion integration providing workspace search, page management, database operations, comments, and AI-optimized content access via Notion's hosted MCP server.",
+      "source": "./hashi/hashi-notion",
+      "category": "Bridge",
+      "keywords": [
+        "mcp",
+        "notion",
+        "knowledge-management",
+        "pages",
+        "databases",
+        "workspace",
+        "documentation",
+        "productivity",
         "server"
       ]
     },

@@ -8,6 +8,17 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["nim", "systems-programming", "metaprogramming"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["nim", "systems-programming", "metaprogramming"],
+  "lspServers": {
+    "nimlsp": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".nim": "nim",
+        ".nims": "nim",
+        ".nimble": "nim"
+      }
+    }
+  }
 }

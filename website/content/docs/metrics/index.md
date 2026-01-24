@@ -104,19 +104,15 @@ Returns aggregated statistics including success rates by confidence bucket, enab
 
 ## What Gets Stored
 
-All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. **No data leaves your machine.** You control it entirely.
+All metrics are stored locally in SQLite at `~/.claude/han/han.db`. **No data leaves your machine.** You control it entirely.
 
-```
-~/.claude/han/metrics/
-├── tasks/
-│   └── 2025-12.jsonl
-├── hooks/
-│   └── 2025-12.jsonl
-└── sessions/
-    └── 2025-12.jsonl
-```
+The database contains tables for:
 
-Each file contains newline-delimited JSON records for easy analysis.
+- `tasks` - Task tracking with descriptions, outcomes, and confidence
+- `hook_executions` - Hook run results with timing and exit codes
+- `frustration_events` - User sentiment and frustration detection
+
+Data can be queried directly with any SQLite client or through the Browse UI.
 
 ## Integration with Hooks
 

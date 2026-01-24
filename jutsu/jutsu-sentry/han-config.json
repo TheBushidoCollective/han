@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "info": {
-      "description": "Verifies Sentry CLI configuration and authentication",
-      "dirsWith": [".sentryclirc", "sentry.properties"],
-      "command": "sentry-cli info"
-    }
-  }
-}

@@ -1,0 +1,11 @@
+hooks:
+  generate:
+    command: "npx bddgen"
+    dirs_with:
+      - "playwright.config.ts"
+      - "playwright.config.js"
+    if_changed:
+      - "**/*.feature"
+      - "**/steps/**/*.ts"
+      - "**/steps/**/*.js"
+      - "playwright.config.*"

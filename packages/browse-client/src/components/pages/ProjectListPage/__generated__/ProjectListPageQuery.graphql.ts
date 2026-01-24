@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<4b14d6df0c9f415065f87652c23ddd91>>
+ * @generated SignedSource<<215e44dc20f5f03d1f8d717a909aa61d>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -16,6 +16,7 @@ export type ProjectListPageQuery$data = {
     readonly lastActivity: any | null | undefined;
     readonly name: string | null | undefined;
     readonly projectId: string | null | undefined;
+    readonly repoId: string | null | undefined;
     readonly totalSessions: number | null | undefined;
     readonly worktrees: ReadonlyArray<{
       readonly isWorktree: boolean | null | undefined;
@@ -84,6 +85,13 @@ v3 = [
         "args": null,
         "kind": "ScalarField",
         "name": "projectId",
+        "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
+        "name": "repoId",
         "storageKey": null
       },
       (v0/*: any*/),
@@ -164,16 +172,16 @@ return {
     "selections": (v3/*: any*/)
   },
   "params": {
-    "cacheID": "38b6cc7aa0d71851d736d63def62e1fb",
+    "cacheID": "857148600c5fb4c0932792ed4c97a4ce",
     "id": null,
     "metadata": {},
     "name": "ProjectListPageQuery",
     "operationKind": "query",
-    "text": "query ProjectListPageQuery {\n  projects(first: 100) {\n    id\n    projectId\n    name\n    totalSessions\n    lastActivity\n    worktrees {\n      name\n      path\n      sessionCount\n      isWorktree\n      subdirs {\n        relativePath\n        path\n        sessionCount\n      }\n    }\n  }\n}\n"
+    "text": "query ProjectListPageQuery {\n  projects(first: 100) {\n    id\n    projectId\n    repoId\n    name\n    totalSessions\n    lastActivity\n    worktrees {\n      name\n      path\n      sessionCount\n      isWorktree\n      subdirs {\n        relativePath\n        path\n        sessionCount\n      }\n    }\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "a6d3af3b411a9bc257ed04ceb5e65c0d";
+(node as any).hash = "3b56794fbb39fcc0e86e69a6e69c1636";
 
 export default node;

@@ -49,8 +49,8 @@ export default function Footer() {
 				</div>
 				<div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
 					<p>
-						MIT License - Walk the way of Bushido. Practice with Discipline.
-						Build with Honor.
+						FSL-1.1-ALv2 License - Walk the way of Bushido. Practice with
+						Discipline. Build with Honor.
 					</p>
 				</div>
 			</div>

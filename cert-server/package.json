@@ -1,0 +1,14 @@
+{
+  "name": "han-cert-server",
+  "version": "1.0.0",
+  "description": "Let's Encrypt certificate distribution server for Han",
+  "type": "module",
+  "scripts": {
+    "start": "bun server.ts",
+    "dev": "bun --watch server.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

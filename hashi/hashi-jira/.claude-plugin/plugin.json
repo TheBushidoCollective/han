@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "mcp",
     "jira",
@@ -21,11 +21,7 @@
   "mcpServers": {
     "atlassian": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.atlassian.com/v1/sse"
-      ]
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"]
     }
   }
 }

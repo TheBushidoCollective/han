@@ -7,10 +7,10 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { validate } from "../lib/validate.ts";
+import { validate } from "../lib/validation/index.ts";
 
 describe("validate.ts", () => {
-	const testDir = `/tmp/test-validate-full-${Date.now()}`;
+	let testDir: string;
 	let consoleLogSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let processExitSpy: ReturnType<typeof spyOn>;
@@ -21,6 +21,9 @@ describe("validate.ts", () => {
 	let originalCwd: () => string;
 
 	beforeEach(() => {
+		// Generate unique directory per test to avoid race conditions
+		testDir = `/tmp/test-validate-full-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 		// Save original environment
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd;
@@ -58,7 +61,9 @@ describe("validate.ts", () => {
 		process.env = originalEnv;
 		process.cwd = originalCwd;
 
-		rmSync(testDir, { recursive: true, force: true });
+		if (testDir) {
+			rmSync(testDir, { recursive: true, force: true });
+		}
 	});
 
 	describe("validate function", () => {
@@ -231,7 +236,7 @@ describe("validate.ts", () => {
 
 			// Should only process pass-test since fail-test doesn't have include-me.txt
 			const allLogs = logs.join("\n");
-			expect(allLogs).toContain("1 directory passed");
+			expect(allLogs).toContain("✅ 1 directory passed");
 			expect(exitCode).toBe(0);
 		});
 	});
@@ -310,7 +315,7 @@ describe("validate.ts", () => {
 			}
 
 			const allLogs = logs.join("\n");
-			expect(allLogs).toContain("passed validation");
+			expect(allLogs).toContain("passed");
 		});
 	});
 

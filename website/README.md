@@ -91,4 +91,4 @@ website/
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) for details.
+FSL-1.1-ALv2 - see [LICENSE](../LICENSE) for details.

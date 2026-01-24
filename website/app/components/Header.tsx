@@ -80,7 +80,7 @@ export default function Header() {
 	// Close mobile menu on route change
 	useEffect(() => {
 		setMobileMenuOpen(false);
-	}, [router]);
+	}, []);
 
 	const handleSearch = () => {
 		if (searchQuery.trim()) {
@@ -164,7 +164,10 @@ export default function Header() {
 						</div>
 					</Link>
 
-					<form onSubmit={handleSubmit} className="hidden md:flex flex-1 max-w-md">
+					<form
+						onSubmit={handleSubmit}
+						className="hidden md:flex flex-1 max-w-md"
+					>
 						<div className="relative" ref={searchRef}>
 							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
 								<svg
@@ -343,6 +346,8 @@ export default function Header() {
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Close menu"
 								>
 									<path
 										strokeLinecap="round"
@@ -357,6 +362,8 @@ export default function Header() {
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Open menu"
 								>
 									<path
 										strokeLinecap="round"

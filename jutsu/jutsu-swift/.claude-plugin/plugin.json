@@ -8,6 +8,15 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["swift", "ios", "protocol-oriented", "concurrency"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["swift", "ios", "protocol-oriented", "concurrency"],
+  "lspServers": {
+    "sourcekit-lsp": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".swift": "swift"
+      }
+    }
+  }
 }

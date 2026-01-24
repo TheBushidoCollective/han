@@ -353,11 +353,11 @@ await mcp.tools.jutsu_bun_test({ cache: true })
 
 All plugin hooks support three standard parameters:
 
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `cache` | `true` | Skip if files unchanged since last run |
-| `directory` | all | Target specific directory |
-| `verbose` | `false` | Stream output in real-time |
+| Parameter   | Default | Purpose                                |
+| ----------- | ------- | -------------------------------------- |
+| `cache`     | `true`  | Skip if files unchanged since last run |
+| `directory` | all     | Target specific directory              |
+| `verbose`   | `false` | Stream output in real-time             |
 
 ### Memory Tools (Self-Learning)
 
@@ -380,7 +380,7 @@ Creates `.claude/rules/api.md` with YAML frontmatter for path restrictions:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules
@@ -405,10 +405,10 @@ memory_read({ domain: "api", scope: "project" })
 
 The memory system supports two scopes:
 
-| Scope | Location | Purpose |
-|-------|----------|---------|
-| `project` | `.claude/rules/` | Team knowledge, git-tracked |
-| `user` | `~/.claude/rules/` | Personal preferences |
+| Scope     | Location           | Purpose                     |
+| --------- | ------------------ | --------------------------- |
+| `project` | `.claude/rules/`   | Team knowledge, git-tracked |
+| `user`    | `~/.claude/rules/` | Personal preferences        |
 
 ### Metrics Tools (Self-Awareness)
 
@@ -470,7 +470,7 @@ query_metrics({
 // Returns aggregated stats, success rates, calibration scores
 ```
 
-All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. Nothing leaves your machine.
+All metrics are stored locally in SQLite at `~/.claude/han/han.db`. Nothing leaves your machine.
 
 ### Checkpoint Tools (Smart Caching)
 

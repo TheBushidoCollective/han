@@ -1,0 +1,6 @@
+hooks:
+  lint:
+    description: Validate Han plugin structure and configuration
+    command: han plugin validate
+    dirs_with:
+      - .claude-plugin/plugin.json

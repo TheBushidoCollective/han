@@ -5,8 +5,6 @@
 
 @plugin "@tailwindcss/typography";
 
-@variant dark (:root.dark &);
-
 :root {
 	--background: #ffffff;
 	--foreground: #171717;

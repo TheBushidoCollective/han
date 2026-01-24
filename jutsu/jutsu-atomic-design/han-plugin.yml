@@ -1,0 +1,5 @@
+# jutsu-atomic-design plugin configuration
+# This plugin provides atomic design methodology skills
+
+# No hooks - this plugin provides skills only
+hooks: {}

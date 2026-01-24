@@ -21,6 +21,7 @@ AI-DLC 2026 introduces **human-on-the-loop (HOTL)** as a distinct operating mode
 - **HOTL**: Human defines success criteria. AI iterates autonomously through quality gates (tests, types, lint, hooks), then criteria checks, alerting humans only when stuck or blocked.
 
 Think of it like Google Maps navigation:
+
 - HITL mode: You approve every turn before the GPS proceeds
 - HOTL mode: You set the destination and constraints, GPS handles the journey
 

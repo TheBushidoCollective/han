@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "test": {
-      "command": "mvn test",
-      "dirsWith": ["pom.xml"],
-      "ifChanged": ["**/*.java", "pom.xml"]
-    }
-  }
-}

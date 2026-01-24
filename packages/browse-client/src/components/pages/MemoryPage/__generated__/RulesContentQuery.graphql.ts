@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<bb50fd415d38c312c74199008c9287a7>>
+ * @generated SignedSource<<30919a6e874739dd1a612075c5006fcc>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -18,6 +18,8 @@ export type RulesContentQuery$data = {
       readonly domain: string | null | undefined;
       readonly id: string | null | undefined;
       readonly path: string | null | undefined;
+      readonly projectName: string | null | undefined;
+      readonly projectPath: string | null | undefined;
       readonly scope: RuleScope | null | undefined;
       readonly size: number | null | undefined;
     }> | null | undefined;
@@ -87,6 +89,20 @@ var v0 = [
             "kind": "ScalarField",
             "name": "size",
             "storageKey": null
+          },
+          {
+            "alias": null,
+            "args": null,
+            "kind": "ScalarField",
+            "name": "projectPath",
+            "storageKey": null
+          },
+          {
+            "alias": null,
+            "args": null,
+            "kind": "ScalarField",
+            "name": "projectName",
+            "storageKey": null
           }
         ],
         "storageKey": null
@@ -113,16 +129,16 @@ return {
     "selections": (v0/*: any*/)
   },
   "params": {
-    "cacheID": "8cbcd47fe7b36ac3f75fe690ed05af7e",
+    "cacheID": "4aab20cbed498bf73c763d0b2d4a198c",
     "id": null,
     "metadata": {},
     "name": "RulesContentQuery",
     "operationKind": "query",
-    "text": "query RulesContentQuery {\n  memory {\n    rules {\n      id\n      domain\n      scope\n      path\n      content\n      size\n    }\n  }\n}\n"
+    "text": "query RulesContentQuery {\n  memory {\n    rules {\n      id\n      domain\n      scope\n      path\n      content\n      size\n      projectPath\n      projectName\n    }\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "8fe8ca72b3ecfdfee467b57123e4c825";
+(node as any).hash = "425b3fa26625a8cb785cd938f24672dc";
 
 export default node;

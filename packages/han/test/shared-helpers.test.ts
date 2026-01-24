@@ -7,7 +7,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
 	getSettingsFilename,
 	parsePluginRecommendations,
-} from "../lib/shared.ts";
+} from "../lib/shared/index.ts";
 
 describe("shared.ts helper functions", () => {
 	describe("getSettingsFilename", () => {

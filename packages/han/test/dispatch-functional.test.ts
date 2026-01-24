@@ -17,11 +17,13 @@ import type { Command } from "commander";
 import { registerHookDispatch } from "../lib/commands/hook/dispatch.ts";
 
 describe("dispatch.ts functional coverage tests", () => {
-	const testDir = `/tmp/test-dispatch-functional-${Date.now()}`;
+	let testDir: string;
 	let originalEnv: NodeJS.ProcessEnv;
 	let originalCwd: string;
 
 	beforeEach(() => {
+		// Generate unique directory per test to avoid race conditions
+		testDir = `/tmp/test-dispatch-functional-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		originalEnv = { ...process.env };
 		originalCwd = process.cwd();
 
@@ -43,7 +45,9 @@ describe("dispatch.ts functional coverage tests", () => {
 		} catch {
 			// Already at original cwd
 		}
-		rmSync(testDir, { recursive: true, force: true });
+		if (testDir) {
+			rmSync(testDir, { recursive: true, force: true });
+		}
 	});
 
 	describe("registerHookDispatch action execution", () => {

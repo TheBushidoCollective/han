@@ -1,0 +1,8 @@
+# do-enforce-planning plugin configuration
+# Enforces planning workflow for implementation tasks
+
+hooks:
+  enforce-planning:
+    event: UserPromptSubmit
+    command: han hook reference hooks/enforce-planning.md --must-read-first "planning workflow enforcement"
+    description: Remind agent to use planning workflow for implementation tasks

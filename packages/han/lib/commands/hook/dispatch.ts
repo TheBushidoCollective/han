@@ -1,6 +1,14 @@
-import { execSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { execSync } from "node:child_process";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
@@ -8,38 +16,111 @@ import {
 	getSettingsPaths,
 	type MarketplaceConfig,
 	readSettingsFile,
-} from "../../claude-settings.ts";
-import {
-	getHanBinary,
-	isCheckpointsEnabled,
-	isHooksEnabled,
-} from "../../han-settings.ts";
-import { getPluginNameFromRoot } from "../../shared.ts";
+} from "../../config/claude-settings.ts";
+
+// Lazy import to avoid loading native module for commands that don't need it
+// (e.g., `han hook reference` doesn't need the native module)
+let _sessionFileChanges:
+	| typeof import("../../db/index.ts").sessionFileChanges
+	| null = null;
+async function getSessionFileChanges() {
+	if (!_sessionFileChanges) {
+		const db = await import("../../db/index.ts");
+		_sessionFileChanges = db.sessionFileChanges;
+	}
+	return _sessionFileChanges;
+}
+
+import { getEventLogger, initEventLogger } from "../../events/logger.ts";
+import { getClaudeProjectPath } from "../../memory/paths.ts";
+import { getPluginNameFromRoot, isDebugMode } from "../../shared.ts";
 import { recordHookExecution as recordOtelHookExecution } from "../../telemetry/index.ts";
 
 /**
- * Check if stdin has data available without blocking
+ * Get the han temp directory for stderr output files
+ */
+function getHanStderrDir(): string {
+	const dir = join(tmpdir(), "han-hook-stderr");
+	mkdirSync(dir, { recursive: true });
+	return dir;
+}
+
+/**
+ * Write stderr to a temp file and return the path
+ */
+function writeStderrToFile(
+	hookType: string,
+	hookName: string,
+	pluginName: string,
+	stderr: string,
+): string {
+	const timestamp = Date.now();
+	const sanitizedPlugin = pluginName.replace(/[^a-zA-Z0-9-]/g, "_");
+	const sanitizedHook = hookName.replace(/[^a-zA-Z0-9-]/g, "_");
+	const filename = `${hookType}_${sanitizedPlugin}_${sanitizedHook}_${timestamp}.txt`;
+	const filepath = join(getHanStderrDir(), filename);
+	writeFileSync(filepath, stderr, "utf-8");
+	return filepath;
+}
+
+/**
+ * Infer session ID from the most recently modified Claude transcript file.
+ * This is a fallback when session_id isn't available via stdin.
+ *
+ * Looks for .jsonl files (excluding -han.jsonl) in the Claude project directory
+ * for the current working directory, returns the session ID of the most recent one.
+ */
+function inferSessionIdFromTranscripts(): string | null {
+	try {
+		const projectDir = getClaudeProjectPath(process.cwd());
+		if (!existsSync(projectDir)) {
+			return null;
+		}
+
+		// Find all .jsonl files that aren't han events files
+		const files = readdirSync(projectDir)
+			.filter((f) => f.endsWith(".jsonl") && !f.endsWith("-han.jsonl"))
+			.map((f) => ({
+				name: f,
+				path: join(projectDir, f),
+				mtime: statSync(join(projectDir, f)).mtime.getTime(),
+			}))
+			.sort((a, b) => b.mtime - a.mtime); // Most recent first
+
+		if (files.length === 0) {
+			return null;
+		}
+
+		// Extract session ID from filename (format: {session-id}.jsonl)
+		const mostRecent = files[0];
+		const sessionId = basename(mostRecent.name, ".jsonl");
+
+		// Validate it looks like a session ID (UUID format or similar)
+		if (sessionId && sessionId.length >= 8) {
+			return sessionId;
+		}
+
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Check if stdin has data available.
+ * Handles various stdin types: files, FIFOs, pipes, and sockets.
  */
 function hasStdinData(): boolean {
 	try {
-		// In a TTY, stdin is interactive - never try to read
+		// TTY means interactive terminal - no piped input
 		if (process.stdin.isTTY) {
 			return false;
 		}
-		// For piped stdin, check if there's data available
-		// readableLength > 0 means data is buffered and ready to read
-		if (process.stdin.readable && process.stdin.readableLength > 0) {
-			return true;
-		}
-		// Check if stdin is a file (not a pipe/FIFO)
 		const { fstatSync } = require("node:fs");
 		const stat = fstatSync(0);
-		// Only read from actual files, not pipes/FIFOs (which would block)
-		if (stat.isFile()) {
-			return true;
-		}
-		// Don't try to read from pipes/FIFOs/sockets without buffered data
-		return false;
+		// Accept any non-TTY stdin type (file, FIFO, socket, pipe)
+		// Socket is used when parent process passes data via execSync's input option
+		return stat.isFile() || stat.isFIFO() || stat.isSocket();
 	} catch {
 		return false;
 	}
@@ -100,7 +181,7 @@ function getStdinPayload(): HookPayload | null {
 /**
  * Parse stdin to extract session_id for metrics reporting
  */
-function getSessionIdFromStdin(): string | undefined {
+function _getSessionIdFromStdin(): string | undefined {
 	const payload = getStdinPayload();
 	return payload?.session_id;
 }
@@ -236,7 +317,7 @@ function loadPluginHooks(
 
 /**
  * Execute a command hook and return its output
- * Also reports execution to metrics if available
+ * Also reports execution to metrics and logs events
  */
 function executeCommandHook(
 	command: string,
@@ -248,6 +329,24 @@ function executeCommandHook(
 	noCheckpoints = false,
 ): string | null {
 	const startTime = Date.now();
+	const pluginName = getPluginNameFromRoot(pluginRoot);
+	const eventLogger = getEventLogger();
+
+	// Check if this is a han hook command - those handle their own event logging
+	// and may be cached (skip execution), so we shouldn't log here
+	const isHanHookCommand = command.startsWith("han hook ");
+
+	// Log hook run event only for non-han-hook commands
+	// han hook commands log their own events and may skip due to caching
+	const hookRunId = isHanHookCommand
+		? undefined
+		: eventLogger?.logHookRun(
+				pluginName,
+				hookName,
+				hookType,
+				process.cwd(),
+				false,
+			);
 
 	try {
 		// Replace ${CLAUDE_PLUGIN_ROOT} with the actual local plugin path
@@ -289,6 +388,8 @@ function executeCommandHook(
 				...process.env,
 				CLAUDE_PLUGIN_ROOT: pluginRoot,
 				CLAUDE_PROJECT_DIR: process.cwd(),
+				// Pass session ID for event logging
+				...(sessionId ? { HAN_SESSION_ID: sessionId } : {}),
 				// Disable fail-fast in subprocesses - dispatch handles aggregation
 				HAN_NO_FAIL_FAST: "1",
 				// Disable cache if --no-cache was passed to dispatch
@@ -307,20 +408,43 @@ function executeCommandHook(
 
 		const duration = Date.now() - startTime;
 
+		// Log appropriate event type based on command
+		// bash/cat scripts: log as hook_script
+		// han hook * commands: they log their own specific events (reference, validation, etc.)
+		// Other commands: log as generic hook_result
+		const isBashOrCat =
+			command.startsWith("bash ") || command.startsWith("cat ");
+		// isHanHookCommand already defined at function start
+
+		if (isBashOrCat) {
+			eventLogger?.logHookScript(
+				pluginName,
+				command,
+				duration,
+				0,
+				true,
+				output.trim(),
+			);
+		} else if (!isHanHookCommand) {
+			// Only log generic result for non-han-hook commands
+			// (han hook commands log their own specific events)
+			eventLogger?.logHookResult(
+				pluginName,
+				hookName,
+				hookType,
+				process.cwd(),
+				false,
+				duration,
+				0,
+				true, // success
+				output.trim(),
+				undefined, // error
+				hookRunId, // correlate with hook_run
+			);
+		}
+
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, true, duration, hookType);
-
-		// Report successful hook execution to internal metrics
-		reportHookExecution({
-			hookType,
-			hookName,
-			hookSource: getPluginNameFromRoot(pluginRoot),
-			durationMs: duration,
-			exitCode: 0,
-			passed: true,
-			output: output.trim(),
-			sessionId,
-		});
 
 		return output.trim();
 	} catch (error: unknown) {
@@ -328,49 +452,55 @@ function executeCommandHook(
 		const exitCode = (error as { status?: number })?.status || 1;
 		const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
 
+		// Log appropriate event type based on command (failure case)
+		const isBashOrCat =
+			command.startsWith("bash ") || command.startsWith("cat ");
+		// isHanHookCommand already defined at function start
+
+		if (isBashOrCat) {
+			eventLogger?.logHookScript(
+				pluginName,
+				command,
+				duration,
+				exitCode,
+				false,
+				stderr,
+			);
+		} else if (!isHanHookCommand) {
+			// Only log generic result for non-han-hook commands
+			eventLogger?.logHookResult(
+				pluginName,
+				hookName,
+				hookType,
+				process.cwd(),
+				false,
+				duration,
+				exitCode,
+				false, // success
+				undefined, // output
+				stderr,
+				hookRunId, // correlate with hook_run
+			);
+		}
+
 		// Report to OTEL telemetry
 		recordOtelHookExecution(hookName, false, duration, hookType);
 
-		// Report failed hook execution to internal metrics
-		reportHookExecution({
-			hookType,
-			hookName,
-			hookSource: getPluginNameFromRoot(pluginRoot),
-			durationMs: duration,
-			exitCode,
-			passed: false,
-			error: stderr,
-			sessionId: getSessionIdFromStdin(),
-		});
+		// For Stop/SubagentStop hooks, write stderr to file and return link
+		// This prevents large error output from clogging the agent's context
+		if ((hookType === "Stop" || hookType === "SubagentStop") && stderr.trim()) {
+			const stderrFile = writeStderrToFile(
+				hookType,
+				hookName,
+				pluginName,
+				stderr,
+			);
+			return `❌ Hook \`${pluginName}/${hookName}\` failed. Output: ${stderrFile}`;
+		}
 
-		// Command failed - silently skip errors for dispatch
+		// Other hook types - silently skip errors for dispatch
 		// (we don't want to block the agent on hook failures)
 		return null;
-	}
-}
-
-/**
- * Report hook execution to metrics (non-blocking)
- */
-function reportHookExecution(data: {
-	hookType: string;
-	hookName: string;
-	hookSource: string;
-	durationMs: number;
-	exitCode: number;
-	passed: boolean;
-	output?: string;
-	error?: string;
-	sessionId?: string;
-}): void {
-	try {
-		execSync(`${getHanBinary()} metrics hook-exec`, {
-			input: JSON.stringify(data),
-			stdio: "pipe",
-			timeout: 5000, // 5 second timeout for reporting
-		});
-	} catch {
-		// Silently fail - don't block hooks on metrics failures
 	}
 }
 
@@ -486,15 +616,48 @@ function dispatchSettingsHooks(
 }
 
 /**
+ * Check if this hook type should be skipped due to no file changes.
+ * Stop and SubagentStop hooks are skipped when no files were modified in the session.
+ */
+async function shouldSkipDueToNoChanges(
+	hookType: string,
+	sessionId: string | undefined,
+): Promise<boolean> {
+	// Only skip Stop-type hooks (validation hooks)
+	if (hookType !== "Stop" && hookType !== "SubagentStop") {
+		return false;
+	}
+
+	// Can't check without a session ID
+	if (!sessionId) {
+		return false;
+	}
+
+	// Allow forcing hooks to run via environment variable
+	if (
+		process.env.HAN_FORCE_HOOKS === "true" ||
+		process.env.HAN_FORCE_HOOKS === "1"
+	) {
+		return false;
+	}
+
+	const sfc = await getSessionFileChanges();
+	const hasChanges = await sfc.hasChanges(sessionId);
+	return !hasChanges;
+}
+
+/**
  * Dispatch hooks of a specific type across all installed plugins.
  * Uses merged settings from all scopes (user, project, local, enterprise).
+ *
+ * Smart dispatch: Skips Stop hooks when no files were modified in the session.
  */
-function dispatchHooks(
+async function dispatchHooks(
 	hookType: string,
 	includeSettings = false,
 	noCache = false,
 	noCheckpoints = false,
-): void {
+): Promise<void> {
 	// Allow global disable of all hooks via environment variable
 	if (
 		process.env.HAN_DISABLE_HOOKS === "true" ||
@@ -503,67 +666,34 @@ function dispatchHooks(
 		process.exit(0);
 	}
 
-	// Check if hooks are disabled via han.yml config
-	if (!isHooksEnabled()) {
-		process.exit(0);
+	// Initialize event logger for this session
+	// Events are stored alongside Claude transcripts in the project directory
+	const payload = getStdinPayload();
+	let sessionId = payload?.session_id;
+
+	// Fallback: infer session ID from most recent Claude transcript if not in stdin
+	if (!sessionId) {
+		sessionId = inferSessionIdFromTranscripts() ?? undefined;
 	}
 
-	// Capture checkpoint at session/agent start in background (fire-and-forget)
-	// This prevents large monorepos from blocking hook dispatch
-	if (isCheckpointsEnabled()) {
-		try {
-			const payload = getStdinPayload();
-
-			// Capture session checkpoint at SessionStart (background)
-			if (hookType === "SessionStart" && payload?.session_id) {
-				// Fire-and-forget: run checkpoint capture in detached background process
-				const child = spawn(
-					process.execPath,
-					[
-						process.argv[1],
-						"checkpoint",
-						"capture",
-						"--type",
-						"session",
-						"--id",
-						payload.session_id,
-					],
-					{
-						detached: true,
-						stdio: "ignore",
-						cwd: process.cwd(),
-					},
-				);
-				child.unref(); // Allow parent to exit independently
-			}
-
-			// Capture agent checkpoint at SubagentStart (background)
-			if (hookType === "SubagentStart" && payload?.agent_id) {
-				// Fire-and-forget: run checkpoint capture in detached background process
-				const child = spawn(
-					process.execPath,
-					[
-						process.argv[1],
-						"checkpoint",
-						"capture",
-						"--type",
-						"agent",
-						"--id",
-						payload.agent_id,
-					],
-					{
-						detached: true,
-						stdio: "ignore",
-						cwd: process.cwd(),
-					},
-				);
-				child.unref(); // Allow parent to exit independently
-			}
-		} catch {
-			// Checkpoint spawn failed - log but continue with hook dispatch
-			// We don't want to block hooks on checkpoint failures
-		}
+	if (isDebugMode()) {
+		console.error(
+			`[dispatch] hookType=${hookType} session_id=${sessionId || "(none)"} (from stdin: ${!!payload?.session_id})`,
+		);
 	}
+
+	if (sessionId) {
+		initEventLogger(sessionId, {}, process.cwd());
+	}
+
+	// Smart dispatch: Skip Stop hooks if no files were modified
+	if (await shouldSkipDueToNoChanges(hookType, payload?.session_id)) {
+		// No files modified - skip validation hooks silently
+		return;
+	}
+
+	// Note: Checkpoint capture at session/agent start has been removed.
+	// Session filtering now uses the database-backed session_file_changes table.
 
 	const outputs: string[] = [];
 
@@ -610,6 +740,12 @@ function dispatchHooks(
 		}
 	}
 
+	// Flush any buffered events before exiting
+	const eventLogger = getEventLogger();
+	if (eventLogger) {
+		eventLogger.flush();
+	}
+
 	// Output aggregated results
 	if (outputs.length > 0) {
 		console.log(outputs.join("\n\n"));
@@ -644,12 +780,12 @@ export function registerHookDispatch(hookCommand: Command): void {
 			"Disable checkpoint filtering - ignore session/agent checkpoint state",
 		)
 		.action(
-			(
+			async (
 				hookType: string,
 				options: { all?: boolean; cache?: boolean; checkpoints?: boolean },
 			) => {
 				// Commander uses --no-X pattern which sets cache/checkpoints to false when used
-				dispatchHooks(
+				await dispatchHooks(
 					hookType,
 					options.all ?? false,
 					options.cache === false,

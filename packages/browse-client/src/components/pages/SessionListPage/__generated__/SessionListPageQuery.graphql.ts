@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<cc3444ebba682efc287964cfa6c43b54>>
+ * @generated SignedSource<<5a603cdad0e0c299b8bbc3d4fb458c8b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -71,6 +71,13 @@ v3 = {
   "kind": "ScalarField",
   "name": "status",
   "storageKey": null
+},
+v4 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "totalCount",
+  "storageKey": null
 };
 return {
   "fragment": {
@@ -130,21 +137,7 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
-                    "name": "date",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
                     "name": "projectName",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "projectPath",
                     "storageKey": null
                   },
                   {
@@ -165,7 +158,7 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
-                    "name": "messageCount",
+                    "name": "updatedAt",
                     "storageKey": null
                   },
                   {
@@ -179,13 +172,6 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
-                    "name": "updatedAt",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
                     "name": "gitBranch",
                     "storageKey": null
                   },
@@ -193,115 +179,152 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
-                    "name": "version",
+                    "name": "name",
                     "storageKey": null
                   },
                   {
-                    "if": null,
-                    "kind": "Defer",
-                    "label": "SessionsContent_query$defer$SessionItemWithDeferredData_session",
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "projectSlug",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "projectId",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "messageCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "Todo",
+                    "kind": "LinkedField",
+                    "name": "currentTodo",
+                    "plural": false,
                     "selections": [
                       {
                         "alias": null,
                         "args": null,
-                        "concreteType": "Todo",
-                        "kind": "LinkedField",
-                        "name": "currentTodo",
-                        "plural": false,
-                        "selections": [
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "content",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "activeForm",
-                            "storageKey": null
-                          },
-                          (v3/*: any*/),
-                          (v2/*: any*/)
-                        ],
+                        "kind": "ScalarField",
+                        "name": "content",
                         "storageKey": null
                       },
                       {
                         "alias": null,
                         "args": null,
-                        "concreteType": "Task",
-                        "kind": "LinkedField",
-                        "name": "currentTask",
-                        "plural": false,
-                        "selections": [
-                          (v2/*: any*/),
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "taskId",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "description",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "type",
-                            "storageKey": null
-                          },
-                          (v3/*: any*/)
-                        ],
+                        "kind": "ScalarField",
+                        "name": "activeForm",
                         "storageKey": null
                       },
+                      (v3/*: any*/),
+                      (v2/*: any*/)
+                    ],
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "TaskConnection",
+                    "kind": "LinkedField",
+                    "name": "activeTasks",
+                    "plural": false,
+                    "selections": [
+                      (v4/*: any*/),
                       {
                         "alias": null,
                         "args": null,
-                        "concreteType": "TodoCounts",
+                        "concreteType": "TaskEdge",
                         "kind": "LinkedField",
-                        "name": "todoCounts",
-                        "plural": false,
+                        "name": "edges",
+                        "plural": true,
                         "selections": [
                           {
                             "alias": null,
                             "args": null,
-                            "kind": "ScalarField",
-                            "name": "total",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "pending",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "inProgress",
-                            "storageKey": null
-                          },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "completed",
+                            "concreteType": "Task",
+                            "kind": "LinkedField",
+                            "name": "node",
+                            "plural": false,
+                            "selections": [
+                              (v2/*: any*/),
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "taskId",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "description",
+                                "storageKey": null
+                              },
+                              {
+                                "alias": null,
+                                "args": null,
+                                "kind": "ScalarField",
+                                "name": "type",
+                                "storageKey": null
+                              },
+                              (v3/*: any*/)
+                            ],
                             "storageKey": null
                           }
                         ],
                         "storageKey": null
                       }
-                    ]
+                    ],
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "concreteType": "TodoCounts",
+                    "kind": "LinkedField",
+                    "name": "todoCounts",
+                    "plural": false,
+                    "selections": [
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "total",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "pending",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "inProgress",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "completed",
+                        "storageKey": null
+                      }
+                    ],
+                    "storageKey": null
                   },
                   {
                     "alias": null,
@@ -348,12 +371,18 @@ return {
             ],
             "storageKey": null
           },
+          (v4/*: any*/),
           {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "totalCount",
-            "storageKey": null
+            "kind": "ClientExtension",
+            "selections": [
+              {
+                "alias": null,
+                "args": null,
+                "kind": "ScalarField",
+                "name": "__id",
+                "storageKey": null
+              }
+            ]
           }
         ],
         "storageKey": null
@@ -373,12 +402,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "7c626766361553bb545da2d70d584b7c",
+    "cacheID": "b3cf06520890d75394f85eea4f4d0ee6",
     "id": null,
     "metadata": {},
     "name": "SessionListPageQuery",
     "operationKind": "query",
-    "text": "query SessionListPageQuery(\n  $first: Int\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_1W0IEr\n}\n\nfragment SessionItemWithDeferredData_session on Session {\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  currentTask {\n    id\n    taskId\n    description\n    type\n    status\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_1W0IEr on Query {\n  sessions(first: $first, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        date\n        projectName\n        projectPath\n        worktreeName\n        summary\n        messageCount\n        startedAt\n        updatedAt\n        gitBranch\n        version\n        ...SessionItemWithDeferredData_session @defer(label: \"SessionsContent_query$defer$SessionItemWithDeferredData_session\")\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
+    "text": "query SessionListPageQuery(\n  $first: Int\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_1W0IEr\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_1W0IEr on Query {\n  sessions(first: $first, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
   }
 };
 })();

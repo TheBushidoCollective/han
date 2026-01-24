@@ -8,6 +8,22 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["cpp", "c++", "modern-cpp", "templates"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["cpp", "c++", "modern-cpp", "templates"],
+  "lspServers": {
+    "clangd": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--background-index"],
+      "extensionToLanguage": {
+        ".cpp": "cpp",
+        ".hpp": "cpp",
+        ".cc": "cpp",
+        ".hh": "cpp",
+        ".cxx": "cpp",
+        ".hxx": "cpp",
+        ".C": "cpp",
+        ".H": "cpp"
+      }
+    }
+  }
 }

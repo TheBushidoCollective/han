@@ -109,11 +109,11 @@ han plugin install do-code-review
 
 ## Hashi (橋) - External Bridges
 
-Hashi plugins are MCP servers that connect Claude to external services and tools. They turn Claude into a universal interface for your development workflow.
+Hashi plugins are bridges that connect Claude to external services and tools. They turn Claude into a universal interface for your development workflow.
 
 **What's included:**
 
-- MCP server implementations
+- MCP server definitions
 - Authentication and authorization
 - API integrations
 - Tool-specific commands and workflows
@@ -125,6 +125,17 @@ Hashi plugins are MCP servers that connect Claude to external services and tools
 - **hashi-blueprints** - Codebase documentation and knowledge management
 - **hashi-jira** - Issue tracking and project management
 - **hashi-sentry** - Error tracking and monitoring
+
+**Dual-Mode Operation:**
+
+Hashi plugins support two operation modes:
+
+| Mode | Tools Visible | Use Case |
+|------|---------------|----------|
+| **Orchestrator** (default) | None—Han manages all tools via `han_workflow` | Reduced context, unified interface |
+| **Direct** | All backend MCP tools exposed individually | Full tool access when needed |
+
+In orchestrator mode, Han exposes a single `han_workflow` tool that can invoke any backend capability. This reduces context usage from 50+ tools to ~5.
 
 **When to install:**
 
@@ -139,6 +150,14 @@ han plugin install hashi-playwright-mcp
 
 # Or specify scope explicitly
 han plugin install hashi-blueprints --scope user
+```
+
+**Switching modes:**
+
+```yaml
+# han.yml - disable orchestrator for direct MCP access
+orchestrator:
+  enabled: false
 ```
 
 ## How They Work Together

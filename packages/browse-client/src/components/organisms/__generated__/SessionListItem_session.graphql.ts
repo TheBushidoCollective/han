@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<540aeb6838d7f46f619a3095b1012c65>>
+ * @generated SignedSource<<8737ad062ab50a12da6f72b841e5db61>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,13 +14,18 @@ export type TaskType = "FIX" | "IMPLEMENTATION" | "REFACTOR" | "RESEARCH" | "%fu
 export type TodoStatus = "COMPLETED" | "IN_PROGRESS" | "PENDING" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionListItem_session$data = {
-  readonly activeTasks: ReadonlyArray<{
-    readonly description: string | null | undefined;
-    readonly id: string | null | undefined;
-    readonly status: TaskStatus | null | undefined;
-    readonly taskId: string | null | undefined;
-    readonly type: TaskType | null | undefined;
-  }> | null | undefined;
+  readonly activeTasks: {
+    readonly edges: ReadonlyArray<{
+      readonly node: {
+        readonly description: string | null | undefined;
+        readonly id: string | null | undefined;
+        readonly status: TaskStatus | null | undefined;
+        readonly taskId: string | null | undefined;
+        readonly type: TaskType | null | undefined;
+      } | null | undefined;
+    }> | null | undefined;
+    readonly totalCount: number | null | undefined;
+  } | null | undefined;
   readonly currentTodo: {
     readonly activeForm: string | null | undefined;
     readonly content: string | null | undefined;
@@ -28,7 +33,10 @@ export type SessionListItem_session$data = {
   } | null | undefined;
   readonly id: string;
   readonly messageCount: number | null | undefined;
+  readonly name: string | null | undefined;
+  readonly projectId: string | null | undefined;
   readonly projectName: string | null | undefined;
+  readonly projectSlug: string | null | undefined;
   readonly sessionId: string | null | undefined;
   readonly startedAt: any | null | undefined;
   readonly summary: string | null | undefined;
@@ -80,7 +88,28 @@ return {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
+      "name": "name",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
       "name": "projectName",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "projectSlug",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "projectId",
       "storageKey": null
     },
     {
@@ -147,34 +176,63 @@ return {
     {
       "alias": null,
       "args": null,
-      "concreteType": "Task",
+      "concreteType": "TaskConnection",
       "kind": "LinkedField",
       "name": "activeTasks",
-      "plural": true,
+      "plural": false,
       "selections": [
-        (v0/*: any*/),
         {
           "alias": null,
           "args": null,
           "kind": "ScalarField",
-          "name": "taskId",
+          "name": "totalCount",
           "storageKey": null
         },
         {
           "alias": null,
           "args": null,
-          "kind": "ScalarField",
-          "name": "description",
+          "concreteType": "TaskEdge",
+          "kind": "LinkedField",
+          "name": "edges",
+          "plural": true,
+          "selections": [
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "Task",
+              "kind": "LinkedField",
+              "name": "node",
+              "plural": false,
+              "selections": [
+                (v0/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "taskId",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "description",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "type",
+                  "storageKey": null
+                },
+                (v1/*: any*/)
+              ],
+              "storageKey": null
+            }
+          ],
           "storageKey": null
-        },
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "type",
-          "storageKey": null
-        },
-        (v1/*: any*/)
+        }
       ],
       "storageKey": null
     },
@@ -223,6 +281,6 @@ return {
 };
 })();
 
-(node as any).hash = "e3cc71763b7f1eddb0addb41ac92e47d";
+(node as any).hash = "40ebbd7ccf815f1d12a348b5c421ae56";
 
 export default node;

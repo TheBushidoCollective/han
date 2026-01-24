@@ -8,8 +8,10 @@ interface MarkdownWrapperProps {
 }
 
 // Configure marked globally with terminal renderer
+// Using type assertion since marked-terminal types are outdated
 marked.setOptions({
-	renderer: new TerminalRenderer(),
+	// biome-ignore lint/suspicious/noExplicitAny: marked-terminal types don't match marked's expected renderer type
+	renderer: new TerminalRenderer() as any,
 });
 
 const MarkdownWrapperInner: React.FC<MarkdownWrapperProps> = ({ children }) => {

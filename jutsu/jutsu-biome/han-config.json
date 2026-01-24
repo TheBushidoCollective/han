@@ -1,9 +1,0 @@
-{
-  "hooks": {
-    "lint": {
-      "command": "npx -y @biomejs/biome check --write --error-on-warnings",
-      "dirsWith": ["biome.json"],
-      "ifChanged": ["**/*.{js,jsx,ts,tsx,json,jsonc}"]
-    }
-  }
-}

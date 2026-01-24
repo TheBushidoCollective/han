@@ -160,6 +160,12 @@ function loadNativeModule(): NativeModule | null {
 	// If we've already tried and failed permanently, return null
 	if (_loadError) return null;
 
+	// Skip native module loading in CI when not built
+	if (process.env.SKIP_NATIVE === "true") {
+		_loadError = new Error("Native module skipped (SKIP_NATIVE=true)");
+		return null;
+	}
+
 	// In dev mode, check if rebuild is needed
 	ensureNativeBuilt();
 
@@ -168,10 +174,19 @@ function loadNativeModule(): NativeModule | null {
 	const maxRetries = 8;
 	let lastError: Error | null = null;
 
+	// In dev mode, use the han-native package (better napi compatibility)
+	// In compiled mode, use the embedded .node file
+	const isDevMode = getDevNativeDir() !== null;
+
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		try {
-			// Static require path tells Bun to embed the file in compiled binaries
-			_nativeModule = require("../native/han-native.node") as NativeModule;
+			if (isDevMode) {
+				// Use the han-native npm package for better napi-rs compatibility
+				_nativeModule = require("../../han-native") as NativeModule;
+			} else {
+				// Static require path tells Bun to embed the file in compiled binaries
+				_nativeModule = require("../native/han-native.node") as NativeModule;
+			}
 			return _nativeModule;
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));

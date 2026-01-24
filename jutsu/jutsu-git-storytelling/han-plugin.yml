@@ -1,5 +1,7 @@
 hooks:
   check_commits:
-    command: "\"${CLAUDE_PLUGIN_ROOT}/hooks/git-storytelling.sh\""
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\" ${HAN_FILES}"
     description: "Commit work early and often for git storytelling"
-    tip: "Use the `jutsu_git_storytelling_check_commits` MCP tool. Follow conventional format: `type(scope): description`."
+    depends_on:
+      - plugin: "*"
+        hook: "*"

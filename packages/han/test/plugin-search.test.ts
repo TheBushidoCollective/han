@@ -50,7 +50,7 @@ mock.module("../lib/marketplace-cache.ts", () => ({
 }));
 
 // Import after mock is set up
-import { searchPlugins } from "../lib/plugin-search.ts";
+import { searchPlugins } from "../lib/plugins/index.ts";
 
 describe("plugin-search.ts", () => {
 	let consoleLogSpy: ReturnType<typeof spyOn>;

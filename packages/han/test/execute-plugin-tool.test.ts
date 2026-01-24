@@ -18,7 +18,7 @@ import {
 let mockRunConfiguredHook: ReturnType<typeof mock>;
 let mockRecordMcpToolCall: ReturnType<typeof mock>;
 
-// Mock the modules
+// Mock the modules - must match the import paths used by tools.ts
 mock.module("../lib/validate.ts", () => ({
 	runConfiguredHook: (...args: unknown[]) => mockRunConfiguredHook(...args),
 }));

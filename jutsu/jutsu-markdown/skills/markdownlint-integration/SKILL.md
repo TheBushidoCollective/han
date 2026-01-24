@@ -391,7 +391,7 @@ jobs:
       - name: Run markdownlint-cli2
         uses: DavidAnson/markdownlint-cli2-action@v9
         with:
-          globs: '**/*.md'
+          paths: '**/*.md'
 ```
 
 ### GitLab CI

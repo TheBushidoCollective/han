@@ -1,0 +1,45 @@
+# jutsu-syncpack plugin configuration
+# Provides validation and auto-fix hooks for consistent dependency versions in monorepos
+
+hooks:
+  fix:
+    command: "npx -y syncpack fix"
+    dirs_with:
+      - "syncpack.config.js"
+      - "syncpack.config.cjs"
+      - "syncpack.config.mjs"
+      - "syncpack.config.ts"
+      - "syncpack.config.json"
+      - "syncpack.config.yaml"
+      - "syncpack.config.yml"
+      - ".syncpackrc"
+      - ".syncpackrc.json"
+      - ".syncpackrc.yaml"
+      - ".syncpackrc.yml"
+    if_changed:
+      - "**/package.json"
+      - "syncpack.config.*"
+      - ".syncpackrc*"
+    tip: "Syncpack ensures consistent dependency versions across your monorepo workspaces."
+
+  format:
+    command: "npx -y syncpack format"
+    dirs_with:
+      - "syncpack.config.js"
+      - "syncpack.config.cjs"
+      - "syncpack.config.mjs"
+      - "syncpack.config.ts"
+      - "syncpack.config.json"
+      - "syncpack.config.yaml"
+      - "syncpack.config.yml"
+      - ".syncpackrc"
+      - ".syncpackrc.json"
+      - ".syncpackrc.yaml"
+      - ".syncpackrc.yml"
+    if_changed:
+      - "**/package.json"
+    tip: "Formats package.json files consistently across the monorepo."
+
+mcp: null
+
+memory: null

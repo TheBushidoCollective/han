@@ -5,7 +5,10 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { listAvailableHooks, loadPluginConfig } from "../../hook-config.ts";
+import {
+	listAvailableHooks,
+	loadPluginConfig,
+} from "../../hooks/hook-config.ts";
 import { getMarketplacePlugins } from "../../marketplace-cache.ts";
 import { getInstalledPlugins } from "../../shared.ts";
 
@@ -180,7 +183,6 @@ export const COMMANDS: Record<string, string[]> = {
 	],
 	plugin: ["install", "list", "uninstall", "search", "update"],
 	hook: ["run", "dispatch", "explain", "test", "verify", "reference"],
-	memory: ["session-end"],
 	metrics: [
 		"show",
 		"session-start",
@@ -190,7 +192,6 @@ export const COMMANDS: Record<string, string[]> = {
 		"session-context",
 		"memory-context",
 		"detect-patterns",
-		"detect-frustration",
 	],
 	checkpoint: ["capture", "list", "clean"],
 	index: ["run", "search", "status"],

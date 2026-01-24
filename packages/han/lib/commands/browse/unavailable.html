@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Han Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e0e0e0;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 500px;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .message {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .hint {
+            font-size: 0.9rem;
+            color: #666;
+            border-top: 1px solid #333;
+            padding-top: 1.5rem;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo pulse">&#128526;</div>
+        <h1>Han Dashboard</h1>
+        <p class="message">
+            Start a Claude Code session to see the active dashboard
+        </p>
+        <p class="hint">
+            Or run <code>han coordinator start</code> to start the backend manually
+        </p>
+    </div>
+    <script>
+        // Auto-refresh every 5 seconds to check if coordinator is up
+        setInterval(() => {
+            fetch('/api/health')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.coordinatorRunning) {
+                        window.location.reload();
+                    }
+                })
+                .catch(() => { });
+        }, 5000);
+    </script>
+</body>
+
+</html>

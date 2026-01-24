@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import yaml from "yaml";
 import { getCategoryIcon } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
@@ -60,11 +61,19 @@ export interface CommandMetadata {
 	content: string;
 }
 
+export interface MCPCapability {
+	category: string;
+	summary: string;
+	examples?: string[];
+}
+
 export interface MCPServerMetadata {
 	name: string;
+	description?: string;
 	command: string;
 	args: string[];
 	env?: Record<string, string>;
+	capabilities?: MCPCapability[];
 }
 
 interface Hook {
@@ -318,8 +327,157 @@ function getPluginSkills(pluginPath: string): SkillMetadata[] {
 	return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Parse hooks from a plugin
+// Parse hooks from han-plugin.yml
+interface HanPluginHook {
+	command: string;
+	description?: string;
+	event?: string;
+	dirs_with?: string[];
+	if_changed?: string[];
+	depends_on?: Array<{ plugin: string; hook: string }>;
+	tool_filter?: string[];
+}
+
+interface HanPluginYml {
+	hooks?: Record<string, HanPluginHook>;
+}
+
+function getPluginHooksFromHanPlugin(pluginPath: string): HookSection[] {
+	const hookSections: HookSection[] = [];
+	const hanPluginPath = path.join(pluginPath, "han-plugin.yml");
+
+	if (!fs.existsSync(hanPluginPath)) return hookSections;
+
+	try {
+		const hanPluginContent = fs.readFileSync(hanPluginPath, "utf-8");
+		const hanPlugin = yaml.parse(hanPluginContent) as HanPluginYml;
+
+		if (!hanPlugin?.hooks) return hookSections;
+
+		// Get script files for referencing
+		const scriptsDir = path.join(pluginPath, "scripts");
+		const allScriptFiles: HookFile[] = [];
+		if (fs.existsSync(scriptsDir)) {
+			const files = fs
+				.readdirSync(scriptsDir)
+				.filter((file) => file.endsWith(".sh") || file.endsWith(".js"));
+
+			for (const file of files) {
+				const filePath = path.join(scriptsDir, file);
+				const content = fs.readFileSync(filePath, "utf-8");
+				allScriptFiles.push({
+					name: path.basename(file, path.extname(file)),
+					path: `scripts/${file}`,
+					content,
+				});
+			}
+		}
+
+		// Get hook files
+		const hooksDir = path.join(pluginPath, "hooks");
+		const allHookFiles: HookFile[] = [];
+		if (fs.existsSync(hooksDir)) {
+			const files = fs
+				.readdirSync(hooksDir)
+				.filter(
+					(file) =>
+						file.endsWith(".md") ||
+						file.endsWith(".sh") ||
+						file.endsWith(".js") ||
+						file.endsWith(".py"),
+				);
+
+			for (const file of files) {
+				const filePath = path.join(hooksDir, file);
+				const content = fs.readFileSync(filePath, "utf-8");
+				allHookFiles.push({
+					name: path.basename(file, path.extname(file)),
+					path: file,
+					content,
+				});
+			}
+		}
+
+		// Group hooks by event (or "Stop" as default for validation hooks)
+		const hooksByEvent: Record<
+			string,
+			{ name: string; hook: HanPluginHook }[]
+		> = {};
+
+		for (const [hookName, hook] of Object.entries(hanPlugin.hooks)) {
+			const event = hook.event || "Stop";
+			if (!hooksByEvent[event]) {
+				hooksByEvent[event] = [];
+			}
+			hooksByEvent[event].push({ name: hookName, hook });
+		}
+
+		// Convert to HookSection format
+		for (const [event, hooks] of Object.entries(hooksByEvent)) {
+			const commands: HookEntry[] = [];
+			const referencedFiles: HookFile[] = [];
+
+			for (const { hook } of hooks) {
+				commands.push({
+					command: hook.command,
+					prompt: hook.description,
+				});
+
+				// Extract script file references
+				const scriptMatch = hook.command.match(
+					/scripts\/([a-zA-Z0-9_-]+\.(sh|js))/,
+				);
+				if (scriptMatch) {
+					const scriptPath = `scripts/${scriptMatch[1]}`;
+					const scriptFile = allScriptFiles.find((f) => f.path === scriptPath);
+					if (
+						scriptFile &&
+						!referencedFiles.some((f) => f.path === scriptPath)
+					) {
+						referencedFiles.push(scriptFile);
+					}
+				}
+
+				// Extract hook file references
+				const hookFileMatch = hook.command.match(
+					/hooks\/([a-zA-Z0-9_-]+\.(md|sh|js|py))/,
+				);
+				if (hookFileMatch) {
+					const hookPath = hookFileMatch[1];
+					const hookFile = allHookFiles.find((f) => f.path === hookPath);
+					if (hookFile && !referencedFiles.some((f) => f.path === hookPath)) {
+						referencedFiles.push(hookFile);
+					}
+				}
+			}
+
+			if (commands.length > 0) {
+				hookSections.push({
+					section: event,
+					commands,
+					files: referencedFiles,
+				});
+			}
+		}
+	} catch (error) {
+		console.error(
+			`Error reading hooks from han-plugin.yml at ${pluginPath}:`,
+			error,
+		);
+	}
+
+	return hookSections;
+}
+
+// Parse hooks from a plugin (checks han-plugin.yml first, then hooks/hooks.json)
 function getPluginHooks(pluginPath: string): HookSection[] {
+	// First try han-plugin.yml (new format)
+	const hanPluginHooks = getPluginHooksFromHanPlugin(pluginPath);
+	if (hanPluginHooks.length > 0) {
+		return hanPluginHooks;
+	}
+
+	// Fallback to hooks/hooks.json (old format)
 	const hookSections: HookSection[] = [];
 	const hooksFile = path.join(pluginPath, "hooks", "hooks.json");
 	const hooksDir = path.join(pluginPath, "hooks");
@@ -519,11 +677,42 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 	return commands.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Parse MCP servers from plugin.json
+// Parse MCP servers from han-plugin.yml (preferred) or plugin.json (fallback)
 function getPluginMCPServers(pluginPath: string): MCPServerMetadata[] {
 	const mcpServers: MCPServerMetadata[] = [];
 
 	try {
+		// First, try to read from han-plugin.yml (new format)
+		const hanPluginPath = path.join(pluginPath, "han-plugin.yml");
+		if (fs.existsSync(hanPluginPath)) {
+			const hanPluginContent = fs.readFileSync(hanPluginPath, "utf-8");
+			const hanPlugin = yaml.parse(hanPluginContent) as {
+				mcp?: {
+					name: string;
+					description?: string;
+					command: string;
+					args?: string[];
+					env?: Record<string, string>;
+					capabilities?: MCPCapability[];
+				};
+			};
+
+			if (hanPlugin?.mcp) {
+				const mcp = hanPlugin.mcp;
+				mcpServers.push({
+					name: mcp.name,
+					description: mcp.description,
+					command: mcp.command,
+					args: mcp.args || [],
+					env: mcp.env,
+					capabilities: mcp.capabilities,
+				});
+				// If we found MCP in han-plugin.yml, return it
+				return mcpServers;
+			}
+		}
+
+		// Fallback to plugin.json (old format)
 		const pluginJsonPath = path.join(
 			pluginPath,
 			".claude-plugin",

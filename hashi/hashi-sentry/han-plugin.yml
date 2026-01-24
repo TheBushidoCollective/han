@@ -1,5 +1,6 @@
 # hashi-sentry plugin configuration
 # This plugin provides Sentry integration via MCP server
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}

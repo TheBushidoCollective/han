@@ -9,7 +9,14 @@ const SITE_URL = "https://han.guru";
 interface SitemapEntry {
 	url: string;
 	lastmod: string;
-	changefreq: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+	changefreq:
+		| "always"
+		| "hourly"
+		| "daily"
+		| "weekly"
+		| "monthly"
+		| "yearly"
+		| "never";
 	priority: number;
 }
 

@@ -7,6 +7,8 @@ authors: ["Raja SP", "The Bushido Collective"]
 tags: ["methodology", "autonomous-agents", "ai-development", "sdlc", "hotl", "hitl"]
 ---
 
+<!-- markdownlint-disable MD025 -->
+
 # AI-Driven Development Lifecycle 2026 (AI-DLC 2026)
 
 ## A Methodology for the Age of Autonomous Agents
@@ -55,6 +57,8 @@ The landscape of AI-driven development in 2026 differs dramatically from just tw
 AI-DLC 2026 preserves foundational insights while incorporating lessons from production deployments: the Ralph Wiggum autonomous loop methodology, the emerging consensus that traditional SDLC phases are collapsing, the practical realization that simpler AI workflows outperform elaborate orchestrations, and the understanding that organizational knowledge—previously locked in tickets, documents, and runbooks—can now serve as memory for AI agents.
 
 ---
+
+<!-- markdownlint-disable MD025 -->
 
 ## I. Context
 
@@ -464,6 +468,7 @@ A **Unit** represents a cohesive, self-contained work element derived from an In
 - **Clear boundaries:** Ownership and scope are unambiguous
 
 Each Unit encompasses:
+
 - User stories articulating functional scope
 - Non-functional requirements specific to that Unit
 - Completion criteria for verification
@@ -516,6 +521,7 @@ flowchart TB
 ```
 
 **Autonomous Bolt characteristics:**
+
 - Completion promise signal (e.g., `COMPLETE` or `BLOCKED`)
 - Maximum iteration limit as safety net
 - Backpressure through tests, types, and linting
@@ -538,6 +544,7 @@ Completion Criteria should be:
 | **Independent** | Don't prescribe implementation | "Passwords are hashed" not "Use bcrypt" |
 
 Completion Criteria can include:
+
 - Test pass requirements
 - Code quality thresholds
 - Performance benchmarks
@@ -555,6 +562,7 @@ Completion Criteria can include:
 - **Validation:** Test suites for functional, security, and performance verification
 
 AI generates all associated tests, including:
+
 - Functional acceptance tests validating business requirements
 - Security scans (static analysis, dependency vulnerabilities, SAST/DAST)
 - Performance and load tests against NFR thresholds
@@ -651,6 +659,7 @@ sequenceDiagram
 **Mob Elaboration condenses weeks of sequential work into hours** while achieving deep alignment between stakeholders and AI.
 
 **Outputs of Inception:**
+
 - Well-defined Units with clear boundaries
 - User stories with acceptance criteria
 - Non-functional requirements (NFRs)
@@ -728,6 +737,7 @@ When all criteria pass:
 ```
 
 **Human review of autonomous work:**
+
 - Reviews generated code for architectural alignment
 - Validates design decisions (e.g., caching strategy)
 - Checks for edge cases not covered by tests
@@ -749,6 +759,7 @@ For complex systems requiring multiple Units built in parallel:
 The Operations Phase centers on deployment, observability, and maintenance of systems, leveraging AI for operational efficiency.
 
 **Deployment:**
+
 1. AI packages modules into Deployment Units (containers, functions, IaC)
 2. Developers review deployment configuration
 3. AI executes deployment to staging environment
@@ -759,6 +770,7 @@ The Operations Phase centers on deployment, observability, and maintenance of sy
 **Observability and Monitoring:**
 
 AI actively analyzes telemetry data:
+
 - **Metrics:** CPU, memory, latency, error rates, business KPIs
 - **Logs:** Error patterns, warning trends, anomaly detection
 - **Traces:** Request flow analysis, bottleneck identification
@@ -856,6 +868,7 @@ based on purchase history and browsing behavior.
 **AI asks clarifying questions:**
 
 > "I'll help elaborate this Intent. Let me ask some clarifying questions:
+>
 > - What recommendation approaches should we consider? Collaborative filtering, content-based, or hybrid?
 > - What's the expected personalization depth? User-specific recommendations or segment-based?
 > - Where should recommendations appear? Product pages, cart, checkout, email?
@@ -868,6 +881,7 @@ based on purchase history and browsing behavior.
 Capture user behavior (views, clicks, purchases), build feature pipelines, create user and product embeddings.
 
 Completion Criteria:
+
 - Event tracking captures views, clicks, add-to-cart, purchases
 - Events flow through pipeline with <30s latency
 - User embeddings update nightly
@@ -877,6 +891,7 @@ Completion Criteria:
 Train and serve ML model for product recommendations.
 
 Completion Criteria:
+
 - Model achieves >0.75 AUC on holdout set
 - Inference latency <50ms p99
 - A/B test framework integrated
@@ -886,6 +901,7 @@ Completion Criteria:
 Real-time serving API integrated with product catalog.
 
 Completion Criteria:
+
 - GET /recommendations/{userId} returns top 10 products
 - Response time <100ms p99 under 1000 req/s load
 - Integration tests pass against catalog API
@@ -896,6 +912,7 @@ Completion Criteria:
 Display recommendations in product pages and cart.
 
 Completion Criteria:
+
 - Recommendation widget renders on product pages
 - Widget handles loading, error, empty states
 - Click tracking integrated with analytics
@@ -916,6 +933,7 @@ Completion Criteria:
 **Unit 3 (API Integration) assigned for construction as Autonomous Bolt.**
 
 Rationale for autonomous mode:
+
 - Clear completion criteria (response time, test coverage, security)
 - Well-understood domain (REST API development)
 - Strong programmatic verification (tests, load tests, security scan)
@@ -937,6 +955,7 @@ Rationale for autonomous mode:
 13. Outputs `COMPLETE`
 
 **Human reviews autonomous output:**
+
 - Code review finds good architectural decisions
 - Caching strategy appropriate for use case
 - Test coverage comprehensive
@@ -945,6 +964,7 @@ Rationale for autonomous mode:
 ### 3. Operations Phase
 
 **Deployment:**
+
 - AI packages API service as container image
 - Generates Kubernetes manifests with HPA configuration
 - Creates Terraform for managed Redis cache
@@ -986,6 +1006,7 @@ Before Inception, AI must understand the existing codebase. This analysis can it
 Analyze existing codebase and generate context models.
 
 Tasks:
+
 1. Identify major components in src/
 2. Map dependencies between components
 3. Document data flows for checkout and user profile
@@ -993,6 +1014,8 @@ Tasks:
 5. Note patterns and conventions used
 
 Output:
+
+
 - docs/architecture/static-model.md (components, responsibilities, relationships)
 - docs/architecture/dynamic-model.md (key use case flows)
 - docs/architecture/integration-points.md (where new features connect)
@@ -1228,18 +1251,21 @@ limits:
 ### For Teams Already Using AI-Assisted Development
 
 **Weeks 1-2: Foundation**
+
 - Introduce Completion Criteria discipline on existing work
 - Start writing explicit success conditions for tasks
 - Run first Supervised Bolts with existing patterns
 - Build CI quality gates (tests, types, lint, security)
 
 **Weeks 3-4: First Autonomous Work**
+
 - Identify low-risk, well-defined tasks for autonomous execution
 - Run first Autonomous Bolts with conservative iteration limits
 - Review results carefully, refine prompts and criteria
 - Document patterns that work
 
 **Month 2: Scaling**
+
 - Expand Autonomous Bolts to more task types
 - Develop team-specific prompt templates
 - Build library of Completion Criteria patterns
@@ -1248,12 +1274,14 @@ limits:
 ### For Teams New to AI-Driven Development
 
 **Start with Mob Elaboration.** The ritual provides:
+
 - Structured way to capture and decompose intent
 - Collaborative refinement of requirements
 - Natural introduction of AI into existing workflows
 - Practice with AI interaction patterns
 
 Then gradually introduce Construction phase patterns:
+
 1. Start fully Supervised—AI proposes, human validates every step
 2. As confidence builds, allow longer autonomous stretches
 3. Define first Completion Criteria and test Autonomous Bolts
@@ -1262,6 +1290,7 @@ Then gradually introduce Construction phase patterns:
 ### Organizational Considerations
 
 **Governance:**
+
 - Define acceptable Autonomous Bolt boundaries
 - Establish review requirements for different risk levels
 - Create audit trails for autonomous actions

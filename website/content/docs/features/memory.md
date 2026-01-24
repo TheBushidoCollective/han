@@ -1,21 +1,20 @@
 ---
 title: "Memory System"
-description: "Han's five-layer memory system provides full historical context - from instant rules to complete conversation history, with automatic pattern promotion."
+description: "Han's four-layer memory system provides full historical context - from instant rules to complete conversation history, with automatic pattern promotion."
 ---
 
-Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with five layers of context and automatic pattern promotion.
+Every codebase has quirks that aren't in the README. Claude figures these out, then next session... context is lost. Han's memory system fixes this with four layers of context and automatic pattern promotion.
 
-## Five Layers of Memory
+## Four Layers of Memory
 
-| Layer | Source | Speed | Contains |
-|-------|--------|-------|----------|
-| **1. Rules** | `.claude/rules/` | Instant | Conventions, patterns |
-| **2. Summaries** | Session end | Fast | Work done, decisions |
-| **3. Observations** | Tool usage | Fast | Files touched, commands |
-| **4. Transcripts** | Conversations | Moderate | Full discussion history |
-| **5. Team Memory** | Git + integrations | Varies | Commits, PRs, expertise |
+| Layer              | Source             | Speed    | Contains                |
+| ------------------ | ------------------ | -------- | ----------------------- |
+| **1. Rules**       | `.claude/rules/`   | Instant  | Conventions, patterns   |
+| **2. Sessions**    | JSONL transcripts  | Fast     | Messages, tool calls    |
+| **3. Transcripts** | Conversations      | Moderate | Full discussion history |
+| **4. Team Memory** | Git + integrations | Varies   | Commits, PRs, expertise |
 
-All layers are searchable via the `memory` MCP tool. Layers 2-5 are indexed using full-text search (BM25) and semantic search for fast retrieval.
+All layers are searchable via the `memory` MCP tool. Sessions are indexed into SQLite with FTS5 for fast full-text search.
 
 ---
 
@@ -50,12 +49,12 @@ So Han lets Claude learn freely and informs you what was captured.
 
 ### MCP Tools
 
-| Tool | Purpose |
-|------|---------|
-| `learn` | Write a learning to `.claude/rules/<domain>.md` |
-| `memory_list` | List existing rule domains |
-| `memory_read` | Read a domain's content (avoid duplicates) |
-| `auto_learn` | Check status and trigger pattern promotion |
+| Tool          | Purpose                                         |
+| ------------- | ----------------------------------------------- |
+| `learn`       | Write a learning to `.claude/rules/<domain>.md` |
+| `memory_list` | List existing rule domains                      |
+| `memory_read` | Read a domain's content (avoid duplicates)      |
+| `auto_learn`  | Check status and trigger pattern promotion      |
 
 ### The `learn` Tool
 
@@ -93,7 +92,7 @@ Creates `.claude/rules/api-validation.md` with YAML frontmatter:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules
@@ -152,24 +151,24 @@ Beyond manual learning, Han automatically promotes patterns to rules when they'r
 
 ### Promotion Criteria
 
-| Criteria | Threshold |
-|----------|-----------|
-| Minimum occurrences | 3 |
-| Confidence score | ≥ 0.8 |
+| Criteria                 | Threshold       |
+| ------------------------ | --------------- |
+| Minimum occurrences      | 3               |
+| Confidence score         | ≥ 0.8           |
 | Multiple authors (bonus) | +0.1 confidence |
 
 ### Domain Detection
 
 Patterns are automatically classified into domains based on keywords:
 
-| Domain | Keywords |
-|--------|----------|
-| testing | test, spec, mock, fixture, assert |
-| api | endpoint, route, handler, request |
-| auth | auth, login, session, token, jwt |
-| database | db, query, migration, schema |
-| error | error, exception, catch, throw |
-| commands | command, cli, script, npm, bun |
+| Domain   | Keywords                          |
+| -------- | --------------------------------- |
+| testing  | test, spec, mock, fixture, assert |
+| api      | endpoint, route, handler, request |
+| auth     | auth, login, session, token, jwt  |
+| database | db, query, migration, schema      |
+| error    | error, exception, catch, throw    |
+| commands | command, cli, script, npm, bun    |
 
 ### The `auto_learn` Tool
 
@@ -195,49 +194,42 @@ auto_learn({ action: "promote" })
 
 ---
 
-## Layer 2-3: Session Memory
+## Layer 2: Session Memory
 
-Han automatically captures what happens during sessions via the PostToolUse hook.
+Han indexes Claude Code's native session transcripts into SQLite for fast search.
 
-### Session Lifecycle
+### Session Indexing
 
-Sessions are long-lived and don't have explicit start/end triggers. The `session_id` comes from Claude Code and flows implicitly through PostToolUse events.
+Sessions are stored as JSONL files by Claude Code and indexed incrementally by Han:
 
 ```
-PostToolUse fired → han memory capture → observations stored
-                                              ↓
-                         ~/.claude/han/memory/sessions/{session_id}.jsonl
+Claude Code writes → ~/.claude/projects/{project}/sessions/{session}.jsonl
+                                            ↓
+                         Han indexer parses JSONL into SQLite
+                                            ↓
+                      Messages, tool calls, file changes stored in DB
 ```
 
-### Observations (Layer 3)
+The indexer runs on-demand (when you run `han browse` or validation hooks) and:
 
-Raw tool usage logs captured continuously:
+- Parses session transcripts incrementally
+- Tracks file changes from Edit/Write tool uses
+- Indexes message content via FTS5 for full-text search
+- Records han events (sentiment analysis, hook results, etc.)
 
-- Every file read/edited
-- Commands executed
-- Timestamps for everything
-- Full context trail
+### Querying Sessions
 
-Query with: `memory({ question: "what was I working on?" })`
-
-### Summaries (Layer 2)
-
-Summaries can be generated on-demand from observations:
-
-- Work completed and in-progress
-- Decisions made with rationale
-- Key files touched
-
-CLI access:
+Use the Browse UI to search session history:
 
 ```bash
-# Generate summary from observations (optional)
-han memory session-end --session-id <id>
+han browse
 ```
+
+Or query with: `memory({ question: "what was I working on?" })`
 
 ---
 
-## Layer 4: Transcript Search
+## Layer 3: Transcript Search
 
 Han searches your full Claude Code conversation history stored at `~/.claude/projects/`.
 
@@ -255,18 +247,18 @@ Query with: `memory({ question: "what did we discuss about X?" })`
 
 ---
 
-## Layer 5: Team Memory
+## Layer 4: Team Memory
 
 Team memory goes beyond personal sessions to research institutional knowledge from multiple sources.
 
 ### Knowledge Sources
 
-| Source | What It Provides |
-|--------|-----------------|
+| Source          | What It Provides                 |
+| --------------- | -------------------------------- |
 | **Git history** | Commits, diffs, who changed what |
-| **GitHub** | PRs, reviews, issue discussions |
-| **Linear** | Issue context, project decisions |
-| **Jira** | Ticket history, sprint context |
+| **GitHub**      | PRs, reviews, issue discussions  |
+| **Linear**      | Issue context, project decisions |
+| **Jira**        | Ticket history, sprint context   |
 
 ### Research Engine
 
@@ -313,7 +305,7 @@ Query with: `memory({ question: "who knows about payments?" })`
 
 ## Indexing
 
-All layers (except rules) are indexed for fast search using BM25 full-text search and semantic embeddings.
+All layers (except rules) are indexed for fast search using SQLite FTS5.
 
 ### CLI Commands
 
@@ -323,12 +315,10 @@ han index run
 
 # Index specific layer
 han index run --layer transcripts
-han index run --layer observations
-han index run --layer summaries
 han index run --layer team
 
 # Index specific session
-han index run --session <session-id>
+han index run --session "<session-id>"
 
 # Search indexed content
 han index search "authentication"
@@ -340,7 +330,7 @@ han index status
 
 ### Automatic Indexing
 
-Indexing happens automatically at session end. Manual indexing is optional but useful for:
+Indexing happens on-demand when you use `han browse` or run validation hooks. Manual indexing is optional but useful for:
 
 - Initial setup after installing Han
 - Troubleshooting search issues
@@ -352,13 +342,13 @@ Indexing happens automatically at session end. Manual indexing is optional but u
 
 The `memory` MCP tool routes questions to appropriate layers automatically:
 
-| Question Type | Routes To |
-|--------------|-----------|
-| "What was I working on?" | Personal sessions (Layer 2-3) |
-| "Continue where I left off" | Recent session context |
-| "Who knows about X?" | Team memory research (Layer 5) |
-| "Why did we choose Y?" | Transcripts + team (Layer 4-5) |
-| "How do we handle Z?" | Rules + conventions (Layer 1) |
+| Question Type               | Routes To                      |
+| --------------------------- | ------------------------------ |
+| "What was I working on?"    | Session history (Layer 2)      |
+| "Continue where I left off" | Recent session context         |
+| "Who knows about X?"        | Team memory research (Layer 4) |
+| "Why did we choose Y?"      | Transcripts + team (Layer 3-4) |
+| "How do we handle Z?"       | Rules + conventions (Layer 1)  |
 
 You don't think about layers - you just ask questions.
 
@@ -369,18 +359,14 @@ You don't think about layers - you just ask questions.
 ```text
 ~/.claude/
   han/
+    han.db                  # SQLite database (Layer 2: indexed sessions)
     memory/
-      personal/
-        sessions/           # Layer 3: Raw observations (JSONL)
-        summaries/          # Layer 2: AI summaries (YAML)
-      index/
-        fts.db              # Full-text search index
       projects/
         github.com_org_repo/
           meta.yaml         # Team memory metadata
 
   projects/
-    {project-slug}/         # Layer 4: Claude transcripts (JSONL)
+    {project-slug}/         # Layer 3: Claude transcripts (JSONL)
 
 .claude/                    # In project repo (git-tracked)
   rules/                    # Layer 1: Permanent rules

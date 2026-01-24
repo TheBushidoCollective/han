@@ -1,20 +1,31 @@
 # hashi-blueprints plugin configuration
-# This plugin provides technical blueprint documentation via MCP server
+# Blueprint tools are provided by Han's built-in blueprints MCP server
 
-# No hooks - MCP server plugins don't have validation hooks
-hooks: {}
+# Blueprints MCP server exposed through Han's main MCP server
+mcp_servers:
+  blueprints:
+    expose: true
+    name: blueprints
+    description: Project blueprint documentation search and retrieval
+    command: han
+    args: ["mcp", "blueprints"]
 
-# Memory provider for team memory extraction from blueprints
-# Convention: provider name = plugin name, script = memory-provider.ts
+hooks:
+  # Sync blueprints index to .claude/rules at session start
+  sync-index:
+    event: SessionStart
+    command: han blueprints sync-index
+    description: Generate blueprints index in .claude/rules
+    silent: true
+
+# Memory provider config - defines which tools the Memory Agent can use
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-blueprints_blueprints__search_blueprints
-    - mcp__plugin_hashi-blueprints_blueprints__read_blueprint
+    - mcp__blueprints__list_blueprints
+    - mcp__blueprints__search_blueprints
+    - mcp__blueprints__read_blueprint
   system_prompt: |
-    Extract observations from technical blueprints. For each item, capture:
-    - timestamp: when the blueprint was created/updated
-    - summary: key architectural decisions and patterns documented
-    - status: whether the blueprint is current or needs update
-    - type: 'blueprint', 'architecture', or 'design_decision'
+    Search project blueprints for architectural decisions and system documentation.
+    Use list_blueprints to see all available blueprints, search_blueprints to filter by keyword,
+    then read_blueprint for detailed content.
     Focus on architectural patterns, API designs, and system behaviors.
-    Return as JSON array of observations.

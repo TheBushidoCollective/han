@@ -105,8 +105,8 @@ describeOrSkip("marketplace-cache.ts", () => {
 		expect(hasCached).toBe(false);
 	});
 
-	test("getCacheAge returns null when no cache exists", () => {
-		const age = getCacheAge();
+	test("getCacheAge returns null when no cache exists", async () => {
+		const age = await getCacheAge();
 		expect(age).toBeNull();
 	});
 
@@ -129,7 +129,7 @@ describeOrSkip("marketplace-cache.ts", () => {
 		// First fetch to populate cache
 		await getMarketplacePlugins();
 
-		const age = getCacheAge();
+		const age = await getCacheAge();
 		expect(age).not.toBeNull();
 		if (age !== null) {
 			expect(age).toBeLessThan(0.1); // Should be very recent (< 6 minutes)
@@ -193,7 +193,7 @@ describeOrSkip("marketplace-cache.ts", () => {
 		writeFileSync(cachePath, JSON.stringify(cache));
 
 		// getCacheAge should now report ~25 hours
-		const age = getCacheAge();
+		const age = await getCacheAge();
 		expect(age).not.toBeNull();
 		if (age !== null) {
 			expect(age).toBeGreaterThan(24);
@@ -232,7 +232,7 @@ describeOrSkip("marketplace-cache.ts", () => {
 		expect(hasCached).toBe(true);
 
 		// getCacheAge should return null for corrupt cache (can't parse timestamp)
-		const age = getCacheAge();
+		const age = await getCacheAge();
 		expect(age).toBeNull();
 
 		// getMarketplacePlugins should fetch fresh data (corrupt cache treated as cache miss)

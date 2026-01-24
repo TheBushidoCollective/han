@@ -176,7 +176,7 @@ describe.serial("Memory Provider Discovery", () => {
 
 	describe("discoverProviders", () => {
 		test("returns empty array when no plugins installed", async () => {
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			expect(providers).toEqual([]);
 		});
 
@@ -186,7 +186,7 @@ describe.serial("Memory Provider Discovery", () => {
 			delete process.env.CLAUDE_CONFIG_DIR;
 			process.env.HOME = testDir;
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			expect(providers).toEqual([]);
 
 			// Restore for cleanup
@@ -199,7 +199,7 @@ describe.serial("Memory Provider Discovery", () => {
 		test("discovers plugin with memory config", async () => {
 			createTestPlugin("hashi-github", "han");
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers).toHaveLength(1);
 			expect(providers[0].name).toBe("github");
@@ -212,7 +212,7 @@ describe.serial("Memory Provider Discovery", () => {
 			createTestPlugin("jutsu-git", "han", { category: "jutsu" });
 			createTestPlugin("do-code-review", "han", { category: "do" });
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			const names = providers.map((p) => p.name);
 			expect(names).toContain("github");
@@ -225,7 +225,7 @@ describe.serial("Memory Provider Discovery", () => {
 				systemPrompt: "Extract PR data as JSON",
 			});
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers[0].systemPrompt).toContain("Extract PR data");
 		});
@@ -248,7 +248,7 @@ describe.serial("Memory Provider Discovery", () => {
 			installedMarketplaces.set("han", {});
 			writeSettingsJson();
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers).toHaveLength(0);
 		});
@@ -274,17 +274,20 @@ memory:
 			installedMarketplaces.set("han", {});
 			writeSettingsJson();
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers).toHaveLength(0);
 		});
 
-		test("skips plugins without memory-provider.ts script", async () => {
+		test("discovers MCP-based providers without memory-provider.ts script", async () => {
 			createTestPlugin("hashi-no-script", "han", { createScript: false });
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
-			expect(providers).toHaveLength(0);
+			// MCP-based providers inherit MCP servers from enabled plugins - no script needed
+			expect(providers).toHaveLength(1);
+			expect(providers[0].type).toBe("mcp");
+			expect(providers[0].scriptPath).toBeUndefined();
 		});
 
 		test("discovers multiple plugins", async () => {
@@ -299,7 +302,7 @@ memory:
 				category: "jutsu",
 			});
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers).toHaveLength(3);
 		});
@@ -329,7 +332,7 @@ memory:
 			});
 			writeSettingsJson();
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers).toHaveLength(1);
 			expect(providers[0].name).toBe("custom");
@@ -342,7 +345,7 @@ memory:
 				allowedTools: ["mcp__github__list_prs", "mcp__github__get_pr"],
 			});
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			const discovered = providers[0];
 
 			const mockMcpClient: MCPClient = {
@@ -380,7 +383,7 @@ export function createProvider(mcpClient, availableTools) {
 `;
 			writeFileSync(join(pluginRoot, "memory-provider.ts"), scriptContent);
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			const discovered = providers[0];
 
 			const mockMcpClient: MCPClient = {
@@ -410,7 +413,7 @@ export function createProvider(mcpClient, availableTools) {
 				"export const name = 'bad';",
 			);
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			const discovered = providers[0];
 
 			const mockMcpClient: MCPClient = {
@@ -448,7 +451,11 @@ export function createProvider(mcpClient, availableTools) {
 				"mcp__linear__list_issues",
 			]);
 
-			const loaded = await loadAllProviders(mockMcpClient, availableTools);
+			const loaded = await loadAllProviders(
+				mockMcpClient,
+				availableTools,
+				testDir,
+			);
 
 			expect(loaded).toHaveLength(2);
 		});
@@ -468,7 +475,11 @@ export function createProvider(mcpClient, availableTools) {
 			// Only github tools are available
 			const availableTools = new Set(["mcp__github__list_prs"]);
 
-			const loaded = await loadAllProviders(mockMcpClient, availableTools);
+			const loaded = await loadAllProviders(
+				mockMcpClient,
+				availableTools,
+				testDir,
+			);
 
 			expect(loaded).toHaveLength(1);
 			expect(loaded[0].name).toBe("github");
@@ -486,7 +497,11 @@ export function createProvider(mcpClient, availableTools) {
 			// No matching tools
 			const availableTools = new Set(["mcp__other__tool"]);
 
-			const loaded = await loadAllProviders(mockMcpClient, availableTools);
+			const loaded = await loadAllProviders(
+				mockMcpClient,
+				availableTools,
+				testDir,
+			);
 
 			expect(loaded).toHaveLength(0);
 		});
@@ -495,19 +510,19 @@ export function createProvider(mcpClient, availableTools) {
 	describe("Convention-based naming", () => {
 		test("hashi- prefix is stripped from provider name", async () => {
 			createTestPlugin("hashi-github", "han");
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			expect(providers[0].name).toBe("github");
 		});
 
 		test("jutsu- prefix is stripped from provider name", async () => {
 			createTestPlugin("jutsu-playwright", "han", { category: "jutsu" });
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			expect(providers[0].name).toBe("playwright");
 		});
 
 		test("do- prefix is stripped from provider name", async () => {
 			createTestPlugin("do-accessibility", "han", { category: "do" });
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 			expect(providers[0].name).toBe("accessibility");
 		});
 
@@ -534,14 +549,15 @@ memory:
 			installedMarketplaces.set("han", {});
 			writeSettingsJson();
 
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
 
 			expect(providers[0].name).toBe("custom-plugin");
 		});
 
-		test("script path is always memory-provider.ts", async () => {
+		test("script path is set for script-based providers", async () => {
 			createTestPlugin("hashi-github", "han");
-			const providers = await discoverProviders();
+			const providers = await discoverProviders(testDir);
+			expect(providers[0].type).toBe("script");
 			expect(providers[0].scriptPath).toContain("memory-provider.ts");
 		});
 	});

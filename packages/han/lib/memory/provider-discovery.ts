@@ -2,28 +2,37 @@
  * Memory Provider Discovery
  *
  * Discovers and loads memory providers from installed plugins.
- * Convention-based: plugins declare required MCP tools, everything else is derived.
+ * Memory sub-agents inherit enabled plugins from Claude Code settings,
+ * so MCP servers are available automatically with OAuth.
  *
  * ```yaml
  * # han-plugin.yml
  * memory:
- *   tools:
- *     - mcp__plugin_hashi-github_github__list_pull_requests
+ *   allowed_tools:
+ *     - mcp__github__list_pull_requests
+ *   system_prompt: |
+ *     Search GitHub for PRs and issues relevant to the query.
  * ```
  *
  * Conventions:
  * - Provider name = plugin name (strip jutsu-/do-/hashi- prefix)
- * - Script location = memory-provider.ts in plugin root
+ * - Script location = memory-provider.ts in plugin root (optional)
+ * - MCP servers inherited from enabled plugins via .mcp.json files
  */
 
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
-} from "../claude-settings.ts";
-import { loadPluginConfig } from "../hook-config.ts";
-import type { MemoryProvider } from "./types.ts";
+} from "../config/claude-settings.ts";
+import { loadPluginConfig } from "../hooks/hook-config.ts";
+import type {
+	ExtractedObservation,
+	ExtractOptions,
+	MemoryProvider,
+	ObservationType,
+} from "./types.ts";
 
 /**
  * MCP client interface for calling tools
@@ -41,6 +50,11 @@ export type ProviderFactory = (
 ) => MemoryProvider;
 
 /**
+ * Provider type - script-based or MCP-based
+ */
+export type ProviderType = "script" | "mcp";
+
+/**
  * Discovered provider with metadata
  */
 export interface DiscoveredProvider {
@@ -50,8 +64,10 @@ export interface DiscoveredProvider {
 	pluginName: string;
 	/** Path to plugin root */
 	pluginRoot: string;
-	/** Path to provider script (always memory-provider.ts) */
-	scriptPath: string;
+	/** Provider type: 'script' for memory-provider.ts, 'mcp' for MCP-based (inherits from enabled plugins) */
+	type: ProviderType;
+	/** Path to provider script (for script-based providers) */
+	scriptPath?: string;
 	/** MCP tools the memory agent is allowed to use */
 	allowedTools: string[];
 	/** System prompt for the memory extraction agent */
@@ -76,6 +92,32 @@ export interface LoadedProvider {
  */
 function deriveProviderName(pluginName: string): string {
 	return pluginName.replace(/^(jutsu|do|hashi)-/, "");
+}
+
+/**
+ * Resolve a potentially relative marketplace path.
+ * For directory sources with relative paths, resolve against project path.
+ * @param directoryPath - The path to resolve
+ * @param projectPath - Project path to resolve against (required for relative paths)
+ */
+function resolveMarketplacePath(
+	directoryPath: string,
+	projectPath?: string,
+): string {
+	if (isAbsolute(directoryPath)) {
+		return directoryPath;
+	}
+
+	// Relative paths require projectPath
+	if (projectPath) {
+		return resolve(projectPath, directoryPath);
+	}
+
+	// No projectPath provided - can't resolve relative path
+	console.error(
+		`[Provider Discovery] Cannot resolve relative path "${directoryPath}" without projectPath`,
+	);
+	return directoryPath; // Return as-is, will fail to find
 }
 
 /**
@@ -105,17 +147,26 @@ function findPluginInMarketplace(
 
 /**
  * Discover all memory providers from installed plugins
+ * @param projectPath - Optional project path for context-aware plugin discovery
  */
-export async function discoverProviders(): Promise<DiscoveredProvider[]> {
+export async function discoverProviders(
+	projectPath?: string,
+): Promise<DiscoveredProvider[]> {
 	const discovered: DiscoveredProvider[] = [];
 
 	const configDir = getClaudeConfigDir();
 	if (!configDir) {
+		console.error("[Provider Discovery] No config dir found");
 		return discovered;
 	}
 
-	// Get installed plugins and marketplace configs
-	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
+	// Get installed plugins and marketplace configs for the given project context
+	const { plugins, marketplaces } =
+		getMergedPluginsAndMarketplaces(projectPath);
+	console.error(
+		`[Provider Discovery] Found ${plugins.size} plugins:`,
+		Array.from(plugins.keys()),
+	);
 
 	for (const [pluginName, marketplace] of plugins.entries()) {
 		const marketplaceConfig = marketplaces.get(marketplace);
@@ -125,7 +176,9 @@ export async function discoverProviders(): Promise<DiscoveredProvider[]> {
 		if (marketplaceConfig?.source?.source === "directory") {
 			const directoryPath = marketplaceConfig.source.path;
 			if (directoryPath) {
-				pluginRoot = findPluginInMarketplace(directoryPath, pluginName);
+				// Resolve relative paths against projectPath
+				const resolvedPath = resolveMarketplacePath(directoryPath, projectPath);
+				pluginRoot = findPluginInMarketplace(resolvedPath, pluginName);
 			}
 		}
 
@@ -142,7 +195,10 @@ export async function discoverProviders(): Promise<DiscoveredProvider[]> {
 			}
 		}
 
-		if (!pluginRoot) continue;
+		if (!pluginRoot) {
+			console.error(`[Provider Discovery] No root found for ${pluginName}`);
+			continue;
+		}
 
 		// Load plugin config
 		const config = loadPluginConfig(pluginRoot, false);
@@ -151,25 +207,42 @@ export async function discoverProviders(): Promise<DiscoveredProvider[]> {
 		if (
 			!config?.memory?.allowed_tools ||
 			config.memory.allowed_tools.length === 0
-		)
-			continue;
-
-		// Convention: script is always memory-provider.ts
-		const scriptPath = join(pluginRoot, "memory-provider.ts");
-
-		// Verify script exists
-		if (!existsSync(scriptPath)) {
+		) {
 			console.error(
-				`Memory provider script not found: ${scriptPath} (plugin: ${pluginName})`,
+				`[Provider Discovery] ${pluginName}: no memory.allowed_tools`,
 			);
 			continue;
 		}
 
+		console.error(
+			`[Provider Discovery] ${pluginName}: found ${config.memory.allowed_tools.length} allowed tools`,
+		);
+
+		// Check for memory-provider.ts script (script-based provider)
+		const scriptPath = join(pluginRoot, "memory-provider.ts");
+		const hasScript = existsSync(scriptPath);
+
+		if (hasScript) {
+			// Script-based provider takes precedence
+			discovered.push({
+				name: deriveProviderName(pluginName),
+				pluginName,
+				pluginRoot,
+				type: "script",
+				scriptPath,
+				allowedTools: config.memory.allowed_tools,
+				systemPrompt: config.memory.system_prompt,
+			});
+			continue;
+		}
+
+		// MCP-based provider - sub-agents inherit enabled plugins and their MCP servers
+		// No need to collect MCP server configs, just register the allowed tools
 		discovered.push({
 			name: deriveProviderName(pluginName),
 			pluginName,
 			pluginRoot,
-			scriptPath,
+			type: "mcp",
 			allowedTools: config.memory.allowed_tools,
 			systemPrompt: config.memory.system_prompt,
 		});
@@ -179,7 +252,123 @@ export async function discoverProviders(): Promise<DiscoveredProvider[]> {
 }
 
 /**
- * Load a provider from its script
+ * Create an MCP-based memory provider
+ *
+ * This creates a provider that calls MCP tools directly.
+ * The provider extracts data from the MCP server using the allowed tools.
+ */
+function createMcpBasedProvider(
+	discovered: DiscoveredProvider,
+	mcpClient: MCPClient,
+): MemoryProvider {
+	return {
+		name: discovered.name,
+
+		async isAvailable(): Promise<boolean> {
+			// Check if at least one allowed tool is callable
+			if (discovered.allowedTools.length === 0) {
+				return false;
+			}
+			// Try calling the first tool to check availability
+			try {
+				await mcpClient.callTool(discovered.allowedTools[0], { limit: 1 });
+				return true;
+			} catch {
+				return false;
+			}
+		},
+
+		async extract(options: ExtractOptions): Promise<ExtractedObservation[]> {
+			const observations: ExtractedObservation[] = [];
+			const limit = options.limit || 50;
+
+			for (const toolName of discovered.allowedTools) {
+				try {
+					const result = await mcpClient.callTool(toolName, {
+						limit,
+						since: options.since,
+						authors: options.authors,
+					});
+
+					// Parse result and extract observations
+					if (result && typeof result === "object") {
+						const items = Array.isArray(result)
+							? result
+							: (result as { items?: unknown[] }).items;
+
+						if (Array.isArray(items)) {
+							for (const item of items) {
+								const rawItem = item as Record<string, unknown>;
+								const timestamp =
+									typeof rawItem.timestamp === "number"
+										? rawItem.timestamp
+										: typeof rawItem.created_at === "string"
+											? new Date(rawItem.created_at).getTime()
+											: Date.now();
+
+								// Filter by since option
+								if (options.since && timestamp < options.since) {
+									continue;
+								}
+
+								const author =
+									(rawItem.author as string) ||
+									(rawItem.user as string) ||
+									"unknown";
+
+								// Filter by authors option
+								if (
+									options.authors &&
+									options.authors.length > 0 &&
+									!options.authors.includes(author)
+								) {
+									continue;
+								}
+
+								// Determine observation type based on tool name
+								let type: ObservationType = "commit";
+								if (toolName.includes("pull_request")) {
+									type = "pr";
+								} else if (toolName.includes("issue")) {
+									type = "issue";
+								} else if (toolName.includes("review")) {
+									type = "review";
+								} else if (toolName.includes("discussion")) {
+									type = "discussion";
+								}
+
+								observations.push({
+									source: `${discovered.name}:${rawItem.id || Math.random().toString(36).slice(2)}`,
+									type,
+									timestamp,
+									author,
+									summary:
+										(rawItem.title as string) ||
+										(rawItem.summary as string) ||
+										(rawItem.message as string) ||
+										"",
+									detail:
+										(rawItem.description as string) ||
+										(rawItem.body as string) ||
+										"",
+									files: (rawItem.files as string[]) || [],
+									patterns: [],
+								});
+							}
+						}
+					}
+				} catch {
+					// Tool call failed - skip
+				}
+			}
+
+			return observations.slice(0, limit);
+		},
+	};
+}
+
+/**
+ * Load a provider from its script or MCP config
  */
 export async function loadProviderScript(
 	discovered: DiscoveredProvider,
@@ -196,7 +385,25 @@ export async function loadProviderScript(
 			return null;
 		}
 
-		// Dynamically import the provider script
+		// Handle based on provider type
+		if (discovered.type === "mcp") {
+			// MCP-based provider - create directly
+			const provider = createMcpBasedProvider(discovered, mcpClient);
+			return {
+				name: discovered.name,
+				provider,
+				pluginName: discovered.pluginName,
+			};
+		}
+
+		// Script-based provider - dynamically import
+		if (!discovered.scriptPath) {
+			console.error(
+				`Script-based provider missing scriptPath: ${discovered.pluginName}`,
+			);
+			return null;
+		}
+
 		const module = await import(discovered.scriptPath);
 
 		// Look for createProvider factory function
@@ -227,12 +434,16 @@ export async function loadProviderScript(
 
 /**
  * Discover and load all available memory providers
+ * @param mcpClient - MCP client for calling tools
+ * @param availableTools - Set of available tool names
+ * @param projectPath - Optional project path for resolving relative marketplace paths
  */
 export async function loadAllProviders(
 	mcpClient: MCPClient,
 	availableTools: Set<string>,
+	projectPath?: string,
 ): Promise<LoadedProvider[]> {
-	const discovered = await discoverProviders();
+	const discovered = await discoverProviders(projectPath);
 	const loaded: LoadedProvider[] = [];
 
 	for (const provider of discovered) {

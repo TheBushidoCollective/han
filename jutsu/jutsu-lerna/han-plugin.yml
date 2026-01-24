@@ -2,7 +2,7 @@ hooks:
   bootstrap:
     dirs_with:
       - "lerna.json"
-    command: "npx -y lerna bootstrap --ci 2>/dev/null || npx -y lerna bootstrap"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh\""
     if_changed:
       - "**/package.json"
       - "lerna.json"

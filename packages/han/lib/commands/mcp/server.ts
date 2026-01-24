@@ -1,25 +1,26 @@
 import { createInterface } from "node:readline";
-import { isMemoryEnabled } from "../../han-settings.ts";
-import { JsonlMetricsStorage } from "../../metrics/jsonl-storage.ts";
-import type {
-	CompleteTaskParams,
-	FailTaskParams,
-	QueryMetricsParams,
-	StartTaskParams,
-	UpdateTaskParams,
-} from "../../metrics/types.ts";
-import { recordTaskCompletion } from "../../telemetry/index.ts";
-import { cleanCheckpoints } from "../checkpoint/clean.ts";
-import { listCheckpoints } from "../checkpoint/list.ts";
+import {
+	isMemoryEnabled,
+	isMetricsEnabled,
+} from "../../config/han-settings.ts";
+import { hookAttempts } from "../../db/index.ts";
+import { getOrCreateEventLogger } from "../../events/logger.ts";
+import {
+	formatMemoryAgentResult,
+	type MemoryQueryParams,
+	queryMemoryAgent,
+} from "../../memory/memory-agent.ts";
+import { type BackendPool, createBackendPool } from "./backend-pool.ts";
+import { getExposedMcpServers } from "./exposed-tools.ts";
 import { captureMemory, type LearnParams } from "./memory.ts";
+import { handleToolsCall as handleTaskToolsCall, TASK_TOOLS } from "./task.ts";
 import {
-	formatMemoryResult,
-	type MemoryParams,
-	queryMemory,
-} from "./memory-router.ts";
-import {
+	type AvailableHook,
+	checkHookNeedsRun,
+	discoverAvailableHooks,
 	discoverPluginTools,
 	executePluginTool,
+	generateHookRunDescription,
 	type PluginTool,
 } from "./tools.ts";
 
@@ -60,7 +61,7 @@ interface McpTool {
 	};
 }
 
-// Cache discovered tools
+// Cache discovered tools (for backwards compatibility with exposed tool lookup)
 let cachedTools: PluginTool[] | null = null;
 
 function discoverTools(): PluginTool[] {
@@ -70,19 +71,81 @@ function discoverTools(): PluginTool[] {
 	return cachedTools;
 }
 
-// Lazy-load metrics storage instance
-let storage: JsonlMetricsStorage | null = null;
+// Cache discovered hooks for the consolidated hook_run tool
+let cachedHooks: AvailableHook[] | null = null;
 
-function getStorage(): JsonlMetricsStorage {
-	if (!storage) {
-		storage = new JsonlMetricsStorage();
+function discoverHooks(): AvailableHook[] {
+	if (!cachedHooks) {
+		cachedHooks = discoverAvailableHooks();
 	}
-	return storage;
+	return cachedHooks;
 }
 
+/**
+ * Generate the consolidated hook_run tool with dynamic description
+ */
+export function getHookRunTool(): McpTool | null {
+	const hooks = discoverHooks();
+	if (hooks.length === 0) {
+		return null;
+	}
+
+	// Generate enum values for plugin and hook parameters
+	const pluginNames = [...new Set(hooks.map((h) => h.plugin))].sort();
+	const hookNames = [...new Set(hooks.map((h) => h.hook))].sort();
+
+	return {
+		name: "hook_run",
+		description: generateHookRunDescription(hooks),
+		annotations: {
+			title: "Run Plugin Hook",
+			readOnlyHint: false, // Hooks may modify files (e.g., formatters)
+			destructiveHint: false, // Not destructive - can be safely re-run
+			idempotentHint: true, // Safe to run multiple times with same result
+			openWorldHint: false, // Works with local files only
+		},
+		inputSchema: {
+			type: "object" as const,
+			properties: {
+				plugin: {
+					type: "string",
+					description: `Plugin name. Available: ${pluginNames.join(", ")}`,
+					enum: pluginNames,
+				},
+				hook: {
+					type: "string",
+					description: `Hook name. Available: ${hookNames.join(", ")}`,
+					enum: hookNames,
+				},
+				session_id: {
+					type: "string",
+					description:
+						"Claude session ID (required). Pass the value of CLAUDE_SESSION_ID from your session.",
+				},
+				cache: {
+					type: "boolean",
+					description:
+						"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true.",
+				},
+				directory: {
+					type: "string",
+					description:
+						"Limit execution to a specific directory path (relative to project root, e.g., 'packages/core' or 'src'). If omitted, runs in all applicable directories.",
+				},
+				verbose: {
+					type: "boolean",
+					description:
+						"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false.",
+				},
+			},
+			required: ["plugin", "hook", "session_id"],
+		},
+	};
+}
+
+// Keep formatToolsForMcp for backwards compatibility (used by some internal tooling)
 export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 	return tools.map((tool) => {
-		// Generate a human-readable title from the tool name
 		const title =
 			tool.hookName.charAt(0).toUpperCase() + tool.hookName.slice(1);
 		const technology = tool.pluginName.replace(/^(jutsu|do|hashi)-/, "");
@@ -94,10 +157,10 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 			description: tool.description,
 			annotations: {
 				title: `${title} ${techDisplay}`,
-				readOnlyHint: false, // These tools may modify files (e.g., formatters)
-				destructiveHint: false, // Not destructive - can be safely re-run
-				idempotentHint: true, // Safe to run multiple times with same result
-				openWorldHint: false, // Works with local files only
+				readOnlyHint: false,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: false,
 			},
 			inputSchema: {
 				type: "object" as const,
@@ -105,7 +168,7 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 					cache: {
 						type: "boolean",
 						description:
-							"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true. Tip: If the result says 'no changes', you can retry with cache=false to run anyway.",
+							"Use cached results when files haven't changed. Set to false to force re-run even if no changes detected. Default: true.",
 					},
 					directory: {
 						type: "string",
@@ -115,7 +178,7 @@ export function formatToolsForMcp(tools: PluginTool[]): McpTool[] {
 					verbose: {
 						type: "boolean",
 						description:
-							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false (output captured and returned).",
+							"Show full command output in real-time. Set to true when debugging failures or when you want to see progress. Default: false.",
 					},
 				},
 				required: [],
@@ -137,233 +200,7 @@ export function handleInitialize(): unknown {
 	};
 }
 
-// Checkpoint tools definition
-const CHECKPOINT_TOOLS: McpTool[] = [
-	{
-		name: "checkpoint_list",
-		description:
-			"List checkpoints for current project. Shows session and agent checkpoints with creation time and file counts.",
-		annotations: {
-			title: "List Checkpoints",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {},
-		},
-	},
-	{
-		name: "checkpoint_clean",
-		description:
-			"Clean stale checkpoints with optional maxAge parameter. Removes checkpoints older than specified age.",
-		annotations: {
-			title: "Clean Checkpoints",
-			readOnlyHint: false,
-			destructiveHint: true,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				maxAge: {
-					type: "number",
-					description:
-						"Maximum age in hours (default: 24). Checkpoints older than this will be removed.",
-				},
-			},
-		},
-	},
-];
-
-// Metrics tools definition
-const METRICS_TOOLS: McpTool[] = [
-	{
-		name: "start_task",
-		description:
-			"Start tracking a new task. Returns a task_id for future updates. Use this when beginning work on a feature, fix, or refactoring.",
-		annotations: {
-			title: "Start Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: false,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				description: {
-					type: "string",
-					description: "Clear description of the task being performed",
-				},
-				type: {
-					type: "string",
-					enum: ["implementation", "fix", "refactor", "research"],
-					description: "Type of task being performed",
-				},
-				estimated_complexity: {
-					type: "string",
-					enum: ["simple", "moderate", "complex"],
-					description: "Optional estimated complexity of the task",
-				},
-			},
-			required: ["description", "type"],
-		},
-	},
-	{
-		name: "update_task",
-		description:
-			"Update a task with progress notes or status changes. Use this to log incremental progress.",
-		annotations: {
-			title: "Update Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				status: {
-					type: "string",
-					description: "Optional status update",
-				},
-				notes: {
-					type: "string",
-					description: "Progress notes or observations",
-				},
-			},
-			required: ["task_id"],
-		},
-	},
-	{
-		name: "complete_task",
-		description:
-			"Mark a task as completed with outcome assessment. Use this when finishing a task successfully or partially.",
-		annotations: {
-			title: "Complete Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				outcome: {
-					type: "string",
-					enum: ["success", "partial", "failure"],
-					description: "Outcome of the task",
-				},
-				confidence: {
-					type: "number",
-					minimum: 0,
-					maximum: 1,
-					description:
-						"Confidence level (0-1) in the success of this task. Used for calibration.",
-				},
-				files_modified: {
-					type: "array",
-					items: { type: "string" },
-					description: "Optional list of files modified during this task",
-				},
-				tests_added: {
-					type: "number",
-					description: "Optional count of tests added",
-				},
-				notes: {
-					type: "string",
-					description: "Optional completion notes",
-				},
-			},
-			required: ["task_id", "outcome", "confidence"],
-		},
-	},
-	{
-		name: "fail_task",
-		description:
-			"Mark a task as failed with detailed reason and attempted solutions. Use when unable to complete a task.",
-		annotations: {
-			title: "Fail Task",
-			readOnlyHint: false,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				task_id: {
-					type: "string",
-					description: "The task ID returned from start_task",
-				},
-				reason: {
-					type: "string",
-					description: "Reason for failure",
-				},
-				confidence: {
-					type: "number",
-					minimum: 0,
-					maximum: 1,
-					description: "Optional confidence in the failure assessment",
-				},
-				attempted_solutions: {
-					type: "array",
-					items: { type: "string" },
-					description: "Optional list of solutions that were attempted",
-				},
-				notes: {
-					type: "string",
-					description: "Optional additional notes",
-				},
-			},
-			required: ["task_id", "reason"],
-		},
-	},
-	{
-		name: "query_metrics",
-		description:
-			"Query task metrics and performance data. Use this to generate reports or analyze agent performance over time.",
-		annotations: {
-			title: "Query Metrics",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				period: {
-					type: "string",
-					enum: ["day", "week", "month"],
-					description: "Optional time period to filter by",
-				},
-				task_type: {
-					type: "string",
-					enum: ["implementation", "fix", "refactor", "research"],
-					description: "Optional filter by task type",
-				},
-				outcome: {
-					type: "string",
-					enum: ["success", "partial", "failure"],
-					description: "Optional filter by outcome",
-				},
-			},
-		},
-	},
-];
+// Task tools are imported from ./task.ts (TASK_TOOLS)
 
 // Unified memory tool (auto-routes to Personal, Team, or Rules)
 const UNIFIED_MEMORY_TOOLS: McpTool[] = [
@@ -446,18 +283,155 @@ const LEARN_TOOLS: McpTool[] = [
 	},
 ];
 
-function handleToolsList(): unknown {
-	const hookTools = formatToolsForMcp(discoverTools());
+// Hook management tools for deferred execution
+// Note: hook_wait was removed - use `han hook wait <orchestration-id>` CLI command instead
+const HOOK_TOOLS: McpTool[] = [
+	{
+		name: "increase_max_attempts",
+		description:
+			"Increase the maximum retry attempts for a stuck hook. Use this when a hook keeps failing and you want to give it more chances after fixing the underlying issue.",
+		annotations: {
+			title: "Increase Hook Retries",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				session_id: {
+					type: "string",
+					description: "The Claude session ID",
+				},
+				plugin: {
+					type: "string",
+					description: "Plugin name (e.g., 'jutsu-biome')",
+				},
+				hook_name: {
+					type: "string",
+					description: "Hook name (e.g., 'lint')",
+				},
+				directory: {
+					type: "string",
+					description: "Directory where the hook runs",
+				},
+				increase: {
+					type: "number",
+					description: "Number of additional attempts to allow (default: 1)",
+				},
+			},
+			required: ["session_id", "plugin", "hook_name", "directory"],
+		},
+	},
+];
+
+// Lazy-load backend pool for exposed MCP servers
+let exposedBackendPool: BackendPool | null = null;
+
+function getExposedBackendPool(): BackendPool {
+	if (!exposedBackendPool) {
+		exposedBackendPool = createBackendPool();
+		const exposedServers = getExposedMcpServers();
+		for (const server of exposedServers) {
+			exposedBackendPool.registerBackend({
+				id: server.serverName,
+				type: server.type === "http" ? "http" : "stdio",
+				command: server.command,
+				args: server.args,
+				url: server.url,
+				env: server.env,
+			});
+		}
+	}
+	return exposedBackendPool;
+}
+
+// Interface to map prefixed tool names back to server/original name
+interface ExposedToolMapping {
+	serverId: string;
+	originalName: string;
+}
+
+// Cache for exposed tools (avoids re-fetching on every tools/list)
+let exposedToolMappings: Map<string, ExposedToolMapping> | null = null;
+let exposedToolsCache: McpTool[] | null = null;
+
+/**
+ * Get tools from all exposed MCP servers with prefixed names
+ * Example: context7 server's "resolve-library-id" becomes "context7_resolve-library-id"
+ */
+async function getExposedTools(): Promise<{
+	tools: McpTool[];
+	mappings: Map<string, ExposedToolMapping>;
+}> {
+	// Return cached if available
+	if (exposedToolsCache && exposedToolMappings) {
+		return { tools: exposedToolsCache, mappings: exposedToolMappings };
+	}
+
+	const exposedServers = getExposedMcpServers();
+	if (exposedServers.length === 0) {
+		exposedToolMappings = new Map();
+		exposedToolsCache = [];
+		return { tools: [], mappings: new Map() };
+	}
+
+	const pool = getExposedBackendPool();
+	const allTools: McpTool[] = [];
+	const mappings = new Map<string, ExposedToolMapping>();
+
+	for (const server of exposedServers) {
+		try {
+			const tools = await pool.getTools(server.serverName);
+			for (const tool of tools) {
+				// Prefix tool name with server name
+				const prefixedName = `${server.serverName}_${tool.name}`;
+				allTools.push({
+					...tool,
+					name: prefixedName,
+					description: `[${server.serverName}] ${tool.description}`,
+				});
+				mappings.set(prefixedName, {
+					serverId: server.serverName,
+					originalName: tool.name,
+				});
+			}
+		} catch (error) {
+			// Log error but continue with other servers
+			console.error(
+				`Failed to get tools from ${server.serverName}:`,
+				error instanceof Error ? error.message : String(error),
+			);
+		}
+	}
+
+	exposedToolMappings = mappings;
+	exposedToolsCache = allTools;
+	return { tools: allTools, mappings };
+}
+
+async function handleToolsList(): Promise<unknown> {
+	// Use consolidated hook_run tool instead of many individual tools
+	const hookRunTool = getHookRunTool();
 	const memoryEnabled = isMemoryEnabled();
+	const metricsEnabled = isMetricsEnabled();
+
+	// Get exposed tools from backend MCP servers
+	const { tools: exposedTools } = await getExposedTools();
 
 	const allTools = [
-		...hookTools,
-		...CHECKPOINT_TOOLS,
-		...METRICS_TOOLS,
+		// Single consolidated hook_run tool (replaces 30+ individual tools)
+		...(hookRunTool ? [hookRunTool] : []),
+		...exposedTools,
+		// Only include task tools if metrics are enabled
+		...(metricsEnabled ? TASK_TOOLS : []),
 		// Only include memory tools if memory is enabled
 		// Two tools: `memory` (query) and `learn` (write)
 		...(memoryEnabled ? UNIFIED_MEMORY_TOOLS : []),
 		...(memoryEnabled ? LEARN_TOOLS : []),
+		// Hook management tools (always available)
+		...HOOK_TOOLS,
 	];
 	return {
 		tools: allTools,
@@ -470,189 +444,81 @@ async function handleToolsCall(params: {
 }): Promise<unknown> {
 	const args = params.arguments || {};
 
-	// Check if this is a checkpoint tool
-	const isCheckpointTool = CHECKPOINT_TOOLS.some((t) => t.name === params.name);
+	// Check if this is an exposed tool (from backend MCP servers)
+	if (exposedToolMappings?.has(params.name)) {
+		const mapping = exposedToolMappings.get(params.name);
+		if (mapping) {
+			const eventLogger = getOrCreateEventLogger();
+			const startTime = Date.now();
 
-	if (isCheckpointTool) {
-		// Handle checkpoint tools
-		try {
-			switch (params.name) {
-				case "checkpoint_list": {
-					// Capture output by temporarily overriding console.log
-					const output: string[] = [];
-					const originalLog = console.log;
-					console.log = (...args: unknown[]) => {
-						output.push(args.join(" "));
-					};
+			// Log exposed tool call event
+			const callId = eventLogger?.logExposedToolCall(
+				mapping.serverId,
+				mapping.originalName,
+				params.name,
+				args,
+			);
 
-					try {
-						await listCheckpoints();
-					} finally {
-						console.log = originalLog;
-					}
+			try {
+				const pool = getExposedBackendPool();
+				const result = await pool.callTool(
+					mapping.serverId,
+					mapping.originalName,
+					args,
+				);
 
-					return {
-						content: [
-							{
-								type: "text",
-								text: output.join("\n"),
-							},
-						],
-					};
+				// Log exposed tool result event
+				const durationMs = Date.now() - startTime;
+				if (callId) {
+					eventLogger?.logExposedToolResult(
+						mapping.serverId,
+						mapping.originalName,
+						params.name,
+						callId,
+						true,
+						durationMs,
+						result,
+					);
 				}
 
-				case "checkpoint_clean": {
-					const maxAge = typeof args.maxAge === "number" ? args.maxAge : 24;
+				return result;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
 
-					// Capture output by temporarily overriding console.log
-					const output: string[] = [];
-					const originalLog = console.log;
-					console.log = (...args: unknown[]) => {
-						output.push(args.join(" "));
-					};
-
-					try {
-						await cleanCheckpoints({ maxAge: maxAge.toString() });
-					} finally {
-						console.log = originalLog;
-					}
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: output.join("\n"),
-							},
-						],
-					};
+				// Log exposed tool error event
+				const durationMs = Date.now() - startTime;
+				if (callId) {
+					eventLogger?.logExposedToolResult(
+						mapping.serverId,
+						mapping.originalName,
+						params.name,
+						callId,
+						false,
+						durationMs,
+						undefined,
+						message,
+					);
 				}
 
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown checkpoint tool: ${params.name}`,
-					};
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Error calling ${params.name}: ${message}`,
+						},
+					],
+					isError: true,
+				};
 			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
 		}
 	}
 
-	// Check if this is a metrics tool
-	const isMetricsTool = METRICS_TOOLS.some((t) => t.name === params.name);
+	// Check if this is a task tool (metrics)
+	const isTaskTool = TASK_TOOLS.some((t) => t.name === params.name);
 
-	if (isMetricsTool) {
-		// Handle metrics tools
-		try {
-			switch (params.name) {
-				case "start_task": {
-					const taskParams = args as unknown as StartTaskParams;
-					const result = getStorage().startTask(taskParams);
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "update_task": {
-					const taskParams = args as unknown as UpdateTaskParams;
-					const result = getStorage().updateTask(taskParams);
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "complete_task": {
-					const taskParams = args as unknown as CompleteTaskParams;
-					const result = getStorage().completeTask(taskParams);
-
-					// Record OTEL telemetry for task completion
-					recordTaskCompletion(
-						(result as { type?: string })?.type || "unknown",
-						taskParams.outcome,
-						taskParams.confidence,
-					);
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "fail_task": {
-					const taskParams = args as unknown as FailTaskParams;
-					const result = getStorage().failTask(taskParams);
-
-					// Record OTEL telemetry for task failure
-					recordTaskCompletion(
-						(result as { type?: string })?.type || "unknown",
-						"failure",
-						taskParams.confidence || 0,
-					);
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				case "query_metrics": {
-					const taskParams = args as unknown as QueryMetricsParams;
-					const result = getStorage().queryMetrics(taskParams);
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(result, null, 2),
-							},
-						],
-					};
-				}
-
-				default:
-					throw {
-						code: -32602,
-						message: `Unknown metrics tool: ${params.name}`,
-					};
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
-		}
+	if (isTaskTool) {
+		// Delegate to task.ts handler which uses the database API
+		return await handleTaskToolsCall(params);
 	}
 
 	// Check if this is the unified memory tool
@@ -676,9 +542,33 @@ async function handleToolsCall(params: {
 		try {
 			switch (params.name) {
 				case "memory": {
-					const memoryParams = args as unknown as MemoryParams;
-					const result = await queryMemory(memoryParams);
-					const formatted = formatMemoryResult(result);
+					const memoryParams = args as unknown as MemoryQueryParams;
+					// Add projectPath from cwd for context-aware plugin discovery
+					memoryParams.projectPath = process.cwd();
+					const startTime = Date.now();
+					const result = await queryMemoryAgent(memoryParams);
+					const durationMs = Date.now() - startTime;
+
+					// Log memory query event - derive source from searched layers
+					const eventLogger = getOrCreateEventLogger();
+					const primarySource =
+						result.searchedLayers.length === 1
+							? (result.searchedLayers[0] as
+									| "personal"
+									| "team"
+									| "rules"
+									| undefined)
+							: result.searchedLayers.length > 1
+								? ("combined" as "personal" | "team" | "rules" | undefined)
+								: undefined;
+					eventLogger?.logMemoryQuery(
+						memoryParams.question,
+						primarySource,
+						result.success,
+						durationMs,
+					);
+
+					const formatted = formatMemoryAgentResult(result);
 					return {
 						content: [
 							{
@@ -730,6 +620,15 @@ async function handleToolsCall(params: {
 		try {
 			const learnParams = args as unknown as LearnParams;
 			const result = captureMemory(learnParams);
+
+			// Log memory learn event
+			const eventLogger = getOrCreateEventLogger();
+			eventLogger?.logMemoryLearn(
+				learnParams.domain,
+				(learnParams.scope as "project" | "user") || "project",
+				result.success,
+			);
+
 			return {
 				content: [
 					{
@@ -755,7 +654,175 @@ async function handleToolsCall(params: {
 		}
 	}
 
-	// Handle hook tools
+	// Handle hook management tools (increase_max_attempts)
+	const isHookTool = HOOK_TOOLS.some((t) => t.name === params.name);
+
+	if (isHookTool) {
+		try {
+			switch (params.name) {
+				case "increase_max_attempts": {
+					const sessionId = args.session_id as string;
+					const plugin = args.plugin as string;
+					const hookName = args.hook_name as string;
+					const directory = args.directory as string;
+					const increase = (args.increase as number) || 1;
+
+					if (!sessionId || !plugin || !hookName || !directory) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameters: session_id, plugin, hook_name, directory",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					hookAttempts.increaseMaxAttempts(
+						sessionId,
+						plugin,
+						hookName,
+						directory,
+						increase,
+					);
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(
+									{
+										success: true,
+										message: `Increased max attempts by ${increase} for ${plugin}/${hookName}`,
+										plugin,
+										hook_name: hookName,
+										directory,
+									},
+									null,
+									2,
+								),
+							},
+						],
+					};
+				}
+
+				default:
+					throw new Error(`Unknown hook tool: ${params.name}`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Handle consolidated hook_run tool - checks cache first, returns CLI command if execution needed
+	if (params.name === "hook_run") {
+		const plugin = args.plugin as string | undefined;
+		const hook = args.hook as string | undefined;
+		// Get session_id from args (MCP servers don't have access to Claude Code environment)
+		const sessionId = args.session_id as string | undefined;
+		const cache = args.cache !== false; // Default to true
+		const verbose = args.verbose === true;
+		const directory =
+			typeof args.directory === "string" ? args.directory : undefined;
+
+		// Validate required parameters
+		if (!plugin || !hook) {
+			// Return helpful list of available hooks
+			const hooks = discoverHooks();
+			const hookList = hooks
+				.map((h) => `  ${h.plugin}/${h.hook}`)
+				.slice(0, 20)
+				.join("\n");
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Missing required parameters: plugin and hook.\n\nAvailable hooks (first 20):\n${hookList}\n\nExample: hook_run({ plugin: "jutsu-biome", hook: "lint" })`,
+					},
+				],
+				isError: true,
+			};
+		}
+
+		// If caching is enabled, check if we can skip execution
+		if (cache && sessionId) {
+			try {
+				const checkResult = await checkHookNeedsRun(plugin, hook, {
+					sessionId,
+					directory,
+					checkSessionChangesOnly: true,
+				});
+
+				// If no changes needed, return fast feedback
+				if (!checkResult.needsRun) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: checkResult.message,
+							},
+						],
+					};
+				}
+			} catch (error) {
+				// On error, fall through to return CLI command
+				console.debug(
+					`Cache check failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+		}
+
+		// Build the CLI command for execution
+		const cmdParts = ["han", "hook", "run", plugin, hook];
+		if (sessionId) {
+			cmdParts.push(`--session-id=${sessionId}`);
+		}
+		if (!cache) {
+			cmdParts.push("--no-cache");
+		}
+		if (verbose) {
+			cmdParts.push("--verbose");
+		}
+		if (directory) {
+			cmdParts.push(`--only=${directory}`);
+		}
+		const cliCommand = cmdParts.join(" ");
+
+		// Get hook metadata for context
+		const hookInfo = discoverHooks().find(
+			(h) => h.plugin === plugin && h.hook === hook,
+		);
+		const hookDesc = hookInfo?.description.split(".")[0] || `${plugin}/${hook}`;
+
+		return {
+			content: [
+				{
+					type: "text",
+					text: `**Run this command via Bash tool for real-time output:**
+
+\`\`\`bash
+${cliCommand}
+\`\`\`
+
+**Hook:** ${hookDesc}
+
+Execute the command above using the Bash tool to see live output and allow the user to follow progress.`,
+				},
+			],
+		};
+	}
+
+	// Handle legacy hook tools (for backwards compatibility during transition)
 	const tools = discoverTools();
 	const tool = tools.find((t) => t.name === params.name);
 
@@ -839,7 +906,7 @@ async function handleRequest(
 				result = {};
 				break;
 			case "tools/list":
-				result = handleToolsList();
+				result = await handleToolsList();
 				break;
 			case "tools/call":
 				result = await handleToolsCall(

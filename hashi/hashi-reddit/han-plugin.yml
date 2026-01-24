@@ -1,0 +1,23 @@
+# hashi-reddit plugin configuration
+# This plugin provides Reddit integration via MCP server
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction from Reddit
+# Convention: provider name = plugin name
+memory:
+  allowed_tools:
+    - mcp__reddit__get_frontpage_posts
+    - mcp__reddit__get_subreddit_info
+    - mcp__reddit__get_subreddit_hot_posts
+    - mcp__reddit__get_subreddit_top_posts
+    - mcp__reddit__get_post_content
+    - mcp__reddit__get_post_comments
+  system_prompt: |
+    Search Reddit for posts and discussions relevant to the query.
+    Use get_subreddit_hot_posts to find current discussions.
+    Use get_subreddit_top_posts with time filters for popular content.
+    Use get_post_comments to understand community sentiment.
+    Return relevant findings with post titles, subreddits, and key insights.

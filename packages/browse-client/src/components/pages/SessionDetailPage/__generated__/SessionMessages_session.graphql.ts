@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<31db3573ee6db9edc5a822f05bba2200>>
+ * @generated SignedSource<<55406ed765d5cc1790d721a38aea7f71>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,25 +9,23 @@
 // @ts-nocheck
 
 import { ReaderFragment } from 'relay-runtime';
-export type MessageType = "ASSISTANT" | "SUMMARY" | "USER" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionMessages_session$data = {
   readonly id: string;
   readonly messageCount: number | null | undefined;
   readonly messages: {
+    readonly __id: string;
     readonly edges: ReadonlyArray<{
       readonly cursor: string | null | undefined;
       readonly node: {
-        readonly content: string | null | undefined;
         readonly id: string | null | undefined;
-        readonly isToolOnly: boolean | null | undefined;
-        readonly timestamp: any | null | undefined;
-        readonly type: MessageType | null | undefined;
+        readonly searchText: string | null | undefined;
+        readonly " $fragmentSpreads": FragmentRefs<"MessageCards_message">;
       } | null | undefined;
     }> | null | undefined;
     readonly pageInfo: {
-      readonly hasPreviousPage: boolean | null | undefined;
-      readonly startCursor: string | null | undefined;
+      readonly endCursor: string | null | undefined;
+      readonly hasNextPage: boolean | null | undefined;
     } | null | undefined;
     readonly totalCount: number | null | undefined;
   } | null | undefined;
@@ -56,31 +54,31 @@ return {
     {
       "defaultValue": null,
       "kind": "LocalArgument",
-      "name": "before"
+      "name": "after"
     },
     {
       "defaultValue": 50,
       "kind": "LocalArgument",
-      "name": "last"
+      "name": "first"
     }
   ],
   "kind": "Fragment",
   "metadata": {
     "connection": [
       {
-        "count": "last",
-        "cursor": "before",
-        "direction": "backward",
+        "count": "first",
+        "cursor": "after",
+        "direction": "forward",
         "path": (v0/*: any*/)
       }
     ],
     "refetch": {
       "connection": {
-        "forward": null,
-        "backward": {
-          "count": "last",
-          "cursor": "before"
+        "forward": {
+          "count": "first",
+          "cursor": "after"
         },
+        "backward": null,
         "path": (v0/*: any*/)
       },
       "fragmentPathInResult": [
@@ -121,7 +119,7 @@ return {
             {
               "alias": null,
               "args": null,
-              "concreteType": "Message",
+              "concreteType": null,
               "kind": "LinkedField",
               "name": "node",
               "plural": false,
@@ -131,29 +129,13 @@ return {
                   "alias": null,
                   "args": null,
                   "kind": "ScalarField",
-                  "name": "type",
+                  "name": "searchText",
                   "storageKey": null
                 },
                 {
-                  "alias": null,
                   "args": null,
-                  "kind": "ScalarField",
-                  "name": "content",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "timestamp",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "isToolOnly",
-                  "storageKey": null
+                  "kind": "FragmentSpread",
+                  "name": "MessageCards_message"
                 },
                 {
                   "alias": null,
@@ -187,14 +169,14 @@ return {
               "alias": null,
               "args": null,
               "kind": "ScalarField",
-              "name": "hasPreviousPage",
+              "name": "hasNextPage",
               "storageKey": null
             },
             {
               "alias": null,
               "args": null,
               "kind": "ScalarField",
-              "name": "startCursor",
+              "name": "endCursor",
               "storageKey": null
             }
           ],
@@ -206,6 +188,18 @@ return {
           "kind": "ScalarField",
           "name": "totalCount",
           "storageKey": null
+        },
+        {
+          "kind": "ClientExtension",
+          "selections": [
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "__id",
+              "storageKey": null
+            }
+          ]
         }
       ],
       "storageKey": null
@@ -217,6 +211,6 @@ return {
 };
 })();
 
-(node as any).hash = "0903560c1a23320426825dcd7016236e";
+(node as any).hash = "940090c0195e7fd7e7126d14782ed7fd";
 
 export default node;

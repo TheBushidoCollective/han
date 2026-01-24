@@ -601,8 +601,16 @@ describe("dispatch.ts coverage tests", () => {
 			);
 
 			const pluginPath = join(projectDir, "jutsu", "jutsu-root");
+			const pluginConfigDir = join(pluginPath, ".claude-plugin");
 			const hooksDir = join(pluginPath, "hooks");
+			mkdirSync(pluginConfigDir, { recursive: true });
 			mkdirSync(hooksDir, { recursive: true });
+
+			// Plugin needs plugin.json to be recognized
+			writeFileSync(
+				join(pluginConfigDir, "plugin.json"),
+				JSON.stringify({ name: "jutsu-root", description: "Test plugin" }),
+			);
 
 			const hooksConfig = {
 				hooks: {

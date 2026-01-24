@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { uninstall } from "../lib/uninstall.ts";
+import { uninstall } from "../lib/install/index.ts";
 
 describe("uninstall.ts", () => {
 	let testDir: string;

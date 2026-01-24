@@ -18,23 +18,23 @@ Create the following directory structure:
 hashi/hashi-{service-name}/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata (ONLY plugin.json goes here)
-├── han-config.json          # Han hook configurations (optional, at plugin root)
-├── hooks/
-│   └── hooks.json           # Claude Code hooks (optional)
+├── han-plugin.yml           # MCP server config + hooks + memory (at plugin root)
+├── commands/                # Slash commands (optional)
+│   └── {command-name}.md
 └── README.md               # Plugin documentation
 ```
 
 **IMPORTANT**:
 
-- Only `plugin.json` goes inside `.claude-plugin/`
-- `hooks.json` goes in the `hooks/` directory
-- `han-config.json` stays at the plugin root (NOT in hooks/)
+- Only `plugin.json` goes inside `.claude-plugin/` (NO mcpServers here)
+- MCP server config goes in `han-plugin.yml` at plugin root
+- `han-plugin.yml` is the single source of truth for MCP config
 
 Note: Hashi plugins typically don't include skills or agents - they provide tools through MCP servers.
 
 ## Step 1: Create plugin.json
 
-Create `.claude-plugin/plugin.json`:
+Create `.claude-plugin/plugin.json` (metadata only, NO mcpServers):
 
 ```json
 {
@@ -54,111 +54,106 @@ Create `.claude-plugin/plugin.json`:
     "{capability}",
     "server",
     "{category}"
-  ],
-  "mcpServers": {
-    "{server-name}": {
-      "command": "{command}",
-      "args": [{command-args}],
-      "env": {
-        "{ENV_VAR}": "{value or placeholder}"
-      }
-    }
-  }
+  ]
 }
 ```
 
-### mcpServers Configuration
+**Note**: Do NOT include `mcpServers` in plugin.json - it goes in `han-plugin.yml`.
 
-The `mcpServers` field defines one or more MCP server connections:
+## Step 2: Create han-plugin.yml
+
+Create `han-plugin.yml` at the plugin root with the MCP server configuration:
+
+```yaml
+# hashi-{service-name} plugin configuration
+# This plugin provides {Service Name} integration via MCP server
+
+# MCP server definition (managed by Han MCP orchestrator)
+mcp:
+  name: {server-name}
+  description: {Brief description of capabilities}
+  command: {command}
+  args:
+    - {arg1}
+    - {arg2}
+  env:
+    {ENV_VAR}: ${PLACEHOLDER}
+  capabilities:
+    - category: {Category}
+      summary: {What this server enables}
+      examples:
+        - {Example use case 1}
+        - {Example use case 2}
+        - {Example use case 3}
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Memory provider for team memory extraction (optional)
+memory:
+  allowed_tools:
+    - mcp__{server-name}__{tool_name_1}
+    - mcp__{server-name}__{tool_name_2}
+  system_prompt: |
+    {Instructions for how to use this MCP server for memory queries}
+```
+
+### MCP Configuration Types
+
+#### Stdio MCP Server (most common)
+
+```yaml
+mcp:
+  name: service-name
+  description: Service integration
+  command: uvx
+  args:
+    - package-name
+  env: {}
+```
 
 #### NPM Package MCP Server
 
-```json
-"mcpServers": {
-  "service-name": {
-    "command": "npx",
-    "args": ["-y", "@scope/package-name"]
-  }
-}
+```yaml
+mcp:
+  name: service-name
+  description: Service integration
+  command: npx
+  args:
+    - -y
+    - "@scope/package-name"
 ```
 
-#### Node.js Script MCP Server
+#### HTTP/Remote MCP Server
 
-```json
-"mcpServers": {
-  "service-name": {
-    "command": "node",
-    "args": ["/path/to/server.js"]
-  }
-}
-```
-
-#### Python MCP Server
-
-```json
-"mcpServers": {
-  "service-name": {
-    "command": "python",
-    "args": ["-m", "package_name"]
-  }
-}
-```
-
-#### UV-based Python MCP Server
-
-```json
-"mcpServers": {
-  "service-name": {
-    "command": "uvx",
-    "args": ["package-name"]
-  }
-}
+```yaml
+mcp:
+  name: service-name
+  description: Service integration
+  type: http
+  url: https://mcp.service.com/mcp
 ```
 
 #### With Environment Variables
 
-```json
-"mcpServers": {
-  "service-name": {
-    "command": "npx",
-    "args": ["-y", "@scope/package"],
-    "env": {
-      "API_KEY": "${SERVICE_API_KEY}",
-      "API_URL": "https://api.service.com"
-    }
-  }
-}
+```yaml
+mcp:
+  name: service-name
+  description: Service integration
+  command: npx
+  args:
+    - -y
+    - "@scope/package"
+  env:
+    API_KEY: ${SERVICE_API_KEY}
+    API_URL: https://api.service.com
 ```
 
 ### Environment Variable Patterns
 
 - **Required API Keys**: Use `${SERVICE_NAME_API_KEY}` format
 - **Optional Configuration**: Provide sensible defaults
-- **Multiple Servers**: Each server can have its own env config
-
-## Step 2: Create .mcp.json
-
-Create `.mcp.json` to document the MCP server configuration:
-
-```json
-{
-  "mcpServers": {
-    "{server-name}": {
-      "command": "{command}",
-      "args": [{command-args}],
-      "env": {
-        "{ENV_VAR}": "${PLACEHOLDER_OR_VALUE}"
-      }
-    }
-  }
-}
-```
-
-This file serves as:
-
-- Documentation for users
-- Template for manual installation
-- Reference for the plugin system
+- **Shell Commands**: Use `$(command)` for dynamic values
 
 ## Step 3: Write README.md
 
@@ -191,12 +186,6 @@ Once installed, Claude Code gains access to these tools:
 - \`{tool-name-3}\`: {What it does}
 - \`{tool-name-4}\`: {What it does}
 
-### Available Resources
-
-{If the MCP server provides resources:}
-
-- \`{resource-type}://{pattern}\`: {What resources are available}
-
 ## Installation
 
 ### Prerequisites
@@ -210,7 +199,7 @@ Once installed, Claude Code gains access to these tools:
 ### Via Han Marketplace
 
 \`\`\`bash
-han plugin install {plugin-name}
+han plugin install hashi-{service-name}
 \`\`\`
 
 Or install manually:
@@ -237,54 +226,15 @@ echo 'export {ENV_VAR}="your-value-here"' >> ~/.zshrc
 source ~/.zshrc
 \`\`\`
 
-2. {Additional configuration steps if needed}
-
-### Manual Installation
-
-If not using Han, add to your Claude Code settings (\`~/.claude/settings.json\`):
-
-\`\`\`json
-{
-  "mcpServers": {
-    "{server-name}": {
-      "command": "{command}",
-      "args": [{args}],
-      "env": {
-        "{ENV_VAR}": "${VALUE}"
-      }
-    }
-  }
-}
-\`\`\`
-
 ## Usage
 
 ### Example 1: {Use Case}
 
 {Practical example of using the MCP server}
 
-\`\`\`
-User: {example request}
-Claude: {uses {tool-name} tool to accomplish task}
-\`\`\`
-
 ### Example 2: {Use Case}
 
 {Another practical example}
-
-\`\`\`
-User: {example request}
-Claude: {uses {tool-name} tool to accomplish task}
-\`\`\`
-
-### Example 3: {Use Case}
-
-{Another practical example}
-
-\`\`\`
-User: {example request}
-Claude: {uses {tool-name} tool to accomplish task}
-\`\`\`
 
 ## Tool Reference
 
@@ -296,55 +246,14 @@ Claude: {uses {tool-name} tool to accomplish task}
 - \`{param1}\` (required): {description}
 - \`{param2}\` (optional): {description}
 
-**Example**:
-\`\`\`json
-{
-  "{param1}": "value",
-  "{param2}": "value"
-}
-\`\`\`
-
-### \`{tool-name-2}\`
-
-**Purpose**: {What this tool does}
-
-**Parameters**:
-- \`{param1}\` (required): {description}
-- \`{param2}\` (optional): {description}
-
-**Example**:
-\`\`\`json
-{
-  "{param1}": "value",
-  "{param2}": "value"
-}
-\`\`\`
-
-## Security Considerations
-
-{Important security notes}
-
-- {Security consideration 1}
-- {Security consideration 2}
-- {Security consideration 3}
-
 ## Limitations
 
 {Known limitations of the MCP server or service}
 
 - {Limitation 1}
 - {Limitation 2}
-- {Limitation 3}
 
 ## Troubleshooting
-
-### Issue: {Common Problem}
-
-**Solution**: {How to resolve}
-
-### Issue: {Common Problem}
-
-**Solution**: {How to resolve}
 
 ### Issue: {Common Problem}
 
@@ -355,11 +264,6 @@ Claude: {uses {tool-name} tool to accomplish task}
 {List related hashis or jutsus}
 
 - **hashi-{related}**: {What it provides}
-- **jutsu-{related}**: {What it provides}
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
 ## License
 
@@ -372,18 +276,42 @@ MIT License - See [LICENSE](../../LICENSE) for details.
 - [MCP Protocol Specification](https://modelcontextprotocol.io)
 ```
 
-## Step 4: Register in Marketplace
+## Step 4: Create Commands (Optional)
+
+If your hashi provides useful workflows, create commands in the `commands/` directory:
+
+```markdown
+---
+description: Brief description of what this command does
+---
+
+# Command Title
+
+{Instructions for Claude on how to use the MCP tools for this workflow}
+
+## Steps
+
+1. {Step 1 using MCP tools}
+2. {Step 2 using MCP tools}
+3. {Step 3 using MCP tools}
+```
+
+## Step 5: Register in Marketplace
 
 Add your plugin to `.claude-plugin/marketplace.json`:
 
 ```json
 {
-  "plugins": {
-    "hashi-{service-name}": {
-      "source": "directory",
-      "path": "./hashi/hashi-{service-name}"
-    }
-  }
+  "name": "hashi-{service-name}",
+  "description": "MCP server for {Service Name} integration providing {key capabilities}.",
+  "source": "./hashi/hashi-{service-name}",
+  "category": "Bridge",
+  "keywords": [
+    "mcp",
+    "{keyword1}",
+    "{keyword2}",
+    "server"
+  ]
 }
 ```
 
@@ -391,27 +319,22 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 ### DO
 
+✅ Put MCP config in `han-plugin.yml`, NOT in `plugin.json`
 ✅ Use well-maintained MCP server packages
 ✅ Document all environment variables clearly
 ✅ Provide practical usage examples
 ✅ Include security considerations
-✅ Test the MCP server connection thoroughly
 ✅ Document tool parameters and return values
-✅ Explain when to use this hashi
-✅ Include troubleshooting guidance
-✅ Use descriptive tool names that indicate their purpose
-✅ Handle authentication securely
+✅ Add commands for common workflows
+✅ Include memory provider config for team memory integration
 
 ### DON'T
 
+❌ Don't put mcpServers in plugin.json (use han-plugin.yml)
 ❌ Don't hardcode API keys or secrets
 ❌ Don't skip documentation of required setup
 ❌ Don't forget to test with actual API credentials
 ❌ Don't ignore rate limits and quotas
-❌ Don't skip error handling documentation
-❌ Don't assume users know the external service
-❌ Don't neglect to document tool limitations
-❌ Don't forget to explain what problems this solves
 
 ## MCP Server Categories
 
@@ -428,105 +351,19 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 - Playwright browser automation
 - Database clients
 
-### AI & ML Services
-
-- OpenAI integration
-- Anthropic integration
-- Image generation
-- Embeddings
-
-### Data & Analytics
-
-- Database queries
-- Data transformation
-- Analytics APIs
-- Time series data
-
 ### External Services
 
 - Cloud providers (AWS, GCP, Azure)
 - Communication (Slack, Discord)
 - Project management (Jira, Linear)
-- CI/CD platforms
-
-## MCP Server Development
-
-If creating a custom MCP server (not using an existing package):
-
-### Server Implementation
-
-1. Choose a language (TypeScript, Python recommended)
-2. Implement MCP protocol handlers
-3. Define tools and/or resources
-4. Handle authentication
-5. Publish package to npm or PyPI
-
-### Server Repository Structure
-
-```
-your-mcp-server/
-├── src/
-│   └── index.ts         # Server implementation
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-### Example MCP Server (TypeScript)
-
-```typescript
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-
-const server = new Server({
-  name: 'your-server-name',
-  version: '1.0.0',
-}, {
-  capabilities: {
-    tools: {},
-  },
-});
-
-server.setRequestHandler('tools/list', async () => {
-  return {
-    tools: [
-      {
-        name: 'your_tool',
-        description: 'What your tool does',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            param: { type: 'string', description: 'Parameter description' },
-          },
-          required: ['param'],
-        },
-      },
-    ],
-  };
-});
-
-server.setRequestHandler('tools/call', async (request) => {
-  if (request.params.name === 'your_tool') {
-    // Implement tool logic
-    return {
-      content: [
-        { type: 'text', text: 'Tool result' },
-      ],
-    };
-  }
-  throw new Error('Unknown tool');
-});
-
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
+- Social media (Reddit, Twitter)
 
 ## Testing Your Hashi
 
 1. Install locally:
 
    ```bash
-   claude plugin install /path/to/hashi-{name}@local
+   han plugin install /path/to/hashi-{name}
    ```
 
 2. Verify MCP server connects:
@@ -543,22 +380,13 @@ await server.connect(transport);
    "Can you use the {tool-name} tool to {action}?"
    ```
 
-4. Test with real credentials:
-   - Set up actual API keys
-   - Perform real operations
-   - Verify results are correct
-
-5. Test error handling:
-   - Invalid credentials
-   - Rate limits
-   - Network errors
-
 ## Examples of Well-Structured Hashis
 
 Reference these examples:
 
-- **hashi-context7**: Excellent documentation and clear setup
-- **hashi-playwright-mcp**: Good tool documentation
+- **hashi-github**: Excellent han-plugin.yml with memory provider
+- **hashi-sentry**: HTTP-based MCP server example
+- **hashi-reddit**: Simple uvx-based MCP server
 
 ## MCP Resources
 

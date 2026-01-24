@@ -2,13 +2,13 @@
 
 Connect Claude Code to the GitHub API for comprehensive repository management, issue tracking, pull request workflows, GitHub Actions, and code search.
 
-**Zero Configuration**: If you have GitHub CLI (`gh`) installed and authenticated, this plugin works instantly - no OAuth setup, no tokens to manage!
+**Zero Configuration**: Uses GitHub Copilot's hosted MCP server - no installation, no Docker, no authentication setup required!
 
 ## What This Hashi Provides
 
 ### MCP Server: github
 
-This hashi uses the official [GitHub MCP Server](https://github.com/github/github-mcp-server) to provide direct access to the GitHub API with 100+ tools for:
+This hashi connects to GitHub's hosted [GitHub MCP Server](https://github.com/github/github-mcp-server) via `https://api.githubcopilot.com/mcp` to provide direct access to the GitHub API with 100+ tools for:
 
 - **Repository Management**: Create, fork, and manage repositories
 - **File Operations**: Read, create, update, and delete files with automatic branch creation
@@ -165,51 +165,27 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 
 ## Security Considerations
 
-- **Token Security**: Uses your existing `gh` CLI authentication token
-- **Revoke Access**: Revoke via `gh auth logout` or manage tokens at [github.com/settings/tokens](https://github.com/settings/tokens)
-- **Minimal Privileges**: Only requests permissions based on your `gh` token scopes
-- **Local Execution**: Runs locally via `npx` - no remote servers storing credentials
+- **OAuth Authentication**: Uses GitHub OAuth via Claude Code - authentication handled securely by GitHub
+- **Hosted Server**: Connects to GitHub's official hosted MCP endpoint at `api.githubcopilot.com`
+- **No Token Management**: No need to create or manage Personal Access Tokens
+- **Revoke Access**: Manage OAuth authorizations at [github.com/settings/applications](https://github.com/settings/applications)
 
 ## Limitations
 
 - API rate limits apply (5000 requests/hour for authenticated requests)
-- Requires GitHub CLI (`gh`) to be installed and authenticated
+- Requires Claude Code 2.1+ with HTTP MCP transport support
 - Large file operations may timeout
-- GitHub Enterprise requires your `gh` CLI to be configured for your enterprise instance
+- GitHub Enterprise Server is not supported (GitHub.com only)
 
 ## Troubleshooting
 
-### Issue: "gh: command not found"
+### Issue: MCP connection failed
 
-**Solution**: Install GitHub CLI from [cli.github.com](https://cli.github.com/) or via package manager:
+**Solution**: Ensure you're using Claude Code 2.1+ which supports HTTP MCP transport. Restart Claude Code if the plugin was just installed.
 
-```bash
-# macOS
-brew install gh
+### Issue: Authentication required
 
-# Windows
-winget install --id GitHub.cli
-
-# Linux
-sudo apt install gh  # Debian/Ubuntu
-```
-
-### Issue: Authentication errors
-
-**Solution**: Ensure you're logged in to `gh`:
-
-```bash
-gh auth status
-gh auth login  # if not authenticated
-```
-
-### Issue: Insufficient permissions
-
-**Solution**: Re-authenticate with additional scopes:
-
-```bash
-gh auth refresh -s repo,read:org,workflow
-```
+**Solution**: The first time you use a GitHub tool, Claude Code will prompt you to authenticate via GitHub OAuth. Follow the browser authorization flow.
 
 ### Issue: Rate limit exceeded
 

@@ -4,7 +4,7 @@ hooks:
       - "build.gradle"
       - "build.gradle.kts"
     test_dir: "test -f gradlew && grep -q 'com.android' build.gradle* 2>/dev/null"
-    command: "./gradlew assembleDebug --no-daemon -q 2>&1 | tail -30 || exit 1"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/build.sh\""
     if_changed:
       - "**/*.kt"
       - "**/*.java"

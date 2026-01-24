@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "mcp",
     "agent-sop",
@@ -19,11 +19,5 @@
     "documentation",
     "agent-workflows",
     "server"
-  ],
-  "mcpServers": {
-    "agent-sops": {
-      "command": "strands-agents-sops",
-      "args": ["mcp", "--sop-paths", "${AGENT_SOP_PATHS-$PLUGIN_ROOT_DIR/sops}"]
-    }
-  }
+  ]
 }

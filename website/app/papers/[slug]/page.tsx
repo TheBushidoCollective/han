@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { formatDate, getAllPapers, getPaper } from "../../../lib/papers";
@@ -41,7 +41,9 @@ const markdownComponents: Components = {
 	pre(props) {
 		const { children, ...rest } = props;
 		// Check if this pre contains a mermaid code block
-		const child = children as any;
+		const child = children as
+			| React.ReactElement<{ className?: string }>
+			| undefined;
 		const isMermaid =
 			child?.props?.className?.includes("language-mermaid") ||
 			child?.type === Mermaid;
@@ -55,7 +57,7 @@ const markdownComponents: Components = {
 		return <pre {...rest}>{children}</pre>;
 	},
 	code(props) {
-		const { children, className, node, ...rest } = props;
+		const { children, className, ...rest } = props;
 		const match = /language-(\w+)/.exec(className || "");
 		const language = match ? match[1] : "";
 

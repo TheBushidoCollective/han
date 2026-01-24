@@ -45,7 +45,10 @@ pub fn get_onnxruntime_url() -> Option<String> {
     return Some(format!("{}-linux-x64-{}.tgz", base, ONNXRUNTIME_VERSION));
 
     #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-    return Some(format!("{}-linux-aarch64-{}.tgz", base, ONNXRUNTIME_VERSION));
+    return Some(format!(
+        "{}-linux-aarch64-{}.tgz",
+        base, ONNXRUNTIME_VERSION
+    ));
 
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
     return Some(format!("{}-win-x64-{}.zip", base, ONNXRUNTIME_VERSION));
@@ -85,8 +88,10 @@ pub fn get_onnxruntime_lib_path() -> PathBuf {
 
 /// Embedding model info
 const MODEL_NAME: &str = "all-MiniLM-L6-v2";
-const MODEL_URL: &str = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx";
-const TOKENIZER_URL: &str = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json";
+const MODEL_URL: &str =
+    "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx";
+const TOKENIZER_URL: &str =
+    "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json";
 
 /// Get the path to the embedding model
 pub fn get_model_path() -> PathBuf {
@@ -239,8 +244,8 @@ async fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), Str
                     .map_err(|e| format!("Failed to extract tar.gz: {}", e))?;
             }
             "zip" => {
-                let mut archive = zip::ZipArchive::new(file)
-                    .map_err(|e| format!("Failed to read zip: {}", e))?;
+                let mut archive =
+                    zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip: {}", e))?;
                 archive
                     .extract(&dest_dir)
                     .map_err(|e| format!("Failed to extract zip: {}", e))?;

@@ -8,9 +8,13 @@
 		"build": "bun run --bun next build",
 		"start": "bun run --bun serve out -p 3000",
 		"test": "bun test",
+		"test:bdd": "bun run bddgen --config=playwright.bdd.config.ts && bun run playwright test --config=playwright.bdd.config.ts",
+		"test:bdd:headed": "bun run bddgen --config=playwright.bdd.config.ts && bun run playwright test --config=playwright.bdd.config.ts --headed",
+		"test:bdd:debug": "bun run bddgen --config=playwright.bdd.config.ts && bun run playwright test --config=playwright.bdd.config.ts --debug",
 		"test:e2e": "bun run playwright test",
 		"test:e2e:headed": "bun run playwright test --headed",
-		"test:e2e:debug": "bun run playwright test --debug"
+		"test:e2e:debug": "bun run playwright test --debug",
+		"test:all": "bun run test:e2e && bun run test:bdd"
 	},
 	"dependencies": {
 		"feed": "^4.2.2",
@@ -25,10 +29,12 @@
 		"react-dom": "^19.2.1",
 		"react-markdown": "10.1.0",
 		"rehype-raw": "^7.0.0",
-		"remark-gfm": "4.0.1"
+		"remark-gfm": "4.0.1",
+		"yaml": "^2.8.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.7",
+		"@cucumber/cucumber": "^12.4.0",
 		"@playwright/test": "1.56.1",
 		"@tailwindcss/postcss": "^4.1.17",
 		"@tailwindcss/typography": "0.5.19",
@@ -37,6 +43,7 @@
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",
 		"autoprefixer": "10.4.22",
+		"playwright-bdd": "^8.4.2",
 		"postcss": "8.5.6",
 		"serve": "^14.2.4",
 		"tailwindcss": "4.1.17",

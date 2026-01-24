@@ -1,6 +1,6 @@
 hooks:
   format:
-    command: "terraform init && terraform fmt -check && terraform validate"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/format.sh\""
     dirs_with:
       - "*.tf"
     if_changed:

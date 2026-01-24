@@ -21,8 +21,8 @@ export default function PapersPage() {
 						Research Papers
 					</h1>
 					<p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
-						Research papers and whitepapers on AI-driven development,
-						autonomous agents, and modern software engineering practices.
+						Research papers and whitepapers on AI-driven development, autonomous
+						agents, and modern software engineering practices.
 					</p>
 
 					<div className="space-y-8">

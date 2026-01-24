@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "mcp",
     "clickup",
@@ -17,11 +17,5 @@
     "acceptance-criteria",
     "validation",
     "productivity"
-  ],
-  "mcpServers": {
-    "clickup": {
-      "type": "http",
-      "url": "https://mcp.clickup.com/mcp"
-    }
-  }
+  ]
 }

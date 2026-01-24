@@ -1,0 +1,23 @@
+{
+  "name": "jutsu-gluestack",
+  "version": "1.0.0",
+  "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, and theming skills. Includes MCP server for component discovery and source code retrieval.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "FSL-1.1-ALv2",
+  "keywords": [
+    "gluestack",
+    "gluestack-ui",
+    "react",
+    "react-native",
+    "nativewind",
+    "tailwind",
+    "ui-components",
+    "accessibility",
+    "mcp"
+  ]
+}

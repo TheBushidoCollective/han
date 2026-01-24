@@ -1,0 +1,292 @@
+/**
+ * Route Generator Script
+ *
+ * Scans the client/pages directory and generates a routes.generated.ts file
+ * with lazy imports and route definitions for file-based routing.
+ *
+ * File path to URL pattern conversion:
+ * - index.tsx → removes from path (becomes directory route)
+ * - [param].tsx → :param
+ * - [...slug].tsx → *slug (catch-all)
+ *
+ * Examples:
+ * - pages/index.tsx → /
+ * - pages/dashboard.tsx → /dashboard
+ * - pages/sessions/index.tsx → /sessions
+ * - pages/sessions/[id]/index.tsx → /sessions/:id
+ * - pages/repos/[projectId]/sessions.tsx → /repos/:projectId/sessions
+ */
+
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+
+/**
+ * Route info extracted from file path
+ */
+interface RouteInfo {
+	/** URL pattern with parameters */
+	pattern: string;
+	/** Parameter names extracted from pattern */
+	paramNames: string[];
+	/** Relative import path from routes.generated.ts */
+	importPath: string;
+	/** Original file path for debugging */
+	filePath: string;
+	/** Specificity score for sorting (higher = more specific) */
+	specificity: number;
+}
+
+/**
+ * Convert a file path segment to a URL pattern segment
+ *
+ * @param segment - File path segment (e.g., "[id]" or "dashboard")
+ * @returns Object with pattern segment and optional param name
+ */
+function convertSegment(segment: string): {
+	pattern: string;
+	paramName?: string;
+	isCatchAll?: boolean;
+} {
+	// Catch-all: [...slug].tsx → *slug
+	const catchAllMatch = segment.match(/^\[\.\.\.(.+)\]$/);
+	if (catchAllMatch) {
+		return {
+			pattern: `(.*)`,
+			paramName: catchAllMatch[1],
+			isCatchAll: true,
+		};
+	}
+
+	// Dynamic segment: [param].tsx → :param
+	const paramMatch = segment.match(/^\[(.+)\]$/);
+	if (paramMatch) {
+		return {
+			pattern: `([^/]+)`,
+			paramName: paramMatch[1],
+		};
+	}
+
+	// Static segment
+	return { pattern: escapeRegex(segment) };
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Convert a file path to a route pattern
+ *
+ * @param filePath - Path relative to pages directory
+ * @returns Route info or null if not a valid route file
+ */
+function filePathToRoute(filePath: string): RouteInfo | null {
+	// Only process .tsx files
+	if (!filePath.endsWith(".tsx")) {
+		return null;
+	}
+
+	// Remove .tsx extension
+	const withoutExt = filePath.slice(0, -4);
+
+	// Split into segments
+	let segments = withoutExt.split("/").filter(Boolean);
+
+	// Remove index from the end (index.tsx becomes directory route)
+	if (segments.length > 0 && segments[segments.length - 1] === "index") {
+		segments = segments.slice(0, -1);
+	}
+
+	// Build pattern and extract params
+	const paramNames: string[] = [];
+	let specificity = 0;
+
+	for (const segment of segments) {
+		const { paramName, isCatchAll } = convertSegment(segment);
+
+		if (isCatchAll) {
+			// Catch-all gets lowest specificity
+			specificity -= 100;
+		} else if (paramName) {
+			// Dynamic segment
+			specificity += 1;
+		} else {
+			// Static segment gets higher specificity
+			specificity += 10;
+		}
+
+		if (paramName) {
+			paramNames.push(paramName);
+		}
+	}
+
+	// More segments = more specific
+	specificity += segments.length * 5;
+
+	// Build the URL pattern (for display/debugging)
+	const urlPattern =
+		"/" +
+		segments
+			.map((seg) => {
+				const catchAllMatch = seg.match(/^\[\.\.\.(.+)\]$/);
+				if (catchAllMatch) return `*${catchAllMatch[1]}`;
+				const paramMatch = seg.match(/^\[(.+)\]$/);
+				if (paramMatch) return `:${paramMatch[1]}`;
+				return seg;
+			})
+			.join("/");
+
+	// Import path relative to routes.generated.ts (which is in client/)
+	const importPath = `./pages/${withoutExt}.tsx`;
+
+	return {
+		pattern: urlPattern,
+		paramNames,
+		importPath,
+		filePath,
+		specificity,
+	};
+}
+
+/**
+ * Recursively scan a directory for .tsx files
+ *
+ * @param dir - Directory to scan
+ * @param baseDir - Base directory for relative paths
+ * @returns Array of relative file paths
+ */
+function scanDirectory(dir: string, baseDir: string): string[] {
+	const files: string[] = [];
+
+	if (!existsSync(dir)) {
+		return files;
+	}
+
+	const entries = readdirSync(dir);
+
+	for (const entry of entries) {
+		const fullPath = join(dir, entry);
+		const stat = statSync(fullPath);
+
+		if (stat.isDirectory()) {
+			// Recursively scan subdirectories
+			files.push(...scanDirectory(fullPath, baseDir));
+		} else if (entry.endsWith(".tsx")) {
+			// Add relative path
+			files.push(relative(baseDir, fullPath));
+		}
+	}
+
+	return files;
+}
+
+/**
+ * Generate the routes.generated.ts file content
+ *
+ * @param routes - Array of route info objects
+ * @returns TypeScript file content
+ */
+function generateRoutesFile(routes: RouteInfo[]): string {
+	const lines: string[] = [
+		"// Auto-generated by scripts/generate-routes.ts - DO NOT EDIT MANUALLY",
+		'import { lazy } from "react";',
+		'import type { RouteDefinition } from "./router/types.ts";',
+		"",
+		"export const routes: RouteDefinition[] = [",
+	];
+
+	for (const route of routes) {
+		// Build regex pattern parts
+		const segments = route.pattern
+			.slice(1) // Remove leading /
+			.split("/")
+			.filter(Boolean);
+
+		const regexParts: string[] = [];
+		for (const seg of segments) {
+			if (seg.startsWith("*")) {
+				// Catch-all
+				regexParts.push("(.*)");
+			} else if (seg.startsWith(":")) {
+				// Dynamic segment
+				regexParts.push("([^/]+)");
+			} else {
+				// Static segment
+				regexParts.push(escapeRegex(seg));
+			}
+		}
+
+		const regexStr =
+			regexParts.length === 0 ? "^/$" : `^/${regexParts.join("/")}$`;
+
+		lines.push("	{");
+		lines.push(`		pattern: ${JSON.stringify(route.pattern)},`);
+		lines.push(`		regex: new RegExp(${JSON.stringify(regexStr)}),`);
+		lines.push(`		paramNames: ${JSON.stringify(route.paramNames)},`);
+		lines.push(
+			`		component: lazy(() => import(${JSON.stringify(route.importPath)})),`,
+		);
+		lines.push(`		filePath: ${JSON.stringify(route.filePath)},`);
+		lines.push("	},");
+	}
+
+	lines.push("];");
+	lines.push("");
+
+	return lines.join("\n");
+}
+
+/**
+ * Main function to generate routes
+ *
+ * @param clientDir - Path to the client directory
+ */
+export async function generateRoutes(clientDir: string): Promise<void> {
+	const pagesDir = join(clientDir, "pages");
+	const outputPath = join(clientDir, "routes.generated.ts");
+
+	console.log(`Scanning for pages in: ${pagesDir}`);
+
+	// Scan for page files
+	const files = scanDirectory(pagesDir, pagesDir);
+	console.log(`Found ${files.length} page files`);
+
+	// Convert to route info
+	const routes: RouteInfo[] = [];
+	for (const file of files) {
+		const route = filePathToRoute(file);
+		if (route) {
+			routes.push(route);
+		}
+	}
+
+	// Sort by specificity (most specific first)
+	routes.sort((a, b) => b.specificity - a.specificity);
+
+	console.log("Generated routes:");
+	for (const route of routes) {
+		console.log(`  ${route.pattern} -> ${route.importPath}`);
+	}
+
+	// Generate and write the file
+	const content = generateRoutesFile(routes);
+	writeFileSync(outputPath, content);
+
+	console.log(`Routes written to: ${outputPath}`);
+}
+
+// Run if executed directly
+if (import.meta.main) {
+	// Navigate from packages/han/scripts to packages/browse-client/src
+	const clientDir = join(
+		dirname(new URL(import.meta.url).pathname),
+		"..",
+		"..",
+		"browse-client",
+		"src",
+	);
+	await generateRoutes(clientDir);
+}

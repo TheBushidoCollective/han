@@ -50,8 +50,8 @@ struct AddedToken {
 
 impl Tokenizer {
     fn from_file(path: &str) -> Result<Self, String> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read tokenizer: {}", e))?;
+        let content =
+            fs::read_to_string(path).map_err(|e| format!("Failed to read tokenizer: {}", e))?;
 
         let json: TokenizerJson = serde_json::from_str(&content)
             .map_err(|e| format!("Failed to parse tokenizer: {}", e))?;
@@ -91,7 +91,8 @@ impl Tokenizer {
 
         // Basic tokenization: lowercase and split by whitespace/punctuation
         let text = text.to_lowercase();
-        let words: Vec<&str> = text.split(|c: char| c.is_whitespace() || c.is_ascii_punctuation())
+        let words: Vec<&str> = text
+            .split(|c: char| c.is_whitespace() || c.is_ascii_punctuation())
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -144,7 +145,7 @@ pub async fn ensure_available() -> napi::Result<String> {
     // Download ONNX Runtime if needed
     let lib_path = download::ensure_onnxruntime()
         .await
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
 
     // Set environment variable for ort to find the library
     std::env::set_var("ORT_DYLIB_PATH", &lib_path);
@@ -152,7 +153,7 @@ pub async fn ensure_available() -> napi::Result<String> {
     // Download model if needed
     download::ensure_model()
         .await
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
 
     Ok(lib_path.to_string_lossy().to_string())
 }
@@ -167,23 +168,27 @@ async fn get_session() -> napi::Result<tokio::sync::MutexGuard<'static, Option<E
         ensure_available().await?;
 
         // Initialize ort
-        ort::init()
-            .commit()
-            .map_err(|e| napi::Error::from_reason(format!("Failed to initialize ONNX Runtime: {}", e)))?;
+        ort::init().commit().map_err(|e| {
+            napi::Error::from_reason(format!("Failed to initialize ONNX Runtime: {}", e))
+        })?;
 
         // Load the model
         let model_path = download::get_model_path();
         let session = Session::builder()
-            .map_err(|e| napi::Error::from_reason(format!("Failed to create session builder: {}", e)))?
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to create session builder: {}", e))
+            })?
             .with_optimization_level(GraphOptimizationLevel::Level3)
-            .map_err(|e| napi::Error::from_reason(format!("Failed to set optimization level: {}", e)))?
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to set optimization level: {}", e))
+            })?
             .commit_from_file(&model_path)
             .map_err(|e| napi::Error::from_reason(format!("Failed to load model: {}", e)))?;
 
         // Load tokenizer
         let tokenizer_path = download::get_tokenizer_path();
         let tokenizer = Tokenizer::from_file(&tokenizer_path.to_string_lossy())
-            .map_err(|e| napi::Error::from_reason(e))?;
+            .map_err(napi::Error::from_reason)?;
 
         *guard = Some(EmbeddingSession { session, tokenizer });
     }
@@ -198,9 +203,9 @@ pub async fn generate_embeddings(texts: Vec<String>) -> napi::Result<Vec<Vec<f32
     }
 
     let mut guard = get_session().await?;
-    let session_data = guard.as_mut().ok_or_else(|| {
-        napi::Error::from_reason("Embedding session not initialized".to_string())
-    })?;
+    let session_data = guard
+        .as_mut()
+        .ok_or_else(|| napi::Error::from_reason("Embedding session not initialized".to_string()))?;
 
     let batch_size = texts.len();
     let seq_len = session_data.tokenizer.max_length;
@@ -218,28 +223,38 @@ pub async fn generate_embeddings(texts: Vec<String>) -> napi::Result<Vec<Vec<f32
     }
 
     // Create input arrays
-    let input_ids = Array2::from_shape_vec((batch_size, seq_len), all_input_ids)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create input_ids array: {}", e)))?;
+    let input_ids = Array2::from_shape_vec((batch_size, seq_len), all_input_ids).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to create input_ids array: {}", e))
+    })?;
     let attention_mask = Array2::from_shape_vec((batch_size, seq_len), all_attention_mask)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create attention_mask array: {}", e)))?;
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create attention_mask array: {}", e))
+        })?;
     let token_type_ids = Array2::from_shape_vec((batch_size, seq_len), all_token_type_ids)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create token_type_ids array: {}", e)))?;
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create token_type_ids array: {}", e))
+        })?;
 
     // Create input tensors (pass owned arrays, not views)
-    let input_ids_value = Value::from_array(input_ids)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create input_ids tensor: {}", e)))?;
-    let attention_mask_value = Value::from_array(attention_mask)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create attention_mask tensor: {}", e)))?;
-    let token_type_ids_value = Value::from_array(token_type_ids)
-        .map_err(|e| napi::Error::from_reason(format!("Failed to create token_type_ids tensor: {}", e)))?;
+    let input_ids_value = Value::from_array(input_ids).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to create input_ids tensor: {}", e))
+    })?;
+    let attention_mask_value = Value::from_array(attention_mask).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to create attention_mask tensor: {}", e))
+    })?;
+    let token_type_ids_value = Value::from_array(token_type_ids).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to create token_type_ids tensor: {}", e))
+    })?;
 
     // Run inference
-    let outputs = session_data.session.run(ort::inputs![
-        "input_ids" => input_ids_value,
-        "attention_mask" => attention_mask_value,
-        "token_type_ids" => token_type_ids_value,
-    ])
-    .map_err(|e| napi::Error::from_reason(format!("Failed to run inference: {}", e)))?;
+    let outputs = session_data
+        .session
+        .run(ort::inputs![
+            "input_ids" => input_ids_value,
+            "attention_mask" => attention_mask_value,
+            "token_type_ids" => token_type_ids_value,
+        ])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to run inference: {}", e)))?;
 
     // Extract embeddings (last_hidden_state or sentence_embedding depending on model)
     // all-MiniLM-L6-v2 outputs sentence_embedding directly
@@ -282,7 +297,10 @@ pub async fn generate_embeddings(texts: Vec<String>) -> napi::Result<Vec<Vec<f32
                 let mut mean = vec![0.0f32; hidden_size];
                 for token_idx in 0..seq_len {
                     let token_start = token_idx * hidden_size;
-                    for (j, val) in batch_data[token_start..token_start + hidden_size].iter().enumerate() {
+                    for (j, val) in batch_data[token_start..token_start + hidden_size]
+                        .iter()
+                        .enumerate()
+                    {
                         mean[j] += val;
                     }
                 }

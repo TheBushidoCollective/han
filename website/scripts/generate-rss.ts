@@ -82,4 +82,6 @@ const jsonPath = path.join(publicDir, "feed.json");
 fs.writeFileSync(jsonPath, feed.json1());
 console.log(`JSON feed generated at ${jsonPath}`);
 
-console.log(`✓ Generated ${posts.length} blog post entries in all feed formats`);
+console.log(
+	`✓ Generated ${posts.length} blog post entries in all feed formats`,
+);

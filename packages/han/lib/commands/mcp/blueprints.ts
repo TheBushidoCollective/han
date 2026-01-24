@@ -1,4 +1,10 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 
@@ -175,6 +181,69 @@ function searchBlueprints(keyword?: string): {
 }
 
 /**
+ * Sync blueprints index to .claude/rules/hashi-blueprints/blueprints-index.md
+ * This generates a lightweight index for session context injection.
+ */
+export function syncBlueprintsIndex(): { success: boolean; count: number } {
+	const { blueprints } = searchBlueprints();
+
+	if (blueprints.length === 0) {
+		// No blueprints - nothing to sync
+		return { success: true, count: 0 };
+	}
+
+	// Find project root (where blueprints/ exists)
+	const cwd = process.cwd();
+	const outputDir = join(cwd, ".claude", "rules", "hashi-blueprints");
+	const outputFile = join(outputDir, "blueprints-index.md");
+
+	// Generate the index content
+	const output = `# Blueprints
+
+Technical documentation for this project's architecture and systems.
+
+## When to Consult Blueprints
+
+Before modifying system architecture, use \`search_blueprints\` and \`read_blueprint\` to understand:
+- Current design decisions and rationale
+- Integration points and dependencies
+- Established patterns to follow
+
+## Key Triggers
+
+Consult blueprints when working on:
+- GraphQL schema changes
+- CLI command modifications
+- MCP server integrations
+- Plugin architecture changes
+- Database schema updates
+- Hook system modifications
+
+## After Modifications
+
+Update blueprints via \`write_blueprint\` when you:
+- Add new systems or major features
+- Change architectural patterns
+- Discover undocumented conventions
+
+## Available Blueprints
+
+<!-- AUTO-GENERATED INDEX - DO NOT EDIT BELOW THIS LINE -->
+| Blueprint | Summary |
+|-----------|---------|
+${blueprints.map((b) => `| ${b.name} | ${b.summary} |`).join("\n")}
+`;
+
+	// Ensure output directory exists
+	mkdirSync(outputDir, { recursive: true });
+
+	// Write the file
+	writeFileSync(outputFile, output, "utf-8");
+
+	return { success: true, count: blueprints.length };
+}
+
+/**
  * Read a specific blueprint by name
  */
 function readBlueprint(name: string): Blueprint {
@@ -249,9 +318,26 @@ function writeBlueprint(
  */
 const BLUEPRINT_TOOLS: McpTool[] = [
 	{
+		name: "list_blueprints",
+		description:
+			"List all available technical blueprints in the repository. Returns all blueprint names and summaries. USE THIS to get an overview of existing documentation.",
+		annotations: {
+			title: "List Blueprints",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {},
+			required: [],
+		},
+	},
+	{
 		name: "search_blueprints",
 		description:
-			"Search and list available technical blueprints. USE THIS FIRST before creating new blueprints to avoid duplication. Returns blueprint names and summaries. Optionally filter by keyword.",
+			"Search and filter technical blueprints by keyword. USE THIS to find specific blueprints before creating new ones to avoid duplication. Returns blueprint names and summaries matching the keyword.",
 		annotations: {
 			title: "Search Blueprints",
 			readOnlyHint: true,
@@ -264,11 +350,10 @@ const BLUEPRINT_TOOLS: McpTool[] = [
 			properties: {
 				keyword: {
 					type: "string",
-					description:
-						"Optional keyword to filter blueprints by name or summary",
+					description: "Keyword to filter blueprints by name or summary",
 				},
 			},
-			required: [],
+			required: ["keyword"],
 		},
 	},
 	{
@@ -355,10 +440,23 @@ async function handleToolsCall(params: {
 		const args = params.arguments || {};
 
 		switch (params.name) {
+			case "list_blueprints": {
+				const result = searchBlueprints();
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(result, null, 2),
+						},
+					],
+				};
+			}
+
 			case "search_blueprints": {
-				const keyword =
-					typeof args.keyword === "string" ? args.keyword : undefined;
-				const result = searchBlueprints(keyword);
+				if (typeof args.keyword !== "string") {
+					throw new Error("Keyword is required for search");
+				}
+				const result = searchBlueprints(args.keyword);
 				return {
 					content: [
 						{

@@ -3,17 +3,45 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { getGitRemoteUrl as nativeGetGitRemoteUrl } from "../../han-native";
 import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.ts";
 import {
 	analyzeCodebase,
 	type CodebaseStats,
 	formatStatsForPrompt,
 } from "./codebase-analyzer.ts";
-import { getHanBinary } from "./han-settings.ts";
+import { getHanBinary } from "./config/han-settings.ts";
 import { getMarketplacePlugins } from "./marketplace-cache.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Check if debug mode is enabled via HAN_DEBUG environment variable
+ */
+export function isDebugMode(): boolean {
+	const debug = process.env.HAN_DEBUG;
+	return debug === "1" || debug === "true";
+}
+
+/**
+ * Check if running in development mode (from source, not compiled binary)
+ *
+ * Returns true (development) if:
+ * - NODE_ENV is "development"
+ * - Running from .ts/.tsx source files (not compiled)
+ *
+ * Returns false (production) if:
+ * - NODE_ENV is "production"
+ * - Running from compiled binary
+ */
+export function isDevMode(): boolean {
+	if (process.env.NODE_ENV === "production") return false;
+	if (process.env.NODE_ENV === "development") return true;
+	// Fall back to checking if running from source
+	const mainFile = process.argv[1] || "";
+	return mainFile.endsWith(".ts") || mainFile.endsWith(".tsx");
+}
 
 export const HAN_MARKETPLACE_REPO = "thebushidocollective/han";
 
@@ -274,6 +302,29 @@ export function detectHanScopes(): InstallScope[] {
 }
 
 /**
+ * Determine the effective installation scope for a project.
+ * Returns the existing project-level scope if Han is already installed there,
+ * or null if user needs to choose (Han only in user scope or not installed).
+ *
+ * Priority: local > project (local is highest precedence as it's gitignored)
+ */
+export function getEffectiveProjectScope(): InstallScope | null {
+	const hanScopes = detectHanScopes();
+
+	// Local takes priority over project (higher precedence, gitignored)
+	if (hanScopes.includes("local")) {
+		return "local";
+	}
+
+	if (hanScopes.includes("project")) {
+		return "project";
+	}
+
+	// Han is only in user scope or not installed - need to prompt user
+	return null;
+}
+
+/**
  * Get currently installed Han plugins
  */
 export function getInstalledPlugins(scope: InstallScope = "user"): string[] {
@@ -364,17 +415,7 @@ export function findClaudeExecutable(): string {
  * Get the git remote origin URL for the current directory
  */
 function getGitRemoteUrl(): string | null {
-	try {
-		const remoteUrl = execSync("git remote get-url origin", {
-			cwd: process.cwd(),
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		}).trim();
-		return remoteUrl || null;
-	} catch {
-		// Not a git repo or no remote configured
-		return null;
-	}
+	return nativeGetGitRemoteUrl(process.cwd()) ?? null;
 }
 
 /**

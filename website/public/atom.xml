@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://han.guru</id>
     <title>Han Blog - Claude Code Plugin Marketplace</title>
-    <updated>2026-01-21T22:59:32.455Z</updated>
+    <updated>2026-01-22T13:49:49.659Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <author>
         <name>The Bushido Collective</name>
@@ -33,9 +33,10 @@ Traditional "human-in-the-loop" (HITL) workflows require humans to validate ever
 AI-DLC 2026 introduces **human-on-the-loop (HOTL)** as a distinct operating mode:
 
 - **HITL**: Human validates each step. AI proposes, human approves, AI executes.
-- **HOTL**: Human defines success criteria. AI iterates autonomously until criteria are met.
+- **HOTL**: Human defines success criteria. AI iterates autonomously through quality gates (tests, types, lint, hooks), then criteria checks, alerting humans only when stuck or blocked.
 
 Think of it like Google Maps navigation:
+
 - HITL mode: You approve every turn before the GPS proceeds
 - HOTL mode: You set the destination and constraints, GPS handles the journey
 
@@ -72,11 +73,14 @@ Production systems using this pattern have achieved remarkable results — 40,00
 
 Traditional phase boundaries — requirements → design → implementation → testing → deployment — existed because iteration was expensive. When changing requirements meant weeks of rework, sequential phases with approval gates made economic sense.
 
-With AI, iteration costs approach zero. You try something, it fails, you adjust, you try again — all in seconds, not weeks.
+The evolution has been rapid. In 2024, we had code assistants. By July 2025, AI could handle complete features with guidance. Now in January 2026, we have multi-hour autonomous reasoning and iteration cycles measured in minutes instead of days.
+
+With AI, iteration costs approach zero. You try something, it fails, you adjust, you try again — all in minutes or hours, not weeks.
 
 **The phases aren't being augmented. They're collapsing into continuous flow.**
 
 Checkpoints replace handoffs:
+
 - Work pauses briefly rather than stopping completely
 - The same agent continues with feedback
 - Context is preserved
@@ -97,12 +101,14 @@ The full methodology covers:
 
 AI-DLC 2026 synthesizes insights from:
 
-- **Raja SP** (AWS): Original AI-DLC methodology and core concepts
+- **Raja SP** (AWS): Original AI-DLC methodology (July 2025) and core concepts
 - **Geoffrey Huntley**: Ralph Wiggum pattern and autonomous loop philosophy
 - **Boris Cherny & Anthropic**: Ralph Wiggum plugin demonstrating production viability
 - **Steve Wilson** (OWASP): Human-on-the-loop governance frameworks
 - **paddo.dev**: Analysis of SDLC collapse and multi-agent orchestration pitfalls
 - **HumanLayer**: 12 Factor Agents and context engineering research
+
+A key evolution since the July 2025 publication: the emergence of extensibility mechanisms (skills, sub-agents, hooks, MCP servers) that enable automated quality gates and plugin ecosystems.
 
 ## Read the Full Paper
 
@@ -119,14 +125,17 @@ This is just a glimpse. The full methodology includes:
 
 ## Why This Matters for Han
 
-Han embodies many AI-DLC 2026 principles:
+Han is built specifically to enable AI-DLC 2026's backpressure methodology. Instead of prescribing how AI should work, Han provides quality gates that reject non-conforming work:
 
-- **Backpressure through hooks**: Quality gates that automatically validate work
-- **Autonomous validation**: Stop hooks run without human intervention
-- **File-based memory**: Project rules persist across sessions
-- **Completion criteria**: Plugins define measurable success conditions
+- **Automated quality gates**: Stop hooks automatically run tests, type checks, linting, formatting, and custom validation after every conversation
+- **Technology detection**: The `--auto` flag detects your stack (TypeScript, Python, Rust, etc.) and installs appropriate validation plugins
+- **Zero configuration**: Hooks are automatically configured based on your project tooling (biome.json, tsconfig.json, pytest.ini, etc.)
+- **Smart caching**: Only runs validation when relevant files change, using native Rust hashing for speed
+- **File-based memory**: Project rules in `.claude/rules/` persist across sessions, enabling continuous learning
 
-The methodology provides the theoretical foundation. Han provides the practical implementation.
+The methodology provides the theoretical foundation. Han provides the practical implementation. Every Claude Code conversation ends with validation — linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
+
+**This is backpressure in action**: AI iterates freely, and quality gates provide the feedback signal to converge toward correct solutions.
 
 ---
 
@@ -581,11 +590,11 @@ When Claude thinks "I see this project uses..." or "The pattern here is..." - th
 
 Three MCP tools power the system:
 
-| Tool | Purpose |
-|------|---------|
-| `learn` | Write a learning to `.claude/rules/<domain>.md` |
-| `memory_list` | Check what domains already exist |
-| `memory_read` | Read existing content (avoid duplicates) |
+| Tool          | Purpose                                         |
+| ------------- | ----------------------------------------------- |
+| `learn`       | Write a learning to `.claude/rules/<domain>.md` |
+| `memory_list` | Check what domains already exist                |
+| `memory_read` | Read existing content (avoid duplicates)        |
 
 Claude uses `memory_list` and `memory_read` to check before writing, preventing redundant entries.
 
@@ -605,7 +614,7 @@ Creates `.claude/rules/api.md` with YAML frontmatter:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules
@@ -867,17 +876,9 @@ This aggregates across sessions, showing:
 
 ## What Gets Stored
 
-All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. No data leaves your machine. You control it entirely.
+All metrics are stored locally in SQLite at `~/.claude/han/han.db`. No data leaves your machine. You control it entirely.
 
-```
-~/.claude/han/metrics/
-├── tasks/
-│   └── 2025-12.jsonl
-├── hooks/
-│   └── 2025-12.jsonl
-└── sessions/
-    └── 2025-12.jsonl
-```
+The database contains tables for tasks, hook executions, and frustration events - all queryable with any SQLite client or through the Browse UI.
 
 ## Integration with Hooks
 
@@ -1473,11 +1474,11 @@ await mcp.tools.jutsu_bun_test({ cache: true })
 
 All plugin hooks support three standard parameters:
 
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `cache` | `true` | Skip if files unchanged since last run |
-| `directory` | all | Target specific directory |
-| `verbose` | `false` | Stream output in real-time |
+| Parameter   | Default | Purpose                                |
+| ----------- | ------- | -------------------------------------- |
+| `cache`     | `true`  | Skip if files unchanged since last run |
+| `directory` | all     | Target specific directory              |
+| `verbose`   | `false` | Stream output in real-time             |
 
 ### Memory Tools (Self-Learning)
 
@@ -1500,7 +1501,7 @@ Creates `.claude/rules/api.md` with YAML frontmatter for path restrictions:
 
 ```markdown
 ---
-globs: ["src/api/**/*.ts"]
+paths: ["src/api/**/*.ts"]
 ---
 
 # API Rules
@@ -1525,10 +1526,10 @@ memory_read({ domain: "api", scope: "project" })
 
 The memory system supports two scopes:
 
-| Scope | Location | Purpose |
-|-------|----------|---------|
-| `project` | `.claude/rules/` | Team knowledge, git-tracked |
-| `user` | `~/.claude/rules/` | Personal preferences |
+| Scope     | Location           | Purpose                     |
+| --------- | ------------------ | --------------------------- |
+| `project` | `.claude/rules/`   | Team knowledge, git-tracked |
+| `user`    | `~/.claude/rules/` | Personal preferences        |
 
 ### Metrics Tools (Self-Awareness)
 
@@ -1590,7 +1591,7 @@ query_metrics({
 // Returns aggregated stats, success rates, calibration scores
 ```
 
-All metrics are stored locally in `~/.claude/han/metrics/` as JSONL files. Nothing leaves your machine.
+All metrics are stored locally in SQLite at `~/.claude/han/han.db`. Nothing leaves your machine.
 
 ### Checkpoint Tools (Smart Caching)
 

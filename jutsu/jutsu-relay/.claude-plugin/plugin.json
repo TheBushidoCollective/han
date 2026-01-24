@@ -1,6 +1,6 @@
 {
   "name": "jutsu-relay",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced Relay GraphQL framework skills for React applications",
   "author": {
     "name": "The Bushido Collective",
@@ -8,6 +8,16 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
-  "keywords": ["relay", "graphql", "react", "fragments"]
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["relay", "graphql", "react", "fragments"],
+  "lspServers": {
+    "relay": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".graphql": "graphql",
+        ".gql": "graphql"
+      }
+    }
+  }
 }

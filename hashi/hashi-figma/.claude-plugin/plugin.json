@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "keywords": [
     "mcp",
     "figma",
@@ -16,11 +16,5 @@
     "design-to-code",
     "design-system",
     "server"
-  ],
-  "mcpServers": {
-    "figma-desktop": {
-      "type": "http",
-      "url": "http://127.0.0.1:3845/mcp"
-    }
-  }
+  ]
 }
