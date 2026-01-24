@@ -212,12 +212,12 @@ Memory providers are discovered from installed Han plugins that have BOTH an `mc
 
 MCP servers can be defined in two places:
 
-- `mcp_servers` (root) - shared with MCP orchestrator AND memory system
+- `mcp_servers` (root) - available to Claude Code AND memory system
 - `memory.mcp_servers` - memory-only MCP servers (not exposed to Claude Code)
 
 ```yaml
 # Example 1: core/han-plugin.yml (shared MCP server)
-# MCP servers shared with MCP orchestrator AND available to memory
+# MCP servers available to Claude Code AND memory system
 mcp_servers:
   memory-dal:
     name: memory-dal
@@ -264,10 +264,10 @@ async function discoverMemoryProviders(): Promise<MemoryProvider[]> {
     if (!config.memory?.allowed_tools?.length) continue;
 
     // Collect MCP servers from BOTH sources:
-    // 1. Root mcp_servers - shared with MCP orchestrator AND memory
+    // 1. Root mcp_servers - available to Claude Code AND memory
     // 2. memory.mcp_servers - memory-only MCP servers
     const allMcpServers = {
-      ...config.mcp_servers,        // Shared with orchestrator
+      ...config.mcp_servers,        // Available to Claude Code
       ...config.memory.mcp_servers, // Memory-only
     };
 
