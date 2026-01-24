@@ -1,6 +1,8 @@
 # Certificate Distribution Server
 
-Manages and distributes Let's Encrypt certificates for `coordinator.local.han.guru`.
+Manages and distributes Let's Encrypt **6-day short-lived certificates** for `coordinator.local.han.guru`.
+
+Uses Let's Encrypt's new short-lived certificate profile (160 hours / ~6 days validity) for improved security through frequent rotation.
 
 ## Setup
 
@@ -44,7 +46,7 @@ Add CNAME record in Google Cloud DNS:
 certs.han.guru CNAME certs-han.up.railway.app
 ```
 
-### 4. Request Initial Certificate
+### 4. Request Initial 6-Day Certificate
 
 SSH into Railway deployment or use the dashboard's shell:
 
@@ -54,10 +56,13 @@ certbot certonly \
   --dns-google-credentials /app/gcloud-credentials.json \
   --dns-google-propagation-seconds 60 \
   -d coordinator.local.han.guru \
+  --preferred-chain shortlived \
   --non-interactive \
   --agree-tos \
   -m your-email@example.com
 ```
+
+The `--preferred-chain shortlived` flag requests a 6-day (160 hour) certificate instead of the standard 90-day certificate.
 
 After initial certificate is issued, restart the server to start serving certificates.
 
@@ -71,10 +76,12 @@ Returns the latest certificate for `coordinator.local.han.guru`:
 {
   "cert": "-----BEGIN CERTIFICATE-----\n...",
   "key": "-----BEGIN PRIVATE KEY-----\n...",
-  "expires": "2026-04-22T00:00:00Z",
+  "expires": "2026-01-29T18:00:00Z",
   "domain": "coordinator.local.han.guru"
 }
 ```
+
+Note: 6-day certificates expire ~160 hours after issuance.
 
 ### GET /health
 
@@ -88,9 +95,26 @@ Health check endpoint:
 
 ## Certificate Renewal
 
-Certificates are automatically renewed via cron (runs daily). Certbot only renews when < 30 days until expiry.
+Certificates are automatically renewed via cron (runs **every 12 hours**).
 
-## Security Note
+For 6-day certificates (160 hours validity):
+- Renewal triggers when < 48 hours (2 days) remaining
+- Cron runs at 00:00 and 12:00 UTC daily
+- More frequent checks ensure certificates never expire
 
-The private key is "public" but the domain resolves to `127.0.0.1`, so connections stay local.
+Standard 90-day certificates renew at < 30 days, but short-lived certs require much tighter rotation.
+
+## Security Notes
+
+### Public Private Key Pattern
+The private key is "public" (distributed to all han users) but the domain resolves to `127.0.0.1`, so connections stay local.
 This follows the Plex pattern (`*.plex.direct`) for local HTTPS.
+
+### Why 6-Day Certificates?
+Short-lived certificates (160 hours) provide:
+- **Reduced vulnerability window**: Even if a key is compromised, it's only valid for 6 days
+- **Forced automation**: Ensures our renewal system is battle-tested and reliable
+- **Preparation for future**: Let's Encrypt's direction is toward shorter certificate lifetimes
+- **Better for public keys**: Since our private key is distributed publicly, shorter validity reduces risk
+
+The rapid rotation (every ~4 days) ensures that even with public key distribution, the security posture remains strong.

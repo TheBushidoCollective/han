@@ -28,8 +28,14 @@ RUN bun install
 
 # Copy application files
 COPY server.ts ./
-COPY renew-certs.sh /etc/cron.daily/renew-certs
-RUN chmod +x /etc/cron.daily/renew-certs
+COPY renew-certs.sh /app/renew-certs.sh
+RUN chmod +x /app/renew-certs.sh
+
+# Set up cron job to run every 12 hours (at 00:00 and 12:00)
+# For 6-day certificates, more frequent renewal checks are critical
+RUN echo "0 */12 * * * /app/renew-certs.sh >> /var/log/cert-renewal.log 2>&1" > /etc/cron.d/renew-certs \
+    && chmod 0644 /etc/cron.d/renew-certs \
+    && crontab /etc/cron.d/renew-certs
 
 # Copy entrypoint script
 COPY entrypoint.sh ./

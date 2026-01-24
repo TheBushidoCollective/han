@@ -17,8 +17,18 @@ fi
 
 # Check if certificates already exist
 if [ ! -d "/etc/letsencrypt/live/coordinator.local.han.guru" ]; then
-    echo "No certificates found. You need to request initial certificates manually."
-    echo "Run: certbot certonly --dns-google --dns-google-credentials /app/gcloud-credentials.json -d coordinator.local.han.guru"
+    echo "No certificates found. You need to request initial 6-day certificates manually."
+    echo ""
+    echo "Run:"
+    echo "certbot certonly \\"
+    echo "  --dns-google \\"
+    echo "  --dns-google-credentials /app/gcloud-credentials.json \\"
+    echo "  --dns-google-propagation-seconds 60 \\"
+    echo "  -d coordinator.local.han.guru \\"
+    echo "  --preferred-chain shortlived \\"
+    echo "  --non-interactive \\"
+    echo "  --agree-tos \\"
+    echo "  -m your-email@example.com"
     echo ""
     echo "Starting server in degraded mode (health checks only)..."
 else
