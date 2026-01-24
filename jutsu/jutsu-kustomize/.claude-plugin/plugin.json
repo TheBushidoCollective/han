@@ -1,6 +1,6 @@
 {
   "name": "jutsu-kustomize",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Kustomize configuration validation for Kubernetes",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["kustomize", "kubernetes", "k8s", "devops"]
+  "keywords": [
+    "kustomize",
+    "kubernetes",
+    "k8s",
+    "devops"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "jutsu-vitest",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Comprehensive Vitest testing framework skills for modern Vite-powered JavaScript and TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["vitest", "testing", "vite", "javascript", "typescript"]
+  "keywords": [
+    "vitest",
+    "testing",
+    "vite",
+    "javascript",
+    "typescript"
+  ]
 }

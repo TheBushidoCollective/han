@@ -1,6 +1,6 @@
 {
   "name": "do-enforce-planning",
-  "version": "1.1.11",
+  "version": "1.2.0",
   "description": "Enforces planning before implementation work begins",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,8 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["planning", "workflow"]
+  "keywords": [
+    "planning",
+    "workflow"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "jutsu-vue",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced Vue skills for Composition API, components, and reactivity.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,11 +9,17 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["vue", "composition-api", "reactivity"],
+  "keywords": [
+    "vue",
+    "composition-api",
+    "reactivity"
+  ],
   "lspServers": {
     "vue": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/vue-lsp-entrypoint.sh",
-      "args": ["--stdio"],
+      "args": [
+        "--stdio"
+      ],
       "extensionToLanguage": {
         ".vue": "vue"
       }

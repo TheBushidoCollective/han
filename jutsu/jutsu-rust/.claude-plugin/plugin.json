@@ -1,6 +1,6 @@
 {
   "name": "jutsu-rust",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Advanced Rust skills for ownership, error handling, and async programming.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,7 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["rust", "ownership", "async"],
+  "keywords": [
+    "rust",
+    "ownership",
+    "async"
+  ],
   "lspServers": {
     "rust-analyzer": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

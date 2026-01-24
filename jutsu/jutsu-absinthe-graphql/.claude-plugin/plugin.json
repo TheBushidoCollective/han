@@ -1,6 +1,6 @@
 {
   "name": "jutsu-absinthe-graphql",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"]
+  "keywords": [
+    "absinthe",
+    "graphql",
+    "elixir",
+    "api",
+    "subscriptions"
+  ]
 }

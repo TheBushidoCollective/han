@@ -1,6 +1,6 @@
 {
   "name": "jutsu-syncpack",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
   "author": {
     "name": "The Bushido Collective",

@@ -1,6 +1,6 @@
 {
   "name": "jutsu-jest",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Comprehensive Jest testing framework skills for JavaScript and TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["jest", "testing", "javascript", "typescript"]
+  "keywords": [
+    "jest",
+    "testing",
+    "javascript",
+    "typescript"
+  ]
 }

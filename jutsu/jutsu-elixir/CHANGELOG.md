@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-01-24
+
+### Added
+
+- add git-storytelling commit validation hook and various improvements ([71c8777d](../../commit/71c8777d))
+
+### Fixed
+
+- fix failing tests due to module path and missing exports ([3ff76091](../../commit/3ff76091))
+
+### Changed
+
+- extract complex inline hook commands to shell scripts ([953a540a](../../commit/953a540a))
+
 ## [1.10.1] - 2025-12-17
 
 ### Other

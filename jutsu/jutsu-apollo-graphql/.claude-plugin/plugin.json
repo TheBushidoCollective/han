@@ -1,6 +1,6 @@
 {
   "name": "jutsu-apollo-graphql",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced Apollo GraphQL skills for client and server development",
   "author": {
     "name": "The Bushido Collective",
@@ -9,7 +9,12 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["apollo", "graphql", "client", "server"],
+  "keywords": [
+    "apollo",
+    "graphql",
+    "client",
+    "server"
+  ],
   "lspServers": {
     "apollo": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

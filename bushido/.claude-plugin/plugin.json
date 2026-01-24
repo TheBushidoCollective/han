@@ -1,6 +1,6 @@
 {
   "name": "bushido",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "The philosophy of the Samurai applied to software development. Injects the seven virtues (義 Righteousness, 勇 Courage, 仁 Compassion, 礼 Respect, 誠 Honesty, 名誉 Honor, 忠義 Loyalty) to guide agent behavior. Requires core for infrastructure.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["philosophy", "bushido", "virtues", "culture", "principles"]
+  "keywords": [
+    "philosophy",
+    "bushido",
+    "virtues",
+    "culture",
+    "principles"
+  ]
 }

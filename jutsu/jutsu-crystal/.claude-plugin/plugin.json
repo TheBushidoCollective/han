@@ -1,6 +1,6 @@
 {
   "name": "jutsu-crystal",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Crystal language development skills and best practices.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,7 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["crystal", "language"],
+  "keywords": [
+    "crystal",
+    "language"
+  ],
   "lspServers": {
     "crystalline": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

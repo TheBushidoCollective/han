@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-24
+
+### Added
+
+- use HAN_FILES from coordinator for session-scoped checks ([3969c632](../../commit/3969c632))
+- add git-storytelling commit validation hook and various improvements ([71c8777d](../../commit/71c8777d))
+
+### Fixed
+
+- correct hook variable and remove unused variable ([79166255](../../commit/79166255))
+
+### Other
+
+- resolve conflicts with main ([ad1a15d7](../../commit/ad1a15d7))
+
 ## [2.1.2] - 2025-12-23
 
 ### Added

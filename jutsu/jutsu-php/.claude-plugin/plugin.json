@@ -1,6 +1,6 @@
 {
   "name": "jutsu-php",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced PHP programming skills for modern PHP and security patterns",
   "author": {
     "name": "The Bushido Collective",
@@ -9,11 +9,18 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["php", "composer", "security", "web"],
+  "keywords": [
+    "php",
+    "composer",
+    "security",
+    "web"
+  ],
   "lspServers": {
     "intelephense": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": ["--stdio"],
+      "args": [
+        "--stdio"
+      ],
       "extensionToLanguage": {
         ".php": "php"
       }

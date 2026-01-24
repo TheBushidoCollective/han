@@ -1,6 +1,6 @@
 {
   "name": "jutsu-lerna",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Lerna monorepo management skills with bootstrap validation hooks.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["lerna", "monorepo", "packages", "workspaces", "node"]
+  "keywords": [
+    "lerna",
+    "monorepo",
+    "packages",
+    "workspaces",
+    "node"
+  ]
 }

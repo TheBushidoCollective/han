@@ -1,6 +1,6 @@
 {
   "name": "jutsu-graphql",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Advanced GraphQL skills for schema design, resolvers, and query optimization.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,11 +9,19 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["graphql", "api", "schema"],
+  "keywords": [
+    "graphql",
+    "api",
+    "schema"
+  ],
   "lspServers": {
     "graphql": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": ["server", "-m", "stream"],
+      "args": [
+        "server",
+        "-m",
+        "stream"
+      ],
       "extensionToLanguage": {
         ".graphql": "graphql",
         ".gql": "graphql"

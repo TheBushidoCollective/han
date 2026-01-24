@@ -1,6 +1,6 @@
 {
   "name": "hashi-reddit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server configuration for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
   "author": {
     "name": "The Bushido Collective",

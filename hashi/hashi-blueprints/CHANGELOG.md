@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-24
+
+### Added
+
+- add list_blueprints MCP tool ([7caf3e29](../../commit/7caf3e29))
+- add git-storytelling commit validation hook and various improvements ([71c8777d](../../commit/71c8777d))
+
+### Fixed
+
+- correct command name in create-blueprint.md ([52e12146](../../commit/52e12146))
+- correct command name in generate-blueprints.md ([3e52bd75](../../commit/3e52bd75))
+- skip Claude Code review for fork PRs and fix broken link warnings ([d73ae673](../../commit/d73ae673))
+- skip Claude Code review for fork PRs and fix broken link warnings ([46ea32c0](../../commit/46ea32c0))
+
+### Changed
+
+- remove orchestrator, use direct MCP exposure with OAuth ([6e69b841](../../commit/6e69b841))
+
+### Other
+
+- Merge pull request #26 from TheBushidoCollective/feature/browse ([5943715b](../../commit/5943715b))
+- update blueprint commands to use MCP tools ([3734fd66](../../commit/3734fd66))
+- resolve conflicts with main ([ad1a15d7](../../commit/ad1a15d7))
+
 ## [1.1.8] - 2026-01-24
 
 ### Fixed

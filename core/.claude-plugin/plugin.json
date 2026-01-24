@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Essential infrastructure for the Han plugin marketplace. Includes mandatory subagent delegation, async fan-out patterns, agent resumption, skill transparency, quality enforcement, unified MCP server (hooks + metrics + Context7/DeepWiki proxying), project memory learning, and universal programming principles.",
   "author": {
     "name": "The Bushido Collective",
@@ -26,7 +26,9 @@
   "mcpServers": {
     "han": {
       "command": "han",
-      "args": ["mcp"]
+      "args": [
+        "mcp"
+      ]
     }
   }
 }

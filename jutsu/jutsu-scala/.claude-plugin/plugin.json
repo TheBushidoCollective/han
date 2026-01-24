@@ -1,6 +1,6 @@
 {
   "name": "jutsu-scala",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Advanced Scala programming skills for functional programming and type systems",
   "author": {
     "name": "The Bushido Collective",
@@ -9,7 +9,12 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["scala", "functional", "jvm", "type-system"],
+  "keywords": [
+    "scala",
+    "functional",
+    "jvm",
+    "type-system"
+  ],
   "lspServers": {
     "metals": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

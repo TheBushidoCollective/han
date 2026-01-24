@@ -1,6 +1,6 @@
 {
   "name": "jutsu-phoenix",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "Phoenix Framework skills for building web applications",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["phoenix", "elixir", "web", "framework"]
+  "keywords": [
+    "phoenix",
+    "elixir",
+    "web",
+    "framework"
+  ]
 }

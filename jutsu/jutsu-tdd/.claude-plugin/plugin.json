@@ -1,6 +1,6 @@
 {
   "name": "jutsu-tdd",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.",
   "author": {
     "name": "The Bushido Collective",

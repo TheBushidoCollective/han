@@ -1,6 +1,6 @@
 {
   "name": "jutsu-clippy",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
   "author": {
     "name": "The Bushido Collective",
@@ -9,5 +9,9 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": ["clippy", "linting", "rust"]
+  "keywords": [
+    "clippy",
+    "linting",
+    "rust"
+  ]
 }
