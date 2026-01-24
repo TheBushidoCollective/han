@@ -109,7 +109,7 @@ function extractDisplayName(pluginName: string): string {
  */
 function getPluginDir(
 	pluginName: string,
-	marketplace: string,
+	_marketplace: string,
 	marketplaceConfig: MarketplaceConfig | undefined,
 ): string | null {
 	if (marketplaceConfig?.source?.source === "directory") {
