@@ -32,7 +32,7 @@ import {
 import { schema } from "../../graphql/schema.ts";
 import { globalSlotManager } from "../../graphql/types/slot-manager.ts";
 import { createLogger } from "../../logger.ts";
-import { ensureCertificates } from "./tls.ts";
+import { checkAndRefreshCertificates, ensureCertificates } from "./tls.ts";
 import { COORDINATOR_PORT, type CoordinatorOptions } from "./types.ts";
 
 const log = createLogger("coordinator");
@@ -47,6 +47,7 @@ interface ServerState {
 	heartbeatInterval: NodeJS.Timeout | null;
 	watchdogInterval: NodeJS.Timeout | null;
 	pendingHooksInterval: NodeJS.Timeout | null;
+	certRefreshInterval: NodeJS.Timeout | null;
 	lastActivity: number;
 	processingHooks: boolean;
 	activeWebSocketClients: number;
@@ -59,6 +60,7 @@ const state: ServerState = {
 	heartbeatInterval: null,
 	watchdogInterval: null,
 	pendingHooksInterval: null,
+	certRefreshInterval: null,
 	lastActivity: Date.now(),
 	processingHooks: false,
 	activeWebSocketClients: 0,
@@ -70,6 +72,10 @@ const WATCHDOG_TIMEOUT_MS = 120000; // Consider stuck after 2 minutes of no acti
 
 // Pending hooks processing
 const PENDING_HOOKS_INTERVAL_MS = 5000; // Poll every 5 seconds
+
+// Certificate refresh (for 6-day certificates)
+// Check every 12 hours to match cert-server renewal schedule
+const CERT_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 /**
  * Update the last activity timestamp (called on any request/event)
@@ -576,6 +582,19 @@ export async function startServer(
 	}, PENDING_HOOKS_INTERVAL_MS);
 	log.info("Pending hooks processor started");
 
+	// Start certificate refresh for HTTPS servers (6-day cert hot-reload)
+	// Only needed if TLS is enabled
+	if (tls && state.httpServer) {
+		state.certRefreshInterval = setInterval(() => {
+			void checkAndRefreshCertificates(
+				state.httpServer as import("node:https").Server,
+			);
+		}, CERT_REFRESH_INTERVAL_MS);
+		log.info(
+			"Certificate refresh scheduler started (checks every 12 hours for 6-day cert rotation)",
+		);
+	}
+
 	// Skip initial index to keep server responsive during startup
 	// Sessions are indexed incrementally via file watcher
 	// A full reindex can be triggered with: han index run --all
@@ -602,6 +621,11 @@ export function stopServer(): void {
 	if (state.pendingHooksInterval) {
 		clearInterval(state.pendingHooksInterval);
 		state.pendingHooksInterval = null;
+	}
+
+	if (state.certRefreshInterval) {
+		clearInterval(state.certRefreshInterval);
+		state.certRefreshInterval = null;
 	}
 
 	// Callback is cleared automatically by watcher.stop()

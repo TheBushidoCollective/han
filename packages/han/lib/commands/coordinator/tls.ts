@@ -3,10 +3,13 @@
  *
  * Fetches and caches Let's Encrypt certificates from the certificate distribution server.
  * Provides automatic refresh when certificates are close to expiry.
+ *
+ * For 6-day certificates, implements hot-reload without server restart.
  */
 
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import type { Server as HttpsServer } from "node:https";
 import { join } from "node:path";
 import { createLogger } from "../../logger.ts";
 
@@ -19,7 +22,8 @@ const CERT_METADATA = join(CERT_DIR, "metadata.json");
 const CERT_FETCH_URL = "https://certs.han.guru/coordinator/latest";
 
 // Refresh certificates when less than this many days until expiry
-const CERT_REFRESH_THRESHOLD_DAYS = 30;
+// For 6-day certificates (160 hours), refresh when < 2 days (48 hours) remaining
+const CERT_REFRESH_THRESHOLD_DAYS = 2;
 
 interface CertBundle {
 	cert: string;
@@ -117,5 +121,86 @@ export async function ensureCertificates(): Promise<TLSCredentials | null> {
 			`Error fetching certificates, falling back to HTTP mode: ${error instanceof Error ? error.message : String(error)}`,
 		);
 		return null;
+	}
+}
+
+/**
+ * Check if certificates need refresh and update server context if needed
+ * Returns true if certificates were refreshed
+ */
+export async function checkAndRefreshCertificates(
+	server?: HttpsServer,
+): Promise<boolean> {
+	try {
+		// Check if we need to refresh
+		if (!existsSync(CERT_METADATA)) {
+			return false;
+		}
+
+		const metadataContent = await readFile(CERT_METADATA, "utf-8");
+		const metadata: CertMetadata = JSON.parse(metadataContent);
+		const expiresAt = new Date(metadata.expires);
+		const now = new Date();
+		const daysUntilExpiry =
+			(expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+
+		// No refresh needed if more than threshold days until expiry
+		if (daysUntilExpiry > CERT_REFRESH_THRESHOLD_DAYS) {
+			return false;
+		}
+
+		log.info(
+			`Certificate expires in ${Math.floor(daysUntilExpiry * 24)} hours, refreshing...`,
+		);
+
+		// Fetch new certificates
+		const response = await fetch(CERT_FETCH_URL);
+
+		if (!response.ok) {
+			log.warn(
+				`Failed to fetch certificates (HTTP ${response.status}), will retry later`,
+			);
+			return false;
+		}
+
+		const bundle: CertBundle = await response.json();
+
+		// Validate bundle structure
+		if (!bundle.cert || !bundle.key || !bundle.expires || !bundle.domain) {
+			log.warn("Invalid certificate bundle received, will retry later");
+			return false;
+		}
+
+		// Cache certificates
+		await writeFile(CERT_FILE, bundle.cert);
+		await writeFile(KEY_FILE, bundle.key);
+		await writeFile(
+			CERT_METADATA,
+			JSON.stringify({
+				expires: bundle.expires,
+				domain: bundle.domain,
+				fetchedAt: new Date().toISOString(),
+			} satisfies CertMetadata),
+		);
+
+		log.info(
+			`Certificates refreshed successfully for ${bundle.domain} (expires ${bundle.expires})`,
+		);
+
+		// Hot-reload TLS context on the running server (if provided)
+		if (server && "setSecureContext" in server) {
+			server.setSecureContext({
+				cert: bundle.cert,
+				key: bundle.key,
+			});
+			log.info("TLS context updated on running server (hot-reload successful)");
+		}
+
+		return true;
+	} catch (error) {
+		log.warn(
+			`Error refreshing certificates: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return false;
 	}
 }
