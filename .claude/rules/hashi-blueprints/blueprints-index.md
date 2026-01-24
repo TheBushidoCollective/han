@@ -42,6 +42,7 @@ Update blueprints via `write_blueprint` when you:
 | distribution-architecture | NPM wrapper + platform-specific Bun binaries distribution model |
 | han-events-logging | Session-scoped logging of Han events (hooks, MCP calls) to JSONL files indexed into SQLite for Browse UI visibility |
 | han-memory-system | Complete architecture and implementation of Han Memory - five-layer semantic memory with synthesis via Agent SDK, streaming output, and citation-backed answers |
+| hook-result-parent-linkage | Hook result messages need parent_id linkage to hook run messages |
 | hook-system | Complete hook lifecycle from definition to execution with centralized orchestration, checkpoint filtering, and cross-plugin dependencies |
 | marketplace | Central plugin registry and distribution |
 | mcp-server | Model Context Protocol server exposing plugin tools |
