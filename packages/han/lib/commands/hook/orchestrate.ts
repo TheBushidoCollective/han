@@ -1222,7 +1222,7 @@ async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
 						}
 						// Collect text from text blocks
 						if (block.type === "text" && block.text) {
-							allText += block.text + " ";
+							allText += `${block.text} `;
 						}
 					}
 				}
