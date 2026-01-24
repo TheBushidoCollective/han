@@ -4,7 +4,7 @@ description: Research a specific system and create or update its blueprints/ doc
 
 ## Name
 
-hashi-blueprints:blueprint - Generate or update blueprint documentation for a specific system
+hashi-blueprints:create-blueprint - Generate or update blueprint documentation for a specific system
 
 ## Synopsis
 
