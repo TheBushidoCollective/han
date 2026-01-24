@@ -1189,6 +1189,58 @@ function isStopHookActive(): boolean {
 	return process.env.HAN_STOP_ORCHESTRATING === "1";
 }
 
+/**
+ * Check if the agent's last turn is waiting for user input (a question).
+ * This detects if the agent used AskUserQuestion tool or ended with a question mark.
+ * If true, the turn isn't complete and Stop hooks shouldn't run yet.
+ */
+async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
+	try {
+		// Get the last assistant message
+		const msgs = await messages.list({
+			sessionId,
+			limit: 1,
+		});
+
+		if (msgs.length === 0) return false;
+
+		const lastMsg = msgs[0];
+
+		// Only check assistant messages
+		if (lastMsg.role !== "assistant") return false;
+
+		// Check if message contains AskUserQuestion tool use
+		if (lastMsg.content) {
+			try {
+				const content = JSON.parse(lastMsg.content);
+				// Check for tool_use blocks with name AskUserQuestion
+				if (Array.isArray(content)) {
+					for (const block of content) {
+						if (block.type === "tool_use" && block.name === "AskUserQuestion") {
+							return true;
+						}
+					}
+				}
+			} catch {
+				// Not JSON, check as text
+			}
+		}
+
+		// Check if text ends with a question mark (accounting for whitespace)
+		if (typeof lastMsg.content === "string") {
+			const trimmed = lastMsg.content.trim();
+			if (trimmed.endsWith("?")) {
+				return true;
+			}
+		}
+
+		return false;
+	} catch (_err) {
+		// Error querying - assume not waiting
+		return false;
+	}
+}
+
 async function getLastHookCheckState(
 	sessionId: string,
 	hookType: string,
@@ -1246,6 +1298,21 @@ async function performCheckMode(
 	onlyChanged: boolean,
 	sessionId: string,
 ): Promise<void> {
+	// For Stop hooks: check if agent is waiting for user input (question)
+	// If so, the turn isn't complete and we shouldn't run hooks yet
+	if (
+		(eventType === "Stop" || eventType === "SubagentStop") &&
+		await isAgentWaitingForInput(sessionId)
+	) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[performCheckMode]${colors.reset} Agent is waiting for user input - skipping hook check`,
+			);
+		}
+		// Exit silently - the turn isn't complete yet
+		process.exit(0);
+	}
+
 	// Build list of hooks that would run (checking cache/changes)
 	const hooksToRun: Array<{
 		plugin: string;
