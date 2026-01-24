@@ -25,7 +25,7 @@ if [ ! -d "/etc/letsencrypt/live/coordinator.local.han.guru" ]; then
     echo "  --dns-google-credentials /app/gcloud-credentials.json \\"
     echo "  --dns-google-propagation-seconds 60 \\"
     echo "  -d coordinator.local.han.guru \\"
-    echo "  --preferred-chain shortlived \\"
+    echo "  --required-profile shortlived \\"
     echo "  --non-interactive \\"
     echo "  --agree-tos \\"
     echo "  -m your-email@example.com"

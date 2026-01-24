@@ -56,13 +56,13 @@ certbot certonly \
   --dns-google-credentials /app/gcloud-credentials.json \
   --dns-google-propagation-seconds 60 \
   -d coordinator.local.han.guru \
-  --preferred-chain shortlived \
+  --required-profile shortlived \
   --non-interactive \
   --agree-tos \
   -m your-email@example.com
 ```
 
-The `--preferred-chain shortlived` flag requests a 6-day (160 hour) certificate instead of the standard 90-day certificate.
+The `--required-profile shortlived` flag requires a 6-day (160 hour) certificate instead of the standard 90-day certificate.
 
 After initial certificate is issued, restart the server to start serving certificates.
 
