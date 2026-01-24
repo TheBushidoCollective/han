@@ -21,9 +21,11 @@ hooks:
 # Memory provider config - defines which tools the Memory Agent can use
 memory:
   allowed_tools:
+    - mcp__blueprints__list_blueprints
     - mcp__blueprints__search_blueprints
     - mcp__blueprints__read_blueprint
   system_prompt: |
     Search project blueprints for architectural decisions and system documentation.
-    Use search_blueprints to find relevant blueprints, then read_blueprint for details.
+    Use list_blueprints to see all available blueprints, search_blueprints to filter by keyword,
+    then read_blueprint for detailed content.
     Focus on architectural patterns, API designs, and system behaviors.

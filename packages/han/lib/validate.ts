@@ -118,7 +118,7 @@ export function getAbsoluteEnvFilePath(): string | null {
 
 	// Security: Validate path to prevent shell injection
 	// Only allow safe file path characters: alphanumeric, /, -, _, ., ~
-	if (!/^[a-zA-Z0-9\/_.\-~]+$/.test(envFile)) {
+	if (!/^[a-zA-Z0-9/_.\-~]+$/.test(envFile)) {
 		console.error(
 			`[han] SECURITY: Invalid CLAUDE_ENV_FILE path (contains unsafe characters): ${envFile}`,
 		);

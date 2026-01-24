@@ -9,6 +9,7 @@ import { execSync } from "node:child_process";
 import { createServer as createHttpServer, type Server } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { parse } from "node:url";
+import { useDeferStream } from "@graphql-yoga/plugin-defer-stream";
 import { makeServer } from "graphql-ws";
 import { createYoga } from "graphql-yoga";
 import { WebSocketServer } from "ws";
@@ -378,6 +379,10 @@ export async function startServer(
 		schema,
 		graphqlEndpoint: "/graphql",
 		graphiql: true,
+		plugins: [
+			// biome-ignore lint/correctness/useHookAtTopLevel: This is a GraphQL Yoga plugin, not a React hook
+			useDeferStream(), // Enable @defer and @stream directives
+		],
 		cors: {
 			origin: [
 				"http://localhost:41956",

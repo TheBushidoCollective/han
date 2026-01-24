@@ -55,7 +55,7 @@ You are tasked with comprehensively documenting all systems in this codebase.
 
 **Use the MCP tools to audit existing documentation**:
 
-1. **Use `search_blueprints()`** to list all existing blueprints
+1. **Use `list_blueprints()`** to get all existing blueprints
 2. **Use `read_blueprint({ name: "blueprint-name" })`** to check each documented system:
    - Does the blueprint match current implementation?
    - Are there new features not documented?

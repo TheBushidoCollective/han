@@ -61,15 +61,10 @@ Thoroughly investigate the system:
 
 Before creating a new blueprint, **use the MCP tools**:
 
-1. **Use `search_blueprints`** to find existing documentation:
-   ```
-   search_blueprints({ keyword: "system-name" })
-   ```
-2. **Use `read_blueprint`** to check existing blueprints for overlap:
-   ```
-   read_blueprint({ name: "related-system" })
-   ```
-3. **Identify overlapping systems** that should be documented together
+1. **Use `list_blueprints()`** to see all existing blueprints
+2. **Use `search_blueprints({ keyword: "system-name" })`** to find related documentation
+3. **Use `read_blueprint({ name: "related-system" })`** to check for overlap
+4. **Identify overlapping systems** that should be documented together
 
 ### 4. Write the Blueprint
 

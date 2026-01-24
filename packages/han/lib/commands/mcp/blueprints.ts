@@ -318,9 +318,26 @@ function writeBlueprint(
  */
 const BLUEPRINT_TOOLS: McpTool[] = [
 	{
+		name: "list_blueprints",
+		description:
+			"List all available technical blueprints in the repository. Returns all blueprint names and summaries. USE THIS to get an overview of existing documentation.",
+		annotations: {
+			title: "List Blueprints",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {},
+			required: [],
+		},
+	},
+	{
 		name: "search_blueprints",
 		description:
-			"Search and list available technical blueprints. USE THIS FIRST before creating new blueprints to avoid duplication. Returns blueprint names and summaries. Optionally filter by keyword.",
+			"Search and filter technical blueprints by keyword. USE THIS to find specific blueprints before creating new ones to avoid duplication. Returns blueprint names and summaries matching the keyword.",
 		annotations: {
 			title: "Search Blueprints",
 			readOnlyHint: true,
@@ -334,10 +351,10 @@ const BLUEPRINT_TOOLS: McpTool[] = [
 				keyword: {
 					type: "string",
 					description:
-						"Optional keyword to filter blueprints by name or summary",
+						"Keyword to filter blueprints by name or summary",
 				},
 			},
-			required: [],
+			required: ["keyword"],
 		},
 	},
 	{
@@ -424,10 +441,23 @@ async function handleToolsCall(params: {
 		const args = params.arguments || {};
 
 		switch (params.name) {
+			case "list_blueprints": {
+				const result = searchBlueprints();
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(result, null, 2),
+						},
+					],
+				};
+			}
+
 			case "search_blueprints": {
-				const keyword =
-					typeof args.keyword === "string" ? args.keyword : undefined;
-				const result = searchBlueprints(keyword);
+				if (typeof args.keyword !== "string") {
+					throw new Error("Keyword is required for search");
+				}
+				const result = searchBlueprints(args.keyword);
 				return {
 					content: [
 						{

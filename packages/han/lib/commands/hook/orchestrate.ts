@@ -1301,10 +1301,7 @@ async function performCheckMode(
 ): Promise<void> {
 	// If flag is set: check if agent is waiting for user input (question)
 	// If so, the turn isn't complete and we shouldn't run hooks yet
-	if (
-		skipIfQuestioning &&
-		await isAgentWaitingForInput(sessionId)
-	) {
+	if (skipIfQuestioning && (await isAgentWaitingForInput(sessionId))) {
 		if (isDebugMode()) {
 			console.error(
 				`${colors.dim}[performCheckMode]${colors.reset} Agent is waiting for user input - skipping hook check`,

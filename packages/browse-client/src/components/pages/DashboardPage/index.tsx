@@ -75,9 +75,6 @@ export const DashboardActivityFragment = graphql`
 /**
  * Main dashboard query
  * Note: projectId filter is used for repo-specific dashboards
- *
- * Activity data is deferred to allow stats/sessions to render immediately
- * while charts load progressively. GraphQL Yoga now supports @defer via useDeferStream plugin.
  */
 export const DashboardPageQuery = graphql`
   query DashboardPageQuery($projectId: String) {
@@ -114,10 +111,8 @@ export const DashboardPageQuery = graphql`
       category
       count
     }
-    # Defer heavy activity data (730 days with nested arrays)
-    # This allows the page to render stats/sessions immediately
-    # while charts load progressively
-    ...DashboardPageActivity_query @defer(label: "activityData")
+    # Include activity data directly
+    ...DashboardPageActivity_query
   }
 `;
 
