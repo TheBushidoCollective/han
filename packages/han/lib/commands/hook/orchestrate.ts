@@ -1297,11 +1297,12 @@ async function performCheckMode(
 	projectRoot: string,
 	onlyChanged: boolean,
 	sessionId: string,
+	skipIfQuestioning: boolean,
 ): Promise<void> {
-	// For Stop hooks: check if agent is waiting for user input (question)
+	// If flag is set: check if agent is waiting for user input (question)
 	// If so, the turn isn't complete and we shouldn't run hooks yet
 	if (
-		(eventType === "Stop" || eventType === "SubagentStop") &&
+		skipIfQuestioning &&
 		await isAgentWaitingForInput(sessionId)
 	) {
 		if (isDebugMode()) {
@@ -1627,6 +1628,7 @@ async function orchestrate(
 		wait: boolean;
 		check: boolean;
 		orchestrationId?: string;
+		skipIfQuestioning?: boolean;
 	},
 ): Promise<void> {
 	// Recursion prevention: If we're already orchestrating Stop hooks, don't trigger again
@@ -1796,6 +1798,7 @@ async function orchestrate(
 			projectRoot,
 			options.onlyChanged,
 			sessionId,
+			options.skipIfQuestioning ?? false,
 		);
 		return;
 	}
@@ -2298,6 +2301,10 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 			"--orchestration-id <id>",
 			"Run queued hooks from a specific orchestration (use with --wait)",
 		)
+		.option(
+			"--skip-if-questioning",
+			"Skip hook check if agent's last message is a question (waiting for user input)",
+		)
 		.action(
 			async (
 				eventType: string,
@@ -2308,6 +2315,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					wait?: boolean;
 					check?: boolean;
 					orchestrationId?: string;
+					skipIfQuestioning?: boolean;
 				},
 			) => {
 				await orchestrate(eventType, {
@@ -2317,6 +2325,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					check: opts.check ?? false,
 					wait: opts.wait ?? false,
 					orchestrationId: opts.orchestrationId,
+					skipIfQuestioning: opts.skipIfQuestioning ?? false,
 				});
 			},
 		);
