@@ -1,6 +1,6 @@
 {
   "name": "jutsu-runbooks",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Structured operational documentation and runbook patterns for human operators. Helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance.",
   "author": {
     "name": "The Bushido Collective",
