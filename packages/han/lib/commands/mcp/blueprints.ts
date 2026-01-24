@@ -350,8 +350,7 @@ const BLUEPRINT_TOOLS: McpTool[] = [
 			properties: {
 				keyword: {
 					type: "string",
-					description:
-						"Keyword to filter blueprints by name or summary",
+					description: "Keyword to filter blueprints by name or summary",
 				},
 			},
 			required: ["keyword"],
