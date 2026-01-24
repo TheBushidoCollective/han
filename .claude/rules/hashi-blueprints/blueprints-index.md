@@ -31,7 +31,6 @@ Update blueprints via `write_blueprint` when you:
 <!-- AUTO-GENERATED INDEX - DO NOT EDIT BELOW THIS LINE -->
 | Blueprint | Summary |
 |-----------|---------|
-| async-workflow-pattern | Background workflow execution with monitor agent for progress narration |
 | blueprint-system | MCP-based blueprint management with frontmatter metadata |
 | browse-architecture | Han browse command architecture - GraphQL + Vite unified server |
 | build-deployment | CI/CD automation for releases and deployments |
@@ -45,7 +44,6 @@ Update blueprints via `write_blueprint` when you:
 | han-memory-system | Complete architecture and implementation of Han Memory - five-layer semantic memory with synthesis via Agent SDK, streaming output, and citation-backed answers |
 | hook-system | Complete hook lifecycle from definition to execution with centralized orchestration, checkpoint filtering, and cross-plugin dependencies |
 | marketplace | Central plugin registry and distribution |
-| mcp-orchestrator | Han as workflow orchestrator with encapsulated MCP backends (tools never returned to CC) |
 | mcp-server | Model Context Protocol server exposing plugin tools |
 | metrics-system | Self-reporting agent performance tracking with validation |
 | native-module | High-performance Rust bindings for hook operations |
