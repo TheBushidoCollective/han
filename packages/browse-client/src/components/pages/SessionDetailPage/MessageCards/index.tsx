@@ -116,6 +116,12 @@ interface MessageCardProps {
 
 const componentMap = {
   UserMessageCard,
+  // UserMessage interface subtypes - all use UserMessageCard
+  RegularUserMessageCard: UserMessageCard,
+  MetaUserMessageCard: UserMessageCard,
+  CommandUserMessageCard: UserMessageCard,
+  InterruptUserMessageCard: UserMessageCard,
+  ToolResultUserMessageCard: UserMessageCard,
   AssistantMessageCard,
   SummaryMessageCard,
   SystemMessageCard,
@@ -175,6 +181,11 @@ export function MessageCard({
  */
 export type MessageTypename =
   | 'UserMessage'
+  | 'RegularUserMessage'
+  | 'MetaUserMessage'
+  | 'CommandUserMessage'
+  | 'InterruptUserMessage'
+  | 'ToolResultUserMessage'
   | 'AssistantMessage'
   | 'SummaryMessage'
   | 'SystemMessage'
@@ -206,12 +217,18 @@ export function isKnownMessageType(
 ): typename is MessageTypename {
   return [
     'UserMessage',
+    'RegularUserMessage',
+    'MetaUserMessage',
+    'CommandUserMessage',
+    'InterruptUserMessage',
+    'ToolResultUserMessage',
     'AssistantMessage',
     'SummaryMessage',
     'SystemMessage',
     'FileHistorySnapshotMessage',
     'HookRunMessage',
     'HookResultMessage',
+    'HookCheckStateMessage',
     'HookReferenceMessage',
     'HookValidationMessage',
     'HookValidationCacheMessage',
