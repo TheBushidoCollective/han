@@ -166,8 +166,6 @@ export function Sidebar(): React.ReactElement {
         <Pressable
           style={styles.modal}
           onPress={() => setShowEnvSwitcher(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Close environment switcher"
         >
           <Box style={styles.modalContent}>
             <EnvironmentSwitcher />

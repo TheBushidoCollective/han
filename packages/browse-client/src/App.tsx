@@ -10,7 +10,6 @@ import {
 } from '@/hooks/useSubscription';
 import { RelayProvider } from '@/relay';
 import { colors, fonts } from '@/theme';
-import type { ViewStyle } from 'react-native';
 import routes from '~react-pages';
 
 function formatMemoryEvent(event: MemoryUpdateEvent): string {
@@ -33,29 +32,29 @@ function formatMemoryEvent(event: MemoryUpdateEvent): string {
   return `${type} ${action}`;
 }
 
-const appStyle: ViewStyle = {
-  display: 'flex',
-  flexDirection: 'row',
-  minHeight: '100vh' as unknown as number,
+const appStyle = {
+  display: 'flex' as const,
+  flexDirection: 'row' as const,
+  minHeight: '100vh',
   backgroundColor: colors.bg.primary,
   color: colors.text.primary,
   fontFamily: fonts.body,
 };
 
-const mainContentStyle: ViewStyle = {
+const mainContentStyle = {
   flex: 1,
   marginLeft: 220,
-  height: '100vh' as unknown as number,
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
+  height: '100vh',
+  overflowY: 'auto' as const,
+  overflowX: 'hidden' as const,
+  display: 'flex' as const,
+  flexDirection: 'column' as const,
 };
 
-const loadingStyle: ViewStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+const loadingStyle = {
+  display: 'flex' as const,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
   height: '100%',
   color: colors.text.muted,
 };

@@ -7,7 +7,6 @@
 
 import type React from 'react';
 import type { ReactNode } from 'react';
-import type { ViewStyle } from 'react-native';
 import { colors, fonts, spacing } from '../../theme.ts';
 import { Box } from '../atoms/index.ts';
 import type { ToastType } from '../organisms/index.ts';
@@ -20,21 +19,21 @@ interface PageLayoutProps {
   onDismissToast: (id: number) => void;
 }
 
-const appStyle: ViewStyle = {
-  display: 'flex',
-  flexDirection: 'row',
-  minHeight: '100vh' as unknown as number,
+const appStyle = {
+  display: 'flex' as const,
+  flexDirection: 'row' as const,
+  minHeight: '100vh',
   backgroundColor: colors.bg.primary,
   color: colors.text.primary,
   fontFamily: fonts.body,
 };
 
-const mainContentStyle: ViewStyle = {
+const mainContentStyle = {
   flex: 1,
   padding: spacing.xl,
   marginLeft: 220,
-  minHeight: '100vh' as unknown as number,
-  overflowX: 'auto',
+  minHeight: '100vh',
+  overflowX: 'auto' as const,
 };
 
 export function PageLayout({
