@@ -98,6 +98,7 @@ Health check endpoint:
 Certificates are automatically renewed via cron (runs **every 12 hours**).
 
 For 6-day certificates (160 hours validity):
+
 - Renewal triggers when < 48 hours (2 days) remaining
 - Cron runs at 00:00 and 12:00 UTC daily
 - More frequent checks ensure certificates never expire
@@ -107,11 +108,14 @@ Standard 90-day certificates renew at < 30 days, but short-lived certs require m
 ## Security Notes
 
 ### Public Private Key Pattern
+
 The private key is "public" (distributed to all han users) but the domain resolves to `127.0.0.1`, so connections stay local.
 This follows the Plex pattern (`*.plex.direct`) for local HTTPS.
 
 ### Why 6-Day Certificates?
+
 Short-lived certificates (160 hours) provide:
+
 - **Reduced vulnerability window**: Even if a key is compromised, it's only valid for 6 days
 - **Forced automation**: Ensures our renewal system is battle-tested and reliable
 - **Preparation for future**: Let's Encrypt's direction is toward shorter certificate lifetimes
