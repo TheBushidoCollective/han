@@ -59,15 +59,31 @@ Thoroughly investigate the system:
 
 ### 3. Check for Duplicates
 
-Before creating a new blueprint:
+Before creating a new blueprint, **use the MCP tools**:
 
-1. **Read blueprints/README.md** if it exists
-2. **Search blueprints/ directory** for related documentation
+1. **Use `search_blueprints`** to find existing documentation:
+   ```
+   search_blueprints({ keyword: "system-name" })
+   ```
+2. **Use `read_blueprint`** to check existing blueprints for overlap:
+   ```
+   read_blueprint({ name: "related-system" })
+   ```
 3. **Identify overlapping systems** that should be documented together
 
 ### 4. Write the Blueprint
 
-Create or update `{repo-root}/blueprints/{system-name}.md` with:
+**Use `write_blueprint` to create or update the blueprint**:
+
+```
+write_blueprint({
+  name: "system-name",
+  summary: "Brief one-line description",
+  content: "# {System Name}\n\n..."
+})
+```
+
+The blueprint content should follow this structure:
 
 ```markdown
 # {System Name}
@@ -143,18 +159,11 @@ Key implementation files:
 - [{Related System}](./related-system.md) - {relationship description}
 ```
 
-### 5. Update {repo-root}/blueprints/README.md
-
-Add an entry to the index:
-
-```markdown
-- [{System Name}](./{system-name}.md) - {brief description}
-```
-
 ## Output
 
 After completing the research and documentation:
 
-1. Create/update the blueprint file
-2. Update blueprints/README.md index
-3. Report what was documented and any related systems that may need documentation
+1. Create/update the blueprint using `write_blueprint`
+2. Report what was documented and any related systems that may need documentation
+
+**Note:** The blueprint index is automatically managed by the MCP tools - you don't need to manually update README files.

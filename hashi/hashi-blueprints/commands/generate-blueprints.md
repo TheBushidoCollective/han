@@ -53,10 +53,10 @@ You are tasked with comprehensively documenting all systems in this codebase.
 
 ### Phase 2: Audit Existing Blueprints
 
-If blueprints/ exists:
+**Use the MCP tools to audit existing documentation**:
 
-1. **Read blueprints/README.md** for the current index
-2. **Check each documented system**:
+1. **Use `search_blueprints()`** to list all existing blueprints
+2. **Use `read_blueprint({ name: "blueprint-name" })`** to check each documented system:
    - Does the blueprint match current implementation?
    - Are there new features not documented?
    - Is any documented functionality removed?
@@ -73,7 +73,17 @@ Order systems by importance:
 
 ### Phase 4: Generate Documentation
 
-For each system, create or update `{repo-root}/blueprints/{system-name}.md`:
+For each system, **use `write_blueprint` to create or update the documentation**:
+
+```
+write_blueprint({
+  name: "system-name",
+  summary: "Brief one-line description",
+  content: "markdown content..."
+})
+```
+
+The blueprint content should follow this structure:
 
 ```markdown
 # {System Name}
@@ -105,49 +115,29 @@ For each system, create or update `{repo-root}/blueprints/{system-name}.md`:
 {Links to related blueprints}
 ```
 
-### Phase 5: Create/Update Index
+### Phase 5: Index Management
 
-Update `{repo-root}/blueprints/README.md`:
+**The blueprint index is automatically managed** by the MCP tools. When you use `write_blueprint`, the index is updated automatically in `.claude/rules/hashi-blueprints/blueprints-index.md`.
 
-```markdown
-# Technical Blueprints
-
-This directory contains implementation documentation for {project name}.
-
-## Systems
-
-### Core
-
-- [{System A}](./system-a.md) - {description}
-- [{System B}](./system-b.md) - {description}
-
-### Features
-
-- [{Feature X}](./feature-x.md) - {description}
-
-### Integrations
-
-- [{Integration Y}](./integration-y.md) - {description}
-
-## Documentation Standards
-
-See [hashi-blueprints](https://github.com/thebushidocollective/han) for documentation guidelines.
-```
+You don't need to manually create or update any README files - just focus on creating quality blueprint content using the MCP tools.
 
 ## De-duplication Strategy
 
 When documenting, actively prevent duplicates:
 
-1. **Check before creating** - Search blueprints/ for existing coverage
-2. **Merge related systems** - Document tightly coupled systems together
-3. **Use cross-references** - Link between blueprints rather than duplicating
-4. **One source of truth** - Each concept documented in exactly one place
+1. **Check before creating** - Use `search_blueprints({ keyword: "system" })` for existing coverage
+2. **Read existing blueprints** - Use `read_blueprint({ name: "blueprint-name" })` to check content
+3. **Merge related systems** - Document tightly coupled systems together
+4. **Use cross-references** - Link between blueprints rather than duplicating
+5. **One source of truth** - Each concept documented in exactly one place
 
 ## Output
 
 After completing:
 
 1. List all systems discovered
-2. List blueprints created/updated
+2. List blueprints created/updated (using `write_blueprint`)
 3. Note any systems that couldn't be documented (why)
 4. Identify areas needing future documentation
+
+**Remember:** Always use the MCP tools (`search_blueprints`, `read_blueprint`, `write_blueprint`) instead of directly reading/writing files. The tools handle frontmatter, indexing, and organization automatically.
