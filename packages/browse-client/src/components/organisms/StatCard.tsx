@@ -51,25 +51,21 @@ export function StatCard({
       ? { padding: theme.spacing.md, textAlign: 'center' as const }
       : undefined;
 
-  // In compact mode, don't use Card wrapper, just a div with custom styling
+  // In compact mode, don't use Card wrapper, just a Box with custom styling
   if (compact) {
     return (
-      <div style={cardStyle}>
+      <VStack gap="xs" style={cardStyle}>
         <Text
           size="lg"
           weight="bold"
-          style={
-            valueColor
-              ? { color: valueColor, display: 'block', marginBottom: 2 }
-              : { display: 'block', marginBottom: 2 }
-          }
+          style={valueColor ? { color: valueColor } : undefined}
         >
           {value}
         </Text>
         <Text size="xs" color="muted">
           {label}
         </Text>
-      </div>
+      </VStack>
     );
   }
 

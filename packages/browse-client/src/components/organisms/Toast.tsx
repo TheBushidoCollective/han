@@ -5,13 +5,12 @@
  */
 
 import type React from 'react';
-import type { CSSProperties } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import {
   colors,
-  createStyles,
   fontSizes,
   radii,
-  shadows,
   spacing,
 } from '../../theme.ts';
 
@@ -26,54 +25,48 @@ interface ToastContainerProps {
   onDismiss: (id: number) => void;
 }
 
-const styles = createStyles({
-  container: {
-    position: 'fixed' as const,
-    bottom: spacing.xl,
-    right: spacing.xl,
-    zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: spacing.sm,
-  },
-  toast: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: `${spacing.md}px ${spacing.lg}px`,
-    borderRadius: radii.md,
-    boxShadow: shadows.lg,
-    minWidth: 280,
-    maxWidth: 400,
-  },
-  message: {
-    flex: 1,
-    fontSize: fontSizes.md,
-    color: colors.text.primary,
-  },
-  dismiss: {
-    backgroundColor: 'transparent',
-    border: 'none',
-    color: colors.text.muted,
-    fontSize: fontSizes.lg,
-    cursor: 'pointer',
-    padding: spacing.xs,
-    lineHeight: 1,
-  },
-});
+const containerStyle: ViewStyle = {
+  position: 'absolute',
+  bottom: spacing.xl,
+  right: spacing.xl,
+  zIndex: 1000,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: spacing.sm,
+};
 
-const toastTypeStyles: Record<Toast['type'], CSSProperties> = {
+const toastBaseStyle: ViewStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.md,
+  padding: spacing.md,
+  paddingLeft: spacing.lg,
+  paddingRight: spacing.lg,
+  borderRadius: radii.md,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  minWidth: 280,
+  maxWidth: 400,
+};
+
+const toastTypeStyles: Record<Toast['type'], ViewStyle> = {
   info: {
     backgroundColor: colors.bg.tertiary,
-    borderLeft: `4px solid ${colors.primary}`,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
   },
   success: {
     backgroundColor: colors.bg.tertiary,
-    borderLeft: `4px solid ${colors.success}`,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
   },
   warning: {
     backgroundColor: colors.bg.tertiary,
-    borderLeft: `4px solid ${colors.warning}`,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
   },
 };
 
@@ -84,22 +77,39 @@ export function ToastContainer({
   if (toasts.length === 0) return null;
 
   return (
-    <div style={styles.container}>
+    <View style={containerStyle}>
       {toasts.map((toast) => (
-        <div
+        <View
           key={toast.id}
-          style={{ ...styles.toast, ...toastTypeStyles[toast.type] }}
+          style={[toastBaseStyle, toastTypeStyles[toast.type]]}
         >
-          <span style={styles.message}>{toast.message}</span>
-          <button
-            type="button"
-            style={styles.dismiss}
-            onClick={() => onDismiss(toast.id)}
+          <Text
+            style={{
+              flex: 1,
+              fontSize: fontSizes.md,
+              color: colors.text.primary,
+            }}
           >
-            ×
-          </button>
-        </div>
+            {toast.message}
+          </Text>
+          <Pressable
+            onPress={() => onDismiss(toast.id)}
+            style={{
+              padding: spacing.xs,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.text.muted,
+                fontSize: fontSizes.lg,
+                lineHeight: fontSizes.lg,
+              }}
+            >
+              ×
+            </Text>
+          </Pressable>
+        </View>
       ))}
-    </div>
+    </View>
   );
 }

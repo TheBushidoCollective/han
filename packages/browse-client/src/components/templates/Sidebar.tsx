@@ -163,25 +163,16 @@ export function Sidebar(): React.ReactElement {
 
       {/* Environment Switcher Modal */}
       {showEnvSwitcher && (
-        <div
-          role="dialog"
-          aria-modal="true"
+        <Pressable
           style={styles.modal}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowEnvSwitcher(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setShowEnvSwitcher(false);
-            }
-          }}
+          onPress={() => setShowEnvSwitcher(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close environment switcher"
         >
-          <div style={styles.modalContent}>
+          <Box style={styles.modalContent}>
             <EnvironmentSwitcher />
-          </div>
-        </div>
+          </Box>
+        </Pressable>
       )}
     </>
   );

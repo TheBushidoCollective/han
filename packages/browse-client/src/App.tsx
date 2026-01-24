@@ -2,13 +2,15 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRoutes } from 'react-router-dom';
 import type { ToastType } from '@/components/organisms';
 import { ToastContainer } from '@/components/organisms';
+import { Box, Center, Text } from '@/components/atoms';
 import { Sidebar } from '@/components/templates/Sidebar';
 import {
   type MemoryUpdateEvent,
   useMemoryUpdates,
 } from '@/hooks/useSubscription';
 import { RelayProvider } from '@/relay';
-import { colors, createStyles, fonts } from '@/theme';
+import { colors, fonts } from '@/theme';
+import type { ViewStyle } from 'react-native';
 import routes from '~react-pages';
 
 function formatMemoryEvent(event: MemoryUpdateEvent): string {
@@ -31,33 +33,32 @@ function formatMemoryEvent(event: MemoryUpdateEvent): string {
   return `${type} ${action}`;
 }
 
-const styles = createStyles({
-  app: {
-    display: 'flex',
-    minHeight: '100vh',
-    backgroundColor: colors.bg.primary,
-    color: colors.text.primary,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 1.5,
-  },
-  mainContent: {
-    flex: 1,
-    marginLeft: 220, // Account for fixed sidebar
-    height: '100vh',
-    overflowY: 'auto' as const,
-    overflowX: 'hidden' as const,
-    display: 'flex',
-    flexDirection: 'column' as const,
-  },
-  loading: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    color: colors.text.muted,
-  },
-});
+const appStyle: ViewStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  minHeight: '100vh' as unknown as number,
+  backgroundColor: colors.bg.primary,
+  color: colors.text.primary,
+  fontFamily: fonts.body,
+};
+
+const mainContentStyle: ViewStyle = {
+  flex: 1,
+  marginLeft: 220,
+  height: '100vh' as unknown as number,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const loadingStyle: ViewStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  color: colors.text.muted,
+};
 
 export function App() {
   const [toasts, setToasts] = useState<ToastType[]>([]);
@@ -110,15 +111,21 @@ export function App() {
 
   return (
     <RelayProvider>
-      <div style={styles.app}>
+      <Box style={appStyle}>
         <Sidebar />
-        <main style={styles.mainContent}>
-          <Suspense fallback={<div style={styles.loading}>Loading...</div>}>
+        <Box style={mainContentStyle}>
+          <Suspense
+            fallback={
+              <Center style={loadingStyle}>
+                <Text color="muted">Loading...</Text>
+              </Center>
+            }
+          >
             {routeElement}
           </Suspense>
-        </main>
+        </Box>
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-      </div>
+      </Box>
     </RelayProvider>
   );
 }
