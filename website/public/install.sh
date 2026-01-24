@@ -86,16 +86,19 @@ fi
 echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
 DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}"
+CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
 
-# Download to temp file first for atomic replacement
+# Download to temp files first for atomic replacement
 # This prevents corruption if download fails or han is already running
 TEMP_BIN="${HAN_BIN}.tmp.$$"
+TEMP_CHECKSUM="${HAN_BIN}.sha256.tmp.$$"
 
 cleanup() {
-	rm -f "$TEMP_BIN"
+	rm -f "$TEMP_BIN" "$TEMP_CHECKSUM"
 }
 trap cleanup EXIT
 
+echo -e "${YELLOW}Downloading binary...${NC}"
 if command -v curl >/dev/null 2>&1; then
 	curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_BIN"
 elif command -v wget >/dev/null 2>&1; then
@@ -103,6 +106,52 @@ elif command -v wget >/dev/null 2>&1; then
 else
 	echo -e "${RED}Neither curl nor wget found. Cannot download han binary.${NC}" >&2
 	exit 1
+fi
+
+# Download checksum
+echo -e "${YELLOW}Downloading checksum for verification...${NC}"
+if command -v curl >/dev/null 2>&1; then
+	if ! curl -fsSL "$CHECKSUM_URL" -o "$TEMP_CHECKSUM" 2>/dev/null; then
+		echo -e "${YELLOW}Warning: Could not download checksum file. Skipping verification.${NC}" >&2
+		echo -e "${YELLOW}This may indicate an older release without checksums.${NC}" >&2
+		SKIP_CHECKSUM=1
+	fi
+elif command -v wget >/dev/null 2>&1; then
+	if ! wget -qO "$TEMP_CHECKSUM" "$CHECKSUM_URL" 2>/dev/null; then
+		echo -e "${YELLOW}Warning: Could not download checksum file. Skipping verification.${NC}" >&2
+		echo -e "${YELLOW}This may indicate an older release without checksums.${NC}" >&2
+		SKIP_CHECKSUM=1
+	fi
+fi
+
+# Verify checksum if downloaded
+if [ -z "$SKIP_CHECKSUM" ]; then
+	echo -e "${YELLOW}Verifying checksum...${NC}"
+
+	# Extract expected checksum from file
+	EXPECTED_CHECKSUM=$(awk '{print $1}' "$TEMP_CHECKSUM")
+
+	# Calculate actual checksum
+	if command -v sha256sum >/dev/null 2>&1; then
+		ACTUAL_CHECKSUM=$(sha256sum "$TEMP_BIN" | awk '{print $1}')
+	elif command -v shasum >/dev/null 2>&1; then
+		ACTUAL_CHECKSUM=$(shasum -a 256 "$TEMP_BIN" | awk '{print $1}')
+	else
+		echo -e "${YELLOW}Warning: No checksum utility found (sha256sum or shasum). Skipping verification.${NC}" >&2
+		SKIP_CHECKSUM=1
+	fi
+
+	if [ -z "$SKIP_CHECKSUM" ]; then
+		if [ "$EXPECTED_CHECKSUM" = "$ACTUAL_CHECKSUM" ]; then
+			echo -e "${GREEN}✓ Checksum verified successfully${NC}"
+		else
+			echo -e "${RED}✗ Checksum verification failed!${NC}" >&2
+			echo -e "${RED}Expected: $EXPECTED_CHECKSUM${NC}" >&2
+			echo -e "${RED}Actual:   $ACTUAL_CHECKSUM${NC}" >&2
+			echo -e "${RED}The downloaded binary may be corrupted or tampered with.${NC}" >&2
+			exit 1
+		fi
+	fi
 fi
 
 # Make it executable
