@@ -11,13 +11,8 @@ import {
 	queryMemoryAgent,
 } from "../../memory/memory-agent.ts";
 import { type BackendPool, createBackendPool } from "./backend-pool.ts";
-import { getExposedMcpServers } from "./capability-registry.ts";
+import { getExposedMcpServers } from "./exposed-tools.ts";
 import { captureMemory, type LearnParams } from "./memory.ts";
-import {
-	getOrchestrator,
-	getOrchestratorConfig,
-	type Orchestrator,
-} from "./orchestrator.ts";
 import { handleToolsCall as handleTaskToolsCall, TASK_TOOLS } from "./task.ts";
 import {
 	type AvailableHook,
@@ -205,71 +200,6 @@ export function handleInitialize(): unknown {
 	};
 }
 
-// Workflow async tools definition (status, cancel, list)
-const WORKFLOW_ASYNC_TOOLS: McpTool[] = [
-	{
-		name: "han_workflow_status",
-		description:
-			"Check the status of an async workflow. Returns progress, partial results, and whether to check again. Use this to poll for updates on workflows started with async=true.",
-		annotations: {
-			title: "Workflow Status",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				workflow_id: {
-					type: "string",
-					description:
-						"The workflow ID returned from han_workflow with async=true",
-				},
-			},
-			required: ["workflow_id"],
-		},
-	},
-	{
-		name: "han_workflow_cancel",
-		description:
-			"Cancel a running async workflow. Returns success if the workflow was cancelled.",
-		annotations: {
-			title: "Cancel Workflow",
-			readOnlyHint: false,
-			destructiveHint: true,
-			idempotentHint: false,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {
-				workflow_id: {
-					type: "string",
-					description: "The workflow ID to cancel",
-				},
-			},
-			required: ["workflow_id"],
-		},
-	},
-	{
-		name: "han_workflow_list",
-		description:
-			"List all active (running or pending) workflows. Useful for debugging or monitoring multiple concurrent workflows.",
-		annotations: {
-			title: "List Workflows",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
-		},
-		inputSchema: {
-			type: "object",
-			properties: {},
-		},
-	},
-];
-
 // Task tools are imported from ./task.ts (TASK_TOOLS)
 
 // Unified memory tool (auto-routes to Personal, Team, or Rules)
@@ -396,23 +326,6 @@ const HOOK_TOOLS: McpTool[] = [
 	},
 ];
 
-// Lazy-load orchestrator for han_workflow tool
-let orchestratorInstance: Orchestrator | null = null;
-let orchestratorInitPromise: Promise<Orchestrator> | null = null;
-
-async function getOrchestratorInstance(): Promise<Orchestrator> {
-	if (orchestratorInstance) {
-		return orchestratorInstance;
-	}
-	if (!orchestratorInitPromise) {
-		orchestratorInitPromise = getOrchestrator().then((orch) => {
-			orchestratorInstance = orch;
-			return orch;
-		});
-	}
-	return orchestratorInitPromise;
-}
-
 // Lazy-load backend pool for exposed MCP servers
 let exposedBackendPool: BackendPool | null = null;
 
@@ -503,25 +416,14 @@ async function handleToolsList(): Promise<unknown> {
 	const hookRunTool = getHookRunTool();
 	const memoryEnabled = isMemoryEnabled();
 	const metricsEnabled = isMetricsEnabled();
-	const orchestratorConfig = getOrchestratorConfig();
 
 	// Get exposed tools from backend MCP servers
 	const { tools: exposedTools } = await getExposedTools();
-
-	// Get orchestrator workflow tools if enabled
-	const orchestratorTools: McpTool[] = [];
-	if (orchestratorConfig.enabled && orchestratorConfig.workflow.enabled) {
-		const orchestrator = await getOrchestratorInstance();
-		orchestratorTools.push(orchestrator.getWorkflowTool());
-		// Also add async workflow tools (status, cancel, list)
-		orchestratorTools.push(...WORKFLOW_ASYNC_TOOLS);
-	}
 
 	const allTools = [
 		// Single consolidated hook_run tool (replaces 30+ individual tools)
 		...(hookRunTool ? [hookRunTool] : []),
 		...exposedTools,
-		...orchestratorTools,
 		// Only include task tools if metrics are enabled
 		...(metricsEnabled ? TASK_TOOLS : []),
 		// Only include memory tools if memory is enabled
@@ -608,56 +510,6 @@ async function handleToolsCall(params: {
 					isError: true,
 				};
 			}
-		}
-	}
-
-	// Check if this is a workflow tool (orchestrator)
-	const workflowTools = [
-		"han_workflow",
-		"han_workflow_status",
-		"han_workflow_cancel",
-		"han_workflow_list",
-	];
-	if (workflowTools.includes(params.name)) {
-		const orchestratorConfig = getOrchestratorConfig();
-		if (!orchestratorConfig.enabled || !orchestratorConfig.workflow.enabled) {
-			return {
-				content: [
-					{
-						type: "text",
-						text: "Orchestrator workflow is disabled. Enable it in han.yml with: orchestrator:\n  enabled: true\n  workflow:\n    enabled: true",
-					},
-				],
-				isError: true,
-			};
-		}
-
-		try {
-			const orchestrator = await getOrchestratorInstance();
-
-			switch (params.name) {
-				case "han_workflow":
-					return await orchestrator.handleWorkflow(args);
-				case "han_workflow_status":
-					return orchestrator.handleWorkflowStatus(args);
-				case "han_workflow_cancel":
-					return orchestrator.handleWorkflowCancel(args);
-				case "han_workflow_list":
-					return orchestrator.handleWorkflowList();
-				default:
-					throw new Error(`Unknown workflow tool: ${params.name}`);
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Error executing ${params.name}: ${message}`,
-					},
-				],
-				isError: true,
-			};
 		}
 	}
 

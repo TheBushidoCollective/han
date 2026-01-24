@@ -210,6 +210,15 @@ export function getAbsoluteEnvFilePath(): string | null {
 	const envFile = process.env.CLAUDE_ENV_FILE;
 	if (!envFile) return null;
 
+	// Security: Validate path to prevent shell injection
+	// Only allow safe file path characters: alphanumeric, /, -, _, ., ~
+	if (!/^[a-zA-Z0-9\/_.\-~]+$/.test(envFile)) {
+		console.error(
+			`[han] SECURITY: Invalid CLAUDE_ENV_FILE path (contains unsafe characters): ${envFile}`,
+		);
+		return null;
+	}
+
 	// If already absolute, use as-is
 	if (envFile.startsWith("/")) return envFile;
 
