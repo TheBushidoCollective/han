@@ -387,7 +387,6 @@ export async function startServer(
 			origin: [
 				"http://localhost:41956",
 				"https://dashboard.local.han.guru",
-				"*", // Fallback for development
 			],
 			credentials: true,
 			methods: ["GET", "POST", "OPTIONS"],
