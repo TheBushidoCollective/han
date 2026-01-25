@@ -1191,7 +1191,7 @@ function isStopHookActive(): boolean {
 
 /**
  * Check if the agent's last turn is waiting for user input (a question).
- * This detects if the agent used AskUserQuestion tool or ended with a question mark.
+ * This detects if the agent used AskUserQuestion tool or asked a question.
  * If true, the turn isn't complete and Stop hooks shouldn't run yet.
  */
 async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
@@ -1209,7 +1209,8 @@ async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
 		// Only check assistant messages
 		if (lastMsg.role !== "assistant") return false;
 
-		// Check if message contains AskUserQuestion tool use
+		// Extract all text content from the message
+		let allText = "";
 		if (lastMsg.content) {
 			try {
 				const content = JSON.parse(lastMsg.content);
@@ -1219,18 +1220,51 @@ async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
 						if (block.type === "tool_use" && block.name === "AskUserQuestion") {
 							return true;
 						}
+						// Collect text from text blocks
+						if (block.type === "text" && block.text) {
+							allText += `${block.text} `;
+						}
 					}
 				}
 			} catch {
-				// Not JSON, check as text
+				// Not JSON, treat entire content as text
+				if (typeof lastMsg.content === "string") {
+					allText = lastMsg.content;
+				}
 			}
 		}
 
-		// Check if text ends with a question mark (accounting for whitespace)
-		if (typeof lastMsg.content === "string") {
-			const trimmed = lastMsg.content.trim();
-			if (trimmed.endsWith("?")) {
+		// If no text collected, use raw content as fallback
+		if (!allText && typeof lastMsg.content === "string") {
+			allText = lastMsg.content;
+		}
+
+		// Check for questions in the text
+		if (allText) {
+			// Normalize whitespace and check for question patterns
+			const normalized = allText.trim().replace(/\s+/g, " ");
+
+			// 1. Check for question marks anywhere in the text
+			if (normalized.includes("?")) {
 				return true;
+			}
+
+			// 2. Check for common question patterns (case-insensitive)
+			// These patterns indicate implied questions even without "?"
+			const questionPatterns = [
+				/\b(should i|shall i|can i|may i|could i|would i)\b/i,
+				/\b(should we|shall we|can we|may we|could we|would we)\b/i,
+				/\b(do you want|would you like|do you prefer|would you prefer)\b/i,
+				/\b(what do you think|how about|what about)\b/i,
+				/\b(which (one|option|approach|method))\b/i,
+				/\b(or (do|should|would|could) (i|we|you))\b/i,
+				/\b(let me know (if|whether|which))\b/i,
+			];
+
+			for (const pattern of questionPatterns) {
+				if (pattern.test(normalized)) {
+					return true;
+				}
 			}
 		}
 
