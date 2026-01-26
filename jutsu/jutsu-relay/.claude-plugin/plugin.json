@@ -9,12 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "relay",
-    "graphql",
-    "react",
-    "fragments"
-  ],
+  "keywords": ["relay", "graphql", "react", "fragments"],
   "lspServers": {
     "relay": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

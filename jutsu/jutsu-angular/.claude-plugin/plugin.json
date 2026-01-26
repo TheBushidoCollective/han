@@ -9,11 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "angular",
-    "rxjs",
-    "signals"
-  ],
+  "keywords": ["angular", "rxjs", "signals"],
   "lspServers": {
     "angular": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/angular-lsp-entrypoint.sh",

@@ -9,11 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "java",
-    "streams",
-    "concurrency"
-  ],
+  "keywords": ["java", "streams", "concurrency"],
   "lspServers": {
     "jdtls": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

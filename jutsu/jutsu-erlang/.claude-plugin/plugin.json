@@ -9,13 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "erlang",
-    "beam",
-    "otp",
-    "distributed",
-    "concurrent"
-  ],
+  "keywords": ["erlang", "beam", "otp", "distributed", "concurrent"],
   "lspServers": {
     "erlang_ls": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

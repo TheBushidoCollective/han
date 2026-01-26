@@ -21,10 +21,7 @@
   "mcpServers": {
     "blueprints": {
       "command": "han",
-      "args": [
-        "mcp",
-        "blueprints"
-      ],
+      "args": ["mcp", "blueprints"],
       "env": {}
     }
   }

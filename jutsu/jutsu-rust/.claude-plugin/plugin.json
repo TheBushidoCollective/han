@@ -9,11 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "rust",
-    "ownership",
-    "async"
-  ],
+  "keywords": ["rust", "ownership", "async"],
   "lspServers": {
     "rust-analyzer": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",

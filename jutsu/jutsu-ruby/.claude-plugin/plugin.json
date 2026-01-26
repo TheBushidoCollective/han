@@ -9,19 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "ruby",
-    "metaprogramming",
-    "blocks",
-    "gems",
-    "oop"
-  ],
+  "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop"],
   "lspServers": {
     "solargraph": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": [
-        "stdio"
-      ],
+      "args": ["stdio"],
       "extensionToLanguage": {
         ".rb": "ruby",
         ".rake": "ruby",

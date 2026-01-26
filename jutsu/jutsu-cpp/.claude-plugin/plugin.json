@@ -9,18 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "cpp",
-    "c++",
-    "modern-cpp",
-    "templates"
-  ],
+  "keywords": ["cpp", "c++", "modern-cpp", "templates"],
   "lspServers": {
     "clangd": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": [
-        "--background-index"
-      ],
+      "args": ["--background-index"],
       "extensionToLanguage": {
         ".cpp": "cpp",
         ".hpp": "cpp",

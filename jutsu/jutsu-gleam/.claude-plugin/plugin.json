@@ -9,18 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "gleam",
-    "beam",
-    "functional",
-    "erlang"
-  ],
+  "keywords": ["gleam", "beam", "functional", "erlang"],
   "lspServers": {
     "gleam": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": [
-        "lsp"
-      ],
+      "args": ["lsp"],
       "extensionToLanguage": {
         ".gleam": "gleam"
       }

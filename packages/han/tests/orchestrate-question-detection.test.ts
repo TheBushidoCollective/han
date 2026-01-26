@@ -52,7 +52,8 @@ describe("Question Detection Patterns", () => {
 		},
 		{
 			name: "Question pattern in middle of text",
-			content: "Here are the changes. Should I commit them? I think they're ready.",
+			content:
+				"Here are the changes. Should I commit them? I think they're ready.",
 			expected: true,
 		},
 		{
@@ -121,7 +122,11 @@ describe("JSON Content Block Handling", () => {
 
 	it("detects AskUserQuestion tool use", () => {
 		const contentBlocks = [
-			{ type: "tool_use", name: "AskUserQuestion", input: { question: "Continue?" } },
+			{
+				type: "tool_use",
+				name: "AskUserQuestion",
+				input: { question: "Continue?" },
+			},
 			{ type: "text", text: "Some text" },
 		];
 

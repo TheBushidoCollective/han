@@ -9,10 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "prettier",
-    "formatting",
-    "javascript",
-    "typescript"
-  ]
+  "keywords": ["prettier", "formatting", "javascript", "typescript"]
 }

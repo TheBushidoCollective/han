@@ -9,18 +9,11 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "php",
-    "composer",
-    "security",
-    "web"
-  ],
+  "keywords": ["php", "composer", "security", "web"],
   "lspServers": {
     "intelephense": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".php": "php"
       }

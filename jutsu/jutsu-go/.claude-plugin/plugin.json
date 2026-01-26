@@ -9,11 +9,7 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "go",
-    "golang",
-    "concurrency"
-  ],
+  "keywords": ["go", "golang", "concurrency"],
   "lspServers": {
     "gopls": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
