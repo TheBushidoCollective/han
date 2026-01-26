@@ -231,10 +231,30 @@ CREATE INDEX IF NOT EXISTS idx_tasks_started_confidence ON tasks(started_at, con
 -- ============================================================================
 
 -- ============================================================================
+-- Orchestrations (groups related hook executions for --check/--wait workflow)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS orchestrations (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'running', 'completed', 'cancelled'
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT,
+    completed_at TEXT,
+    total_hooks INTEGER NOT NULL DEFAULT 0,
+    passed_hooks INTEGER NOT NULL DEFAULT 0,
+    failed_hooks INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_orchestrations_session ON orchestrations(session_id);
+CREATE INDEX IF NOT EXISTS idx_orchestrations_status ON orchestrations(status);
+CREATE INDEX IF NOT EXISTS idx_orchestrations_created ON orchestrations(created_at);
+
+-- ============================================================================
 -- Hook Executions (track every hook run for metrics)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS hook_executions (
     id TEXT PRIMARY KEY,
+    orchestration_id TEXT REFERENCES orchestrations(id) ON DELETE SET NULL,
     session_id TEXT REFERENCES sessions(id),
     task_id TEXT,
     hook_type TEXT NOT NULL,
@@ -252,7 +272,9 @@ CREATE TABLE IF NOT EXISTS hook_executions (
     -- Deferred execution fields
     status TEXT DEFAULT 'completed',  -- 'pending', 'running', 'completed', 'failed'
     consecutive_failures INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 3
+    max_attempts INTEGER DEFAULT 3,
+    pid INTEGER,  -- Process ID of the hook execution
+    plugin_root TEXT  -- Plugin root directory
 );
 
 CREATE INDEX IF NOT EXISTS idx_hook_executions_session ON hook_executions(session_id);
@@ -261,6 +283,7 @@ CREATE INDEX IF NOT EXISTS idx_hook_executions_name ON hook_executions(hook_name
 CREATE INDEX IF NOT EXISTS idx_hook_executions_executed ON hook_executions(executed_at);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_status ON hook_executions(status);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_session_hook ON hook_executions(session_id, hook_name, directory);
+CREATE INDEX IF NOT EXISTS idx_hook_executions_orchestration ON hook_executions(orchestration_id);
 -- Composite indexes for hook stats queries (time-based filtering with grouping)
 CREATE INDEX IF NOT EXISTS idx_hook_executions_executed_type ON hook_executions(executed_at, hook_type);
 CREATE INDEX IF NOT EXISTS idx_hook_executions_executed_passed ON hook_executions(executed_at, passed);
