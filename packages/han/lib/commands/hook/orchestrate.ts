@@ -1190,66 +1190,80 @@ function isStopHookActive(): boolean {
 }
 
 /**
+ * Tools that modify files - if these are used, Stop hooks should run
+ * regardless of whether the exchange looks like Q&A
+ */
+const FILE_MODIFYING_TOOLS = new Set([
+	"Edit",
+	"Write",
+	"NotebookEdit",
+	"MultiEdit",
+]);
+
+/**
  * Check if the conversation is in a Q&A exchange (not completing work).
  * This detects two scenarios where Stop hooks should be skipped:
  * 1. Agent asked the user a question (waiting for user input)
  * 2. User asked the agent a question (agent is just responding, not doing work)
  *
- * In either case, no actual work is being validated - it's just conversation.
+ * IMPORTANT: Even if Q&A is detected, if the agent performed file modifications
+ * (Edit, Write, NotebookEdit), Stop hooks MUST still run to validate the work.
  */
 async function isConversationalExchange(sessionId: string): Promise<boolean> {
 	try {
-		// Get the last 2 messages (user + assistant) to check both directions
+		// Get recent messages to find the last user and last assistant message
+		// We need more than 2 because there can be many tool use/result messages
+		// between the user's question and the assistant's final response
 		const msgs = await messages.list({
 			sessionId,
-			limit: 2,
+			limit: 20, // Enough to find both roles even with many tool calls
 		});
 
 		if (msgs.length === 0) return false;
 
-		// Check each message for questions
-		for (const msg of msgs) {
-			// Skip non-conversation messages (tool results, etc.)
-			if (msg.role !== "assistant" && msg.role !== "user") continue;
+		// Find the last user message and last assistant message
+		let lastUserMsg: (typeof msgs)[0] | null = null;
+		let lastAssistantMsg: (typeof msgs)[0] | null = null;
+		let hasFileModifications = false;
 
-			// Extract text content from the message
-			let allText = "";
-			if (msg.content) {
-				try {
-					const content = JSON.parse(msg.content);
-					if (Array.isArray(content)) {
-						for (const block of content) {
-							// For assistant messages: check for AskUserQuestion tool
-							if (
-								msg.role === "assistant" &&
-								block.type === "tool_use" &&
-								block.name === "AskUserQuestion"
-							) {
-								return true;
-							}
-							// Collect text from text blocks
-							if (block.type === "text" && block.text) {
-								allText += `${block.text} `;
-							}
-						}
-					}
-				} catch {
-					// Not JSON, treat entire content as text
-					if (typeof msg.content === "string") {
-						allText = msg.content;
-					}
+		for (const msg of msgs) {
+			if (msg.role === "user" && !lastUserMsg) {
+				lastUserMsg = msg;
+			}
+			if (msg.role === "assistant") {
+				if (!lastAssistantMsg) {
+					lastAssistantMsg = msg;
+				}
+				// Check ALL assistant messages for file-modifying tools
+				// (agent may have multiple messages with tool uses)
+				if (checkMessageForFileModifications(msg)) {
+					hasFileModifications = true;
 				}
 			}
+			// Stop looking for user/assistant once we have both AND checked enough for file mods
+			if (lastUserMsg && lastAssistantMsg && hasFileModifications) break;
+		}
 
-			// If no text collected, use raw content as fallback
-			if (!allText && typeof msg.content === "string") {
-				allText = msg.content;
+		// If file modifications occurred, ALWAYS run Stop hooks
+		// Even if Q&A exchange detected, actual work was done that needs validation
+		if (hasFileModifications) {
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[isConversationalExchange]${colors.reset} File modifications detected - NOT skipping hooks`,
+				);
 			}
+			return false;
+		}
 
-			// Check for questions in the text
-			if (allText && containsQuestion(allText)) {
-				return true;
-			}
+		// No file modifications - now check for Q&A exchange
+		// Check the last user message for questions
+		if (lastUserMsg && checkMessageForQuestion(lastUserMsg)) {
+			return true;
+		}
+
+		// Check the last assistant message for questions
+		if (lastAssistantMsg && checkMessageForQuestion(lastAssistantMsg)) {
+			return true;
 		}
 
 		return false;
@@ -1257,6 +1271,77 @@ async function isConversationalExchange(sessionId: string): Promise<boolean> {
 		// Error querying - assume not a Q&A exchange
 		return false;
 	}
+}
+
+/**
+ * Check if a message contains file-modifying tool uses (Edit, Write, NotebookEdit)
+ */
+function checkMessageForFileModifications(
+	msg: Awaited<ReturnType<typeof messages.list>>[0],
+): boolean {
+	if (!msg.content) return false;
+
+	try {
+		const content = JSON.parse(msg.content);
+		if (Array.isArray(content)) {
+			for (const block of content) {
+				if (
+					block.type === "tool_use" &&
+					FILE_MODIFYING_TOOLS.has(block.name)
+				) {
+					return true;
+				}
+			}
+		}
+	} catch {
+		// Not JSON, no tool uses
+	}
+
+	return false;
+}
+
+/**
+ * Check if a message contains a question (text or AskUserQuestion tool)
+ */
+function checkMessageForQuestion(
+	msg: Awaited<ReturnType<typeof messages.list>>[0],
+): boolean {
+	let allText = "";
+
+	if (msg.content) {
+		try {
+			const content = JSON.parse(msg.content);
+			if (Array.isArray(content)) {
+				for (const block of content) {
+					// For assistant messages: check for AskUserQuestion tool
+					if (
+						msg.role === "assistant" &&
+						block.type === "tool_use" &&
+						block.name === "AskUserQuestion"
+					) {
+						return true;
+					}
+					// Collect text from text blocks
+					if (block.type === "text" && block.text) {
+						allText += `${block.text} `;
+					}
+				}
+			}
+		} catch {
+			// Not JSON, treat entire content as text
+			if (typeof msg.content === "string") {
+				allText = msg.content;
+			}
+		}
+	}
+
+	// If no text collected, use raw content as fallback
+	if (!allText && typeof msg.content === "string") {
+		allText = msg.content;
+	}
+
+	// Check for questions in the text
+	return allText ? containsQuestion(allText) : false;
 }
 
 /**
