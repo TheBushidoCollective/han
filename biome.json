@@ -17,7 +17,8 @@
       "!**/node_modules",
       "!**/dist",
       "!**/.browse-out",
-      "!**/__generated__"
+      "!**/__generated__",
+      "!**/build-info.generated.ts"
     ],
     "ignoreUnknown": true
   },
