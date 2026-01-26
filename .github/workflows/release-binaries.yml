@@ -141,7 +141,7 @@ jobs:
         shell: bash
         run: |
           cd packages/han
-          npm ci
+          bun install
           mkdir -p native
           cp ../han-native/${{ matrix.native_file }} native/han-native.node
 
