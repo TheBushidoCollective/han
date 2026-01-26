@@ -79,6 +79,10 @@ notify-debouncer-mini = "0.4"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+# Windows process checking
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["processthreadsapi", "winnt", "handleapi"] }
+
 [build-dependencies]
 napi-build = "2"
 
