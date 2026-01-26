@@ -60,6 +60,10 @@ async function createTestSession(sessionId: string) {
 async function createTestOrchestration(sessionId?: string) {
 	const { orchestrations, initDb } = await import("../lib/db/index.ts");
 	await initDb();
+	// Create session first if sessionId provided (FK constraint)
+	if (sessionId) {
+		await createTestSession(sessionId);
+	}
 	return orchestrations.create({
 		sessionId,
 		hookType: "Stop",
