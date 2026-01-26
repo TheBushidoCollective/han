@@ -1190,89 +1190,106 @@ function isStopHookActive(): boolean {
 }
 
 /**
- * Check if the agent's last turn is waiting for user input (a question).
- * This detects if the agent used AskUserQuestion tool or asked a question.
- * If true, the turn isn't complete and Stop hooks shouldn't run yet.
+ * Check if the conversation is in a Q&A exchange (not completing work).
+ * This detects two scenarios where Stop hooks should be skipped:
+ * 1. Agent asked the user a question (waiting for user input)
+ * 2. User asked the agent a question (agent is just responding, not doing work)
+ *
+ * In either case, no actual work is being validated - it's just conversation.
  */
-async function isAgentWaitingForInput(sessionId: string): Promise<boolean> {
+async function isConversationalExchange(sessionId: string): Promise<boolean> {
 	try {
-		// Get the last assistant message
+		// Get the last 2 messages (user + assistant) to check both directions
 		const msgs = await messages.list({
 			sessionId,
-			limit: 1,
+			limit: 2,
 		});
 
 		if (msgs.length === 0) return false;
 
-		const lastMsg = msgs[0];
+		// Check each message for questions
+		for (const msg of msgs) {
+			// Skip non-conversation messages (tool results, etc.)
+			if (msg.role !== "assistant" && msg.role !== "user") continue;
 
-		// Only check assistant messages
-		if (lastMsg.role !== "assistant") return false;
-
-		// Extract all text content from the message
-		let allText = "";
-		if (lastMsg.content) {
-			try {
-				const content = JSON.parse(lastMsg.content);
-				// Check for tool_use blocks with name AskUserQuestion
-				if (Array.isArray(content)) {
-					for (const block of content) {
-						if (block.type === "tool_use" && block.name === "AskUserQuestion") {
-							return true;
-						}
-						// Collect text from text blocks
-						if (block.type === "text" && block.text) {
-							allText += `${block.text} `;
+			// Extract text content from the message
+			let allText = "";
+			if (msg.content) {
+				try {
+					const content = JSON.parse(msg.content);
+					if (Array.isArray(content)) {
+						for (const block of content) {
+							// For assistant messages: check for AskUserQuestion tool
+							if (
+								msg.role === "assistant" &&
+								block.type === "tool_use" &&
+								block.name === "AskUserQuestion"
+							) {
+								return true;
+							}
+							// Collect text from text blocks
+							if (block.type === "text" && block.text) {
+								allText += `${block.text} `;
+							}
 						}
 					}
-				}
-			} catch {
-				// Not JSON, treat entire content as text
-				if (typeof lastMsg.content === "string") {
-					allText = lastMsg.content;
+				} catch {
+					// Not JSON, treat entire content as text
+					if (typeof msg.content === "string") {
+						allText = msg.content;
+					}
 				}
 			}
-		}
 
-		// If no text collected, use raw content as fallback
-		if (!allText && typeof lastMsg.content === "string") {
-			allText = lastMsg.content;
-		}
+			// If no text collected, use raw content as fallback
+			if (!allText && typeof msg.content === "string") {
+				allText = msg.content;
+			}
 
-		// Check for questions in the text
-		if (allText) {
-			// Normalize whitespace and check for question patterns
-			const normalized = allText.trim().replace(/\s+/g, " ");
-
-			// 1. Check for question marks anywhere in the text
-			if (normalized.includes("?")) {
+			// Check for questions in the text
+			if (allText && containsQuestion(allText)) {
 				return true;
-			}
-
-			// 2. Check for common question patterns (case-insensitive)
-			// These patterns indicate implied questions even without "?"
-			const questionPatterns = [
-				/\b(should i|shall i|can i|may i|could i|would i)\b/i,
-				/\b(should we|shall we|can we|may we|could we|would we)\b/i,
-				/\b(do you want|would you like|do you prefer|would you prefer)\b/i,
-				/\b(what do you think|how about|what about)\b/i,
-				/\b(which (one|option|approach|method))\b/i,
-				/\b(or (do|should|would|could) (i|we|you))\b/i,
-				/\b(let me know (if|whether|which))\b/i,
-			];
-
-			for (const pattern of questionPatterns) {
-				if (pattern.test(normalized)) {
-					return true;
-				}
 			}
 		}
 
 		return false;
 	} catch (_err) {
-		// Error querying - assume not waiting
+		// Error querying - assume not a Q&A exchange
 		return false;
 	}
+}
+
+/**
+ * Check if text contains a question
+ */
+function containsQuestion(text: string): boolean {
+	// Normalize whitespace
+	const normalized = text.trim().replace(/\s+/g, " ");
+
+	// 1. Check for question marks anywhere in the text
+	if (normalized.includes("?")) {
+		return true;
+	}
+
+	// 2. Check for common question patterns (case-insensitive)
+	// These patterns indicate implied questions even without "?"
+	const questionPatterns = [
+		/\b(should i|shall i|can i|may i|could i|would i)\b/i,
+		/\b(should we|shall we|can we|may we|could we|would we)\b/i,
+		/\b(do you want|would you like|do you prefer|would you prefer)\b/i,
+		/\b(what do you think|how about|what about)\b/i,
+		/\b(which (one|option|approach|method))\b/i,
+		/\b(or (do|should|would|could) (i|we|you))\b/i,
+		/\b(let me know (if|whether|which))\b/i,
+	];
+
+	for (const pattern of questionPatterns) {
+		if (pattern.test(normalized)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 async function getLastHookCheckState(
@@ -1333,15 +1350,15 @@ async function performCheckMode(
 	sessionId: string,
 	skipIfQuestioning: boolean,
 ): Promise<void> {
-	// If flag is set: check if agent is waiting for user input (question)
-	// If so, the turn isn't complete and we shouldn't run hooks yet
-	if (skipIfQuestioning && (await isAgentWaitingForInput(sessionId))) {
+	// If flag is set: check if this is a Q&A exchange (user or agent asked a question)
+	// If so, skip hooks - no work is being validated, just conversation
+	if (skipIfQuestioning && (await isConversationalExchange(sessionId))) {
 		if (isDebugMode()) {
 			console.error(
-				`${colors.dim}[performCheckMode]${colors.reset} Agent is waiting for user input - skipping hook check`,
+				`${colors.dim}[performCheckMode]${colors.reset} Q&A exchange detected - skipping hook check`,
 			);
 		}
-		// Exit silently - the turn isn't complete yet
+		// Exit silently - this is just conversation, not work completion
 		process.exit(0);
 	}
 
@@ -2334,7 +2351,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 		)
 		.option(
 			"--skip-if-questioning",
-			"Skip hook check if agent's last message is a question (waiting for user input)",
+			"Skip hook check if the last user or agent message contains a question (Q&A exchange, not work)",
 		)
 		.action(
 			async (
