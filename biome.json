@@ -6,21 +6,19 @@
     "useIgnoreFile": true
   },
   "files": {
-    "include": [
+    "includes": [
       "**/*.ts",
       "**/*.tsx",
       "**/*.js",
       "**/*.jsx",
-      "**/*.json"
-    ],
-    "ignore": [
-      "**/.next",
-      "**/out",
-      "**/node_modules",
-      "**/dist",
-      "**/.browse-out",
-      "**/__generated__",
-      "**/build-info.generated.ts"
+      "**/*.json",
+      "!**/.next",
+      "!**/out",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.browse-out",
+      "!**/__generated__",
+      "!**/build-info.generated.ts"
     ],
     "ignoreUnknown": true
   },
