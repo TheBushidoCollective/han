@@ -1302,10 +1302,7 @@ function checkMessageForFileModifications(
 		const content = JSON.parse(msg.content);
 		if (Array.isArray(content)) {
 			for (const block of content) {
-				if (
-					block.type === "tool_use" &&
-					FILE_MODIFYING_TOOLS.has(block.name)
-				) {
+				if (block.type === "tool_use" && FILE_MODIFYING_TOOLS.has(block.name)) {
 					return true;
 				}
 			}
@@ -1788,6 +1785,20 @@ async function orchestrate(
 		skipIfQuestioning?: boolean;
 	},
 ): Promise<void> {
+	// Signal handlers: Ensure clean exit when Claude Code terminates this process
+	// Without these, async operations may keep the process alive after SIGTERM
+	const exitHandler = () => {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[orchestrate]${colors.reset} Received termination signal, exiting...`,
+			);
+		}
+		process.exit(0);
+	};
+	process.on("SIGTERM", exitHandler);
+	process.on("SIGINT", exitHandler);
+	process.on("SIGHUP", exitHandler);
+
 	// Recursion prevention: If we're already orchestrating Stop hooks, don't trigger again
 	// This prevents infinite loops when user approves Bash commands during Stop execution.
 	// BUT: Allow explicit --wait calls through (that's the user-initiated execution command)
@@ -1948,15 +1959,28 @@ async function orchestrate(
 	}
 
 	// Check mode: Just report what would run and tell agent to execute
+	// Use a safeguard timeout to prevent indefinite hangs (Claude Code timeout is 30s)
 	if (options.check) {
-		await performCheckMode(
-			tasks,
-			eventType,
-			projectRoot,
-			options.onlyChanged,
-			sessionId,
-			options.skipIfQuestioning ?? false,
-		);
+		const CHECK_MODE_TIMEOUT = 25000; // 25 seconds (5s buffer before Claude Code's 30s timeout)
+		const timeoutId = setTimeout(() => {
+			console.error(
+				`${colors.yellow}⚠️  Check mode timeout - exiting to prevent hang${colors.reset}`,
+			);
+			process.exit(0); // Exit cleanly, don't block the session
+		}, CHECK_MODE_TIMEOUT);
+
+		try {
+			await performCheckMode(
+				tasks,
+				eventType,
+				projectRoot,
+				options.onlyChanged,
+				sessionId,
+				options.skipIfQuestioning ?? false,
+			);
+		} finally {
+			clearTimeout(timeoutId);
+		}
 		return;
 	}
 
@@ -2103,7 +2127,7 @@ async function orchestrate(
 						sessionId,
 						orchestrationId,
 						hookType: eventType,
-						isStopHook: eventType === "Stop",
+						isStopHook: eventType === "Stop" || eventType === "SubagentStop",
 						logPath,
 					},
 				);
@@ -2193,8 +2217,8 @@ async function orchestrate(
 		console.log(outputs.join("\n\n"));
 	}
 
-	// For Stop hooks only: handle deferred execution and attempt tracking
-	if (eventType === "Stop") {
+	// For Stop/SubagentStop hooks: handle deferred execution and attempt tracking
+	if (eventType === "Stop" || eventType === "SubagentStop") {
 		const deferredHooks = allResults.filter((r) => r.deferred);
 		const failedHooks = allResults.filter((r) => !r.success && !r.skipped);
 		const isRetryRun = payload.stop_hook_active === true;
@@ -2349,7 +2373,9 @@ When done, the Stop hook will run again to verify the fixes.`);
 									sessionId,
 									orchestrationId,
 									hookType: orch.hookType,
-									isStopHook: orch.hookType === "Stop",
+									isStopHook:
+										orch.hookType === "Stop" ||
+										orch.hookType === "SubagentStop",
 									logPath,
 								},
 							);
