@@ -376,6 +376,15 @@ export async function trackFilesAsync(
 
 	// Record each file validation in the database
 	try {
+		// Canonicalize directory for consistent lookups
+		// (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
+		let canonicalDirectory: string;
+		try {
+			canonicalDirectory = realpathSync(options.directory ?? rootDir);
+		} catch {
+			canonicalDirectory = options.directory ?? rootDir;
+		}
+
 		for (const [filePath, fileHash] of Object.entries(manifest)) {
 			await sessionFileValidations.record({
 				sessionId: options.sessionId,
@@ -383,7 +392,7 @@ export async function trackFilesAsync(
 				fileHash,
 				pluginName,
 				hookName,
-				directory: options.directory ?? rootDir,
+				directory: canonicalDirectory,
 				commandHash: options.commandHash,
 			});
 		}
@@ -391,7 +400,7 @@ export async function trackFilesAsync(
 		// Delete stale validation records for files that no longer exist
 		// This prevents "ghost" validations from causing infinite re-validation loops
 		const currentFilePaths = Object.keys(manifest);
-		const directory = options.directory ?? rootDir;
+		const directory = canonicalDirectory;
 		const deletedCount = await sessionFileValidations.deleteStale(
 			options.sessionId,
 			pluginName,
@@ -463,11 +472,20 @@ export async function checkForChangesAsync(
 
 		const allSessionChanges = getSessionFileChanges(dbPath, options.sessionId);
 
+		// Canonicalize rootDir to match canonicalized paths in session changes
+		// (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
+		let canonicalRootDir: string;
+		try {
+			canonicalRootDir = realpathSync(rootDir);
+		} catch {
+			canonicalRootDir = rootDir;
+		}
+
 		// Filter to only changes within this hook's directory
 		const sessionChanges = allSessionChanges.filter(
 			(change) =>
-				change.filePath.startsWith(`${rootDir}/`) ||
-				change.filePath === rootDir,
+				change.filePath.startsWith(`${canonicalRootDir}/`) ||
+				change.filePath === canonicalRootDir,
 		);
 
 		// If no session changes in this directory, nothing to validate
@@ -486,11 +504,20 @@ export async function checkForChangesAsync(
 
 	// Get cached validations from database
 	try {
+		// Canonicalize directory for consistent lookups
+		// (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
+		let canonicalDirectory: string;
+		try {
+			canonicalDirectory = realpathSync(options.directory ?? rootDir);
+		} catch {
+			canonicalDirectory = options.directory ?? rootDir;
+		}
+
 		const validations = await sessionFileValidations.list(
 			options.sessionId,
 			pluginName,
 			hookName,
-			options.directory ?? rootDir,
+			canonicalDirectory,
 		);
 
 		// If no validations exist yet, we need to check if any files in the manifest

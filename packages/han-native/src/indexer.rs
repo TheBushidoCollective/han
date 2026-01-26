@@ -796,7 +796,14 @@ fn extract_file_path_from_tool_input(tool_name: &str, tool_input: &str) -> Optio
 
 /// Record a file change from a tool_use message
 fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &str) {
-    if let Some(file_path) = extract_file_path_from_tool_input(tool_name, tool_input) {
+    if let Some(raw_path) = extract_file_path_from_tool_input(tool_name, tool_input) {
+        // Canonicalize the file path to normalize symlinks and mounts
+        // (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
+        let file_path = std::fs::canonicalize(&raw_path)
+            .ok()
+            .and_then(|p| p.to_str().map(|s| s.to_string()))
+            .unwrap_or(raw_path);
+
         let action = match tool_name {
             "Write" => "created",
             "Edit" => "modified",
