@@ -38,3 +38,8 @@ next-env.d.ts
 # Generated files
 /public/marketplace.json
 /public/search-index.json
+/public/sitemap.xml
+/public/rss.xml
+/public/atom.xml
+/public/feed.json
+/public/data/
