@@ -2527,6 +2527,70 @@ pub fn get_all_session_validations(session_id: &str) -> napi::Result<Vec<Session
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
+/// Delete stale validation records for files that no longer exist.
+/// This prevents "ghost" validations from causing infinite re-validation loops.
+/// Takes a list of current file paths and deletes any validation records not in that list.
+pub fn delete_stale_validations(
+    session_id: &str,
+    plugin_name: &str,
+    hook_name: &str,
+    directory: &str,
+    current_file_paths: Vec<String>,
+) -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // If no current files, delete ALL validations for this hook/directory combo
+    if current_file_paths.is_empty() {
+        let deleted = conn
+            .execute(
+                "DELETE FROM session_file_validations
+                 WHERE session_id = ?1 AND plugin_name = ?2 AND hook_name = ?3 AND directory = ?4",
+                params![session_id, plugin_name, hook_name, directory],
+            )
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to delete validations: {}", e))
+            })?;
+        return Ok(deleted as u32);
+    }
+
+    // Build a list of placeholders for the IN clause
+    let placeholders: Vec<String> = current_file_paths
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 5)) // Start at ?5 since we have 4 params before
+        .collect();
+    let in_clause = placeholders.join(",");
+
+    let sql = format!(
+        "DELETE FROM session_file_validations
+         WHERE session_id = ?1 AND plugin_name = ?2 AND hook_name = ?3 AND directory = ?4
+         AND file_path NOT IN ({})",
+        in_clause
+    );
+
+    // Build params: session_id, plugin_name, hook_name, directory, then all file paths
+    let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = vec![
+        Box::new(session_id.to_string()),
+        Box::new(plugin_name.to_string()),
+        Box::new(hook_name.to_string()),
+        Box::new(directory.to_string()),
+    ];
+    for path in current_file_paths {
+        params_vec.push(Box::new(path));
+    }
+
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+
+    let deleted = conn.execute(&sql, params_refs.as_slice()).map_err(|e| {
+        napi::Error::from_reason(format!("Failed to delete stale validations: {}", e))
+    })?;
+
+    Ok(deleted as u32)
+}
+
 // ============================================================================
 // Database Reset Operations
 // ============================================================================

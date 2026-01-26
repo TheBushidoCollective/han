@@ -388,6 +388,23 @@ export async function trackFilesAsync(
 			});
 		}
 
+		// Delete stale validation records for files that no longer exist
+		// This prevents "ghost" validations from causing infinite re-validation loops
+		const currentFilePaths = Object.keys(manifest);
+		const directory = options.directory ?? rootDir;
+		const deletedCount = await sessionFileValidations.deleteStale(
+			options.sessionId,
+			pluginName,
+			hookName,
+			directory,
+			currentFilePaths,
+		);
+		if (deletedCount > 0) {
+			console.debug(
+				`Deleted ${deletedCount} stale validation records for ${pluginName}/${hookName} in ${directory}`,
+			);
+		}
+
 		// Log validation cache event if logger is provided
 		if (options?.logger) {
 			options.logger.logHookValidationCache(

@@ -17,6 +17,17 @@ NC='\033[0m' # No Color
 HAN_BIN_DIR="${HOME}/.claude/bin"
 HAN_BIN="${HAN_BIN_DIR}/han"
 
+# Check for hanBinary override in .claude/han.yml (local development)
+# If set, skip installation entirely - user is using a custom binary path
+HAN_CONFIG=".claude/han.yml"
+if [ -f "${HAN_CONFIG}" ]; then
+    if grep -q "^hanBinary:" "${HAN_CONFIG}" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Custom hanBinary configured in ${HAN_CONFIG}"
+        echo "  Skipping installation (using local development binary)"
+        exit 0
+    fi
+fi
+
 # Check if han is already in PATH
 if command -v han &> /dev/null; then
     echo -e "${GREEN}✓${NC} Han is already installed: $(command -v han)"

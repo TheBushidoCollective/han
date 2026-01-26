@@ -33,7 +33,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # Use GITHUB_TOKEN for checkout (always available)
+          # PAT is only needed for push operations
+          token: ${{ github.token }}
 
       - name: Detect changed paths
         id: detect-changes
@@ -89,6 +91,8 @@ jobs:
           fi
 
       - name: Commit changelog updates
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -99,7 +103,13 @@ jobs:
           else
             git add "**/CHANGELOG.md" || true
             git commit -m "chore: update changelogs [skip ci]" || true
-            git push origin main || true
+            # Use PAT for push if available, otherwise skip
+            if [ -n "$GH_TOKEN" ]; then
+              git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+              git push origin main || true
+            else
+              echo "No HOMEBREW_TAP_TOKEN available, skipping push"
+            fi
           fi
 
   bump-and-tag:
@@ -113,8 +123,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use PAT instead of GITHUB_TOKEN so tag push triggers release-binaries workflow
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # Use GITHUB_TOKEN for checkout, PAT for push operations
+          token: ${{ github.token }}
+
+      - name: Configure git for push
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use PAT for push so tag creation triggers workflows
+          if [ -n "$GH_TOKEN" ]; then
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          fi
 
       - name: Pull latest changes
         run: git pull --rebase origin main
@@ -229,8 +250,7 @@ jobs:
       - name: Commit version bump
         if: steps.check-tag.outputs.exists == 'false'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Git already configured in earlier step
           git add packages/han/package.json packages/han/CHANGELOG.md
           git commit -m "chore(release): bump version to v${{ steps.bump-version.outputs.new_version }} [skip ci]"
           git push origin main

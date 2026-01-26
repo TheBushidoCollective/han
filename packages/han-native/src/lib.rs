@@ -1007,6 +1007,26 @@ pub fn get_files_for_validation(
     crud::get_files_for_validation(&session_id, &plugin_name, &hook_name, &directory)
 }
 
+/// Delete stale validation records for files that no longer exist.
+/// This prevents "ghost" validations from causing infinite re-validation loops.
+#[napi]
+pub fn delete_stale_validations(
+    _db_path: String,
+    session_id: String,
+    plugin_name: String,
+    hook_name: String,
+    directory: String,
+    current_file_paths: Vec<String>,
+) -> napi::Result<u32> {
+    crud::delete_stale_validations(
+        &session_id,
+        &plugin_name,
+        &hook_name,
+        &directory,
+        current_file_paths,
+    )
+}
+
 // ============================================================================
 // Session Summary Operations (event-sourced)
 // ============================================================================

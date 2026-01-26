@@ -7,7 +7,8 @@
 
 import type React from 'react';
 import type { ReactNode } from 'react';
-import { colors, createStyles, fonts, spacing } from '../../theme.ts';
+import { colors, fonts, spacing } from '../../theme.ts';
+import { Box } from '../atoms/index.ts';
 import type { ToastType } from '../organisms/index.ts';
 import { ToastContainer } from '../organisms/index.ts';
 import { Sidebar } from './Sidebar.tsx';
@@ -18,22 +19,22 @@ interface PageLayoutProps {
   onDismissToast: (id: number) => void;
 }
 
-const styles = createStyles({
-  app: {
-    display: 'flex',
-    minHeight: '100vh',
-    backgroundColor: colors.bg.primary,
-    color: colors.text.primary,
-    fontFamily: fonts.body,
-  },
-  mainContent: {
-    flex: 1,
-    padding: spacing.xl,
-    marginLeft: 220,
-    minHeight: '100vh',
-    overflowX: 'auto' as const,
-  },
-});
+const appStyle = {
+  display: 'flex' as const,
+  flexDirection: 'row' as const,
+  minHeight: '100vh',
+  backgroundColor: colors.bg.primary,
+  color: colors.text.primary,
+  fontFamily: fonts.body,
+};
+
+const mainContentStyle = {
+  flex: 1,
+  padding: spacing.xl,
+  marginLeft: 220,
+  minHeight: '100vh',
+  overflowX: 'auto' as const,
+};
 
 export function PageLayout({
   children,
@@ -41,10 +42,10 @@ export function PageLayout({
   onDismissToast,
 }: PageLayoutProps): React.ReactElement {
   return (
-    <div style={styles.app}>
+    <Box style={appStyle}>
       <Sidebar />
-      <main style={styles.mainContent}>{children}</main>
+      <Box style={mainContentStyle}>{children}</Box>
       <ToastContainer toasts={toasts} onDismiss={onDismissToast} />
-    </div>
+    </Box>
   );
 }
