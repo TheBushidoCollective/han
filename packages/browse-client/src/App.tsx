@@ -1,8 +1,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRoutes } from 'react-router-dom';
+import { Box, Center, Text } from '@/components/atoms';
 import type { ToastType } from '@/components/organisms';
 import { ToastContainer } from '@/components/organisms';
-import { Box, Center, Text } from '@/components/atoms';
 import { Sidebar } from '@/components/templates/Sidebar';
 import {
   type MemoryUpdateEvent,

@@ -12,11 +12,13 @@ if (!rootElement) throw new Error('Root element not found');
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <Suspense fallback={
-        <Center>
-          <Text>Loading...</Text>
-        </Center>
-      }>
+      <Suspense
+        fallback={
+          <Center>
+            <Text>Loading...</Text>
+          </Center>
+        }
+      >
         <App />
       </Suspense>
     </BrowserRouter>

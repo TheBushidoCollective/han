@@ -5,14 +5,9 @@
  */
 
 import type React from 'react';
-import { Pressable, Text, View } from 'react-native';
 import type { ViewStyle } from 'react-native';
-import {
-  colors,
-  fontSizes,
-  radii,
-  spacing,
-} from '../../theme.ts';
+import { Pressable, Text, View } from 'react-native';
+import { colors, fontSizes, radii, spacing } from '../../theme.ts';
 
 export interface Toast {
   id: number;
