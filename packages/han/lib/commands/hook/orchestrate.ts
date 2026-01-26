@@ -1203,11 +1203,13 @@ const FILE_MODIFYING_TOOLS = new Set([
 /**
  * Check if the conversation is in a Q&A exchange (not completing work).
  * This detects two scenarios where Stop hooks should be skipped:
- * 1. Agent asked the user a question (waiting for user input)
- * 2. User asked the agent a question (agent is just responding, not doing work)
+ * 1. Agent asked the user a question (waiting for user input) - ALWAYS skip
+ * 2. User asked the agent a question AND agent didn't do file work - skip
  *
- * IMPORTANT: Even if Q&A is detected, if the agent performed file modifications
- * (Edit, Write, NotebookEdit), Stop hooks MUST still run to validate the work.
+ * Priority:
+ * - If agent's LAST message is a question → ALWAYS skip (waiting for input)
+ * - If user asked question AND agent did file work → run hooks (work needs validation)
+ * - If user asked question AND no file work → skip (pure conversation)
  */
 async function isConversationalExchange(sessionId: string): Promise<boolean> {
 	try {
@@ -1244,28 +1246,43 @@ async function isConversationalExchange(sessionId: string): Promise<boolean> {
 			if (lastUserMsg && lastAssistantMsg && hasFileModifications) break;
 		}
 
-		// If file modifications occurred, ALWAYS run Stop hooks
-		// Even if Q&A exchange detected, actual work was done that needs validation
+		// PRIORITY 1: If agent's LAST message is a question, ALWAYS skip
+		// Agent is waiting for user input - file mods from earlier don't matter yet
+		if (lastAssistantMsg && checkMessageForQuestion(lastAssistantMsg)) {
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[isConversationalExchange]${colors.reset} Agent asked question - skipping hooks`,
+				);
+			}
+			return true;
+		}
+
+		// PRIORITY 2: User asked a question
+		if (lastUserMsg && checkMessageForQuestion(lastUserMsg)) {
+			// If agent did file work after user's question, run hooks
+			if (hasFileModifications) {
+				if (isDebugMode()) {
+					console.error(
+						`${colors.dim}[isConversationalExchange]${colors.reset} User asked question but agent did file work - running hooks`,
+					);
+				}
+				return false;
+			}
+			// No file work - pure Q&A, skip hooks
+			return true;
+		}
+
+		// No Q&A detected - check if there were file modifications
 		if (hasFileModifications) {
 			if (isDebugMode()) {
 				console.error(
-					`${colors.dim}[isConversationalExchange]${colors.reset} File modifications detected - NOT skipping hooks`,
+					`${colors.dim}[isConversationalExchange]${colors.reset} File modifications detected - running hooks`,
 				);
 			}
 			return false;
 		}
 
-		// No file modifications - now check for Q&A exchange
-		// Check the last user message for questions
-		if (lastUserMsg && checkMessageForQuestion(lastUserMsg)) {
-			return true;
-		}
-
-		// Check the last assistant message for questions
-		if (lastAssistantMsg && checkMessageForQuestion(lastAssistantMsg)) {
-			return true;
-		}
-
+		// No questions, no file modifications - this is unusual but run hooks to be safe
 		return false;
 	} catch (_err) {
 		// Error querying - assume not a Q&A exchange
