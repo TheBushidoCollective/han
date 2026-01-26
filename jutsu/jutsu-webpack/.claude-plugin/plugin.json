@@ -1,0 +1,19 @@
+{
+  "name": "jutsu-webpack",
+  "version": "1.0.0",
+  "description": "Webpack build validation with automatic package manager detection.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "FSL-1.1-ALv2",
+  "keywords": [
+    "webpack",
+    "bundler",
+    "build",
+    "javascript",
+    "typescript"
+  ]
+}

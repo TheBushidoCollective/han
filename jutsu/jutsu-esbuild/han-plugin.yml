@@ -1,0 +1,14 @@
+hooks:
+  build:
+    command: |
+      if [ -f bun.lock ] || [ -f bun.lockb ]; then bun run build
+      elif [ -f pnpm-lock.yaml ]; then pnpm run build
+      elif [ -f yarn.lock ]; then yarn build
+      else npm run build; fi
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"esbuild\":' package.json"
+    if_changed:
+      - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
+      - "esbuild.config.*"
+      - "package.json"

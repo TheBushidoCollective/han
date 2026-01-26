@@ -952,6 +952,15 @@ export async function startMcpServer(): Promise<void> {
 	process.on("SIGINT", () => process.exit(0));
 	process.on("SIGTERM", () => process.exit(0));
 
+	// Ensure coordinator is running to keep database indexed during session
+	try {
+		const { ensureCoordinator } = await import("../coordinator/daemon.ts");
+		await ensureCoordinator();
+	} catch (_err) {
+		// Log but don't fail - MCP can operate without coordinator for basic operations
+		console.error("[mcp] Warning: Failed to start coordinator");
+	}
+
 	const rl = createInterface({
 		input: process.stdin,
 		terminal: false,

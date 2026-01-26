@@ -1,0 +1,21 @@
+{
+  "name": "jutsu-vite",
+  "version": "1.0.0",
+  "description": "Vite build validation with automatic package manager detection.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "FSL-1.1-ALv2",
+  "keywords": [
+    "vite",
+    "bundler",
+    "build",
+    "javascript",
+    "typescript",
+    "vue",
+    "svelte"
+  ]
+}
