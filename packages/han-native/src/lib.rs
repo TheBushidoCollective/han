@@ -41,6 +41,10 @@ pub use schema::{
     Message,
     MessageBatch,
     MessageInput,
+    // Native tasks (Claude Code's built-in task system)
+    NativeTask,
+    NativeTaskInput,
+    NativeTaskUpdate,
     Project,
     ProjectInput,
     Repo,
@@ -61,10 +65,6 @@ pub use schema::{
     // Session todos (event-sourced)
     SessionTodos,
     SessionTodosInput,
-    // Native tasks (Claude Code's built-in task system)
-    NativeTask,
-    NativeTaskInput,
-    NativeTaskUpdate,
     Task,
     TaskCompletion,
     TaskFailure,

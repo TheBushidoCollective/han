@@ -16,9 +16,9 @@
 use crate::crud;
 use crate::jsonl::{jsonl_read_page, JsonlLine};
 use crate::schema::{
-    MessageInput, NativeTaskInput, NativeTaskUpdate, ProjectInput, RepoInput,
-    SessionCompactInput, SessionFileChangeInput, SessionFileValidationInput, SessionInput,
-    SessionSummaryInput, SessionTodosInput, TaskCompletion, TaskFailure, TaskInput,
+    MessageInput, NativeTaskInput, NativeTaskUpdate, ProjectInput, RepoInput, SessionCompactInput,
+    SessionFileChangeInput, SessionFileValidationInput, SessionInput, SessionSummaryInput,
+    SessionTodosInput, TaskCompletion, TaskFailure, TaskInput,
 };
 use crate::sentiment;
 use crate::task_timeline::{build_task_timeline, TaskTimeline};
