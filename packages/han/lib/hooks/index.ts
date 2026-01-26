@@ -9,6 +9,11 @@
 
 // UI Components
 export { HookExplainUI, type HookSource } from "../hook-explain-ui.tsx";
+// Hash cycle detection for recursion
+export {
+	type CycleDetectionResult,
+	HashCycleDetector,
+} from "./hash-cycle-detector.ts";
 // Cache management
 export {
 	buildManifest,

@@ -27,6 +27,7 @@ import {
 	getOrCreateEventLogger,
 	initEventLogger,
 } from "../../events/logger.ts";
+import { HashCycleDetector } from "../../hooks/hash-cycle-detector.ts";
 import {
 	buildCommandWithFiles,
 	checkForChangesAsync,
@@ -2040,6 +2041,19 @@ async function orchestrate(
 	let hasFailures = false;
 	let aborted = false; // Abort flag for fail-fast
 
+	// Initialize hash cycle detector for recursion detection
+	const cycleDetector = new HashCycleDetector();
+
+	// Capture initial file hashes before running any hooks
+	// This allows us to detect if hooks cycle files back to their original state
+	for (const task of tasks) {
+		if (task.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
+			for (const directory of task.directories) {
+				cycleDetector.recordHashes(directory, task.hookDef.ifChanged, null);
+			}
+		}
+	}
+
 	// Execute batches sequentially, hooks within batch in parallel
 	for (const batch of batches) {
 		// Check abort flag before starting a batch
@@ -2176,6 +2190,42 @@ async function orchestrate(
 			});
 		}
 		allResults.push(...batchResults);
+
+		// Check for hash cycles (recursion detection)
+		// After each batch, record new file hashes and check if any file
+		// has returned to a previously seen state
+		for (const result of batchResults) {
+			if (result.success && !result.skipped) {
+				const task = batch.find(
+					(t) => t.plugin === result.plugin && t.hookName === result.hook,
+				);
+				if (task?.hookDef.ifChanged && task.hookDef.ifChanged.length > 0) {
+					const directory =
+						result.directory === "."
+							? projectRoot
+							: `${projectRoot}/${result.directory}`;
+					const cycleResult = cycleDetector.recordHashes(
+						directory,
+						task.hookDef.ifChanged,
+						{
+							plugin: result.plugin,
+							hook: result.hook,
+							directory: result.directory,
+						},
+					);
+
+					if (cycleResult.hasCycle) {
+						// Cycle detected - hooks are fighting!
+						console.error(cycleDetector.formatCycleReport(cycleResult));
+						appendToOrchestrationLog(
+							logPath,
+							cycleDetector.formatCycleReport(cycleResult),
+						);
+						process.exit(3); // Exit code 3 = recursion detected
+					}
+				}
+			}
+		}
 
 		// Check for failures
 		const failures = batchResults.filter((r) => !r.success && !r.skipped);
