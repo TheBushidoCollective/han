@@ -391,6 +391,49 @@ export interface SessionTodosInput {
   timestamp: string
   lineNumber: number
 }
+/** A native task from Claude Code's TaskCreate/TaskUpdate tools */
+export interface NativeTask {
+  id: string
+  sessionId: string
+  messageId: string
+  subject: string
+  description?: string
+  status: string
+  activeForm?: string
+  owner?: string
+  blocks?: string
+  blockedBy?: string
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+  lineNumber: number
+}
+/** Input for creating a native task (from TaskCreate tool call) */
+export interface NativeTaskInput {
+  id: string
+  sessionId: string
+  messageId: string
+  subject: string
+  description?: string
+  activeForm?: string
+  timestamp: string
+  lineNumber: number
+}
+/** Input for updating a native task (from TaskUpdate tool call) */
+export interface NativeTaskUpdate {
+  id: string
+  sessionId: string
+  messageId: string
+  status?: string
+  subject?: string
+  description?: string
+  activeForm?: string
+  owner?: string
+  addBlocks?: Array<string>
+  addBlockedBy?: Array<string>
+  timestamp: string
+  lineNumber: number
+}
 export interface Message {
   id: string
   sessionId: string
@@ -953,6 +996,10 @@ export declare function getSessionCompact(dbPath: string, sessionId: string): Se
 export declare function upsertSessionTodos(dbPath: string, input: SessionTodosInput): SessionTodos
 /** Get session todos by session ID */
 export declare function getSessionTodos(dbPath: string, sessionId: string): SessionTodos | null
+/** Get all native tasks for a session */
+export declare function getSessionNativeTasks(dbPath: string, sessionId: string): Array<NativeTask>
+/** Get a specific native task by session ID and task ID */
+export declare function getNativeTask(dbPath: string, sessionId: string, taskId: string): NativeTask | null
 /** Try to acquire the coordinator lock (single-instance indexer pattern) */
 export declare function tryAcquireCoordinatorLock(): boolean
 /** Release the coordinator lock */

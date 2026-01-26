@@ -203,6 +203,62 @@ pub struct SessionTodosInput {
 }
 
 // ============================================================================
+// Data Structures - Native Tasks (Claude Code's built-in task system)
+// ============================================================================
+
+/// A native task from Claude Code's TaskCreate/TaskUpdate tools
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeTask {
+    pub id: String,              // Claude's task ID (e.g., "1", "2") scoped to session
+    pub session_id: String,
+    pub message_id: String,
+    pub subject: String,         // Brief task title
+    pub description: Option<String>,
+    pub status: String,          // pending, in_progress, completed
+    pub active_form: Option<String>, // Present continuous form
+    pub owner: Option<String>,
+    pub blocks: Option<String>,  // JSON array of task IDs
+    pub blocked_by: Option<String>, // JSON array of task IDs
+    pub created_at: String,
+    pub updated_at: String,
+    pub completed_at: Option<String>,
+    pub line_number: i32,
+}
+
+/// Input for creating a native task (from TaskCreate tool call)
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeTaskInput {
+    pub id: String,              // Task ID from Claude (e.g., "1")
+    pub session_id: String,
+    pub message_id: String,
+    pub subject: String,
+    pub description: Option<String>,
+    pub active_form: Option<String>,
+    pub timestamp: String,
+    pub line_number: i32,
+}
+
+/// Input for updating a native task (from TaskUpdate tool call)
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeTaskUpdate {
+    pub id: String,              // Task ID to update
+    pub session_id: String,
+    pub message_id: String,
+    pub status: Option<String>,
+    pub subject: Option<String>,
+    pub description: Option<String>,
+    pub active_form: Option<String>,
+    pub owner: Option<String>,
+    pub add_blocks: Option<Vec<String>>,
+    pub add_blocked_by: Option<Vec<String>>,
+    pub timestamp: String,
+    pub line_number: i32,
+}
+
+// ============================================================================
 // Data Structures - Messages
 // id IS the message UUID from JSONL - no separate message_id
 // ============================================================================

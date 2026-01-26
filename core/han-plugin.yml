@@ -39,7 +39,7 @@ hooks:
   session-references:
     event: SessionStart
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/session-references.sh"
-    description: Consolidated SessionStart reference hooks (no-time-estimates, metrics-tracking, professional-honesty, ensure-subagent, bash-output-capture, ensure-skill-use, date-handling)
+    description: Consolidated SessionStart reference hooks (no-time-estimates, professional-honesty, ensure-subagent, bash-output-capture, ensure-skill-use, date-handling)
 
   # UserPromptSubmit hooks - run on each user message
   current-datetime:

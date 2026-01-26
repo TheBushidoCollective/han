@@ -7,8 +7,6 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
 cat <<EOF
 <must-read-first reason="no time estimates policy">${PLUGIN_ROOT}/hooks/no-time-estimates.md</must-read-first>
 
-<must-read-first reason="metrics tracking guidelines">${PLUGIN_ROOT}/hooks/metrics-tracking.md</must-read-first>
-
 <must-read-first reason="epistemic rigor and professional honesty">${PLUGIN_ROOT}/hooks/professional-honesty.md</must-read-first>
 
 <must-read-first reason="subagent delegation rules">${PLUGIN_ROOT}/hooks/ensure-subagent.md</must-read-first>

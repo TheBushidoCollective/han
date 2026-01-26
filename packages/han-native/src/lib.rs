@@ -61,6 +61,10 @@ pub use schema::{
     // Session todos (event-sourced)
     SessionTodos,
     SessionTodosInput,
+    // Native tasks (Claude Code's built-in task system)
+    NativeTask,
+    NativeTaskInput,
+    NativeTaskUpdate,
     Task,
     TaskCompletion,
     TaskFailure,
@@ -1089,6 +1093,29 @@ pub fn get_session_todos(
     session_id: String,
 ) -> napi::Result<Option<SessionTodos>> {
     crud::get_session_todos(&session_id)
+}
+
+// ============================================================================
+// Native Task Functions (Claude Code's built-in task system)
+// ============================================================================
+
+/// Get all native tasks for a session
+#[napi]
+pub fn get_session_native_tasks(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<NativeTask>> {
+    crud::get_session_native_tasks(&session_id)
+}
+
+/// Get a specific native task by session ID and task ID
+#[napi]
+pub fn get_native_task(
+    _db_path: String,
+    session_id: String,
+    task_id: String,
+) -> napi::Result<Option<NativeTask>> {
+    crud::get_native_task(&session_id, &task_id)
 }
 
 // ============================================================================

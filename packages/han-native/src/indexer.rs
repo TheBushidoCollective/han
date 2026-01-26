@@ -16,9 +16,9 @@
 use crate::crud;
 use crate::jsonl::{jsonl_read_page, JsonlLine};
 use crate::schema::{
-    MessageInput, ProjectInput, RepoInput, SessionCompactInput, SessionFileChangeInput,
-    SessionFileValidationInput, SessionInput, SessionSummaryInput, SessionTodosInput,
-    TaskCompletion, TaskFailure, TaskInput,
+    MessageInput, NativeTaskInput, NativeTaskUpdate, ProjectInput, RepoInput,
+    SessionCompactInput, SessionFileChangeInput, SessionFileValidationInput, SessionInput,
+    SessionSummaryInput, SessionTodosInput, TaskCompletion, TaskFailure, TaskInput,
 };
 use crate::sentiment;
 use crate::task_timeline::{build_task_timeline, TaskTimeline};
@@ -879,6 +879,149 @@ fn extract_and_save_todos(
     let _ = crud::upsert_session_todos(input);
 }
 
+/// Extract and save a native task from a TaskCreate tool call
+/// The tool_input contains: {subject, description, activeForm}
+fn extract_and_save_task_create(
+    session_id: &str,
+    message_id: &str,
+    tool_input: &str,
+    timestamp: &str,
+    line_number: i32,
+) {
+    let input: Value = match serde_json::from_str(tool_input) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    // Extract task fields
+    let subject = match input.get("subject").and_then(|s| s.as_str()) {
+        Some(s) => s.to_string(),
+        None => return, // subject is required
+    };
+
+    let description = input
+        .get("description")
+        .and_then(|d| d.as_str())
+        .map(|s| s.to_string());
+
+    let active_form = input
+        .get("activeForm")
+        .and_then(|a| a.as_str())
+        .map(|s| s.to_string());
+
+    // Generate a task ID based on order within session
+    // The actual ID will be determined by counting existing tasks
+    // For now, we'll use the message_id as a temporary ID and let the DB handle uniqueness
+    // Claude assigns sequential IDs like "1", "2", etc. but we don't have access to that here
+    // We'll use a hash of the subject as the ID for deduplication
+    let task_id = format!("{:x}", md5_hash(&format!("{}{}", session_id, subject)));
+
+    let task_input = NativeTaskInput {
+        id: task_id,
+        session_id: session_id.to_string(),
+        message_id: message_id.to_string(),
+        subject,
+        description,
+        active_form,
+        timestamp: timestamp.to_string(),
+        line_number,
+    };
+
+    // Insert to database (ignore errors - task tracking is best-effort)
+    let _ = crud::create_native_task(task_input);
+}
+
+/// Simple hash function for generating task IDs
+fn md5_hash(input: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    input.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// Extract and apply a native task update from a TaskUpdate tool call
+/// The tool_input contains: {taskId, status?, subject?, description?, activeForm?, owner?, addBlocks?, addBlockedBy?}
+fn extract_and_save_task_update(
+    session_id: &str,
+    message_id: &str,
+    tool_input: &str,
+    timestamp: &str,
+    line_number: i32,
+) {
+    let input: Value = match serde_json::from_str(tool_input) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    // Extract taskId - required
+    let task_id = match input.get("taskId").and_then(|t| t.as_str()) {
+        Some(id) => id.to_string(),
+        None => return,
+    };
+
+    let status = input
+        .get("status")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_string());
+
+    let subject = input
+        .get("subject")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_string());
+
+    let description = input
+        .get("description")
+        .and_then(|d| d.as_str())
+        .map(|s| s.to_string());
+
+    let active_form = input
+        .get("activeForm")
+        .and_then(|a| a.as_str())
+        .map(|s| s.to_string());
+
+    let owner = input
+        .get("owner")
+        .and_then(|o| o.as_str())
+        .map(|s| s.to_string());
+
+    let add_blocks = input
+        .get("addBlocks")
+        .and_then(|b| b.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        });
+
+    let add_blocked_by = input
+        .get("addBlockedBy")
+        .and_then(|b| b.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        });
+
+    let task_update = NativeTaskUpdate {
+        id: task_id,
+        session_id: session_id.to_string(),
+        message_id: message_id.to_string(),
+        status,
+        subject,
+        description,
+        active_form,
+        owner,
+        add_blocks,
+        add_blocked_by,
+        timestamp: timestamp.to_string(),
+        line_number,
+    };
+
+    // Update in database (ignore errors - task tracking is best-effort)
+    let _ = crud::update_native_task(task_update);
+}
+
 /// Compute sentiment analysis for a message and return tuple of fields
 /// Returns (sentiment_score, sentiment_level, frustration_score, frustration_level)
 fn compute_sentiment(content: &str) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
@@ -1421,6 +1564,25 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
                             line_number,
                         );
                     }
+                    // Extract native task events (Claude's built-in task system)
+                    if tool_name == "TaskCreate" {
+                        extract_and_save_task_create(
+                            &session_id,
+                            &message_id,
+                            tool_input,
+                            &message_timestamp,
+                            line_number,
+                        );
+                    }
+                    if tool_name == "TaskUpdate" {
+                        extract_and_save_task_update(
+                            &session_id,
+                            &message_id,
+                            tool_input,
+                            &message_timestamp,
+                            line_number,
+                        );
+                    }
                 }
             }
             // For assistant messages, extract tool_use blocks from the message.content array
@@ -1448,6 +1610,31 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
                                         if let Some(input) = item.get("input") {
                                             let input_str = input.to_string();
                                             extract_and_save_todos(
+                                                &session_id,
+                                                &message_id,
+                                                &input_str,
+                                                &message_timestamp,
+                                                line_number,
+                                            );
+                                        }
+                                    }
+                                    // Extract native task events (Claude's built-in task system)
+                                    if tool_name == "TaskCreate" {
+                                        if let Some(input) = item.get("input") {
+                                            let input_str = input.to_string();
+                                            extract_and_save_task_create(
+                                                &session_id,
+                                                &message_id,
+                                                &input_str,
+                                                &message_timestamp,
+                                                line_number,
+                                            );
+                                        }
+                                    }
+                                    if tool_name == "TaskUpdate" {
+                                        if let Some(input) = item.get("input") {
+                                            let input_str = input.to_string();
+                                            extract_and_save_task_update(
                                                 &session_id,
                                                 &message_id,
                                                 &input_str,

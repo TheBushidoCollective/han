@@ -1886,6 +1886,60 @@ type Mutation {
   togglePlugin(enabled: Boolean!, marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
 }
 
+"""A task from Claude Code's built-in task management system"""
+type NativeTask {
+  """Present continuous form shown in spinner"""
+  activeForm: String
+
+  """Task IDs that block this task"""
+  blockedBy: [String!]
+
+  """Task IDs that this task blocks"""
+  blocks: [String!]
+
+  """When the task was completed"""
+  completedAt: String
+
+  """When the task was created"""
+  createdAt: String
+
+  """Detailed task description"""
+  description: String
+
+  """Task ID (sequential within session)"""
+  id: ID
+
+  """Message ID that last updated this task"""
+  messageId: String
+
+  """Task owner (agent name)"""
+  owner: String
+
+  """Session this task belongs to"""
+  sessionId: String
+
+  """Current task status"""
+  status: NativeTaskStatus
+
+  """Brief task title"""
+  subject: String
+
+  """When the task was last updated"""
+  updatedAt: String
+}
+
+"""Status of a native Claude Code task"""
+enum NativeTaskStatus {
+  """Task finished"""
+  completed
+
+  """Task currently being worked on"""
+  in_progress
+
+  """Task not yet started"""
+  pending
+}
+
 interface Node {
   id: ID!
 }
@@ -2482,6 +2536,11 @@ type Session implements Node {
 
   """Display name for session (slug if available, otherwise sessionId)"""
   name: String
+
+  """
+  Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
+  """
+  nativeTasks: [NativeTask!]
 
   """The project this session belongs to"""
   project: Project

@@ -1238,6 +1238,35 @@ export const sessionTodos = {
 };
 
 // ============================================================================
+// Native Tasks (Claude Code's built-in task system: TaskCreate/TaskUpdate)
+// ============================================================================
+
+export const nativeTasks = {
+	/**
+	 * Get all native tasks for a session
+	 */
+	async getForSession(
+		sessionId: string,
+	): Promise<import("../../../han-native").NativeTask[]> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getSessionNativeTasks(dbPath, sessionId);
+	},
+
+	/**
+	 * Get a specific native task by session ID and task ID
+	 */
+	async get(
+		sessionId: string,
+		taskId: string,
+	): Promise<import("../../../han-native").NativeTask | null> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.getNativeTask(dbPath, sessionId, taskId);
+	},
+};
+
+// ============================================================================
 // Session Modified Files (replaces transcript-filter.ts)
 // ============================================================================
 

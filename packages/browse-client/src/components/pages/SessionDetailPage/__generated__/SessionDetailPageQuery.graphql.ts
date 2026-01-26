@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<9772b514f52a712be8c8fe16064e57fd>>
+ * @generated SignedSource<<1830539ced388872e8328d4ec7616a3a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -395,131 +395,138 @@ v31 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "fileCount",
+  "name": "messageId",
   "storageKey": null
 },
 v32 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "plugin",
+  "name": "fileCount",
   "storageKey": null
 },
 v33 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "hook",
+  "name": "plugin",
   "storageKey": null
 },
 v34 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "directory",
+  "name": "hook",
   "storageKey": null
 },
 v35 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "cached",
+  "name": "directory",
   "storageKey": null
 },
 v36 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "success",
+  "name": "cached",
   "storageKey": null
 },
 v37 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "durationMs",
+  "name": "success",
   "storageKey": null
 },
 v38 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "exitCode",
+  "name": "durationMs",
   "storageKey": null
 },
 v39 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "output",
+  "name": "exitCode",
   "storageKey": null
 },
 v40 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "output",
+  "storageKey": null
+},
+v41 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "error",
   "storageKey": null
 },
-v41 = [
+v42 = [
   (v18/*: any*/),
   (v19/*: any*/),
-  (v32/*: any*/),
   (v33/*: any*/),
   (v34/*: any*/),
   (v35/*: any*/),
-  (v37/*: any*/),
-  (v38/*: any*/),
   (v36/*: any*/),
+  (v38/*: any*/),
   (v39/*: any*/),
-  (v40/*: any*/)
+  (v37/*: any*/),
+  (v40/*: any*/),
+  (v41/*: any*/)
 ],
-v42 = {
+v43 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "hookType",
   "storageKey": null
 },
-v43 = {
+v44 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "filePath",
   "storageKey": null
 },
-v44 = {
+v45 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "tool",
   "storageKey": null
 },
-v45 = {
+v46 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "server",
   "storageKey": null
 },
-v46 = {
+v47 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "prefixedName",
   "storageKey": null
 },
-v47 = {
+v48 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "callId",
   "storageKey": null
 },
-v48 = [
+v49 = [
   (v2/*: any*/),
-  (v36/*: any*/),
   (v37/*: any*/),
+  (v38/*: any*/),
   {
     "alias": null,
     "args": null,
@@ -527,16 +534,16 @@ v48 = [
     "name": "result",
     "storageKey": null
   },
-  (v40/*: any*/)
+  (v41/*: any*/)
 ],
-v49 = {
+v50 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "cursor",
   "storageKey": null
 },
-v50 = {
+v51 = {
   "alias": null,
   "args": null,
   "concreteType": "PageInfo",
@@ -561,75 +568,82 @@ v50 = {
   ],
   "storageKey": null
 },
-v51 = {
+v52 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "totalCount",
   "storageKey": null
 },
-v52 = {
+v53 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "hookName",
   "storageKey": null
 },
-v53 = {
+v54 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "passed",
   "storageKey": null
 },
-v54 = {
+v55 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "pluginName",
   "storageKey": null
 },
-v55 = {
+v56 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "total",
   "storageKey": null
 },
-v56 = {
+v57 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "status",
   "storageKey": null
 },
-v57 = {
+v58 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "activeForm",
   "storageKey": null
 },
-v58 = {
+v59 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "taskId",
   "storageKey": null
 },
-v59 = {
+v60 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "description",
   "storageKey": null
 },
-v60 = [
+v61 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "completedAt",
+  "storageKey": null
+},
+v62 = [
   (v2/*: any*/),
-  (v58/*: any*/),
   (v59/*: any*/),
+  (v60/*: any*/),
   (v21/*: any*/),
-  (v56/*: any*/),
+  (v57/*: any*/),
   (v12/*: any*/)
 ];
 return {
@@ -923,13 +937,7 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              {
-                                "alias": null,
-                                "args": null,
-                                "kind": "ScalarField",
-                                "name": "messageId",
-                                "storageKey": null
-                              },
+                              (v31/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -937,7 +945,7 @@ return {
                                 "name": "isSnapshotUpdate",
                                 "storageKey": null
                               },
-                              (v31/*: any*/),
+                              (v32/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -954,10 +962,10 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v32/*: any*/),
                               (v33/*: any*/),
                               (v34/*: any*/),
                               (v35/*: any*/),
+                              (v36/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -974,11 +982,11 @@ return {
                                 "plural": false,
                                 "selections": [
                                   (v2/*: any*/),
-                                  (v36/*: any*/),
                                   (v37/*: any*/),
                                   (v38/*: any*/),
                                   (v39/*: any*/),
-                                  (v40/*: any*/)
+                                  (v40/*: any*/),
+                                  (v41/*: any*/)
                                 ],
                                 "storageKey": null
                               }
@@ -988,7 +996,7 @@ return {
                           },
                           {
                             "kind": "InlineFragment",
-                            "selections": (v41/*: any*/),
+                            "selections": (v42/*: any*/),
                             "type": "HookResultMessage",
                             "abstractKey": null
                           },
@@ -997,7 +1005,7 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v42/*: any*/),
+                              (v43/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1021,8 +1029,8 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v32/*: any*/),
-                              (v43/*: any*/),
+                              (v33/*: any*/),
+                              (v44/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1030,15 +1038,15 @@ return {
                                 "name": "reason",
                                 "storageKey": null
                               },
-                              (v36/*: any*/),
-                              (v37/*: any*/)
+                              (v37/*: any*/),
+                              (v38/*: any*/)
                             ],
                             "type": "HookReferenceMessage",
                             "abstractKey": null
                           },
                           {
                             "kind": "InlineFragment",
-                            "selections": (v41/*: any*/),
+                            "selections": (v42/*: any*/),
                             "type": "HookValidationMessage",
                             "abstractKey": null
                           },
@@ -1047,10 +1055,10 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v32/*: any*/),
                               (v33/*: any*/),
                               (v34/*: any*/),
-                              (v31/*: any*/)
+                              (v35/*: any*/),
+                              (v32/*: any*/)
                             ],
                             "type": "HookValidationCacheMessage",
                             "abstractKey": null
@@ -1060,7 +1068,7 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v32/*: any*/),
+                              (v33/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1068,10 +1076,10 @@ return {
                                 "name": "command",
                                 "storageKey": null
                               },
-                              (v37/*: any*/),
                               (v38/*: any*/),
-                              (v36/*: any*/),
-                              (v39/*: any*/)
+                              (v39/*: any*/),
+                              (v37/*: any*/),
+                              (v40/*: any*/)
                             ],
                             "type": "HookScriptMessage",
                             "abstractKey": null
@@ -1081,7 +1089,7 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v32/*: any*/),
+                              (v33/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1089,7 +1097,7 @@ return {
                                 "name": "datetime",
                                 "storageKey": null
                               },
-                              (v37/*: any*/)
+                              (v38/*: any*/)
                             ],
                             "type": "HookDatetimeMessage",
                             "abstractKey": null
@@ -1113,7 +1121,7 @@ return {
                                 "name": "changeToolName",
                                 "storageKey": null
                               },
-                              (v43/*: any*/)
+                              (v44/*: any*/)
                             ],
                             "type": "HookFileChangeMessage",
                             "abstractKey": null
@@ -1146,11 +1154,11 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v44/*: any*/),
                               (v45/*: any*/),
                               (v46/*: any*/),
-                              (v24/*: any*/),
                               (v47/*: any*/),
+                              (v24/*: any*/),
+                              (v48/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1158,7 +1166,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "result",
                                 "plural": false,
-                                "selections": (v48/*: any*/),
+                                "selections": (v49/*: any*/),
                                 "storageKey": null
                               }
                             ],
@@ -1170,13 +1178,13 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v44/*: any*/),
                               (v45/*: any*/),
                               (v46/*: any*/),
+                              (v47/*: any*/),
+                              (v38/*: any*/),
                               (v37/*: any*/),
-                              (v36/*: any*/),
-                              (v39/*: any*/),
-                              (v40/*: any*/)
+                              (v40/*: any*/),
+                              (v41/*: any*/)
                             ],
                             "type": "McpToolResultMessage",
                             "abstractKey": null
@@ -1186,10 +1194,10 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v44/*: any*/),
-                              (v46/*: any*/),
-                              (v24/*: any*/),
+                              (v45/*: any*/),
                               (v47/*: any*/),
+                              (v24/*: any*/),
+                              (v48/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1197,7 +1205,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "result",
                                 "plural": false,
-                                "selections": (v48/*: any*/),
+                                "selections": (v49/*: any*/),
                                 "storageKey": null
                               }
                             ],
@@ -1209,12 +1217,12 @@ return {
                             "selections": [
                               (v18/*: any*/),
                               (v19/*: any*/),
-                              (v44/*: any*/),
-                              (v46/*: any*/),
+                              (v45/*: any*/),
+                              (v47/*: any*/),
+                              (v38/*: any*/),
                               (v37/*: any*/),
-                              (v36/*: any*/),
-                              (v39/*: any*/),
-                              (v40/*: any*/)
+                              (v40/*: any*/),
+                              (v41/*: any*/)
                             ],
                             "type": "ExposedToolResultMessage",
                             "abstractKey": null
@@ -1238,7 +1246,7 @@ return {
                                 "name": "route",
                                 "storageKey": null
                               },
-                              (v37/*: any*/),
+                              (v38/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1334,12 +1342,12 @@ return {
                         ],
                         "storageKey": null
                       },
-                      (v49/*: any*/)
+                      (v50/*: any*/)
                     ],
                     "storageKey": null
                   },
-                  (v50/*: any*/),
                   (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "kind": "ClientExtension",
                     "selections": [
@@ -1372,7 +1380,7 @@ return {
                 "name": "hookExecutions",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1390,8 +1398,8 @@ return {
                         "plural": false,
                         "selections": [
                           (v2/*: any*/),
-                          (v42/*: any*/),
-                          (v52/*: any*/),
+                          (v43/*: any*/),
+                          (v53/*: any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -1399,21 +1407,21 @@ return {
                             "name": "hookSource",
                             "storageKey": null
                           },
-                          (v34/*: any*/),
-                          (v37/*: any*/),
-                          (v53/*: any*/),
-                          (v39/*: any*/),
+                          (v35/*: any*/),
+                          (v38/*: any*/),
+                          (v54/*: any*/),
                           (v40/*: any*/),
+                          (v41/*: any*/),
                           (v18/*: any*/),
                           (v16/*: any*/)
                         ],
                         "storageKey": null
                       },
-                      (v49/*: any*/)
+                      (v50/*: any*/)
                     ],
                     "storageKey": null
                   },
-                  (v50/*: any*/)
+                  (v51/*: any*/)
                 ],
                 "storageKey": "hookExecutions(first:50)"
               },
@@ -1434,7 +1442,7 @@ return {
                 "name": "fileChanges",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1452,7 +1460,7 @@ return {
                         "plural": false,
                         "selections": [
                           (v2/*: any*/),
-                          (v43/*: any*/),
+                          (v44/*: any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -1489,8 +1497,8 @@ return {
                             "name": "validations",
                             "plural": true,
                             "selections": [
-                              (v54/*: any*/),
-                              (v52/*: any*/),
+                              (v55/*: any*/),
+                              (v53/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -1509,8 +1517,8 @@ return {
                             "name": "missingValidations",
                             "plural": true,
                             "selections": [
-                              (v54/*: any*/),
-                              (v52/*: any*/)
+                              (v55/*: any*/),
+                              (v53/*: any*/)
                             ],
                             "storageKey": null
                           },
@@ -1518,11 +1526,11 @@ return {
                         ],
                         "storageKey": null
                       },
-                      (v49/*: any*/)
+                      (v50/*: any*/)
                     ],
                     "storageKey": null
                   },
-                  (v50/*: any*/)
+                  (v51/*: any*/)
                 ],
                 "storageKey": "fileChanges(first:50)"
               },
@@ -1593,9 +1601,9 @@ return {
                     "name": "byHookType",
                     "plural": true,
                     "selections": [
-                      (v42/*: any*/),
-                      (v55/*: any*/),
-                      (v53/*: any*/)
+                      (v43/*: any*/),
+                      (v56/*: any*/),
+                      (v54/*: any*/)
                     ],
                     "storageKey": null
                   }
@@ -1670,7 +1678,7 @@ return {
                 "name": "todos",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1689,8 +1697,8 @@ return {
                         "selections": [
                           (v2/*: any*/),
                           (v20/*: any*/),
-                          (v56/*: any*/),
-                          (v57/*: any*/)
+                          (v57/*: any*/),
+                          (v58/*: any*/)
                         ],
                         "storageKey": null
                       }
@@ -1709,8 +1717,8 @@ return {
                 "plural": false,
                 "selections": [
                   (v20/*: any*/),
+                  (v58/*: any*/),
                   (v57/*: any*/),
-                  (v56/*: any*/),
                   (v2/*: any*/)
                 ],
                 "storageKey": null
@@ -1723,7 +1731,7 @@ return {
                 "name": "todoCounts",
                 "plural": false,
                 "selections": [
-                  (v55/*: any*/),
+                  (v56/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1756,7 +1764,7 @@ return {
                 "name": "tasks",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1774,10 +1782,10 @@ return {
                         "plural": false,
                         "selections": [
                           (v2/*: any*/),
-                          (v58/*: any*/),
                           (v59/*: any*/),
+                          (v60/*: any*/),
                           (v21/*: any*/),
-                          (v56/*: any*/),
+                          (v57/*: any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -1793,13 +1801,7 @@ return {
                             "storageKey": null
                           },
                           (v12/*: any*/),
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "completedAt",
-                            "storageKey": null
-                          },
+                          (v61/*: any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -1824,7 +1826,7 @@ return {
                 "name": "activeTasks",
                 "plural": false,
                 "selections": [
-                  (v51/*: any*/),
+                  (v52/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1840,7 +1842,7 @@ return {
                         "kind": "LinkedField",
                         "name": "node",
                         "plural": false,
-                        "selections": (v60/*: any*/),
+                        "selections": (v62/*: any*/),
                         "storageKey": null
                       }
                     ],
@@ -1856,7 +1858,61 @@ return {
                 "kind": "LinkedField",
                 "name": "currentTask",
                 "plural": false,
-                "selections": (v60/*: any*/),
+                "selections": (v62/*: any*/),
+                "storageKey": null
+              },
+              {
+                "alias": null,
+                "args": null,
+                "concreteType": "NativeTask",
+                "kind": "LinkedField",
+                "name": "nativeTasks",
+                "plural": true,
+                "selections": [
+                  (v2/*: any*/),
+                  (v3/*: any*/),
+                  (v31/*: any*/),
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "subject",
+                    "storageKey": null
+                  },
+                  (v60/*: any*/),
+                  (v57/*: any*/),
+                  (v58/*: any*/),
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "owner",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "blocks",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "blockedBy",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "createdAt",
+                    "storageKey": null
+                  },
+                  (v13/*: any*/),
+                  (v61/*: any*/)
+                ],
                 "storageKey": null
               }
             ],
@@ -1869,12 +1925,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "8acccc3030a170f5ac061139addf97c0",
+    "cacheID": "2b30264afb8b2fab9622997109551934",
     "id": null,
     "metadata": {},
     "name": "SessionDetailPageQuery",
     "operationKind": "query",
-    "text": "query SessionDetailPageQuery(\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ... on Session {\n      id\n      sessionId\n      name\n      date\n      projectName\n      projectPath\n      projectId\n      worktreeName\n      summary\n      messageCount\n      startedAt\n      updatedAt\n      gitBranch\n      version\n      ...SessionMessages_session\n      ...SessionSidebar_session\n    }\n    id\n  }\n}\n\nfragment AssistantMessageCard_message on AssistantMessage {\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  isToolOnly\n  model\n  hasThinking\n  thinkingCount\n  hasToolUse\n  toolUseCount\n  inputTokens\n  outputTokens\n  cachedTokens\n}\n\nfragment ExposedToolCallMessageCard_message on ExposedToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment ExposedToolResultMessageCard_message on ExposedToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment FileHistorySnapshotMessageCard_message on FileHistorySnapshotMessage {\n  id\n  timestamp\n  rawJson\n  messageId\n  isSnapshotUpdate\n  fileCount\n  snapshotTimestamp\n}\n\nfragment HookCheckStateMessageCard_message on HookCheckStateMessage {\n  id\n  timestamp\n  rawJson\n  hookType\n  fingerprint\n  hooksCount\n}\n\nfragment HookDatetimeMessageCard_message on HookDatetimeMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  datetime\n  durationMs\n}\n\nfragment HookFileChangeMessageCard_message on HookFileChangeMessage {\n  id\n  timestamp\n  rawJson\n  recordedSessionId\n  changeToolName\n  filePath\n}\n\nfragment HookReferenceMessageCard_message on HookReferenceMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  filePath\n  reason\n  success\n  durationMs\n}\n\nfragment HookResultMessageCard_message on HookResultMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment HookRunMessageCard_message on HookRunMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  hookRunId\n  result {\n    id\n    success\n    durationMs\n    exitCode\n    output\n    error\n  }\n}\n\nfragment HookScriptMessageCard_message on HookScriptMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  command\n  durationMs\n  exitCode\n  success\n  output\n}\n\nfragment HookValidationCacheMessageCard_message on HookValidationCacheMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  fileCount\n}\n\nfragment HookValidationMessageCard_message on HookValidationMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment McpToolCallMessageCard_message on McpToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment McpToolResultMessageCard_message on McpToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment MemoryLearnMessageCard_message on MemoryLearnMessage {\n  id\n  timestamp\n  rawJson\n  domain\n  scope\n  paths\n  append\n}\n\nfragment MemoryQueryMessageCard_message on MemoryQueryMessage {\n  id\n  timestamp\n  rawJson\n  question\n  route\n  durationMs\n  resultCount\n}\n\nfragment MessageCards_message on Message {\n  __isMessage: __typename\n  __typename\n  id\n  ...UserMessageCard_message\n  ...AssistantMessageCard_message\n  ...SummaryMessageCard_message\n  ...SystemMessageCard_message\n  ...FileHistorySnapshotMessageCard_message\n  ...HookRunMessageCard_message\n  ...HookResultMessageCard_message\n  ...HookCheckStateMessageCard_message\n  ...HookReferenceMessageCard_message\n  ...HookValidationMessageCard_message\n  ...HookValidationCacheMessageCard_message\n  ...HookScriptMessageCard_message\n  ...HookDatetimeMessageCard_message\n  ...HookFileChangeMessageCard_message\n  ...QueueOperationMessageCard_message\n  ...McpToolCallMessageCard_message\n  ...McpToolResultMessageCard_message\n  ...ExposedToolCallMessageCard_message\n  ...ExposedToolResultMessageCard_message\n  ...MemoryQueryMessageCard_message\n  ...MemoryLearnMessageCard_message\n  ...SentimentAnalysisMessageCard_message\n  ...UnknownEventMessageCard_message\n}\n\nfragment QueueOperationMessageCard_message on QueueOperationMessage {\n  id\n  timestamp\n  rawJson\n  operation\n  queueSessionId\n}\n\nfragment SentimentAnalysisMessageCard_message on SentimentAnalysisMessage {\n  id\n  timestamp\n  rawJson\n  sentimentScore\n  sentimentLevel\n  frustrationScore\n  frustrationLevel\n  signals\n  analyzedMessageId\n}\n\nfragment SessionMessages_session on Session {\n  messageCount\n  messages(first: 50) {\n    edges {\n      node {\n        __typename\n        id\n        searchText\n        ...MessageCards_message\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n  id\n}\n\nfragment SessionSidebar_fileChanges on Session {\n  fileChanges(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        filePath\n        action\n        toolName\n        recordedAt\n        isValidated\n        validations {\n          pluginName\n          hookName\n          validatedAt\n        }\n        missingValidations {\n          pluginName\n          hookName\n        }\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  fileChangeCount\n  id\n}\n\nfragment SessionSidebar_hookExecutions on Session {\n  hookExecutions(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        hookType\n        hookName\n        hookSource\n        directory\n        durationMs\n        passed\n        output\n        error\n        timestamp\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  id\n}\n\nfragment SessionSidebar_session on Session {\n  ...SessionSidebar_hookExecutions\n  ...SessionSidebar_fileChanges\n  hookStats {\n    totalHooks\n    passedHooks\n    failedHooks\n    totalDurationMs\n    passRate\n    byHookType {\n      hookType\n      total\n      passed\n    }\n  }\n  frustrationSummary {\n    totalAnalyzed\n    moderateCount\n    highCount\n    overallLevel\n    averageScore\n    peakScore\n    topSignals\n  }\n  todos {\n    totalCount\n    edges {\n      node {\n        id\n        content\n        status\n        activeForm\n      }\n    }\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  tasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        outcome\n        confidence\n        startedAt\n        completedAt\n        durationSeconds\n      }\n    }\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        startedAt\n      }\n    }\n  }\n  currentTask {\n    id\n    taskId\n    description\n    type\n    status\n    startedAt\n  }\n}\n\nfragment SummaryMessageCard_message on SummaryMessage {\n  id\n  timestamp\n  rawJson\n  content\n  isCompactSummary\n}\n\nfragment SystemMessageCard_message on SystemMessage {\n  id\n  timestamp\n  rawJson\n  content\n  subtype\n  level\n  isMeta\n}\n\nfragment UnknownEventMessageCard_message on UnknownEventMessage {\n  id\n  timestamp\n  rawJson\n  messageType\n  eventType\n}\n\nfragment UserMessageCard_message on UserMessage {\n  __isUserMessage: __typename\n  __typename\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  sentimentAnalysis {\n    sentimentScore\n    sentimentLevel\n    frustrationScore\n    frustrationLevel\n    signals\n    id\n  }\n  ... on CommandUserMessage {\n    commandName\n  }\n}\n"
+    "text": "query SessionDetailPageQuery(\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ... on Session {\n      id\n      sessionId\n      name\n      date\n      projectName\n      projectPath\n      projectId\n      worktreeName\n      summary\n      messageCount\n      startedAt\n      updatedAt\n      gitBranch\n      version\n      ...SessionMessages_session\n      ...SessionSidebar_session\n    }\n    id\n  }\n}\n\nfragment AssistantMessageCard_message on AssistantMessage {\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  isToolOnly\n  model\n  hasThinking\n  thinkingCount\n  hasToolUse\n  toolUseCount\n  inputTokens\n  outputTokens\n  cachedTokens\n}\n\nfragment ExposedToolCallMessageCard_message on ExposedToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment ExposedToolResultMessageCard_message on ExposedToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment FileHistorySnapshotMessageCard_message on FileHistorySnapshotMessage {\n  id\n  timestamp\n  rawJson\n  messageId\n  isSnapshotUpdate\n  fileCount\n  snapshotTimestamp\n}\n\nfragment HookCheckStateMessageCard_message on HookCheckStateMessage {\n  id\n  timestamp\n  rawJson\n  hookType\n  fingerprint\n  hooksCount\n}\n\nfragment HookDatetimeMessageCard_message on HookDatetimeMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  datetime\n  durationMs\n}\n\nfragment HookFileChangeMessageCard_message on HookFileChangeMessage {\n  id\n  timestamp\n  rawJson\n  recordedSessionId\n  changeToolName\n  filePath\n}\n\nfragment HookReferenceMessageCard_message on HookReferenceMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  filePath\n  reason\n  success\n  durationMs\n}\n\nfragment HookResultMessageCard_message on HookResultMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment HookRunMessageCard_message on HookRunMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  hookRunId\n  result {\n    id\n    success\n    durationMs\n    exitCode\n    output\n    error\n  }\n}\n\nfragment HookScriptMessageCard_message on HookScriptMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  command\n  durationMs\n  exitCode\n  success\n  output\n}\n\nfragment HookValidationCacheMessageCard_message on HookValidationCacheMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  fileCount\n}\n\nfragment HookValidationMessageCard_message on HookValidationMessage {\n  id\n  timestamp\n  rawJson\n  plugin\n  hook\n  directory\n  cached\n  durationMs\n  exitCode\n  success\n  output\n  error\n}\n\nfragment McpToolCallMessageCard_message on McpToolCallMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  input\n  callId\n  result {\n    id\n    success\n    durationMs\n    result\n    error\n  }\n}\n\nfragment McpToolResultMessageCard_message on McpToolResultMessage {\n  id\n  timestamp\n  rawJson\n  tool\n  server\n  prefixedName\n  durationMs\n  success\n  output\n  error\n}\n\nfragment MemoryLearnMessageCard_message on MemoryLearnMessage {\n  id\n  timestamp\n  rawJson\n  domain\n  scope\n  paths\n  append\n}\n\nfragment MemoryQueryMessageCard_message on MemoryQueryMessage {\n  id\n  timestamp\n  rawJson\n  question\n  route\n  durationMs\n  resultCount\n}\n\nfragment MessageCards_message on Message {\n  __isMessage: __typename\n  __typename\n  id\n  ...UserMessageCard_message\n  ...AssistantMessageCard_message\n  ...SummaryMessageCard_message\n  ...SystemMessageCard_message\n  ...FileHistorySnapshotMessageCard_message\n  ...HookRunMessageCard_message\n  ...HookResultMessageCard_message\n  ...HookCheckStateMessageCard_message\n  ...HookReferenceMessageCard_message\n  ...HookValidationMessageCard_message\n  ...HookValidationCacheMessageCard_message\n  ...HookScriptMessageCard_message\n  ...HookDatetimeMessageCard_message\n  ...HookFileChangeMessageCard_message\n  ...QueueOperationMessageCard_message\n  ...McpToolCallMessageCard_message\n  ...McpToolResultMessageCard_message\n  ...ExposedToolCallMessageCard_message\n  ...ExposedToolResultMessageCard_message\n  ...MemoryQueryMessageCard_message\n  ...MemoryLearnMessageCard_message\n  ...SentimentAnalysisMessageCard_message\n  ...UnknownEventMessageCard_message\n}\n\nfragment QueueOperationMessageCard_message on QueueOperationMessage {\n  id\n  timestamp\n  rawJson\n  operation\n  queueSessionId\n}\n\nfragment SentimentAnalysisMessageCard_message on SentimentAnalysisMessage {\n  id\n  timestamp\n  rawJson\n  sentimentScore\n  sentimentLevel\n  frustrationScore\n  frustrationLevel\n  signals\n  analyzedMessageId\n}\n\nfragment SessionMessages_session on Session {\n  messageCount\n  messages(first: 50) {\n    edges {\n      node {\n        __typename\n        id\n        searchText\n        ...MessageCards_message\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n  id\n}\n\nfragment SessionSidebar_fileChanges on Session {\n  fileChanges(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        filePath\n        action\n        toolName\n        recordedAt\n        isValidated\n        validations {\n          pluginName\n          hookName\n          validatedAt\n        }\n        missingValidations {\n          pluginName\n          hookName\n        }\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  fileChangeCount\n  id\n}\n\nfragment SessionSidebar_hookExecutions on Session {\n  hookExecutions(first: 50) {\n    totalCount\n    edges {\n      node {\n        id\n        hookType\n        hookName\n        hookSource\n        directory\n        durationMs\n        passed\n        output\n        error\n        timestamp\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n  id\n}\n\nfragment SessionSidebar_session on Session {\n  ...SessionSidebar_hookExecutions\n  ...SessionSidebar_fileChanges\n  hookStats {\n    totalHooks\n    passedHooks\n    failedHooks\n    totalDurationMs\n    passRate\n    byHookType {\n      hookType\n      total\n      passed\n    }\n  }\n  frustrationSummary {\n    totalAnalyzed\n    moderateCount\n    highCount\n    overallLevel\n    averageScore\n    peakScore\n    topSignals\n  }\n  todos {\n    totalCount\n    edges {\n      node {\n        id\n        content\n        status\n        activeForm\n      }\n    }\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  tasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        outcome\n        confidence\n        startedAt\n        completedAt\n        durationSeconds\n      }\n    }\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n        startedAt\n      }\n    }\n  }\n  currentTask {\n    id\n    taskId\n    description\n    type\n    status\n    startedAt\n  }\n  nativeTasks {\n    id\n    sessionId\n    messageId\n    subject\n    description\n    status\n    activeForm\n    owner\n    blocks\n    blockedBy\n    createdAt\n    updatedAt\n    completedAt\n  }\n}\n\nfragment SummaryMessageCard_message on SummaryMessage {\n  id\n  timestamp\n  rawJson\n  content\n  isCompactSummary\n}\n\nfragment SystemMessageCard_message on SystemMessage {\n  id\n  timestamp\n  rawJson\n  content\n  subtype\n  level\n  isMeta\n}\n\nfragment UnknownEventMessageCard_message on UnknownEventMessage {\n  id\n  timestamp\n  rawJson\n  messageType\n  eventType\n}\n\nfragment UserMessageCard_message on UserMessage {\n  __isUserMessage: __typename\n  __typename\n  id\n  timestamp\n  rawJson\n  content\n  contentBlocks {\n    __typename\n    type\n    ... on ThinkingBlock {\n      thinking\n      preview\n      signature\n    }\n    ... on TextBlock {\n      text\n    }\n    ... on ToolUseBlock {\n      toolCallId\n      name\n      input\n      category\n      icon\n      displayName\n      color\n      result {\n        toolCallId\n        content\n        isError\n        isLong\n        preview\n        hasImage\n      }\n    }\n    ... on ImageBlock {\n      mediaType\n      dataUrl\n    }\n  }\n  sentimentAnalysis {\n    sentimentScore\n    sentimentLevel\n    frustrationScore\n    frustrationLevel\n    signals\n    id\n  }\n  ... on CommandUserMessage {\n    commandName\n  }\n}\n"
   }
 };
 })();

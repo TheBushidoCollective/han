@@ -1,48 +1,31 @@
-# Metrics Tracking
+# Task Tracking (Automatic)
 
-When working on non-trivial tasks (implementation, fixes, refactoring, research), use the Han metrics tools to track work:
+Task tracking is now **automatic** via Claude Code's built-in TaskCreate/TaskUpdate tools.
 
-## Starting Tasks
+## How It Works
 
-Use `mcp__plugin_core_han__start_task` when beginning work on:
+When you use the native task tools:
+- `TaskCreate` - Creates a new task
+- `TaskUpdate` - Updates task status (pending → in_progress → completed)
+- `TaskList` - Lists all tasks
+- `TaskGet` - Gets task details
 
-- New feature implementations
-- Bug fixes
-- Code refactoring
-- Research/investigation tasks
+Han automatically indexes these events from the JSONL transcript and displays them in the Browse UI.
 
-```
-mcp__plugin_core_han__start_task({
-  description: "Brief description of the task",
-  type: "implementation" | "fix" | "refactor" | "research"
-})
-```
+## No Manual MCP Calls Needed
 
-## Completing Tasks
+You do NOT need to call the legacy MCP metrics tools (`start_task`, `complete_task`). Just use Claude Code's built-in task system naturally.
 
-Use `mcp__plugin_core_han__complete_task` when finishing:
+## When to Use Tasks
 
-```
-mcp__plugin_core_han__complete_task({
-  task_id: "task-xxx",
-  outcome: "success" | "partial" | "failure",
-  confidence: 0.0-1.0,  // How confident you are in the outcome
-  notes: "Optional completion notes"
-})
-```
+Use TaskCreate for substantive work:
+- Implementing features
+- Fixing bugs
+- Refactoring code
+- Research tasks
 
-## When NOT to Track
+Skip for trivial operations like reading files or answering simple questions.
 
-Skip tracking for:
+## Viewing Task History
 
-- Simple questions/explanations
-- Single-line changes
-- Trivial fixes (typos, formatting)
-- Conversation-only interactions
-
-## Important
-
-The metrics tools are SEPARATE from the TodoWrite tool:
-
-- **TodoWrite**: Shows task progress UI to the user
-- **start_task/complete_task**: Records metrics for analysis in the Browse UI
+Task data is visible in the Browse UI sidebar under the "Tasks" tab for each session.

@@ -22,10 +22,16 @@ import type { SessionSidebar_hookExecutions$key } from './__generated__/SessionS
 import type { SessionSidebar_session$key } from './__generated__/SessionSidebar_session.graphql.ts';
 import type { SessionSidebarFilesRefetchQuery } from './__generated__/SessionSidebarFilesRefetchQuery.graphql.ts';
 import type { SessionSidebarHooksRefetchQuery } from './__generated__/SessionSidebarHooksRefetchQuery.graphql.ts';
-import { FileChangeCard, HookExecutionCard, TaskCard } from './components.ts';
+import {
+  FileChangeCard,
+  HookExecutionCard,
+  NativeTaskCard,
+  TaskCard,
+} from './components.ts';
+import type { NativeTask } from './types.ts';
 import { formatMs } from './utils.ts';
 
-type SidebarTab = 'todos' | 'tasks' | 'hooks' | 'files';
+type SidebarTab = 'todos' | 'nativeTasks' | 'tasks' | 'hooks' | 'files';
 
 /**
  * Fragment for hook executions with pagination
@@ -190,6 +196,21 @@ const SessionSidebarFragment = graphql`
       type
       status
       startedAt
+    }
+    nativeTasks {
+      id
+      sessionId
+      messageId
+      subject
+      description
+      status
+      activeForm
+      owner
+      blocks
+      blockedBy
+      createdAt
+      updatedAt
+      completedAt
     }
   }
 `;
@@ -389,6 +410,30 @@ function SessionSidebarContent({
       .filter((node): node is NonNullable<typeof node> => node != null) ?? [];
   const todoCounts = data.todoCounts;
 
+  // Native tasks from Claude's built-in task system
+  const nativeTasks: NativeTask[] = (data.nativeTasks ?? [])
+    .filter(
+      (t): t is NonNullable<typeof t> & { id: string; status: string } =>
+        t != null && !!t.id && !!t.status
+    )
+    .map((t) => ({
+      id: t.id,
+      sessionId: t.sessionId ?? '',
+      messageId: t.messageId ?? '',
+      subject: t.subject ?? '',
+      description: t.description ?? null,
+      status: (['pending', 'in_progress', 'completed'].includes(t.status)
+        ? t.status
+        : 'pending') as 'pending' | 'in_progress' | 'completed',
+      activeForm: t.activeForm ?? null,
+      owner: t.owner ?? null,
+      blocks: t.blocks ?? [],
+      blockedBy: t.blockedBy ?? [],
+      createdAt: t.createdAt ?? '',
+      updatedAt: t.updatedAt ?? '',
+      completedAt: t.completedAt ?? null,
+    }));
+
   // Load more handlers
   const loadMoreHooks = () => {
     if (hasMoreHooks && !isLoadingMoreHooks) {
@@ -404,6 +449,7 @@ function SessionSidebarContent({
 
   // Determine counts for tabs
   const todosCount = todoCounts?.total ?? todos.length;
+  const nativeTasksCount = nativeTasks.length;
   const tasksCount = tasksConnection?.totalCount ?? tasks.length;
   const hooksCount =
     hookStats?.totalHooks ??
@@ -412,20 +458,23 @@ function SessionSidebarContent({
   const filesCount =
     fileChangeCount || fileChangesConnection?.totalCount || fileChanges.length;
 
-  // Set initial tab based on which has data (prefer todos if available)
+  // Set initial tab based on which has data (prefer native tasks, then todos)
   const [activeTab, setActiveTab] = useState<SidebarTab>(
-    todosCount > 0
-      ? 'todos'
-      : tasksCount > 0
-        ? 'tasks'
-        : hooksCount > 0
-          ? 'hooks'
-          : 'files'
+    nativeTasksCount > 0
+      ? 'nativeTasks'
+      : todosCount > 0
+        ? 'todos'
+        : tasksCount > 0
+          ? 'tasks'
+          : hooksCount > 0
+            ? 'hooks'
+            : 'files'
   );
 
-  // Debug: show counts
+  // Check if we have any data to display
   const hasAnyData =
     todos.length > 0 ||
+    nativeTasks.length > 0 ||
     tasks.length > 0 ||
     hookExecutions.length > 0 ||
     fileChanges.length > 0;
@@ -523,12 +572,21 @@ function SessionSidebarContent({
         </Box>
       )}
 
-      {/* Tab Bar for switching between todos, tasks, hooks, and file changes */}
-      {(todos.length > 0 ||
+      {/* Tab Bar for switching between native tasks, todos, tasks, hooks, and file changes */}
+      {(nativeTasks.length > 0 ||
+        todos.length > 0 ||
         tasks.length > 0 ||
         hookExecutions.length > 0 ||
         fileChanges.length > 0) && (
         <Box style={tabBarStyle}>
+          {nativeTasks.length > 0 && (
+            <Pressable
+              style={tabStyle(activeTab === 'nativeTasks')}
+              onPress={() => setActiveTab('nativeTasks')}
+            >
+              <Text>Tasks ({nativeTasksCount})</Text>
+            </Pressable>
+          )}
           {todos.length > 0 && (
             <Pressable
               style={tabStyle(activeTab === 'todos')}
@@ -542,7 +600,7 @@ function SessionSidebarContent({
               style={tabStyle(activeTab === 'tasks')}
               onPress={() => setActiveTab('tasks')}
             >
-              <Text>Tasks ({tasksCount})</Text>
+              <Text>Metrics ({tasksCount})</Text>
             </Pressable>
           )}
           <Pressable
@@ -558,6 +616,39 @@ function SessionSidebarContent({
             <Text>Files ({filesCount})</Text>
           </Pressable>
         </Box>
+      )}
+
+      {activeTab === 'nativeTasks' && nativeTasks.length > 0 && (
+        <VStack className="native-tasks-section" gap="md" align="stretch">
+          {/* Native Task Summary Cards */}
+          <HStack gap="sm" style={{ flexWrap: 'wrap' }}>
+            <StatCard
+              value={nativeTasks.filter((t) => t.status === 'completed').length}
+              label="Done"
+              valueColor={colors.success}
+              compact
+            />
+            <StatCard
+              value={nativeTasks.filter((t) => t.status === 'in_progress').length}
+              label="Active"
+              valueColor={colors.primary}
+              compact
+            />
+            <StatCard
+              value={nativeTasks.filter((t) => t.status === 'pending').length}
+              label="Pending"
+              valueColor={colors.text.muted}
+              compact
+            />
+          </HStack>
+
+          {/* Native Task List */}
+          <VStack className="native-tasks-grid" gap="sm">
+            {nativeTasks.map((task) => (
+              <NativeTaskCard key={task.id} task={task} />
+            ))}
+          </VStack>
+        </VStack>
       )}
 
       {activeTab === 'todos' && todos.length > 0 && (

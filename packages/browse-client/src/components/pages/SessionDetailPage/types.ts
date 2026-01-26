@@ -138,6 +138,25 @@ export interface Task {
   durationSeconds: number | null;
 }
 
+/**
+ * Native task from Claude's built-in TaskCreate/TaskUpdate tools
+ */
+export interface NativeTask {
+  id: string;
+  sessionId: string;
+  messageId: string;
+  subject: string;
+  description: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  activeForm: string | null;
+  owner: string | null;
+  blocks: readonly string[];
+  blockedBy: readonly string[];
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+
 export interface Session {
   id: string;
   sessionId: string;
@@ -154,6 +173,7 @@ export interface Session {
   hookExecutions: HookExecutionConnection;
   hookStats: HookStats;
   tasks: Task[];
+  nativeTasks: NativeTask[];
 }
 
 export interface SessionWithMessages extends Session {

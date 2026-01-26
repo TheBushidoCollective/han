@@ -89,6 +89,11 @@ import {
 } from "../todo-connection.ts";
 import { TodoCountsType } from "../todo-counts.ts";
 import {
+	getNativeTasksForSession,
+	type NativeTaskData,
+	NativeTaskType,
+} from "../native-task.ts";
+import {
 	type FileChangeConnectionData,
 	FileChangeConnectionType,
 } from "./file-change-connection.ts";
@@ -660,6 +665,15 @@ export const SessionType = SessionRef.implement({
 					args,
 					(task) => `Task:${task.taskId}`,
 				);
+			},
+		}),
+		// Native tasks - Claude Code's built-in task system (TaskCreate/TaskUpdate)
+		nativeTasks: t.field({
+			type: [NativeTaskType],
+			description:
+				"Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)",
+			resolve: async (session): Promise<NativeTaskData[]> => {
+				return getNativeTasksForSession(session.sessionId);
 			},
 		}),
 		// Messages with Relay-style cursor pagination

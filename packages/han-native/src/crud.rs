@@ -924,6 +924,241 @@ pub fn get_session_todos(session_id: &str) -> napi::Result<Option<SessionTodos>>
 }
 
 // ============================================================================
+// Native Task Operations (Claude Code's built-in task system)
+// ============================================================================
+
+/// Create a native task from a TaskCreate tool call
+pub fn create_native_task(input: NativeTaskInput) -> napi::Result<NativeTask> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Use INSERT OR IGNORE to avoid duplicates on re-indexing
+    conn.execute(
+        "INSERT OR IGNORE INTO native_tasks (
+            id, session_id, message_id, subject, description, status, active_form,
+            owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number
+        ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6, NULL, NULL, NULL, ?7, ?7, NULL, ?8)",
+        params![
+            input.id,
+            input.session_id,
+            input.message_id,
+            input.subject,
+            input.description,
+            input.active_form,
+            input.timestamp,
+            input.line_number,
+        ],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to create native task: {}", e)))?;
+
+    // Return the created/existing task
+    get_native_task(&input.session_id, &input.id)?
+        .ok_or_else(|| napi::Error::from_reason("Failed to retrieve created native task"))
+}
+
+/// Update a native task from a TaskUpdate tool call
+pub fn update_native_task(input: NativeTaskUpdate) -> napi::Result<Option<NativeTask>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Build dynamic UPDATE query based on provided fields
+    let mut updates = Vec::new();
+    let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    let mut param_idx = 1;
+
+    // Always update these
+    updates.push(format!("message_id = ?{}", param_idx));
+    params_vec.push(Box::new(input.message_id.clone()));
+    param_idx += 1;
+
+    updates.push(format!("updated_at = ?{}", param_idx));
+    params_vec.push(Box::new(input.timestamp.clone()));
+    param_idx += 1;
+
+    updates.push(format!("line_number = ?{}", param_idx));
+    params_vec.push(Box::new(input.line_number));
+    param_idx += 1;
+
+    if let Some(ref status) = input.status {
+        updates.push(format!("status = ?{}", param_idx));
+        params_vec.push(Box::new(status.clone()));
+        param_idx += 1;
+
+        // Set completed_at if status is completed
+        if status == "completed" {
+            updates.push(format!("completed_at = ?{}", param_idx));
+            params_vec.push(Box::new(input.timestamp.clone()));
+            param_idx += 1;
+        }
+    }
+
+    if let Some(ref subject) = input.subject {
+        updates.push(format!("subject = ?{}", param_idx));
+        params_vec.push(Box::new(subject.clone()));
+        param_idx += 1;
+    }
+
+    if let Some(ref description) = input.description {
+        updates.push(format!("description = ?{}", param_idx));
+        params_vec.push(Box::new(description.clone()));
+        param_idx += 1;
+    }
+
+    if let Some(ref active_form) = input.active_form {
+        updates.push(format!("active_form = ?{}", param_idx));
+        params_vec.push(Box::new(active_form.clone()));
+        param_idx += 1;
+    }
+
+    if let Some(ref owner) = input.owner {
+        updates.push(format!("owner = ?{}", param_idx));
+        params_vec.push(Box::new(owner.clone()));
+        param_idx += 1;
+    }
+
+    // Handle addBlocks - append to existing JSON array
+    if let Some(ref add_blocks) = input.add_blocks {
+        if !add_blocks.is_empty() {
+            let blocks_json = serde_json::to_string(add_blocks).unwrap_or_default();
+            updates.push(format!(
+                "blocks = CASE
+                    WHEN blocks IS NULL THEN ?{}
+                    ELSE json_group_array(value)
+                END",
+                param_idx
+            ));
+            params_vec.push(Box::new(blocks_json));
+            param_idx += 1;
+        }
+    }
+
+    // Handle addBlockedBy - append to existing JSON array
+    if let Some(ref add_blocked_by) = input.add_blocked_by {
+        if !add_blocked_by.is_empty() {
+            let blocked_by_json = serde_json::to_string(add_blocked_by).unwrap_or_default();
+            updates.push(format!(
+                "blocked_by = CASE
+                    WHEN blocked_by IS NULL THEN ?{}
+                    ELSE json_group_array(value)
+                END",
+                param_idx
+            ));
+            params_vec.push(Box::new(blocked_by_json));
+            param_idx += 1;
+        }
+    }
+
+    // Add WHERE clause params
+    params_vec.push(Box::new(input.session_id.clone()));
+    params_vec.push(Box::new(input.id.clone()));
+
+    let sql = format!(
+        "UPDATE native_tasks SET {} WHERE session_id = ?{} AND id = ?{}",
+        updates.join(", "),
+        param_idx,
+        param_idx + 1
+    );
+
+    // Convert to params slice
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+
+    conn.execute(&sql, params_refs.as_slice())
+        .map_err(|e| napi::Error::from_reason(format!("Failed to update native task: {}", e)))?;
+
+    // Return updated task
+    get_native_task(&input.session_id, &input.id)
+}
+
+/// Get a native task by session ID and task ID
+pub fn get_native_task(session_id: &str, task_id: &str) -> napi::Result<Option<NativeTask>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, message_id, subject, description, status, active_form,
+                    owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number
+             FROM native_tasks WHERE session_id = ?1 AND id = ?2",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id, task_id], |row| {
+        Ok(NativeTask {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            message_id: row.get(2)?,
+            subject: row.get(3)?,
+            description: row.get(4)?,
+            status: row.get(5)?,
+            active_form: row.get(6)?,
+            owner: row.get(7)?,
+            blocks: row.get(8)?,
+            blocked_by: row.get(9)?,
+            created_at: row.get(10)?,
+            updated_at: row.get(11)?,
+            completed_at: row.get(12)?,
+            line_number: row.get(13)?,
+        })
+    });
+
+    match result {
+        Ok(task) => Ok(Some(task)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get native task: {}",
+            e
+        ))),
+    }
+}
+
+/// Get all native tasks for a session
+pub fn get_session_native_tasks(session_id: &str) -> napi::Result<Vec<NativeTask>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, message_id, subject, description, status, active_form,
+                    owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number
+             FROM native_tasks WHERE session_id = ?1 ORDER BY created_at ASC",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let tasks = stmt
+        .query_map(params![session_id], |row| {
+            Ok(NativeTask {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                message_id: row.get(2)?,
+                subject: row.get(3)?,
+                description: row.get(4)?,
+                status: row.get(5)?,
+                active_form: row.get(6)?,
+                owner: row.get(7)?,
+                blocks: row.get(8)?,
+                blocked_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+                completed_at: row.get(12)?,
+                line_number: row.get(13)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query native tasks: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(tasks)
+}
+
+// ============================================================================
 // Message Operations
 // ============================================================================
 

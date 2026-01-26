@@ -397,6 +397,33 @@ CREATE INDEX IF NOT EXISTS idx_session_todos_session ON session_todos(session_id
 CREATE INDEX IF NOT EXISTS idx_session_todos_timestamp ON session_todos(timestamp);
 
 -- ============================================================================
+-- Native Tasks (from Claude Code's TaskCreate/TaskUpdate tools)
+-- These are Claude's built-in task management, distinct from Han's MCP metrics tasks
+-- Event-sourced: each TaskCreate/TaskUpdate creates/updates a record
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS native_tasks (
+    id TEXT PRIMARY KEY,  -- Claude's task ID (e.g., "1", "2") scoped to session
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    message_id TEXT NOT NULL,  -- Reference to the source tool_use message
+    subject TEXT NOT NULL,  -- Brief task title
+    description TEXT,  -- Detailed task description
+    status TEXT NOT NULL DEFAULT 'pending',  -- pending, in_progress, completed
+    active_form TEXT,  -- Present continuous form shown in spinner
+    owner TEXT,  -- Optional task owner
+    blocks TEXT,  -- JSON array of task IDs this task blocks
+    blocked_by TEXT,  -- JSON array of task IDs blocking this task
+    created_at TEXT NOT NULL,  -- When task was created (from first TaskCreate)
+    updated_at TEXT NOT NULL,  -- When task was last updated
+    completed_at TEXT,  -- When task was completed (if status=completed)
+    line_number INTEGER NOT NULL,
+    UNIQUE(session_id, id)  -- Task ID is unique within a session
+);
+
+CREATE INDEX IF NOT EXISTS idx_native_tasks_session ON native_tasks(session_id);
+CREATE INDEX IF NOT EXISTS idx_native_tasks_status ON native_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_native_tasks_created ON native_tasks(created_at);
+
+-- ============================================================================
 -- Vector embeddings (for semantic search)
 -- Note: sqlite-vec tables are created dynamically with appropriate dimensions
 -- ============================================================================

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<1e0945a07c80da0549eef00e7947da94>>
+ * @generated SignedSource<<d8d1fcf32cba594be37db8ab7ff93b41>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,6 +9,7 @@
 // @ts-nocheck
 
 import { ReaderFragment } from 'relay-runtime';
+export type NativeTaskStatus = "completed" | "in_progress" | "pending" | "%future added value";
 export type TaskOutcome = "FAILURE" | "PARTIAL" | "SUCCESS" | "%future added value";
 export type TaskStatus = "ACTIVE" | "COMPLETED" | "FAILED" | "%future added value";
 export type TaskType = "FIX" | "IMPLEMENTATION" | "REFACTOR" | "RESEARCH" | "%future added value";
@@ -62,6 +63,21 @@ export type SessionSidebar_session$data = {
     readonly totalDurationMs: number | null | undefined;
     readonly totalHooks: number | null | undefined;
   } | null | undefined;
+  readonly nativeTasks: ReadonlyArray<{
+    readonly activeForm: string | null | undefined;
+    readonly blockedBy: ReadonlyArray<string> | null | undefined;
+    readonly blocks: ReadonlyArray<string> | null | undefined;
+    readonly completedAt: string | null | undefined;
+    readonly createdAt: string | null | undefined;
+    readonly description: string | null | undefined;
+    readonly id: string | null | undefined;
+    readonly messageId: string | null | undefined;
+    readonly owner: string | null | undefined;
+    readonly sessionId: string | null | undefined;
+    readonly status: NativeTaskStatus | null | undefined;
+    readonly subject: string | null | undefined;
+    readonly updatedAt: string | null | undefined;
+  }> | null | undefined;
   readonly tasks: {
     readonly edges: ReadonlyArray<{
       readonly node: {
@@ -175,7 +191,14 @@ v9 = {
   "name": "startedAt",
   "storageKey": null
 },
-v10 = [
+v10 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "completedAt",
+  "storageKey": null
+},
+v11 = [
   (v2/*: any*/),
   (v6/*: any*/),
   (v7/*: any*/),
@@ -461,13 +484,7 @@ return {
                   "storageKey": null
                 },
                 (v9/*: any*/),
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "completedAt",
-                  "storageKey": null
-                },
+                (v10/*: any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -508,7 +525,7 @@ return {
               "kind": "LinkedField",
               "name": "node",
               "plural": false,
-              "selections": (v10/*: any*/),
+              "selections": (v11/*: any*/),
               "storageKey": null
             }
           ],
@@ -524,7 +541,79 @@ return {
       "kind": "LinkedField",
       "name": "currentTask",
       "plural": false,
-      "selections": (v10/*: any*/),
+      "selections": (v11/*: any*/),
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "concreteType": "NativeTask",
+      "kind": "LinkedField",
+      "name": "nativeTasks",
+      "plural": true,
+      "selections": [
+        (v2/*: any*/),
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "sessionId",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "messageId",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "subject",
+          "storageKey": null
+        },
+        (v7/*: any*/),
+        (v4/*: any*/),
+        (v5/*: any*/),
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "owner",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "blocks",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "blockedBy",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "createdAt",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "updatedAt",
+          "storageKey": null
+        },
+        (v10/*: any*/)
+      ],
       "storageKey": null
     }
   ],
@@ -533,6 +622,6 @@ return {
 };
 })();
 
-(node as any).hash = "73aa838201f6ab2a08fb134b7ece75fd";
+(node as any).hash = "edb1969648279ec4c60b1125cde49073";
 
 export default node;
