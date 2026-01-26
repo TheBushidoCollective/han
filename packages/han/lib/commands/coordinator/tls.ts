@@ -178,9 +178,7 @@ export async function checkAndRefreshCertificates(
 		} catch (err) {
 			clearTimeout(timeout);
 			const errorMsg = err instanceof Error ? err.message : String(err);
-			log.warn(
-				`Failed to fetch certificates (${errorMsg}), will retry later`,
-			);
+			log.warn(`Failed to fetch certificates (${errorMsg}), will retry later`);
 			return false;
 		} finally {
 			clearTimeout(timeout);
