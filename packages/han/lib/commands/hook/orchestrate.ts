@@ -1366,6 +1366,13 @@ function containsQuestion(text: string): boolean {
 		/\b(which (one|option|approach|method))\b/i,
 		/\b(or (do|should|would|could) (i|we|you))\b/i,
 		/\b(let me know (if|whether|which))\b/i,
+		// Waiting for user input patterns
+		/\b(waiting (on|for) your)\b/i,
+		/\b(your (choice|decision|input|response|answer))\b/i,
+		/\b(please (choose|select|decide|pick))\b/i,
+		// Option list patterns (A, B, or C / A) B) C) / 1, 2, or 3)
+		/\b[ABC]\s*[,)]\s*[ABC]\s*[,)]\s*(or\s+)?[ABC]\b/i,
+		/\b[123]\s*[,)]\s*[123]\s*[,)]\s*(or\s+)?[123]\b/i,
 	];
 
 	for (const pattern of questionPatterns) {
