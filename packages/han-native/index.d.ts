@@ -936,6 +936,11 @@ export declare function getAllSessionValidations(dbPath: string, sessionId: stri
  * and validation_hash to determine if validation is needed.
  */
 export declare function getFilesForValidation(dbPath: string, sessionId: string, pluginName: string, hookName: string, directory: string): Array<FileValidationStatus>
+/**
+ * Delete stale validation records for files that no longer exist.
+ * This prevents "ghost" validations from causing infinite re-validation loops.
+ */
+export declare function deleteStaleValidations(dbPath: string, sessionId: string, pluginName: string, hookName: string, directory: string, currentFilePaths: Array<string>): number
 /** Upsert a session summary (keeps the latest by timestamp) */
 export declare function upsertSessionSummary(dbPath: string, input: SessionSummaryInput): SessionSummary
 /** Get session summary by session ID */

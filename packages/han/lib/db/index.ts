@@ -1176,6 +1176,36 @@ export const sessionFileValidations = {
 			staleFiles,
 		};
 	},
+
+	/**
+	 * Delete stale validation records for files that no longer exist.
+	 * This prevents "ghost" validations from causing infinite re-validation loops.
+	 *
+	 * @param sessionId - Session ID
+	 * @param pluginName - Plugin name
+	 * @param hookName - Hook name
+	 * @param directory - Directory being validated
+	 * @param currentFilePaths - List of file paths that currently exist
+	 * @returns Number of stale records deleted
+	 */
+	async deleteStale(
+		sessionId: string,
+		pluginName: string,
+		hookName: string,
+		directory: string,
+		currentFilePaths: string[],
+	): Promise<number> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.deleteStaleValidations(
+			dbPath,
+			sessionId,
+			pluginName,
+			hookName,
+			directory,
+			currentFilePaths,
+		);
+	},
 };
 
 // ============================================================================
