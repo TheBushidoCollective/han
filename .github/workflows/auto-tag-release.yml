@@ -268,7 +268,7 @@ jobs:
       - name: Trigger release binaries workflow
         if: steps.check-tag.outputs.exists == 'false'
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.bump-version.outputs.new_version }}"
           echo "Triggering release-binaries workflow for $TAG"
