@@ -9,11 +9,5 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "FSL-1.1-ALv2",
-  "keywords": [
-    "webpack",
-    "bundler",
-    "build",
-    "javascript",
-    "typescript"
-  ]
+  "keywords": ["webpack", "bundler", "build", "javascript", "typescript"]
 }
