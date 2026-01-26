@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-01-26
+
+### Added
+
+- add bundler plugins, package manager detection, and coordinator auto-start ([c7cb63f9](../../commit/c7cb63f9))
+- add --skip-if-questioning flag to Stop hooks ([04c326dd](../../commit/04c326dd))
+- show session names in browse UI instead of UUIDs ([d11845de](../../commit/d11845de))
+- add git-storytelling commit validation hook and various improvements ([71c8777d](../../commit/71c8777d))
+- add session todos indexing and UI display ([dc161235](../../commit/dc161235))
+- add async workflow pattern with polling-based progress monitoring ([a91f7843](../../commit/a91f7843))
+- add session ID hook for workflow/memory tool integration ([42a283db](../../commit/42a283db))
+
+### Fixed
+
+- skip han installation when hanBinary is configured ([e179646c](../../commit/e179646c))
+
+### Changed
+
+- remove orchestrator, use direct MCP exposure with OAuth ([6e69b841](../../commit/6e69b841))
+- major codebase cleanup and consolidation ([94d9d6db](../../commit/94d9d6db))
+
+### Other
+
+- Merge branch 'fix/react-native-web-violations' ([bc5f78a8](../../commit/bc5f78a8))
+- optimize SessionStart from 6s to 2s ([44595593](../../commit/44595593))
+- optimize SessionStart hook from 37s to ~3s ([9ad15784](../../commit/9ad15784))
+- resolve conflicts with main ([ad1a15d7](../../commit/ad1a15d7))
+
 ## [1.8.1] - 2026-01-26
 
 ### Added
