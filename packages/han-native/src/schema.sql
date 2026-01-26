@@ -235,14 +235,16 @@ CREATE INDEX IF NOT EXISTS idx_tasks_started_confidence ON tasks(started_at, con
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS orchestrations (
     id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
+    session_id TEXT REFERENCES sessions(id),  -- Nullable for CLI-initiated orchestrations
+    hook_type TEXT NOT NULL,  -- 'Stop', 'SessionStart', etc.
+    project_root TEXT NOT NULL,  -- Root directory for the orchestration
     status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'running', 'completed', 'cancelled'
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    started_at TEXT,
-    completed_at TEXT,
     total_hooks INTEGER NOT NULL DEFAULT 0,
-    passed_hooks INTEGER NOT NULL DEFAULT 0,
-    failed_hooks INTEGER NOT NULL DEFAULT 0
+    completed_hooks INTEGER NOT NULL DEFAULT 0,
+    failed_hooks INTEGER NOT NULL DEFAULT 0,
+    deferred_hooks INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_orchestrations_session ON orchestrations(session_id);
