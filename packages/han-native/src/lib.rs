@@ -300,8 +300,10 @@ pub fn build_manifest(files: Vec<String>, root_dir: String) -> HashMap<String, S
     files
         .par_iter()
         .filter_map(|file| {
-            let path = Path::new(file);
-            let relative = path.strip_prefix(&root).ok()?;
+            // Canonicalize the file path to resolve symlinks and different mounts
+            // (e.g., /Volumes/dev vs /Users/name/dev pointing to the same location)
+            let canonical_path = fs::canonicalize(file).ok()?;
+            let relative = canonical_path.strip_prefix(&root).ok()?;
             let relative_str = relative.to_string_lossy().to_string();
             let hash = compute_file_hash(file.clone());
             Some((relative_str, hash))
