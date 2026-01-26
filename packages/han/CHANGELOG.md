@@ -5,6 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] - 2026-01-26
+
+### BREAKING CHANGES
+
+- bump to v3.0.0 and fix workflow trigger token ([53a8cb8f](../../commit/53a8cb8f))
+
+### Added
+
+- add list_blueprints MCP tool ([7caf3e29](../../commit/7caf3e29))
+- add --skip-if-questioning flag to Stop hooks ([04c326dd](../../commit/04c326dd))
+- skip Stop hook check when agent is waiting for user input ([baba2d47](../../commit/baba2d47))
+- hot-reload 6-day TLS certificates without restart ([a7a40ef0](../../commit/a7a40ef0))
+- add --local flag for local vs remote dashboard ([7c609b69](../../commit/7c609b69))
+- add keep-alive for active connections and sessions ([90cf11db](../../commit/90cf11db))
+- add HookCheckStateMessage display in message timeline ([9a045168](../../commit/9a045168))
+- add GraphQL @defer support for incremental data loading ([220d8724](../../commit/220d8724))
+- add actionable hook failure guidance to SessionStart ([4d4fc2b5](../../commit/4d4fc2b5))
+- use HAN_FILES from coordinator for session-scoped checks ([3969c632](../../commit/3969c632))
+- add detailed coordinator logging for performance debugging ([32fbb6be](../../commit/32fbb6be))
+- add project list to repo detail page ([97a3b4b3](../../commit/97a3b4b3))
+- show session names in browse UI instead of UUIDs ([d11845de](../../commit/d11845de))
+- add git-storytelling commit validation hook and various improvements ([71c8777d](../../commit/71c8777d))
+- implement deferred hook execution system ([96418bbd](../../commit/96418bbd))
+- add session todos indexing and UI display ([dc161235](../../commit/dc161235))
+- add coordinator-managed global slot system ([8c68e9c1](../../commit/8c68e9c1))
+- add async workflow pattern with polling-based progress monitoring ([a91f7843](../../commit/a91f7843))
+- add session ID hook for workflow/memory tool integration ([42a283db](../../commit/42a283db))
+
+### Fixed
+
+- run Stop hooks if file modifications occurred ([4b06b66c](../../commit/4b06b66c))
+- skip Stop hooks for Q&A exchanges in both directions ([b93243fd](../../commit/b93243fd))
+- create session before orchestration to satisfy FK constraint ([598a3c1d](../../commit/598a3c1d))
+- delete stale validation records for deleted files ([5f34c3bc](../../commit/5f34c3bc))
+- improve question detection in orchestrator skip logic ([4fe04442](../../commit/4fe04442))
+- remove CORS wildcard from coordinator GraphQL server ([0321399c](../../commit/0321399c))
+- prefix unused marketplace parameter with underscore ([bc038174](../../commit/bc038174))
+- make port availability test more robust ([c5c8c598](../../commit/c5c8c598))
+- fix syntax error in openBrowser callback ([41b6c544](../../commit/41b6c544))
+- local mode always uses HTTP for offline scenarios ([60fb82df](../../commit/60fb82df))
+- clarify hook failure attempt message ([15e71a32](../../commit/15e71a32))
+- show correct GraphQL URL in console ([982b46ce](../../commit/982b46ce))
+- support HTTPS in health check ([22ebc660](../../commit/22ebc660))
+- remove duplicate coordinatorProtocol declaration ([3de087fb](../../commit/3de087fb))
+- prevent caching for hooks without ifChanged filters ([837d0585](../../commit/837d0585))
+- enable @defer support in GraphQL Yoga ([eb65532c](../../commit/eb65532c))
+- correct HAN_FILES path handling for absolute paths ([beed531e](../../commit/beed531e))
+- resolve biome lint warnings for HAN_FILES substitution ([3386d38e](../../commit/3386d38e))
+- resolve markdownlint MD032 and MD025 errors in paper and blog ([bc9b8e20](../../commit/bc9b8e20))
+- remove PluginMcpConfig export (interface no longer exists) ([b1413c79](../../commit/b1413c79))
+- update memory provider tests for MCP-based discovery ([896522c0](../../commit/896522c0))
+- address validation workflow failures ([947483db](../../commit/947483db))
+- correct hook variable and remove unused variable ([79166255](../../commit/79166255))
+- filter validation to only hooks matching session-changed files ([8eeb8c5d](../../commit/8eeb8c5d))
+- prevent false positives in cache validation check ([4d53fe14](../../commit/4d53fe14))
+- always record file validations regardless of session changes ([bc7d466a](../../commit/bc7d466a))
+- remove composite cache key bug in orchestration and validation ([11245e12](../../commit/11245e12))
+- resolve marketplace paths relative to project root, not CWD ([40a4e685](../../commit/40a4e685))
+- resolve Stop hook orchestration loop with synchronous execution ([d29d4e9f](../../commit/d29d4e9f))
+- Stop hooks now return within 5 seconds via timeout-based deferral ([ee6e11fc](../../commit/ee6e11fc))
+- skip logging hook_run for han hook commands ([de986310](../../commit/de986310))
+- fix failing tests due to module path and missing exports ([3ff76091](../../commit/3ff76091))
+
+### Changed
+
+- remove han_workflow system completely ([717d7b9b](../../commit/717d7b9b))
+- extract health check logic into reusable function ([b866aeaf](../../commit/b866aeaf))
+- always open browser, remove --no-open flag ([4a7a7544](../../commit/4a7a7544))
+- restructure CLI commands to use coordinator subcommand ([7ecba4d5](../../commit/7ecba4d5))
+- simplify memory provider auth via plugin inheritance ([ebed64a4](../../commit/ebed64a4))
+- replace cache/checkpoints options with onlyChanged, always cache ([0b019ed2](../../commit/0b019ed2))
+- replace HTML tags with React Native Web components ([beadc9ab](../../commit/beadc9ab))
+- major codebase cleanup and consolidation ([94d9d6db](../../commit/94d9d6db))
+- consolidate GraphQL and API implementations ([e633b374](../../commit/e633b374))
+- update CLI, hooks, memory, and MCP tooling ([d7bd5df8](../../commit/d7bd5df8))
+
+### Other
+
+- format coordinator server CORS config ([bb41e4f3](../../commit/bb41e4f3))
+- Merge branch 'fix/react-native-web-violations' ([bc5f78a8](../../commit/bc5f78a8))
+- Merge pull request #34 from TheBushidoCollective/fix/cors-restrictions ([9859f865](../../commit/9859f865))
+- use template literal for string concatenation ([1798f3b6](../../commit/1798f3b6))
+- format blueprints.ts with biome ([48e133c6](../../commit/48e133c6))
+- remove orphaned workflow system tests ([6a9e873c](../../commit/6a9e873c))
+- skip flaky memory-storage tests ([b2e16080](../../commit/b2e16080))
+- skip flaky session-file-validation test ([f3862ce1](../../commit/f3862ce1))
+- apply biome formatting to shouldStayAlive ([0dc875de](../../commit/0dc875de))
+- optimize SessionStart from 6s to 2s ([44595593](../../commit/44595593))
+- add timeout protection to SessionStart hook queries ([08b33f7c](../../commit/08b33f7c))
+- optimize SessionStart hook from 37s to ~3s ([9ad15784](../../commit/9ad15784))
+- add comprehensive tests for deferred hook execution system ([843d31b6](../../commit/843d31b6))
+- resolve conflicts with main ([ad1a15d7](../../commit/ad1a15d7))
+
 ## [3.0.1] - 2026-01-26
 
 ### BREAKING CHANGES
