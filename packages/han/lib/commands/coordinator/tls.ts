@@ -79,9 +79,24 @@ export async function ensureCertificates(): Promise<TLSCredentials | null> {
 			);
 		}
 
-		// Fetch new certificates
+		// Fetch new certificates with a timeout
 		log.info(`Fetching certificates from ${CERT_FETCH_URL}...`);
-		const response = await fetch(CERT_FETCH_URL);
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+		let response: Response;
+		try {
+			response = await fetch(CERT_FETCH_URL, { signal: controller.signal });
+		} catch (err) {
+			clearTimeout(timeout);
+			const errorMsg = err instanceof Error ? err.message : String(err);
+			log.warn(
+				`Failed to fetch certificates (${errorMsg}), falling back to HTTP mode`,
+			);
+			return null;
+		} finally {
+			clearTimeout(timeout);
+		}
 
 		if (!response.ok) {
 			log.warn(
@@ -153,8 +168,23 @@ export async function checkAndRefreshCertificates(
 			`Certificate expires in ${Math.floor(daysUntilExpiry * 24)} hours, refreshing...`,
 		);
 
-		// Fetch new certificates
-		const response = await fetch(CERT_FETCH_URL);
+		// Fetch new certificates with timeout
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+		let response: Response;
+		try {
+			response = await fetch(CERT_FETCH_URL, { signal: controller.signal });
+		} catch (err) {
+			clearTimeout(timeout);
+			const errorMsg = err instanceof Error ? err.message : String(err);
+			log.warn(
+				`Failed to fetch certificates (${errorMsg}), will retry later`,
+			);
+			return false;
+		} finally {
+			clearTimeout(timeout);
+		}
 
 		if (!response.ok) {
 			log.warn(
