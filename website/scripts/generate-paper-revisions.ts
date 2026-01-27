@@ -398,14 +398,21 @@ function assignVersions(
 
 function generatePaperRevisions(filePath: string): PaperRevisions | null {
 	const slug = path.basename(filePath, path.extname(filePath));
-	const commits = getGitLog(filePath);
+	const allCommits = getGitLog(filePath);
 
-	if (commits.length === 0) {
+	if (allCommits.length === 0) {
 		console.log(`  No git history for ${slug}`);
 		return null;
 	}
 
-	const versions = assignVersions(commits);
+	// Only keep first (newest) and last (oldest/original) commits
+	// This creates a clean 2-version history
+	const commits =
+		allCommits.length <= 2
+			? allCommits
+			: [allCommits[0], allCommits[allCommits.length - 1]];
+
+	const versions = assignVersions(allCommits); // Use all commits for version numbering
 	const revisions: Revision[] = [];
 	const currentContent = fs.readFileSync(filePath, "utf-8");
 
@@ -448,8 +455,8 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 
 	// Get new sections in latest version compared to first tracked version
 	const firstContent =
-		commits.length > 1
-			? getFileAtCommit(filePath, commits[commits.length - 1].hash)
+		allCommits.length > 1
+			? getFileAtCommit(filePath, allCommits[allCommits.length - 1].hash)
 			: "";
 	const firstSections = extractSections(firstContent || "");
 	const currentSections = extractSections(currentContent);
