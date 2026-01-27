@@ -7,14 +7,6 @@ authors: ["Raja SP", "The Bushido Collective"]
 tags: ["methodology", "autonomous-agents", "ai-development", "sdlc", "hotl", "hitl"]
 ---
 
-<!-- markdownlint-disable MD025 -->
-
-# AI-Driven Development Lifecycle 2026 (AI-DLC 2026)
-
-## A Methodology for the Age of Autonomous Agents
-
----
-
 ## Acknowledgments & Attribution
 
 This methodology synthesizes foundational work from the AI development community with lessons learned from production deployments of autonomous AI systems.
@@ -58,9 +50,7 @@ AI-DLC 2026 preserves foundational insights while incorporating lessons from pro
 
 ---
 
-<!-- markdownlint-disable MD025 -->
-
-## I. Context
+## Context
 
 ### The Evolution of Software Engineering
 
@@ -137,11 +127,11 @@ Ad-hoc approaches don't compound—each session starts fresh, each prompt is one
 
 ---
 
-## II. Core Principles
+## Core Principles
 
 The following principles form the foundation of AI-DLC 2026. They shape its phases, roles, artifacts, and rituals. These principles are critical for validating the methodology, as they provide the underpinning rationale behind its design.
 
-### 1. Reimagine Rather Than Retrofit
+### Reimagine Rather Than Retrofit
 
 We choose to reimagine a development method rather than keeping existing methods like Waterfall or Agile and retrofitting AI into them. Traditional methods were built for longer iteration durations—weeks and months—which led to rituals like daily standups, sprint planning, and retrospectives. These rituals assume a cadence that AI has rendered obsolete.
 
@@ -155,7 +145,7 @@ Proper application of AI leads to rapid cycles measured in hours or even minutes
 
 These new dynamics warrant reimagination based on first principles thinking rather than retrofitting. **We need automobiles, not faster horse chariots.**
 
-### 2. Three Operating Modes: HITL, Observed HOTL, and HOTL
+### Three Operating Modes: HITL, Observed HOTL, and HOTL
 
 AI-DLC 2026 introduces the concept of AI initiating and directing conversations, using the Google Maps analogy: humans set the destination, AI provides step-by-step directions, humans maintain oversight. This methodology distinguishes **three distinct operating modes** that form a spectrum of human involvement:
 
@@ -247,7 +237,7 @@ The Google Maps analogy extends across all three modes:
 
 **The key insight:** The human doesn't disappear. The human's *function* changes—from micromanaging execution to defining outcomes, observing progress, and building quality gates. The choice of mode depends on the nature of the work, not just its risk level.
 
-### 3. Backpressure Over Prescription
+### Backpressure Over Prescription
 
 Traditional methodologies prescribe *how* work should be done. Detailed process steps, code review checklists, and implementation patterns create rigid workflows that constrain AI's ability to leverage its full capabilities.
 
@@ -274,7 +264,7 @@ Let AI determine *how* to satisfy these constraints. This approach offers multip
 
 The philosophy can be summarized as: **"Better to fail predictably than succeed unpredictably."** Each failure is data. Each iteration refines the approach. The skill shifts from directing AI step-by-step to writing criteria and tests that converge toward correct solutions.
 
-### 4. Embrace the Collapsing SDLC
+### Embrace the Collapsing SDLC
 
 Traditional SDLC phases existed because iteration was expensive. Each handoff between analyst → architect → developer → tester → operations lost context, added latency, and created opportunities for misalignment. Sequential phases with approval gates were an economic optimization for a world of expensive iteration.
 
@@ -317,7 +307,7 @@ Work pauses briefly at checkpoints. Same agent continues with feedback. Context 
 
 This doesn't mean structure disappears. It means structure changes form—from sequential gates to parallel loops with human oversight at strategic moments.
 
-### 5. Context Is Abundant—Use It Wisely
+### Context Is Abundant—Use It Wisely
 
 Modern language models offer context windows ranging from 200K tokens (Claude Opus 4.5) to over 1 million tokens (Claude Sonnet 4.5, Gemini). This abundance fundamentally changes how we think about AI workflows—but not in the ways that might be obvious.
 
@@ -341,7 +331,7 @@ Research shows model performance degrades when context windows exceed 40-60% uti
 
 The best workflows aren't complex orchestrations—they're simple loops with clear objectives and rich, relevant context.
 
-### 6. Memory Providers Expand Knowledge
+### Memory Providers Expand Knowledge
 
 AI context windows reset between sessions. Modified files and git history provide persistence without complex memory infrastructure. AI-DLC 2026 extends this insight by recognizing that **existing organizational artifacts are memory providers** that AI agents can access.
 
@@ -395,7 +385,7 @@ flowchart TB
 
 The filesystem remains the simplest, most robust memory provider. Git history shows what was attempted. Modified files persist across iterations. But these aren't the only options—organizational memory, properly connected, dramatically expands what agents can know.
 
-### 7. Completion Criteria Enable Autonomy
+### Completion Criteria Enable Autonomy
 
 The key enabler of autonomous operation is **programmatic verification**. If success can be measured by machines, AI can iterate toward it without human intervention for each step.
 
@@ -420,7 +410,7 @@ Every work element in AI-DLC 2026 should have explicit **Completion Criteria**�
 
 This transforms the human role from "validator of each step" to "definer of done." The human specifies what success looks like; the AI figures out how to achieve it.
 
-### 8. Design Techniques Are Tools, Not Requirements
+### Design Techniques Are Tools, Not Requirements
 
 AI-DLC 2026 takes a pragmatic approach: design techniques like Domain-Driven Design (DDD), Test-Driven Development (TDD), and Behavior-Driven Development (BDD) are valuable tools to apply when appropriate, not mandatory steps in every workflow.
 
@@ -442,7 +432,7 @@ AI can apply design patterns during execution without requiring explicit design 
 
 **The test suite, not the architecture document, becomes the source of truth.** If the tests pass and the code meets non-functional requirements, the implementation is valid regardless of whether it matches a pre-specified design.
 
-### 9. Streamline Responsibilities
+### Streamline Responsibilities
 
 AI's ability to perform task decomposition, code generation, testing, documentation, and deployment reduces the need for specialized roles. A single developer supervising AI can accomplish what previously required separate specialists for frontend, backend, infrastructure, testing, and documentation.
 
@@ -458,7 +448,7 @@ The role shifts from "doing the work" to **"defining what work matters and verif
 
 However, humans remain integral. Product owners ensure alignment with business objectives. Developers maintain design quality and handle judgment calls. These roles ensure that automation and human accountability remain balanced.
 
-### 10. Platform Agnostic
+### Platform Agnostic
 
 AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodology applies regardless of infrastructure choices:
 
@@ -472,7 +462,7 @@ The methodology should be independent of vendor choices. Choose infrastructure b
 
 ---
 
-## III. Core Framework
+## Core Framework
 
 This section outlines the core framework of AI-DLC 2026, detailing its artifacts, phases, rituals, and workflows.
 
@@ -503,7 +493,7 @@ graph TB
     end
 ```
 
-### 1. Artifacts
+### Artifacts
 
 #### Intent
 
@@ -513,7 +503,7 @@ Every Intent includes explicit **Completion Criteria**—programmatically verifi
 
 **Example Intent:**
 
-```
+```markdown
 ## Intent: User Authentication System
 
 ### Description
@@ -696,7 +686,7 @@ Deployment Units should be independently deployable and include automated rollba
 
 ---
 
-### 2. Phases & Rituals
+### Phases & Rituals
 
 AI-DLC 2026 organizes work into three phases, each with distinct rituals and human-AI interaction patterns.
 
@@ -821,7 +811,7 @@ For novel domains, architectural decisions, or high-judgment work:
 
 For well-defined tasks with programmatic verification:
 
-```
+```markdown
 Implement the user authentication API endpoints.
 
 Context:
@@ -930,7 +920,7 @@ autonomous_actions:
 
 ---
 
-### 3. The Workflow
+### The Workflow
 
 The complete AI-DLC 2026 workflow integrates all phases into a continuous flow:
 
@@ -965,15 +955,15 @@ flowchart TB
 
 ---
 
-## IV. AI-DLC 2026 in Action: Greenfield Development
+## AI-DLC 2026 in Action: Greenfield Development
 
 **Scenario:** Product Owner initiates development of a recommendation engine for cross-selling products.
 
-### 1. Inception Phase (Mob Elaboration)
+### Inception Phase (Mob Elaboration)
 
 **Human provides Intent:**
 
-```
+```markdown
 ## Intent: Product Recommendation Engine
 
 Build a recommendation engine that suggests complementary products
@@ -1050,7 +1040,7 @@ Completion Criteria:
 | API Integration | Autonomous (HOTL) | Standard REST patterns, clear criteria |
 | Frontend Integration | Supervised (HITL) | UX decisions, accessibility judgment |
 
-### 2. Construction Phase
+### Construction Phase
 
 **Unit 3 (API Integration) assigned for construction as Autonomous Bolt.**
 
@@ -1083,7 +1073,7 @@ Rationale for autonomous mode:
 - Test coverage comprehensive
 - Approves for integration
 
-### 3. Operations Phase
+### Operations Phase
 
 **Deployment:**
 
@@ -1114,7 +1104,7 @@ autonomous_actions:
 
 ---
 
-## V. AI-DLC 2026 in Action: Brownfield Development
+## AI-DLC 2026 in Action: Brownfield Development
 
 **Scenario:** Adding a new wishlist feature to an existing e-commerce application.
 
@@ -1124,7 +1114,7 @@ Before Inception, AI must understand the existing codebase. This analysis can it
 
 **Autonomous context building:**
 
-```
+```markdown
 Analyze existing codebase and generate context models.
 
 Tasks:
@@ -1163,7 +1153,7 @@ This context informs the Inception phase, ensuring new work aligns with existing
 
 ---
 
-## VI. Decision Framework: Selecting Operating Mode
+## Decision Framework: Selecting Operating Mode
 
 ### Decision Tree
 
@@ -1250,7 +1240,7 @@ The flexibility to switch modes mid-work is a key feature of AI-DLC 2026.
 
 ---
 
-## VII. Implementing Autonomous Bolts
+## Implementing Autonomous Bolts
 
 ### The Ralph Wiggum Pattern
 
@@ -1271,7 +1261,7 @@ The Ralph Wiggum pattern has evolved through distinct phases, each addressing li
 
 The original pattern uses a single agent iterating until completion:
 
-```
+```markdown
 [Task description with context]
 
 Completion Criteria:
@@ -1521,7 +1511,7 @@ limits:
 
 ---
 
-## VIII. Adoption Path
+## Adoption Path
 
 ### For Teams Already Using AI-Assisted Development
 
@@ -1593,7 +1583,7 @@ Then gradually introduce Construction phase patterns:
 
 ---
 
-## IX. Measuring AI-DLC Effectiveness
+## Measuring AI-DLC Effectiveness
 
 AI-DLC introduces new metrics that capture value delivery rather than activity. This section provides a framework for measuring adoption success and identifying areas for improvement.
 
@@ -1655,7 +1645,7 @@ The best teams measure what matters to the business, not what's easy to count.
 
 ---
 
-## X. Compliance and Audit Integration
+## Compliance and Audit Integration
 
 AI-DLC can integrate with regulated environments through structured audit patterns. These patterns maintain compliance without sacrificing AI's speed benefits.
 
@@ -1743,11 +1733,11 @@ The key is that audit trails emerge naturally from AI-DLC workflow rather than b
 
 ---
 
-## XI. Appendix: Prompt Patterns
+## Appendix: Prompt Patterns
 
 ### Setup Prompt
 
-```
+```markdown
 We're working on [PROJECT_NAME] using AI-DLC methodology.
 
 Directory structure:
@@ -1777,7 +1767,7 @@ After completing work:
 
 ### Inception: Mob Elaboration
 
-```
+```markdown
 Role: Expert product manager and technical lead facilitating Mob Elaboration.
 
 Task: Elaborate the following Intent into Units with Completion Criteria.
@@ -1804,7 +1794,7 @@ Ask clarifying questions before proceeding if the Intent is ambiguous.
 
 ### Construction: Supervised Bolt
 
-```
+```markdown
 Role: Senior software engineer.
 
 Task: Implement [FEATURE].
@@ -1830,7 +1820,7 @@ Document any blockers or questions in .agent/blockers.md.
 
 ### Construction: Observed Bolt
 
-```
+```markdown
 Implement [FEATURE] with real-time observation.
 
 Context:
@@ -1872,7 +1862,7 @@ When complete:
 
 ### Construction: Autonomous Bolt
 
-```
+```markdown
 Implement [FEATURE].
 
 Context:
@@ -1915,7 +1905,7 @@ When all criteria pass:
 
 ### Operations: Incident Analysis
 
-```
+```markdown
 Role: Site reliability engineer.
 
 Task: Analyze incident and recommend remediation.
@@ -1948,7 +1938,7 @@ Mark autonomous-safe actions clearly.
 
 ---
 
-## XII. Glossary
+## Glossary
 
 | Term | Definition |
 |------|------------|
@@ -1970,7 +1960,7 @@ Mark autonomous-safe actions clearly.
 
 ---
 
-## XIII. References
+## References
 
 1. **Raja SP.** *AI-Driven Development Lifecycle (AI-DLC) Method Definition.* Amazon Web Services, July 2025. https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/
 

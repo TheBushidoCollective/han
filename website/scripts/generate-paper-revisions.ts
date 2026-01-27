@@ -13,8 +13,11 @@ interface RevisionChange {
 }
 
 interface SectionChange {
-	section: string;
+	section: string; // Normalized name for display
+	originalSection?: string; // Original heading text for anchor links
 	isNew: boolean;
+	isRemoved?: boolean;
+	renamedFrom?: string; // Old section name if this is a rename
 	linesAdded: number;
 	linesRemoved: number;
 }
@@ -23,13 +26,13 @@ interface Revision {
 	version: string;
 	date: string;
 	commitHash: string;
+	fullCommitHash: string; // Full hash for fetching from GitHub
 	commitMessage: string;
 	stats: {
 		linesAdded: number;
 		linesRemoved: number;
 	};
 	sectionChanges: SectionChange[];
-	diff: RevisionChange[];
 }
 
 interface PaperRevisions {
@@ -86,14 +89,47 @@ function getFileAtCommit(filePath: string, commitHash: string): string | null {
 	}
 }
 
+/**
+ * Normalize section name by removing leading numbers, roman numerals, and punctuation
+ * e.g., "VI. Decision Framework" -> "Decision Framework"
+ *       "1. Introduction" -> "Introduction"
+ *       "### Pattern A: Auditable" -> "Pattern A: Auditable"
+ */
+function normalizeSectionName(name: string): string {
+	return (
+		name
+			// Remove leading roman numerals (I, II, III, IV, V, VI, VII, VIII, IX, X, XI, XII, XIII, etc.)
+			.replace(/^[IVXLCDM]+\.\s*/i, "")
+			// Remove leading numbers (1., 2., 3., etc.)
+			.replace(/^\d+\.\s*/, "")
+			// Remove leading letters (A., B., C., etc.)
+			.replace(/^[A-Z]\.\s*/i, "")
+			.trim()
+	);
+}
+
 function extractSections(content: string): Map<string, string> {
 	const sections = new Map<string, string>();
 	const lines = content.split("\n");
 	let currentSection = "Introduction";
 	let currentContent: string[] = [];
+	let inCodeBlock = false;
 
 	for (const line of lines) {
-		// Match ## or ### headings
+		// Track fenced code blocks (``` or ~~~)
+		if (line.trim().startsWith("```") || line.trim().startsWith("~~~")) {
+			inCodeBlock = !inCodeBlock;
+			currentContent.push(line);
+			continue;
+		}
+
+		// Skip headers inside code blocks
+		if (inCodeBlock) {
+			currentContent.push(line);
+			continue;
+		}
+
+		// Match ## or ### headings (not inside code blocks)
 		const match = line.match(/^(#{2,3})\s+(.+)$/);
 		if (match) {
 			// Save previous section
@@ -112,7 +148,13 @@ function extractSections(content: string): Map<string, string> {
 		sections.set(currentSection, currentContent.join("\n"));
 	}
 
-	return sections;
+	// Normalize section content by trimming whitespace
+	const normalized = new Map<string, string>();
+	for (const [name, content] of sections) {
+		normalized.set(name, content.trim());
+	}
+
+	return normalized;
 }
 
 function computeDiff(
@@ -162,6 +204,25 @@ function computeDiff(
 	return { changes, stats: { linesAdded, linesRemoved } };
 }
 
+/**
+ * Calculate similarity ratio between two strings (0-1)
+ */
+function contentSimilarity(a: string, b: string): number {
+	if (a === b) return 1;
+	if (!a || !b) return 0;
+
+	const aLines = new Set(a.split("\n").filter((l) => l.trim()));
+	const bLines = new Set(b.split("\n").filter((l) => l.trim()));
+
+	let matches = 0;
+	for (const line of aLines) {
+		if (bLines.has(line)) matches++;
+	}
+
+	const total = Math.max(aLines.size, bLines.size);
+	return total > 0 ? matches / total : 0;
+}
+
 function computeSectionChanges(
 	oldContent: string,
 	newContent: string,
@@ -170,40 +231,147 @@ function computeSectionChanges(
 	const newSections = extractSections(newContent);
 	const changes: SectionChange[] = [];
 
-	// Check for new and modified sections
-	for (const [section, content] of newSections) {
-		const oldSectionContent = oldSections.get(section);
+	// Create normalized lookup maps for matching
+	const oldNormalized = new Map<string, { name: string; content: string }>();
+	for (const [name, content] of oldSections) {
+		oldNormalized.set(normalizeSectionName(name), { name, content });
+	}
 
-		if (!oldSectionContent) {
-			// New section
-			changes.push({
-				section,
-				isNew: true,
-				linesAdded: content.split("\n").length,
-				linesRemoved: 0,
-			});
-		} else if (oldSectionContent !== content) {
-			// Modified section
-			const { stats } = computeDiff(oldSectionContent, content);
-			if (stats.linesAdded > 0 || stats.linesRemoved > 0) {
-				changes.push({
-					section,
-					isNew: false,
-					linesAdded: stats.linesAdded,
-					linesRemoved: stats.linesRemoved,
-				});
+	const newNormalized = new Map<string, { name: string; content: string }>();
+	for (const [name, content] of newSections) {
+		newNormalized.set(normalizeSectionName(name), { name, content });
+	}
+
+	// Track which old sections have been matched (for rename detection)
+	const matchedOldSections = new Set<string>();
+
+	// First pass: find exact matches and modifications
+	for (const [
+		normalizedName,
+		{ name: originalName, content },
+	] of newNormalized) {
+		const oldSection = oldNormalized.get(normalizedName);
+
+		if (oldSection) {
+			matchedOldSections.add(normalizedName);
+			if (oldSection.content !== content) {
+				// Modified section
+				const { stats } = computeDiff(oldSection.content, content);
+				if (stats.linesAdded > 0 || stats.linesRemoved > 0) {
+					changes.push({
+						section: normalizedName,
+						originalSection: originalName,
+						isNew: false,
+						linesAdded: stats.linesAdded,
+						linesRemoved: stats.linesRemoved,
+					});
+				}
 			}
 		}
 	}
 
-	// Check for removed sections
-	for (const [section, content] of oldSections) {
-		if (!newSections.has(section)) {
+	// Collect unmatched sections (with both normalized and original names)
+	const unmatchedNew: Array<{
+		normalizedName: string;
+		originalName: string;
+		content: string;
+	}> = [];
+	const unmatchedOld: Array<{
+		normalizedName: string;
+		originalName: string;
+		content: string;
+	}> = [];
+
+	for (const [normalizedName, data] of newNormalized) {
+		if (!oldNormalized.has(normalizedName)) {
+			unmatchedNew.push({
+				normalizedName,
+				originalName: data.name,
+				content: data.content,
+			});
+		}
+	}
+
+	for (const [normalizedName, data] of oldNormalized) {
+		if (
+			!matchedOldSections.has(normalizedName) &&
+			!newNormalized.has(normalizedName)
+		) {
+			unmatchedOld.push({
+				normalizedName,
+				originalName: data.name,
+				content: data.content,
+			});
+		}
+	}
+
+	// Second pass: detect renames by matching similar content
+	const usedOldSections = new Set<string>();
+
+	for (const newSection of unmatchedNew) {
+		let bestMatch: {
+			normalizedName: string;
+			originalName: string;
+			similarity: number;
+		} | null = null;
+
+		for (const oldSection of unmatchedOld) {
+			if (usedOldSections.has(oldSection.normalizedName)) continue;
+
+			const similarity = contentSimilarity(
+				oldSection.content,
+				newSection.content,
+			);
+			if (
+				similarity > 0.7 &&
+				(!bestMatch || similarity > bestMatch.similarity)
+			) {
+				bestMatch = {
+					normalizedName: oldSection.normalizedName,
+					originalName: oldSection.originalName,
+					similarity,
+				};
+			}
+		}
+
+		if (bestMatch) {
+			// This is a rename
+			usedOldSections.add(bestMatch.normalizedName);
+			const oldSection = unmatchedOld.find(
+				(s) => s.normalizedName === bestMatch!.normalizedName,
+			)!;
+			const { stats } = computeDiff(oldSection.content, newSection.content);
+
 			changes.push({
-				section,
+				section: newSection.normalizedName,
+				originalSection: newSection.originalName,
 				isNew: false,
+				renamedFrom: bestMatch.normalizedName,
+				linesAdded: stats.linesAdded,
+				linesRemoved: stats.linesRemoved,
+			});
+		} else {
+			// Truly new section
+			changes.push({
+				section: newSection.normalizedName,
+				originalSection: newSection.originalName,
+				isNew: true,
+				linesAdded: newSection.content.split("\n").length,
+				linesRemoved: 0,
+			});
+		}
+	}
+
+	// Add truly removed sections
+	for (const oldSection of unmatchedOld) {
+		if (!usedOldSections.has(oldSection.normalizedName)) {
+			changes.push({
+				section: oldSection.normalizedName,
+				originalSection: oldSection.originalName,
+				isNew: false,
+				isRemoved: true,
 				linesAdded: 0,
-				linesRemoved: content.split("\n").length,
+				linesRemoved: oldSection.content.split("\n").length,
 			});
 		}
 	}
@@ -262,10 +430,10 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 				version: versions.get(commit.hash) || "1.0",
 				date: commit.date.split("T")[0],
 				commitHash: commit.hash.substring(0, 7),
+				fullCommitHash: commit.hash, // For fetching from GitHub
 				commitMessage: commit.message,
 				stats,
 				sectionChanges,
-				diff: changes.slice(0, 500), // Limit diff size for performance
 			});
 		}
 	}
