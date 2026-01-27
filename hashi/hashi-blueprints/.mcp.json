@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "blueprints": {
+      "command": "han",
+      "args": ["mcp", "blueprints"]
+    }
+  }
+}
