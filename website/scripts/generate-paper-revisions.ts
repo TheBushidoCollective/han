@@ -455,7 +455,9 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 	const manifestVersions = parseVersionsManifest(manifestPath);
 
 	if (manifestVersions) {
-		console.log(`  Using versions manifest (${manifestVersions.length} versions)`);
+		console.log(
+			`  Using versions manifest (${manifestVersions.length} versions)`,
+		);
 
 		// Build commits from manifest (newest first for processing)
 		const commits: Array<{
@@ -494,7 +496,10 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 			if (newContent === null) continue;
 
 			const { stats } = computeDiff(oldContent || "", newContent);
-			const sectionChanges = computeSectionChanges(oldContent || "", newContent);
+			const sectionChanges = computeSectionChanges(
+				oldContent || "",
+				newContent,
+			);
 
 			// Only include revisions with actual changes
 			if (stats.linesAdded > 0 || stats.linesRemoved > 0) {
@@ -527,7 +532,9 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 
 		return {
 			slug,
-			currentVersion: String(manifestVersions[manifestVersions.length - 1].version),
+			currentVersion: String(
+				manifestVersions[manifestVersions.length - 1].version,
+			),
 			revisions: revisions.slice(0, 10),
 			newSections,
 		};
