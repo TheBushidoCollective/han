@@ -1,0 +1,6 @@
+# Paper version manifest
+# Each line is a commit SHA representing a published version
+# Format: SHA (optional comment after #)
+
+ce6366b40dc2276e45673acdec83995c6c071b9d # v1 - Initial publication (2026-01-21)
+543c7601d68261979b0c20de359e1b79c7aca914 # v2 - Major update with new sections (2026-01-26)

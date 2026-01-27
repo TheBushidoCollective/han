@@ -42,6 +42,55 @@ interface PaperRevisions {
 	newSections: string[]; // Sections added in latest version
 }
 
+/**
+ * Parse a versions manifest file (.versions) next to a paper
+ * Format: one SHA per line, # comments allowed
+ * Lines are ordered oldest first (v1 on line 1, v2 on line 2, etc.)
+ */
+function parseVersionsManifest(
+	manifestPath: string,
+): Array<{ hash: string; version: number }> | null {
+	if (!fs.existsSync(manifestPath)) {
+		return null;
+	}
+
+	const content = fs.readFileSync(manifestPath, "utf-8");
+	const versions: Array<{ hash: string; version: number }> = [];
+	let versionNum = 1;
+
+	for (const line of content.split("\n")) {
+		const trimmed = line.trim();
+		// Skip empty lines and comment-only lines
+		if (!trimmed || trimmed.startsWith("#")) continue;
+
+		// Extract SHA (everything before # comment)
+		const sha = trimmed.split("#")[0].trim();
+		if (sha && /^[a-f0-9]{40}$/i.test(sha)) {
+			versions.push({ hash: sha, version: versionNum++ });
+		}
+	}
+
+	return versions.length > 0 ? versions : null;
+}
+
+/**
+ * Get commit metadata (date, message) for a specific commit
+ */
+function getCommitMetadata(
+	hash: string,
+): { date: string; message: string } | null {
+	try {
+		const result = execSync(`git log -1 --pretty=format:"%aI|%s" ${hash}`, {
+			encoding: "utf-8",
+			cwd: process.cwd(),
+		});
+		const [date, ...messageParts] = result.trim().split("|");
+		return { date, message: messageParts.join("|") };
+	} catch {
+		return null;
+	}
+}
+
 function getGitLog(filePath: string): Array<{
 	hash: string;
 	date: string;
@@ -398,6 +447,93 @@ function assignVersions(
 
 function generatePaperRevisions(filePath: string): PaperRevisions | null {
 	const slug = path.basename(filePath, path.extname(filePath));
+	const ext = path.extname(filePath);
+	const manifestPath = filePath.replace(ext, ".versions");
+	const currentContent = fs.readFileSync(filePath, "utf-8");
+
+	// Check for versions manifest first
+	const manifestVersions = parseVersionsManifest(manifestPath);
+
+	if (manifestVersions) {
+		console.log(`  Using versions manifest (${manifestVersions.length} versions)`);
+
+		// Build commits from manifest (newest first for processing)
+		const commits: Array<{
+			hash: string;
+			date: string;
+			message: string;
+			version: number;
+		}> = [];
+
+		for (const { hash, version } of [...manifestVersions].reverse()) {
+			const metadata = getCommitMetadata(hash);
+			if (metadata) {
+				commits.push({ hash, ...metadata, version });
+			} else {
+				console.log(`  Warning: Could not find commit ${hash.substring(0, 7)}`);
+			}
+		}
+
+		if (commits.length === 0) {
+			console.log(`  No valid commits found in manifest`);
+			return null;
+		}
+
+		const revisions: Revision[] = [];
+
+		// Process commits (newest to oldest)
+		for (let i = 0; i < commits.length; i++) {
+			const commit = commits[i];
+			const previousCommit = commits[i + 1];
+
+			const newContent = getFileAtCommit(filePath, commit.hash);
+			const oldContent = previousCommit
+				? getFileAtCommit(filePath, previousCommit.hash)
+				: "";
+
+			if (newContent === null) continue;
+
+			const { stats } = computeDiff(oldContent || "", newContent);
+			const sectionChanges = computeSectionChanges(oldContent || "", newContent);
+
+			// Only include revisions with actual changes
+			if (stats.linesAdded > 0 || stats.linesRemoved > 0) {
+				revisions.push({
+					version: String(commit.version),
+					date: commit.date.split("T")[0],
+					commitHash: commit.hash.substring(0, 7),
+					fullCommitHash: commit.hash,
+					commitMessage: commit.message,
+					stats,
+					sectionChanges,
+				});
+			}
+		}
+
+		// Get new sections comparing first and last manifest versions
+		const firstHash = manifestVersions[0].hash;
+		const lastHash = manifestVersions[manifestVersions.length - 1].hash;
+		const firstContent = getFileAtCommit(filePath, firstHash) || "";
+		const lastContent = getFileAtCommit(filePath, lastHash) || "";
+		const firstSections = extractSections(firstContent);
+		const lastSections = extractSections(lastContent);
+		const newSections: string[] = [];
+
+		for (const section of lastSections.keys()) {
+			if (!firstSections.has(section)) {
+				newSections.push(section);
+			}
+		}
+
+		return {
+			slug,
+			currentVersion: String(manifestVersions[manifestVersions.length - 1].version),
+			revisions: revisions.slice(0, 10),
+			newSections,
+		};
+	}
+
+	// Fallback to git log scanning
 	const allCommits = getGitLog(filePath);
 
 	if (allCommits.length === 0) {
@@ -412,9 +548,8 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 			? allCommits
 			: [allCommits[0], allCommits[allCommits.length - 1]];
 
-	const versions = assignVersions(allCommits); // Use all commits for version numbering
+	const versions = assignVersions(commits); // Version only the filtered commits
 	const revisions: Revision[] = [];
-	const currentContent = fs.readFileSync(filePath, "utf-8");
 
 	// Process commits (newest to oldest)
 	for (let i = 0; i < commits.length; i++) {
@@ -428,13 +563,13 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 
 		if (newContent === null) continue;
 
-		const { changes, stats } = computeDiff(oldContent || "", newContent);
+		const { stats } = computeDiff(oldContent || "", newContent);
 		const sectionChanges = computeSectionChanges(oldContent || "", newContent);
 
 		// Only include revisions with actual changes
 		if (stats.linesAdded > 0 || stats.linesRemoved > 0) {
 			revisions.push({
-				version: versions.get(commit.hash) || "1.0",
+				version: versions.get(commit.hash) || "1",
 				date: commit.date.split("T")[0],
 				commitHash: commit.hash.substring(0, 7),
 				fullCommitHash: commit.hash, // For fetching from GitHub
@@ -473,7 +608,7 @@ function generatePaperRevisions(filePath: string): PaperRevisions | null {
 		currentVersion:
 			deduplicatedRevisions[0]?.version ||
 			versions.get(commits[0]?.hash) ||
-			"1.0",
+			"1",
 		revisions: deduplicatedRevisions.slice(0, 10), // Keep last 10 versions
 		newSections,
 	};
