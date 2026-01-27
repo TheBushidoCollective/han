@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- enable full git history for paper revisions and remove trailing slashes ([6f2ac863](../../commit/6f2ac863))
+- simplify paper revision history to first and latest versions ([b5c3905a](../../commit/b5c3905a))
+
+### Other
+
+- fix biome formatting in paper revisions script ([4b74c6a1](../../commit/4b74c6a1))
+
+## [1.33.1] - 2026-01-27
+
+### Added
+
+- add paper versions manifest support ([ef9b12e7](../../commit/ef9b12e7))
+- enhance paper view with syntax highlighting and code editor UI ([543c7601](../../commit/543c7601))
+- add paper revision history with visual diff tracking ([b0d26482](../../commit/b0d26482))
+
+### Fixed
+
 - simplify paper revision history to first and latest versions ([b5c3905a](../../commit/b5c3905a))
 
 ### Other
