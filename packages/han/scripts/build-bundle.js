@@ -135,6 +135,10 @@ const proc = Bun.spawn(
 		"vite",
 		"--external",
 		"lightningcss",
+		// Externalize han-native package to prevent bundling napi-rs loader
+		// The compiled binary uses the embedded .node file instead
+		"--external",
+		"@thebushidocollective/han-native",
 		join(__dirname, "..", "lib", "main.ts"),
 		"--outfile",
 		outfile,
