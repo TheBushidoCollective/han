@@ -1192,73 +1192,17 @@ The pattern has evolved from simple single-agent loops to hat-based orchestratio
 
 ## Adoption Path
 
-### For Teams Already Using AI-Assisted Development
+AI-DLC adoption follows a progressive pattern: start with Mob Elaboration to build shared understanding, introduce Completion Criteria discipline, then gradually expand autonomous scope as confidence builds.
 
-**Weeks 1-2: Foundation**
+**The key phases:**
 
-- Introduce Completion Criteria discipline on existing work
-- Start writing explicit success conditions for tasks
-- Run first Supervised Bolts with existing patterns
-- Build CI quality gates (tests, types, lint, security)
+1. **Foundation:** Introduce Completion Criteria on existing work, build quality gates
+2. **First Autonomous Work:** Low-risk, well-defined tasks with conservative limits
+3. **Scaling:** Expand to more task types, develop team-specific patterns
 
-**Weeks 3-4: First Autonomous Work**
+**Skills evolve** from writing code to defining success criteria, from reviewing PRs to designing quality gates, from manual testing to test specification.
 
-- Identify low-risk, well-defined tasks for autonomous execution
-- Run first Autonomous Bolts with conservative iteration limits
-- Review results carefully, refine prompts and criteria
-- Document patterns that work
-
-**Month 2: Scaling**
-
-- Expand Autonomous Bolts to more task types
-- Develop team-specific prompt templates
-- Build library of Completion Criteria patterns
-- Establish mode selection guidelines
-
-### For Teams New to AI-Driven Development
-
-**Start with Mob Elaboration.** The ritual provides:
-
-- Structured way to capture and decompose intent
-- Collaborative refinement of requirements
-- Natural introduction of AI into existing workflows
-- Practice with AI interaction patterns
-
-Then gradually introduce Construction phase patterns:
-
-1. Start fully Supervised—AI proposes, human validates every step
-2. As confidence builds, allow longer autonomous stretches
-3. Define first Completion Criteria and test Autonomous Bolts
-4. Expand autonomous scope based on success
-
-### Organizational Considerations
-
-**Governance:**
-
-- Define acceptable Autonomous Bolt boundaries
-- Establish review requirements for different risk levels
-- Create audit trails for autonomous actions
-- Define escalation paths when AI is blocked
-
-**Skills Evolution:**
-
-| Traditional Skill | AI-DLC 2026 Evolution |
-|-------------------|----------------------|
-| Writing code | Defining success criteria |
-| Reviewing PRs | Designing quality gates |
-| Manual testing | Test specification and scenario design |
-| Debugging | Prompt refinement and blocker analysis |
-| Architecture docs | Completion criteria that encode architecture |
-
-**Metrics Shift:**
-
-| Traditional Metric | AI-DLC 2026 Metric |
-|-------------------|-------------------|
-| Velocity (story points) | Value delivered |
-| Code coverage | Criteria coverage |
-| Cycle time | Time-to-value |
-| Bugs found | Criteria escaped |
-| Lines of code | Outcomes achieved |
+**→ See the [Incremental Adoption Runbook](./ai-dlc-2026/runbooks/incremental-adoption) for step-by-step guidance and the [Organizational Adoption Runbook](./ai-dlc-2026/runbooks/organizational-adoption) for governance and scaling considerations.**
 
 ---
 
