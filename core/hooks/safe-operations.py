@@ -78,6 +78,15 @@ BASH_WRITE_PATTERNS = [
     (r'\btee\s+(?:-a\s+)?([^\s;|&><]+)', "tee"),  # tee file
 ]
 
+# Patterns for file copy/move operations that need project boundary checking
+# cp and mv can both read from and write to outside project
+BASH_COPY_PATTERNS = [
+    # cp source dest - need to check both paths
+    r'\bcp\s+(?:-[a-zA-Z]+\s+)*([^\s;|&><]+)\s+([^\s;|&><]+)',
+    # mv source dest - need to check both paths
+    r'\bmv\s+(?:-[a-zA-Z]+\s+)*([^\s;|&><]+)\s+([^\s;|&><]+)',
+]
+
 # Protected directories that files should not be written to
 PROTECTED_DIRECTORIES = [
     '/etc',
@@ -180,6 +189,43 @@ def check_bash_write_paths(command: str, project_root: str) -> tuple[bool, str]:
     return False, ""
 
 
+def check_bash_copy_operations(command: str, project_root: str) -> tuple[bool, str]:
+    """
+    Check if cp/mv commands access files outside the project directory.
+    Blocks both reading from and writing to paths outside the project.
+    Returns (is_blocked, reason).
+    """
+    for pattern in BASH_COPY_PATTERNS:
+        for match in re.finditer(pattern, command, re.IGNORECASE):
+            source_path = match.group(1)
+            dest_path = match.group(2)
+
+            # Expand ~ to home directory for checking
+            source_expanded = os.path.expanduser(source_path)
+            dest_expanded = os.path.expanduser(dest_path)
+
+            # Check source path (reading from outside project)
+            if source_path.startswith('~') or source_path.startswith('/'):
+                # Skip /tmp paths
+                if source_expanded.startswith('/tmp/') or source_expanded.startswith('/private/tmp/'):
+                    pass
+                elif is_path_outside_project(source_expanded, project_root):
+                    return True, f"Cannot copy/move from '{source_path}' - source is outside project directory"
+
+            # Check destination path (writing to outside project)
+            if dest_path.startswith('~') or dest_path.startswith('/'):
+                # Skip /tmp paths
+                if dest_expanded.startswith('/tmp/') or dest_expanded.startswith('/private/tmp/'):
+                    pass
+                # Check for protected paths
+                elif is_protected_path(dest_expanded)[0]:
+                    return True, f"Cannot copy/move to protected path: {dest_path}"
+                elif is_path_outside_project(dest_expanded, project_root):
+                    return True, f"Cannot copy/move to '{dest_path}' - destination is outside project directory"
+
+    return False, ""
+
+
 def deny_tool(reason: str) -> None:
     """Output JSON to deny the tool execution."""
     output = {
@@ -244,6 +290,11 @@ def main():
 
         # Check for bash write operations outside project
         is_blocked, reason = check_bash_write_paths(command, project_root)
+        if is_blocked:
+            deny_tool(f"🛡️ BLOCKED: {reason}\nCommand: {command}")
+
+        # Check for cp/mv operations outside project
+        is_blocked, reason = check_bash_copy_operations(command, project_root)
         if is_blocked:
             deny_tool(f"🛡️ BLOCKED: {reason}\nCommand: {command}")
 
