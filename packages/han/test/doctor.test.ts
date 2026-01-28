@@ -73,9 +73,9 @@ describe("doctor command", () => {
 			expect(configCheck).toBeDefined();
 		});
 
-		test("includes Installed Plugins check", () => {
+		test("includes Enabled Plugins check", () => {
 			const results = runDiagnostics();
-			const pluginsCheck = results.find((r) => r.name === "Installed Plugins");
+			const pluginsCheck = results.find((r) => r.name === "Enabled Plugins");
 
 			expect(pluginsCheck).toBeDefined();
 		});
@@ -87,9 +87,9 @@ describe("doctor command", () => {
 			expect(nativeCheck).toBeDefined();
 		});
 
-		test("includes Global Hooks check", () => {
+		test("includes Dispatch Hooks check", () => {
 			const results = runDiagnostics();
-			const hooksCheck = results.find((r) => r.name === "Global Hooks");
+			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
 			expect(hooksCheck).toBeDefined();
 		});
@@ -188,10 +188,10 @@ describe("doctor command", () => {
 		});
 	});
 
-	describe("Installed Plugins check", () => {
+	describe("Enabled Plugins check", () => {
 		test("reports count of installed plugins", () => {
 			const results = runDiagnostics();
-			const pluginsCheck = results.find((r) => r.name === "Installed Plugins");
+			const pluginsCheck = results.find((r) => r.name === "Enabled Plugins");
 
 			expect(pluginsCheck).toBeDefined();
 			expect(pluginsCheck?.message).toMatch(/\d+ plugins/);
@@ -208,7 +208,7 @@ describe("doctor command", () => {
 			);
 
 			const results = runDiagnostics();
-			const pluginsCheck = results.find((r) => r.name === "Installed Plugins");
+			const pluginsCheck = results.find((r) => r.name === "Enabled Plugins");
 
 			expect(pluginsCheck?.details).toBeDefined();
 			expect(Array.isArray(pluginsCheck?.details)).toBe(true);
@@ -238,10 +238,10 @@ describe("doctor command", () => {
 		});
 	});
 
-	describe("Global Hooks check", () => {
+	describe("Dispatch Hooks check", () => {
 		test("checks for SessionStart and UserPromptSubmit hooks", () => {
 			const results = runDiagnostics();
-			const hooksCheck = results.find((r) => r.name === "Global Hooks");
+			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
 			expect(hooksCheck).toBeDefined();
 			expect(hooksCheck?.details).toBeDefined();
@@ -255,7 +255,7 @@ describe("doctor command", () => {
 
 		test("reports configured count", () => {
 			const results = runDiagnostics();
-			const hooksCheck = results.find((r) => r.name === "Global Hooks");
+			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
 			expect(hooksCheck?.message).toMatch(/\d+\/\d+ configured/);
 		});
