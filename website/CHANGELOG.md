@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.2] - 2026-01-28
+
+### Added
+
+- make header sticky with backdrop blur ([4f373276](../../commit/4f373276))
+- add paper versions manifest support ([ef9b12e7](../../commit/ef9b12e7))
+- enhance paper view with syntax highlighting and code editor UI ([543c7601](../../commit/543c7601))
+- add paper revision history with visual diff tracking ([b0d26482](../../commit/b0d26482))
+- add SHA256 checksum verification to install script ([40ea66f4](../../commit/40ea66f4))
+
+### Fixed
+
+- add validation for empty checksum files ([0c0e306f](../../commit/0c0e306f))
+- enable full git history for paper revisions and remove trailing slashes ([6f2ac863](../../commit/6f2ac863))
+- simplify paper revision history to first and latest versions ([b5c3905a](../../commit/b5c3905a))
+
+### Other
+
+- Merge pull request #35 from TheBushidoCollective/feat/install-checksum-verification ([7ef6268e](../../commit/7ef6268e))
+- fix biome formatting in paper revisions script ([4b74c6a1](../../commit/4b74c6a1))
+
 ## [1.33.1] - 2026-01-27
 
 ### Added
