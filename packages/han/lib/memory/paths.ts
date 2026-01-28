@@ -7,7 +7,7 @@
 
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getGitRemoteUrl } from "../../../han-native";
+import { getGitRemoteUrl } from "../native.ts";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
 
 /**

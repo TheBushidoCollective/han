@@ -11,7 +11,7 @@
 import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { getGitBranch as nativeGetGitBranch } from "../../../han-native";
+import { getGitBranch as nativeGetGitBranch } from "../native.ts";
 import { ensureMemoryDirs, getHanEventsFilePath } from "../memory/paths.ts";
 import { isDebugMode } from "../shared.ts";
 import type {

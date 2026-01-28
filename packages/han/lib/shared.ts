@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { getGitRemoteUrl as nativeGetGitRemoteUrl } from "../../han-native";
+import { getGitRemoteUrl as nativeGetGitRemoteUrl } from "./native.ts";
 import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.ts";
 import {
 	analyzeCodebase,

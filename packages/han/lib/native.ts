@@ -232,3 +232,111 @@ export function getNativeModule(): NativeModule {
 export function tryGetNativeModule(): NativeModule | null {
 	return loadNativeModule();
 }
+
+// ============================================================================
+// Re-exported functions from han-native
+// These wrappers ensure all code goes through the centralized loader
+// instead of importing from han-native directly (which bundles the napi-rs loader)
+// ============================================================================
+
+/**
+ * Get the git remote URL for a directory
+ */
+export function getGitRemoteUrl(dir: string): string | null {
+	return getNativeModule().getGitRemoteUrl(dir);
+}
+
+/**
+ * Get the current git branch for a directory
+ */
+export function getGitBranch(dir: string): string | null {
+	return getNativeModule().getGitBranch(dir);
+}
+
+/**
+ * Get the git root directory
+ */
+export function getGitRoot(dir: string): string | null {
+	return getNativeModule().getGitRoot(dir);
+}
+
+/**
+ * Get the git common directory (for worktrees)
+ */
+export function getGitCommonDir(dir: string): string | null {
+	return getNativeModule().getGitCommonDir(dir);
+}
+
+/**
+ * List files tracked by git in a directory
+ */
+export function gitLsFiles(dir: string): string[] {
+	return getNativeModule().gitLsFiles(dir);
+}
+
+/**
+ * List git worktrees for a repository
+ */
+export function gitWorktreeList(
+	dir: string,
+): ReturnType<NativeModule["gitWorktreeList"]> {
+	return getNativeModule().gitWorktreeList(dir);
+}
+
+/**
+ * Get session file changes
+ */
+export function getSessionFileChanges(
+	dbPath: string,
+	sessionId: string,
+): ReturnType<NativeModule["getSessionFileChanges"]> {
+	return getNativeModule().getSessionFileChanges(dbPath, sessionId);
+}
+
+// ============================================================================
+// FTS/Vector search functions
+// ============================================================================
+
+export function ftsIndex(
+	...args: Parameters<NativeModule["ftsIndex"]>
+): ReturnType<NativeModule["ftsIndex"]> {
+	return getNativeModule().ftsIndex(...args);
+}
+
+export function ftsSearch(
+	...args: Parameters<NativeModule["ftsSearch"]>
+): ReturnType<NativeModule["ftsSearch"]> {
+	return getNativeModule().ftsSearch(...args);
+}
+
+export function ftsDelete(
+	...args: Parameters<NativeModule["ftsDelete"]>
+): ReturnType<NativeModule["ftsDelete"]> {
+	return getNativeModule().ftsDelete(...args);
+}
+
+export function vectorIndex(
+	...args: Parameters<NativeModule["vectorIndex"]>
+): ReturnType<NativeModule["vectorIndex"]> {
+	return getNativeModule().vectorIndex(...args);
+}
+
+export function vectorSearch(
+	...args: Parameters<NativeModule["vectorSearch"]>
+): ReturnType<NativeModule["vectorSearch"]> {
+	return getNativeModule().vectorSearch(...args);
+}
+
+// ============================================================================
+// FileEventType enum - re-export from the native module
+// ============================================================================
+
+/**
+ * File event types for the indexer
+ * This mirrors the native const enum with the same values.
+ */
+export const enum FileEventType {
+	Created = "Created",
+	Modified = "Modified",
+	Removed = "Removed",
+}

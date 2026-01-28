@@ -9,7 +9,7 @@
  * hierarchy: Repo > Project > Session.
  */
 
-import { getGitRemoteUrl } from "../../../../han-native";
+import { getGitRemoteUrl } from "../../native.ts";
 import type { ProjectGroup } from "../../api/sessions.ts";
 import { projects, repos } from "../../db/index.ts";
 import { builder } from "../builder.ts";

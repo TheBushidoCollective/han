@@ -1856,7 +1856,7 @@ export {
 	ftsSearch,
 	vectorIndex,
 	vectorSearch,
-} from "../../../han-native";
+} from "../native.ts";
 
 // ============================================================================
 // Indexer Operations (Coordinator Only)
@@ -1902,16 +1902,17 @@ export const indexer = {
 	 * COORDINATOR USE ONLY
 	 */
 	async handleFileEvent(
-		eventType: import("../../../han-native").FileEventType,
+		eventType: import("../native.ts").FileEventType,
 		filePath: string,
 		sessionId?: string,
 		projectPath?: string,
 	): Promise<IndexResult | null> {
 		const dbPath = await ensureInitialized();
 		const native = getNativeModule();
+		// Cast to native FileEventType - values are identical ("Created", "Modified", "Removed")
 		return native.handleFileEvent(
 			dbPath,
-			eventType,
+			eventType as unknown as import("../../../han-native").FileEventType,
 			filePath,
 			sessionId ?? null,
 			projectPath ?? null,
@@ -1931,7 +1932,7 @@ export const indexer = {
 };
 
 // Export FileEventType for use with handleFileEvent
-export { FileEventType } from "../../../han-native";
+export { FileEventType } from "../native.ts";
 
 // ============================================================================
 // Note on JSONL Access

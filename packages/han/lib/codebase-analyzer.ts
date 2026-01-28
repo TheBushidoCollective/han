@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { gitLsFiles } from "../../han-native";
+import { gitLsFiles } from "./native.ts";
 
 export interface ExtensionCount {
 	extension: string;

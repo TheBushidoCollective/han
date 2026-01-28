@@ -16,7 +16,7 @@ import {
 	getGitRemoteUrl,
 	getGitRoot,
 	gitWorktreeList,
-} from "../../../han-native";
+} from "../native.ts";
 import {
 	messages as dbMessages,
 	projects as dbProjects,

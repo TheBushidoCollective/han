@@ -7,7 +7,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { getGitRemoteUrl } from "../../../han-native";
+import { getGitRemoteUrl } from "../native.ts";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import {
 	getHookCache,
@@ -351,7 +351,7 @@ export async function trackFilesAsync(
 
 	if (options.trackSessionChangesOnly) {
 		// Only track files that the session has changed
-		const { getSessionFileChanges } = await import("../../../han-native");
+		const { getSessionFileChanges } = await import("../native.ts");
 		const { getDbPath } = await import("../db/index.ts");
 		const dbPath = getDbPath();
 
@@ -466,7 +466,7 @@ export async function checkForChangesAsync(
 
 	if (options.checkSessionChangesOnly) {
 		// Only check files that the session has changed AND are within this directory
-		const { getSessionFileChanges } = await import("../../../han-native");
+		const { getSessionFileChanges } = await import("../native.ts");
 		const { getDbPath } = await import("../db/index.ts");
 		const dbPath = getDbPath();
 
@@ -531,7 +531,7 @@ export async function checkForChangesAsync(
 			}
 
 			// For pattern-based checks, see if any manifest files were changed in the session
-			const { getSessionFileChanges } = await import("../../../han-native");
+			const { getSessionFileChanges } = await import("../native.ts");
 			const { getDbPath } = await import("../db/index.ts");
 			const dbPath = getDbPath();
 			const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
