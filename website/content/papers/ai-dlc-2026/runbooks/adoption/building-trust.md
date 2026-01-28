@@ -7,30 +7,25 @@
 Trust isn't binary—it's a progression. Teams move through distinct phases as they learn to work with AI effectively.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Phase1["🤨 Skepticism"]
-        direction TB
-        S1[Doubt AI capabilities]
+        S1[Doubt capabilities]
         S2[Verify everything]
-        S3[High cognitive load]
-    end
-
-    subgraph Phase2["⚖️ Calibration"]
-        direction TB
-        C1[Learn AI strengths]
-        C2[Discover blind spots]
-        C3[Adjust expectations]
-    end
-
-    subgraph Phase3["🤝 Confidence"]
-        direction TB
-        T1[Trust within bounds]
-        T2[Efficient verification]
-        T3[Productive partnership]
     end
 
     Phase1 -->|"Experience"| Phase2
+
+    subgraph Phase2["⚖️ Calibration"]
+        C1[Learn strengths]
+        C2[Find blind spots]
+    end
+
     Phase2 -->|"Patterns"| Phase3
+
+    subgraph Phase3["🤝 Confidence"]
+        T1[Trust within bounds]
+        T2[Efficient verification]
+    end
 
     style Phase1 fill:#ffcdd2
     style Phase2 fill:#fff3e0
@@ -56,29 +51,24 @@ Begin trust-building with tasks where correctness is objectively verifiable:
 
 ```mermaid
 flowchart TB
-    subgraph Level1["🟢 Level 1: Routine"]
-        direction TB
-        L1A[Boilerplate code]
+    subgraph Level1["🟢 Routine"]
+        L1A[Boilerplate]
         L1B[Standard patterns]
-        L1C[Well-defined tasks]
-    end
-
-    subgraph Level2["🟡 Level 2: Moderate"]
-        direction TB
-        L2A[Business logic]
-        L2B[Integration code]
-        L2C[Refactoring]
-    end
-
-    subgraph Level3["🔴 Level 3: Complex"]
-        direction TB
-        L3A[Architecture decisions]
-        L3B[Novel algorithms]
-        L3C[Security-critical code]
     end
 
     Level1 -->|"Trust earned"| Level2
+
+    subgraph Level2["🟡 Moderate"]
+        L2A[Business logic]
+        L2B[Integration]
+    end
+
     Level2 -->|"Trust earned"| Level3
+
+    subgraph Level3["🔴 Complex"]
+        L3A[Architecture]
+        L3B[Security-critical]
+    end
 
     style Level1 fill:#c8e6c9
     style Level2 fill:#fff3e0
@@ -92,13 +82,13 @@ flowchart TB
 When AI produces incorrect output, treat it as calibration data, not trust violation:
 
 ```mermaid
-flowchart LR
+flowchart TB
     F[❌ AI Failure] --> A[🔍 Analyze]
     A --> P{Pattern?}
-    P -->|Yes| D[📝 Document limitation]
-    P -->|No| O[One-off error]
-    D --> U[🔄 Update mode selection]
-    O --> C[✅ Continue normal operation]
+    P -->|Yes| D[📝 Document]
+    P -->|No| O[One-off]
+    D --> U[🔄 Update mode]
+    O --> C[✅ Continue]
 
     style F fill:#ffcdd2
     style D fill:#fff3e0
@@ -132,27 +122,19 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph Problem["Syndrome Triggers"]
-        P1[No verification strategy]
-        P2[Unclear capabilities]
-        P3[Career anxiety]
-        P4[Control need]
-    end
+    P1[No verification strategy] --> S1[Criteria-based review]
+    P2[Unclear capabilities] --> S2[AI capability map]
+    P3[Career anxiety] --> S3[Shared accountability]
+    P4[Control need] --> S4[Start observed mode]
 
-    subgraph Solution["Targeted Solutions"]
-        S1[Teach criteria-based review]
-        S2[Document AI capability map]
-        S3[Establish shared accountability]
-        S4[Start with observed mode]
-    end
-
-    P1 --> S1
-    P2 --> S2
-    P3 --> S3
-    P4 --> S4
-
-    style Problem fill:#ffcdd2
-    style Solution fill:#c8e6c9
+    style P1 fill:#ffcdd2
+    style P2 fill:#ffcdd2
+    style P3 fill:#ffcdd2
+    style P4 fill:#ffcdd2
+    style S1 fill:#c8e6c9
+    style S2 fill:#c8e6c9
+    style S3 fill:#c8e6c9
+    style S4 fill:#c8e6c9
 ```
 
 **Criteria-based review:** Instead of reading every line, verify:
@@ -175,24 +157,22 @@ Different operating modes require different trust levels:
 ### Mode Graduation Criteria
 
 ```mermaid
-flowchart LR
-    subgraph HITL["Supervised"]
+flowchart TB
+    subgraph HITL["🔴 Supervised"]
         H1[Every step reviewed]
-        H2[Human approves each action]
-    end
-
-    subgraph Observed["Observed"]
-        O1[Periodic check-ins]
-        O2[Human can intervene]
-    end
-
-    subgraph AHOTL["Autonomous"]
-        A1[Criteria-based verification]
-        A2[Human reviews output only]
     end
 
     HITL -->|"5+ successful Units"| Observed
+
+    subgraph Observed["🟡 Observed"]
+        O1[Periodic check-ins]
+    end
+
     Observed -->|"10+ successful Units"| AHOTL
+
+    subgraph AHOTL["🟢 Autonomous"]
+        A1[Criteria-based only]
+    end
 
     style HITL fill:#ffcdd2
     style Observed fill:#fff3e0
@@ -209,15 +189,11 @@ Different team members will be at different trust levels:
 
 ```mermaid
 flowchart TB
-    subgraph Team["Team Trust Distribution"]
-        direction LR
-        Early[Early Adopters]
-        Middle[Pragmatists]
-        Late[Skeptics]
-    end
-
+    Early[🟢 Early Adopters]
     Early -->|"Demonstrate success"| Middle
+    Middle[🟡 Pragmatists]
     Middle -->|"Social proof"| Late
+    Late[🔴 Skeptics]
 
     style Early fill:#c8e6c9
     style Middle fill:#fff3e0
