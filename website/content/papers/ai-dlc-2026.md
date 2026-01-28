@@ -108,7 +108,7 @@ Most teams today use AI for coding in an ad-hoc manner:
 | Chat-and-paste | Structured iteration loops |
 | Hope it works | Backpressure verification |
 | Vague "make it work" | Explicit completion criteria |
-| One mode fits all | Mode selection (HITL/Observed/HOTL) |
+| One mode fits all | Mode selection (HITL/OHOTL/AHOTL) |
 | Session-bound context | File-based persistent memory |
 | No measurement | Metrics framework |
 | AI as tool | AI as collaborator with governance |
@@ -145,7 +145,7 @@ Proper application of AI leads to rapid cycles measured in hours or even minutes
 
 These new dynamics warrant reimagination based on first principles thinking rather than retrofitting. **We need automobiles, not faster horse chariots.**
 
-### Three Operating Modes: HITL, Observed HOTL, and HOTL
+### Three Operating Modes: HITL, OHOTL, and AHOTL
 
 AI-DLC 2026 introduces the concept of AI initiating and directing conversations, using the Google Maps analogy: humans set the destination, AI provides step-by-step directions, humans maintain oversight. This methodology distinguishes **three distinct operating modes** that form a spectrum of human involvement:
 
@@ -167,7 +167,7 @@ This mode is essential for:
 - **High-risk operations** involving production data, security-sensitive changes, or compliance requirements
 - **Foundational decisions** that will shape subsequent autonomous work
 
-**Observed HOTL (Observed Human-on-the-Loop):** The system operates while a human watches in real-time, able to intervene at any moment but not required to approve each step. The human maintains **synchronous awareness with asynchronous control**—they see what's happening and can redirect, but progress isn't blocked waiting for approval.
+**OHOTL (Observed Human-on-the-Loop):** The system operates while a human watches in real-time, able to intervene at any moment but not required to approve each step. The human maintains **synchronous awareness with asynchronous control**—they see what's happening and can redirect, but progress isn't blocked waiting for approval.
 
 ```mermaid
 flowchart TB
@@ -190,7 +190,7 @@ This mode is appropriate for:
 - **Judgment-heavy work** requiring real-time human input without formal gates
 - **Iterative refinement** where human taste guides direction
 
-**Human-on-the-Loop (HOTL):** The system operates autonomously while humans receive periodic updates and intervene only when needed. AI executes within defined boundaries until success criteria are met, alerting humans only when intervention is required.
+**AHOTL (Autonomous Human-on-the-Loop):** The system operates autonomously while humans receive periodic updates and intervene only when needed. AI executes within defined boundaries until success criteria are met, alerting humans only when intervention is required.
 
 ```mermaid
 flowchart TB
@@ -221,8 +221,8 @@ This mode is appropriate for:
 
 **Comparing the Three Modes:**
 
-| Aspect | HITL | Observed HOTL | HOTL |
-|--------|------|---------------|------|
+| Aspect | HITL | OHOTL | AHOTL |
+|--------|------|-------|-------|
 | **Human Attention** | Continuous, blocking | Continuous, non-blocking | Periodic, on-demand |
 | **Approval Model** | Before each step | Any time (interrupt) | At completion |
 | **AI Autonomy** | Minimal | Moderate | Full within boundaries |
@@ -232,8 +232,8 @@ This mode is appropriate for:
 The Google Maps analogy extends across all three modes:
 
 - **HITL:** You tell the GPS each turn to make, it confirms, you approve, it executes
-- **Observed HOTL:** GPS drives while you watch the route, you can say "no, not that way" at any moment
-- **HOTL:** You set the destination, define acceptable routes (no toll roads, avoid highways), and check when you arrive
+- **OHOTL:** GPS drives while you watch the route, you can say "no, not that way" at any moment
+- **AHOTL:** You set the destination, define acceptable routes (no toll roads, avoid highways), and check when you arrive
 
 **The key insight:** The human doesn't disappear. The human's *function* changes—from micromanaging execution to defining outcomes, observing progress, and building quality gates. The choice of mode depends on the nature of the work, not just its risk level.
 
@@ -554,7 +554,7 @@ A **Bolt** is the smallest iteration cycle in AI-DLC 2026, designed for rapid im
 
 **Bolts operate in three modes:**
 
-#### 🧑‍💻 Supervised Bolt (HITL)
+#### Supervised Bolt (HITL)
 
 Human validates each major step before proceeding. AI proposes, human reviews, AI implements, human validates. Used for high-risk, novel, or foundational work.
 
@@ -574,7 +574,7 @@ flowchart TB
 - Human makes trade-off decisions
 - Used for foundational work that shapes subsequent autonomous execution
 
-#### 👁️ Observed Bolt (Observed HOTL)
+#### Observed Bolt (OHOTL)
 
 AI works while human watches in real-time. Human can intervene at any moment but doesn't block progress. Used for creative, subjective, or training scenarios.
 
@@ -608,7 +608,7 @@ flowchart TB
 | Exploratory refactoring | Human can redirect if approach seems off |
 | Design system work | Aesthetic decisions benefit from immediate feedback |
 
-#### 🤖 Autonomous Bolt (HOTL)
+#### Autonomous Bolt (AHOTL)
 
 AI iterates until completion criteria are met, using test results and quality gates as feedback. Human reviews final output. Used for well-defined tasks with programmatic verification.
 
@@ -709,7 +709,7 @@ flowchart TB
         C3["🤖 Autonomous:<br/>Loop until criteria met"]
         C4["🔍 Human Checkpoint"]
         C1 -->|"HITL"| C2
-        C1 -->|"HOTL"| C3
+        C1 -->|"AHOTL"| C3
         C2 --> C4
         C3 --> C4
     end
@@ -788,8 +788,8 @@ The Construction Phase transforms Units into tested, deployment-ready artifacts 
 
 The first decision in Construction is mode selection for each Bolt:
 
-| Choose Supervised (HITL) When... | Choose Autonomous (HOTL) When... |
-|----------------------------------|----------------------------------|
+| Choose Supervised (HITL) When... | Choose Autonomous (AHOTL) When... |
+|----------------------------------|-----------------------------------|
 | Novel domain or architecture | Well-understood patterns |
 | Complex trade-offs required | Clear acceptance criteria |
 | High-risk changes | Programmatic verification available |
@@ -807,7 +807,7 @@ For novel domains, architectural decisions, or high-judgment work:
 5. AI generates tests; developer validates scenarios and edge cases
 6. Iterate until acceptance criteria met with human checkpoint at each step
 
-**Autonomous Construction (HOTL)**
+**Autonomous Construction (AHOTL)**
 
 For well-defined tasks with programmatic verification:
 
@@ -889,7 +889,7 @@ AI actively analyzes telemetry data:
 
 **Anomaly Response:**
 
-For well-defined operational scenarios with runbook coverage, AI operates autonomously (HOTL for operations). Humans monitor dashboards, receive alerts for novel situations, and intervene for edge cases outside runbook coverage.
+For well-defined operational scenarios with runbook coverage, AI operates autonomously (AHOTL for operations). Humans monitor dashboards, receive alerts for novel situations, and intervene for edge cases outside runbook coverage.
 
 **Autonomous Operations Boundaries Example:**
 
@@ -1035,9 +1035,9 @@ Completion Criteria:
 
 | Unit | Recommended Mode | Rationale |
 |------|------------------|-----------|
-| Data Collection | Autonomous (HOTL) | Clear criteria, established patterns |
+| Data Collection | Autonomous (AHOTL) | Clear criteria, established patterns |
 | Recommendation Model | Supervised (HITL) | Novel ML decisions, trade-offs |
-| API Integration | Autonomous (HOTL) | Standard REST patterns, clear criteria |
+| API Integration | Autonomous (AHOTL) | Standard REST patterns, clear criteria |
 | Frontend Integration | Supervised (HITL) | UX decisions, accessibility judgment |
 
 ### Construction Phase
@@ -1155,359 +1155,38 @@ This context informs the Inception phase, ensuring new work aligns with existing
 
 ## Decision Framework: Selecting Operating Mode
 
-### Decision Tree
+Selecting the right operating mode is critical to AI-DLC success. The decision depends on criteria clarity, verification method, risk level, domain familiarity, and whether subjective quality matters.
 
-```mermaid
-flowchart TD
-    A["🆕 New Task"] --> B{"📋 Clear completion<br/>criteria?"}
-    B -->|"No"| C["🧑‍💻 Supervised (HITL)"]
-    B -->|"Yes"| D{"✅ Programmatic<br/>verification?"}
-    D -->|"No"| E{"🎨 Subjective<br/>judgment needed?"}
-    E -->|"Yes"| F["👁️ Observed (OHOTL)"]
-    E -->|"No"| C
-    D -->|"Yes"| G{"⚠️ High risk?"}
-    G -->|"Yes"| C
-    G -->|"No"| H{"🔬 Novel domain?"}
-    H -->|"Yes"| C
-    H -->|"No"| I{"🎨 Subjective<br/>quality matters?"}
-    I -->|"Yes"| F
-    I -->|"No"| J["🤖 Autonomous (HOTL)"]
-
-    C --> K["🕵️ Human validates<br/>each step"]
-    F --> L["👁️ Human watches,<br/>can redirect"]
-    J --> M["🔄 AI iterates until<br/>criteria met"]
-
-    K --> N["🧐 Human reviews<br/>output"]
-    L --> N
-    M --> N
-```
-
-For any new task, follow this decision process:
-
-1. **Does the task have clear completion criteria?**
-   - No → Use Supervised (HITL)
-   - Yes → Continue
-
-2. **Can success be verified programmatically?**
-   - No → Does it require subjective judgment?
-     - Yes → Use Observed (Observed HOTL)
-     - No → Use Supervised (HITL)
-   - Yes → Continue
-
-3. **Is this a high-risk change?**
-   - Yes → Use Supervised (HITL)
-   - No → Continue
-
-4. **Is this a novel domain?**
-   - Yes → Use Supervised (HITL)
-   - No → Continue
-
-5. **Does subjective quality matter?**
-   - Yes → Use Observed (Observed HOTL)
-   - No → Use Autonomous (HOTL)
-
-### Quick Reference
+**The core principle:** Default to more supervision when uncertain. It's easier to loosen control than to recover from autonomous mistakes.
 
 | Scenario | Mode | Rationale |
 |----------|------|-----------|
-| Implement new algorithm | Supervised | Novel, requires judgment on approach |
-| Add CRUD endpoints | Autonomous | Well-understood pattern, clear criteria |
-| Database schema migration | Supervised | High risk, hard to reverse, data integrity |
-| Expand test coverage | Autonomous | Clear criteria (coverage %), low risk |
-| Design API contract | Supervised | Trade-off decisions, consumer impact |
-| Refactor to new patterns | Autonomous | Clear target state, verifiable result |
-| Production incident response | Supervised | High risk, context-dependent decisions |
-| Documentation update | Autonomous | Clear criteria, low risk, verifiable |
-| UI component implementation | Observed | Subjective design quality, real-time feedback |
-| Content/copy writing | Observed | Tone and brand judgment |
-| Junior engineer learning codebase | Observed | Training value, can intervene on mistakes |
-| Design system work | Observed | Aesthetic decisions need immediate feedback |
-| Batch data migration | Autonomous | Mechanical, programmatically verifiable |
-| Dependency updates | Autonomous | Tests verify compatibility |
+| Implement new algorithm | Supervised (HITL) | Novel, requires judgment |
+| Add CRUD endpoints | Autonomous (AHOTL) | Well-understood pattern |
+| Database schema migration | Supervised (HITL) | High risk, data integrity |
+| UI component implementation | Observed (OHOTL) | Subjective design quality |
+| Documentation update | Autonomous (AHOTL) | Clear criteria, low risk |
 
-### Transitioning Between Modes
+Work can transition between modes as understanding develops. The flexibility to switch modes mid-work is a key feature of AI-DLC 2026.
 
-Work can transition between modes as understanding develops:
-
-- **Autonomous → Observed:** AI produces output that needs taste review, human starts watching
-- **Autonomous → Supervised:** AI hits unexpected complexity, documents blocker, human takes over
-- **Observed → Supervised:** Human sees fundamental issues, takes direct control
-- **Observed → Autonomous:** Human satisfied with direction, steps away to review later
-- **Supervised → Observed:** Initial decisions made, remaining work benefits from real-time feedback
-- **Supervised → Autonomous:** Architecture established, remaining work is mechanical
-
-The flexibility to switch modes mid-work is a key feature of AI-DLC 2026.
+**→ See the [Mode Selection Runbook](./ai-dlc-2026/runbooks/mode-selection) for the complete decision tree and transition triggers.**
 
 ---
 
 ## Implementing Autonomous Bolts
 
-### The Ralph Wiggum Pattern
-
-The Ralph Wiggum pattern, named after the Simpsons character, embraces the philosophy of "deterministically bad in an undeterministic world." Rather than trying to be perfect, the agent tries, fails, learns from failures, and iterates until success.
+The Ralph Wiggum pattern, named after the Simpsons character, embraces "deterministically bad in an undeterministic world." Rather than trying to be perfect, the agent tries, fails, learns from failures, and iterates until success.
 
 **Core components:**
 
-1. **Completion Promise:** A signal that autonomous execution has finished
-2. **Backpressure:** Quality gates that provide feedback
+1. **Completion Promise:** A signal (COMPLETE/BLOCKED) that autonomous execution has finished
+2. **Backpressure:** Quality gates that provide feedback on each iteration
 3. **Iteration Limit:** Safety net preventing infinite loops
 4. **Blocker Documentation:** Graceful degradation when stuck
 
-### The Evolution of Ralph Wiggum
+The pattern has evolved from simple single-agent loops to hat-based orchestration for complex workflows—but the core philosophy remains: sophisticated behavior emerges from simple loops with good backpressure, not from complex multi-agent architectures.
 
-The Ralph Wiggum pattern has evolved through distinct phases, each addressing limitations discovered in production:
-
-#### Phase 1: Simple Loop (Original)
-
-The original pattern uses a single agent iterating until completion:
-
-```markdown
-[Task description with context]
-
-Completion Criteria:
-- [Specific, measurable criterion 1]
-- [Specific, measurable criterion 2]
-- [...]
-
-Process:
-1. Read relevant context (specs, existing code)
-2. Write tests first where applicable
-3. Implement to pass tests
-4. Run verification suite
-5. Fix failures and iterate
-6. Repeat until all criteria pass
-
-Constraints:
-- Maximum [N] iterations
-- Only modify files in [allowed paths]
-- Commit after each working increment
-
-If blocked after [M] attempts on same issue:
-- Document in .agent/blockers.md:
-  - What was attempted
-  - Why it failed
-  - What information would unblock
-- Output BLOCKED
-
-When all criteria pass:
-- Verify by running: [verification commands]
-- Output COMPLETE
-```
-
-**Characteristics:**
-
-- Single agent iterates until completion promise (COMPLETE/BLOCKED)
-- No roles, no handoffs, just iteration
-- Backpressure from quality gates guides corrections
-- Simple, effective for bounded tasks
-
-#### Phase 2: Hat-Based Orchestration (Many Hats)
-
-For complex workflows requiring different perspectives, Ralph adopts different personas ("hats") that coordinate through events. Rather than creating separate specialized agents (the "19-agent trap"), a single agent switches contexts:
-
-> "The orchestrator is a thin coordination layer, not a platform."
-> "Ralph is smart; let Ralph do the work."
-
-**Hat Configuration Structure:**
-
-```yaml
-# .agent/hats.yaml
-hats:
-  analyst:
-    name: "🔍 Requirements Analyst"
-    triggers: ["task.start", "requirements.unclear"]
-    publishes: ["requirements.clarified", "acceptance.criteria"]
-    instructions: |
-      Analyze the task and clarify requirements.
-      Ask clarifying questions if needed.
-      Output structured acceptance criteria.
-
-  developer:
-    name: "💻 Developer"
-    triggers: ["requirements.clarified", "tests.failing"]
-    publishes: ["code.written", "tests.passing"]
-    instructions: |
-      Implement the solution based on acceptance criteria.
-      Write tests first, then implementation.
-      Iterate until tests pass.
-
-  reviewer:
-    name: "🔬 Code Reviewer"
-    triggers: ["code.written"]
-    publishes: ["review.approved", "review.changes_requested"]
-    instructions: |
-      Review the implementation for quality, security, performance.
-      Check alignment with acceptance criteria.
-      Approve or request specific changes.
-
-  documenter:
-    name: "📝 Technical Writer"
-    triggers: ["review.approved"]
-    publishes: ["documentation.complete"]
-    instructions: |
-      Update documentation to reflect changes.
-      Ensure API docs, README, and inline comments are current.
-```
-
-**Event-Driven Flow:**
-
-```mermaid
-flowchart LR
-    E1["task.start"] --> H1["🔍 Analyst"]
-    H1 --> E2["requirements.clarified"]
-    E2 --> H2["💻 Developer"]
-    H2 --> E3["code.written"]
-    E3 --> H3["🔬 Reviewer"]
-    H3 -->|"approved"| H4["📝 Documenter"]
-    H3 -->|"changes_requested"| H2
-    H4 --> E4["documentation.complete"]
-```
-
-1. Ralph publishes starting event (e.g., `task.start`)
-2. Hat with matching trigger activates
-3. Hat executes its instructions with fresh context
-4. Hat publishes completion events
-5. Next hat triggers, cascade continues until done
-
-### Coordination Patterns
-
-Seven documented patterns for hat orchestration:
-
-| Pattern | Description | Use Case |
-|---------|-------------|----------|
-| **Linear Pipeline** | A → B → C sequential | Simple workflows with clear stages |
-| **Contract-First** | Spec validation gates between stages | API development, integration work |
-| **Cyclic Rotation** | Hats process in rotation until stable | Iterative refinement, polishing |
-| **Adversarial Review** | Hats challenge each other's work | Code review, security analysis |
-| **Hypothesis-Driven** | Propose → Test → Refine cycle | Debugging, root cause analysis |
-| **Fan-Out** | Coordinator dispatches to specialists | Parallel work streams |
-| **Adaptive Entry** | Context-based routing to first hat | Complex varied task intake |
-
-### The Fresh Context Philosophy
-
-Each hat invocation starts with a clean context window. This is intentional:
-
-- **Prevents context pollution** from accumulating errors across iterations
-- **Makes each iteration deterministic** and easier to debug
-- **Forces explicit state** through files (not conversation memory)
-- **Keeps context focused** on current hat's responsibilities
-
-> "Regeneration costs one planning loop. Cheap."
-
-**State persists through files, not memory:**
-
-| State Type | Location | Purpose |
-|------------|----------|---------|
-| **Scratchpad** | `.agent/scratchpad.md` | Shared memory across iterations |
-| **Memories** | `.agent/memories.md` | Persistent learning across sessions |
-| **Git history** | Repository | What was attempted, what worked |
-| **Event payloads** | `.agent/events/` | Structured data passed between hats |
-
-### Why Many Hats > Many Agents
-
-| Many Agents (Anti-pattern) | Many Hats (Preferred) |
-|---------------------------|----------------------|
-| Complex orchestration architecture | Thin coordination layer |
-| Debugging 19 agent interactions | Single agent, file-based state |
-| Scaffolding becomes the product | Agent does the work |
-| Context scattered across systems | Files are single source of truth |
-| Each agent reimplements file access | Shared file conventions |
-| Handoff protocols per agent pair | Universal event system |
-| Agent-to-agent communication failures | Events are just files |
-
-**The key insight:** Sophisticated behavior emerges from simple loops with good backpressure, not from complex multi-agent architectures. When you find yourself building elaborate orchestration, you've likely made the problem harder than it needs to be.
-
-### Autonomous Bolt Template (Phase 1)
-
-For simpler tasks, the original template remains effective:
-
-### Backpressure Configuration
-
-Quality gates are the primary mechanism for implementing backpressure in AI-DLC 2026. Rather than prescribing *how* AI should work, gates define *what* must be satisfied—creating rejection signals that guide autonomous iteration toward correct solutions:
-
-```yaml
-# .ai-dlc/quality-gates.yaml
-gates:
-  - name: tests
-    command: npm test
-    required: true
-
-  - name: types
-    command: npm run typecheck
-    required: true
-
-  - name: lint
-    command: npm run lint
-    required: true
-
-  - name: security
-    command: npm audit --audit-level=high
-    required: true
-
-  - name: coverage
-    command: npm run test:coverage
-    threshold: 80
-    required: true
-
-  - name: build
-    command: npm run build
-    required: true
-```
-
-**Note:** Modern AI development platforms can automate quality gate configuration through plugin systems and declarative hooks, detecting project tooling (test frameworks, linters, type checkers) and configuring appropriate gates without manual YAML authoring.
-
-### File-Based Memory
-
-Progress persists in files, enabling resumption across sessions:
-
-```markdown
-# .agent/scratchpad.md
-
-## Current Task
-Implementing user authentication API
-
-## Context
-- Working on Unit 3: API Integration
-- Using existing auth middleware pattern from src/middleware/
-
-## Progress
-- [x] Wrote tests for /login endpoint
-- [x] Implemented /login with JWT generation
-- [x] Wrote tests for /register endpoint
-- [ ] Implementing /register
-- [ ] Rate limiting
-
-## Decisions Made
-- Using bcrypt for password hashing (matches existing user service)
-- JWT expiry: 1 hour access, 7 day refresh (per security requirements)
-
-## Blockers
-None currently
-
-## Notes for Next Session
-- Check if email verification is required (not in specs but mentioned in Slack)
-```
-
-### Safety Limits
-
-Autonomous execution requires safety boundaries:
-
-```yaml
-# Autonomous Bolt safety configuration
-limits:
-  max_iterations: 50          # Prevent infinite loops
-  max_runtime: 4h             # Time boundary
-  allowed_paths:              # Scope of modifications
-    - "src/"
-    - "tests/"
-    - "docs/"
-  forbidden_paths:            # Never modify
-    - ".env*"
-    - "*.secret*"
-    - "production/*"
-  require_tests: true         # Must have test coverage
-  require_commit: true        # Must commit working changes
-```
+**→ See the [Autonomous Bolt Runbook](./ai-dlc-2026/runbooks/autonomous-bolt) for implementation templates, safety configuration, and the Many Hats orchestration pattern.**
 
 ---
 
@@ -1585,356 +1264,37 @@ Then gradually introduce Construction phase patterns:
 
 ## Measuring AI-DLC Effectiveness
 
-AI-DLC introduces new metrics that capture value delivery rather than activity. This section provides a framework for measuring adoption success and identifying areas for improvement.
+AI-DLC shifts from activity-based metrics (lines of code, story points) to outcome-based metrics (value delivered, criteria coverage, time-to-value). The best teams measure what matters to the business, not what's easy to count.
 
-### Core Metrics
+**Core metrics to track:**
 
-| Metric | What It Measures | Baseline Comparison |
-|--------|------------------|---------------------|
-| **Cycle Time** | Time from Intent to Production | Compare to pre-AI-DLC delivery |
-| **Criteria Escape Rate** | Defects found post-deployment | Should decrease over time |
-| **Bolt Success Rate** | Bolts completing without human rescue | Target: increase as criteria improve |
-| **Churn Rate** | Iterations per bolt | High churn = poor criteria or wrong mode |
-| **Human Intervention Rate** | HOTL bolts requiring rescue | Indicator of mode selection quality |
-| **CI Failure Reduction** | Pipeline failures caught locally | Backpressure should catch issues before CI |
-| **Value Delivered** | Business outcomes achieved | Replaces velocity/story points |
+| Metric | What It Measures |
+|--------|------------------|
+| **Cycle Time** | Time from Intent to Production |
+| **Bolt Success Rate** | Bolts completing without human rescue |
+| **Churn Rate** | Iterations per bolt (high = poor criteria) |
+| **Criteria Escape Rate** | Defects found post-deployment |
 
-### CI Failure Reduction
-
-In complex systems, developers often can't—or don't—run the full test/lint/type-check suite locally before pushing. Quality gates as backpressure shift this left: the AI runs verification continuously during construction, catching issues that would otherwise fail in CI.
-
-Track the reduction in "surprise CI failures" as an adoption metric. A mature AI-DLC team should see:
-
-- Fewer CI pipeline failures from lint/type/test issues
-- Faster CI runs (less fixing-in-CI iteration)
-- Higher first-pass success rate for autonomous bolts
-
-### Early Warning Signs
-
-Watch for these failure patterns:
-
-| Warning Sign | Likely Cause | Response |
-|--------------|--------------|----------|
-| **Churn rate increasing** | Poor completion criteria | Improve criteria specificity |
-| **Human intervention rate not decreasing** | Wrong mode selection | Review mode selection decisions |
-| **Code review rejection rate high** | Criteria don't capture quality | Add subjective criteria, use Observed mode |
-| **Autonomous bolts frequently blocked** | Tasks too novel for HOTL | Switch to Supervised or Observed |
-| **Cycle time not improving** | Overhead in Inception phase | Streamline Mob Elaboration |
-| **Criteria escape rate increasing** | Quality gates insufficient | Strengthen backpressure configuration |
-
-### Metrics Evolution
-
-AI-DLC shifts measurement philosophy:
-
-**From activity-based metrics:**
-
-- Lines of code written
-- Story points completed
-- Hours worked
-- PRs merged
-
-**To outcome-based metrics:**
-
-- Value delivered to users
-- Criteria coverage (% of intent captured)
-- Time-to-value (intent → production)
-- Autonomous success rate
-- Learning velocity (how fast teams improve at AI-DLC)
-
-The best teams measure what matters to the business, not what's easy to count.
+**→ See the [Metrics & Measurement Runbook](./ai-dlc-2026/runbooks/metrics-measurement) for dashboards, ROI calculation, and early warning signs.**
 
 ---
 
 ## Compliance and Audit Integration
 
-AI-DLC can integrate with regulated environments through structured audit patterns. These patterns maintain compliance without sacrificing AI's speed benefits.
+AI-DLC integrates with regulated environments through structured audit patterns that maintain compliance without sacrificing speed. Two primary patterns:
 
-### Pattern A: Auditable Checkpoints
+1. **Auditable Checkpoints:** Human audit points at strategic boundaries (requirements sign-off, design approval, code review, release approval) with autonomous work between them
+2. **Automated Compliance Gates:** Quality gates as compliance verification with audit logging
 
-Insert human audit points at strategic boundaries while allowing AI to operate autonomously between them:
+The key insight: audit trails emerge naturally from the AI-DLC workflow rather than being bolted on afterward. The workflow *is* the audit trail.
 
-```mermaid
-flowchart LR
-    I["💡 Intent"] --> A1["🔒 Audit Point 1<br/><i>Requirements sign-off</i>"]
-    A1 --> U["📦 Units"]
-    U --> A2["🔒 Audit Point 2<br/><i>Design approval</i>"]
-    A2 --> B["⚡ Bolts"]
-    B --> A3["🔒 Audit Point 3<br/><i>Code review</i>"]
-    A3 --> D["🚀 Deploy"]
-    D --> A4["🔒 Audit Point 4<br/><i>Release approval</i>"]
-```
-
-**Characteristics:**
-
-- HITL at audit points, HOTL/Observed HOTL between them
-- Human signs off at each gate with audit trail
-- Creates paper trail naturally through workflow
-- Maps to existing compliance frameworks (SOC2, HIPAA, PCI-DSS, etc.)
-
-**Mapping to compliance frameworks:**
-
-| Audit Point | SOC2 | HIPAA | PCI-DSS |
-|-------------|------|-------|---------|
-| Requirements sign-off | CC6.1 Change Management | Administrative Safeguards | Req 6.4 |
-| Design approval | CC6.1 Change Management | Technical Safeguards | Req 6.3 |
-| Code review | CC6.1, CC7.1 | Technical Safeguards | Req 6.3.2 |
-| Release approval | CC6.1 Change Management | Administrative Safeguards | Req 6.4.5 |
-
-### Pattern B: Automated Compliance Gates
-
-Use quality gates as compliance verification—automated, non-blocking when passing, with audit logging:
-
-```yaml
-# .ai-dlc/compliance-gates.yaml (illustrative)
-compliance_gates:
-  - name: security_scan
-    description: "SAST/DAST security analysis"
-    command: npm run security:scan
-    audit_log: true
-    compliance: ["SOC2-CC6.1", "PCI-DSS-6.5"]
-
-  - name: license_check
-    description: "Open source license verification"
-    command: npm run license:check
-    audit_log: true
-    compliance: ["SOC2-CC6.1"]
-
-  - name: pii_detection
-    description: "Sensitive data detection in code"
-    command: npm run pii:scan
-    audit_log: true
-    compliance: ["HIPAA", "GDPR"]
-
-  - name: access_review
-    description: "Verify least-privilege access patterns"
-    command: npm run access:audit
-    audit_log: true
-    compliance: ["SOC2-CC6.3", "PCI-DSS-7.1"]
-```
-
-**Benefits:**
-
-- Compliance as backpressure—automated, non-blocking when passing
-- Evidence collection for auditors happens automatically
-- Human review only for exceptions/failures
-- Audit trail generated without manual documentation
-
-### Implementation Guidance
-
-These patterns are tool-agnostic. They can be implemented via:
-
-- **CI/CD pipelines** — GitHub Actions, GitLab CI, Jenkins
-- **Pre-commit hooks** — Automated local verification
-- **IDE integrations** — Real-time compliance checking
-- **Dedicated compliance platforms** — Drata, Vanta, Secureframe
-- **Custom tooling** — Organization-specific implementations
-
-The key is that audit trails emerge naturally from AI-DLC workflow rather than being bolted on afterward. When AI commits work, the commit message includes completion criteria met. When humans approve at checkpoints, that approval is logged. The workflow *is* the audit trail.
+**→ See the [Compliance & Audit Runbook](./ai-dlc-2026/runbooks/compliance-audit) for framework mappings (SOC2, HIPAA, PCI-DSS) and implementation patterns.**
 
 ---
 
-## Appendix: Prompt Patterns
+## Implementation Guides
 
-### Setup Prompt
-
-```markdown
-We're working on [PROJECT_NAME] using AI-DLC methodology.
-
-Directory structure:
-- specs/: Requirements and completion criteria
-- src/: Source code
-- tests/: Test files
-- docs/: Documentation
-- .agent/: AI working files (scratchpad, plans, blockers)
-
-Before starting any task:
-1. Read relevant specs in specs/
-2. Check .agent/scratchpad.md for context from previous sessions
-3. Review existing code patterns before writing new code
-4. Create a plan in .agent/plans/[task-name].md for complex work
-
-Quality gates (all must pass):
-- npm test (all tests pass)
-- npm run typecheck (TypeScript strict)
-- npm run lint (ESLint clean)
-- npm run build (successful build)
-
-After completing work:
-1. Update .agent/scratchpad.md with progress
-2. Commit with descriptive message
-3. Update relevant documentation if behavior changed
-```
-
-### Inception: Mob Elaboration
-
-```markdown
-Role: Expert product manager and technical lead facilitating Mob Elaboration.
-
-Task: Elaborate the following Intent into Units with Completion Criteria.
-
-Intent: [DESCRIPTION]
-
-For each Unit:
-1. Write clear description of scope and boundaries
-2. List user stories in "As a [user], I want [goal], so that [benefit]" format
-3. Define non-functional requirements
-4. Identify risks and dependencies on other Units
-5. Generate Completion Criteria that are:
-   - Programmatically verifiable
-   - Specific and measurable
-   - Independent of implementation approach
-
-Output format:
-- specs/units/[unit-name].md for each Unit
-- specs/overview.md with Unit relationships and dependencies
-- specs/risks.md with risk register
-
-Ask clarifying questions before proceeding if the Intent is ambiguous.
-```
-
-### Construction: Supervised Bolt
-
-```markdown
-Role: Senior software engineer.
-
-Task: Implement [FEATURE].
-
-Process:
-1. Read specs in specs/[feature]/
-2. Create implementation plan in .agent/plans/[feature].md
-3. **STOP and wait for my review**
-4. After approval, implement incrementally
-5. After each significant component, **STOP for review**
-6. Write tests alongside implementation
-7. Run quality gates after each milestone
-8. Update documentation for any API changes
-
-Critical decisions requiring my approval:
-- Architectural patterns or significant design choices
-- External dependencies or service integrations
-- Security-related implementations
-- Performance trade-offs
-
-Document any blockers or questions in .agent/blockers.md.
-```
-
-### Construction: Observed Bolt
-
-```markdown
-Implement [FEATURE] with real-time observation.
-
-Context:
-- Specs: specs/[feature].md
-- Related code: [relevant paths]
-- Design references: [mockups, examples]
-
-Criteria (objective):
-- [ ] [Measurable criterion 1]
-- [ ] [Measurable criterion 2]
-- [ ] All tests pass
-- [ ] TypeScript compiles with no errors
-
-Criteria (subjective - I will provide feedback):
-- [ ] Visual quality matches design intent
-- [ ] Interaction feels responsive and natural
-- [ ] Content tone aligns with brand voice
-
-Process:
-1. Read specs and design references
-2. Implement incrementally, showing progress
-3. Pause at visual/UX decision points for my feedback
-4. Adjust based on my real-time guidance
-5. Continue until both objective and subjective criteria satisfied
-
-Intervention triggers (pause and ask):
-- Major layout decisions
-- Color or typography choices not in design system
-- Interaction patterns with multiple valid approaches
-- Content phrasing where tone matters
-
-I am watching your work. Proceed unless I intervene.
-When I say "looks good" or similar, continue.
-When I redirect, adjust and continue.
-
-When complete:
-- Output READY_FOR_REVIEW
-```
-
-### Construction: Autonomous Bolt
-
-```markdown
-Implement [FEATURE].
-
-Context:
-- Specs: specs/[feature].md
-- Related code: [relevant paths]
-- Patterns to follow: [existing examples]
-
-Completion Criteria:
-- [ ] [Criterion 1 - specific and measurable]
-- [ ] [Criterion 2 - specific and measurable]
-- [ ] All tests pass
-- [ ] TypeScript compiles with no errors
-- [ ] ESLint passes with no warnings
-- [ ] Coverage >[threshold]% for new code
-
-Process:
-1. Read all relevant specs and existing code
-2. Write tests first (TDD where applicable)
-3. Implement to pass tests
-4. Run full quality gate suite
-5. Fix any failures
-6. Iterate until all criteria pass
-
-Constraints:
-- Maximum [N] iterations
-- Only modify files in [ALLOWED_PATHS]
-- Commit working increments with clear messages
-
-If blocked after [M] attempts on same issue:
-- Document in .agent/blockers.md:
-  - What was attempted
-  - Why it failed
-  - What information would unblock
-- Output BLOCKED
-
-When all criteria pass:
-- Verify by running: [verification commands]
-- Output COMPLETE
-```
-
-### Operations: Incident Analysis
-
-```markdown
-Role: Site reliability engineer.
-
-Task: Analyze incident and recommend remediation.
-
-Incident Context:
-[ALERT/INCIDENT DETAILS]
-
-Analysis required:
-1. Identify likely root cause based on symptoms
-2. Assess blast radius (affected users, services, data)
-3. Correlate with recent deployments or changes
-4. Check for similar past incidents
-
-Output:
-1. Immediate actions (with risk assessment for each):
-   - Actions safe to execute autonomously
-   - Actions requiring human approval
-
-2. Root cause analysis:
-   - Most likely cause with evidence
-   - Alternative hypotheses to investigate
-
-3. Prevention recommendations:
-   - Short-term mitigations
-   - Long-term fixes to prevent recurrence
-
-Do NOT execute any remediation without explicit approval.
-Mark autonomous-safe actions clearly.
-```
+For detailed runbooks with system prompts, entry/exit criteria, and failure modes, see the [AI-DLC 2026 Runbooks](./ai-dlc-2026/runbooks).
 
 ---
 
@@ -1943,17 +1303,17 @@ Mark autonomous-safe actions clearly.
 | Term | Definition |
 |------|------------|
 | **Backpressure** | Quality gates that automatically reject work not meeting criteria, providing feedback for iteration |
-| **Bolt** | Smallest iteration unit in AI-DLC 2026; operates in supervised (HITL), observed (Observed HOTL), or autonomous (HOTL) mode |
+| **Bolt** | Smallest iteration unit in AI-DLC 2026; operates in supervised (HITL), observed (OHOTL), or autonomous (AHOTL) mode |
 | **Completion Criteria** | Programmatically verifiable conditions that define when work is successfully done |
 | **Completion Promise** | Signal (e.g., COMPLETE, BLOCKED) that autonomous execution has finished |
 | **Context Budget** | Available attention capacity in AI context window; quality degrades when overloaded |
 | **HITL** | Human-in-the-Loop: human validates each significant step before AI proceeds; used for novel, high-risk, or foundational work |
-| **HOTL** | Human-on-the-Loop: human defines criteria and reviews output; AI operates autonomously within boundaries; used for well-defined, programmatically verifiable work |
+| **AHOTL** | Autonomous Human-on-the-Loop: human defines criteria and reviews output; AI operates autonomously within boundaries; used for well-defined, programmatically verifiable work |
 | **Intent** | High-level statement of purpose with completion criteria that serves as starting point for decomposition |
 | **Memory Provider** | Source of persistent context (files, git, tickets, ADRs, runbooks) accessible to AI agents |
 | **Mob Elaboration** | Collaborative ritual where humans and AI decompose Intent into Units with Completion Criteria |
 | **Mob Construction** | Collaborative ritual where multiple teams build Units in parallel with AI assistance |
-| **Observed HOTL** | Observed Human-on-the-Loop: human watches AI work in real-time with ability to intervene; synchronous awareness with asynchronous control; used for creative, subjective, or training scenarios |
+| **OHOTL** | Observed Human-on-the-Loop: human watches AI work in real-time with ability to intervene; synchronous awareness with asynchronous control; used for creative, subjective, or training scenarios |
 | **Quality Gate** | Automated check (tests, types, lint, security) that provides pass/fail feedback |
 | **Ralph Wiggum Pattern** | Autonomous loop methodology: try, fail, learn, iterate until success criteria met |
 | **Unit** | Cohesive, independently deployable work element derived from an Intent |
