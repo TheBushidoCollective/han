@@ -273,7 +273,7 @@ With AI, that economic calculus inverts. Iteration is nearly free. Context loss 
 #### ❌ Traditional Sequential Phases
 
 ```mermaid
-flowchart LR
+flowchart TB
     T1["Requirements"] --> T2["Design"]
     T2 --> T3["Implementation"]
     T3 --> T4["Testing"]
@@ -285,8 +285,8 @@ Work stops completely at each handoff. Context transfers between specialized rol
 #### ✅ AI-DLC 2026 Collapsed Flow
 
 ```mermaid
-flowchart LR
-    C1["🎯 Intent"] --> C2["🔄 Continuous<br/>Loop"]
+flowchart TB
+    C1["🎯 Intent"] --> C2["🔄 Continuous Loop"]
     C2 --> C2
     C2 --> C3["🔍 Checkpoint"]
     C3 -->|"Continue"| C2
@@ -348,21 +348,25 @@ These artifacts represent institutional memory—decisions made, rationales docu
 
 ```mermaid
 flowchart TB
+    Agent["🤖 AI Agent"]
+
     subgraph Filesystem["💭 Working Memory"]
-        F1["✏️ Rules<br/><i>(i.e. Claude rules)</i>"]
+        direction TB
+        F1["✏️ Rules"]
         F2["📂 Modified files"]
         F3["🕥 Git history"]
-        F4["📝 Agent scratchpads"]
+        F4["📝 Scratchpads"]
     end
 
     subgraph Organizational["🏛️ Institutional Memory"]
-        O1["📋 Work Memory<br/><i>Tickets, requirements</i>"]
-        O2["📝 Decision Memory<br/><i>PRDs, ADRs, design docs</i>"]
-        O3["📚 Knowledge Memory<br/><i>Runbooks, standards</i>"]
-        O4["📊 Runtime Memory<br/><i>Incidents, errors, metrics</i>"]
+        direction TB
+        O1["📋 Work Memory"]
+        O2["📝 Decision Memory"]
+        O3["📚 Knowledge Memory"]
+        O4["📊 Runtime Memory"]
     end
 
-    Agent["🤖 AI Agent"] --> Filesystem
+    Agent --> Filesystem
     Agent --> Organizational
 ```
 
@@ -468,28 +472,18 @@ This section outlines the core framework of AI-DLC 2026, detailing its artifacts
 
 ```mermaid
 graph TB
-    subgraph "🎯 Inception Phase"
-        I["💡 Intent"] --> U1["📦 Unit 1"]
-        I --> U2["📦 Unit 2"]
-        I --> Un["📦 Unit n"]
+    subgraph Inception["🎯 Inception"]
+        I["💡 Intent"]
+        I --> U["📦 Units"]
     end
 
-    subgraph "🔨 Construction Phase"
-        U1 --> B1["⚡ Bolt 1.1"]
-        U1 --> B2["⚡ Bolt 1.2"]
-        U2 --> B3["⚡ Bolt 2.1"]
-        Un --> Bn["⚡ Bolt n.1"]
-
-        B1 --> D1["📦 Deployment Unit"]
-        B2 --> D1
-        B3 --> D2["📦 Deployment Unit"]
-        Bn --> Dn["📦 Deployment Unit"]
+    subgraph Construction["🔨 Construction"]
+        U --> B["⚡ Bolts"]
+        B --> D["📦 Deployment Units"]
     end
 
-    subgraph "🚀 Operations Phase"
-        D1 --> P1["🌐 Production"]
-        D2 --> P2["🌐 Production"]
-        Dn --> Pn["🌐 Production"]
+    subgraph Operations["🚀 Operations"]
+        D --> P["🌐 Production"]
     end
 ```
 
@@ -692,40 +686,40 @@ AI-DLC 2026 organizes work into three phases, each with distinct rituals and hum
 
 ```mermaid
 flowchart TB
-    subgraph Inception["🎯 INCEPTION PHASE"]
+    subgraph Inception["🎯 INCEPTION"]
         direction TB
         I1["👤 Human provides Intent"]
-        I2["🤖 AI clarifies & elaborates"]
-        I3["📋 Decompose into Units"]
-        I4["✅ Define Completion Criteria"]
+        I2["🤖 AI clarifies"]
+        I3["📋 Decompose to Units"]
+        I4["✅ Define Criteria"]
         I5["⚡ Plan Bolts"]
         I1 --> I2 --> I3 --> I4 --> I5
     end
 
-    subgraph Construction["🔨 CONSTRUCTION PHASE"]
+    Inception --> Construction
+
+    subgraph Construction["🔨 CONSTRUCTION"]
         direction TB
         C1{"Select Mode"}
-        C2["🧑‍💻 Supervised:<br/>Step-by-step validation"]
-        C3["🤖 Autonomous:<br/>Loop until criteria met"]
-        C4["🔍 Human Checkpoint"]
+        C2["🧑‍💻 Supervised"]
+        C3["🤖 Autonomous"]
+        C4["🔍 Checkpoint"]
         C1 -->|"HITL"| C2
         C1 -->|"AHOTL"| C3
         C2 --> C4
         C3 --> C4
     end
 
-    subgraph Operations["📊 OPERATIONS PHASE"]
+    Construction --> Operations
+
+    subgraph Operations["📊 OPERATIONS"]
         direction TB
         O1["🚀 Deploy"]
-        O2["📈 AI monitors telemetry"]
-        O3["⚠️ AI detects anomalies"]
-        O4["🔧 AI proposes/executes runbooks"]
-        O5["👤 Human oversees & escalates"]
+        O2["📈 Monitor"]
+        O3["⚠️ Detect"]
+        O4["🔧 Respond"]
         O1 --> O2 --> O3 --> O4
-        O4 --> O5
     end
-
-    Inception --> Construction --> Operations
 ```
 
 #### Inception Phase
@@ -740,24 +734,22 @@ During Mob Elaboration:
 
 ```mermaid
 sequenceDiagram
-    participant PO as 👤 Product Owner
-    participant AI as 🤖 AI Agent
-    participant Dev as 👩‍💻 Developers
-    participant QA as 🧪 QA/Stakeholders
+    participant PO as 👤 PO
+    participant AI as 🤖 AI
+    participant Team as 👥 Team
 
-    PO->>AI: Articulates Intent
+    PO->>AI: Intent
     AI->>PO: Clarifying questions
-    Note over AI,PO: "Who are primary users?"<br/>"What key outcomes?"<br/>"Compliance requirements?"
-    PO->>AI: Provides context & answers
-    AI->>Dev: Proposes User Stories with acceptance criteria
-    Dev->>AI: Refines technical aspects
-    AI->>PO: Presents Units (cohesive groupings)
-    PO->>AI: Validates business alignment, adjusts scope
-    AI->>Dev: Generates Completion Criteria
-    Dev->>AI: Validates technical feasibility
-    AI->>QA: Proposes test scenarios
-    QA->>AI: Refines edge cases, risk scenarios
-    AI->>All: Final Plan with Bolts and mode recommendations
+    PO->>AI: Context & answers
+    AI->>Team: Proposed Stories
+    Team->>AI: Technical refinement
+    AI->>PO: Units & scope
+    PO->>AI: Business validation
+    AI->>Team: Completion Criteria
+    Team->>AI: Feasibility check
+    AI->>Team: Test scenarios
+    Team->>AI: Edge cases
+    AI->>PO: Final Plan + Bolts
 ```
 
 1. **AI asks clarifying questions** to minimize ambiguity in the original Intent
