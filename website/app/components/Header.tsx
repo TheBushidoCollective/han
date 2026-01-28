@@ -288,18 +288,18 @@ export default function Header() {
 						</Link>
 
 						<div className="hidden lg:flex items-center gap-2">
-							<a href="https://github.com/TheBushidoCollective/han/releases">
+							<a href="https://github.com/thebushidocollective/han/releases">
 								{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
 								<img
-									src="https://img.shields.io/github/v/release/TheBushidoCollective/han"
+									src="https://img.shields.io/github/v/release/thebushidocollective/han"
 									alt="GitHub Release"
 									className="h-5"
 								/>
 							</a>
-							<a href="https://github.com/TheBushidoCollective/han">
+							<a href="https://github.com/thebushidocollective/han">
 								{/* biome-ignore lint/performance/noImgElement: External dynamic badge from shields.io */}
 								<img
-									src="https://img.shields.io/github/stars/TheBushidoCollective/han"
+									src="https://img.shields.io/github/stars/thebushidocollective/han"
 									alt="GitHub Stars"
 									className="h-5"
 								/>
