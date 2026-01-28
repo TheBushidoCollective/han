@@ -131,16 +131,25 @@ if [ -z "$SKIP_CHECKSUM" ]; then
 	# Extract expected checksum from file
 	EXPECTED_CHECKSUM=$(awk '{print $1}' "$TEMP_CHECKSUM")
 
-	# Calculate actual checksum
-	if command -v sha256sum >/dev/null 2>&1; then
-		ACTUAL_CHECKSUM=$(sha256sum "$TEMP_BIN" | awk '{print $1}')
-	elif command -v shasum >/dev/null 2>&1; then
-		ACTUAL_CHECKSUM=$(shasum -a 256 "$TEMP_BIN" | awk '{print $1}')
-	else
-		echo -e "${YELLOW}Warning: No checksum utility found (sha256sum or shasum). Skipping verification.${NC}" >&2
+	# Validate checksum is non-empty
+	if [ -z "$EXPECTED_CHECKSUM" ]; then
+		echo -e "${YELLOW}Warning: Checksum file is empty. Skipping verification.${NC}" >&2
 		SKIP_CHECKSUM=1
 	fi
 
+	# Calculate actual checksum (only if we haven't decided to skip)
+	if [ -z "$SKIP_CHECKSUM" ]; then
+		if command -v sha256sum >/dev/null 2>&1; then
+			ACTUAL_CHECKSUM=$(sha256sum "$TEMP_BIN" | awk '{print $1}')
+		elif command -v shasum >/dev/null 2>&1; then
+			ACTUAL_CHECKSUM=$(shasum -a 256 "$TEMP_BIN" | awk '{print $1}')
+		else
+			echo -e "${YELLOW}Warning: No checksum utility found (sha256sum or shasum). Skipping verification.${NC}" >&2
+			SKIP_CHECKSUM=1
+		fi
+	fi
+
+	# Verify checksums match
 	if [ -z "$SKIP_CHECKSUM" ]; then
 		if [ "$EXPECTED_CHECKSUM" = "$ACTUAL_CHECKSUM" ]; then
 			echo -e "${GREEN}✓ Checksum verified successfully${NC}"
