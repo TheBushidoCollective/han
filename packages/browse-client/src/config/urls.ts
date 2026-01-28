@@ -73,10 +73,27 @@ export function getGraphQLEndpoints(): GraphQLEndpoints {
   // Check for active environment in localStorage
   const activeEnv = getActiveEnvironment();
   if (activeEnv) {
-    return {
-      http: `${activeEnv.coordinatorUrl}/graphql`,
-      ws: `${activeEnv.wsUrl}/graphql`,
-    };
+    // Validate URLs have protocol to prevent relative path issues
+    const httpUrl = activeEnv.coordinatorUrl;
+    const wsUrl = activeEnv.wsUrl;
+
+    // Only use stored env if URLs are valid absolute URLs
+    if (
+      httpUrl &&
+      wsUrl &&
+      (httpUrl.startsWith('https://') || httpUrl.startsWith('http://')) &&
+      (wsUrl.startsWith('wss://') || wsUrl.startsWith('ws://'))
+    ) {
+      return {
+        http: `${httpUrl}/graphql`,
+        ws: `${wsUrl}/graphql`,
+      };
+    }
+    // Invalid stored environment - fall through to discovery/defaults
+    console.warn('Invalid stored environment URLs, using defaults:', {
+      coordinatorUrl: httpUrl,
+      wsUrl,
+    });
   }
 
   // Use cached discovery result if available

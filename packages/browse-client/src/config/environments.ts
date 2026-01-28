@@ -86,9 +86,32 @@ export function getActiveEnvironment(): Environment | null {
 }
 
 /**
+ * Validate that a URL has proper protocol
+ */
+function isValidCoordinatorUrl(url: string): boolean {
+  return url.startsWith('https://') || url.startsWith('http://');
+}
+
+function isValidWsUrl(url: string): boolean {
+  return url.startsWith('wss://') || url.startsWith('ws://');
+}
+
+/**
  * Add a new environment
  */
 export function addEnvironment(env: Omit<Environment, 'id'>): Environment {
+  // Validate URLs before saving
+  if (!isValidCoordinatorUrl(env.coordinatorUrl)) {
+    throw new Error(
+      `Invalid coordinatorUrl: ${env.coordinatorUrl}. Must start with https:// or http://`
+    );
+  }
+  if (!isValidWsUrl(env.wsUrl)) {
+    throw new Error(
+      `Invalid wsUrl: ${env.wsUrl}. Must start with wss:// or ws://`
+    );
+  }
+
   const newEnv: Environment = {
     ...env,
     id: generateId(),
