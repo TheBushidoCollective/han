@@ -39,6 +39,46 @@ export default function Home() {
 				</div>
 			</section>
 
+			{/* AI-DLC Callout */}
+			<section className="bg-gradient-to-r from-blue-600 to-indigo-700 py-12">
+				<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+					<p className="text-blue-100 text-sm font-medium uppercase tracking-wide mb-2">
+						New Paper
+					</p>
+					<h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+						You didn&apos;t fail at AI.
+						<br />
+						<span className="text-blue-200">
+							You just handed it a human&apos;s job description.
+						</span>
+					</h2>
+					<p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+						AI-DLC 2026 is a methodology for AI-driven development that actually
+						works. Learn how to write completion criteria, choose operating
+						modes, and let AI iterate autonomously.
+					</p>
+					<Link
+						href="/papers/ai-dlc-2026"
+						className="inline-flex items-center px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition"
+					>
+						Read the Paper
+						<svg
+							className="ml-2 w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 5l7 7-7 7"
+							/>
+						</svg>
+					</Link>
+				</div>
+			</section>
+
 			{/* How It Works */}
 			<section className="bg-white dark:bg-gray-800 py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
