@@ -1322,7 +1322,11 @@ export async function getSessionModifiedFiles(
 		}
 
 		// allModified includes created and modified, but not deleted
-		const allModified = [...new Set([...created, ...modified])];
+		// Filter out files that were later deleted (e.g., created then deleted in same session)
+		const deletedSet = new Set(deleted);
+		const allModified = [...new Set([...created, ...modified])].filter(
+			(f) => !deletedSet.has(f),
+		);
 
 		return {
 			created,
