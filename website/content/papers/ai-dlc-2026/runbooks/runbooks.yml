@@ -1,0 +1,75 @@
+# Runbook Configuration for AI-DLC 2026
+# Defines group order and runbook order within each group
+
+groups:
+  - id: adoption
+    name: Adoption
+    icon: "🔄"
+    description: Transform your existing SDLC for AI collaboration
+    runbooks:
+      - reimagining-sdlc
+      - reimagining-roles
+      - from-waterfall
+      - building-trust
+      - skills-training
+      - metrics-measurement
+      - tooling-setup
+      - tooling-costs
+      - quality-guardrails
+      - organizational-adoption
+      - incremental-adoption
+      - overcoming-tech-debt
+
+  - id: inception
+    name: Inception Phase
+    icon: "🎯"
+    description: Transform intent into actionable specifications
+    runbooks:
+      - mob-elaboration
+
+  - id: construction
+    name: Construction Phase
+    icon: "🔨"
+    description: Build the specified units using appropriate operating modes
+    runbooks:
+      - mode-selection
+      - supervised-bolt
+      - observed-bolt
+      - autonomous-bolt
+      - mob-construction
+
+  - id: operations
+    name: Operations Phase
+    icon: "📊"
+    description: Deploy, monitor, and maintain production systems
+    runbooks:
+      - deployment
+      - autonomous-operations
+      - compliance-audit
+
+  - id: tooling
+    name: AI Coding Tools
+    icon: "🛠️"
+    description: Comprehensive guides for popular AI coding assistants
+    runbooks:
+      - claude-code
+      - claude-cowork
+      - cursor
+      - github-copilot
+      - windsurf
+      - cody
+      - aider
+
+  - id: skills
+    name: Core Skills
+    icon: "🎯"
+    description: Essential skills for effective AI collaboration
+    runbooks:
+      - writing-completion-criteria
+
+  - id: reference
+    name: Reference
+    icon: "📖"
+    description: Deep dives on specific topics and challenges
+    runbooks:
+      - ai-limitations
