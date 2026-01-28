@@ -174,19 +174,14 @@ function loadNativeModule(): NativeModule | null {
 	const maxRetries = 8;
 	let lastError: Error | null = null;
 
-	// In dev mode, use the han-native package (better napi compatibility)
-	// In compiled mode, use the embedded .node file
-	const isDevMode = getDevNativeDir() !== null;
-
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		try {
-			if (isDevMode) {
-				// Use the han-native npm package for better napi-rs compatibility
-				_nativeModule = require("../../han-native") as NativeModule;
-			} else {
-				// Static require path tells Bun to embed the file in compiled binaries
-				_nativeModule = require("../native/han-native.node") as NativeModule;
-			}
+			// Always use the .node file directly (copied by han-native's copy-to-han script)
+			// This works in both dev and production:
+			// - Dev: han-native's build script copies the .node file to ../han/native/
+			// - Production: build-bundle.js copies the platform-specific .node file
+			// Static require path tells Bun to embed the file in compiled binaries
+			_nativeModule = require("../native/han-native.node") as NativeModule;
 			return _nativeModule;
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
