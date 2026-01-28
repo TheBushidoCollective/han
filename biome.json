@@ -18,7 +18,8 @@
       "!**/dist",
       "!**/.browse-out",
       "!**/__generated__",
-      "!**/build-info.generated.ts"
+      "!**/build-info.generated.ts",
+      "!**/tailwind-variants.css"
     ],
     "ignoreUnknown": true
   },
