@@ -275,10 +275,10 @@ export default function Header() {
 							Blog
 						</Link>
 						<Link
-							href="/papers"
+							href="/papers/ai-dlc-2026"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>
-							Papers
+							AI-DLC 2026
 						</Link>
 						<Link
 							href="/docs"
@@ -426,11 +426,11 @@ export default function Header() {
 								Blog
 							</Link>
 							<Link
-								href="/papers"
+								href="/papers/ai-dlc-2026"
 								className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition py-2"
 								onClick={() => setMobileMenuOpen(false)}
 							>
-								Papers
+								AI-DLC 2026
 							</Link>
 							<Link
 								href="/docs"
