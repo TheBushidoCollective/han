@@ -160,11 +160,3 @@ fnox exec -- node app.js
 # Production
 FNOX_PROFILE=production fnox exec -- node app.js
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

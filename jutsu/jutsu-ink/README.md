@@ -131,7 +131,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-ink
 ```
-
-## License
-
-MIT

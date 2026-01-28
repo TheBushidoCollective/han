@@ -172,12 +172,12 @@ export function Mermaid({ chart }: MermaidProps) {
 						fontSize: "16px",
 					},
 			flowchart: {
-				useMaxWidth: false,
+				useMaxWidth: true,
 				htmlLabels: true,
 				curve: "basis",
 			},
 			sequence: {
-				useMaxWidth: false,
+				useMaxWidth: true,
 				wrap: true,
 			},
 		});
@@ -383,11 +383,11 @@ export function Mermaid({ chart }: MermaidProps) {
 	}
 
 	return (
-		<div className="my-6 overflow-x-auto not-prose">
+		<div className="my-6 not-prose max-w-full">
 			<div
 				ref={containerRef}
-				className="flex justify-center min-w-fit"
-				style={{ background: "transparent" }}
+				className="flex justify-center"
+				style={{ background: "transparent", maxWidth: "100%" }}
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid generates safe SVG
 				dangerouslySetInnerHTML={{ __html: svg }}
 			/>

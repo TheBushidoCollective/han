@@ -30,8 +30,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install do-compiler-development
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.

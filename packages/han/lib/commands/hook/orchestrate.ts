@@ -33,7 +33,10 @@ import {
 	checkForChangesAsync,
 	findDirectoriesWithMarkers,
 	hookMatchesEvent,
+	type HookCategory,
+	inferCategoryFromHookName,
 	loadPluginConfig,
+	PHASE_ORDER,
 	type PluginHookDefinition,
 	trackFilesAsync,
 } from "../../hooks/index.ts";
@@ -705,6 +708,83 @@ function resolveDependencies(tasks: HookTask[]): HookTask[][] {
 	}
 
 	return batches;
+}
+
+/**
+ * Check if a hook has wildcard dependencies (depends_on: [{plugin: "*", hook: "*"}])
+ * Hooks with wildcard deps already handle their ordering explicitly.
+ */
+function hasWildcardDependencies(task: HookTask): boolean {
+	return task.dependsOn.some((dep) => dep.plugin === "*" || dep.hook === "*");
+}
+
+/**
+ * Inject implicit phase-based dependencies into tasks.
+ * Hooks are executed in phase order: format → lint → typecheck → test → advisory.
+ * All hooks in phase N must complete before phase N+1 starts.
+ *
+ * This adds implicit dependencies so that each task depends on ALL tasks in previous phases.
+ * Explicit dependsOn relationships are preserved and take precedence.
+ *
+ * Category is inferred from the hook name (e.g., "lint" → lint, "format" → format).
+ *
+ * Note: Hooks with wildcard dependencies (plugin: "*" or hook: "*") are excluded from
+ * phase injection to avoid circular dependencies.
+ *
+ * @param tasks - The hook tasks to process
+ * @returns Tasks with injected phase dependencies
+ */
+function injectPhaseDependencies(tasks: HookTask[]): HookTask[] {
+	// Separate tasks with wildcard dependencies - they manage their own ordering
+	const tasksWithWildcard = tasks.filter(hasWildcardDependencies);
+	const tasksWithoutWildcard = tasks.filter((t) => !hasWildcardDependencies(t));
+
+	// Group non-wildcard tasks by phase index
+	const tasksByPhase = new Map<number, HookTask[]>();
+
+	for (const task of tasksWithoutWildcard) {
+		// Infer category from hook name (e.g., "lint" → lint, "format" → format)
+		const category: HookCategory = inferCategoryFromHookName(task.hookName);
+		const phaseIndex = PHASE_ORDER.indexOf(category);
+		// If category is invalid or not in PHASE_ORDER, default to lint (index 1)
+		const phase = phaseIndex === -1 ? 1 : phaseIndex;
+
+		if (!tasksByPhase.has(phase)) {
+			tasksByPhase.set(phase, []);
+		}
+		tasksByPhase.get(phase)!.push(task);
+	}
+
+	// Add implicit dependencies to non-wildcard tasks
+	const processedTasks = tasksWithoutWildcard.map((task) => {
+		// Infer category from hook name
+		const category: HookCategory = inferCategoryFromHookName(task.hookName);
+		const myPhaseIndex = PHASE_ORDER.indexOf(category);
+		const myPhase = myPhaseIndex === -1 ? 1 : myPhaseIndex;
+
+		const implicitDeps: Array<{ plugin: string; hook: string; optional: boolean }> = [];
+
+		// Add dependencies on all tasks in earlier phases
+		for (let p = 0; p < myPhase; p++) {
+			for (const prevTask of tasksByPhase.get(p) ?? []) {
+				implicitDeps.push({
+					plugin: prevTask.plugin,
+					hook: prevTask.hookName,
+					optional: true, // Phase dependencies are optional (don't fail if plugin not installed)
+				});
+			}
+		}
+
+		// Merge implicit dependencies with explicit ones
+		// Explicit deps come after so they take precedence in deduplication
+		return {
+			...task,
+			dependsOn: [...implicitDeps, ...task.dependsOn],
+		};
+	});
+
+	// Return all tasks (wildcard tasks unchanged, others with phase deps)
+	return [...processedTasks, ...tasksWithWildcard];
 }
 
 /**
@@ -1774,7 +1854,7 @@ ${colors.dim}The wait command automatically prevents recursion during execution.
 /**
  * Main orchestration function
  */
-async function orchestrate(
+export async function orchestrate(
 	eventType: string,
 	options: {
 		onlyChanged: boolean;
@@ -2019,8 +2099,12 @@ async function orchestrate(
 		);
 	}
 
+	// Inject phase-based dependencies (format → lint → typecheck → test → advisory)
+	// This ensures hooks run in the correct order based on their category
+	const tasksWithPhaseDeps = injectPhaseDependencies(tasks);
+
 	// Resolve dependencies into execution batches
-	const batches = resolveDependencies(tasks);
+	const batches = resolveDependencies(tasksWithPhaseDeps);
 
 	if (isDebugMode()) {
 		console.error(

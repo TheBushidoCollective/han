@@ -151,11 +151,3 @@ If you want to disable auto-commits for a specific project, add to `.claude/sett
 
 - Git 2.0+
 - Running in a git repository
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

@@ -37,11 +37,3 @@ Once installed, this jutsu automatically validates your GitLab CI configuration:
 
 - [glab CLI](https://gitlab.com/gitlab-org/cli) installed and authenticated
 - GitLab project with `.gitlab-ci.yml`
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

@@ -27,7 +27,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-ecto
 ```
-
-## License
-
-Licensed under MIT - see repository for details.

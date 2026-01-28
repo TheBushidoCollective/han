@@ -25,6 +25,7 @@ import { registerCoordinatorCommands } from "./commands/coordinator/index.ts";
 import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerReindexCommand } from "./commands/index/index.ts";
+import { registerKeepCommands } from "./commands/keep/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
@@ -203,6 +204,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerMcpCommands(program);
 	registerBlueprintsCommands(program);
 	registerMemoryCommand(program);
+	registerKeepCommands(program);
 	registerReindexCommand(program);
 	registerAliasCommands(program);
 	registerCompletionCommand(program);

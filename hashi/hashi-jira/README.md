@@ -442,22 +442,3 @@ duedate < now() AND status != Done
 ❌ Update tickets without adding context in comments
 ❌ Use vague or unclear ticket summaries
 ❌ Ignore the Stop hook validation reminders
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.
-
-## Links
-
-- [Atlassian REST API Documentation](https://developer.atlassian.com/cloud/jira/platform/rest/v3/)
-- [JQL Reference](https://support.atlassian.com/jira-service-management-cloud/docs/use-advanced-search-with-jira-query-language-jql/)
-- [MCP Server - Atlassian](https://github.com/modelcontextprotocol/servers/tree/main/src/atlassian)
-- [MCP Protocol Specification](https://modelcontextprotocol.io)
-
----
-
-Built with ❤️ by [The Bushido Collective](https://thebushido.co)

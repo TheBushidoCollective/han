@@ -56,11 +56,3 @@ export SENTRY_ORG=your-org
 export SENTRY_PROJECT=your-project
 export SENTRY_AUTH_TOKEN=your-auth-token
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

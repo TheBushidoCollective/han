@@ -123,7 +123,3 @@ gluestack-ui is a universal UI component library for React and React Native that
 - Support for Next.js, Expo, and React Native
 
 Learn more at [gluestack.io](https://gluestack.io)
-
-## License
-
-Licensed under MIT - see repository for details.

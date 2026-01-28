@@ -72,7 +72,3 @@ Install with han CLI:
 ```bash
 han plugin install hashi-playwright-mcp
 ```
-
-## License
-
-Licensed under MIT - see repository for details.

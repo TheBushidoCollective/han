@@ -45,8 +45,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-rspec
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.

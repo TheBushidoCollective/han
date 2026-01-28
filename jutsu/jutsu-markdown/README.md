@@ -94,11 +94,3 @@ jutsu-markdown:
   lint:
     command: "npx -y markdownlint-cli --fix . --disable MD013"  # Ignore line length
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

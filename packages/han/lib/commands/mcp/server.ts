@@ -283,6 +283,147 @@ const LEARN_TOOLS: McpTool[] = [
 	},
 ];
 
+// Keep storage tools - scoped key-value storage
+import {
+	type Scope as KeepScope,
+	clear as keepClear,
+	list as keepList,
+	load as keepLoad,
+	remove as keepRemove,
+	save as keepSave,
+} from "../keep/storage.ts";
+
+const KEEP_TOOLS: McpTool[] = [
+	{
+		name: "han_keep_save",
+		description:
+			"Save content to scoped key-value storage. Use for persisting state across sessions (iteration state, scratchpads, blockers). Scopes: 'branch' (default) for branch-specific state, 'repo' for cross-branch state, 'global' for user-wide preferences.",
+		annotations: {
+			title: "Save to Keep Storage",
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				key: {
+					type: "string",
+					description:
+						"Storage key (filename). Examples: 'intent.md', 'iteration.json', 'scratchpad.md'",
+				},
+				content: {
+					type: "string",
+					description: "Content to save",
+				},
+				scope: {
+					type: "string",
+					enum: ["global", "repo", "branch"],
+					description:
+						"Storage scope. 'branch' (default): branch-specific. 'repo': shared across branches. 'global': shared across all repos.",
+				},
+			},
+			required: ["key", "content"],
+		},
+	},
+	{
+		name: "han_keep_load",
+		description:
+			"Load content from scoped key-value storage. Returns null if key doesn't exist.",
+		annotations: {
+			title: "Load from Keep Storage",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				key: {
+					type: "string",
+					description: "Storage key to load",
+				},
+				scope: {
+					type: "string",
+					enum: ["global", "repo", "branch"],
+					description: "Storage scope (default: 'branch')",
+				},
+			},
+			required: ["key"],
+		},
+	},
+	{
+		name: "han_keep_list",
+		description: "List all keys in a storage scope.",
+		annotations: {
+			title: "List Keep Storage Keys",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				scope: {
+					type: "string",
+					enum: ["global", "repo", "branch"],
+					description: "Storage scope to list (default: 'branch')",
+				},
+			},
+		},
+	},
+	{
+		name: "han_keep_delete",
+		description: "Delete a key from scoped storage.",
+		annotations: {
+			title: "Delete from Keep Storage",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				key: {
+					type: "string",
+					description: "Storage key to delete",
+				},
+				scope: {
+					type: "string",
+					enum: ["global", "repo", "branch"],
+					description: "Storage scope (default: 'branch')",
+				},
+			},
+			required: ["key"],
+		},
+	},
+	{
+		name: "han_keep_clear",
+		description: "Clear all keys in a storage scope.",
+		annotations: {
+			title: "Clear Keep Storage",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: false,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				scope: {
+					type: "string",
+					enum: ["global", "repo", "branch"],
+					description: "Storage scope to clear (default: 'branch')",
+				},
+			},
+		},
+	},
+];
+
 // Hook management tools for deferred execution
 // Note: hook_wait was removed - use `han hook wait <orchestration-id>` CLI command instead
 const HOOK_TOOLS: McpTool[] = [
@@ -432,6 +573,8 @@ async function handleToolsList(): Promise<unknown> {
 		...(memoryEnabled ? LEARN_TOOLS : []),
 		// Hook management tools (always available)
 		...HOOK_TOOLS,
+		// Keep storage tools (always available)
+		...KEEP_TOOLS,
 	];
 	return {
 		tools: allTools,
@@ -647,6 +790,152 @@ async function handleToolsCall(params: {
 					{
 						type: "text",
 						text: `Error executing learn: ${message}`,
+					},
+				],
+				isError: true,
+			};
+		}
+	}
+
+	// Handle keep storage tools
+	const isKeepTool = KEEP_TOOLS.some((t) => t.name === params.name);
+
+	if (isKeepTool) {
+		try {
+			const scope = (args.scope as KeepScope) || "branch";
+
+			switch (params.name) {
+				case "han_keep_save": {
+					const key = args.key as string;
+					const content = args.content as string;
+
+					if (!key || content === undefined) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameters: key, content",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					keepSave(scope, key, content);
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Saved to ${scope}:${key}`,
+							},
+						],
+					};
+				}
+
+				case "han_keep_load": {
+					const key = args.key as string;
+
+					if (!key) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameter: key",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					const content = keepLoad(scope, key);
+					if (content === null) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: `Key not found: ${scope}:${key}`,
+								},
+							],
+							isError: true,
+						};
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: content,
+							},
+						],
+					};
+				}
+
+				case "han_keep_list": {
+					const keys = keepList(scope);
+					return {
+						content: [
+							{
+								type: "text",
+								text:
+									keys.length > 0
+										? `Keys in ${scope} scope:\n${keys.join("\n")}`
+										: `No keys in ${scope} scope`,
+							},
+						],
+					};
+				}
+
+				case "han_keep_delete": {
+					const key = args.key as string;
+
+					if (!key) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: "Missing required parameter: key",
+								},
+							],
+							isError: true,
+						};
+					}
+
+					const deleted = keepRemove(scope, key);
+					return {
+						content: [
+							{
+								type: "text",
+								text: deleted
+									? `Deleted ${scope}:${key}`
+									: `Key not found: ${scope}:${key}`,
+							},
+						],
+						isError: !deleted,
+					};
+				}
+
+				case "han_keep_clear": {
+					const count = keepClear(scope);
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Cleared ${count} key(s) from ${scope} scope`,
+							},
+						],
+					};
+				}
+
+				default:
+					throw new Error(`Unknown keep tool: ${params.name}`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Error executing ${params.name}: ${message}`,
 					},
 				],
 				isError: true,

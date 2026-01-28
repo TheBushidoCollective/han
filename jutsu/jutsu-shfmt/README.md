@@ -207,11 +207,3 @@ repos:
 | **ShellCheck** | Linter | Bugs, pitfalls, best practices |
 
 Both tools complement each other. Use ShellCheck for catching bugs and shfmt for consistent formatting.
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.
