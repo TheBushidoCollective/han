@@ -12,6 +12,7 @@ import {
   getActiveEnvironment,
   setActiveEnvironmentId,
 } from './environments.ts';
+import { getCoordinatorPort } from './port.ts';
 
 /**
  * Build-time injected URLs (replaced by Bun.build define)
@@ -19,12 +20,6 @@ import {
  */
 declare const __GRAPHQL_URL__: string | undefined;
 declare const __GRAPHQL_WS_URL__: string | undefined;
-
-/**
- * Default coordinator port for local development
- * Matches DEFAULT_COORDINATOR_PORT in packages/han
- */
-const COORDINATOR_PORT = 41957;
 
 export interface GraphQLEndpoints {
   http: string;
@@ -133,17 +128,19 @@ export function getGraphQLEndpoints(): GraphQLEndpoints {
       });
   }
 
-  // Hosted dashboard mode fallback - connect to default port
+  // Hosted dashboard mode fallback - connect to coordinator port from URL
   if (isHostedMode()) {
+    const port = getCoordinatorPort();
     return {
-      http: `https://coordinator.local.han.guru:${COORDINATOR_PORT}/graphql`,
-      ws: `wss://coordinator.local.han.guru:${COORDINATOR_PORT}/graphql`,
+      http: `https://coordinator.local.han.guru:${port}/graphql`,
+      ws: `wss://coordinator.local.han.guru:${port}/graphql`,
     };
   }
 
   // Local development mode - connect via HTTP
+  const port = getCoordinatorPort();
   return {
-    http: `http://127.0.0.1:${COORDINATOR_PORT}/graphql`,
-    ws: `ws://127.0.0.1:${COORDINATOR_PORT}/graphql`,
+    http: `http://127.0.0.1:${port}/graphql`,
+    ws: `ws://127.0.0.1:${port}/graphql`,
   };
 }

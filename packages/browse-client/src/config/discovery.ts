@@ -7,6 +7,7 @@
  */
 
 import type { Environment } from './environments.ts';
+import { getCoordinatorPort } from './port.ts';
 
 /**
  * Han port range for coordinator services
@@ -17,8 +18,21 @@ const PORT_RANGE_END = 41999;
 
 /**
  * Default ports to check first (most likely to be in use)
+ * Prioritizes the port from URL query parameter if provided
  */
-const PRIORITY_PORTS = [41957, 41956, 41900, 41901];
+function getPriorityPorts(): number[] {
+  const urlPort = getCoordinatorPort();
+  const defaultPorts = [41957, 41956, 41900, 41901];
+  // If URL specifies a port, check it first
+  if (urlPort && !defaultPorts.includes(urlPort)) {
+    return [urlPort, ...defaultPorts];
+  }
+  // If URL port is in defaults, move it to front
+  if (urlPort && defaultPorts.includes(urlPort)) {
+    return [urlPort, ...defaultPorts.filter((p) => p !== urlPort)];
+  }
+  return defaultPorts;
+}
 
 /**
  * Probe a single port to see if a coordinator is running
@@ -58,7 +72,7 @@ export async function discoverCoordinators(
   const environments: Environment[] = [];
 
   // Check priority ports first
-  for (const port of PRIORITY_PORTS) {
+  for (const port of getPriorityPorts()) {
     if (signal?.aborted) break;
 
     const isRunning = await probeCoordinator(port);
@@ -81,7 +95,7 @@ export async function discoverCoordinators(
   // Scan remaining ports in the range
   for (let port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
     if (signal?.aborted) break;
-    if (PRIORITY_PORTS.includes(port)) continue; // Already checked
+    if (getPriorityPorts().includes(port)) continue; // Already checked
 
     const isRunning = await probeCoordinator(port);
     if (isRunning) {
@@ -105,7 +119,7 @@ export async function discoverCoordinators(
 export async function quickDiscoverCoordinator(): Promise<Environment | null> {
   // Check priority ports in parallel
   const results = await Promise.allSettled(
-    PRIORITY_PORTS.map(async (port) => {
+    getPriorityPorts().map(async (port) => {
       const isRunning = await probeCoordinator(port);
       return { port, isRunning };
     })
