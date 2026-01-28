@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePaperChanges } from "./PaperChangesContext";
 
 interface TocItem {
 	id: string;
@@ -21,6 +22,7 @@ interface SectionChange {
 interface PaperTableOfContentsProps {
 	content: string;
 	sectionChanges?: SectionChange[];
+	children?: React.ReactNode;
 }
 
 /**
@@ -98,8 +100,10 @@ function extractHeadings(content: string): TocItem[] {
 export default function PaperTableOfContents({
 	content,
 	sectionChanges = [],
+	children,
 }: PaperTableOfContentsProps) {
 	const [activeId, setActiveId] = useState<string>("");
+	const { showChanges, setShowChanges } = usePaperChanges();
 	const navRef = useRef<HTMLElement>(null);
 	const headings = extractHeadings(content);
 
@@ -110,50 +114,48 @@ export default function PaperTableOfContents({
 	);
 
 	useEffect(() => {
-		// Track which headings are currently visible
-		const visibleHeadings = new Set<string>();
+		if (headings.length === 0) return;
 
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) {
-						visibleHeadings.add(entry.target.id);
+		// Find the heading that's closest to (but above) the current scroll position
+		const findActiveHeading = () => {
+			const scrollTop = window.scrollY;
+			const offset = 120; // Account for sticky header
+
+			let activeHeading = headings[0].id;
+
+			for (const heading of headings) {
+				const element = document.getElementById(heading.id);
+				if (element) {
+					const top = element.getBoundingClientRect().top + scrollTop;
+					if (top <= scrollTop + offset) {
+						activeHeading = heading.id;
 					} else {
-						visibleHeadings.delete(entry.target.id);
+						break;
 					}
 				}
-
-				// Find the first visible heading in document order
-				for (const heading of headings) {
-					if (visibleHeadings.has(heading.id)) {
-						setActiveId(heading.id);
-						return;
-					}
-				}
-
-				// If no heading is visible, keep the last active one
-			},
-			{
-				rootMargin: "-100px 0px -60% 0px",
-				threshold: 0,
-			},
-		);
-
-		// Observe all heading elements
-		for (const heading of headings) {
-			const element = document.getElementById(heading.id);
-			if (element) {
-				observer.observe(element);
 			}
-		}
 
-		// Set initial active heading
-		if (headings.length > 0 && !activeId) {
-			setActiveId(headings[0].id);
-		}
+			setActiveId(activeHeading);
+		};
 
-		return () => observer.disconnect();
-	}, [headings, activeId]);
+		// Run on mount
+		findActiveHeading();
+
+		// Run on scroll with throttling
+		let ticking = false;
+		const handleScroll = () => {
+			if (!ticking) {
+				requestAnimationFrame(() => {
+					findActiveHeading();
+					ticking = false;
+				});
+				ticking = true;
+			}
+		};
+
+		window.addEventListener("scroll", handleScroll, { passive: true });
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, [headings]);
 
 	// Auto-scroll TOC to keep active item visible near top
 	useEffect(() => {
@@ -186,32 +188,58 @@ export default function PaperTableOfContents({
 
 	return (
 		<nav ref={navRef} className="max-h-[calc(100vh-8rem)] overflow-y-auto pr-4">
-			{/* What's New Summary */}
+			{/* What's New Summary - Collapsible */}
 			{hasChanges && (
 				<div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-					<h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-						What&apos;s New
-					</h4>
-					<div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-						{newSections.length > 0 && (
-							<div className="flex items-center gap-2">
-								<span className="w-2 h-2 rounded-full bg-green-500" />
-								<span>
-									{newSections.length} new section
-									{newSections.length > 1 ? "s" : ""}
-								</span>
-							</div>
-						)}
-						{updatedSections.length > 0 && (
-							<div className="flex items-center gap-2">
-								<span className="w-2 h-2 rounded-full bg-yellow-400" />
-								<span>
-									{updatedSections.length} updated section
-									{updatedSections.length > 1 ? "s" : ""}
-								</span>
-							</div>
-						)}
-					</div>
+					<button
+						type="button"
+						onClick={() => setShowChanges(!showChanges)}
+						className="flex items-center justify-between w-full text-left group"
+					>
+						<h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+							What&apos;s New
+						</h4>
+						<span className="flex items-center gap-2">
+							<span className="text-xs text-gray-500 dark:text-gray-400">
+								{newSections.length + updatedSections.length}
+							</span>
+							<svg
+								className={`w-4 h-4 text-gray-400 transition-transform ${showChanges ? "rotate-180" : ""}`}
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M19 9l-7 7-7-7"
+								/>
+							</svg>
+						</span>
+					</button>
+					{showChanges && (
+						<div className="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+							{newSections.length > 0 && (
+								<div className="flex items-center gap-2">
+									<span className="w-2 h-2 rounded-full bg-green-500" />
+									<span>
+										{newSections.length} new section
+										{newSections.length > 1 ? "s" : ""}
+									</span>
+								</div>
+							)}
+							{updatedSections.length > 0 && (
+								<div className="flex items-center gap-2">
+									<span className="w-2 h-2 rounded-full bg-yellow-400" />
+									<span>
+										{updatedSections.length} updated section
+										{updatedSections.length > 1 ? "s" : ""}
+									</span>
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 
@@ -220,7 +248,9 @@ export default function PaperTableOfContents({
 			</h4>
 			<ul className="space-y-1 text-sm">
 				{headings.map((heading) => {
-					const badge = getHeadingBadge(heading.text, sectionChanges);
+					const badge = showChanges
+						? getHeadingBadge(heading.text, sectionChanges)
+						: null;
 					return (
 						<li
 							key={heading.id}
@@ -249,6 +279,7 @@ export default function PaperTableOfContents({
 					);
 				})}
 			</ul>
+			{children}
 		</nav>
 	);
 }

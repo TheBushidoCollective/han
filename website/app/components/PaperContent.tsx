@@ -384,14 +384,19 @@ export default function PaperContent({
 	content,
 	initialSectionChanges,
 }: PaperContentProps) {
-	const { sectionChanges, compareContent, compareVersion, isLoadingCompare } =
-		usePaperChanges();
+	const {
+		sectionChanges,
+		showChanges,
+		compareContent,
+		compareVersion,
+		isLoadingCompare,
+	} = usePaperChanges();
 
 	// Use context sectionChanges if available, otherwise fall back to initial
 	const changes =
 		sectionChanges.length > 0 ? sectionChanges : initialSectionChanges;
 
-	// Create heading components that add badges
+	// Create heading components that add badges (only when showChanges is true)
 	const createHeading = (level: 2 | 3 | 4) => {
 		const HeadingComponent = ({
 			children,
@@ -406,7 +411,7 @@ export default function PaperContent({
 						? children.filter((c) => typeof c === "string").join("")
 						: "";
 
-			const badge = getSectionBadge(headingText, changes);
+			const badge = showChanges ? getSectionBadge(headingText, changes) : null;
 			const Tag = `h${level}` as const;
 
 			// Use flex layout for proper badge alignment

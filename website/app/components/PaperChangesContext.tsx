@@ -40,6 +40,9 @@ interface SectionChange {
 
 interface PaperChangesContextType {
 	sectionChanges: SectionChange[];
+	// Show/hide change indicators
+	showChanges: boolean;
+	setShowChanges: (show: boolean) => void;
 	// Compare functionality
 	compareVersion: string | null;
 	setCompareVersion: (version: string | null) => void;
@@ -61,6 +64,7 @@ export function PaperChangesProvider({
 	children: ReactNode;
 	sectionChanges: SectionChange[];
 }) {
+	const [showChanges, setShowChanges] = useState(false);
 	const [compareVersion, setCompareVersion] = useState<string | null>(null);
 	const [compareContent, setCompareContent] = useState<string | null>(null);
 	const [isLoadingCompare, setIsLoadingCompare] = useState(false);
@@ -106,6 +110,8 @@ export function PaperChangesProvider({
 		<PaperChangesContext.Provider
 			value={{
 				sectionChanges,
+				showChanges,
+				setShowChanges,
 				compareVersion,
 				setCompareVersion: handleSetCompareVersion,
 				compareContent,
@@ -123,6 +129,8 @@ export function usePaperChanges() {
 	if (!context) {
 		return {
 			sectionChanges: [],
+			showChanges: false,
+			setShowChanges: () => {},
 			compareVersion: null,
 			setCompareVersion: () => {},
 			compareContent: null,
