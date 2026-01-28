@@ -2,9 +2,12 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Command } from "commander";
+import {
+	getMergedPluginsAndMarketplaces,
+	getMergedSettings,
+} from "../config/claude-settings.ts";
 import { getMergedHanConfig } from "../config/han-settings.ts";
 import { tryGetNativeModule } from "../native.ts";
-import { readGlobalSettings } from "../shared.ts";
 
 interface DiagnosticResult {
 	name: string;
@@ -96,44 +99,21 @@ function checkConfigFiles(): DiagnosticResult {
 }
 
 /**
- * Check installed plugins
+ * Check enabled plugins from merged settings (all scopes)
  */
 function checkPlugins(): DiagnosticResult {
-	const pluginsDir = join(
-		homedir(),
-		".claude",
-		"plugins",
-		"marketplaces",
-		"han",
-	);
-	const pluginTypes = ["jutsu", "do", "hashi"];
-	const installed: string[] = [];
+	const { plugins } = getMergedPluginsAndMarketplaces();
+	const enabled: string[] = [];
 
-	for (const type of pluginTypes) {
-		const typeDir = join(pluginsDir, type);
-		if (existsSync(typeDir)) {
-			try {
-				const { readdirSync } = require("node:fs");
-				const plugins = readdirSync(typeDir);
-				for (const plugin of plugins) {
-					installed.push(`${type}/${plugin}`);
-				}
-			} catch {
-				// Directory exists but can't read
-			}
-		}
-	}
-
-	// Also check bushido
-	if (existsSync(join(pluginsDir, "bushido"))) {
-		installed.unshift("bushido");
+	for (const [pluginName, marketplace] of plugins) {
+		enabled.push(`${pluginName}@${marketplace}`);
 	}
 
 	return {
-		name: "Installed Plugins",
-		status: installed.length > 0 ? "ok" : "warning",
-		message: `${installed.length} plugins`,
-		details: installed.length > 0 ? installed : ["No plugins installed"],
+		name: "Enabled Plugins",
+		status: enabled.length > 0 ? "ok" : "warning",
+		message: `${enabled.length} plugins`,
+		details: enabled.length > 0 ? enabled : ["No plugins enabled"],
 	};
 }
 
@@ -158,11 +138,11 @@ function checkNativeModule(): DiagnosticResult {
 }
 
 /**
- * Check global settings for dispatch hooks
+ * Check dispatch hooks from merged settings (all scopes)
  */
-function checkGlobalHooks(): DiagnosticResult {
+function checkHooks(): DiagnosticResult {
 	try {
-		const settings = readGlobalSettings();
+		const settings = getMergedSettings();
 		const hooks = settings.hooks as Record<string, unknown[]> | undefined;
 
 		const hookTypes = ["SessionStart", "UserPromptSubmit"];
@@ -179,14 +159,14 @@ function checkGlobalHooks(): DiagnosticResult {
 		}
 
 		return {
-			name: "Global Hooks",
+			name: "Dispatch Hooks",
 			status: missing.length === 0 ? "ok" : "warning",
 			message: `${configured.length}/${hookTypes.length} configured`,
 			details: [...configured, ...missing],
 		};
 	} catch {
 		return {
-			name: "Global Hooks",
+			name: "Dispatch Hooks",
 			status: "warning",
 			message: "could not read settings",
 		};
@@ -250,7 +230,7 @@ export function runDiagnostics(): DiagnosticResult[] {
 		checkConfigFiles(),
 		checkPlugins(),
 		checkNativeModule(),
-		checkGlobalHooks(),
+		checkHooks(),
 		checkMemorySystem(),
 	];
 }
