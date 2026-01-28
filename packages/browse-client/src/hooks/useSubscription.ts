@@ -6,6 +6,7 @@
 
 import { type Client, createClient } from 'graphql-ws';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getGraphQLEndpoints } from '../config/urls.ts';
 
 /**
  * Singleton WebSocket client for subscriptions
@@ -18,10 +19,9 @@ function getWsClient(): Client {
   }
 
   if (!wsClient) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/graphql`;
+    const endpoints = getGraphQLEndpoints();
     wsClient = createClient({
-      url: wsUrl,
+      url: endpoints.ws,
       retryAttempts: 5,
       shouldRetry: () => true,
     });
