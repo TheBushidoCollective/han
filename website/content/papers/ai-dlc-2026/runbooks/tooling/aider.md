@@ -7,21 +7,17 @@
 Aider is an open-source AI coding assistant that runs in your terminal with tight git integration. It automatically commits changes with sensible messages, making it ideal for developers who live in the terminal and want a transparent, git-native workflow.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[📚 Git-native workflow]
-        S2[🔓 Open source]
-        S3[💻 Terminal-first]
-        S4[🔄 Automatic commits]
+        S1[Git-native workflow]
+        S2[Open source]
+        S3[Terminal-first]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Terminal users]
         B2[Git-heavy workflows]
-        B3[Open source projects]
-        B4[Transparent AI usage]
+        B3[Transparent AI usage]
     end
 
     style Strengths fill:#c8e6c9
@@ -153,11 +149,10 @@ aider --auto-commits
 ### 1. Git Integration
 
 ```mermaid
-flowchart LR
+flowchart TB
     Request[📝 Request] --> Aider[🤖 Aider]
-    Aider --> Code[💻 Code Changes]
+    Aider --> Code[💻 Changes]
     Code --> Commit[📚 Auto Commit]
-    Commit --> History[📜 Git History]
 
     style Commit fill:#c8e6c9
 ```

@@ -7,30 +7,20 @@
 AI-DLC doesn't require entirely new skills—it transforms existing ones.
 
 ```mermaid
-flowchart LR
-    subgraph Old["🔴 Traditional Skills"]
-        direction TB
-        O1[⌨️ Code writing]
-        O2[🐛 Debugging]
-        O3[👀 Code review]
-        O4[📋 Requirements analysis]
-    end
+flowchart TB
+    O1[⌨️ Code writing] -->|evolves| N1[💬 Prompting]
+    O2[🐛 Debugging] -->|evolves| N2[📊 Criteria]
+    O3[👀 Code review] -->|evolves| N3[✅ Verification]
+    O4[📋 Requirements] -->|evolves| N4[🎯 Intent]
 
-    subgraph New["🟢 AI-DLC Skills"]
-        direction TB
-        N1[💬 Prompt engineering]
-        N2[📊 Criteria definition]
-        N3[✅ Output verification]
-        N4[🎯 Intent articulation]
-    end
-
-    O1 -->|"Evolves to"| N1
-    O2 -->|"Evolves to"| N2
-    O3 -->|"Evolves to"| N3
-    O4 -->|"Evolves to"| N4
-
-    style Old fill:#ffcdd2
-    style New fill:#c8e6c9
+    style O1 fill:#ffcdd2
+    style O2 fill:#ffcdd2
+    style O3 fill:#ffcdd2
+    style O4 fill:#ffcdd2
+    style N1 fill:#c8e6c9
+    style N2 fill:#c8e6c9
+    style N3 fill:#c8e6c9
+    style N4 fill:#c8e6c9
 ```
 
 ## Core AI-DLC Skills
@@ -152,19 +142,15 @@ Efficiently verifying AI output without reviewing every line.
 4. **Pattern matching** — Does it follow project conventions?
 
 ```mermaid
-flowchart LR
-    O[AI Output] --> A[Automated Checks]
-    A -->|Pass| C[Criteria Check]
-    A -->|Fail| R1[Reject + Feedback]
-    C -->|Pass| S[Spot Check]
-    C -->|Fail| R2[Reject + Feedback]
-    S -->|Pass| Accept
-    S -->|Fail| R3[Reject + Feedback]
+flowchart TB
+    O[AI Output] --> A[Auto Checks]
+    A -->|Pass| C[Criteria]
+    A -->|Fail| R[Reject]
+    C -->|Pass| Accept[✅]
+    C -->|Fail| R
 
     style Accept fill:#c8e6c9
-    style R1 fill:#ffcdd2
-    style R2 fill:#ffcdd2
-    style R3 fill:#ffcdd2
+    style R fill:#ffcdd2
 ```
 
 ## Training Paths by Role
@@ -210,16 +196,15 @@ flowchart LR
 ### Pairing Protocol
 
 ```mermaid
-flowchart LR
-    subgraph Pairing["Effective AI-DLC Pairing"]
-        direction TB
-        P1[One person prompts]
-        P2[Other person verifies]
-        P3[Rotate roles]
-        P4[Discuss discrepancies]
-    end
+flowchart TB
+    P1[Prompt] --> P2[Verify]
+    P2 --> P3[Rotate]
+    P3 --> P4[Discuss]
 
-    style Pairing fill:#e1f5fe
+    style P1 fill:#e1f5fe
+    style P2 fill:#e1f5fe
+    style P3 fill:#e1f5fe
+    style P4 fill:#e1f5fe
 ```
 
 **Why this works:** Forces articulation of intent and criteria, builds shared vocabulary.

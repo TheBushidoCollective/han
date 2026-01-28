@@ -7,36 +7,32 @@
 AI-DLC adoption follows a predictable pattern. Rushing stages leads to failure; respecting the journey leads to sustainable transformation.
 
 ```mermaid
-flowchart LR
-    subgraph Stage1["🔭 Stage 1: Explore"]
-        direction TB
-        S1A[Select pilot team]
-        S1B[Define success criteria]
-        S1C[Set up tooling]
+flowchart TB
+    subgraph Stage1["🔭 Explore"]
+        S1A[Pilot team]
+        S1B[Success criteria]
     end
 
-    subgraph Stage2["🧪 Stage 2: Pilot"]
-        direction TB
+    Stage1 --> Stage2
+
+    subgraph Stage2["🧪 Pilot"]
         S2A[Single team]
         S2B[Limited scope]
-        S2C[Heavy support]
     end
 
-    subgraph Stage3["📈 Stage 3: Expand"]
-        direction TB
+    Stage2 --> Stage3
+
+    subgraph Stage3["📈 Expand"]
         S3A[Multiple teams]
-        S3B[Broader scope]
-        S3C[Self-sufficient]
+        S3B[Self-sufficient]
     end
 
-    subgraph Stage4["🚀 Stage 4: Scale"]
-        direction TB
+    Stage3 --> Stage4
+
+    subgraph Stage4["🚀 Scale"]
         S4A[All teams]
         S4B[Default approach]
-        S4C[Optimized]
     end
-
-    Stage1 --> Stage2 --> Stage3 --> Stage4
 
     style Stage1 fill:#e1f5fe
     style Stage2 fill:#fff3e0

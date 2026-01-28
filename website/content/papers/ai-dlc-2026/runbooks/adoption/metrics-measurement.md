@@ -7,33 +7,25 @@
 AI-DLC fundamentally changes what we're measuring. Velocity in story points? Lines of code? These metrics were proxies for value delivery—proxies that break when AI changes the equation.
 
 ```mermaid
-flowchart LR
-    subgraph Old["📉 Traditional Metrics"]
-        direction TB
-        O1[📊 Story points/sprint]
-        O2[📝 Lines of code]
-        O3[🐛 Bugs per release]
-        O4[⏱️ Time to complete]
-    end
-
-    subgraph Problem["❌ Why They Fail"]
-        direction TB
-        P1[🤷 AI makes points meaningless]
-        P2[💨 AI generates more code faster]
-        P3[🎯 Catches bugs earlier]
-        P4[⚡ Completion time collapses]
-    end
-
-    subgraph New["✅ AI-DLC Metrics"]
-        direction TB
-        N1[📈 Unit completion rate]
-        N2[🎯 Criteria effectiveness]
-        N3[⚙️ Mode efficiency]
-        N4[🔄 Value cycle time]
+flowchart TB
+    subgraph Old["📉 Traditional"]
+        O1[Story points]
+        O2[Lines of code]
     end
 
     Old --> Problem
+
+    subgraph Problem["❌ Fail"]
+        P1[AI breaks points]
+        P2[AI generates fast]
+    end
+
     Problem --> New
+
+    subgraph New["✅ AI-DLC"]
+        N1[Completion rate]
+        N2[Criteria quality]
+    end
 
     style Old fill:#ffcdd2
     style Problem fill:#fff3e0
@@ -163,22 +155,21 @@ Value is harder to quantify. Options:
 4. **Opportunity cost** — What else could the team build?
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Costs["💰 Costs"]
-        C1[🤖 API: $200/dev/mo]
-        C2[📚 Training: 20h initial]
-        C3[🖥️ Infrastructure: minimal]
+        C1[API costs]
+        C2[Training]
     end
+
+    Costs --> ROI
 
     subgraph Value["💎 Value"]
-        V1[📈 2x throughput]
-        V2[🐛 50% fewer defects]
-        V3[🚀 Faster time to market]
+        V1[2x throughput]
+        V2[Fewer defects]
     end
 
-    Costs --> ROI{📊 ROI Calculation}
     Value --> ROI
-    ROI --> Result[✨ Typical: 3-10x]
+    ROI{ROI} --> Result[3-10x]
 
     style Costs fill:#ffcdd2
     style Value fill:#c8e6c9

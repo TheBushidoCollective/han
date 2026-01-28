@@ -7,21 +7,17 @@
 GitHub Copilot is trained on billions of lines of code and integrates directly into your editor. It suggests completions as you type, making it the most frictionless AI coding experience. Copilot excels at everyday coding tasks and has the broadest IDE support.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[🔌 Broad IDE support]
-        S2[⚡ Fast completions]
-        S3[🏢 Enterprise features]
-        S4[📚 Trained on vast codebase]
+        S1[Broad IDE support]
+        S2[Fast completions]
+        S3[Enterprise features]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Daily coding tasks]
         B2[Boilerplate code]
-        B3[Enterprise teams]
-        B4[Multi-IDE workflows]
+        B3[Multi-IDE workflows]
     end
 
     style Strengths fill:#c8e6c9
@@ -129,11 +125,10 @@ Trust completions for well-understood patterns:
 ### 1. Inline Suggestions
 
 ```mermaid
-flowchart LR
-    Type[⌨️ Type code] --> Ghost[👻 Ghost text appears]
-    Ghost --> Tab[Tab to accept]
-    Ghost --> Esc[Esc to dismiss]
-    Ghost --> Alt[Alt+] to cycle]
+flowchart TB
+    Type[⌨️ Type] --> Ghost[👻 Ghost text]
+    Ghost --> Tab[Tab ✅]
+    Ghost --> Esc[Esc ❌]
 
     style Tab fill:#c8e6c9
 ```

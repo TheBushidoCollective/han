@@ -266,20 +266,22 @@ Some tasks are poorly suited to current AI capabilities:
 AI capabilities are improving. Current limitations may be temporary:
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Now["2026 State"]
-        N1[Context: 100-200K tokens]
-        N2[Reasoning: Good for patterns]
-        N3[Knowledge: Training cutoff]
+        direction TB
+        N1[Context: 100-200K]
+        N2[Pattern matching]
+        N3[Training cutoff]
     end
 
-    subgraph Future["Expected Evolution"]
-        F1[Context: 1M+ tokens]
-        F2[Reasoning: Multi-step chains]
-        F3[Knowledge: Live retrieval]
-    end
+    Now -->|"Improving"| Future
 
-    Now -->|"Ongoing improvement"| Future
+    subgraph Future["Expected"]
+        direction TB
+        F1[Context: 1M+]
+        F2[Multi-step reasoning]
+        F3[Live retrieval]
+    end
 
     style Now fill:#fff3e0
     style Future fill:#c8e6c9

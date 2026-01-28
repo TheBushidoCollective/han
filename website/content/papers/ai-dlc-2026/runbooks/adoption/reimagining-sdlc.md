@@ -7,22 +7,17 @@
 Many teams attempt AI adoption by inserting AI tools into existing phases:
 
 ```mermaid
-flowchart LR
-    subgraph Traditional["🔴 Traditional SDLC (Retrofitted)"]
-        A[💡 Ideation] --> B[🎨 Design]
-        B --> C[🔧 Refinement]
-        C --> D[✅ Acceptance Criteria]
-        D --> E[📐 Technical Planning]
-        E --> F[💻 Development]
-        F --> G[🧪 Verification]
-        G --> H[🚀 Deployment]
-    end
+flowchart TB
+    A[💡 Ideation] --> B[🎨 Design]
+    B --> C[✅ Criteria]
+    C --> D[💻 Dev]
+    D --> E[🧪 Verify]
+    E --> F[🚀 Deploy]
 
-    AI1[🤖 AI Assistant] -.-> F
-    AI2[🤖 AI Code Review] -.-> G
+    AI[🤖 AI] -.-> D
+    AI -.-> E
 
-    style AI1 fill:#ff9999
-    style AI2 fill:#ff9999
+    style AI fill:#ff9999
 ```
 
 **Problems with retrofitting:**
@@ -39,30 +34,24 @@ AI-DLC 2026 collapses phases where AI accelerates iteration:
 
 ```mermaid
 flowchart TB
-    subgraph Inception["💡 INCEPTION: Mob Elaboration"]
-        direction LR
-        I1[🎯 Intent] --> I2[🔀 Decomposition]
-        I2 --> I3[📋 Units + Criteria]
-    end
-
-    subgraph Construction["🔨 CONSTRUCTION: Bolts"]
-        direction TB
-        C1[🎯 Mode Selection]
-        C1 --> C2[👀 Supervised]
-        C1 --> C3[👁️ Observed]
-        C1 --> C4[🤖 Autonomous]
-        C2 --> C5[✅ Verified Code]
-        C3 --> C5
-        C4 --> C5
-    end
-
-    subgraph Operations["🚀 OPERATIONS"]
-        direction LR
-        O1[📦 Deployment] --> O2[🤖 Autonomous Ops]
+    subgraph Inception["💡 INCEPTION"]
+        I1[🎯 Intent] --> I2[📋 Units]
     end
 
     Inception --> Construction
+
+    subgraph Construction["🔨 CONSTRUCTION"]
+        C1{Mode} --> C2[Supervised]
+        C1 --> C3[Autonomous]
+        C2 --> C4[✅ Code]
+        C3 --> C4
+    end
+
     Construction --> Operations
+
+    subgraph Operations["🚀 OPERATIONS"]
+        O1[📦 Deploy] --> O2[🤖 Monitor]
+    end
 
     style Inception fill:#e1f5fe
     style Construction fill:#fff3e0
@@ -74,20 +63,18 @@ flowchart TB
 ### Traditional: 4 Phases → AI-DLC: 1 Ritual
 
 ```mermaid
-flowchart LR
-    subgraph Before["🔴 Traditional (Sequential)"]
-        direction TB
-        T1[💡 Ideation<br/>👤 Human] --> T2[🎨 Design<br/>👤 Human]
-        T2 --> T3[🔧 Refinement<br/>👤 Human]
-        T3 --> T4[✅ Criteria<br/>👤 Human]
+flowchart TB
+    subgraph Before["🔴 Traditional"]
+        T1[Ideation] --> T2[Design]
+        T2 --> T3[Refine]
+        T3 --> T4[Criteria]
     end
 
-    subgraph After["🟢 AI-DLC (Collaborative)"]
-        direction TB
-        A1[👥 Mob Elaboration<br/>🤝 Human + AI]
-    end
+    Before -->|"Collapses"| After
 
-    Before -->|"Collapses into"| After
+    subgraph After["🟢 AI-DLC"]
+        A1[👥 Mob Elaboration]
+    end
 
     style Before fill:#ffcdd2
     style After fill:#c8e6c9
@@ -105,22 +92,19 @@ flowchart LR
 ### Traditional: 3 Phases → AI-DLC: Iterative Loops
 
 ```mermaid
-flowchart LR
-    subgraph Before["🔴 Traditional (Sequential)"]
-        direction TB
-        T1[📐 Technical Planning<br/>👤 Human] --> T2[💻 Development<br/>👤 Human + 🤖 AI Tool]
-        T2 --> T3[🧪 Verification<br/>👤 Human]
+flowchart TB
+    subgraph Before["🔴 Traditional"]
+        T1[Plan] --> T2[Dev]
+        T2 --> T3[Verify]
     end
 
-    subgraph After["🟢 AI-DLC (Iterative)"]
-        direction TB
-        A1[⚡ Bolt Execution] --> A2{📋 Criteria Met?}
-        A2 -->|No| A3[🔙 Backpressure]
-        A3 --> A1
-        A2 -->|Yes| A4[✅ Complete]
-    end
+    Before -->|"Collapses"| After
 
-    Before -->|"Collapses into"| After
+    subgraph After["🟢 AI-DLC"]
+        A1[⚡ Bolt] --> A2{Done?}
+        A2 -->|No| A1
+        A2 -->|Yes| A3[✅]
+    end
 
     style Before fill:#ffcdd2
     style After fill:#c8e6c9

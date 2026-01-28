@@ -7,21 +7,17 @@
 Cody from Sourcegraph excels at understanding large, complex codebases. It indexes your entire project and provides context-aware answers by leveraging Sourcegraph's code intelligence platform. Ideal for enterprise teams working with massive monorepos.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[🔍 Deep code search]
-        S2[📚 Large codebase understanding]
-        S3[🏢 Enterprise features]
-        S4[🔗 Cross-repo context]
+        S1[Deep code search]
+        S2[Large codebase support]
+        S3[Enterprise features]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Large codebases]
         B2[Enterprise teams]
-        B3[Code exploration]
-        B4[Legacy understanding]
+        B3[Legacy understanding]
     end
 
     style Strengths fill:#c8e6c9
@@ -133,11 +129,10 @@ Use for batch operations:
 ### 1. Deep Code Search
 
 ```mermaid
-flowchart LR
-    Query[🔍 Search Query] --> Index[📚 Code Index]
-    Index --> Results[📋 Ranked Results]
-    Results --> Context[🧠 AI Context]
-    Context --> Answer[💬 Informed Answer]
+flowchart TB
+    Query[🔍 Query] --> Index[📚 Index]
+    Index --> Context[🧠 Context]
+    Context --> Answer[💬 Answer]
 
     style Answer fill:#c8e6c9
 ```
@@ -221,11 +216,9 @@ Pre-built commands for common tasks:
 ### Code Review Integration
 
 ```mermaid
-flowchart LR
-    PR[🔀 Pull Request] --> Cody[🤖 Cody Review]
-    Cody --> Issues[⚠️ Potential Issues]
-    Cody --> Suggestions[💡 Suggestions]
-    Cody --> Questions[❓ Questions]
+flowchart TB
+    PR[🔀 PR] --> Cody[🤖 Cody]
+    Cody --> Feedback[💡 Feedback]
 
     style Cody fill:#e1f5fe
 ```

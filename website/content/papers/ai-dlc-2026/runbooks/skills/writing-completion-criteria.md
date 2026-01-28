@@ -7,21 +7,24 @@
 Completion Criteria are the foundation of AI-DLC autonomy. Without programmatically verifiable criteria, every task requires human judgment, eliminating the efficiency gains of AI-assisted development.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Bad["❌ Weak Criteria"]
-        B1["Requires human judgment"]
-        B2["Subjective interpretation"]
-        B3["Endless debate"]
+        direction TB
+        B1["Human judgment"]
+        B2["Subjective"]
+        B3["Debate"]
     end
 
+    Bad -->|"Blocks"| Manual[🐌 Manual only]
+
     subgraph Good["✅ Strong Criteria"]
+        direction TB
         G1["Machine verifiable"]
         G2["Binary pass/fail"]
         G3["Clear completion"]
     end
 
-    Bad -->|"Blocks autonomy"| Manual[🐌 Manual mode only]
-    Good -->|"Enables autonomy"| Auto[🚀 Autonomous execution]
+    Good -->|"Enables"| Auto[🚀 Autonomous]
 
     style Manual fill:#ffcdd2
     style Auto fill:#c8e6c9

@@ -7,21 +7,17 @@
 Cursor is a VS Code fork rebuilt around AI. It provides the closest experience to having an AI pair programmer that understands your project context. Unlike delegation-based tools, Cursor excels at "flow state" coding—fast, inline edits while you type.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[⚡ Inline completions]
-        S2[💬 Chat in context]
-        S3[🔍 Codebase awareness]
-        S4[🎨 VS Code ecosystem]
+        S1[Inline completions]
+        S2[Chat in context]
+        S3[Codebase awareness]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Flow state coding]
         B2[Quick iterations]
-        B3[Learning codebases]
-        B4[IDE-native workflow]
+        B3[IDE-native workflow]
     end
 
     style Strengths fill:#c8e6c9
@@ -126,12 +122,10 @@ You: [Review diff, accept all or selectively]
 ### 1. Tab Completion
 
 ```mermaid
-flowchart LR
-    Type[⌨️ Start typing] --> Suggest[💭 AI suggests]
-    Suggest --> Tab[Tab to accept]
-    Suggest --> Esc[Esc to reject]
-    Tab --> Continue[Continue coding]
-    Esc --> Continue
+flowchart TB
+    Type[⌨️ Type] --> Suggest[💭 AI suggests]
+    Suggest --> Tab[Tab ✅]
+    Suggest --> Esc[Esc ❌]
 
     style Tab fill:#c8e6c9
     style Esc fill:#ffcdd2
@@ -246,10 +240,9 @@ npm test
 ### Git Integration
 
 ```mermaid
-flowchart LR
-    Code[💻 Code changes] --> Diff[📊 Review diff]
-    Diff --> Chat[💬 Ask about changes]
-    Chat --> Commit[📝 Generate commit message]
+flowchart TB
+    Code[💻 Changes] --> Diff[📊 Diff]
+    Diff --> Commit[📝 Commit]
 
     style Commit fill:#c8e6c9
 ```

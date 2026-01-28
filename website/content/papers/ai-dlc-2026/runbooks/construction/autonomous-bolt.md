@@ -384,14 +384,15 @@ hats:
 ### Event-Driven Flow
 
 ```mermaid
-flowchart LR
-    E1["task.start"] --> H1["Analyst"]
+flowchart TB
+    E1["task.start"]
+    E1 --> H1["Analyst"]
     H1 --> E2["requirements.clarified"]
     E2 --> H2["Developer"]
     H2 --> E3["code.written"]
     E3 --> H3["Reviewer"]
     H3 -->|"approved"| Complete
-    H3 -->|"changes_requested"| H2
+    H3 -->|"changes"| H2
 ```
 
 ### Coordination Patterns

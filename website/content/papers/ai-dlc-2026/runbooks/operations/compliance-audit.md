@@ -18,14 +18,15 @@ AI-DLC can integrate with regulated environments through structured audit patter
 Insert human audit points at strategic boundaries while allowing AI to operate autonomously between them:
 
 ```mermaid
-flowchart LR
-    I["Intent"] --> A1["Audit Point 1<br/><i>Requirements sign-off</i>"]
+flowchart TB
+    I["Intent"]
+    I --> A1["Audit 1: Requirements"]
     A1 --> U["Units"]
-    U --> A2["Audit Point 2<br/><i>Design approval</i>"]
+    U --> A2["Audit 2: Design"]
     A2 --> B["Bolts"]
-    B --> A3["Audit Point 3<br/><i>Code review</i>"]
+    B --> A3["Audit 3: Code"]
     A3 --> D["Deploy"]
-    D --> A4["Audit Point 4<br/><i>Release approval</i>"]
+    D --> A4["Audit 4: Release"]
 ```
 
 ### Characteristics

@@ -7,21 +7,17 @@
 Windsurf (originally Codeium, now part of OpenAI) is an AI-enhanced IDE built around Cascade—an autonomous agent that proactively pulls in context and executes multi-step tasks. Unlike reactive assistants, Cascade anticipates what you need and works ahead.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[🤖 Autonomous agent]
-        S2[🧠 Proactive context]
-        S3[📁 Multi-file execution]
-        S4[💨 Fast performance]
+        S1[Autonomous agent]
+        S2[Proactive context]
+        S3[Multi-file execution]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Autonomous workflows]
         B2[Multi-step tasks]
         B3[Codebase exploration]
-        B4[Agentic development]
     end
 
     style Strengths fill:#c8e6c9
@@ -252,13 +248,12 @@ Context hints:
 ### CI Integration
 
 ```mermaid
-flowchart LR
+flowchart TB
     Cascade[🌊 Cascade] --> Code[📝 Code]
-    Code --> Tests[🧪 Local Tests]
-    Tests -->|Pass| PR[🔀 Create PR]
-    Tests -->|Fail| Fix[🔧 Auto-fix]
-    Fix --> Tests
-    PR --> CI[⚙️ CI Pipeline]
+    Code --> Tests[🧪 Tests]
+    Tests -->|Pass| PR[🔀 PR]
+    Tests -->|Fail| Cascade
+    PR --> CI[⚙️ CI]
 
     style PR fill:#c8e6c9
 ```

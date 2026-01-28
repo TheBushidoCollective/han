@@ -7,21 +7,17 @@
 AI-DLC doesn't eliminate roles—it transforms them. Every role shifts from *doing the work* to *directing AI to do the work* and *verifying the outcomes*.
 
 ```mermaid
-flowchart LR
-    subgraph Before["🔴 Traditional Model"]
-        direction TB
-        H1[👤 Human Does Work]
-        H1 --> O1[📦 Output]
-    end
-
-    subgraph After["🟢 AI-DLC Model"]
-        direction TB
-        H2[🎯 Human Directs] --> A[🤖 AI Executes]
-        A --> H3[✅ Human Verifies]
-        H3 --> O2[📦 Output]
+flowchart TB
+    subgraph Before["🔴 Traditional"]
+        H1[👤 Human] --> O1[📦 Output]
     end
 
     Before -->|"Evolves"| After
+
+    subgraph After["🟢 AI-DLC"]
+        H2[🎯 Direct] --> A[🤖 Execute]
+        A --> H3[✅ Verify]
+    end
 
     style Before fill:#ffcdd2
     style After fill:#c8e6c9
@@ -204,7 +200,7 @@ flowchart TB
 Every role transformation follows the same pattern:
 
 ```mermaid
-flowchart LR
+flowchart TB
     D[Doing] --> DE[Defining]
     DE --> DI[Directing]
     DI --> V[Verifying]

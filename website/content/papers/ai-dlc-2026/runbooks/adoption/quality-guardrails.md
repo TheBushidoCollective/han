@@ -7,15 +7,14 @@
 AI can generate code faster than humans can review it. Guardrails ensure quality without becoming bottlenecks.
 
 ```mermaid
-flowchart LR
-    subgraph Philosophy["🛡️ Guardrail Philosophy"]
-        direction TB
-        P1[🤖 Automate what's automatable]
-        P2[🧠 Human judgment for edge cases]
-        P3[⚡ Fail fast, fix early]
-    end
+flowchart TB
+    P1[🤖 Automate]
+    P2[🧠 Human judgment]
+    P3[⚡ Fail fast]
 
-    style Philosophy fill:#c8e6c9
+    style P1 fill:#c8e6c9
+    style P2 fill:#c8e6c9
+    style P3 fill:#c8e6c9
 ```
 
 **Key principle:** Guardrails should be *fast* and *actionable*. A guardrail that takes 10 minutes to run or produces vague warnings is a bottleneck, not a safeguard.
@@ -84,18 +83,11 @@ Catch issues during AI generation.
 ### IDE Integration
 
 ```mermaid
-flowchart LR
-    AI[🤖 AI Generation] --> IDE[💻 IDE Checks]
-    IDE --> TS[📝 TypeScript Errors]
-    IDE --> Lint[🧹 Linting Warnings]
-    IDE --> Sec[🔒 Security Hints]
-
-    TS -->|Pass| Continue[✅ Continue]
-    Lint -->|Pass| Continue
-    Sec -->|Pass| Continue
-    TS -->|Fail| Stop[🛑 Immediate Feedback]
-    Lint -->|Fail| Stop
-    Sec -->|Fail| Stop
+flowchart TB
+    AI[🤖 AI] --> IDE[💻 IDE Checks]
+    IDE --> Checks[TS + Lint + Sec]
+    Checks -->|Pass| Continue[✅]
+    Checks -->|Fail| Stop[🛑]
 
     style Stop fill:#ffcdd2
     style Continue fill:#c8e6c9
@@ -197,23 +189,19 @@ export default defineConfig({
 ### Security Scanning
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Scans["🔍 Security Scans"]
-        direction TB
-        S1[📦 Dependency vulnerabilities]
-        S2[🔎 Code pattern analysis]
-        S3[🔑 Secret detection]
-        S4[📜 License compliance]
-    end
-
-    subgraph Actions["⚡ Actions"]
-        direction TB
-        A1[🚫 Block critical/high]
-        A2[⚠️ Warn on medium]
-        A3[📝 Report low]
+        S1[Dependencies]
+        S2[Code patterns]
+        S3[Secrets]
     end
 
     Scans --> Actions
+
+    subgraph Actions["⚡ Actions"]
+        A1[🚫 Block high]
+        A2[⚠️ Warn medium]
+    end
 
     style Scans fill:#e1f5fe
     style Actions fill:#c8e6c9
@@ -313,13 +301,12 @@ Catch what escaped earlier layers.
 ### Rollback Strategy
 
 ```mermaid
-flowchart LR
+flowchart TB
     Deploy[🚀 Deploy] --> Monitor[📊 Monitor]
-    Monitor -->|Healthy| Continue[✅ Continue]
-    Monitor -->|Issue| Decision{⚠️ Severity?}
-    Decision -->|High| Rollback[🔙 Immediate Rollback]
-    Decision -->|Medium| Investigate[🔍 Investigate]
-    Decision -->|Low| Track[📝 Track]
+    Monitor -->|OK| Continue[✅]
+    Monitor -->|Issue| Decision{Severity}
+    Decision -->|High| Rollback[🔙]
+    Decision -->|Low| Track[📝]
 
     style Rollback fill:#ffcdd2
     style Continue fill:#c8e6c9

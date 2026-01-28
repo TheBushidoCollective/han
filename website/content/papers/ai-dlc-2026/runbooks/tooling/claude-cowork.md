@@ -7,21 +7,17 @@
 Claude Cowork is Anthropic's agentic AI tool designed to handle everyday office work with the same autonomy as Claude Code. Unlike traditional conversational AI, Cowork's core positioning is "collaboration" not "chatting"—the experience is more like assigning tasks to a colleague than interacting with a chatbot.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[📁 File management]
-        S2[📊 Document creation]
-        S3[🔄 Autonomous execution]
-        S4[📝 Content organization]
+        S1[File management]
+        S2[Document creation]
+        S3[Autonomous execution]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Office tasks]
         B2[Document processing]
-        B3[File organization]
-        B4[Report drafting]
+        B3[Report drafting]
     end
 
     style Strengths fill:#c8e6c9
@@ -141,9 +137,9 @@ Approach: Trust Cowork to complete, verify final output
 ### 1. Document Processing
 
 ```mermaid
-flowchart LR
-    Input[📄 Scattered Notes] --> Cowork[🤖 Cowork]
-    Cowork --> Output[📊 Organized Report]
+flowchart TB
+    Input[📄 Notes] --> Cowork[🤖 Cowork]
+    Cowork --> Output[📊 Report]
 
     style Output fill:#c8e6c9
 ```
@@ -158,9 +154,9 @@ flowchart LR
 ### 2. File Organization
 
 ```mermaid
-flowchart LR
-    Messy[📁 Messy Folder] --> Cowork[🤖 Cowork]
-    Cowork --> Organized[📂 Organized Structure]
+flowchart TB
+    Messy[📁 Messy] --> Cowork[🤖 Cowork]
+    Cowork --> Organized[📂 Organized]
 
     style Organized fill:#c8e6c9
 ```
@@ -175,11 +171,11 @@ flowchart LR
 ### 3. Data Extraction
 
 ```mermaid
-flowchart LR
-    Screenshots[📸 Screenshots] --> Cowork[🤖 Cowork]
-    Cowork --> Spreadsheet[📊 Spreadsheet]
+flowchart TB
+    Screenshots[📸 Images] --> Cowork[🤖 Cowork]
+    Cowork --> Data[📊 Data]
 
-    style Spreadsheet fill:#c8e6c9
+    style Data fill:#c8e6c9
 ```
 
 **Examples:**

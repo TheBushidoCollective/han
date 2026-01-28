@@ -7,23 +7,19 @@
 If your team follows something like this:
 
 ```mermaid
-flowchart LR
-    A[💡 Initial<br/>Ideation] --> B[🎨 Design]
-    B --> C[🔧 Refinement]
-    C --> D[✅ Acceptance<br/>Criteria]
-    D --> E[📐 Technical<br/>Planning]
-    E --> F[💻 Development]
-    F --> G[🧪 Verification]
-    G --> H[🚀 Deployment]
+flowchart TB
+    A[💡 Ideation] --> B[🎨 Design]
+    B --> C[✅ Criteria]
+    C --> D[💻 Dev]
+    D --> E[🧪 Verify]
+    E --> F[🚀 Deploy]
 
     style A fill:#e3f2fd
     style B fill:#e3f2fd
     style C fill:#e3f2fd
-    style D fill:#e3f2fd
+    style D fill:#fff3e0
     style E fill:#fff3e0
-    style F fill:#fff3e0
-    style G fill:#fff3e0
-    style H fill:#e8f5e9
+    style F fill:#e8f5e9
 ```
 
 **You have 8 sequential phases with handoffs between each.**
@@ -33,25 +29,21 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Phase1["💡 INCEPTION"]
-        direction LR
         M[👥 Mob Elaboration]
     end
 
+    Phase1 --> Phase2
+
     subgraph Phase2["🔨 CONSTRUCTION"]
-        direction TB
-        MS[🎯 Mode Selection]
-        MS --> S[👀 Supervised<br/>Bolt]
-        MS --> O[👁️ Observed<br/>Bolt]
-        MS --> AU[🤖 Autonomous<br/>Bolt]
+        MS{Mode} --> S[Supervised]
+        MS --> AU[Autonomous]
     end
+
+    Phase2 --> Phase3
 
     subgraph Phase3["🚀 OPERATIONS"]
-        direction LR
-        D[📦 Deployment] --> AO[🤖 Autonomous<br/>Operations]
+        D[📦 Deploy]
     end
-
-    Phase1 --> Phase2
-    Phase2 --> Phase3
 
     style Phase1 fill:#e1f5fe
     style Phase2 fill:#fff3e0
@@ -137,20 +129,19 @@ flowchart TB
 ### Phase 8 → Operations
 
 ```mermaid
-flowchart LR
-    subgraph Old["🔴 Waterfall Phase 8"]
-        W8[🚀 Deployment]
-    end
-
-    subgraph New["🟢 AI-DLC: Operations"]
-        N1[📦 Deployment] --> N2[🤖 Autonomous<br/>Operations]
-        N2 --> N3{⚠️ Issue?}
-        N3 -->|"Within bounds"| N4[🤖 AI Responds]
-        N3 -->|"Escalate"| N5[👤 Human]
-        N4 --> N2
+flowchart TB
+    subgraph Old["🔴 Waterfall"]
+        W8[🚀 Deploy]
     end
 
     Old -->|"Expands"| New
+
+    subgraph New["🟢 AI-DLC"]
+        N1[📦 Deploy] --> N2[🤖 Monitor]
+        N2 --> N3{Issue?}
+        N3 -->|AI| N2
+        N3 -->|Human| N4[👤]
+    end
 
     style Old fill:#ffcdd2
     style New fill:#c8e6c9

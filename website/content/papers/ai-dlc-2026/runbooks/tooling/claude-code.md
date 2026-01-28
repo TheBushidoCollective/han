@@ -7,21 +7,17 @@
 Claude Code is a command-line tool that brings Claude's reasoning capabilities directly into your development workflow. Unlike inline completion tools, Claude Code operates as a delegation-based assistant—you describe what you want, and it executes multi-step plans autonomously.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Strengths["💪 Strengths"]
-        direction TB
-        S1[🧠 Deep reasoning]
-        S2[📁 Multi-file operations]
-        S3[🔧 Agentic execution]
-        S4[🎯 Complex refactoring]
+        S1[Deep reasoning]
+        S2[Multi-file ops]
+        S3[Agentic execution]
     end
 
     subgraph BestFor["🎯 Best For"]
-        direction TB
         B1[Large refactors]
-        B2[Architecture changes]
+        B2[Architecture]
         B3[Complex debugging]
-        B4[Code exploration]
     end
 
     style Strengths fill:#c8e6c9
@@ -186,18 +182,14 @@ claude "Fix any types in src/utils/ only"
 ### Continuous Verification
 
 ```mermaid
-flowchart LR
-    Claude[🤖 Claude Code] --> Change[📝 Code Change]
+flowchart TB
+    Claude[🤖 Claude Code] --> Change[📝 Change]
     Change --> Hook[🪝 Stop Hook]
-    Hook --> Tests[🧪 Tests]
-    Hook --> Types[📋 TypeCheck]
-    Hook --> Lint[🧹 Lint]
-    Tests -->|Pass| Done[✅ Complete]
-    Tests -->|Fail| Feedback[🔙 Backpressure]
-    Feedback --> Claude
+    Hook --> Verify[🧪 Tests + Types + Lint]
+    Verify -->|Pass| Done[✅ Complete]
+    Verify -->|Fail| Claude
 
     style Done fill:#c8e6c9
-    style Feedback fill:#ffcdd2
 ```
 
 ## Best Practices

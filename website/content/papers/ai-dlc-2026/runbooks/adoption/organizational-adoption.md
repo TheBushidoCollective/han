@@ -38,22 +38,18 @@ flowchart TB
 ### The Reframe
 
 ```mermaid
-flowchart LR
-    subgraph Old["😟 Fear Narrative"]
-        direction TB
-        O1[🤖 AI replaces developers]
-        O2[📉 Fewer people needed]
-        O3[🗑️ My skills are obsolete]
-    end
-
-    subgraph New["🌟 Elevation Narrative"]
-        direction TB
-        N1[🔄 AI handles routine]
-        N2[💎 Humans do higher-value work]
-        N3[🧠 My judgment is more valuable]
+flowchart TB
+    subgraph Old["😟 Fear"]
+        O1[AI replaces devs]
+        O2[Skills obsolete]
     end
 
     Old -->|"Reframe"| New
+
+    subgraph New["🌟 Elevation"]
+        N1[AI handles routine]
+        N2[Humans do high-value]
+    end
 
     style Old fill:#ffcdd2
     style New fill:#c8e6c9
@@ -100,13 +96,10 @@ Leadership should make explicit commitments:
 ### The Control Spectrum
 
 ```mermaid
-flowchart LR
-    subgraph Spectrum["Control Spectrum"]
-        direction TB
-        S1[Full Control: HITL]
-        S2[Oversight: Observed]
-        S3[Trust: Autonomous]
-    end
+flowchart TB
+    S1[🔴 HITL: Full Control]
+    S1 --> S2[🟡 Observed: Oversight]
+    S2 --> S3[🟢 Autonomous: Trust]
 
     style S1 fill:#ffcdd2
     style S2 fill:#fff3e0

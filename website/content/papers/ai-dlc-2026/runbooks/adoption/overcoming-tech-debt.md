@@ -44,7 +44,7 @@ Start with the fastest path to basic verification.
 **Objective:** Get any automated feedback loop working.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph MVP["Minimum Viable Quality"]
         direction TB
         M1[🧪 1 test that runs]

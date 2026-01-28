@@ -133,7 +133,7 @@ jobs:
 Testing is the primary backpressure mechanism in AI-DLC.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Testing["🧪 Test Types"]
         direction TB
         T1[🔬 Unit Tests]
@@ -141,16 +141,14 @@ flowchart LR
         T3[🎭 E2E Tests]
     end
 
+    Testing --> Trigger
+
     subgraph Trigger["⏰ When They Run"]
         direction TB
-        TR1[💾 Every save/commit]
-        TR2[📤 Every push]
+        TR1[💾 Save/commit]
+        TR2[📤 Push]
         TR3[🔀 Pre-merge]
     end
-
-    T1 --> TR1
-    T2 --> TR2
-    T3 --> TR3
 
     style Testing fill:#c8e6c9
 ```
@@ -224,9 +222,11 @@ repos:
 Track Units through their lifecycle:
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph States["📊 Unit States"]
-        I[💡 Intent] --> E[💬 Elaboration]
+        direction TB
+        I[💡 Intent]
+        I --> E[💬 Elaboration]
         E --> C[🔨 Construction]
         C --> V[✅ Verification]
         V --> D[🎉 Done]

@@ -60,17 +60,17 @@ flowchart TB
 **Phase 1: Exploration (Cost: $0-20/mo/person)**
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph FreeTier["Free/Low-Cost Options"]
         direction TB
-        F1[GitHub Copilot Free tier]
-        F2[Cursor Free tier]
-        F3[Cody Free tier]
+        F1[Copilot Free]
+        F2[Cursor Free]
+        F3[Cody Free]
     end
 
     FreeTier --> Evaluate{Worth paying?}
-    Evaluate -->|Yes| Upgrade[Upgrade specific tools]
-    Evaluate -->|No| Stay[Stay on free tier]
+    Evaluate -->|Yes| Upgrade[Upgrade]
+    Evaluate -->|No| Stay[Stay free]
 
     style FreeTier fill:#c8e6c9
 ```
