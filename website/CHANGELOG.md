@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.34.1] - 2026-01-28
+
+### Added
+
+- add AI-DLC callout to homepage ([3778f9b6](../../commit/3778f9b6))
+- extract paper sections to runbooks ([0276424e](../../commit/0276424e))
+- add path-first hero to runbooks index ([8bb664bf](../../commit/8bb664bf))
+- add hook statement and path selector to paper ([8d528282](../../commit/8d528282))
+- make What's New section collapsible ([6d94778f](../../commit/6d94778f))
+- link nav directly to AI-DLC paper ([434e3184](../../commit/434e3184))
+- make header sticky with backdrop blur ([4f373276](../../commit/4f373276))
+- add paper versions manifest support ([ef9b12e7](../../commit/ef9b12e7))
+- enhance paper view with syntax highlighting and code editor UI ([543c7601](../../commit/543c7601))
+- add paper revision history with visual diff tracking ([b0d26482](../../commit/b0d26482))
+- add SHA256 checksum verification to install script ([40ea66f4](../../commit/40ea66f4))
+
+### Fixed
+
+- wrap TOC in PaperChangesProvider ([aafb0b5c](../../commit/aafb0b5c))
+- update lockfile for CI ([0379583e](../../commit/0379583e))
+- improve Mermaid diagram sizing ([04d31b80](../../commit/04d31b80))
+- add validation for empty checksum files ([0c0e306f](../../commit/0c0e306f))
+- enable full git history for paper revisions and remove trailing slashes ([6f2ac863](../../commit/6f2ac863))
+- simplify paper revision history to first and latest versions ([b5c3905a](../../commit/b5c3905a))
+
+### Changed
+
+- trim Adoption Path to summary with runbook links ([560f6667](../../commit/560f6667))
+- update HOTL terminology and trim paper ([c568bc09](../../commit/c568bc09))
+
+### Other
+
+- Merge pull request #35 from TheBushidoCollective/feat/install-checksum-verification ([7ef6268e](../../commit/7ef6268e))
+- fix biome formatting in paper revisions script ([4b74c6a1](../../commit/4b74c6a1))
+
 ## [1.34.0] - 2026-01-28
 
 ### Added
