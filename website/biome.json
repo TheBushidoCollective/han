@@ -1,5 +1,16 @@
 {
 	"root": false,
+	"files": {
+		"includes": [
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.js",
+			"**/*.jsx",
+			"**/*.json",
+			"**/*.css",
+			"!app/tailwind-variants.css"
+		]
+	},
 	"css": {
 		"parser": {
 			"tailwindDirectives": true

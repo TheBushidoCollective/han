@@ -44,6 +44,7 @@
 		"@tailwindcss/typography": "0.5.19",
 		"@types/bun": "latest",
 		"@types/diff": "^7.0.2",
+		"@types/js-yaml": "^4.0.9",
 		"@types/minimatch": "^6.0.0",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.6",

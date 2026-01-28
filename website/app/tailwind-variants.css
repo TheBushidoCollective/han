@@ -1,0 +1,4 @@
+/* Tailwind v4 dark mode configuration
+   This file is excluded from Biome linting because Biome's CSS parser
+   doesn't support Tailwind v4's @variant directive syntax */
+@variant dark (&:where(.dark, .dark *));

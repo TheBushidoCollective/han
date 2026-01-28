@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./tailwind-variants.css";
 
 @source "../app";
 @source "../components";
@@ -146,7 +147,10 @@ pre.hljs,
 pre code.hljs,
 pre > code,
 .hljs {
+	/* biome-ignore lint/complexity/noImportantStyles: Required to override highlight.js defaults */
 	background: transparent !important;
+	/* biome-ignore lint/complexity/noImportantStyles: Required to override highlight.js defaults */
 	padding: 0 !important;
+	/* biome-ignore lint/complexity/noImportantStyles: Required to override highlight.js defaults */
 	margin: 0 !important;
 }
