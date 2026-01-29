@@ -9,6 +9,12 @@
 
 set -e
 
+# Check for jq dependency
+if ! command -v jq &> /dev/null; then
+  echo "Warning: jq is required for AI-DLC but not installed. Skipping context injection." >&2
+  exit 0
+fi
+
 # Check for AI-DLC state
 ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
 
@@ -17,12 +23,18 @@ if [ -z "$ITERATION_JSON" ]; then
   exit 0
 fi
 
-# Parse iteration state
-ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1')
-HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "elaborator"')
-STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"')
-WORKFLOW_NAME=$(echo "$ITERATION_JSON" | jq -r '.workflowName // "default"')
-WORKFLOW_HATS=$(echo "$ITERATION_JSON" | jq -r '.workflow // ["elaborator","planner","builder","reviewer"] | join(" → ")')
+# Validate JSON before parsing
+if ! echo "$ITERATION_JSON" | jq empty 2>/dev/null; then
+  echo "Warning: Invalid iteration.json format. Run /reset to clear state." >&2
+  exit 0
+fi
+
+# Parse iteration state with defaults for missing fields
+ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1' 2>/dev/null || echo "1")
+HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "elaborator"' 2>/dev/null || echo "elaborator")
+STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"' 2>/dev/null || echo "active")
+WORKFLOW_NAME=$(echo "$ITERATION_JSON" | jq -r '.workflowName // "default"' 2>/dev/null || echo "default")
+WORKFLOW_HATS=$(echo "$ITERATION_JSON" | jq -r '.workflow // ["elaborator","planner","builder","reviewer"] | join(" → ")' 2>/dev/null || echo "elaborator → planner → builder → reviewer")
 
 # If task is complete, just show completion message
 if [ "$STATUS" = "complete" ]; then

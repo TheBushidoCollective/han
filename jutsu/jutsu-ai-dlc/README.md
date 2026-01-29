@@ -21,6 +21,15 @@ AI-DLC (AI-Driven Development Lifecycle) is a methodology for collaborative huma
 han plugin install jutsu-ai-dlc
 ```
 
+## Terminology
+
+| Term | Definition |
+|------|------------|
+| **Intent** | Top-level goal (e.g., "Add OAuth login") - the overall objective |
+| **Unit** | Discrete work package within an Intent - a focused piece of the work |
+| **Bolt** | A single iteration/session bounded by `/clear` cycles - one focused work period |
+| **Hat** | Role/responsibility for a phase of work (e.g., Builder, Reviewer) |
+
 ## The Unit Model
 
 AI-DLC organizes work into **Intents** and **Units**:

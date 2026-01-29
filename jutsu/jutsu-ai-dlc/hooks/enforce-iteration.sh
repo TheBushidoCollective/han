@@ -6,6 +6,12 @@
 
 set -e
 
+# Check for jq dependency
+if ! command -v jq &> /dev/null; then
+  # jq not installed - skip silently
+  exit 0
+fi
+
 # Check for AI-DLC state
 ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
 
@@ -14,7 +20,13 @@ if [ -z "$ITERATION_JSON" ]; then
   exit 0
 fi
 
-STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"')
+# Validate JSON before parsing
+if ! echo "$ITERATION_JSON" | jq empty 2>/dev/null; then
+  # Invalid JSON - skip silently
+  exit 0
+fi
+
+STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"' 2>/dev/null || echo "active")
 
 # If task is already complete, don't enforce iteration
 if [ "$STATUS" = "complete" ]; then
@@ -22,14 +34,16 @@ if [ "$STATUS" = "complete" ]; then
 fi
 
 # Increment iteration count
-CURRENT_ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1')
+CURRENT_ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1' 2>/dev/null || echo "1")
 NEW_ITERATION=$((CURRENT_ITERATION + 1))
 
 # Update iteration.json with new count
-UPDATED_JSON=$(echo "$ITERATION_JSON" | jq ".iteration = $NEW_ITERATION")
-han keep save --branch iteration.json "$UPDATED_JSON"
+UPDATED_JSON=$(echo "$ITERATION_JSON" | jq ".iteration = $NEW_ITERATION" 2>/dev/null)
+if [ -n "$UPDATED_JSON" ]; then
+  han keep save --branch iteration.json "$UPDATED_JSON" 2>/dev/null || true
+fi
 
-HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "builder"')
+HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "builder"' 2>/dev/null || echo "builder")
 
 echo ""
 echo "---"
