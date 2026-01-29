@@ -14,19 +14,34 @@
  *   --branch    Branch-scoped (default)
  */
 import type { Command } from "commander";
-import { type Scope, clear, list, load, remove, save } from "./storage.ts";
+import {
+	type Scope,
+	type StorageOptions,
+	clear,
+	list,
+	load,
+	remove,
+	save,
+} from "./storage.ts";
 
 /**
- * Parse scope from command options
+ * Parse scope and options from command options
  */
-function parseScope(options: {
+function parseScopeAndOptions(options: {
 	global?: boolean;
 	repo?: boolean;
-	branch?: boolean;
-}): Scope {
-	if (options.global) return "global";
-	if (options.repo) return "repo";
-	return "branch"; // Default
+	branch?: string | boolean;
+}): { scope: Scope; storageOptions: StorageOptions } {
+	if (options.global) return { scope: "global", storageOptions: {} };
+	if (options.repo) return { scope: "repo", storageOptions: {} };
+
+	// Branch scope - may have explicit branch name
+	const storageOptions: StorageOptions = {};
+	if (typeof options.branch === "string") {
+		storageOptions.branchName = options.branch;
+	}
+
+	return { scope: "branch", storageOptions };
 }
 
 /**
@@ -43,12 +58,15 @@ export function registerKeepCommands(program: Command): void {
 		.description("Save content to storage (reads from stdin if no content provided)")
 		.option("--global", "Use global scope (shared across all repos)")
 		.option("--repo", "Use repo scope (shared across branches)")
-		.option("--branch", "Use branch scope (default)")
+		.option(
+			"--branch [name]",
+			"Use branch scope (default). Optionally specify explicit branch name.",
+		)
 		.action(async (key: string, contentParts: string[], options) => {
 			// Join content parts back together (handles space-separated arguments)
 			let content: string | undefined =
 				contentParts.length > 0 ? contentParts.join(" ") : undefined;
-			const scope = parseScope(options);
+			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			// If no content provided, read from stdin
 			if (content === undefined) {
@@ -60,8 +78,10 @@ export function registerKeepCommands(program: Command): void {
 			}
 
 			try {
-				save(scope, key, content);
-				console.log(`Saved to ${scope}:${key}`);
+				save(scope, key, content, storageOptions);
+				const branchSuffix =
+					storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
+				console.log(`Saved to ${scope}:${key}${branchSuffix}`);
 			} catch (error) {
 				console.error(
 					`Error saving ${key}:`,
@@ -77,13 +97,16 @@ export function registerKeepCommands(program: Command): void {
 		.description("Load content from storage")
 		.option("--global", "Use global scope")
 		.option("--repo", "Use repo scope")
-		.option("--branch", "Use branch scope (default)")
+		.option(
+			"--branch [name]",
+			"Use branch scope (default). Optionally specify explicit branch name.",
+		)
 		.option("-q, --quiet", "Suppress errors if key not found")
 		.action((key: string, options) => {
-			const scope = parseScope(options);
+			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			try {
-				const content = load(scope, key);
+				const content = load(scope, key, storageOptions);
 
 				if (content === null) {
 					if (!options.quiet) {
@@ -110,13 +133,16 @@ export function registerKeepCommands(program: Command): void {
 		.description("List all keys in scope")
 		.option("--global", "Use global scope")
 		.option("--repo", "Use repo scope")
-		.option("--branch", "Use branch scope (default)")
+		.option(
+			"--branch [name]",
+			"Use branch scope (default). Optionally specify explicit branch name.",
+		)
 		.option("--json", "Output as JSON array")
 		.action((options) => {
-			const scope = parseScope(options);
+			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			try {
-				const keys = list(scope);
+				const keys = list(scope, storageOptions);
 
 				if (options.json) {
 					console.log(JSON.stringify(keys));
@@ -142,13 +168,16 @@ export function registerKeepCommands(program: Command): void {
 		.description("Delete a key from storage")
 		.option("--global", "Use global scope")
 		.option("--repo", "Use repo scope")
-		.option("--branch", "Use branch scope (default)")
+		.option(
+			"--branch [name]",
+			"Use branch scope (default). Optionally specify explicit branch name.",
+		)
 		.option("-q, --quiet", "Suppress errors if key not found")
 		.action((key: string, options) => {
-			const scope = parseScope(options);
+			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			try {
-				const deleted = remove(scope, key);
+				const deleted = remove(scope, key, storageOptions);
 
 				if (!deleted && !options.quiet) {
 					console.error(`Key not found: ${scope}:${key}`);
@@ -156,7 +185,9 @@ export function registerKeepCommands(program: Command): void {
 				}
 
 				if (deleted) {
-					console.log(`Deleted ${scope}:${key}`);
+					const branchSuffix =
+						storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
+					console.log(`Deleted ${scope}:${key}${branchSuffix}`);
 				}
 			} catch (error) {
 				if (!options.quiet) {
@@ -175,13 +206,16 @@ export function registerKeepCommands(program: Command): void {
 		.description("Clear all keys in scope")
 		.option("--global", "Use global scope")
 		.option("--repo", "Use repo scope")
-		.option("--branch", "Use branch scope (default)")
+		.option(
+			"--branch [name]",
+			"Use branch scope (default). Optionally specify explicit branch name.",
+		)
 		.option("-f, --force", "Skip confirmation prompt")
 		.action((options) => {
-			const scope = parseScope(options);
+			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			try {
-				const keys = list(scope);
+				const keys = list(scope, storageOptions);
 
 				if (keys.length === 0) {
 					console.log(`No keys to clear in ${scope} scope`);
@@ -190,14 +224,20 @@ export function registerKeepCommands(program: Command): void {
 
 				// For now, just proceed (could add interactive prompt later)
 				if (!options.force) {
-					console.log(`Clearing ${keys.length} key(s) from ${scope} scope:`);
+					const branchSuffix =
+						storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
+					console.log(
+						`Clearing ${keys.length} key(s) from ${scope} scope${branchSuffix}:`,
+					);
 					for (const key of keys) {
 						console.log(`  - ${key}`);
 					}
 				}
 
-				const deleted = clear(scope);
-				console.log(`Cleared ${deleted} key(s) from ${scope} scope`);
+				const deleted = clear(scope, storageOptions);
+				const branchSuffix =
+					storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
+				console.log(`Cleared ${deleted} key(s) from ${scope} scope${branchSuffix}`);
 			} catch (error) {
 				console.error(
 					"Error clearing keys:",

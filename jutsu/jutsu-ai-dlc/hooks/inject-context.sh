@@ -15,6 +15,12 @@ if ! command -v han &> /dev/null; then
   exit 0
 fi
 
+# Source DAG library if available
+DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+if [ -f "$DAG_LIB" ]; then
+  source "$DAG_LIB"
+fi
+
 # Check for AI-DLC state
 ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
 
@@ -106,6 +112,66 @@ if [ -n "$SCRATCHPAD" ]; then
   echo ""
   echo "$SCRATCHPAD"
   echo ""
+fi
+
+# Load and display DAG status (if units exist)
+INTENT_SLUG=$(han keep load --branch intent-slug --quiet 2>/dev/null || echo "")
+if [ -n "$INTENT_SLUG" ]; then
+  INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+
+  if [ -d "$INTENT_DIR" ] && ls "$INTENT_DIR"/unit-*.md 1>/dev/null 2>&1; then
+    echo "### Unit Status"
+    echo ""
+
+    # Use DAG functions if available
+    if type get_dag_status_table &>/dev/null; then
+      get_dag_status_table "$INTENT_DIR"
+      echo ""
+
+      # Show summary
+      if type get_dag_summary &>/dev/null; then
+        SUMMARY=$(get_dag_summary "$INTENT_DIR")
+        # Parse summary into human-readable format
+        # Format: "pending:N in_progress:N completed:N blocked:N ready:N"
+        PENDING=$(echo "$SUMMARY" | sed -n 's/.*pending:\([0-9]*\).*/\1/p')
+        IN_PROG=$(echo "$SUMMARY" | sed -n 's/.*in_progress:\([0-9]*\).*/\1/p')
+        COMPLETED=$(echo "$SUMMARY" | sed -n 's/.*completed:\([0-9]*\).*/\1/p')
+        BLOCKED=$(echo "$SUMMARY" | sed -n 's/.*blocked:\([0-9]*\).*/\1/p')
+        READY=$(echo "$SUMMARY" | sed -n 's/.*ready:\([0-9]*\).*/\1/p')
+        echo "**Summary:** $COMPLETED completed, $IN_PROG in_progress, $PENDING pending ($BLOCKED blocked), $READY ready"
+        echo ""
+      fi
+
+      # Show ready units
+      if type find_ready_units &>/dev/null; then
+        READY_UNITS=$(find_ready_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
+        if [ -n "$READY_UNITS" ]; then
+          echo "**Ready for execution:** $READY_UNITS"
+          echo ""
+        fi
+      fi
+
+      # Show in-progress units
+      if type find_in_progress_units &>/dev/null; then
+        IN_PROGRESS=$(find_in_progress_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
+        if [ -n "$IN_PROGRESS" ]; then
+          echo "**Currently in progress:** $IN_PROGRESS"
+          echo ""
+        fi
+      fi
+    else
+      # Fallback: simple unit list without DAG analysis
+      echo "| Unit | Status |"
+      echo "|------|--------|"
+      for unit_file in "$INTENT_DIR"/unit-*.md; do
+        [ -f "$unit_file" ] || continue
+        NAME=$(basename "$unit_file" .md)
+        STATUS=$(han parse yaml status -r --default pending < "$unit_file" 2>/dev/null || echo "pending")
+        echo "| $NAME | $STATUS |"
+      done
+      echo ""
+    fi
+  fi
 fi
 
 # Load hat instructions from markdown files

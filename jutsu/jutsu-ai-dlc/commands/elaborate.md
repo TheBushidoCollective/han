@@ -72,6 +72,14 @@ han_keep_save({ scope: "branch", key: "intent.md", content: "..." })
 han_keep_save({ scope: "branch", key: "completion-criteria.md", content: "..." })
 ```
 
+Also save the intent slug for DAG lookup (used by the SessionStart hook to display unit status):
+
+```javascript
+// Save intent slug - this should match the directory name under .ai-dlc/
+// Example: for ".ai-dlc/add-oauth/", the intent-slug is "add-oauth"
+han_keep_save({ scope: "branch", key: "intent-slug", content: "{intent-slug}" })
+```
+
 Then initialize the iteration state with the selected workflow:
 
 ```javascript
@@ -114,6 +122,102 @@ han_keep_save({
   })
 })
 ```
+
+### Step 5b: Decompose into Units (Optional)
+
+For complex intents, decompose the work into **units** - independent pieces of work that can be executed in parallel by autonomous bolts.
+
+**Important:** The `{intent-slug}` directory name MUST match the value saved to `intent-slug` in Step 5 above. This enables the SessionStart hook to find and display unit status.
+
+#### Unit Structure
+
+Each unit is a file in `.ai-dlc/{intent-slug}/`:
+
+```
+.ai-dlc/
+  add-oauth/
+    intent.md           # Overall intent description
+    unit-01-setup.md    # First unit (no deps)
+    unit-02-provider.md # Second unit (depends on 01)
+    unit-03-session.md  # Third unit (depends on 01)
+    unit-04-auth.md     # Fourth unit (depends on 02 and 03)
+```
+
+#### Unit File Format
+
+```markdown
+---
+status: pending
+depends_on: [unit-01-setup, unit-03-session]
+branch: ai-dlc/add-oauth/04-auth-integration
+---
+# unit-04-auth-integration
+
+## Description
+Integrate all authentication components.
+
+## Completion Criteria
+- [ ] Login button triggers OAuth flow
+- [ ] Session persists across refreshes
+```
+
+#### Unit Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Not started, may be waiting for dependencies |
+| `in_progress` | Being worked on by a bolt |
+| `completed` | Successfully finished |
+| `blocked` | Explicitly blocked (manual intervention needed) |
+
+#### Unit Naming Convention
+
+- Format: `unit-NN-slug.md` where NN is a zero-padded number
+- Numbers indicate suggested execution order (1 before 2)
+- Slugs should be descriptive and lowercase with hyphens
+
+#### Branch Naming Convention
+
+Each unit should specify its branch:
+```
+ai-dlc/{intent-slug}/{unit-number}-{unit-slug}
+```
+
+Example: `ai-dlc/add-oauth/04-auth-integration`
+
+#### DAG Dependencies
+
+The `depends_on` field declares which units must complete before this one can start:
+- Use the full unit name without `.md` extension
+- An empty array `[]` means no dependencies
+- Units with satisfied dependencies are "ready" for execution
+
+#### Example Decomposition
+
+For "Add Google OAuth login":
+
+| Unit | Dependencies | Description |
+|------|--------------|-------------|
+| unit-01-setup | [] | Install OAuth library, add env vars |
+| unit-02-provider | [unit-01-setup] | Implement Google OAuth provider |
+| unit-03-session | [unit-01-setup] | Implement session management |
+| unit-04-auth | [unit-02-provider, unit-03-session] | Wire up login flow |
+| unit-05-tests | [unit-04-auth] | Add integration tests |
+
+This forms a DAG where units 02 and 03 can run in parallel after 01 completes.
+
+#### When to Use Units
+
+Use units when:
+- Work can be parallelized across multiple bolts
+- Intent is complex with clear sub-tasks
+- Dependencies between sub-tasks are explicit
+- You want to track progress at granular level
+
+Skip units when:
+- Intent is simple and sequential
+- Work cannot be meaningfully parallelized
+- Single bolt can handle entire intent
 
 ### Step 6: Transition to Construction
 

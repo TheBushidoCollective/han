@@ -286,6 +286,7 @@ const LEARN_TOOLS: McpTool[] = [
 // Keep storage tools - scoped key-value storage
 import {
 	type Scope as KeepScope,
+	type StorageOptions as KeepStorageOptions,
 	clear as keepClear,
 	list as keepList,
 	load as keepLoad,
@@ -323,6 +324,11 @@ const KEEP_TOOLS: McpTool[] = [
 					description:
 						"Storage scope. 'branch' (default): branch-specific. 'repo': shared across branches. 'global': shared across all repos.",
 				},
+				branch_name: {
+					type: "string",
+					description:
+						"Explicit branch name for branch scope. If omitted, uses current branch. Only used when scope is 'branch'.",
+				},
 			},
 			required: ["key", "content"],
 		},
@@ -350,6 +356,11 @@ const KEEP_TOOLS: McpTool[] = [
 					enum: ["global", "repo", "branch"],
 					description: "Storage scope (default: 'branch')",
 				},
+				branch_name: {
+					type: "string",
+					description:
+						"Explicit branch name for branch scope. If omitted, uses current branch. Only used when scope is 'branch'.",
+				},
 			},
 			required: ["key"],
 		},
@@ -371,6 +382,11 @@ const KEEP_TOOLS: McpTool[] = [
 					type: "string",
 					enum: ["global", "repo", "branch"],
 					description: "Storage scope to list (default: 'branch')",
+				},
+				branch_name: {
+					type: "string",
+					description:
+						"Explicit branch name for branch scope. If omitted, uses current branch. Only used when scope is 'branch'.",
 				},
 			},
 		},
@@ -397,6 +413,11 @@ const KEEP_TOOLS: McpTool[] = [
 					enum: ["global", "repo", "branch"],
 					description: "Storage scope (default: 'branch')",
 				},
+				branch_name: {
+					type: "string",
+					description:
+						"Explicit branch name for branch scope. If omitted, uses current branch. Only used when scope is 'branch'.",
+				},
 			},
 			required: ["key"],
 		},
@@ -418,6 +439,11 @@ const KEEP_TOOLS: McpTool[] = [
 					type: "string",
 					enum: ["global", "repo", "branch"],
 					description: "Storage scope to clear (default: 'branch')",
+				},
+				branch_name: {
+					type: "string",
+					description:
+						"Explicit branch name for branch scope. If omitted, uses current branch. Only used when scope is 'branch'.",
 				},
 			},
 		},
@@ -803,6 +829,14 @@ async function handleToolsCall(params: {
 	if (isKeepTool) {
 		try {
 			const scope = (args.scope as KeepScope) || "branch";
+			// Build storage options with optional branch_name (only used for branch scope)
+			const storageOptions: KeepStorageOptions = {};
+			if (scope === "branch" && typeof args.branch_name === "string") {
+				storageOptions.branchName = args.branch_name;
+			}
+			const branchSuffix = storageOptions.branchName
+				? ` (${storageOptions.branchName})`
+				: "";
 
 			switch (params.name) {
 				case "han_keep_save": {
@@ -821,12 +855,12 @@ async function handleToolsCall(params: {
 						};
 					}
 
-					keepSave(scope, key, content);
+					keepSave(scope, key, content, storageOptions);
 					return {
 						content: [
 							{
 								type: "text",
-								text: `Saved to ${scope}:${key}`,
+								text: `Saved to ${scope}:${key}${branchSuffix}`,
 							},
 						],
 					};
@@ -847,13 +881,13 @@ async function handleToolsCall(params: {
 						};
 					}
 
-					const content = keepLoad(scope, key);
+					const content = keepLoad(scope, key, storageOptions);
 					if (content === null) {
 						return {
 							content: [
 								{
 									type: "text",
-									text: `Key not found: ${scope}:${key}`,
+									text: `Key not found: ${scope}:${key}${branchSuffix}`,
 								},
 							],
 							isError: true,
@@ -871,15 +905,15 @@ async function handleToolsCall(params: {
 				}
 
 				case "han_keep_list": {
-					const keys = keepList(scope);
+					const keys = keepList(scope, storageOptions);
 					return {
 						content: [
 							{
 								type: "text",
 								text:
 									keys.length > 0
-										? `Keys in ${scope} scope:\n${keys.join("\n")}`
-										: `No keys in ${scope} scope`,
+										? `Keys in ${scope} scope${branchSuffix}:\n${keys.join("\n")}`
+										: `No keys in ${scope} scope${branchSuffix}`,
 							},
 						],
 					};
@@ -900,14 +934,14 @@ async function handleToolsCall(params: {
 						};
 					}
 
-					const deleted = keepRemove(scope, key);
+					const deleted = keepRemove(scope, key, storageOptions);
 					return {
 						content: [
 							{
 								type: "text",
 								text: deleted
-									? `Deleted ${scope}:${key}`
-									: `Key not found: ${scope}:${key}`,
+									? `Deleted ${scope}:${key}${branchSuffix}`
+									: `Key not found: ${scope}:${key}${branchSuffix}`,
 							},
 						],
 						isError: !deleted,
@@ -915,12 +949,12 @@ async function handleToolsCall(params: {
 				}
 
 				case "han_keep_clear": {
-					const count = keepClear(scope);
+					const count = keepClear(scope, storageOptions);
 					return {
 						content: [
 							{
 								type: "text",
-								text: `Cleared ${count} key(s) from ${scope} scope`,
+								text: `Cleared ${count} key(s) from ${scope} scope${branchSuffix}`,
 							},
 						],
 					};

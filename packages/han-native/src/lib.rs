@@ -1230,8 +1230,8 @@ pub fn full_scan_and_index(_db_path: String) -> napi::Result<Vec<indexer::IndexR
 // Re-export git types and functions from git module
 pub use git::{
     get_git_branch, get_git_common_dir, get_git_info, get_git_remote_url, get_git_root,
-    git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list, GitDiffStat, GitInfo,
-    GitLogEntry, GitWorktree,
+    git_create_branch, git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_add,
+    git_worktree_list, git_worktree_remove, GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
 };
 
 // ============================================================================

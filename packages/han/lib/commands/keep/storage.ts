@@ -31,6 +31,18 @@ import { getClaudeConfigDir } from "../../config/claude-settings.ts";
 export type Scope = "global" | "repo" | "branch";
 
 /**
+ * Options for storage operations
+ */
+export interface StorageOptions {
+	/**
+	 * Explicit branch name for branch-scoped storage.
+	 * If not provided, the current branch is auto-detected.
+	 * Only used when scope is "branch".
+	 */
+	branchName?: string;
+}
+
+/**
  * Normalize a git remote URL to a safe directory slug
  * Examples:
  *   git@github.com:user/repo.git -> github.com-user-repo
@@ -97,7 +109,11 @@ export function getKeepBaseDir(): string {
 /**
  * Get the storage path for a given scope and key
  */
-export function getStoragePath(scope: Scope, key: string): string {
+export function getStoragePath(
+	scope: Scope,
+	key: string,
+	options?: StorageOptions,
+): string {
 	const keepDir = getKeepBaseDir();
 	const cwd = process.cwd();
 
@@ -114,7 +130,8 @@ export function getStoragePath(scope: Scope, key: string): string {
 		case "branch": {
 			const remote = getGitRemoteUrl(cwd);
 			const repoSlug = normalizeGitRemote(remote);
-			const branch = getGitBranch(cwd);
+			// Use explicit branch name if provided, else detect current
+			const branch = options?.branchName ?? getGitBranch(cwd);
 			const branchSlug = normalizeBranchName(branch);
 			return join(keepDir, "repos", repoSlug, "branches", branchSlug, key);
 		}
@@ -124,7 +141,7 @@ export function getStoragePath(scope: Scope, key: string): string {
 /**
  * Get the directory for listing keys in a scope
  */
-export function getScopeDir(scope: Scope): string {
+export function getScopeDir(scope: Scope, options?: StorageOptions): string {
 	const keepDir = getKeepBaseDir();
 	const cwd = process.cwd();
 
@@ -141,7 +158,8 @@ export function getScopeDir(scope: Scope): string {
 		case "branch": {
 			const remote = getGitRemoteUrl(cwd);
 			const repoSlug = normalizeGitRemote(remote);
-			const branch = getGitBranch(cwd);
+			// Use explicit branch name if provided, else detect current
+			const branch = options?.branchName ?? getGitBranch(cwd);
 			const branchSlug = normalizeBranchName(branch);
 			return join(keepDir, "repos", repoSlug, "branches", branchSlug);
 		}
@@ -151,8 +169,13 @@ export function getScopeDir(scope: Scope): string {
 /**
  * Save content to scoped storage
  */
-export function save(scope: Scope, key: string, content: string): void {
-	const path = getStoragePath(scope, key);
+export function save(
+	scope: Scope,
+	key: string,
+	content: string,
+	options?: StorageOptions,
+): void {
+	const path = getStoragePath(scope, key, options);
 	const dir = dirname(path);
 
 	if (!existsSync(dir)) {
@@ -166,8 +189,12 @@ export function save(scope: Scope, key: string, content: string): void {
  * Load content from scoped storage
  * Returns null if key doesn't exist
  */
-export function load(scope: Scope, key: string): string | null {
-	const path = getStoragePath(scope, key);
+export function load(
+	scope: Scope,
+	key: string,
+	options?: StorageOptions,
+): string | null {
+	const path = getStoragePath(scope, key, options);
 
 	if (!existsSync(path)) {
 		return null;
@@ -184,8 +211,8 @@ export function load(scope: Scope, key: string): string | null {
  * List all keys in a scope
  * Returns only files (not directories like "branches")
  */
-export function list(scope: Scope): string[] {
-	const dir = getScopeDir(scope);
+export function list(scope: Scope, options?: StorageOptions): string[] {
+	const dir = getScopeDir(scope, options);
 
 	if (!existsSync(dir)) {
 		return [];
@@ -211,8 +238,12 @@ export function list(scope: Scope): string[] {
  * Remove a key from scoped storage
  * Returns true if the key existed and was deleted
  */
-export function remove(scope: Scope, key: string): boolean {
-	const path = getStoragePath(scope, key);
+export function remove(
+	scope: Scope,
+	key: string,
+	options?: StorageOptions,
+): boolean {
+	const path = getStoragePath(scope, key, options);
 
 	if (!existsSync(path)) {
 		return false;
@@ -230,12 +261,12 @@ export function remove(scope: Scope, key: string): boolean {
  * Clear all keys in a scope
  * Returns the number of keys deleted
  */
-export function clear(scope: Scope): number {
-	const keys = list(scope);
+export function clear(scope: Scope, options?: StorageOptions): number {
+	const keys = list(scope, options);
 	let deleted = 0;
 
 	for (const key of keys) {
-		if (remove(scope, key)) {
+		if (remove(scope, key, options)) {
 			deleted++;
 		}
 	}

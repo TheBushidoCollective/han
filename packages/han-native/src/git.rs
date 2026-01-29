@@ -363,6 +363,85 @@ pub fn git_show_file(directory: String, commit: String, file_path: String) -> na
         .map_err(|e| napi::Error::from_reason(format!("File is not UTF-8: {}", e)))
 }
 
+/// Create a new branch from current HEAD
+#[napi]
+pub fn git_create_branch(directory: String, branch_name: String) -> napi::Result<()> {
+    use std::process::Command;
+
+    let output = Command::new("git")
+        .args(["branch", &branch_name])
+        .current_dir(&directory)
+        .output()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to run git: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(napi::Error::from_reason(format!(
+            "git branch failed: {}",
+            stderr.trim()
+        )));
+    }
+
+    Ok(())
+}
+
+/// Add a worktree at specified path for a branch
+#[napi]
+pub fn git_worktree_add(
+    directory: String,
+    worktree_path: String,
+    branch: String,
+) -> napi::Result<()> {
+    use std::process::Command;
+
+    let output = Command::new("git")
+        .args(["worktree", "add", &worktree_path, &branch])
+        .current_dir(&directory)
+        .output()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to run git: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(napi::Error::from_reason(format!(
+            "git worktree add failed: {}",
+            stderr.trim()
+        )));
+    }
+
+    Ok(())
+}
+
+/// Remove a worktree
+#[napi]
+pub fn git_worktree_remove(
+    directory: String,
+    worktree_path: String,
+    force: Option<bool>,
+) -> napi::Result<()> {
+    use std::process::Command;
+
+    let mut args = vec!["worktree", "remove", &worktree_path];
+    if force.unwrap_or(false) {
+        args.push("--force");
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .current_dir(&directory)
+        .output()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to run git: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(napi::Error::from_reason(format!(
+            "git worktree remove failed: {}",
+            stderr.trim()
+        )));
+    }
+
+    Ok(())
+}
+
 /// Diff statistics for a file
 #[napi(object)]
 pub struct GitDiffStat {
@@ -1361,5 +1440,194 @@ mod tests {
         repo.checkout("feature-2");
         let result = get_git_branch(repo.path_str());
         assert_eq!(result, Some("feature-2".to_string()));
+    }
+
+    // ========================================================================
+    // Git Create Branch Tests
+    // ========================================================================
+
+    #[test]
+    fn test_git_create_branch_basic() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        let result = git_create_branch(repo.path_str(), "new-feature".to_string());
+        assert!(result.is_ok());
+
+        // Verify the branch was created
+        let output = Command::new("git")
+            .args(["branch", "--list", "new-feature"])
+            .current_dir(repo.path())
+            .output()
+            .expect("Failed to list branches");
+        let branches = String::from_utf8_lossy(&output.stdout);
+        assert!(branches.contains("new-feature"));
+    }
+
+    #[test]
+    fn test_git_create_branch_already_exists() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        // Create branch first time
+        git_create_branch(repo.path_str(), "existing-branch".to_string())
+            .expect("Failed to create branch");
+
+        // Try to create same branch again - should fail
+        let result = git_create_branch(repo.path_str(), "existing-branch".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_git_create_branch_non_repo() {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let result = git_create_branch(
+            temp_dir.path().to_string_lossy().to_string(),
+            "branch".to_string(),
+        );
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Git Worktree Add Tests
+    // ========================================================================
+
+    #[test]
+    fn test_git_worktree_add_basic() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        // Create a branch for the worktree
+        git_create_branch(repo.path_str(), "worktree-branch".to_string())
+            .expect("Failed to create branch");
+
+        // Create worktree in a sibling directory
+        let worktree_path = repo.path().parent().unwrap().join("test-worktree");
+
+        let result = git_worktree_add(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            "worktree-branch".to_string(),
+        );
+        assert!(result.is_ok());
+
+        // Verify the worktree was created
+        assert!(worktree_path.exists());
+        assert!(worktree_path.join("file.txt").exists());
+
+        // Clean up
+        let _ = Command::new("git")
+            .args(["worktree", "remove", "--force", &worktree_path.to_string_lossy()])
+            .current_dir(repo.path())
+            .output();
+    }
+
+    #[test]
+    fn test_git_worktree_add_non_existent_branch() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        let worktree_path = repo.path().parent().unwrap().join("bad-worktree");
+
+        let result = git_worktree_add(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            "nonexistent-branch".to_string(),
+        );
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Git Worktree Remove Tests
+    // ========================================================================
+
+    #[test]
+    fn test_git_worktree_remove_basic() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        // Create a branch and worktree
+        git_create_branch(repo.path_str(), "remove-test".to_string())
+            .expect("Failed to create branch");
+
+        let worktree_path = repo.path().parent().unwrap().join("remove-me");
+        git_worktree_add(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            "remove-test".to_string(),
+        )
+        .expect("Failed to create worktree");
+
+        assert!(worktree_path.exists());
+
+        // Remove the worktree
+        let result = git_worktree_remove(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            None,
+        );
+        assert!(result.is_ok());
+
+        // Verify it was removed
+        assert!(!worktree_path.exists());
+    }
+
+    #[test]
+    fn test_git_worktree_remove_force() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        // Create a branch and worktree
+        git_create_branch(repo.path_str(), "force-remove".to_string())
+            .expect("Failed to create branch");
+
+        let worktree_path = repo.path().parent().unwrap().join("force-remove-me");
+        git_worktree_add(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            "force-remove".to_string(),
+        )
+        .expect("Failed to create worktree");
+
+        // Create an uncommitted change in the worktree
+        let new_file = worktree_path.join("uncommitted.txt");
+        fs::write(&new_file, "uncommitted content").expect("Failed to write file");
+
+        // Regular remove should fail because worktree is dirty
+        let result = git_worktree_remove(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            None,
+        );
+        assert!(result.is_err());
+
+        // Force remove should succeed
+        let result = git_worktree_remove(
+            repo.path_str(),
+            worktree_path.to_string_lossy().to_string(),
+            Some(true),
+        );
+        assert!(result.is_ok());
+        assert!(!worktree_path.exists());
+    }
+
+    #[test]
+    fn test_git_worktree_remove_nonexistent() {
+        let repo = TestRepo::new();
+        repo.create_file("file.txt", "content");
+        repo.commit("Initial commit");
+
+        let result = git_worktree_remove(
+            repo.path_str(),
+            "/nonexistent/worktree/path".to_string(),
+            None,
+        );
+        assert!(result.is_err());
     }
 }
