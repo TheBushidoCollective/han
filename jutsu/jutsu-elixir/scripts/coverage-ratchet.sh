@@ -29,14 +29,8 @@ if ! grep -q '"minimum_coverage"' coveralls.json 2>/dev/null; then
     exit 0
 fi
 
-# Extract minimum coverage threshold
-# Try jq first, fall back to grep/sed
-if command -v jq &>/dev/null; then
-    THRESHOLD=$(jq -r '.minimum_coverage // empty' coveralls.json)
-else
-    # Fallback: extract with grep/sed (handles basic cases)
-    THRESHOLD=$(grep -o '"minimum_coverage"[[:space:]]*:[[:space:]]*[0-9.]*' coveralls.json | grep -o '[0-9.]*$' || echo "")
-fi
+# Extract minimum coverage threshold using han parse
+THRESHOLD=$(han parse json minimum_coverage -r < coveralls.json 2>/dev/null || echo "")
 
 if [[ -z "$THRESHOLD" ]]; then
     echo "Coverage ratcheting: Could not parse minimum_coverage from coveralls.json, skipping"

@@ -4,9 +4,8 @@
 # Read stdin JSON payload
 PAYLOAD=$(cat)
 
-# Extract the command being run from the JSON payload
-# The payload contains information about the tool being used
-COMMAND=$(echo "$PAYLOAD" | grep -o '"command":"[^"]*"' | sed 's/"command":"//;s/"$//' | head -1)
+# Extract the command being run from the JSON payload using han parse
+COMMAND=$(echo "$PAYLOAD" | han parse json command -r --default "" 2>/dev/null || echo "")
 
 # Check if this is a git push command
 if echo "$COMMAND" | grep -q "git.*push"; then

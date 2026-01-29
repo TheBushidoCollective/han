@@ -147,6 +147,7 @@ export function registerParseCommands(program: Command): void {
 		.option("-r, --raw", "Output raw string without quotes")
 		.option("-e, --exit-code", "Exit with 1 if path not found or null")
 		.option("--default <value>", "Default value if path not found")
+		.option("-k, --keys", "Output object keys instead of values")
 		.action(async (pathArg: string, opts) => {
 			try {
 				const input = await Bun.stdin.text();
@@ -162,6 +163,17 @@ export function registerParseCommands(program: Command): void {
 						process.exit(1);
 					}
 					console.log(opts.raw ? "" : "null");
+					return;
+				}
+
+				// If --keys flag, output object keys
+				if (opts.keys) {
+					if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+						const keys = Object.keys(result as Record<string, unknown>);
+						for (const key of keys) {
+							console.log(key);
+						}
+					}
 					return;
 				}
 
