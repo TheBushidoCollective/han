@@ -70,7 +70,7 @@ han plugin install jutsu-typescript jutsu-biome  # For TypeScript projects
 Work collaboratively with Claude to define:
 - **Workflow** - Which development pattern to use (default, tdd, adversarial, hypothesis)
 - **Intent** - What you're building
-- **Units** - How to break down the work
+- **Units** - How to break down the work (with dependencies forming a DAG)
 - **Completion Criteria** - How you'll know it's done
 
 **2. Run the Construction Loop**
@@ -204,6 +204,49 @@ Session-scoped, cleared on `/reset`:
 han keep load --branch iteration.json
 han keep load --branch scratchpad.md
 ```
+
+## Unit Dependencies (DAG)
+
+Units can declare dependencies on other units, forming a Directed Acyclic Graph:
+
+```
+unit-01-setup-provider ──────────────────┐
+                                         ├──→ unit-04-auth-integration
+unit-02-callback-handler ──→ unit-03-session ─┘
+```
+
+**Unit frontmatter with dependencies:**
+
+```yaml
+---
+status: pending
+depends_on: [unit-01-setup-provider, unit-03-session]
+branch: ai-dlc/add-oauth-login/04-auth-integration
+---
+# Unit 04: Auth Integration
+
+## Description
+Integrate all authentication components into the main application.
+
+## Completion Criteria
+- [ ] Login button triggers OAuth flow
+- [ ] Session persists across page refreshes
+- [ ] All auth tests pass
+```
+
+**Execution rules:**
+
+- **Fan-out:** Units with no dependencies (or satisfied dependencies) start in parallel
+- **Fan-in:** Units wait for ALL their dependencies to complete
+- **Ready check:** A unit is ready when all its `depends_on` units have `status: completed`
+
+**Example DAG execution:**
+
+1. unit-01 and unit-02 start in parallel (no dependencies)
+2. unit-03 starts when unit-02 completes
+3. unit-04 starts when BOTH unit-01 AND unit-03 complete (fan-in)
+
+During `/construct`, Claude checks unit readiness and selects the next ready unit to work on.
 
 ## Integration with Quality Gates
 
