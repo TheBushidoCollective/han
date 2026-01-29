@@ -6,7 +6,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { Box, render, Text } from "ink";
@@ -27,6 +27,18 @@ import {
 } from "../../hooks/index.ts";
 
 /**
+ * Hook types where stdout is meant to inject context into Claude's conversation.
+ * These are the hooks affected by the Claude Code plugin output capture bug.
+ * See: https://github.com/anthropics/claude-code/issues/12151
+ */
+const CONTEXT_INJECTING_HOOK_TYPES = [
+	"SessionStart",
+	"UserPromptSubmit",
+	"PreCompact",
+	"Notification",
+];
+
+/**
  * Hook entry from Claude Code settings (legacy format)
  */
 interface LegacyHookEntry {
@@ -40,7 +52,7 @@ interface LegacyHookEntry {
  * Unified hook representation for testing
  */
 interface TestableHook {
-	source: "settings" | "plugin";
+	source: "settings" | "plugin" | "claude-plugin";
 	sourcePath: string;
 	pluginName?: string;
 	marketplace?: string;
@@ -50,6 +62,11 @@ interface TestableHook {
 	command: string;
 	timeout?: number;
 	type: "command" | "prompt";
+	/**
+	 * True if this hook is from a Claude Code plugin's hooks/hooks.json.
+	 * These hooks have a bug where output is not captured for context-injecting hook types.
+	 */
+	isClaudePlugin?: boolean;
 }
 
 /**
@@ -280,6 +297,109 @@ function collectPluginHooks(): TestableHook[] {
 }
 
 /**
+ * Claude Code plugin hooks.json format
+ */
+interface ClaudePluginHooksJson {
+	description?: string;
+	hooks?: Record<
+		string,
+		Array<{
+			matcher?: string;
+			hooks: Array<{
+				type: "command" | "prompt";
+				command?: string;
+				prompt?: string;
+				timeout?: number;
+			}>;
+		}>
+	>;
+}
+
+/**
+ * Collect hooks from Claude Code plugin hooks.json files.
+ * These are the hooks that Claude Code directly executes from plugins.
+ *
+ * IMPORTANT: These hooks have a bug where stdout is not captured for
+ * context-injecting hook types (SessionStart, UserPromptSubmit, etc.)
+ * See: https://github.com/anthropics/claude-code/issues/12151
+ */
+function collectClaudePluginHooks(): TestableHook[] {
+	const hooks: TestableHook[] = [];
+	const configDir = getClaudeConfigDir();
+	if (!configDir) return hooks;
+
+	const pluginCacheDir = join(configDir, "plugins", "cache");
+	if (!existsSync(pluginCacheDir)) return hooks;
+
+	try {
+		const marketplaces = readdirSync(pluginCacheDir, { withFileTypes: true })
+			.filter((d) => d.isDirectory())
+			.map((d) => d.name);
+
+		for (const marketplace of marketplaces) {
+			const marketplaceDir = join(pluginCacheDir, marketplace);
+			const plugins = readdirSync(marketplaceDir, { withFileTypes: true })
+				.filter((d) => d.isDirectory())
+				.map((d) => d.name);
+
+			for (const pluginName of plugins) {
+				const pluginDir = join(marketplaceDir, pluginName);
+				const versions = readdirSync(pluginDir, { withFileTypes: true })
+					.filter((d) => d.isDirectory())
+					.map((d) => d.name)
+					.sort()
+					.reverse();
+
+				if (versions.length === 0) continue;
+
+				const latestVersion = versions[0];
+				const hooksJsonPath = join(
+					pluginDir,
+					latestVersion,
+					"hooks",
+					"hooks.json",
+				);
+
+				if (!existsSync(hooksJsonPath)) continue;
+
+				try {
+					const content = readFileSync(hooksJsonPath, "utf-8");
+					const hooksJson = JSON.parse(content) as ClaudePluginHooksJson;
+
+					if (!hooksJson.hooks) continue;
+
+					for (const [hookType, hookGroups] of Object.entries(hooksJson.hooks)) {
+						let hookIndex = 0;
+						for (const group of hookGroups) {
+							for (const hook of group.hooks) {
+								hookIndex++;
+								hooks.push({
+									source: "claude-plugin",
+									sourcePath: hooksJsonPath,
+									pluginName: `${pluginName}@${marketplace}`,
+									hookType,
+									name: `hook-${hookIndex}`,
+									command: hook.command || hook.prompt || "",
+									timeout: hook.timeout,
+									type: hook.type,
+									isClaudePlugin: true,
+								});
+							}
+						}
+					}
+				} catch {
+					// Invalid JSON, skip
+				}
+			}
+		}
+	} catch {
+		// Directory read failed, skip
+	}
+
+	return hooks;
+}
+
+/**
  * Generate example stdin payload like Claude Code would send.
  * Based on official Claude Code hook documentation.
  */
@@ -503,9 +623,35 @@ interface TestUIProps {
 	totalDuration: number;
 }
 
+/**
+ * Check if a hook is affected by the Claude Code plugin output capture bug.
+ * Plugin hooks on context-injecting hook types have their output silently discarded.
+ */
+function isAffectedByOutputBug(hook: TestableHook): boolean {
+	return (
+		hook.isClaudePlugin === true &&
+		CONTEXT_INJECTING_HOOK_TYPES.includes(hook.hookType)
+	);
+}
+
 const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
 	const statusColor = result.success ? "green" : "red";
 	const statusIcon = result.success ? "✓" : "✗";
+	const affectedByBug = isAffectedByOutputBug(result.hook);
+
+	// Determine source color and label
+	let sourceColor: string;
+	let sourceLabel: string;
+	if (result.hook.source === "claude-plugin") {
+		sourceColor = "magenta";
+		sourceLabel = `${result.hook.pluginName}/${result.hook.name}`;
+	} else if (result.hook.source === "plugin") {
+		sourceColor = "cyan";
+		sourceLabel = `${result.hook.pluginName}/${result.hook.name}`;
+	} else {
+		sourceColor = "yellow";
+		sourceLabel = `settings/${result.hook.name}`;
+	}
 
 	return (
 		<Box flexDirection="column" marginBottom={1}>
@@ -514,11 +660,10 @@ const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
 					{statusIcon}
 				</Text>
 				<Text> </Text>
-				<Text color={result.hook.source === "plugin" ? "cyan" : "yellow"}>
-					{result.hook.source === "plugin"
-						? `${result.hook.pluginName}/${result.hook.name}`
-						: `settings/${result.hook.name}`}
-				</Text>
+				<Text color={sourceColor}>{sourceLabel}</Text>
+				{result.hook.source === "claude-plugin" && (
+					<Text dimColor> [Claude plugin]</Text>
+				)}
 				<Text dimColor> ({result.duration}ms)</Text>
 				{result.timedOut && <Text color="red"> [TIMEOUT]</Text>}
 				{result.exitCode !== null && result.exitCode !== 0 && (
@@ -541,6 +686,28 @@ const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
 						<Text color="white">
 							{result.stdout.slice(0, 500)}
 							{result.stdout.length > 500 ? "..." : ""}
+						</Text>
+					</Box>
+				</Box>
+			)}
+
+			{/* Bug warning - what Claude would actually see */}
+			{affectedByBug && result.stdout && (
+				<Box marginLeft={3} flexDirection="column">
+					<Box>
+						<Text color="red" bold>
+							⚠ Claude would see:
+						</Text>
+						<Text color="red"> (nothing - output discarded)</Text>
+					</Box>
+					<Box marginLeft={2}>
+						<Text dimColor>
+							Bug: Plugin hooks.json output not captured for {result.hook.hookType}
+						</Text>
+					</Box>
+					<Box marginLeft={2}>
+						<Text dimColor>
+							See: github.com/anthropics/claude-code/issues/12151
 						</Text>
 					</Box>
 				</Box>
@@ -733,9 +900,11 @@ async function runHookTest(
 	hookType?: string,
 	options: { payload?: boolean; command?: string } = {},
 ): Promise<void> {
+	const claudePluginHooks = collectClaudePluginHooks();
 	const settingsHooks = collectSettingsHooks();
 	const pluginHooks = collectPluginHooks();
-	const allHooks = [...settingsHooks, ...pluginHooks];
+	// Claude plugin hooks first (they execute first in Claude Code)
+	const allHooks = [...claudePluginHooks, ...settingsHooks, ...pluginHooks];
 
 	// Filter by hook type if specified
 	let hooksToTest = hookType
@@ -974,17 +1143,32 @@ async function runWithConsole(
 		for (const hook of phaseHooks) {
 			const result = await executeHook(hook, payload);
 			const statusIcon = result.success ? "✓" : "✗";
-			const source =
-				hook.source === "plugin"
-					? `${hook.pluginName}/${hook.name}`
-					: `settings/${hook.name}`;
+			let source: string;
+			let sourceTag = "";
+			if (hook.source === "claude-plugin") {
+				source = `${hook.pluginName}/${hook.name}`;
+				sourceTag = " [Claude plugin]";
+			} else if (hook.source === "plugin") {
+				source = `${hook.pluginName}/${hook.name}`;
+			} else {
+				source = `settings/${hook.name}`;
+			}
 
-			console.log(`  ${statusIcon} ${source} (${result.duration}ms)`);
+			console.log(`  ${statusIcon} ${source}${sourceTag} (${result.duration}ms)`);
 
 			if (result.stdout && result.stdout.length > 0) {
 				const preview = result.stdout.slice(0, 100).replace(/\n/g, " ");
 				console.log(`    stdout: ${preview}${result.stdout.length > 100 ? "..." : ""}`);
 			}
+
+			// Show bug warning for affected hooks
+			const affectedByBug = isAffectedByOutputBug(hook);
+			if (affectedByBug && result.stdout && result.stdout.length > 0) {
+				console.log(`    ⚠ Claude would see: (nothing - output discarded)`);
+				console.log(`    Bug: Plugin hooks.json output not captured for ${hook.hookType}`);
+				console.log(`    See: github.com/anthropics/claude-code/issues/12151`);
+			}
+
 			if (result.stderr && result.stderr.length > 0) {
 				const preview = result.stderr.slice(0, 100).replace(/\n/g, " ");
 				console.log(`    stderr: ${preview}${result.stderr.length > 100 ? "..." : ""}`);
