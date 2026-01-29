@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-01-29
+
+### Added
+
+- add phase timing stats to hook test command ([1e7a4d90](../../commit/1e7a4d90))
+- add hook test command and show all hooks by default ([8155a54e](../../commit/8155a54e))
+
+### Fixed
+
+- resolve startup race conditions and improve LSP resilience ([4f2c642a](../../commit/4f2c642a))
+- use merged settings from all scopes ([7dc9de77](../../commit/7dc9de77))
+- route all native imports through centralized loader ([ec5509b0](../../commit/ec5509b0))
+- use direct .node file loading instead of conditional require ([d9495ab9](../../commit/d9495ab9))
+- exclude deleted files from modified list ([61828d4d](../../commit/61828d4d))
+- externalize han-native to prevent bundling napi-rs loader ([3b67eeeb](../../commit/3b67eeeb))
+
+### Other
+
+- update test names to match renamed checks ([737be0c3](../../commit/737be0c3))
+- Merge pull request #40 from TheBushidoCollective/claude/issue-39-20260128-0049 ([33f47b91](../../commit/33f47b91))
+
 ## [3.2.0] - 2026-01-29
 
 ### Added
