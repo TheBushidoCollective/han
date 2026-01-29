@@ -182,6 +182,36 @@ const HookTypeSection: React.FC<{
 	);
 };
 
+/**
+ * Helper to sort hook types in logical order
+ */
+function sortHookTypes(types: string[]): string[] {
+	const eventOrder = [
+		"SessionStart",
+		"UserPromptSubmit",
+		"PreToolUse",
+		"PostToolUse",
+		"Stop",
+		"SubagentStart",
+		"SubagentStop",
+	];
+	return types.sort((a, b) => {
+		const aIdx = eventOrder.indexOf(a);
+		const bIdx = eventOrder.indexOf(b);
+		if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+		if (aIdx === -1) return 1;
+		if (bIdx === -1) return -1;
+		return aIdx - bIdx;
+	});
+}
+
+/**
+ * Check if a hook source is from Claude Code (plugin or settings)
+ */
+function isClaudeCodeHook(source: HookSource): boolean {
+	return source.isClaudePlugin === true || source.scope !== undefined;
+}
+
 export const HookExplainUI: React.FC<HookExplainUIProps> = ({
 	hooks,
 	showAll,
@@ -200,37 +230,34 @@ export const HookExplainUI: React.FC<HookExplainUIProps> = ({
 		);
 	}
 
-	// Group by hook type
-	const byType = new Map<string, HookSource[]>();
-	for (const hook of hooks) {
-		const existing = byType.get(hook.hookType) || [];
-		existing.push(hook);
-		byType.set(hook.hookType, existing);
-	}
+	// Separate Claude Code hooks from Han plugin hooks
+	const claudeHooks = hooks.filter(isClaudeCodeHook);
+	const hanHooks = hooks.filter((h) => !isClaudeCodeHook(h));
 
-	// Sort hook types in logical order
-	const eventOrder = [
-		"SessionStart",
-		"UserPromptSubmit",
-		"PreToolUse",
-		"PostToolUse",
-		"Stop",
-		"SubagentStart",
-		"SubagentStop",
-	];
-	const sortedTypes = Array.from(byType.keys()).sort((a, b) => {
-		const aIdx = eventOrder.indexOf(a);
-		const bIdx = eventOrder.indexOf(b);
-		if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
-		if (aIdx === -1) return 1;
-		if (bIdx === -1) return -1;
-		return aIdx - bIdx;
-	});
+	// Group each by hook type
+	const groupByType = (sources: HookSource[]): Map<string, HookSource[]> => {
+		const byType = new Map<string, HookSource[]>();
+		for (const hook of sources) {
+			const existing = byType.get(hook.hookType) || [];
+			existing.push(hook);
+			byType.set(hook.hookType, existing);
+		}
+		return byType;
+	};
+
+	const claudeByType = groupByType(claudeHooks);
+	const hanByType = groupByType(hanHooks);
+
+	const claudeTypes = sortHookTypes(Array.from(claudeByType.keys()));
+	const hanTypes = sortHookTypes(Array.from(hanByType.keys()));
 
 	// Calculate summary
-	const totalPlugins = new Set(hooks.map((h) => h.pluginName).filter(Boolean))
-		.size;
 	const totalHooks = hooks.reduce((sum, h) => sum + h.hooks.length, 0);
+	const claudeHookCount = claudeHooks.reduce(
+		(sum, h) => sum + h.hooks.length,
+		0,
+	);
+	const hanHookCount = hanHooks.reduce((sum, h) => sum + h.hooks.length, 0);
 	const withCaching = hooks
 		.flatMap((h) => h.hooks)
 		.filter((h) => h.ifChanged && h.ifChanged.length > 0).length;
@@ -240,85 +267,105 @@ export const HookExplainUI: React.FC<HookExplainUIProps> = ({
 
 	return (
 		<Box flexDirection="column" padding={1}>
-			{/* Header */}
-			<Box flexDirection="column">
-				<Text color="cyan" bold>
-					{"═".repeat(60)}
-				</Text>
-				<Text color="white" bold>
-					ORCHESTRATOR-MANAGED HOOKS{" "}
-					{showAll ? "(all sources)" : "(Han plugins only)"}
-				</Text>
-				<Text color="cyan" bold>
-					{"═".repeat(60)}
-				</Text>
-			</Box>
+			{/* Claude Code Hooks Section */}
+			{claudeHooks.length > 0 && (
+				<Box flexDirection="column">
+					<Box flexDirection="column">
+						<Text color="magenta" bold>
+							{"═".repeat(60)}
+						</Text>
+						<Text color="white" bold>
+							CLAUDE CODE HOOKS ({claudeHookCount} hook
+							{claudeHookCount !== 1 ? "s" : ""})
+						</Text>
+						<Text dimColor>
+							Executed directly by Claude Code's hook system
+						</Text>
+						<Text color="magenta" bold>
+							{"═".repeat(60)}
+						</Text>
+					</Box>
 
-			{/* Hook Types */}
-			{sortedTypes.map((type) => {
-				const sources = byType.get(type);
-				if (!sources) return null;
-				return <HookTypeSection key={type} hookType={type} sources={sources} />;
-			})}
+					{claudeTypes.map((type) => {
+						const sources = claudeByType.get(type);
+						if (!sources) return null;
+						return (
+							<HookTypeSection key={type} hookType={type} sources={sources} />
+						);
+					})}
+				</Box>
+			)}
+
+			{/* Han Plugin Hooks Section */}
+			{hanHooks.length > 0 && (
+				<Box flexDirection="column" marginTop={claudeHooks.length > 0 ? 2 : 0}>
+					<Box flexDirection="column">
+						<Text color="cyan" bold>
+							{"═".repeat(60)}
+						</Text>
+						<Text color="white" bold>
+							HAN PLUGIN HOOKS ({hanHookCount} hook
+							{hanHookCount !== 1 ? "s" : ""})
+						</Text>
+						<Text dimColor>
+							Orchestrated by han hook orchestrate with caching and dependencies
+						</Text>
+						<Text color="cyan" bold>
+							{"═".repeat(60)}
+						</Text>
+					</Box>
+
+					{hanTypes.map((type) => {
+						const sources = hanByType.get(type);
+						if (!sources) return null;
+						return (
+							<HookTypeSection key={type} hookType={type} sources={sources} />
+						);
+					})}
+				</Box>
+			)}
 
 			{/* Summary */}
 			<Box flexDirection="column" marginTop={2}>
-				<Text color="cyan" bold>
-					{"═".repeat(60)}
+				<Text color="yellow" bold>
+					{"─".repeat(60)}
 				</Text>
 				<Text color="white" bold>
 					SUMMARY
 				</Text>
 				<Box marginLeft={2} flexDirection="column">
 					<Box>
-						<Text dimColor>Total plugins: </Text>
-						<Text bold>{totalPlugins}</Text>
+						<Text dimColor>Claude Code hooks: </Text>
+						<Text color="magenta" bold>
+							{claudeHookCount}
+						</Text>
+					</Box>
+					<Box>
+						<Text dimColor>Han plugin hooks: </Text>
+						<Text color="cyan" bold>
+							{hanHookCount}
+						</Text>
 					</Box>
 					<Box>
 						<Text dimColor>Total hooks: </Text>
-						<Text color="blue" bold>
-							{totalHooks}
-						</Text>
+						<Text bold>{totalHooks}</Text>
 					</Box>
-					<Box>
-						<Text dimColor>With caching (if_changed): </Text>
-						<Text color="green" bold>
-							{withCaching}
-						</Text>
-					</Box>
-					<Box>
-						<Text dimColor>With directory targeting (dirs_with): </Text>
-						<Text color="yellow" bold>
-							{withDirs}
-						</Text>
-					</Box>
-					<Box>
-						<Text dimColor>Event types: </Text>
-						<Text>{sortedTypes.join(", ") || "none"}</Text>
-					</Box>
-				</Box>
-			</Box>
-
-			{/* Notes */}
-			<Box flexDirection="column" marginTop={1}>
-				<Text color="yellow" bold>
-					HOW IT WORKS:
-				</Text>
-				<Box marginLeft={2} flexDirection="column">
-					<Text dimColor>
-						• All hooks are managed by the central orchestrator (han hook
-						orchestrate)
-					</Text>
-					<Text dimColor>
-						• Hooks are discovered from han-plugin.yml files in installed
-						plugins
-					</Text>
-					<Text dimColor>
-						• Dependencies are resolved and hooks run in parallel batches
-					</Text>
-					<Text dimColor>
-						• Caching skips hooks when if_changed files haven't been modified
-					</Text>
+					{withCaching > 0 && (
+						<Box>
+							<Text dimColor>With caching (if_changed): </Text>
+							<Text color="green" bold>
+								{withCaching}
+							</Text>
+						</Box>
+					)}
+					{withDirs > 0 && (
+						<Box>
+							<Text dimColor>With directory targeting (dirs_with): </Text>
+							<Text color="yellow" bold>
+								{withDirs}
+							</Text>
+						</Box>
+					)}
 				</Box>
 			</Box>
 		</Box>
