@@ -64,6 +64,40 @@ function setPath(obj: unknown, path: string, value: unknown): unknown {
 }
 
 /**
+ * Extract frontmatter from markdown content
+ * Frontmatter is YAML between --- markers at the start of the file
+ *
+ * @example
+ * extractFrontmatter("---\nname: test\n---\n# Content") // returns "name: test"
+ */
+function extractFrontmatter(content: string): string | null {
+	const trimmed = content.trimStart();
+
+	// Must start with ---
+	if (!trimmed.startsWith("---")) {
+		return null;
+	}
+
+	// Find the closing ---
+	const lines = trimmed.split("\n");
+	let endIndex = -1;
+
+	for (let i = 1; i < lines.length; i++) {
+		if (lines[i].trim() === "---") {
+			endIndex = i;
+			break;
+		}
+	}
+
+	if (endIndex === -1) {
+		return null;
+	}
+
+	// Return content between the --- markers
+	return lines.slice(1, endIndex).join("\n");
+}
+
+/**
  * Validate JSON against a simple schema
  * Schema format: { field: "type", field2: "type" }
  * Types: string, number, boolean, array, object
@@ -207,17 +241,30 @@ export function registerParseCommands(program: Command): void {
 
 	// han parse yaml <path>
 	// Reads YAML from stdin and extracts value at path
+	// Automatically extracts frontmatter if input starts with ---
 	parseCmd
 		.command("yaml")
-		.description("Parse YAML from stdin")
+		.description(
+			"Parse YAML from stdin (auto-extracts frontmatter from markdown)",
+		)
 		.argument("[path]", "Path to extract (dot notation)", ".")
 		.option("-r, --raw", "Output raw string without quotes")
 		.option("-e, --exit-code", "Exit with 1 if path not found or null")
 		.option("--default <value>", "Default value if path not found")
 		.option("--json", "Output as JSON instead of YAML")
+		.option("--no-frontmatter", "Disable automatic frontmatter extraction")
 		.action(async (pathArg: string, opts) => {
 			try {
-				const input = await Bun.stdin.text();
+				let input = await Bun.stdin.text();
+
+				// Auto-extract frontmatter if input looks like markdown with frontmatter
+				if (opts.frontmatter !== false) {
+					const frontmatter = extractFrontmatter(input);
+					if (frontmatter !== null) {
+						input = frontmatter;
+					}
+				}
+
 				const data = yaml.parse(input);
 				let result = getPath(data, pathArg);
 

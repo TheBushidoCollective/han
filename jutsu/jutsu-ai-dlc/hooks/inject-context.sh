@@ -125,22 +125,12 @@ echo "### Current Hat Instructions"
 echo ""
 
 if [ -n "$HAT_FILE" ] && [ -f "$HAT_FILE" ]; then
-  # Read the file content
-  HAT_CONTENT=$(cat "$HAT_FILE")
-
-  # Extract frontmatter block (between --- lines)
-  FRONTMATTER=$(echo "$HAT_CONTENT" | sed -n '/^---$/,/^---$/p' | sed '1d;$d')
-
-  # Parse frontmatter using han parse yaml
-  if [ -n "$FRONTMATTER" ]; then
-    NAME=$(echo "$FRONTMATTER" | han parse yaml name -r --default "" 2>/dev/null || echo "")
-    MODE=$(echo "$FRONTMATTER" | han parse yaml mode -r --default "" 2>/dev/null || echo "")
-  else
-    NAME=""
-    MODE=""
-  fi
+  # Parse frontmatter directly (han parse yaml auto-extracts it)
+  NAME=$(han parse yaml name -r --default "" < "$HAT_FILE" 2>/dev/null || echo "")
+  MODE=$(han parse yaml mode -r --default "" < "$HAT_FILE" 2>/dev/null || echo "")
 
   # Get content after frontmatter (skip until second ---)
+  HAT_CONTENT=$(cat "$HAT_FILE")
   INSTRUCTIONS=$(echo "$HAT_CONTENT" | sed '1,/^---$/d' | sed '1,/^---$/d')
 
   echo "**${NAME:-$HAT}** (Mode: ${MODE:-HITL})"
