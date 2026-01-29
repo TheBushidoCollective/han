@@ -1,6 +1,7 @@
 hooks:
   validate:
     command: act --dryrun
+    timeout: 120000  # 2 minutes - act needs time to pull Docker images
     dirs_with:
       - ".github/workflows"
     if_changed:
