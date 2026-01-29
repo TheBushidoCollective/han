@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-01-29
+
+### Added
+
+- add AI-DLC callout to homepage ([3778f9b6](../../commit/3778f9b6))
+- extract paper sections to runbooks ([0276424e](../../commit/0276424e))
+- add path-first hero to runbooks index ([8bb664bf](../../commit/8bb664bf))
+- add hook statement and path selector to paper ([8d528282](../../commit/8d528282))
+- make What's New section collapsible ([6d94778f](../../commit/6d94778f))
+- link nav directly to AI-DLC paper ([434e3184](../../commit/434e3184))
+- make header sticky with backdrop blur ([4f373276](../../commit/4f373276))
+- add SHA256 checksum verification to install script ([40ea66f4](../../commit/40ea66f4))
+
+### Fixed
+
+- prevent white flash on dark mode load ([283ccc95](../../commit/283ccc95))
+- use lowercase org name for shields.io ([78df2565](../../commit/78df2565))
+- convert all AI-DLC runbook Mermaid diagrams to TB layout ([f0aa107a](../../commit/f0aa107a))
+- narrow wide Mermaid diagrams in building-trust runbook ([a010dc05](../../commit/a010dc05))
+- narrow wide Mermaid diagrams in AI-DLC paper ([599113e9](../../commit/599113e9))
+- wrap TOC in PaperChangesProvider ([aafb0b5c](../../commit/aafb0b5c))
+- update lockfile for CI ([0379583e](../../commit/0379583e))
+- improve Mermaid diagram sizing ([04d31b80](../../commit/04d31b80))
+- add validation for empty checksum files ([0c0e306f](../../commit/0c0e306f))
+
+### Changed
+
+- trim Adoption Path to summary with runbook links ([560f6667](../../commit/560f6667))
+- update HOTL terminology and trim paper ([c568bc09](../../commit/c568bc09))
+
+### Other
+
+- Merge pull request #35 from TheBushidoCollective/feat/install-checksum-verification ([7ef6268e](../../commit/7ef6268e))
+
 ## [1.34.2] - 2026-01-28
 
 ### Added
