@@ -1,5 +1,6 @@
 ---
 description: (Internal) Advance to the next hat in the AI-DLC workflow
+internal: true
 ---
 
 # /advance - Move to Next Hat

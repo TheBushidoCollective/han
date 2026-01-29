@@ -9,7 +9,12 @@
 
 set -e
 
-# Check for jq dependency
+# Check for required dependencies
+if ! command -v han &> /dev/null; then
+  echo "Warning: han CLI is required for AI-DLC but not installed. Skipping context injection." >&2
+  exit 0
+fi
+
 if ! command -v jq &> /dev/null; then
   echo "Warning: jq is required for AI-DLC but not installed. Skipping context injection." >&2
   exit 0
@@ -114,9 +119,19 @@ if [ -n "$HAT_FILE" ] && [ -f "$HAT_FILE" ]; then
   # Read the file content
   HAT_CONTENT=$(cat "$HAT_FILE")
 
-  # Parse frontmatter (between --- lines)
-  NAME=$(echo "$HAT_CONTENT" | sed -n '/^---$/,/^---$/p' | grep '^name:' | sed 's/^name:[[:space:]]*//' | tr -d '"')
-  MODE=$(echo "$HAT_CONTENT" | sed -n '/^---$/,/^---$/p' | grep '^mode:' | sed 's/^mode:[[:space:]]*//' | tr -d '"')
+  # Extract frontmatter block (between --- lines)
+  FRONTMATTER=$(echo "$HAT_CONTENT" | sed -n '/^---$/,/^---$/p' | sed '1d;$d')
+
+  # Parse frontmatter - prefer yq for safety, fallback to grep
+  if command -v yq &> /dev/null && [ -n "$FRONTMATTER" ]; then
+    # Use yq for proper YAML parsing (safer)
+    NAME=$(echo "$FRONTMATTER" | yq -r '.name // empty' 2>/dev/null || echo "")
+    MODE=$(echo "$FRONTMATTER" | yq -r '.mode // empty' 2>/dev/null || echo "")
+  else
+    # Fallback: simple grep extraction (only alphanumeric + spaces allowed)
+    NAME=$(echo "$FRONTMATTER" | grep -E '^name:' | sed 's/^name:[[:space:]]*//' | tr -d '"' | tr -cd '[:alnum:] _-')
+    MODE=$(echo "$FRONTMATTER" | grep -E '^mode:' | sed 's/^mode:[[:space:]]*//' | tr -d '"' | tr -cd '[:alnum:]')
+  fi
 
   # Get content after frontmatter (skip until second ---)
   INSTRUCTIONS=$(echo "$HAT_CONTENT" | sed '1,/^---$/d' | sed '1,/^---$/d')

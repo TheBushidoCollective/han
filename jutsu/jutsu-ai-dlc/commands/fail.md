@@ -1,5 +1,6 @@
 ---
 description: (Internal) Return to the previous hat in the AI-DLC workflow (e.g., reviewer finds issues)
+internal: true
 ---
 
 # /fail - Return to Previous Hat

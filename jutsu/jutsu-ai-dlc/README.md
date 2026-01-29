@@ -283,7 +283,18 @@ Session-scoped, cleared on `/reset`:
 | `scratchpad.md` | Learnings and progress notes |
 | `blockers.md` | Documented blockers |
 
+> **Note:** Commands use `han_keep_save()` and `han_keep_load()` syntax which are **MCP tool calls**, not CLI commands. Claude executes these as MCP tool invocations. The hooks use `han keep` CLI commands directly.
+
 ## Customization
+
+### Hat Resolution Order
+
+Hats are resolved in this order:
+
+1. **Project override**: `.ai-dlc/hats/{hat}.md` (in your repo)
+2. **Plugin built-in**: `jutsu-ai-dlc/hats/{hat}.md`
+
+This allows you to customize any hat while falling back to defaults.
 
 ### Custom Hats
 
@@ -342,16 +353,69 @@ This plugin provides skills for understanding AI-DLC:
 - `ai-dlc-backpressure` - Using quality gates effectively
 - `ai-dlc-blockers` - Documenting blockers properly
 
+## Error Recovery
+
+### Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| **Invalid iteration.json** | Run `/reset` to clear corrupted state |
+| **Stuck in wrong hat** | Edit `iteration.json` via `han keep load/save` or `/reset` |
+| **Hook not injecting context** | Verify `han` and `jq` are installed and in PATH |
+| **Missing hat instructions** | Check hat file exists in `.ai-dlc/hats/` or plugin's `hats/` |
+| **Orphaned ephemeral state** | Run `/reset` to clear, recommit intent if needed |
+
+### Manual State Inspection
+
+```bash
+# View current iteration state
+han keep load --branch iteration.json
+
+# View scratchpad
+han keep load --branch scratchpad.md
+
+# Clear all ephemeral state (same as /reset)
+han keep clear --branch
+```
+
+### Recovery from Context Loss
+
+If you `/clear` without running the stop hook:
+
+1. Your committed artifacts (`.ai-dlc/`) are safe
+2. Ephemeral state persists in `han keep`
+3. Just run `/construct` to continue
+
 ## Integration with Han
+
+### Recommended Plugin Stack
+
+AI-DLC works best with backpressure from other jutsu plugins. Recommended combinations:
+
+**Minimal (any project):**
+```bash
+han plugin install jutsu-ai-dlc
+han plugin install jutsu-biome      # Lint + format backpressure
+```
+
+**TypeScript Projects:**
+```bash
+han plugin install jutsu-ai-dlc
+han plugin install jutsu-typescript # Type checking backpressure
+han plugin install jutsu-biome      # Lint backpressure
+```
+
+**Full TDD Stack:**
+```bash
+han plugin install jutsu-ai-dlc
+han plugin install jutsu-typescript
+han plugin install jutsu-biome
+han plugin install jutsu-vitest     # Test backpressure (or jest, etc.)
+```
 
 ### Backpressure Hooks
 
-AI-DLC works best with backpressure from other jutsu plugins:
-
-```bash
-han plugin install jutsu-biome      # Lint backpressure
-han plugin install jutsu-typescript # Type backpressure
-```
+These plugins provide Stop hooks that block completion when quality gates fail:
 
 ### Memory System
 

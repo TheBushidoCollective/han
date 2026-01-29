@@ -1,5 +1,6 @@
 ---
 description: (Internal) Complete the AI-DLC task (only valid from the last hat)
+internal: true
 ---
 
 # /done - Complete Task

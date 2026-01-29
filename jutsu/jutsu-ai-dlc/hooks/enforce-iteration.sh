@@ -6,7 +6,12 @@
 
 set -e
 
-# Check for jq dependency
+# Check for required dependencies
+if ! command -v han &> /dev/null; then
+  # han not installed - skip silently
+  exit 0
+fi
+
 if ! command -v jq &> /dev/null; then
   # jq not installed - skip silently
   exit 0
