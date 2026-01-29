@@ -265,12 +265,13 @@ function getPluginHooks(): HookSource[] {
 /**
  * Explain all configured hooks using Ink UI
  */
-function explainHooks(hookType?: string, showAll = false): void {
+function explainHooks(hookType?: string, hanOnly = false): void {
 	const settingsHooks = getSettingsHooks();
 	const pluginHooks = getPluginHooks();
 
-	// By default, only show Han plugin hooks. Use --all to include settings hooks.
-	const allHooks = showAll ? [...settingsHooks, ...pluginHooks] : pluginHooks;
+	// By default, show all hooks (Han plugins + Claude Code settings).
+	// Use --han-only to show only Han plugin hooks.
+	const allHooks = hanOnly ? pluginHooks : [...settingsHooks, ...pluginHooks];
 
 	// Filter by hook type if specified
 	const filteredHooks: HookSource[] = hookType
@@ -280,7 +281,7 @@ function explainHooks(hookType?: string, showAll = false): void {
 		: allHooks;
 
 	// Render the Ink UI component
-	render(<HookExplainUI hooks={filteredHooks} showAll={showAll} />);
+	render(<HookExplainUI hooks={filteredHooks} showAll={!hanOnly} />);
 }
 
 export function registerHookExplain(hookCommand: Command): void {
@@ -288,19 +289,16 @@ export function registerHookExplain(hookCommand: Command): void {
 		.command("explain [hookType]")
 		.description(
 			"Show comprehensive information about configured hooks.\n" +
-				"By default, shows only Han plugin hooks (from han-plugin.yml).\n" +
-				"Use --all to include hooks from Claude Code settings.\n\n" +
+				"By default, shows ALL hooks (Han plugins + Claude Code settings).\n" +
+				"Use --han-only to show only Han plugin hooks.\n\n" +
 				"Examples:\n" +
-				"  han hook explain           # Show Han plugin hooks\n" +
-				"  han hook explain Stop      # Show only Stop hooks from Han plugins\n" +
-				"  han hook explain --all     # Show all hooks including settings\n" +
-				"  han hook explain Stop --all",
+				"  han hook explain           # Show all hooks (Han + settings)\n" +
+				"  han hook explain Stop      # Show only Stop hooks from all sources\n" +
+				"  han hook explain --han-only # Show only Han plugin hooks\n" +
+				"  han hook explain Stop --han-only",
 		)
-		.option(
-			"-a, --all",
-			"Include hooks from Claude Code settings (not just Han plugins)",
-		)
-		.action((hookType: string | undefined, options: { all?: boolean }) => {
-			explainHooks(hookType, options.all ?? false);
+		.option("--han-only", "Show only Han plugin hooks (exclude settings hooks)")
+		.action((hookType: string | undefined, options: { hanOnly?: boolean }) => {
+			explainHooks(hookType, options.hanOnly ?? false);
 		});
 }
