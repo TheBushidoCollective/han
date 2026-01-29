@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import type { Command } from "commander";
 import { render } from "ink";
 import {
@@ -17,6 +17,25 @@ import {
 	loadPluginConfig,
 	type PluginHookDefinition,
 } from "../../hooks/index.ts";
+
+/**
+ * Claude Code plugin hooks.json format
+ */
+interface ClaudePluginHooksJson {
+	description?: string;
+	hooks?: Record<
+		string,
+		Array<{
+			matcher?: string;
+			hooks: Array<{
+				type: "command" | "prompt";
+				command?: string;
+				prompt?: string;
+				timeout?: number;
+			}>;
+		}>
+	>;
+}
 
 /**
  * Hook entry from Claude Code settings (legacy format)
@@ -155,6 +174,98 @@ function parseLegacyHooksObject(
 }
 
 /**
+ * Get hooks from Claude Code plugin hooks.json files
+ * These are the actual hooks that Claude Code executes (e.g., han hook orchestrate commands)
+ */
+function getClaudePluginHooks(): HookSource[] {
+	const sources: HookSource[] = [];
+	const configDir = getClaudeConfigDir();
+	if (!configDir) return sources;
+
+	const pluginCacheDir = join(configDir, "plugins", "cache");
+	if (!existsSync(pluginCacheDir)) return sources;
+
+	// Iterate through marketplaces
+	try {
+		const marketplaces = readdirSync(pluginCacheDir, { withFileTypes: true })
+			.filter((d) => d.isDirectory())
+			.map((d) => d.name);
+
+		for (const marketplace of marketplaces) {
+			const marketplaceDir = join(pluginCacheDir, marketplace);
+			const plugins = readdirSync(marketplaceDir, { withFileTypes: true })
+				.filter((d) => d.isDirectory())
+				.map((d) => d.name);
+
+			for (const pluginName of plugins) {
+				const pluginDir = join(marketplaceDir, pluginName);
+				// Find the latest version directory
+				const versions = readdirSync(pluginDir, { withFileTypes: true })
+					.filter((d) => d.isDirectory())
+					.map((d) => d.name)
+					.sort()
+					.reverse();
+
+				if (versions.length === 0) continue;
+
+				const latestVersion = versions[0];
+				const hooksJsonPath = join(
+					pluginDir,
+					latestVersion,
+					"hooks",
+					"hooks.json",
+				);
+
+				if (!existsSync(hooksJsonPath)) continue;
+
+				try {
+					const content = readFileSync(hooksJsonPath, "utf-8");
+					const hooksJson = JSON.parse(content) as ClaudePluginHooksJson;
+
+					if (!hooksJson.hooks) continue;
+
+					for (const [hookType, hookGroups] of Object.entries(hooksJson.hooks)) {
+						const hooks: Array<{
+							name?: string;
+							command: string;
+							description?: string;
+							matcher?: string;
+						}> = [];
+
+						for (const group of hookGroups) {
+							for (const hook of group.hooks) {
+								hooks.push({
+									command: hook.command || hook.prompt || "",
+									description:
+										hook.type === "prompt" ? "Prompt hook" : undefined,
+									matcher: group.matcher,
+								});
+							}
+						}
+
+						if (hooks.length > 0) {
+							sources.push({
+								source: hooksJsonPath,
+								pluginName: `${pluginName}@${marketplace}`,
+								hookType,
+								hooks,
+								isClaudePlugin: true,
+							});
+						}
+					}
+				} catch {
+					// Invalid JSON, skip
+				}
+			}
+		}
+	} catch {
+		// Directory read failed, skip
+	}
+
+	return sources;
+}
+
+/**
  * Get hooks from Claude Code settings files (legacy format)
  */
 function getSettingsHooks(): HookSource[] {
@@ -266,12 +377,15 @@ function getPluginHooks(): HookSource[] {
  * Explain all configured hooks using Ink UI
  */
 function explainHooks(hookType?: string, hanOnly = false): void {
+	const claudePluginHooks = getClaudePluginHooks();
 	const settingsHooks = getSettingsHooks();
 	const pluginHooks = getPluginHooks();
 
-	// By default, show all hooks (Han plugins + Claude Code settings).
+	// By default, show all hooks (Claude plugin hooks first, then settings, then Han plugins).
 	// Use --han-only to show only Han plugin hooks.
-	const allHooks = hanOnly ? pluginHooks : [...settingsHooks, ...pluginHooks];
+	const allHooks = hanOnly
+		? pluginHooks
+		: [...claudePluginHooks, ...settingsHooks, ...pluginHooks];
 
 	// Filter by hook type if specified
 	const filteredHooks: HookSource[] = hookType

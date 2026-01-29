@@ -15,6 +15,8 @@ interface HookEntry {
 	toolFilter?: string[];
 	tip?: string;
 	dependsOn?: HookDependency[];
+	/** Matcher pattern for PreToolUse/PostToolUse hooks */
+	matcher?: string;
 }
 
 export interface HookSource {
@@ -24,6 +26,8 @@ export interface HookSource {
 	marketplace?: string;
 	hookType: string;
 	hooks: HookEntry[];
+	/** True if this is from a Claude Code plugin's hooks.json (not Han plugin) */
+	isClaudePlugin?: boolean;
 }
 
 interface HookExplainUIProps {
@@ -188,7 +192,8 @@ export const HookExplainUI: React.FC<HookExplainUIProps> = ({
 				<Text color="yellow">No hooks configured.</Text>
 				{!showAll && (
 					<Text dimColor>
-						Use --all to include hooks from Claude Code settings.
+						Run without --han-only to include Claude Code settings and plugin
+						hooks.
 					</Text>
 				)}
 			</Box>
