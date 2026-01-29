@@ -1,6 +1,7 @@
 # Han
 
 [![GitHub Release](https://img.shields.io/github/v/release/thebushidocollective/han)](https://github.com/thebushidocollective/han/releases)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/jwaldrip/cd6f81e193544d779245496680af7ba0/raw/han-coverage.json)](https://github.com/thebushidocollective/han/actions/workflows/validate-han.yml)
 
 Automatic quality gates for Claude Code. Every conversation ends with validation—linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
 
