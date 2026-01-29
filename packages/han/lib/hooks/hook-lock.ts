@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
 	existsSync,
 	mkdirSync,
@@ -150,32 +150,46 @@ function readSlotFile(slotPath: string): LockSlot | null {
 
 /**
  * Write a slot file atomically
+ * Uses UUID for temp file names to avoid collisions even when
+ * Date.now() returns the same value for concurrent processes
  */
 function writeSlotFile(slotPath: string, slot: LockSlot): boolean {
+	// Use UUID to guarantee unique temp file names
+	const tempPath = `${slotPath}.${randomUUID()}.tmp`;
+
 	try {
-		// Write to temp file first, then rename for atomicity
-		// Use timestamp + pid to avoid collisions with leftover temp files
-		const tempPath = `${slotPath}.${process.pid}.${Date.now()}.tmp`;
 		writeFileSync(tempPath, JSON.stringify(slot));
 
-		// Check if slot was taken while we were writing
-		if (existsSync(slotPath)) {
-			debugLog(`writeSlotFile: slot already exists at ${slotPath}`);
-			rmSync(tempPath, { force: true });
-			return false;
-		}
-
-		// Rename temp to final (atomic on most filesystems)
+		// Atomic rename - this either succeeds completely or fails
+		// The TOCTOU window is handled by checking ownership after rename
 		try {
 			renameSync(tempPath, slotPath);
-			return true;
+
+			// Verify we actually own the slot (another process might have won)
+			const written = readSlotFile(slotPath);
+			if (written && written.pid === slot.pid) {
+				return true;
+			}
+
+			// We lost the race - another process's slot is there
+			debugLog(`writeSlotFile: lost race, slot owned by pid ${written?.pid}`);
+			return false;
 		} catch (e) {
-			debugLog(`writeSlotFile: rename failed: ${(e as Error).message}`);
+			const err = e as NodeJS.ErrnoException;
+			// EEXIST means another process created the file between our check and rename
+			// ENOENT means our temp file was deleted (shouldn't happen)
+			debugLog(`writeSlotFile: rename failed: ${err.message}`);
 			rmSync(tempPath, { force: true });
 			return false;
 		}
 	} catch (e) {
 		debugLog(`writeSlotFile: write failed: ${(e as Error).message}`);
+		// Clean up temp file on any error
+		try {
+			rmSync(tempPath, { force: true });
+		} catch {
+			// Ignore cleanup errors
+		}
 		return false;
 	}
 }
@@ -188,8 +202,14 @@ function tryAcquireSlot(
 	hookName: string,
 	pluginName?: string,
 ): number {
-	// Ensure lock directory exists
-	mkdirSync(manager.lockDir, { recursive: true });
+	// Ensure lock directory exists - handle race with other processes
+	try {
+		mkdirSync(manager.lockDir, { recursive: true });
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+			throw err;
+		}
+	}
 
 	for (let i = 0; i < manager.parallelism; i++) {
 		const slotPath = join(manager.lockDir, `slot-${i}.lock`);
@@ -380,7 +400,15 @@ export function signalFailure(
 	info?: { pluginName?: string; hookName?: string; directory?: string },
 ): void {
 	try {
-		mkdirSync(manager.lockDir, { recursive: true });
+		// Handle directory creation race with other processes
+		try {
+			mkdirSync(manager.lockDir, { recursive: true });
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+				throw err;
+			}
+		}
+
 		const sentinelPath = getFailureSentinelPath(manager);
 		const content = JSON.stringify({
 			pid: process.pid,

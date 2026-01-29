@@ -3,6 +3,28 @@ set -euo pipefail
 
 LSP_CMD="sourcekit-lsp"
 
+# Graceful degradation: Check if Swift project files exist
+has_swift_files() {
+    # Check for Package.swift first (fastest check)
+    [[ -f "Package.swift" ]] && return 0
+
+    # Search for .swift files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/.build" -prune -o \
+        -path "*/Pods" -prune -o \
+        -path "*/DerivedData" -prune -o \
+        -name "*.swift" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_swift_files; then
+    echo "No .swift files or Package.swift found. Swift LSP disabled." >&2
+    exit 0
+fi
+
 # Check if available (usually bundled with Xcode on macOS)
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

@@ -16,7 +16,10 @@
       "args": ["--stdio"],
       "extensionToLanguage": {
         ".vue": "vue"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

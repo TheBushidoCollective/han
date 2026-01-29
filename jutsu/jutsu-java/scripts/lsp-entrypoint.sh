@@ -8,6 +8,30 @@ BIN_DIR="${HOME}/.claude/bin"
 JDTLS_DIR="${HOME}/.claude/lsp/jdtls"
 LSP_CMD="jdtls"
 
+# Graceful degradation: Check if Java project files exist
+has_java_files() {
+    # Check for build files first (fastest check)
+    [[ -f "pom.xml" ]] && return 0
+    [[ -f "build.gradle" ]] && return 0
+    [[ -f "build.gradle.kts" ]] && return 0
+
+    # Search for .java files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/target" -prune -o \
+        -path "*/build" -prune -o \
+        -path "*/.gradle" -prune -o \
+        -name "*.java" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_java_files; then
+    echo "No .java files or build files found. Java LSP disabled." >&2
+    exit 0
+fi
+
 # Check if jdtls is in PATH or our bin directory
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

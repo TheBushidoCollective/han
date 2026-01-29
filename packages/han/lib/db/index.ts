@@ -84,6 +84,7 @@ export type {
 
 let _dbPath: string | null = null;
 let _initialized = false;
+let _initPromise: Promise<void> | null = null;
 
 /**
  * Reset the cached database state
@@ -93,6 +94,7 @@ let _initialized = false;
 export function _resetDbState(): void {
 	_dbPath = null;
 	_initialized = false;
+	_initPromise = null;
 }
 
 /**
@@ -110,8 +112,14 @@ export function getDbPath(): string {
 	}
 
 	const hanDir = join(configDir, "han");
-	if (!existsSync(hanDir)) {
+	// Use try/catch for directory creation - mkdirSync with recursive is idempotent
+	// but can still race with other processes
+	try {
 		mkdirSync(hanDir, { recursive: true });
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+			throw err;
+		}
 	}
 
 	_dbPath = join(hanDir, "han.db");
@@ -122,17 +130,40 @@ export function getDbPath(): string {
  * Initialize the database and schema
  * Call this once at startup to ensure tables and indexes exist
  * Note: Schema is auto-applied when database is opened (SQLite)
+ *
+ * Uses a promise-based guard to prevent concurrent initialization
+ * within the same process. SQLite's own locking handles cross-process
+ * coordination.
  */
 export async function initDb(): Promise<void> {
+	// Fast path - already initialized
 	if (_initialized) return;
 
-	const dbPath = getDbPath();
-	const native = getNativeModule();
+	// If initialization is in progress, wait for it
+	if (_initPromise) {
+		await _initPromise;
+		return;
+	}
 
-	// dbInit auto-applies schema on first access
-	native.dbInit(dbPath);
+	// Start initialization
+	_initPromise = (async () => {
+		try {
+			const dbPath = getDbPath();
+			const native = getNativeModule();
 
-	_initialized = true;
+			// dbInit auto-applies schema on first access
+			// SQLite handles its own locking for cross-process coordination
+			native.dbInit(dbPath);
+
+			_initialized = true;
+		} catch (err) {
+			// Reset promise on failure so retry is possible
+			_initPromise = null;
+			throw err;
+		}
+	})();
+
+	await _initPromise;
 }
 
 /**
@@ -169,10 +200,10 @@ export async function isCoordinatorRunning(): Promise<boolean> {
  * Start the coordinator daemon if not already running
  * Returns immediately if coordinator is already starting or running
  *
- * @param timeout Maximum time to wait for coordinator to start (default: 5000ms)
+ * @param timeout Maximum time to wait for coordinator to start (default: 10000ms)
  */
 export async function startCoordinatorIfNeeded(
-	timeout = 5000,
+	timeout = 10000,
 ): Promise<boolean> {
 	// Quick check if already running
 	if (await isCoordinatorRunning()) {
@@ -232,8 +263,9 @@ export async function startCoordinatorIfNeeded(
  * @returns The result of the operation
  */
 export async function withFreshData<T>(fn: () => Promise<T>): Promise<T> {
-	// Try to ensure coordinator is running (2s timeout to prevent slow startups)
-	await startCoordinatorIfNeeded(2000);
+	// Try to ensure coordinator is running (5s timeout to prevent slow startups)
+	// Increased from 2s to handle slower systems
+	await startCoordinatorIfNeeded(5000);
 
 	// Execute the operation regardless of coordinator status
 	return fn();

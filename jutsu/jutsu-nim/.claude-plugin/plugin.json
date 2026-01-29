@@ -18,7 +18,10 @@
         ".nim": "nim",
         ".nims": "nim",
         ".nimble": "nim"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

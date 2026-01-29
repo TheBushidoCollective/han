@@ -23,7 +23,10 @@
       "extensionToLanguage": {
         ".ts": "typescript",
         ".html": "html"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

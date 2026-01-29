@@ -97,9 +97,15 @@ export class EventLogger {
 		// Ref directory for large content: {logPath-dir}/{sessionId}/
 		this.refDir = join(dirname(this.logPath), sessionId);
 
-		// Ensure directory exists
-		if (!existsSync(dirname(this.logPath))) {
+		// Ensure directory exists - use try/catch to handle race conditions
+		// where multiple processes try to create the same directory
+		try {
 			mkdirSync(dirname(this.logPath), { recursive: true });
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+				// Only throw if it's not an "already exists" error
+				throw err;
+			}
 		}
 
 		if (isDebugMode()) {
@@ -159,8 +165,14 @@ export class EventLogger {
 	 */
 	private writeRefFile(event: HanEvent): string {
 		const refSubdir = join(this.refDir, event.type);
-		if (!existsSync(refSubdir)) {
+
+		// Create directory with race-safe pattern
+		try {
 			mkdirSync(refSubdir, { recursive: true });
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+				throw err;
+			}
 		}
 
 		const refFileName = `${event.uuid}.json`;

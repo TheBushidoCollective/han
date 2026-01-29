@@ -28,7 +28,10 @@
         ".jsx": "javascriptreact",
         ".tsx": "typescriptreact",
         ".vue": "vue"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

@@ -23,7 +23,10 @@
         ".hxx": "cpp",
         ".C": "cpp",
         ".H": "cpp"
-      }
+      },
+      "startupTimeout": 120000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

@@ -4,6 +4,27 @@ set -euo pipefail
 LSP_CMD="terraform-ls"
 BIN_DIR="${HOME}/.claude/bin"
 
+# Graceful degradation: Check if terraform files exist in the project
+# This prevents the LSP from walking entire directory trees in non-terraform projects
+has_terraform_files() {
+    # Check common locations for terraform files
+    # Use find with maxdepth 5 for monorepo support (apps/name/infra/*.tf)
+    # Exclude node_modules, .git, vendor to keep search fast
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/vendor" -prune -o \
+        -path "*/.terraform" -prune -o \
+        -name "*.tf" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_terraform_files; then
+    echo "No .tf files found in project. Terraform LSP disabled." >&2
+    exit 0
+fi
+
 # Check if already installed
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

@@ -195,11 +195,20 @@ export async function startDaemon(
 
 	child.unref();
 
-	// Wait for daemon to start (30s timeout, check every 100ms)
-	const healthy = await waitForHealth(port, 30000, 100);
+	// Wait for daemon to start
+	// Timeout is configurable via HAN_COORDINATOR_TIMEOUT (default: 60s)
+	// Increased from 30s to handle slow disks and heavy I/O
+	const timeoutMs = parseInt(
+		process.env.HAN_COORDINATOR_TIMEOUT || "60000",
+		10,
+	);
+	const healthy = await waitForHealth(port, timeoutMs, 100);
 
 	if (!healthy) {
-		throw new Error("Coordinator failed to start within timeout");
+		throw new Error(
+			`Coordinator failed to start within ${timeoutMs / 1000}s timeout. ` +
+				`Set HAN_COORDINATOR_TIMEOUT to increase (milliseconds).`,
+		);
 	}
 
 	const newStatus = await getStatus(port);

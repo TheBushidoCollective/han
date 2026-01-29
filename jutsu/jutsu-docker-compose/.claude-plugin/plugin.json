@@ -17,7 +17,10 @@
       "extensionToLanguage": {
         ".yaml": "dockercompose",
         ".yml": "dockercompose"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

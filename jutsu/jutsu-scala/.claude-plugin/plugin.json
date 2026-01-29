@@ -18,7 +18,10 @@
         ".scala": "scala",
         ".sc": "scala",
         ".sbt": "sbt"
-      }
+      },
+      "startupTimeout": 120000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

@@ -5,12 +5,42 @@
  * to communicate with the coordinator daemon.
  *
  * Uses fetch for queries/mutations and graphql-ws for subscriptions.
+ * Automatically ensures the coordinator is running before making requests.
  */
 
 import { type Client, createClient } from "graphql-ws";
 import WebSocket from "ws";
 import { checkHealth } from "./health.ts";
 import { getCoordinatorPort } from "./types.ts";
+
+// Lazy coordinator initialization state
+let coordinatorPromise: Promise<void> | null = null;
+let coordinatorReady = false;
+
+/**
+ * Ensure the coordinator is running before making requests.
+ * This is called automatically by the client on first request.
+ * Returns true if coordinator is ready, false if it failed to start.
+ */
+export async function ensureCoordinatorReady(): Promise<boolean> {
+	if (coordinatorReady) return true;
+
+	if (!coordinatorPromise) {
+		coordinatorPromise = (async () => {
+			try {
+				const { ensureCoordinator } = await import("./daemon.ts");
+				await ensureCoordinator();
+				coordinatorReady = true;
+			} catch (err) {
+				// Log but don't throw - caller will handle unavailability
+				console.error("[coordinator-client] Failed to start coordinator:", err);
+			}
+		})();
+	}
+
+	await coordinatorPromise;
+	return coordinatorReady;
+}
 
 /**
  * GraphQL request options
@@ -55,12 +85,19 @@ export class CoordinatorClient {
 	}
 
 	/**
-	 * Execute a GraphQL query or mutation
+	 * Execute a GraphQL query or mutation.
+	 * Automatically ensures the coordinator is running before making requests.
 	 */
 	async request<T = unknown>(
 		query: string,
 		options: GraphQLRequestOptions = {},
 	): Promise<GraphQLResponse<T>> {
+		// Ensure coordinator is running before making requests
+		const ready = await ensureCoordinatorReady();
+		if (!ready) {
+			throw new Error("Coordinator is not available");
+		}
+
 		const response = await fetch(this.url, {
 			method: "POST",
 			headers: {

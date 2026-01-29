@@ -17,6 +17,20 @@
       "extensionToLanguage": {
         ".tf": "terraform",
         ".tfvars": "terraform-vars"
+      },
+      "initializationOptions": {
+        "indexing": {
+          "ignorePaths": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/vendor/**",
+            "**/.terraform/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/.next/**",
+            "**/out/**"
+          ]
+        }
       }
     }
   }

@@ -183,11 +183,49 @@ export function registerCoordinatorCommands(program: Command): void {
 		.command("ensure")
 		.description("Ensure coordinator is running (start if needed)")
 		.option("-p, --port <port>", `Port number (default: ${defaultPort})`)
-		.action(async (options: { port?: string }) => {
+		.option(
+			"--background",
+			"Start in background without waiting for health check",
+		)
+		.action(async (options: { port?: string; background?: boolean }) => {
 			try {
 				const port = options.port
 					? parseInt(options.port, 10)
 					: getCoordinatorPort();
+
+				if (options.background) {
+					// Non-blocking: start daemon and return immediately
+					// Used by SessionStart hook to not block session startup
+					const status = await getStatus(port);
+					if (status.running) {
+						// Already running, nothing to do
+						return;
+					}
+
+					// Start in background - fire and forget
+					// Don't await the full startup, just spawn the daemon
+					const { spawn } = await import("node:child_process");
+					const hanBinary = process.argv[1];
+					const child = spawn(
+						process.execPath,
+						[
+							hanBinary,
+							"coordinator",
+							"start",
+							"--daemon",
+							"--port",
+							String(port),
+						],
+						{
+							detached: true,
+							stdio: "ignore",
+						},
+					);
+					child.unref();
+					return;
+				}
+
+				// Blocking: wait for coordinator to be healthy
 				const status = await ensureCoordinator(port);
 
 				if (status.running) {
@@ -320,6 +358,7 @@ export function registerCoordinatorCommands(program: Command): void {
 export {
 	CoordinatorClient,
 	createCoordinatorClient,
+	ensureCoordinatorReady,
 	getCoordinatorClient,
 } from "./client.ts";
 // Re-export utilities for use by other commands

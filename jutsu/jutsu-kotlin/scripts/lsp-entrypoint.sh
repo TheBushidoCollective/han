@@ -8,6 +8,28 @@ BIN_DIR="${HOME}/.claude/bin"
 LSP_CMD="kotlin-language-server"
 VERSION="1.3.9"
 
+# Graceful degradation: Check if Kotlin files exist
+has_kotlin_files() {
+    # Check for Gradle Kotlin DSL files first (fastest check)
+    [[ -f "build.gradle.kts" ]] && return 0
+    [[ -f "settings.gradle.kts" ]] && return 0
+
+    # Search for .kt files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/build" -prune -o \
+        -path "*/.gradle" -prune -o \
+        -name "*.kt" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_kotlin_files; then
+    echo "No .kt files or Kotlin Gradle files found. Kotlin LSP disabled." >&2
+    exit 0
+fi
+
 # Check if kotlin-language-server is in PATH or our bin directory
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

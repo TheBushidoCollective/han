@@ -4,6 +4,27 @@ set -euo pipefail
 LSP_CMD="expert"
 BIN_DIR="${HOME}/.claude/bin"
 
+# Graceful degradation: Check if Elixir project files exist
+has_elixir_files() {
+    # Check for mix.exs first (fastest check)
+    [[ -f "mix.exs" ]] && return 0
+
+    # Search for .ex/.exs files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/_build" -prune -o \
+        -path "*/deps" -prune -o \
+        \( -name "*.ex" -o -name "*.exs" \) -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_elixir_files; then
+    echo "No mix.exs or .ex/.exs files found. Elixir LSP disabled." >&2
+    exit 0
+fi
+
 # Check if already installed
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

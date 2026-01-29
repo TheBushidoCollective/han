@@ -3,6 +3,26 @@ set -euo pipefail
 
 LSP_CMD="gopls"
 
+# Graceful degradation: Check if Go project files exist
+has_go_files() {
+    # Check for go.mod first (fastest check)
+    [[ -f "go.mod" ]] && return 0
+
+    # Search for .go files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/vendor" -prune -o \
+        -name "*.go" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_go_files; then
+    echo "No go.mod or .go files found. Go LSP disabled." >&2
+    exit 0
+fi
+
 if ! command -v "$LSP_CMD" &> /dev/null; then
     echo "Installing $LSP_CMD..." >&2
 

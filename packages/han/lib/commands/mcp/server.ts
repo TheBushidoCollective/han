@@ -947,19 +947,24 @@ function sendResponse(response: JsonRpcResponse): void {
 	process.stdout.write(`${json}\n`);
 }
 
+// Re-export coordinator readiness check from client layer
+// Any code using CoordinatorClient automatically gets coordinator readiness,
+// but this export is available for code that needs explicit control
+export { ensureCoordinatorReady as waitForCoordinator } from "../coordinator/client.ts";
+
 export async function startMcpServer(): Promise<void> {
 	// Setup signal handlers for graceful shutdown
 	process.on("SIGINT", () => process.exit(0));
 	process.on("SIGTERM", () => process.exit(0));
 
-	// Ensure coordinator is running to keep database indexed during session
-	try {
-		const { ensureCoordinator } = await import("../coordinator/daemon.ts");
-		await ensureCoordinator();
-	} catch (_err) {
-		// Log but don't fail - MCP can operate without coordinator for basic operations
-		console.error("[mcp] Warning: Failed to start coordinator");
-	}
+	// Try to start coordinator in background (non-blocking)
+	// This warms it up early so it's ready when first GraphQL request comes
+	// Also started by SessionStart hook - whichever runs first wins
+	import("../coordinator/client.ts").then(({ ensureCoordinatorReady }) => {
+		ensureCoordinatorReady().catch(() => {
+			// Ignore - will be retried on first GraphQL request if needed
+		});
+	});
 
 	const rl = createInterface({
 		input: process.stdin,

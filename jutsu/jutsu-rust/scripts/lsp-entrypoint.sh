@@ -3,6 +3,26 @@ set -euo pipefail
 
 LSP_CMD="rust-analyzer"
 
+# Graceful degradation: Check if Rust project files exist
+has_rust_files() {
+    # Check for Cargo.toml first (fastest check)
+    [[ -f "Cargo.toml" ]] && return 0
+
+    # Search for .rs files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/target" -prune -o \
+        -name "*.rs" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_rust_files; then
+    echo "No Cargo.toml or .rs files found. Rust LSP disabled." >&2
+    exit 0
+fi
+
 if ! command -v "$LSP_CMD" &> /dev/null; then
     echo "Installing $LSP_CMD..." >&2
 

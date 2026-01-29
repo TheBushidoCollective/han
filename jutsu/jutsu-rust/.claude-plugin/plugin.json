@@ -16,6 +16,14 @@
       "args": [],
       "extensionToLanguage": {
         ".rs": "rust"
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3,
+      "initializationOptions": {
+        "files": {
+          "excludeDirs": ["node_modules", ".git", "target", "vendor"]
+        }
       }
     }
   }

@@ -150,8 +150,12 @@ function ensureNativeBuilt(): void {
  * When running as a compiled Bun binary, multiple han processes may
  * start simultaneously (e.g., during hooks), causing a race condition
  * where one process extracts the native module while another tries to
- * load a partially-written file. We use longer delays and more retries
- * to handle this.
+ * load a partially-written file.
+ *
+ * We use:
+ * - 12 retries with exponential backoff (up to ~40 seconds total wait)
+ * - Longer base delay for dlopen errors (extraction in progress)
+ * - Reset error state on certain errors to allow retry after transient failures
  */
 function loadNativeModule(): NativeModule | null {
 	// Return cached module if already loaded
@@ -170,8 +174,9 @@ function loadNativeModule(): NativeModule | null {
 	ensureNativeBuilt();
 
 	// More retries with longer delays to handle race conditions
-	// when multiple hook processes start simultaneously
-	const maxRetries = 8;
+	// when multiple hook processes start simultaneously during session start
+	// Total max wait: ~40 seconds (200ms * 2^0 + 2^1 + ... + 2^11)
+	const maxRetries = 12;
 	let lastError: Error | null = null;
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -190,14 +195,19 @@ function loadNativeModule(): NativeModule | null {
 			const isDlopenError =
 				lastError.message.includes("dlopen") ||
 				lastError.message.includes("ERR_DLOPEN_FAILED") ||
-				lastError.message.includes("no such file");
+				lastError.message.includes("no such file") ||
+				lastError.message.includes("ENOENT") ||
+				lastError.message.includes("EBUSY") ||
+				lastError.message.includes("ETXTBSY");
 
 			// Don't retry on the last attempt
 			if (attempt < maxRetries - 1) {
-				// Longer exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, 3200ms, 6400ms
-				// For dlopen errors, wait even longer as the file might still be extracting
+				// Exponential backoff with longer base delay for extraction issues
+				// dlopen errors: 200ms, 400ms, 800ms, 1600ms, 3200ms... (max 5s)
+				// other errors: 100ms, 200ms, 400ms... (max 2s)
 				const baseDelay = isDlopenError ? 200 : 100;
-				const delay = baseDelay * 2 ** attempt;
+				const maxDelay = isDlopenError ? 5000 : 2000;
+				const delay = Math.min(baseDelay * 2 ** attempt, maxDelay);
 				Bun.sleepSync(delay);
 			}
 		}

@@ -4,6 +4,26 @@ set -euo pipefail
 LSP_CMD="crystalline"
 BIN_DIR="${HOME}/.claude/bin"
 
+# Graceful degradation: Check if crystal files exist in the project
+has_crystal_files() {
+    # Check for shard.yml first (fastest check)
+    [[ -f "shard.yml" ]] && return 0
+
+    # Search for .cr files with monorepo-friendly depth, excluding common dirs
+    local found
+    found=$(find . -maxdepth 5 \
+        -path "*/node_modules" -prune -o \
+        -path "*/.git" -prune -o \
+        -path "*/vendor" -prune -o \
+        -name "*.cr" -type f -print 2>/dev/null | head -1)
+    [[ -n "$found" ]]
+}
+
+if ! has_crystal_files; then
+    echo "No .cr files or shard.yml found. Crystal LSP disabled." >&2
+    exit 0
+fi
+
 # Check if already installed
 if command -v "$LSP_CMD" &> /dev/null; then
     exec "$LSP_CMD" "$@"

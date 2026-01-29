@@ -18,7 +18,10 @@
         ".rb": "ruby",
         ".rake": "ruby",
         ".gemspec": "ruby"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

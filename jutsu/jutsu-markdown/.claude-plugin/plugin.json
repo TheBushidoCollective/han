@@ -23,7 +23,10 @@
       "extensionToLanguage": {
         ".md": "markdown",
         ".mdx": "markdown"
-      }
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
   }
 }

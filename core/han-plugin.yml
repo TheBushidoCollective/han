@@ -31,6 +31,11 @@ hooks:
     description: Ensure han binary is installed and available
 
   # SessionStart hooks - run at session start
+  coordinator:
+    event: SessionStart
+    command: han coordinator ensure --background
+    description: Start coordinator daemon for indexing and hook caching (non-blocking)
+
   context:
     event: SessionStart
     command: han hook context

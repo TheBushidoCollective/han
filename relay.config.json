@@ -1,0 +1,7 @@
+{
+  "src": "./packages/browse-client/src",
+  "schema": "./packages/browse-client/schema.graphql",
+  "language": "typescript",
+  "eagerEsModules": true,
+  "excludes": ["**/node_modules/**", "**/__mocks__/**", "**/__generated__/**"]
+}
