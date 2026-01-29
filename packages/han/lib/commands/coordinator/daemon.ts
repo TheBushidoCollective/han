@@ -164,9 +164,6 @@ export async function startDaemon(
 	// Spawn daemon process
 	console.log("[coordinator] Starting daemon...");
 
-	// Get the han binary path
-	const hanBinary = process.argv[1];
-
 	// Setup log file for daemon output
 	const logPath = getLogFilePath();
 	const logDir = dirname(logPath);
@@ -177,9 +174,12 @@ export async function startDaemon(
 	// Open log file for appending (Bun requires fd, not stream)
 	const logFd = openSync(logPath, "a");
 
+	// For compiled Bun binaries, process.execPath is the binary itself
+	// and we shouldn't pass process.argv[1] (which is internal /$bunfs/... path)
+	// Just spawn the binary directly with the command arguments
 	const child = spawn(
 		process.execPath,
-		[hanBinary, "coordinator", "start", "--foreground", "--port", String(port)],
+		["coordinator", "start", "--foreground", "--port", String(port)],
 		{
 			detached: true,
 			stdio: ["ignore", logFd, logFd],

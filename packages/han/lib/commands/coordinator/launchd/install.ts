@@ -82,8 +82,9 @@ function findHanBinary(): string {
 		join(homedir(), ".claude", "bin", "han"),
 		"/usr/local/bin/han",
 		"/opt/homebrew/bin/han",
-		// Development fallback - use bun with main.ts
-		process.argv[1],
+		// Fallback: for compiled binaries, process.execPath is the binary itself
+		// Note: process.argv[1] returns internal /$bunfs/... paths that don't exist on filesystem
+		process.execPath,
 	];
 
 	for (const loc of locations) {

@@ -205,11 +205,13 @@ export function registerCoordinatorCommands(program: Command): void {
 					// Start in background - fire and forget
 					// Don't await the full startup, just spawn the daemon
 					const { spawn } = await import("node:child_process");
-					const hanBinary = process.argv[1];
+
+					// For compiled Bun binaries, process.execPath is the binary itself
+					// and we shouldn't pass process.argv[1] (which is internal /$bunfs/... path)
+					// Just spawn the binary directly with the command arguments
 					const child = spawn(
 						process.execPath,
 						[
-							hanBinary,
 							"coordinator",
 							"start",
 							"--daemon",
