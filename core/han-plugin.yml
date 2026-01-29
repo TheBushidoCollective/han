@@ -67,12 +67,6 @@ hooks:
     command: han hook reference hooks/memory-confidence.md --must-read-first "memory-augmented answers"
     description: Reference memory confidence guidelines
 
-  # SubagentStart hooks - capture checkpoint when subagent starts
-  subagent-checkpoint:
-    event: SubagentStart
-    command: han checkpoint capture
-    description: Capture checkpoint when subagent starts for validation filtering
-
   # PreToolUse safety hooks - prevent dangerous operations
   safe-operations:
     event: PreToolUse

@@ -1,6 +1,6 @@
 hooks:
   validate:
-    command: "\"act --dryrun\""
+    command: act --dryrun
     dirs_with:
       - ".github/workflows"
     if_changed:

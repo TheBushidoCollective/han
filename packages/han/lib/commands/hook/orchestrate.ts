@@ -16,7 +16,10 @@ import {
 	getProjectDir,
 	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
-import { getPluginHookSettings } from "../../config/han-settings.ts";
+import {
+	getHanBinary as getConfiguredHanBinary,
+	getPluginHookSettings,
+} from "../../config/han-settings.ts";
 import {
 	getSessionModifiedFiles,
 	hookAttempts,
@@ -42,17 +45,22 @@ import { isDebugMode } from "../../shared.ts";
 
 /**
  * Get the han binary invocation string.
- * Uses the current process's execPath and script to ensure
- * we invoke the same han binary for child processes.
+ * Priority:
+ * 1. hanBinary from config (han.yml) - allows development overrides
+ * 2. "han" from PATH (default)
+ *
+ * Note: We don't use process.argv[1] directly because compiled Bun binaries
+ * have paths like "/$bunfs/root/han-darwin-arm64" which contain shell variables
+ * that get incorrectly expanded when run via bash.
  */
 function getHanBinary(): string {
-	// process.execPath = runtime (bun/node)
-	// process.argv[1] = script path (e.g., /path/to/lib/main.ts)
-	const scriptPath = process.argv[1];
-	if (scriptPath) {
-		return `"${process.execPath}" "${scriptPath}"`;
+	// Use the configured hanBinary if available (respects han.yml settings)
+	const configured = getConfiguredHanBinary();
+	if (configured && configured !== "han") {
+		return configured;
 	}
-	// Fallback to 'han' from PATH if we can't determine the script
+
+	// Fallback to 'han' from PATH
 	return "han";
 }
 

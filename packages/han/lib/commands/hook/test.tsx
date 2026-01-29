@@ -261,6 +261,24 @@ function collectSettingsHooks(): TestableHook[] {
 }
 
 /**
+ * Check if a hook applies to the current directory based on dirs_with markers
+ */
+function hookAppliesHere(hookDef: PluginHookDefinition): boolean {
+	const dirsWith = hookDef.dirsWith;
+	if (!dirsWith || dirsWith.length === 0) {
+		return true; // No dirs_with filter means hook applies everywhere
+	}
+
+	const cwd = process.cwd();
+	for (const marker of dirsWith) {
+		if (existsSync(join(cwd, marker))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
  * Collect all hooks from Han plugins
  */
 function collectPluginHooks(): TestableHook[] {
@@ -277,7 +295,14 @@ function collectPluginHooks(): TestableHook[] {
 		if (!config?.hooks) continue;
 
 		for (const [hookName, hookDef] of Object.entries(config.hooks)) {
-			const events = getHookEvents(hookDef as PluginHookDefinition);
+			const def = hookDef as PluginHookDefinition;
+
+			// Skip hooks that don't apply to current directory (dirs_with check)
+			if (!hookAppliesHere(def)) {
+				continue;
+			}
+
+			const events = getHookEvents(def);
 			for (const event of events) {
 				hooks.push({
 					source: "plugin",
@@ -286,7 +311,7 @@ function collectPluginHooks(): TestableHook[] {
 					marketplace,
 					hookType: event,
 					name: hookName,
-					command: (hookDef as PluginHookDefinition).command,
+					command: def.command,
 					type: "command",
 				});
 			}
@@ -368,7 +393,9 @@ function collectClaudePluginHooks(): TestableHook[] {
 
 					if (!hooksJson.hooks) continue;
 
-					for (const [hookType, hookGroups] of Object.entries(hooksJson.hooks)) {
+					for (const [hookType, hookGroups] of Object.entries(
+						hooksJson.hooks,
+					)) {
 						let hookIndex = 0;
 						for (const group of hookGroups) {
 							for (const hook of group.hooks) {
@@ -702,7 +729,8 @@ const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
 					</Box>
 					<Box marginLeft={2}>
 						<Text dimColor>
-							Bug: Plugin hooks.json output not captured for {result.hook.hookType}
+							Bug: Plugin hooks.json output not captured for{" "}
+							{result.hook.hookType}
 						</Text>
 					</Box>
 					<Box marginLeft={2}>
@@ -740,10 +768,10 @@ function formatDuration(ms: number): string {
 	return `${mins}m ${secs}s`;
 }
 
-const PhaseStatsDisplay: React.FC<{ stats: PhaseStats; isCurrent: boolean }> = ({
-	stats,
-	isCurrent,
-}) => {
+const PhaseStatsDisplay: React.FC<{
+	stats: PhaseStats;
+	isCurrent: boolean;
+}> = ({ stats, isCurrent }) => {
 	const allPassed = stats.failed === 0 && stats.passed > 0;
 	const statusColor = allPassed ? "green" : stats.failed > 0 ? "red" : "gray";
 	const statusIcon = allPassed ? "✓" : stats.failed > 0 ? "✗" : "○";
@@ -1124,7 +1152,12 @@ async function runWithConsole(
 
 	let totalPassed = 0;
 	let totalFailed = 0;
-	const phaseResults: { phase: string; passed: number; failed: number; duration: number }[] = [];
+	const phaseResults: {
+		phase: string;
+		passed: number;
+		failed: number;
+		duration: number;
+	}[] = [];
 
 	for (const hookType of sortedPhases) {
 		const phaseHooks = hooksByType.get(hookType)!;
@@ -1134,7 +1167,10 @@ async function runWithConsole(
 		console.log(`─ ${hookType} (${phaseHooks.length} hooks)`);
 
 		if (showPayload) {
-			console.log("  Payload:", payload.replace(/\n/g, " ").slice(0, 100) + "...");
+			console.log(
+				"  Payload:",
+				payload.replace(/\n/g, " ").slice(0, 100) + "...",
+			);
 		}
 
 		let phasePassed = 0;
@@ -1154,24 +1190,32 @@ async function runWithConsole(
 				source = `settings/${hook.name}`;
 			}
 
-			console.log(`  ${statusIcon} ${source}${sourceTag} (${result.duration}ms)`);
+			console.log(
+				`  ${statusIcon} ${source}${sourceTag} (${result.duration}ms)`,
+			);
 
 			if (result.stdout && result.stdout.length > 0) {
 				const preview = result.stdout.slice(0, 100).replace(/\n/g, " ");
-				console.log(`    stdout: ${preview}${result.stdout.length > 100 ? "..." : ""}`);
+				console.log(
+					`    stdout: ${preview}${result.stdout.length > 100 ? "..." : ""}`,
+				);
 			}
 
 			// Show bug warning for affected hooks
 			const affectedByBug = isAffectedByOutputBug(hook);
 			if (affectedByBug && result.stdout && result.stdout.length > 0) {
 				console.log(`    ⚠ Claude would see: (nothing - output discarded)`);
-				console.log(`    Bug: Plugin hooks.json output not captured for ${hook.hookType}`);
+				console.log(
+					`    Bug: Plugin hooks.json output not captured for ${hook.hookType}`,
+				);
 				console.log(`    See: github.com/anthropics/claude-code/issues/12151`);
 			}
 
 			if (result.stderr && result.stderr.length > 0) {
 				const preview = result.stderr.slice(0, 100).replace(/\n/g, " ");
-				console.log(`    stderr: ${preview}${result.stderr.length > 100 ? "..." : ""}`);
+				console.log(
+					`    stderr: ${preview}${result.stderr.length > 100 ? "..." : ""}`,
+				);
 			}
 			if (result.timedOut) {
 				console.log("    [TIMEOUT]");
@@ -1210,7 +1254,9 @@ async function runWithConsole(
 	console.log("\nPhase Timing:");
 	for (const { phase, passed, failed, duration } of phaseResults) {
 		const status = failed > 0 ? "✗" : "✓";
-		console.log(`  ${status} ${phase}: ${passed}/${passed + failed} passed, ${formatDuration(duration)}`);
+		console.log(
+			`  ${status} ${phase}: ${passed}/${passed + failed} passed, ${formatDuration(duration)}`,
+		);
 	}
 
 	console.log("\nTotals:");
