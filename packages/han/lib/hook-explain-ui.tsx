@@ -4,6 +4,18 @@ import type { SettingsScope } from "./config/claude-settings.ts";
 import type { HookDependency } from "./hooks/hook-config.ts";
 
 /**
+ * Hook types where stdout is meant to inject context into Claude's conversation.
+ * These are affected by the Claude Code plugin output capture bug.
+ * See: https://github.com/anthropics/claude-code/issues/12151
+ */
+const CONTEXT_INJECTING_HOOK_TYPES = [
+	"SessionStart",
+	"UserPromptSubmit",
+	"PreCompact",
+	"Notification",
+];
+
+/**
  * Hook entry - can be from han-plugin.yml (new) or legacy format
  */
 interface HookEntry {
@@ -154,6 +166,11 @@ const HookTypeSection: React.FC<{
 }> = ({ hookType, sources }) => {
 	const totalHooks = sources.reduce((sum, s) => sum + s.hooks.length, 0);
 
+	// Check if this hook type is affected by the output capture bug
+	const isContextInjecting = CONTEXT_INJECTING_HOOK_TYPES.includes(hookType);
+	const hasClaudePluginSources = sources.some((s) => s.isClaudePlugin);
+	const showBugWarning = isContextInjecting && hasClaudePluginSources;
+
 	return (
 		<Box flexDirection="column" marginTop={1}>
 			<Box>
@@ -169,6 +186,37 @@ const HookTypeSection: React.FC<{
 			<Box marginLeft={2}>
 				<Text dimColor>{"─".repeat(50)}</Text>
 			</Box>
+
+			{/* Bug warning for affected hook types */}
+			{showBugWarning && (
+				<Box marginLeft={2} flexDirection="column" marginTop={1}>
+					<Box>
+						<Text color="red" bold>
+							⚠ Known Issue:
+						</Text>
+						<Text color="red">
+							{" "}
+							Plugin hooks.json output not captured for {hookType}
+						</Text>
+					</Box>
+					<Box marginLeft={2}>
+						<Text dimColor>
+							Claude plugin hooks execute but stdout is discarded (not passed to
+							agent).
+						</Text>
+					</Box>
+					<Box marginLeft={2}>
+						<Text dimColor>
+							Han works around this via settings.json dispatcher hooks.
+						</Text>
+					</Box>
+					<Box marginLeft={2}>
+						<Text dimColor>
+							See: github.com/anthropics/claude-code/issues/12151
+						</Text>
+					</Box>
+				</Box>
+			)}
 
 			{sources.map((source) => (
 				<Box
