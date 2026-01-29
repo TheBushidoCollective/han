@@ -10,7 +10,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { Box, render, Text } from "ink";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
@@ -62,6 +63,18 @@ interface TestResult {
 	stderr: string;
 	duration: number;
 	timedOut: boolean;
+}
+
+/**
+ * Phase timing stats
+ */
+interface PhaseStats {
+	hookType: string;
+	hookCount: number;
+	passed: number;
+	failed: number;
+	totalDuration: number;
+	startTime?: number;
 }
 
 /**
@@ -481,10 +494,13 @@ async function executeHook(
 interface TestUIProps {
 	hooks: TestableHook[];
 	results: Map<string, TestResult>;
+	phaseStats: Map<string, PhaseStats>;
+	currentPhase: string | null;
 	currentHook: TestableHook | null;
 	showPayload: boolean;
 	stdinPayload: string;
 	isComplete: boolean;
+	totalDuration: number;
 }
 
 const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
@@ -546,28 +562,90 @@ const TestResultDisplay: React.FC<{ result: TestResult }> = ({ result }) => {
 	);
 };
 
+/**
+ * Format duration in human-readable form
+ */
+function formatDuration(ms: number): string {
+	if (ms < 1000) return `${ms}ms`;
+	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+	const mins = Math.floor(ms / 60000);
+	const secs = ((ms % 60000) / 1000).toFixed(1);
+	return `${mins}m ${secs}s`;
+}
+
+const PhaseStatsDisplay: React.FC<{ stats: PhaseStats; isCurrent: boolean }> = ({
+	stats,
+	isCurrent,
+}) => {
+	const allPassed = stats.failed === 0 && stats.passed > 0;
+	const statusColor = allPassed ? "green" : stats.failed > 0 ? "red" : "gray";
+	const statusIcon = allPassed ? "✓" : stats.failed > 0 ? "✗" : "○";
+
+	return (
+		<Box>
+			<Text color={statusColor} bold>
+				{statusIcon}
+			</Text>
+			<Text> </Text>
+			<Text color={isCurrent ? "yellow" : "white"} bold>
+				{stats.hookType}
+			</Text>
+			<Text dimColor>
+				{" "}
+				({stats.hookCount} hook{stats.hookCount !== 1 ? "s" : ""})
+			</Text>
+			{stats.totalDuration > 0 && (
+				<Text color="cyan"> {formatDuration(stats.totalDuration)}</Text>
+			)}
+			{isCurrent && <Text color="yellow"> ← running</Text>}
+		</Box>
+	);
+};
+
 const HookTestUI: React.FC<TestUIProps> = ({
 	hooks,
 	results,
+	phaseStats,
+	currentPhase,
 	currentHook,
 	showPayload,
 	stdinPayload,
 	isComplete,
+	totalDuration,
 }) => {
 	const passed = Array.from(results.values()).filter((r) => r.success).length;
 	const failed = Array.from(results.values()).filter((r) => !r.success).length;
 
+	// Sort phases in logical order
+	const eventOrder = [
+		"Setup",
+		"SessionStart",
+		"UserPromptSubmit",
+		"PreToolUse",
+		"PermissionRequest",
+		"PostToolUse",
+		"PostToolUseFailure",
+		"SubagentStart",
+		"SubagentStop",
+		"Stop",
+		"PreCompact",
+		"SessionEnd",
+		"Notification",
+	];
+	const sortedPhases = Array.from(phaseStats.values()).sort((a, b) => {
+		const aIdx = eventOrder.indexOf(a.hookType);
+		const bIdx = eventOrder.indexOf(b.hookType);
+		if (aIdx === -1 && bIdx === -1) return a.hookType.localeCompare(b.hookType);
+		if (aIdx === -1) return 1;
+		if (bIdx === -1) return -1;
+		return aIdx - bIdx;
+	});
+
 	return (
 		<Box flexDirection="column" padding={1}>
-			<Text bold>
-				{"═".repeat(60)}
-			</Text>
-			<Text bold>
-				HOOK TEST - Simulating Claude Code Hook Execution
-			</Text>
-			<Text bold>
-				{"═".repeat(60)}
-			</Text>
+			<Text bold>{"═".repeat(60)}</Text>
+			<Text bold>HOOK TEST - Simulating Claude Code Hook Execution</Text>
+			<Text bold>{"═".repeat(60)}</Text>
 
 			{showPayload && (
 				<Box flexDirection="column" marginTop={1}>
@@ -578,17 +656,33 @@ const HookTestUI: React.FC<TestUIProps> = ({
 				</Box>
 			)}
 
-			<Box marginTop={1}>
-				<Text dimColor>
-					Testing {hooks.length} hook(s)...{" "}
-					{currentHook && !isComplete && (
-						<Text color="yellow">
-							Running: {currentHook.pluginName || "settings"}/{currentHook.name}
-						</Text>
-					)}
-				</Text>
+			{/* Phase Overview */}
+			<Box flexDirection="column" marginTop={1}>
+				<Text bold>Phases:</Text>
+				<Box flexDirection="column" marginLeft={2}>
+					{sortedPhases.map((stats) => (
+						<PhaseStatsDisplay
+							key={stats.hookType}
+							stats={stats}
+							isCurrent={stats.hookType === currentPhase}
+						/>
+					))}
+				</Box>
 			</Box>
 
+			{/* Current hook indicator */}
+			{currentHook && !isComplete && (
+				<Box marginTop={1}>
+					<Text dimColor>
+						Running:{" "}
+						<Text color="yellow">
+							{currentHook.pluginName || "settings"}/{currentHook.name}
+						</Text>
+					</Text>
+				</Box>
+			)}
+
+			{/* Detailed results */}
 			<Box flexDirection="column" marginTop={1}>
 				{Array.from(results.values()).map((result) => (
 					<TestResultDisplay
@@ -600,20 +694,31 @@ const HookTestUI: React.FC<TestUIProps> = ({
 
 			{isComplete && (
 				<Box flexDirection="column" marginTop={1}>
-					<Text bold>
-						{"─".repeat(60)}
-					</Text>
-					<Box>
-						<Text>
-							Results:{" "}
+					<Text bold>{"═".repeat(60)}</Text>
+					<Text bold>SUMMARY</Text>
+					<Box flexDirection="column" marginLeft={2}>
+						<Box>
+							<Text dimColor>Total hooks: </Text>
+							<Text bold>{hooks.length}</Text>
+						</Box>
+						<Box>
+							<Text dimColor>Passed: </Text>
 							<Text color="green" bold>
-								{passed} passed
+								{passed}
 							</Text>
-							,{" "}
+						</Box>
+						<Box>
+							<Text dimColor>Failed: </Text>
 							<Text color={failed > 0 ? "red" : "gray"} bold>
-								{failed} failed
+								{failed}
 							</Text>
-						</Text>
+						</Box>
+						<Box>
+							<Text dimColor>Total time: </Text>
+							<Text color="cyan" bold>
+								{formatDuration(totalDuration)}
+							</Text>
+						</Box>
 					</Box>
 				</Box>
 			)}
@@ -686,17 +791,60 @@ async function runWithUI(
 ): Promise<void> {
 	return new Promise((resolve) => {
 		const results = new Map<string, TestResult>();
+		const phaseStats = new Map<string, PhaseStats>();
+		let currentPhase: string | null = null;
 		let currentHook: TestableHook | null = null;
 		let isComplete = false;
+		let totalDuration = 0;
+		const overallStartTime = Date.now();
+
+		// Group hooks by type and initialize phase stats
+		const hooksByType = new Map<string, TestableHook[]>();
+		for (const hook of hooks) {
+			const existing = hooksByType.get(hook.hookType) || [];
+			existing.push(hook);
+			hooksByType.set(hook.hookType, existing);
+
+			if (!phaseStats.has(hook.hookType)) {
+				phaseStats.set(hook.hookType, {
+					hookType: hook.hookType,
+					hookCount: 0,
+					passed: 0,
+					failed: 0,
+					totalDuration: 0,
+				});
+			}
+			const stats = phaseStats.get(hook.hookType)!;
+			stats.hookCount++;
+		}
+
+		const doRender = () => {
+			rerender(
+				<HookTestUI
+					hooks={hooks}
+					results={results}
+					phaseStats={phaseStats}
+					currentPhase={currentPhase}
+					currentHook={currentHook}
+					showPayload={showPayload}
+					stdinPayload={stdinPayload}
+					isComplete={isComplete}
+					totalDuration={totalDuration}
+				/>,
+			);
+		};
 
 		const { rerender, unmount } = render(
 			<HookTestUI
 				hooks={hooks}
 				results={results}
+				phaseStats={phaseStats}
+				currentPhase={currentPhase}
 				currentHook={currentHook}
 				showPayload={showPayload}
 				stdinPayload={stdinPayload}
 				isComplete={isComplete}
+				totalDuration={totalDuration}
 			/>,
 		);
 
@@ -709,51 +857,44 @@ async function runWithUI(
 		(async () => {
 			let hasFailures = false;
 
-			for (const hook of hooks) {
-				currentHook = hook;
-				rerender(
-					<HookTestUI
-						hooks={hooks}
-						results={results}
-						currentHook={currentHook}
-						showPayload={showPayload}
-						stdinPayload={stdinPayload}
-						isComplete={isComplete}
-					/>,
-				);
+			// Run hooks grouped by phase (hook type)
+			for (const [hookType, phaseHooks] of hooksByType) {
+				currentPhase = hookType;
+				const phaseStartTime = Date.now();
+				const stats = phaseStats.get(hookType)!;
 
-				const result = await executeHook(hook, stdinPayload);
-				const key = `${hook.source}-${hook.hookType}-${hook.name}`;
-				results.set(key, result);
+				for (const hook of phaseHooks) {
+					currentHook = hook;
+					doRender();
 
-				if (!result.success) {
-					hasFailures = true;
+					const result = await executeHook(
+						hook,
+						generateStdinPayload(hook.hookType),
+					);
+					const key = `${hook.source}-${hook.hookType}-${hook.name}`;
+					results.set(key, result);
+
+					// Update phase stats
+					if (result.success) {
+						stats.passed++;
+					} else {
+						stats.failed++;
+						hasFailures = true;
+					}
+
+					doRender();
 				}
 
-				rerender(
-					<HookTestUI
-						hooks={hooks}
-						results={results}
-						currentHook={currentHook}
-						showPayload={showPayload}
-						stdinPayload={stdinPayload}
-						isComplete={isComplete}
-					/>,
-				);
+				// Record phase duration
+				stats.totalDuration = Date.now() - phaseStartTime;
+				doRender();
 			}
 
 			isComplete = true;
+			currentPhase = null;
 			currentHook = null;
-			rerender(
-				<HookTestUI
-					hooks={hooks}
-					results={results}
-					currentHook={currentHook}
-					showPayload={showPayload}
-					stdinPayload={stdinPayload}
-					isComplete={isComplete}
-				/>,
-			);
+			totalDuration = Date.now() - overallStartTime;
+			doRender();
 
 			setTimeout(() => {
 				process.off("SIGINT", handleSigInt);
@@ -767,59 +908,134 @@ async function runWithUI(
 
 async function runWithConsole(
 	hooks: TestableHook[],
-	stdinPayload: string,
+	_stdinPayload: string,
 	showPayload: boolean,
 ): Promise<void> {
+	const overallStartTime = Date.now();
+
 	console.log("═".repeat(60));
 	console.log("HOOK TEST - Simulating Claude Code Hook Execution");
 	console.log("═".repeat(60));
 
-	if (showPayload) {
-		console.log("\nStdin payload sent to hooks:");
-		console.log(stdinPayload);
-	}
-
-	console.log(`\nTesting ${hooks.length} hook(s)...\n`);
-
-	let passed = 0;
-	let failed = 0;
-
+	// Group hooks by type
+	const hooksByType = new Map<string, TestableHook[]>();
 	for (const hook of hooks) {
-		const result = await executeHook(hook, stdinPayload);
-		const statusIcon = result.success ? "✓" : "✗";
-		const source =
-			hook.source === "plugin"
-				? `${hook.pluginName}/${hook.name}`
-				: `settings/${hook.name}`;
-
-		console.log(`${statusIcon} ${source} (${result.duration}ms)`);
-		console.log(`  Command: ${hook.command.slice(0, 80)}${hook.command.length > 80 ? "..." : ""}`);
-
-		if (result.stdout) {
-			console.log("  stdout:", result.stdout.slice(0, 200));
-		}
-		if (result.stderr) {
-			console.log("  stderr:", result.stderr.slice(0, 200));
-		}
-		if (result.timedOut) {
-			console.log("  [TIMEOUT]");
-		}
-		if (result.exitCode !== null && result.exitCode !== 0) {
-			console.log(`  [exit ${result.exitCode}]`);
-		}
-		console.log();
-
-		if (result.success) {
-			passed++;
-		} else {
-			failed++;
-		}
+		const existing = hooksByType.get(hook.hookType) || [];
+		existing.push(hook);
+		hooksByType.set(hook.hookType, existing);
 	}
 
-	console.log("─".repeat(60));
-	console.log(`Results: ${passed} passed, ${failed} failed`);
+	// Sort phases
+	const eventOrder = [
+		"Setup",
+		"SessionStart",
+		"UserPromptSubmit",
+		"PreToolUse",
+		"PermissionRequest",
+		"PostToolUse",
+		"PostToolUseFailure",
+		"SubagentStart",
+		"SubagentStop",
+		"Stop",
+		"PreCompact",
+		"SessionEnd",
+		"Notification",
+	];
+	const sortedPhases = Array.from(hooksByType.keys()).sort((a, b) => {
+		const aIdx = eventOrder.indexOf(a);
+		const bIdx = eventOrder.indexOf(b);
+		if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+		if (aIdx === -1) return 1;
+		if (bIdx === -1) return -1;
+		return aIdx - bIdx;
+	});
 
-	process.exit(failed > 0 ? 1 : 0);
+	console.log(`\nPhases: ${sortedPhases.join(", ")}`);
+	console.log(`Testing ${hooks.length} hook(s)...\n`);
+
+	let totalPassed = 0;
+	let totalFailed = 0;
+	const phaseResults: { phase: string; passed: number; failed: number; duration: number }[] = [];
+
+	for (const hookType of sortedPhases) {
+		const phaseHooks = hooksByType.get(hookType)!;
+		const phaseStartTime = Date.now();
+		const payload = generateStdinPayload(hookType);
+
+		console.log(`─ ${hookType} (${phaseHooks.length} hooks)`);
+
+		if (showPayload) {
+			console.log("  Payload:", payload.replace(/\n/g, " ").slice(0, 100) + "...");
+		}
+
+		let phasePassed = 0;
+		let phaseFailed = 0;
+
+		for (const hook of phaseHooks) {
+			const result = await executeHook(hook, payload);
+			const statusIcon = result.success ? "✓" : "✗";
+			const source =
+				hook.source === "plugin"
+					? `${hook.pluginName}/${hook.name}`
+					: `settings/${hook.name}`;
+
+			console.log(`  ${statusIcon} ${source} (${result.duration}ms)`);
+
+			if (result.stdout && result.stdout.length > 0) {
+				const preview = result.stdout.slice(0, 100).replace(/\n/g, " ");
+				console.log(`    stdout: ${preview}${result.stdout.length > 100 ? "..." : ""}`);
+			}
+			if (result.stderr && result.stderr.length > 0) {
+				const preview = result.stderr.slice(0, 100).replace(/\n/g, " ");
+				console.log(`    stderr: ${preview}${result.stderr.length > 100 ? "..." : ""}`);
+			}
+			if (result.timedOut) {
+				console.log("    [TIMEOUT]");
+			}
+			if (result.exitCode !== null && result.exitCode !== 0) {
+				console.log(`    [exit ${result.exitCode}]`);
+			}
+
+			if (result.success) {
+				phasePassed++;
+				totalPassed++;
+			} else {
+				phaseFailed++;
+				totalFailed++;
+			}
+		}
+
+		const phaseDuration = Date.now() - phaseStartTime;
+		phaseResults.push({
+			phase: hookType,
+			passed: phasePassed,
+			failed: phaseFailed,
+			duration: phaseDuration,
+		});
+
+		console.log(`  Phase total: ${formatDuration(phaseDuration)}\n`);
+	}
+
+	const totalDuration = Date.now() - overallStartTime;
+
+	console.log("═".repeat(60));
+	console.log("SUMMARY");
+	console.log("─".repeat(60));
+
+	// Phase timing breakdown
+	console.log("\nPhase Timing:");
+	for (const { phase, passed, failed, duration } of phaseResults) {
+		const status = failed > 0 ? "✗" : "✓";
+		console.log(`  ${status} ${phase}: ${passed}/${passed + failed} passed, ${formatDuration(duration)}`);
+	}
+
+	console.log("\nTotals:");
+	console.log(`  Hooks: ${hooks.length}`);
+	console.log(`  Passed: ${totalPassed}`);
+	console.log(`  Failed: ${totalFailed}`);
+	console.log(`  Total time: ${formatDuration(totalDuration)}`);
+
+	process.exit(totalFailed > 0 ? 1 : 0);
 }
 
 export function registerHookTest(hookCommand: Command): void {
