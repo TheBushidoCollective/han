@@ -35,16 +35,20 @@ export {
 } from "./hook-cache.ts";
 // Hook configuration
 export {
+	DEFAULT_HOOK_CATEGORY,
 	DEFAULT_HOOK_EVENTS,
 	getHookConfigs,
 	getHookDefinition,
 	getHookEvents,
+	type HookCategory,
 	type HookDependency,
 	type HookEventType,
 	hookMatchesEvent,
+	inferCategoryFromHookName,
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
+	PHASE_ORDER,
 	type PluginConfig,
 	type PluginHookDefinition,
 	type PluginMcpConfig,

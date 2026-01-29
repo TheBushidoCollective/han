@@ -230,11 +230,3 @@ const meta = {
   },
 } satisfies Meta<typeof Button>;
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines on contributing to this jutsu.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

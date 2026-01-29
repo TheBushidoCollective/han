@@ -202,7 +202,3 @@ Props should flow downward through the hierarchy:
 - [Atomic Design by Brad Frost](https://atomicdesign.bradfrost.com/)
 - [Pattern Lab](https://patternlab.io/)
 - [Storybook](https://storybook.js.org/)
-
-## License
-
-Licensed under MIT - see repository for details.

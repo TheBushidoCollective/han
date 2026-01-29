@@ -22,8 +22,8 @@ BINARY="${BIN_DIR}/${LSP_NAME}${EXT:-}"
 mkdir -p "$BIN_DIR"
 echo "Installing lua-language-server..." >&2
 
-# Get latest version
-LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/LuaLS/lua-language-server/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+# Get latest version using han parse (removes jq/grep dependency)
+LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/LuaLS/lua-language-server/releases/latest | han parse json tag_name -r 2>/dev/null)
 
 DOWNLOAD_URL="https://github.com/LuaLS/lua-language-server/releases/download/${LATEST_VERSION}/lua-language-server-${LATEST_VERSION}-${PLATFORM}.tar.gz"
 

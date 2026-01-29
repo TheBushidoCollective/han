@@ -40,7 +40,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-effect
 ```
-
-## License
-
-Licensed under MIT - see repository for details.

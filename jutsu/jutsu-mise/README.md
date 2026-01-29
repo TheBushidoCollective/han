@@ -116,11 +116,3 @@ description = "Deploy"
 depends = ["nonexistent-task"]
 run = "./deploy.sh"
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

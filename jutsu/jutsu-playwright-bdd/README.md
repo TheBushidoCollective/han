@@ -137,7 +137,3 @@ project/
 │   └── fixtures.ts
 └── .features-gen/           # Generated (add to .gitignore)
 ```
-
-## License
-
-Licensed under MIT - see repository for details.

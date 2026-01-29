@@ -6,14 +6,8 @@ if [ ! -f package.json ]; then
   exit 0
 fi
 
-# Extract all script names matching "build" or "build:*"
-# Uses jq if available, falls back to grep/sed
-if command -v jq &> /dev/null; then
-  build_scripts=$(jq -r '.scripts // {} | keys[] | select(. == "build" or startswith("build:"))' package.json 2>/dev/null)
-else
-  # Fallback: grep for "build" or "build:" script keys
-  build_scripts=$(grep -oE '"build(:[^"]*)?"\s*:' package.json 2>/dev/null | sed 's/"//g' | sed 's/\s*://g')
-fi
+# Extract all script names matching "build" or "build:*" using han parse
+build_scripts=$(han parse json scripts --keys < package.json 2>/dev/null | grep -E '^build(:|$)')
 
 if [ -z "$build_scripts" ]; then
   echo "No build script found, skipping"

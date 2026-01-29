@@ -63,11 +63,3 @@ jutsu-ios:
 
 - **jutsu-swift**: Swift language skills and SwiftLint validation
 - **jutsu-objective-c**: Objective-C development skills
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

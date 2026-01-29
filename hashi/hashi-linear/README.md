@@ -490,22 +490,3 @@ Let me validate these issues before we stop...
 ❌ Use vague or unclear issue titles
 ❌ Ignore the Stop hook validation reminders
 ❌ Forget to assign issues when starting work
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.
-
-## Links
-
-- [Linear API Documentation](https://developers.linear.app/docs)
-- [Linear GraphQL API](https://studio.apollographql.com/public/Linear-API/home)
-- [MCP Server - Linear](https://github.com/modelcontextprotocol/servers/tree/main/src/linear)
-- [MCP Protocol Specification](https://modelcontextprotocol.io)
-
----
-
-Built with ❤️ by [The Bushido Collective](https://thebushido.co)

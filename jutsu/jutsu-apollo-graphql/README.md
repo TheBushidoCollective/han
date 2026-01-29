@@ -26,8 +26,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-apollo-graphql
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.

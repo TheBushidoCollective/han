@@ -32,6 +32,21 @@
       ]
     },
     {
+      "name": "jutsu-ai-dlc",
+      "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation.",
+      "source": "./jutsu/jutsu-ai-dlc",
+      "category": "Technique",
+      "keywords": [
+        "ai-dlc",
+        "methodology",
+        "workflow",
+        "iteration",
+        "completion-criteria",
+        "hat-switching",
+        "human-ai-collaboration"
+      ]
+    },
+    {
       "name": "jutsu-android",
       "description": "Android development validation with Gradle build hooks.",
       "source": "./jutsu/jutsu-android",
@@ -357,6 +372,13 @@
       ]
     },
     {
+      "name": "jutsu-esbuild",
+      "description": "esbuild build validation with automatic package manager detection.",
+      "source": "./jutsu/jutsu-esbuild",
+      "category": "Technique",
+      "keywords": ["esbuild", "bundler", "build", "javascript", "typescript"]
+    },
+    {
       "name": "jutsu-eslint",
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
       "source": "./jutsu/jutsu-eslint",
@@ -424,6 +446,13 @@
         "diff",
         "operations"
       ]
+    },
+    {
+      "name": "jutsu-han-plugins",
+      "description": "Validates Han plugin structure and configuration files.",
+      "source": "./jutsu/jutsu-han-plugins",
+      "category": "Technique",
+      "keywords": ["han", "plugins", "validation", "configuration"]
     },
     {
       "name": "jutsu-helm",
@@ -726,6 +755,13 @@
       "keywords": ["rspec", "testing", "ruby", "bdd", "skill"]
     },
     {
+      "name": "jutsu-rollup",
+      "description": "Rollup build validation with automatic package manager detection.",
+      "source": "./jutsu/jutsu-rollup",
+      "category": "Technique",
+      "keywords": ["rollup", "bundler", "build", "javascript", "typescript"]
+    },
+    {
       "name": "jutsu-ruby",
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
       "source": "./jutsu/jutsu-ruby",
@@ -905,11 +941,25 @@
       ]
     },
     {
+      "name": "jutsu-vite",
+      "description": "Vite build validation with automatic package manager detection.",
+      "source": "./jutsu/jutsu-vite",
+      "category": "Technique",
+      "keywords": ["vite", "bundler", "build", "javascript", "typescript", "vue", "svelte"]
+    },
+    {
       "name": "jutsu-vue",
       "description": "Advanced Vue skills for Composition API, components, and reactivity.",
       "source": "./jutsu/jutsu-vue",
       "category": "Technique",
       "keywords": ["vue", "composition-api", "reactivity", "skill"]
+    },
+    {
+      "name": "jutsu-webpack",
+      "description": "Webpack build validation with automatic package manager detection.",
+      "source": "./jutsu/jutsu-webpack",
+      "category": "Technique",
+      "keywords": ["webpack", "bundler", "build", "javascript", "typescript"]
     },
     {
       "name": "jutsu-zustand",

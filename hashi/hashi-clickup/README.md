@@ -560,22 +560,3 @@ Let me validate these tasks before we stop...
 ❌ Use vague or unclear task names
 ❌ Ignore the Stop hook validation reminders
 ❌ Forget to assign tasks when starting work
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.
-
-## Links
-
-- [ClickUp API Documentation](https://clickup.com/api)
-- [ClickUp API v2 Reference](https://clickup.com/api/clickupreference/operation/GetTasks/)
-- [MCP Server - ClickUp](https://github.com/modelcontextprotocol/servers/tree/main/src/clickup)
-- [MCP Protocol Specification](https://modelcontextprotocol.io)
-
----
-
-Built with ❤️ by [The Bushido Collective](https://thebushido.co)

@@ -144,11 +144,3 @@ const db = new Database("mydb.sqlite");
 db.run("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
 db.run("INSERT INTO users (name) VALUES (?)", ["Alice"]);
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.

@@ -27,8 +27,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install do-enforce-planning
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.

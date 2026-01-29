@@ -22,8 +22,8 @@ BINARY="${BIN_DIR}/${LSP_NAME}${EXT:-}"
 mkdir -p "$BIN_DIR"
 echo "Installing Gleam..." >&2
 
-# Get latest version
-LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/gleam-lang/gleam/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+# Get latest version using han parse (removes jq/grep dependency)
+LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/gleam-lang/gleam/releases/latest | han parse json tag_name -r 2>/dev/null | sed 's/^v//')
 
 DOWNLOAD_URL="https://github.com/gleam-lang/gleam/releases/download/v${LATEST_VERSION}/gleam-v${LATEST_VERSION}-${PLATFORM}.tar.gz"
 

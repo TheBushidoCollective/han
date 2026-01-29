@@ -418,9 +418,10 @@ function getPluginHooksFromHanPlugin(pluginPath: string): HookSection[] {
 			const referencedFiles: HookFile[] = [];
 
 			for (const { hook } of hooks) {
+				// Note: hook.description is NOT an LLM evaluation prompt
+				// Only hooks.json with type: "prompt" should set the prompt field
 				commands.push({
 					command: hook.command,
-					prompt: hook.description,
 				});
 
 				// Extract script file references
@@ -645,6 +646,11 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 			const filePath = path.join(commandsDir, file);
 			const fileContent = fs.readFileSync(filePath, "utf-8");
 			const { data, content } = matter(fileContent);
+
+			// Skip internal commands (not meant for public documentation)
+			if (data.internal === true) {
+				continue;
+			}
 
 			// Extract description from frontmatter or first paragraph after heading
 			let description = data.description || "";

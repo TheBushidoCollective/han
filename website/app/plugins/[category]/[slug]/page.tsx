@@ -3,8 +3,6 @@ import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import YAML from "yaml";
 import {
 	getAllPlugins,
@@ -14,6 +12,7 @@ import {
 import Header from "../../../components/Header";
 import HookCommandWithDetails from "../../../components/HookCommandWithDetails";
 import InstallationTabs from "../../../components/InstallationTabs";
+import MarkdownContent from "../../../components/MarkdownContent";
 import RelatedPlugins from "../../../components/RelatedPlugins";
 import Sidebar from "../../../components/Sidebar";
 
@@ -40,6 +39,43 @@ const categoryLabels = {
 	do: "Dō",
 	hashi: "Hashi",
 } as const;
+
+// License badge configuration (Tailwind classes for colors)
+const licenseConfig: Record<
+	string,
+	{ label: string; bgClass: string; textClass: string; url: string }
+> = {
+	"Apache-2.0": {
+		label: "Apache 2.0",
+		bgClass: "bg-blue-100 dark:bg-blue-900",
+		textClass: "text-blue-800 dark:text-blue-200",
+		url: "https://opensource.org/licenses/Apache-2.0",
+	},
+	MIT: {
+		label: "MIT",
+		bgClass: "bg-green-100 dark:bg-green-900",
+		textClass: "text-green-800 dark:text-green-200",
+		url: "https://opensource.org/licenses/MIT",
+	},
+	"GPL-3.0": {
+		label: "GPL v3",
+		bgClass: "bg-red-100 dark:bg-red-900",
+		textClass: "text-red-800 dark:text-red-200",
+		url: "https://www.gnu.org/licenses/gpl-3.0",
+	},
+	"BSD-3-Clause": {
+		label: "BSD 3-Clause",
+		bgClass: "bg-orange-100 dark:bg-orange-900",
+		textClass: "text-orange-800 dark:text-orange-200",
+		url: "https://opensource.org/licenses/BSD-3-Clause",
+	},
+	ISC: {
+		label: "ISC",
+		bgClass: "bg-purple-100 dark:bg-purple-900",
+		textClass: "text-purple-800 dark:text-purple-200",
+		url: "https://opensource.org/licenses/ISC",
+	},
+};
 
 const hookDescriptions: Record<string, string> = {
 	Setup:
@@ -292,6 +328,16 @@ export default async function PluginPage({
 												v{pluginJson.version}
 											</span>
 										)}
+										{pluginJson.license && licenseConfig[pluginJson.license] && (
+											<a
+												href={licenseConfig[pluginJson.license].url}
+												target="_blank"
+												rel="noopener noreferrer"
+												className={`px-2 py-1 ${licenseConfig[pluginJson.license].bgClass} ${licenseConfig[pluginJson.license].textClass} rounded text-sm font-medium hover:opacity-80 transition`}
+											>
+												{licenseConfig[pluginJson.license].label}
+											</a>
+										)}
 									</div>
 									<p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
 										{plugin.metadata.description}
@@ -460,11 +506,10 @@ export default async function PluginPage({
 								id="overview"
 								className="scroll-mt-32 mb-12 bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700"
 							>
-								<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
-									<ReactMarkdown remarkPlugins={[remarkGfm]}>
-										{plugin.readme.replace(/^\s*#\s+.+/, "# Overview")}
-									</ReactMarkdown>
-								</div>
+								<MarkdownContent
+									content={plugin.readme.replace(/^\s*#\s+.+/, "# Overview")}
+									className="prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6"
+								/>
 							</section>
 						)}
 

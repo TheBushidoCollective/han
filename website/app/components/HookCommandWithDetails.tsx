@@ -1,8 +1,28 @@
 "use client";
 
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import javascript from "highlight.js/lib/languages/javascript";
+import markdown from "highlight.js/lib/languages/markdown";
+import python from "highlight.js/lib/languages/python";
+import typescript from "highlight.js/lib/languages/typescript";
+import "highlight.js/styles/github-dark.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+// Register languages
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("sh", bash);
+hljs.registerLanguage("shell", bash);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("js", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("ts", typescript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("py", python);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("md", markdown);
 
 interface HanHookConfig {
 	command?: string;
@@ -24,6 +44,57 @@ interface HookCommandWithDetailsProps {
 	hanHooks?: Record<string, HanHookConfig>;
 	pluginName: string;
 	files?: HookFile[];
+}
+
+// Get language from file extension
+function getLanguageFromPath(filePath: string): string {
+	const ext = filePath.split(".").pop()?.toLowerCase() || "";
+	const langMap: Record<string, string> = {
+		sh: "bash",
+		bash: "bash",
+		js: "javascript",
+		ts: "typescript",
+		py: "python",
+		md: "markdown",
+	};
+	return langMap[ext] || "plaintext";
+}
+
+// Highlighted code block component
+function HighlightedCode({
+	code,
+	language,
+	maxHeight = "max-h-96",
+}: {
+	code: string;
+	language: string;
+	maxHeight?: string;
+}) {
+	let highlighted: string;
+	try {
+		if (language && hljs.getLanguage(language)) {
+			highlighted = hljs.highlight(code, { language }).value;
+		} else {
+			highlighted = hljs.highlightAuto(code).value;
+		}
+	} catch {
+		highlighted = code
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;");
+	}
+
+	return (
+		<pre
+			className={`bg-[#0d1117] text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom ${maxHeight}`}
+		>
+			<code
+				className={`hljs language-${language}`}
+				// biome-ignore lint: safe HTML from highlight.js
+				dangerouslySetInnerHTML={{ __html: highlighted }}
+			/>
+		</pre>
+	);
 }
 
 // Extract han hook name from a command like:
@@ -314,9 +385,12 @@ export default function HookCommandWithDetails({
 										</svg>
 									</button>
 									{scriptExpanded && (
-										<pre className="mt-2 bg-gray-950 text-gray-100 p-3 rounded overflow-x-auto text-xs scrollbar-custom max-h-96">
-											<code>{file.content}</code>
-										</pre>
+										<div className="mt-2">
+											<HighlightedCode
+												code={file.content}
+												language={getLanguageFromPath(file.path)}
+											/>
+										</div>
 									)}
 								</div>
 							))}
@@ -383,9 +457,12 @@ export default function HookCommandWithDetails({
 								</svg>
 							</button>
 							{scriptExpanded && (
-								<pre className="mt-2 bg-gray-950 text-gray-100 p-3 rounded overflow-x-auto text-xs scrollbar-custom max-h-96">
-									<code>{referencedFiles[0].content}</code>
-								</pre>
+								<div className="mt-2">
+									<HighlightedCode
+										code={referencedFiles[0].content}
+										language={getLanguageFromPath(referencedFiles[0].path)}
+									/>
+								</div>
 							)}
 						</div>
 					)}
