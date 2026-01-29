@@ -9,14 +9,9 @@
 
 set -e
 
-# Check for required dependencies
+# Check for han CLI (only dependency needed)
 if ! command -v han &> /dev/null; then
   echo "Warning: han CLI is required for AI-DLC but not installed. Skipping context injection." >&2
-  exit 0
-fi
-
-if ! command -v jq &> /dev/null; then
-  echo "Warning: jq is required for AI-DLC but not installed. Skipping context injection." >&2
   exit 0
 fi
 
@@ -28,30 +23,19 @@ if [ -z "$ITERATION_JSON" ]; then
   exit 0
 fi
 
-# Validate JSON structure before parsing
-if ! echo "$ITERATION_JSON" | jq empty 2>/dev/null; then
+# Validate JSON and schema using han parse
+if ! echo "$ITERATION_JSON" | han parse json-validate \
+  --schema '{"iteration":"number","hat":"string","status":"string"}' \
+  --quiet 2>/dev/null; then
   echo "Warning: Invalid iteration.json format. Run /reset to clear state." >&2
   exit 0
 fi
 
-# Schema validation: check required fields and types
-VALID=$(echo "$ITERATION_JSON" | jq '
-  (has("iteration") and (.iteration | type) == "number") and
-  (has("hat") and (.hat | type) == "string") and
-  (has("status") and (.status | type) == "string") and
-  (.status | IN("active", "blocked", "complete"))
-' 2>/dev/null || echo "false")
-
-if [ "$VALID" != "true" ]; then
-  echo "Warning: iteration.json has invalid schema. Run /reset to clear state." >&2
-  exit 0
-fi
-
-# Parse iteration state with defaults for missing fields
-ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1' 2>/dev/null || echo "1")
-HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "elaborator"' 2>/dev/null || echo "elaborator")
-STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"' 2>/dev/null || echo "active")
-WORKFLOW_NAME=$(echo "$ITERATION_JSON" | jq -r '.workflowName // "default"' 2>/dev/null || echo "default")
+# Parse iteration state using han parse (no jq needed)
+ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
+HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default elaborator)
+STATUS=$(echo "$ITERATION_JSON" | han parse json status -r --default active)
+WORKFLOW_NAME=$(echo "$ITERATION_JSON" | han parse json workflowName -r --default default)
 
 # Validate workflow name against known workflows
 KNOWN_WORKFLOWS="default tdd adversarial hypothesis"
@@ -60,7 +44,11 @@ if ! echo "$KNOWN_WORKFLOWS" | grep -qw "$WORKFLOW_NAME"; then
   WORKFLOW_NAME="default"
 fi
 
-WORKFLOW_HATS=$(echo "$ITERATION_JSON" | jq -r '.workflow // ["elaborator","planner","builder","reviewer"] | join(" → ")' 2>/dev/null || echo "elaborator → planner → builder → reviewer")
+# Get workflow hats array as string
+WORKFLOW_HATS=$(echo "$ITERATION_JSON" | han parse json workflow 2>/dev/null || echo '["elaborator","planner","builder","reviewer"]')
+# Format as arrow-separated list
+WORKFLOW_HATS_STR=$(echo "$WORKFLOW_HATS" | tr -d '[]"' | sed 's/,/ → /g')
+[ -z "$WORKFLOW_HATS_STR" ] && WORKFLOW_HATS_STR="elaborator → planner → builder → reviewer"
 
 # If task is complete, just show completion message
 if [ "$STATUS" = "complete" ]; then
@@ -72,7 +60,7 @@ fi
 
 echo "## AI-DLC Context"
 echo ""
-echo "**Iteration:** $ITERATION | **Hat:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS)"
+echo "**Iteration:** $ITERATION | **Hat:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
 # Load and display intent
@@ -143,15 +131,13 @@ if [ -n "$HAT_FILE" ] && [ -f "$HAT_FILE" ]; then
   # Extract frontmatter block (between --- lines)
   FRONTMATTER=$(echo "$HAT_CONTENT" | sed -n '/^---$/,/^---$/p' | sed '1d;$d')
 
-  # Parse frontmatter - prefer yq for safety, fallback to grep
-  if command -v yq &> /dev/null && [ -n "$FRONTMATTER" ]; then
-    # Use yq for proper YAML parsing (safer)
-    NAME=$(echo "$FRONTMATTER" | yq -r '.name // empty' 2>/dev/null || echo "")
-    MODE=$(echo "$FRONTMATTER" | yq -r '.mode // empty' 2>/dev/null || echo "")
+  # Parse frontmatter using han parse yaml
+  if [ -n "$FRONTMATTER" ]; then
+    NAME=$(echo "$FRONTMATTER" | han parse yaml name -r --default "" 2>/dev/null || echo "")
+    MODE=$(echo "$FRONTMATTER" | han parse yaml mode -r --default "" 2>/dev/null || echo "")
   else
-    # Fallback: simple grep extraction (only alphanumeric + spaces allowed)
-    NAME=$(echo "$FRONTMATTER" | grep -E '^name:' | sed 's/^name:[[:space:]]*//' | tr -d '"' | tr -cd '[:alnum:] _-')
-    MODE=$(echo "$FRONTMATTER" | grep -E '^mode:' | sed 's/^mode:[[:space:]]*//' | tr -d '"' | tr -cd '[:alnum:]')
+    NAME=""
+    MODE=""
   fi
 
   # Get content after frontmatter (skip until second ---)

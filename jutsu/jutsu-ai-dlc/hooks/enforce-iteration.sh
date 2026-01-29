@@ -6,14 +6,9 @@
 
 set -e
 
-# Check for required dependencies
+# Check for han CLI (only dependency needed)
 if ! command -v han &> /dev/null; then
   # han not installed - skip silently
-  exit 0
-fi
-
-if ! command -v jq &> /dev/null; then
-  # jq not installed - skip silently
   exit 0
 fi
 
@@ -25,30 +20,31 @@ if [ -z "$ITERATION_JSON" ]; then
   exit 0
 fi
 
-# Validate JSON before parsing
-if ! echo "$ITERATION_JSON" | jq empty 2>/dev/null; then
+# Validate JSON using han parse
+if ! echo "$ITERATION_JSON" | han parse json-validate --quiet 2>/dev/null; then
   # Invalid JSON - skip silently
   exit 0
 fi
 
-STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"' 2>/dev/null || echo "active")
+# Parse state using han parse (no jq needed)
+STATUS=$(echo "$ITERATION_JSON" | han parse json status -r --default active)
 
 # If task is already complete, don't enforce iteration
 if [ "$STATUS" = "complete" ]; then
   exit 0
 fi
 
-# Increment iteration count
-CURRENT_ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1' 2>/dev/null || echo "1")
+# Get current iteration and increment
+CURRENT_ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
 NEW_ITERATION=$((CURRENT_ITERATION + 1))
 
-# Update iteration.json with new count
-UPDATED_JSON=$(echo "$ITERATION_JSON" | jq ".iteration = $NEW_ITERATION" 2>/dev/null)
+# Update iteration.json with new count using han parse json-set
+UPDATED_JSON=$(echo "$ITERATION_JSON" | han parse json-set iteration "$NEW_ITERATION" 2>/dev/null)
 if [ -n "$UPDATED_JSON" ]; then
   han keep save --branch iteration.json "$UPDATED_JSON" 2>/dev/null || true
 fi
 
-HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "builder"' 2>/dev/null || echo "builder")
+HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 
 echo ""
 echo "---"
