@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import type { Command } from "commander";
 import { render } from "ink";
 import {
@@ -224,7 +224,9 @@ function getClaudePluginHooks(): HookSource[] {
 
 					if (!hooksJson.hooks) continue;
 
-					for (const [hookType, hookGroups] of Object.entries(hooksJson.hooks)) {
+					for (const [hookType, hookGroups] of Object.entries(
+						hooksJson.hooks,
+					)) {
 						const hooks: Array<{
 							name?: string;
 							command: string;

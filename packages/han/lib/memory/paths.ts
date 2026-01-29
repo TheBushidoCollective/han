@@ -7,8 +7,8 @@
 
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getGitRemoteUrl } from "../native.ts";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
+import { getGitRemoteUrl } from "../native.ts";
 
 /**
  * Override for memory root (used in tests)

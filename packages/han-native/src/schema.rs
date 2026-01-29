@@ -210,15 +210,15 @@ pub struct SessionTodosInput {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeTask {
-    pub id: String,              // Claude's task ID (e.g., "1", "2") scoped to session
+    pub id: String, // Claude's task ID (e.g., "1", "2") scoped to session
     pub session_id: String,
     pub message_id: String,
-    pub subject: String,         // Brief task title
+    pub subject: String, // Brief task title
     pub description: Option<String>,
-    pub status: String,          // pending, in_progress, completed
+    pub status: String,              // pending, in_progress, completed
     pub active_form: Option<String>, // Present continuous form
     pub owner: Option<String>,
-    pub blocks: Option<String>,  // JSON array of task IDs
+    pub blocks: Option<String>,     // JSON array of task IDs
     pub blocked_by: Option<String>, // JSON array of task IDs
     pub created_at: String,
     pub updated_at: String,
@@ -230,7 +230,7 @@ pub struct NativeTask {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeTaskInput {
-    pub id: String,              // Task ID from Claude (e.g., "1")
+    pub id: String, // Task ID from Claude (e.g., "1")
     pub session_id: String,
     pub message_id: String,
     pub subject: String,
@@ -244,7 +244,7 @@ pub struct NativeTaskInput {
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeTaskUpdate {
-    pub id: String,              // Task ID to update
+    pub id: String, // Task ID to update
     pub session_id: String,
     pub message_id: String,
     pub status: Option<String>,

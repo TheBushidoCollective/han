@@ -9,7 +9,7 @@ prerequisites:
   - quality-guardrails
 ---
 
-# Compliance and Audit Integration
+## Overview
 
 AI-DLC can integrate with regulated environments through structured audit patterns. These patterns maintain compliance without sacrificing AI's speed benefits.
 
@@ -30,6 +30,7 @@ flowchart TB
 ```
 
 ### Characteristics
+
 - HITL at audit points, AHOTL/OHOTL between them
 - Human signs off at each gate with audit trail
 - Creates paper trail naturally through workflow
@@ -77,6 +78,7 @@ compliance_gates:
 ```
 
 ### Benefits
+
 - Compliance as backpressure - automated, non-blocking when passing
 - Evidence collection for auditors happens automatically
 - Human review only for exceptions/failures
@@ -87,6 +89,7 @@ compliance_gates:
 These patterns are tool-agnostic. Implement via:
 
 ### CI/CD Pipelines
+
 ```yaml
 # GitHub Actions example
 compliance-check:
@@ -109,6 +112,7 @@ compliance-check:
 ```
 
 ### Pre-commit Hooks
+
 ```bash
 #!/bin/bash
 # .git/hooks/pre-commit
@@ -131,6 +135,7 @@ echo "Compliance checks passed."
 ```
 
 ### Dedicated Platforms
+
 - **Drata** - Automated SOC2 evidence collection
 - **Vanta** - Continuous compliance monitoring
 - **Secureframe** - Security and privacy automation
@@ -191,18 +196,21 @@ Compliance: SOC2-CC6.1, PCI-DSS-8.1
 ## Regulated Industry Considerations
 
 ### Healthcare (HIPAA)
+
 - Log all PHI access
 - Encrypt data at rest and in transit
 - Implement minimum necessary access
 - Maintain audit trails for 6 years
 
 ### Financial (PCI-DSS)
+
 - Never log cardholder data
 - Implement strong access control
 - Regular security assessments
 - Maintain audit trails for 1 year
 
 ### General (SOC2)
+
 - Document change management
 - Implement access reviews
 - Monitor for anomalies
@@ -211,6 +219,7 @@ Compliance: SOC2-CC6.1, PCI-DSS-8.1
 ## AI-Specific Compliance Concerns
 
 ### AI Output Review
+
 For regulated work, always include human review of AI output:
 
 ```yaml
@@ -225,6 +234,7 @@ mode_overrides:
 ```
 
 ### AI Decision Documentation
+
 Document when AI made decisions:
 
 ```markdown
@@ -239,11 +249,13 @@ Document when AI made decisions:
 ```
 
 ## Entry Criteria
+
 - [ ] Compliance framework identified (SOC2, HIPAA, PCI-DSS, etc.)
 - [ ] Audit requirements documented
 - [ ] Security tooling available (SAST, license check, etc.)
 
 ## Exit Criteria
+
 - [ ] Audit checkpoints mapped to compliance requirements
 - [ ] Automated compliance gates configured
 - [ ] Audit trail template established

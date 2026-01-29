@@ -63,6 +63,7 @@ What the code must do.
 ```
 
 **Anti-patterns:**
+
 - "Works correctly" — What does "correctly" mean?
 - "Handles edge cases" — Which edge cases?
 - "Follows the spec" — Link the spec, enumerate the checks
@@ -103,6 +104,7 @@ Speed and resource constraints.
 ```
 
 **Include load conditions:** "Fast" means nothing without context. Always specify:
+
 - Request rate (req/s)
 - Concurrent users
 - Data volume
@@ -189,6 +191,7 @@ For each criterion, there should be a command that checks it:
 ### 1. Subjective Quality Terms
 
 **Bad:**
+
 ```markdown
 - [ ] Code is readable
 - [ ] Error messages are helpful
@@ -196,6 +199,7 @@ For each criterion, there should be a command that checks it:
 ```
 
 **Better:**
+
 ```markdown
 - [ ] All functions have JSDoc comments
 - [ ] Error responses include error code and user-facing message
@@ -205,12 +209,14 @@ For each criterion, there should be a command that checks it:
 ### 2. Missing Thresholds
 
 **Bad:**
+
 ```markdown
 - [ ] Has good test coverage
 - [ ] Performance is acceptable
 ```
 
 **Better:**
+
 ```markdown
 - [ ] Test coverage >80% for src/feature/
 - [ ] P95 latency <200ms at 1000 req/s
@@ -219,11 +225,13 @@ For each criterion, there should be a command that checks it:
 ### 3. Vague Scope
 
 **Bad:**
+
 ```markdown
 - [ ] All edge cases handled
 ```
 
 **Better:**
+
 ```markdown
 - [ ] Returns 400 when email is missing
 - [ ] Returns 400 when email format is invalid
@@ -234,6 +242,7 @@ For each criterion, there should be a command that checks it:
 ### 4. Implementation Details as Criteria
 
 **Bad:**
+
 ```markdown
 - [ ] Uses Redis for caching
 - [ ] Implements the Repository pattern
@@ -241,6 +250,7 @@ For each criterion, there should be a command that checks it:
 ```
 
 **Better:**
+
 ```markdown
 - [ ] Cache hit rate >90% for repeated queries
 - [ ] Database queries are abstracted behind interface

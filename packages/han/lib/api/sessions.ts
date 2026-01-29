@@ -12,17 +12,17 @@ import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import {
-	getGitCommonDir,
-	getGitRemoteUrl,
-	getGitRoot,
-	gitWorktreeList,
-} from "../native.ts";
-import {
 	messages as dbMessages,
 	projects as dbProjects,
 	sessions as dbSessions,
 	type Message,
 } from "../db/index.ts";
+import {
+	getGitCommonDir,
+	getGitRemoteUrl,
+	getGitRoot,
+	gitWorktreeList,
+} from "../native.ts";
 
 /**
  * Check if a path is within a system temp folder

@@ -11,7 +11,6 @@ import { join } from "node:path";
 import type { Command } from "commander";
 import { Box, render, Text } from "ink";
 import type React from "react";
-import { useEffect, useState } from "react";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
@@ -312,6 +311,7 @@ function collectPluginHooks(): TestableHook[] {
 					hookType: event,
 					name: hookName,
 					command: def.command,
+					timeout: def.timeout,
 					type: "command",
 				});
 			}
@@ -943,9 +943,8 @@ async function runHookTest(
 
 	// Filter by specific command if specified
 	if (options.command) {
-		hooksToTest = hooksToTest.filter((h) =>
-			h.command.includes(options.command!),
-		);
+		const cmdFilter = options.command;
+		hooksToTest = hooksToTest.filter((h) => h.command.includes(cmdFilter));
 	}
 
 	if (hooksToTest.length === 0) {
@@ -1011,8 +1010,8 @@ async function runWithUI(
 					totalDuration: 0,
 				});
 			}
-			const stats = phaseStats.get(hook.hookType)!;
-			stats.hookCount++;
+			const stats = phaseStats.get(hook.hookType);
+			if (stats) stats.hookCount++;
 		}
 
 		const doRender = () => {
@@ -1058,7 +1057,8 @@ async function runWithUI(
 			for (const [hookType, phaseHooks] of hooksByType) {
 				currentPhase = hookType;
 				const phaseStartTime = Date.now();
-				const stats = phaseStats.get(hookType)!;
+				const stats = phaseStats.get(hookType);
+				if (!stats) continue;
 
 				for (const hook of phaseHooks) {
 					currentHook = hook;
@@ -1160,7 +1160,8 @@ async function runWithConsole(
 	}[] = [];
 
 	for (const hookType of sortedPhases) {
-		const phaseHooks = hooksByType.get(hookType)!;
+		const phaseHooks = hooksByType.get(hookType);
+		if (!phaseHooks) continue;
 		const phaseStartTime = Date.now();
 		const payload = generateStdinPayload(hookType);
 
@@ -1169,7 +1170,7 @@ async function runWithConsole(
 		if (showPayload) {
 			console.log(
 				"  Payload:",
-				payload.replace(/\n/g, " ").slice(0, 100) + "...",
+				`${payload.replace(/\n/g, " ").slice(0, 100)}...`,
 			);
 		}
 

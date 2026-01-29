@@ -109,7 +109,7 @@ Does it have clear completion criteria?
 ## Mode Comparison
 
 | Aspect | Supervised (HITL) | Observed (OHOTL) | Autonomous (AHOTL) |
-|--------|-------------------|------------------|--------------------
+|--------|-------------------|------------------|---------------------|
 | **Human Attention** | Continuous, blocking | Continuous, non-blocking | Periodic, on-demand |
 | **Approval Model** | Before each step | Any time (interrupt) | At completion |
 | **AI Autonomy** | Minimal | Moderate | Full within boundaries |

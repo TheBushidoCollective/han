@@ -5,6 +5,7 @@
 ## The Cost Reality
 
 AI coding tools have real costs. Ignoring this leads to either:
+
 - Adopting expensive tools and facing budget pressure later
 - Avoiding AI-DLC due to perceived cost barriers
 
@@ -76,6 +77,7 @@ flowchart TB
 ```
 
 **What you can accomplish:**
+
 - Basic code completion
 - Limited chat queries
 - Feel for AI-assisted workflow
@@ -83,6 +85,7 @@ flowchart TB
 **Phase 2: Pilot (Cost: $20-40/mo/person)**
 
 Select ONE paid tool for deeper evaluation:
+
 - If IDE-native matters: Cursor Pro ($20/mo)
 - If deep reasoning matters: Claude Pro ($20/mo)
 - If enterprise compliance matters: GitHub Copilot Business ($19/mo)
@@ -116,6 +119,7 @@ flowchart TB
 ```
 
 **Rationale:**
+
 - Seniors use autonomous mode more → need powerful reasoning
 - Juniors need supervision anyway → completion sufficient
 - Mid-level varies by task → flexible allocation
@@ -159,16 +163,19 @@ Different AI-DLC modes have different cost profiles:
 Not every developer needs individual subscriptions:
 
 **Team API keys:**
+
 - Pool API budget across team
 - Set per-person quotas
 - Monitor usage patterns
 
 **Pair programming with AI:**
+
 - Two developers, one AI subscription
 - One prompts, one reviews
 - Effective for training
 
 **Time-boxed access:**
+
 - Reserve high-capability tools for complex tasks
 - Use basic tools for routine work
 
@@ -183,6 +190,7 @@ At high volume, API costs may exceed subscriptions:
 | Heavy (5000+) | $100-200 | ~$200-500 | Evaluate custom setup |
 
 **For heavy users:**
+
 - Consider local models for simple tasks
 - Use API for complex reasoning only
 - Implement caching for repeated patterns
@@ -279,6 +287,7 @@ For teams with GPU resources:
 | Mistral | 8GB+ VRAM | Balanced |
 
 **Trade-offs:**
+
 - (+) No ongoing cost
 - (+) Privacy/offline capable
 - (-) Less capable than frontier models
@@ -299,6 +308,7 @@ For teams with GPU resources:
 ### Volume Discounts
 
 At scale, negotiate:
+
 - Seat licenses (10-30% discount at 50+ seats)
 - API commit discounts (20-40% with committed spend)
 - Annual vs monthly billing (typically 15-20% savings)
@@ -306,6 +316,7 @@ At scale, negotiate:
 ### Compliance Costs
 
 Factor in:
+
 - Data residency requirements (may limit tool options)
 - Audit logging (enterprise tiers often required)
 - SSO/SAML integration (usually enterprise only)

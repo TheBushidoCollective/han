@@ -326,9 +326,7 @@ export const HookExplainUI: React.FC<HookExplainUIProps> = ({
 							CLAUDE CODE HOOKS ({claudeHookCount} hook
 							{claudeHookCount !== 1 ? "s" : ""})
 						</Text>
-						<Text dimColor>
-							Executed directly by Claude Code's hook system
-						</Text>
+						<Text dimColor>Executed directly by Claude Code's hook system</Text>
 						<Text color="magenta" bold>
 							{"═".repeat(60)}
 						</Text>

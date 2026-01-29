@@ -345,7 +345,7 @@ export function vectorSearch(
  * File event types for the indexer
  * This mirrors the native const enum with the same values.
  */
-export const enum FileEventType {
+export enum FileEventType {
 	Created = "Created",
 	Modified = "Modified",
 	Removed = "Removed",

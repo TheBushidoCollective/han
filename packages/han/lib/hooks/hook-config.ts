@@ -76,6 +76,11 @@ export interface PluginHookDefinition {
 	 */
 	ifChanged?: string[];
 	/**
+	 * Maximum time in milliseconds for the hook to complete.
+	 * Default: 30000 (30 seconds)
+	 */
+	timeout?: number;
+	/**
 	 * Maximum time in milliseconds to wait for output before considering
 	 * the hook as hanging. If no output is received within this period,
 	 * the hook will be terminated and reported as failed.
@@ -123,6 +128,7 @@ interface YamlPluginHookDefinition {
 	command: string;
 	description?: string;
 	if_changed?: string[];
+	timeout?: number;
 	idle_timeout?: number;
 	tip?: string;
 	depends_on?: YamlHookDependency[];
@@ -193,6 +199,7 @@ function convertYamlHook(
 		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),
 		...(yamlHook.description && { description: yamlHook.description }),
 		...(yamlHook.if_changed && { ifChanged: yamlHook.if_changed }),
+		...(yamlHook.timeout !== undefined && { timeout: yamlHook.timeout }),
 		...(yamlHook.idle_timeout !== undefined && {
 			idleTimeout: yamlHook.idle_timeout,
 		}),

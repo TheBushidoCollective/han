@@ -629,7 +629,9 @@ function SessionSidebarContent({
               compact
             />
             <StatCard
-              value={nativeTasks.filter((t) => t.status === 'in_progress').length}
+              value={
+                nativeTasks.filter((t) => t.status === 'in_progress').length
+              }
               label="Active"
               valueColor={colors.primary}
               compact

@@ -5,6 +5,7 @@
 ## The Reality Check
 
 AI coding assistants are powerful but imperfect. Understanding their limitations helps you:
+
 - Choose appropriate modes
 - Set realistic expectations
 - Design workflows that compensate for weaknesses
@@ -40,6 +41,7 @@ flowchart TB
 **What it is:** AI generates plausible-sounding but incorrect code, APIs, or facts.
 
 **Common manifestations:**
+
 - Inventing functions that don't exist in libraries
 - Citing non-existent documentation
 - Generating syntactically correct but logically wrong code
@@ -71,6 +73,7 @@ flowchart TB
 **What it is:** AI has a finite context window. Quality degrades when overloaded.
 
 **Symptoms:**
+
 - Forgetting earlier instructions in long conversations
 - Inconsistent naming across files
 - Missing relevant code that was provided earlier
@@ -108,6 +111,7 @@ flowchart TB
 **What it is:** AI excels at pattern matching but struggles with deep multi-step reasoning.
 
 **Symptoms:**
+
 - Correct implementation of wrong approach
 - Missing edge cases in complex logic
 - Failing to see systemic implications
@@ -145,6 +149,7 @@ flowchart TB
 **What it is:** AI training data has a cutoff date. It may not know about recent APIs, frameworks, or best practices.
 
 **Symptoms:**
+
 - Using deprecated APIs
 - Not knowing about new framework features
 - Outdated security practices
@@ -181,6 +186,7 @@ flowchart TB
 **What it is:** AI may generate inconsistent code across multiple interactions or files.
 
 **Symptoms:**
+
 - Different naming conventions in different files
 - Inconsistent error handling patterns
 - Varying code style
@@ -200,6 +206,7 @@ flowchart TB
 **What it is:** AI presents uncertain information with high confidence.
 
 **Symptoms:**
+
 - Assertive statements about incorrect behavior
 - No hedging on uncertain recommendations
 - Presenting one approach as "the best" without trade-off analysis

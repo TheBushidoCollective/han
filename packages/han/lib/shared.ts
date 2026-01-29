@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { getGitRemoteUrl as nativeGetGitRemoteUrl } from "./native.ts";
 import { DETECT_PLUGINS_PROMPT } from "./build-info.generated.ts";
 import {
 	analyzeCodebase,
@@ -12,6 +11,7 @@ import {
 } from "./codebase-analyzer.ts";
 import { getHanBinary } from "./config/han-settings.ts";
 import { getMarketplacePlugins } from "./marketplace-cache.ts";
+import { getGitRemoteUrl as nativeGetGitRemoteUrl } from "./native.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

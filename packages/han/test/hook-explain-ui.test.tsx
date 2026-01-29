@@ -14,14 +14,14 @@ describe("hook-explain-ui.tsx", () => {
 			);
 			const output = lastFrame();
 			expect(output).toContain("No hooks configured");
-			expect(output).toContain("Use --all to include hooks");
+			expect(output).toContain("Run without --han-only");
 		});
 
 		test("renders empty state without hint when showAll is true", () => {
 			const { lastFrame } = render(<HookExplainUI hooks={[]} showAll={true} />);
 			const output = lastFrame();
 			expect(output).toContain("No hooks configured");
-			expect(output).not.toContain("Use --all to include hooks");
+			expect(output).not.toContain("Run without --han-only");
 		});
 	});
 
@@ -58,8 +58,7 @@ describe("hook-explain-ui.tsx", () => {
 				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("ORCHESTRATOR-MANAGED HOOKS");
-			expect(output).toContain("Han plugins only");
+			expect(output).toContain("HAN PLUGIN HOOKS");
 		});
 
 		test("renders header with showAll true", () => {
@@ -67,7 +66,8 @@ describe("hook-explain-ui.tsx", () => {
 				<HookExplainUI hooks={[samplePluginHook]} showAll={true} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("all sources");
+			// Should still show HAN PLUGIN HOOKS section
+			expect(output).toContain("HAN PLUGIN HOOKS");
 		});
 
 		test("renders plugin hook source with name and marketplace", () => {
@@ -122,18 +122,19 @@ describe("hook-explain-ui.tsx", () => {
 			);
 			const output = lastFrame();
 			expect(output).toContain("SUMMARY");
-			expect(output).toContain("Total plugins:");
+			expect(output).toContain("Claude Code hooks:");
+			expect(output).toContain("Han plugin hooks:");
 			expect(output).toContain("Total hooks:");
-			expect(output).toContain("Event types:");
 		});
 
-		test("renders HOW IT WORKS section", () => {
+		test("renders both Claude Code and Han sections when mixed hooks", () => {
+			const hooks: HookSource[] = [samplePluginHook, sampleSettingsHook];
 			const { lastFrame } = render(
-				<HookExplainUI hooks={[samplePluginHook]} showAll={false} />,
+				<HookExplainUI hooks={hooks} showAll={true} />,
 			);
 			const output = lastFrame();
-			expect(output).toContain("HOW IT WORKS:");
-			expect(output).toContain("central orchestrator");
+			expect(output).toContain("CLAUDE CODE HOOKS");
+			expect(output).toContain("HAN PLUGIN HOOKS");
 		});
 
 		test("renders path information", () => {

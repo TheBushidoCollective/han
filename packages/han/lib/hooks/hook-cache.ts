@@ -7,7 +7,6 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { getGitRemoteUrl } from "../native.ts";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import {
 	getHookCache,
@@ -15,7 +14,7 @@ import {
 	setHookCache,
 } from "../db/index.ts";
 import type { EventLogger } from "../events/logger.ts";
-import { getNativeModule } from "../native.ts";
+import { getGitRemoteUrl, getNativeModule } from "../native.ts";
 
 /**
  * Cache manifest structure stored per plugin/hook combination

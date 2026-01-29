@@ -58,6 +58,7 @@ flowchart TB
 **Actions (all Supervised Bolts):**
 
 1. **Add a test runner**
+
    ```bash
    npm install -D vitest
    ```
@@ -72,6 +73,7 @@ flowchart TB
    - Use `strict: false` initially
 
 4. **Create minimal CI**
+
    ```yaml
    # .github/workflows/ci.yml
    name: CI
@@ -224,6 +226,7 @@ AI excels at writing tests for existing code. Use it:
 **Intent:** Add test coverage to `src/utils/validation.js`
 
 **Criteria:**
+
 - [ ] Tests exist for all exported functions
 - [ ] Coverage >80% for this file
 - [ ] Tests pass
@@ -232,6 +235,7 @@ AI excels at writing tests for existing code. Use it:
 **Mode:** Supervised (you validate test quality)
 
 **Prompt pattern:**
+
 ```
 Analyze src/utils/validation.js and write comprehensive tests.
 
@@ -248,6 +252,7 @@ Requirements:
 **Intent:** Convert `src/services/user.js` to TypeScript
 
 **Criteria:**
+
 - [ ] File renamed to `.ts`
 - [ ] All functions have explicit parameter and return types
 - [ ] No `any` types
@@ -261,6 +266,7 @@ Requirements:
 **Intent:** Enable strict lint rules gradually
 
 **Criteria:**
+
 - [ ] Add rule to config (e.g., `noExplicitAny`)
 - [ ] Fix all violations in `src/feature/`
 - [ ] No new violations introduced

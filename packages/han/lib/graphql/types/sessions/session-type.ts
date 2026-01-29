@@ -71,6 +71,11 @@ import {
 	TaskConnectionType,
 	TaskType,
 } from "../metrics.ts";
+import {
+	getNativeTasksForSession,
+	type NativeTaskData,
+	NativeTaskType,
+} from "../native-task.ts";
 import { applyConnectionArgs, type ConnectionArgs } from "../pagination.ts";
 import { ProjectRef } from "../project.ts";
 import { type SessionData, SessionRef } from "../session-connection.ts";
@@ -88,11 +93,6 @@ import {
 	TodoConnectionType,
 } from "../todo-connection.ts";
 import { TodoCountsType } from "../todo-counts.ts";
-import {
-	getNativeTasksForSession,
-	type NativeTaskData,
-	NativeTaskType,
-} from "../native-task.ts";
 import {
 	type FileChangeConnectionData,
 	FileChangeConnectionType,

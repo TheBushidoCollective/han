@@ -129,6 +129,10 @@ def is_path_outside_project(file_path: str, project_root: str) -> bool:
         if abs_file.startswith(abs_claude_config + os.sep) or abs_file == abs_claude_config:
             return False
 
+        # Allow writes to temp directories (standard temp locations - safe)
+        if abs_file.startswith('/tmp/') or abs_file.startswith('/private/tmp/'):
+            return False
+
         # Check if file is within project
         return not abs_file.startswith(abs_project + os.sep) and abs_file != abs_project
     except Exception:

@@ -67,7 +67,9 @@ interface NativeTaskCardProps {
   task: NativeTask;
 }
 
-export function NativeTaskCard({ task }: NativeTaskCardProps): React.ReactElement {
+export function NativeTaskCard({
+  task,
+}: NativeTaskCardProps): React.ReactElement {
   const isBlocked = task.blockedBy.length > 0;
   const hasBlocking = task.blocks.length > 0;
 
@@ -109,7 +111,8 @@ export function NativeTaskCard({ task }: NativeTaskCardProps): React.ReactElemen
         <Text
           weight="medium"
           style={{
-            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+            textDecoration:
+              task.status === 'completed' ? 'line-through' : 'none',
             color:
               task.status === 'completed'
                 ? colors.text.muted

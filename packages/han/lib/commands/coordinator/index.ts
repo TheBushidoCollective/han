@@ -211,13 +211,7 @@ export function registerCoordinatorCommands(program: Command): void {
 					// Just spawn the binary directly with the command arguments
 					const child = spawn(
 						process.execPath,
-						[
-							"coordinator",
-							"start",
-							"--daemon",
-							"--port",
-							String(port),
-						],
+						["coordinator", "start", "--daemon", "--port", String(port)],
 						{
 							detached: true,
 							stdio: "ignore",
