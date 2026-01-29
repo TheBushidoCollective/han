@@ -28,9 +28,22 @@ if [ -z "$ITERATION_JSON" ]; then
   exit 0
 fi
 
-# Validate JSON before parsing
+# Validate JSON structure before parsing
 if ! echo "$ITERATION_JSON" | jq empty 2>/dev/null; then
   echo "Warning: Invalid iteration.json format. Run /reset to clear state." >&2
+  exit 0
+fi
+
+# Schema validation: check required fields and types
+VALID=$(echo "$ITERATION_JSON" | jq '
+  (has("iteration") and (.iteration | type) == "number") and
+  (has("hat") and (.hat | type) == "string") and
+  (has("status") and (.status | type) == "string") and
+  (.status | IN("active", "blocked", "complete"))
+' 2>/dev/null || echo "false")
+
+if [ "$VALID" != "true" ]; then
+  echo "Warning: iteration.json has invalid schema. Run /reset to clear state." >&2
   exit 0
 fi
 
@@ -39,6 +52,14 @@ ITERATION=$(echo "$ITERATION_JSON" | jq -r '.iteration // 1' 2>/dev/null || echo
 HAT=$(echo "$ITERATION_JSON" | jq -r '.hat // "elaborator"' 2>/dev/null || echo "elaborator")
 STATUS=$(echo "$ITERATION_JSON" | jq -r '.status // "active"' 2>/dev/null || echo "active")
 WORKFLOW_NAME=$(echo "$ITERATION_JSON" | jq -r '.workflowName // "default"' 2>/dev/null || echo "default")
+
+# Validate workflow name against known workflows
+KNOWN_WORKFLOWS="default tdd adversarial hypothesis"
+if ! echo "$KNOWN_WORKFLOWS" | grep -qw "$WORKFLOW_NAME"; then
+  echo "Warning: Unknown workflow '$WORKFLOW_NAME'. Using 'default'." >&2
+  WORKFLOW_NAME="default"
+fi
+
 WORKFLOW_HATS=$(echo "$ITERATION_JSON" | jq -r '.workflow // ["elaborator","planner","builder","reviewer"] | join(" → ")' 2>/dev/null || echo "elaborator → planner → builder → reviewer")
 
 # If task is complete, just show completion message
@@ -157,6 +178,16 @@ else
   echo ""
   echo "Instructions for this hat..."
   echo "\`\`\`"
+fi
+
+# Check branch naming convention (informational only)
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ]; then
+  if ! echo "$CURRENT_BRANCH" | grep -qE '^ai-dlc/[a-z0-9-]+/[0-9]+-[a-z0-9-]+$'; then
+    echo ""
+    echo "> **Note:** Branch \`$CURRENT_BRANCH\` doesn't follow AI-DLC convention:"
+    echo "> \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
+  fi
 fi
 
 echo ""

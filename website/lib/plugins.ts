@@ -647,6 +647,11 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 			const fileContent = fs.readFileSync(filePath, "utf-8");
 			const { data, content } = matter(fileContent);
 
+			// Skip internal commands (not meant for public documentation)
+			if (data.internal === true) {
+				continue;
+			}
+
 			// Extract description from frontmatter or first paragraph after heading
 			let description = data.description || "";
 			if (!description) {
