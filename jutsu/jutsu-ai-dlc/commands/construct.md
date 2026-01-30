@@ -80,7 +80,34 @@ If status is "complete":
 Task already complete! Run /reset to start a new task.
 ```
 
-### Step 2: Spawn Subagent for Current Role
+### Step 2: Ensure Unit Branch
+
+**CRITICAL: All work MUST happen on the unit's dedicated branch.**
+
+Branch naming: `ai-dlc/{intent-slug}/{unit-number}-{unit-slug}`
+
+```bash
+# Determine current unit from state or find next ready unit
+UNIT_FILE=$(find_ready_unit "$INTENT_DIR")
+UNIT_NAME=$(basename "$UNIT_FILE" .md)  # e.g., unit-01-core-backend
+UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT_NAME#unit-}"  # e.g., ai-dlc/han-team-platform/01-core-backend
+
+# Check if on correct branch
+CURRENT_BRANCH=$(git branch --show-current)
+
+if [ "$CURRENT_BRANCH" != "$UNIT_BRANCH" ]; then
+  # Create branch if it doesn't exist, then switch
+  git checkout -B "$UNIT_BRANCH"
+fi
+```
+
+**Why branches matter:**
+- Isolates work per unit (clean PRs)
+- Enables parallel execution via worktrees
+- Preserves main branch stability
+- Allows easy rollback if unit fails
+
+### Step 3: Spawn Subagent for Current Role
 
 **CRITICAL: Do NOT execute hat work inline. Always spawn a subagent.**
 
@@ -117,7 +144,7 @@ Task({
 
 The subagent automatically receives AI-DLC context (hat instructions, intent, workflow rules, unit status) via SubagentPrompt injection.
 
-### Step 3: Handle Subagent Result
+### Step 4: Handle Subagent Result
 
 Based on the subagent's response:
 - **Success/Complete**: Call `/advance` to move to next role
@@ -144,7 +171,7 @@ Based on the subagent's response:
 - experimenter: Test hypotheses
 - analyst: Evaluate and fix
 
-### Step 3b: Parallel Unit Orchestration
+### Step 4b: Parallel Unit Orchestration
 
 When the intent has been decomposed into units (`.ai-dlc/{intent-slug}/unit-*.md` files exist), the construction loop changes to unit-based execution.
 
@@ -156,21 +183,47 @@ A unit is **ready** when:
 
 #### Serial vs Parallel Execution
 
-**Serial (single ready unit):** Execute directly in current session.
+**Serial (single ready unit):**
+1. Switch to unit branch (Step 2)
+2. Execute in current session
 
-**Parallel (multiple ready units):** Spawn subagents in worktrees:
+**Parallel (multiple ready units):** Create worktrees with dedicated branches:
 
-```javascript
-Task({
-  description: `Execute AI-DLC unit: ${UNIT_NAME}`,
-  prompt: `Execute AI-DLC unit in isolated worktree.
-    Working directory: /tmp/worktree-${UNIT_NAME}
-    Intent branch for shared state: ${INTENT_BRANCH}
-    ...`
-})
+```bash
+# For each ready unit, create a worktree with its branch
+for UNIT in $READY_UNITS; do
+  UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT#unit-}"
+  WORKTREE_PATH="/tmp/ai-dlc-worktree-${UNIT}"
+
+  # Create worktree (also creates branch if needed)
+  git worktree add -B "$UNIT_BRANCH" "$WORKTREE_PATH"
+done
 ```
 
-### Step 4: Internal Commands
+Then spawn parallel subagents:
+
+```javascript
+// Spawn subagent per ready unit
+for (const unit of readyUnits) {
+  Task({
+    run_in_background: true,
+    description: `Execute AI-DLC unit: ${unit.name}`,
+    prompt: `
+      Execute AI-DLC unit in isolated worktree.
+
+      Working directory: /tmp/ai-dlc-worktree-${unit.name}
+      Branch: ai-dlc/${intentSlug}/${unit.slug}
+
+      IMPORTANT: cd to the worktree directory first!
+      All git operations happen on the unit's branch.
+    `
+  })
+}
+```
+
+When units complete, merge branches back to main or create PRs.
+
+### Step 5: Internal Commands
 
 The AI calls these internally (user does not call directly):
 
@@ -178,7 +231,7 @@ The AI calls these internally (user does not call directly):
 - **`/fail`** - Return to previous hat (issues found)
 - **`/done`** - Mark task complete (only from last hat)
 
-### Step 5: Loop Behavior
+### Step 6: Loop Behavior
 
 The construction loop continues within a session until:
 1. **Blocked** - Need user input or hit a blocker
@@ -194,36 +247,51 @@ After `/clear`, user runs `/construct` again to continue.
 [Session 1]
 User: /elaborate
 ...collaborative discussion (elaborator agent)...
-AI: Intent and criteria saved. /advance
-AI: Now in planner role. Spawning Plan agent...
+AI: Intent and criteria saved. Units created:
+    - unit-01-api-endpoints (discipline: backend)
+    - unit-02-dashboard-ui (discipline: frontend)
+AI: /advance → planner role
+
+AI: Switching to branch: ai-dlc/my-feature/01-api-endpoints
+AI: Spawning Plan agent...
 [Plan subagent runs, receives AI-DLC context]
-AI: Plan saved. /advance
-AI: Now in builder role. Spawning frontend agent...
-[Builder subagent runs, receives AI-DLC context + builder hat]
+AI: Plan saved. /advance → builder role
+
+AI: Spawning backend agent for unit-01...
+[Builder subagent runs on ai-dlc/my-feature/01-api-endpoints branch]
 ...builds...
 Stop hook: "Run /clear to continue"
 
 [Session 2]
 User: /clear
 User: /construct
-AI: Resuming builder role. Spawning frontend agent...
-[Builder subagent continues work]
-AI: Builder complete. /advance
-AI: Now in reviewer role. Spawning review agent...
+AI: Loading state... builder role, unit-01-api-endpoints
+AI: Ensuring branch: ai-dlc/my-feature/01-api-endpoints ✓
+AI: Spawning backend agent...
+[Builder subagent continues work, commits to unit branch]
+AI: Builder complete. /advance → reviewer role
+
+AI: Spawning review agent...
 [Reviewer subagent runs, receives AI-DLC context + reviewer hat]
-AI: Issue found - missing test. /fail
-AI: Back to builder. Spawning frontend agent...
-[Builder subagent fixes issue]
+AI: Issue found - missing test. /fail → builder role
+AI: Spawning backend agent...
+[Builder subagent fixes issue on unit branch]
 Stop hook: "Run /clear to continue"
 
 [Session 3]
 User: /clear
 User: /construct
-AI: Resuming builder role. Spawning frontend agent...
-[Builder subagent adds test]
-AI: Builder complete. /advance
-AI: Now in reviewer role. Spawning review agent...
-[Reviewer subagent verifies]
-AI: All criteria satisfied! /done
-AI: Task complete!
+AI: Loading state... builder role, unit-01-api-endpoints
+AI: Ensuring branch: ai-dlc/my-feature/01-api-endpoints ✓
+AI: Spawning backend agent...
+[Builder subagent adds test, commits]
+AI: Builder complete. /advance → reviewer role
+
+AI: Spawning review agent...
+[Reviewer subagent verifies all criteria]
+AI: All criteria satisfied! Unit-01 complete.
+AI: Merging ai-dlc/my-feature/01-api-endpoints → main
+AI: Moving to next unit: unit-02-dashboard-ui
+AI: Switching to branch: ai-dlc/my-feature/02-dashboard-ui
+...continues with next unit...
 ```
