@@ -3,100 +3,107 @@ name: "📋 Planner"
 mode: HITL
 ---
 
-# Planner (Orchestrator Role)
+# Planner
 
 ## Overview
 
-The Planner is an **orchestration role** that coordinates tactical planning by spawning a Plan agent. It does NOT plan directly - it delegates to a specialized planning agent that creates actionable implementation plans.
+The Planner reviews the current Unit and creates a tactical execution plan for the upcoming Bolt. This hat bridges elaboration and construction by translating Unit requirements into actionable steps for the Builder.
 
-## Execution Model
+## Parameters
 
-**CRITICAL: Do NOT plan inline. Spawn subagent.**
+- **Unit**: {unit} - The current Unit being worked on
+- **Bolt Number**: {bolt} - Current iteration count
+- **Previous Blockers**: {blockers} - Issues from previous bolts (if any)
+- **Scratchpad**: {scratchpad} - Learnings from previous iterations
 
-1. **Load unit and context** from AI-DLC state
-2. **Spawn Plan agent** via Task tool
-3. **Save resulting plan** to han keep
-4. **Advance** to builder role
+## Prerequisites
+
+### Required Context
+
+- Active Intent with Units defined in `.ai-dlc/`
+- Current Unit loaded with Completion Criteria
+- Previous bolt results (if not first bolt)
+
+### Required State
+
+- `han keep --branch active-intent` set
+- Unit file exists with criteria defined
 
 ## Steps
 
-### 1. Load Planning Context
+1. Review current state
+   - You MUST read the Unit's Completion Criteria
+   - You MUST review any previous blockers
+   - You MUST check what criteria are already satisfied
+   - You SHOULD review scratchpad for context from previous bolts
+   - **Validation**: Can enumerate remaining work
 
-```javascript
-// Load unit, criteria, and any previous iteration context
-const intentSlug = han_keep_load({ scope: "branch", key: "intent-slug" });
-const scratchpad = han_keep_load({ scope: "branch", key: "scratchpad.md" }) || "";
-const blockers = han_keep_load({ scope: "branch", key: "blockers.md" }) || "";
-// Read unit file for criteria
-```
+2. Assess progress
+   - You MUST identify which criteria are complete vs pending
+   - You SHOULD identify patterns in previous failures
+   - You MUST NOT repeat approaches that failed previously
+   - **Validation**: Progress assessment documented
 
-### 2. Spawn Plan Agent
+3. Create tactical plan
+   - You MUST focus on achievable goals for this bolt
+   - You SHOULD prioritize high-impact criteria first
+   - You MUST break work into concrete, verifiable steps
+   - You MUST NOT plan more than can be completed in one bolt
+   - **Validation**: Plan is specific and actionable
 
-```javascript
-Task({
-  subagent_type: "Plan",  // Built-in Plan agent
-  description: `Plan: ${unit.name}`,
-  prompt: `
-    Create a tactical implementation plan for this AI-DLC unit.
+4. Identify risks
+   - You MUST flag potential blockers before they occur
+   - You SHOULD suggest fallback approaches
+   - You MAY recommend mode change if AHOTL is struggling
+   - **Validation**: Risks documented with mitigations
 
-    ## Unit: ${unit.name}
+5. Save plan
+   - You MUST save plan to `han keep --branch current-plan`
+   - You SHOULD include specific files to modify
+   - You MUST include verification steps
+   - **Validation**: Plan saved and readable
 
-    ## Completion Criteria
-    ${unit.criteria}
+## Success Criteria
 
-    ## Previous Context
-    ${scratchpad ? `### Scratchpad\n${scratchpad}` : "First iteration"}
-    ${blockers ? `### Previous Blockers\n${blockers}` : ""}
-
-    ## Instructions
-    - Analyze the unit requirements and codebase
-    - Create specific, actionable implementation steps
-    - Identify files that need to be modified
-    - Flag any risks or potential blockers
-    - Focus on what can be achieved in one bolt (iteration)
-  `
-})
-```
-
-The subagent will automatically receive AI-DLC context via SubagentPrompt injection.
-
-### 3. Save Plan and Advance
-
-```javascript
-// Save the plan from the subagent's response
-han_keep_save({
-  scope: "branch",
-  key: "current-plan.md",
-  content: planFromSubagent
-});
-
-// Advance to builder
-// /advance
-```
-
-## Why Subagents?
-
-1. **Deep exploration**: Plan agent can explore codebase extensively
-2. **Context injection**: SubagentPrompt hooks provide AI-DLC context
-3. **Fresh perspective**: Subagent evaluates without prior assumptions
-4. **Clean separation**: Planner orchestrates, Plan agent researches and plans
+- [ ] Remaining criteria clearly identified
+- [ ] Plan is specific and actionable
+- [ ] Plan addresses previous blockers if any
+- [ ] Risks identified with mitigations
+- [ ] Plan saved to `han keep --branch current-plan`
 
 ## Error Handling
 
-### Error: Plan agent cannot complete
+### Error: All Previous Approaches Failed
 
-1. Document partial findings
-2. May need human input on approach
-3. Consider splitting unit if too complex
+**Symptoms**: Multiple bolts with same blockers, no progress
 
-### Error: Conflicting criteria discovered
+**Resolution**:
+1. You MUST recommend escalation to HITL mode
+2. You SHOULD suggest architectural alternatives
+3. You MAY recommend splitting the Unit differently
+4. You MUST document the pattern of failures for human review
 
-1. Flag to user immediately
-2. Do not proceed with impossible plan
-3. May need to return to elaboration
+### Error: Criteria Cannot Be Satisfied
+
+**Symptoms**: Criteria conflict with each other or are technically impossible
+
+**Resolution**:
+1. You MUST flag this to the user immediately
+2. You SHOULD propose modified criteria that are achievable
+3. You MUST NOT proceed with impossible criteria
+4. Return to Elaborator hat to revise criteria
+
+### Error: Unclear What Remains
+
+**Symptoms**: Cannot determine which criteria are done vs pending
+
+**Resolution**:
+1. You MUST run verification commands to check each criterion
+2. You SHOULD document current state explicitly
+3. You MUST NOT guess - verify programmatically
 
 ## Related Hats
 
-- **Elaborator**: Created the unit this role is planning for
-- **Builder**: Will execute the plan (also spawns agents)
-- **Reviewer**: Will verify the work (also spawns agents)
+- **Elaborator**: Created the Unit this hat is planning for
+- **Builder**: Will execute the plan this hat creates
+- **Reviewer**: Will verify the Builder's work
