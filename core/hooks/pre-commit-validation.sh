@@ -11,6 +11,19 @@
 
 set -e
 
+# Check if han CLI is available
+if ! command -v han &> /dev/null; then
+  # han not installed - skip validation silently
+  # (Setup hook should have installed it; if not, don't block commits)
+  exit 0
+fi
+
+# Check if jq is available (needed for safe JSON construction)
+if ! command -v jq &> /dev/null; then
+  # jq not installed - skip validation (can't safely construct JSON responses)
+  exit 0
+fi
+
 # Read stdin into variable
 INPUT=$(cat)
 
@@ -36,17 +49,20 @@ if ! echo "$COMMAND" | grep -qE '\bgit\s+commit\b'; then
 fi
 
 # This is a git commit - run Stop hook validation
-# Construct Stop payload with context from parent hook
-STOP_PAYLOAD=$(cat <<EOF
-{
-  "session_id": "$SESSION_ID",
-  "transcript_path": "$TRANSCRIPT_PATH",
-  "cwd": "$CWD",
-  "permission_mode": "$PERMISSION_MODE",
-  "hook_event_name": "Stop",
-  "stop_hook_active": true
-}
-EOF
+# Construct Stop payload with context from parent hook (use jq for safe JSON construction)
+STOP_PAYLOAD=$(jq -n \
+  --arg session_id "$SESSION_ID" \
+  --arg transcript_path "$TRANSCRIPT_PATH" \
+  --arg cwd "$CWD" \
+  --arg permission_mode "$PERMISSION_MODE" \
+  '{
+    "session_id": $session_id,
+    "transcript_path": $transcript_path,
+    "cwd": $cwd,
+    "permission_mode": $permission_mode,
+    "hook_event_name": "Stop",
+    "stop_hook_active": true
+  }'
 )
 
 # Run validation hooks via orchestrate
@@ -58,22 +74,28 @@ VALIDATION_EXIT=${VALIDATION_EXIT:-0}
 
 # If validation failed, replace command with no-op that shows the error
 if [ "$VALIDATION_EXIT" -ne 0 ]; then
-  # Escape the output for JSON (replace newlines and quotes)
-  ESCAPED_OUTPUT=$(echo "$VALIDATION_OUTPUT" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+  # Build the error command - use printf with %s to safely handle any characters
+  # The validation output is passed as a separate argument, avoiding shell escaping issues
+  ERROR_MESSAGE="Pre-commit validation failed. Fix the issues before committing:
 
-  # Output JSON to replace command with echo that shows validation errors
-  cat <<EOF
-{
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "allow",
-    "updatedInput": {
-      "command": "echo 'Pre-commit validation failed. Fix the issues before committing:\\n\\n$ESCAPED_OUTPUT' >&2 && exit 1"
-    },
-    "additionalContext": "Pre-commit validation failed. The commit was skipped. Fix the issues and try again."
-  }
-}
-EOF
+$VALIDATION_OUTPUT"
+
+  # Use jq to safely construct JSON with proper escaping
+  # This handles newlines, quotes, backslashes, and any special characters
+  ERROR_COMMAND=$(printf '%s' "$ERROR_MESSAGE" | jq -Rs '"printf '\''%s\\n'\'' " + (. | @json) + " >&2 && exit 1"')
+
+  jq -n \
+    --argjson cmd "$ERROR_COMMAND" \
+    '{
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "allow",
+        "updatedInput": {
+          "command": $cmd
+        },
+        "additionalContext": "Pre-commit validation failed. The commit was skipped. Fix the issues and try again."
+      }
+    }'
   exit 0
 fi
 

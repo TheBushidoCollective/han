@@ -270,6 +270,27 @@ update_unit_status() {
     return 1
   fi
 
+  # Path validation: ensure file is within .ai-dlc directory to prevent path traversal
+  local real_path
+  real_path=$(realpath "$unit_file" 2>/dev/null) || {
+    echo "Error: Cannot resolve path: $unit_file" >&2
+    return 1
+  }
+
+  # Check that the file is within a .ai-dlc directory
+  if [[ ! "$real_path" =~ /\.ai-dlc/ ]]; then
+    echo "Error: Unit file must be within .ai-dlc directory: $unit_file" >&2
+    return 1
+  fi
+
+  # Ensure it's a unit file (not arbitrary file in .ai-dlc)
+  local basename
+  basename=$(basename "$real_path")
+  if [[ ! "$basename" =~ ^unit-.*\.md$ ]]; then
+    echo "Error: File must be a unit file (unit-*.md): $unit_file" >&2
+    return 1
+  fi
+
   # Validate status value
   case "$new_status" in
     pending|in_progress|completed|blocked)

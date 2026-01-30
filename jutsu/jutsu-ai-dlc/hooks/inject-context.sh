@@ -45,7 +45,16 @@ if ! echo "$ITERATION_JSON" | han parse json-validate \
 fi
 
 # Check for needsAdvance flag (set by Stop hook to signal iteration should increment)
-# Only advance on 'clear' or 'startup' sources - NOT on 'compact' events
+# Only advance on 'clear' or 'startup' sources - NOT on 'compact' events.
+#
+# Source types:
+#   - startup: New session starting (may advance iteration)
+#   - clear: Context was manually cleared (may advance iteration)
+#   - compact: Context window compaction by Claude (NEVER advance - this is just summarization)
+#
+# Note: This read-modify-write pattern is safe because Claude Code serializes
+# hook execution within a session. Cross-session race conditions are possible
+# but unlikely in practice since iterations are scoped to a branch/intent.
 NEEDS_ADVANCE=$(echo "$ITERATION_JSON" | han parse json needsAdvance -r --default false 2>/dev/null || echo "false")
 if [ "$NEEDS_ADVANCE" = "true" ] && [ "$SOURCE" != "compact" ]; then
   # Increment iteration and clear the flag
