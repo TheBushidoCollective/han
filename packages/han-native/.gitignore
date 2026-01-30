@@ -1,6 +1,2 @@
 # Rust build artifacts
 target/
-
-# Generated NAPI-RS bindings
-index.js
-index.d.ts
