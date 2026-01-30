@@ -69,7 +69,10 @@ const intentSlug = han_keep_load({ scope: "branch", key: "intent-slug" }) || nul
 
 If no state exists:
 ```
-No AI-DLC state found. Run /elaborate first to define intent and completion criteria.
+No AI-DLC state found.
+
+If you have existing intent artifacts in .ai-dlc/, run /resume to continue.
+Otherwise, run /elaborate to start a new task.
 ```
 
 If status is "complete":

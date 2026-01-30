@@ -376,6 +376,75 @@ is_dag_complete() {
   return 0
 }
 
+# Determine recommended starting hat based on unit states
+# Usage: get_recommended_hat <intent_dir> [workflow_name]
+# Returns: hat name (elaborator, planner, builder, reviewer, etc.)
+get_recommended_hat() {
+  local intent_dir="$1"
+  local workflow_name="${2:-default}"
+
+  # Get workflow hats from workflows.yml
+  local hats_file="${CLAUDE_PLUGIN_ROOT}/workflows.yml"
+  local hats
+  hats=$(han parse yaml "${workflow_name}.hats" < "$hats_file" 2>/dev/null | sed 's/^- //' | tr '\n' ' ')
+
+  # Default hats if parse fails
+  [ -z "$hats" ] && hats="elaborator planner builder reviewer"
+
+  # Convert to array
+  read -ra hat_array <<< "$hats"
+  local num_hats=${#hat_array[@]}
+
+  # No units? Go to planner (2nd hat, index 1)
+  local unit_count=0
+  for f in "$intent_dir"/unit-*.md; do
+    [ -f "$f" ] && unit_count=$((unit_count + 1))
+  done
+
+  if [ "$unit_count" -eq 0 ]; then
+    # Use 2nd hat (planner) if available, otherwise first
+    if [ "$num_hats" -ge 2 ]; then
+      echo "${hat_array[1]}"
+    else
+      echo "${hat_array[0]}"
+    fi
+    return
+  fi
+
+  # Get summary
+  local summary
+  summary=$(get_dag_summary "$intent_dir")
+
+  local completed in_progress pending ready
+  completed=$(echo "$summary" | sed -n 's/.*completed:\([0-9]*\).*/\1/p')
+  in_progress=$(echo "$summary" | sed -n 's/.*in_progress:\([0-9]*\).*/\1/p')
+  pending=$(echo "$summary" | sed -n 's/.*pending:\([0-9]*\).*/\1/p')
+  ready=$(echo "$summary" | sed -n 's/.*ready:\([0-9]*\).*/\1/p')
+
+  # All completed? Go to last hat (reviewer)
+  if [ "${pending:-0}" -eq 0 ] && [ "${in_progress:-0}" -eq 0 ]; then
+    echo "${hat_array[$((num_hats - 1))]}"
+    return
+  fi
+
+  # In progress or ready? Go to builder (3rd hat, index 2)
+  if [ "${in_progress:-0}" -gt 0 ] || [ "${ready:-0}" -gt 0 ]; then
+    if [ "$num_hats" -ge 3 ]; then
+      echo "${hat_array[2]}"
+    else
+      echo "${hat_array[$((num_hats - 1))]}"
+    fi
+    return
+  fi
+
+  # Everything blocked? Go to planner (2nd hat)
+  if [ "$num_hats" -ge 2 ]; then
+    echo "${hat_array[1]}"
+  else
+    echo "${hat_array[0]}"
+  fi
+}
+
 # Validate DAG structure (check for cycles and missing deps)
 # Usage: validate_dag <intent_dir>
 # Returns error messages if invalid, empty if valid

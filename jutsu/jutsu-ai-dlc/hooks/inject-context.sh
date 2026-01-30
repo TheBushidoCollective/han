@@ -100,15 +100,56 @@ AVAILABLE_WORKFLOWS="${AVAILABLE_WORKFLOWS#
 ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
 
 if [ -z "$ITERATION_JSON" ]; then
-  # No AI-DLC state - show available workflows for /elaborate
-  if [ -n "$AVAILABLE_WORKFLOWS" ]; then
-    echo "## AI-DLC Available"
+  # Check for resumable intents in .ai-dlc/*/intent.md
+  RESUMABLE_INTENTS=""
+  for intent_file in .ai-dlc/*/intent.md; do
+    [ -f "$intent_file" ] || continue
+    dir=$(dirname "$intent_file")
+    slug=$(basename "$dir")
+    status=$(han parse yaml status -r --default active < "$intent_file" 2>/dev/null || echo "active")
+    [ "$status" = "active" ] || continue
+    workflow=$(han parse yaml workflow -r --default default < "$intent_file" 2>/dev/null || echo "default")
+
+    # Get unit summary if DAG functions are available
+    summary=""
+    if type get_dag_summary &>/dev/null && [ -d "$dir" ]; then
+      summary=$(get_dag_summary "$dir")
+    fi
+    RESUMABLE_INTENTS="${RESUMABLE_INTENTS}${slug}|${workflow}|${summary}"$'\n'
+  done
+
+  if [ -n "$RESUMABLE_INTENTS" ]; then
+    # Show resumable intents
+    echo "## AI-DLC: Resumable Intents Found"
     echo ""
-    echo "No active AI-DLC task. Run \`/elaborate\` to start a new task."
+    echo "Found intent(s) that can be resumed:"
     echo ""
-    echo "**Available workflows:**"
-    echo "$AVAILABLE_WORKFLOWS"
+    echo "$RESUMABLE_INTENTS" | while IFS='|' read -r slug workflow summary; do
+      [ -z "$slug" ] && continue
+      echo "- **$slug** (workflow: $workflow)"
+      # Parse summary for unit counts if available
+      if [ -n "$summary" ]; then
+        completed=$(echo "$summary" | sed -n 's/.*completed:\([0-9]*\).*/\1/p')
+        pending=$(echo "$summary" | sed -n 's/.*pending:\([0-9]*\).*/\1/p')
+        in_prog=$(echo "$summary" | sed -n 's/.*in_progress:\([0-9]*\).*/\1/p')
+        total=$((completed + pending + in_prog))
+        [ "$total" -gt 0 ] && echo "  Units: $completed/$total completed"
+      fi
+    done
     echo ""
+    echo "**To resume:** \`/resume <slug>\` or \`/resume\` if only one"
+    echo ""
+  else
+    # No AI-DLC state and no resumable intents - show available workflows for /elaborate
+    if [ -n "$AVAILABLE_WORKFLOWS" ]; then
+      echo "## AI-DLC Available"
+      echo ""
+      echo "No active AI-DLC task. Run \`/elaborate\` to start a new task."
+      echo ""
+      echo "**Available workflows:**"
+      echo "$AVAILABLE_WORKFLOWS"
+      echo ""
+    fi
   fi
   exit 0
 fi
