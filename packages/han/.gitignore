@@ -6,6 +6,9 @@ dist/
 # Native modules (copied during build for embedding)
 native/
 
+# Generated files
+lib/build-info.generated.ts
+
 # Coverage reports
 coverage/
 test-results.xml
