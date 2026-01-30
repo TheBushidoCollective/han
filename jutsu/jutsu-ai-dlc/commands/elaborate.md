@@ -2,140 +2,253 @@
 description: Start AI-DLC mob elaboration to collaboratively define intent and completion criteria (user-facing command)
 ---
 
-## Name
+You are the **Elaborator** starting the AI-DLC Mob Elaboration ritual. Your job is to collaboratively define:
+1. The **Intent** - What are we building and why?
+2. **Success Criteria** - How do we know when it's done?
+3. **Units** - Independent pieces of work (for complex intents)
 
-`jutsu-ai-dlc:elaborate` - Start mob elaboration to define intent and completion criteria.
+Then you'll write these as files in `.ai-dlc/{intent-slug}/` for the construction phase.
 
-## Synopsis
+---
 
+## Phase 1: Gather Intent
+
+Ask the user: "What do you want to build or accomplish?"
+
+Wait for their answer. Do not explain the process.
+
+---
+
+## Phase 2: Clarify Requirements
+
+Use `AskUserQuestion` to explore their intent with 2-4 questions at a time. Each question should have 2-4 options.
+
+CRITICAL: Do NOT list questions as plain text. Always use the `AskUserQuestion` tool.
+
+Example:
+```json
+{
+  "questions": [
+    {
+      "question": "What's the scope of this work?",
+      "header": "Scope",
+      "options": [
+        {"label": "New feature", "description": "Adding new functionality"},
+        {"label": "Enhancement", "description": "Improving existing feature"},
+        {"label": "Bug fix", "description": "Fixing broken behavior"},
+        {"label": "Refactor", "description": "Restructuring without behavior change"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "What's the complexity?",
+      "header": "Complexity",
+      "options": [
+        {"label": "Simple", "description": "Single file, few hours"},
+        {"label": "Medium", "description": "Multiple files, can be done in one session"},
+        {"label": "Complex", "description": "Needs decomposition into units"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
 ```
-/elaborate
+
+Continue asking until you understand:
+- What problem this solves
+- Who it's for
+- Key constraints or requirements
+- Integration points with existing systems
+
+---
+
+## Phase 3: Recommend Workflow
+
+Based on the intent, recommend a workflow:
+
+| Intent Type | Workflow | When to Use |
+|-------------|----------|-------------|
+| New feature, enhancement | **default** | Standard development work |
+| Bug, investigation | **hypothesis** | When root cause is unknown |
+| Quality-focused | **tdd** | When tests should drive design |
+| Security-sensitive | **adversarial** | When security review is critical |
+
+Confirm with `AskUserQuestion`:
+```json
+{
+  "questions": [{
+    "question": "This looks like a new feature. I recommend the 'default' workflow. Sound right?",
+    "header": "Workflow",
+    "options": [
+      {"label": "default (Recommended)", "description": "elaborator → planner → builder → reviewer"},
+      {"label": "tdd", "description": "test-writer → implementer → refactorer"},
+      {"label": "hypothesis", "description": "observer → hypothesizer → experimenter → analyst"},
+      {"label": "adversarial", "description": "builder → red-team → blue-team → reviewer"}
+    ],
+    "multiSelect": false
+  }]
+}
 ```
 
-## Description
+---
 
-**User-facing command** - The user runs this once to start a new AI-DLC workflow.
+## Phase 4: Define Success Criteria
 
-This is the **elaboration phase** - collaborative inception where you and the user define what to build. You wear the **Elaborator hat** and your job is to:
+Work with the user to define 3-7 **verifiable** success criteria. Each MUST be:
+- **Specific** - Unambiguous
+- **Measurable** - Programmatically verifiable
+- **Testable** - Can write a test for it
 
-1. **Understand the user's intent** - What do they want to accomplish?
-2. **Ask clarifying questions** - Don't assume, explore
-3. **Identify edge cases** - What could go wrong? What's out of scope?
-4. **Define completion criteria** - How will we know when it's done?
+Good:
+```
+- [ ] API endpoint returns 200 with valid auth token
+- [ ] Invalid tokens return 401 with error message
+- [ ] Rate limit of 100 requests/minute is enforced
+- [ ] All existing tests pass
+```
 
-**Important:**
-- Do NOT implement anything - This is pure discovery
-- Do NOT skip this phase - Good criteria enable autonomy later
-- Collaborate - This is HITL (human-in-the-loop) by design
-- User runs `/construct` next - That kicks off the autonomous loop
+Bad:
+```
+- [ ] Code is clean
+- [ ] API works well
+```
 
-## Implementation
+Use `AskUserQuestion` to confirm criteria:
+```json
+{
+  "questions": [{
+    "question": "Here are the success criteria I've captured. Are these complete?",
+    "header": "Criteria",
+    "options": [
+      {"label": "Yes, looks good", "description": "Proceed with these criteria"},
+      {"label": "Need to add more", "description": "I have additional criteria"},
+      {"label": "Need to revise", "description": "Some criteria need adjustment"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
 
-### Step 1: Select Workflow
+---
 
-Present the available workflows to the user:
+## Phase 5: Decompose into Units (if complex)
 
-| Workflow | Description | Hat Sequence |
-|----------|-------------|--------------|
-| **default** | Standard development workflow | elaborator → planner → builder → reviewer |
-| **tdd** | Test-Driven Development | test-writer → implementer → refactorer |
-| **adversarial** | Security-focused development | builder → red-team → blue-team → reviewer |
-| **hypothesis** | Scientific debugging | observer → hypothesizer → experimenter → analyst |
+For medium/complex intents, decompose into **Units** - independent pieces of work.
 
-Ask: "Which workflow fits this task? (default: **default**)"
+Ask with `AskUserQuestion`:
+```json
+{
+  "questions": [{
+    "question": "Should we decompose this into parallel units?",
+    "header": "Decompose",
+    "options": [
+      {"label": "Yes", "description": "Break into 2-5 independent units"},
+      {"label": "No", "description": "Keep as single unit of work"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
 
-### Step 2: Understand Intent
+If yes, define each unit with:
+- Name and description
+- Specific success criteria for that unit
+- Dependencies on other units (if any)
 
-Ask the user to describe what they want. Then ask follow-up questions:
-- "What problem does this solve?"
-- "Who is this for?"
-- "What's the expected outcome?"
+---
 
-### Step 3: Explore Requirements
+## Phase 6: Write AI-DLC Artifacts
 
-Dig into specifics:
-- "What should happen when X?"
-- "How should errors be handled?"
-- "Are there any constraints?"
+Create the `.ai-dlc/{intent-slug}/` directory and write files:
 
-### Step 4: Define Completion Criteria
-
-Work with the user to create **verifiable** criteria. Each criterion should be:
-- **Specific** - No ambiguity
-- **Measurable** - Can be checked
-- **Automated** - Ideally testable
-
-Example format:
+### 1. Write `intent.md`:
 ```markdown
-- [ ] Users can log in with Google OAuth
-- [ ] Login failure shows descriptive error message
-- [ ] Session persists across page refreshes
-- [ ] All existing tests continue to pass
+---
+workflow: {workflow-name}
+created: {ISO date}
+status: active
+---
+
+# {Intent Title}
+
+## Problem
+{What problem are we solving?}
+
+## Solution
+{High-level approach}
+
+## Success Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Context
+{Relevant background, constraints, decisions}
 ```
 
-### Step 5: Save State
-
-Once you've collaborated on intent, criteria, and workflow, save them.
-
-> **Note:** The examples below show MCP tool calls (`han_keep_save`). Use the Han MCP server tools
-> or equivalent CLI commands: `han keep save --branch <key> "<content>"`
-
-```bash
-# CLI equivalent commands:
-han keep save --branch intent.md "Your intent description"
-han keep save --branch completion-criteria.md "- [ ] Criterion 1\n- [ ] Criterion 2"
-han keep save --branch intent-slug "my-feature"
-```
-
-Then initialize the iteration state with the selected workflow:
-
-```bash
-# Initialize iteration state (JSON)
-han keep save --branch iteration.json '{"iteration":1,"hat":"elaborator","workflowName":"default","workflow":["elaborator","planner","builder","reviewer"],"status":"active"}'
-```
-
-### Step 5b: Decompose into Units (Optional)
-
-For complex intents, decompose the work into **units** - independent pieces of work that can be executed in parallel.
-
-#### Unit File Format
-
-Each unit is a file in `.ai-dlc/{intent-slug}/`:
-
+### 2. Write `unit-NN-{slug}.md` for each unit:
 ```markdown
 ---
 status: pending
-depends_on: [unit-01-setup, unit-03-session]
-branch: ai-dlc/add-oauth/04-auth-integration
+depends_on: []
+branch: ai-dlc/{intent-slug}/NN-{slug}
 ---
-# unit-04-auth-integration
+
+# unit-NN-{slug}
 
 ## Description
-Integrate all authentication components.
+{What this unit accomplishes}
 
-## Completion Criteria
-- [ ] Login button triggers OAuth flow
-- [ ] Session persists across refreshes
+## Success Criteria
+- [ ] Specific criterion for this unit
+- [ ] Another criterion
+
+## Notes
+{Implementation hints, context}
 ```
 
-#### Unit Status Values
+### 3. Save iteration state to han keep:
+```javascript
+han_keep_save({
+  scope: "branch",
+  key: "intent-slug",
+  content: "{intent-slug}"
+})
 
-| Status | Description |
-|--------|-------------|
-| `pending` | Not started, may be waiting for dependencies |
-| `in_progress` | Being worked on by a bolt |
-| `completed` | Successfully finished |
-| `blocked` | Explicitly blocked (manual intervention needed) |
+han_keep_save({
+  scope: "branch",
+  key: "iteration.json",
+  content: JSON.stringify({
+    iteration: 1,
+    hat: "{first-hat-after-elaborator}",
+    workflowName: "{workflow}",
+    workflow: ["{hat1}", "{hat2}", ...],
+    status: "active"
+  })
+})
+```
 
-### Step 6: Transition to Construction
+---
 
-When elaboration is complete:
+## Phase 7: Handoff to Construction
 
-1. Call `/advance` internally to set hat to next in workflow
-2. Tell the user:
+Tell the user:
 
 ```
-Intent and criteria defined! Workflow: {workflowName}
+Elaboration complete!
 
-Run `/construct` to start the autonomous build loop.
+Created: .ai-dlc/{intent-slug}/
+- intent.md
+- unit-01-{name}.md
+- unit-02-{name}.md
+...
+
+Workflow: {workflowName}
+Next hat: {next-hat}
+
+To start the autonomous build loop:
+  /construct
+
+The construction phase will iterate through each unit, using quality gates
+(tests, types, lint) as backpressure until all success criteria are met.
 ```

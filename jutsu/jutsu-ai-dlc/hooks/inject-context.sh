@@ -28,11 +28,88 @@ if [ -f "$DAG_LIB" ]; then
   source "$DAG_LIB"
 fi
 
+# Load workflows from plugin (defaults) and project (overrides)
+# Project workflows merge with plugin workflows (project takes precedence)
+PLUGIN_WORKFLOWS="${CLAUDE_PLUGIN_ROOT}/workflows.yml"
+PROJECT_WORKFLOWS=".ai-dlc/workflows.yml"
+
+# Function to extract workflow names from YAML file
+get_workflow_names() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    # Extract top-level keys (workflow names) - lines without leading spaces that end with :
+    grep -E '^[a-z][a-z0-9_-]*:' "$file" 2>/dev/null | sed 's/:.*//' || true
+  fi
+}
+
+# Function to get workflow details (description and hats)
+get_workflow_details() {
+  local file="$1"
+  local name="$2"
+  if [ -f "$file" ]; then
+    local desc hats
+    desc=$(han parse yaml "${name}.description" -r < "$file" 2>/dev/null || echo "")
+    # han parse yaml outputs arrays as "- item\n- item", convert to arrow-separated
+    hats=$(han parse yaml "${name}.hats" < "$file" 2>/dev/null | sed 's/^- //' | tr '\n' '|' | sed 's/|$//; s/|/ → /g' || echo "")
+    if [ -n "$desc" ] && [ -n "$hats" ]; then
+      echo "$desc|$hats"
+    fi
+  fi
+}
+
+# Build merged workflow list (project overrides plugin)
+declare -A WORKFLOWS
+KNOWN_WORKFLOWS=""
+
+# Load plugin workflows first
+for name in $(get_workflow_names "$PLUGIN_WORKFLOWS"); do
+  details=$(get_workflow_details "$PLUGIN_WORKFLOWS" "$name")
+  if [ -n "$details" ]; then
+    WORKFLOWS[$name]="$details"
+    KNOWN_WORKFLOWS="$KNOWN_WORKFLOWS $name"
+  fi
+done
+
+# Load project workflows (override or add)
+for name in $(get_workflow_names "$PROJECT_WORKFLOWS"); do
+  details=$(get_workflow_details "$PROJECT_WORKFLOWS" "$name")
+  if [ -n "$details" ]; then
+    WORKFLOWS[$name]="$details"
+    # Add to known if not already there
+    if ! echo "$KNOWN_WORKFLOWS" | grep -qw "$name"; then
+      KNOWN_WORKFLOWS="$KNOWN_WORKFLOWS $name"
+    fi
+  fi
+done
+
+# Build formatted workflow list for display
+AVAILABLE_WORKFLOWS=""
+for name in $KNOWN_WORKFLOWS; do
+  details="${WORKFLOWS[$name]}"
+  if [ -n "$details" ]; then
+    desc="${details%%|*}"
+    hats="${details##*|}"
+    AVAILABLE_WORKFLOWS="${AVAILABLE_WORKFLOWS}
+- **$name**: $desc ($hats)"
+  fi
+done
+AVAILABLE_WORKFLOWS="${AVAILABLE_WORKFLOWS#
+}"  # Remove leading newline
+
 # Check for AI-DLC state
 ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
 
 if [ -z "$ITERATION_JSON" ]; then
-  # No AI-DLC state - not using the methodology
+  # No AI-DLC state - show available workflows for /elaborate
+  if [ -n "$AVAILABLE_WORKFLOWS" ]; then
+    echo "## AI-DLC Available"
+    echo ""
+    echo "No active AI-DLC task. Run \`/elaborate\` to start a new task."
+    echo ""
+    echo "**Available workflows:**"
+    echo "$AVAILABLE_WORKFLOWS"
+    echo ""
+  fi
   exit 0
 fi
 
@@ -71,8 +148,7 @@ HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default elaborator)
 STATUS=$(echo "$ITERATION_JSON" | han parse json status -r --default active)
 WORKFLOW_NAME=$(echo "$ITERATION_JSON" | han parse json workflowName -r --default default)
 
-# Validate workflow name against known workflows
-KNOWN_WORKFLOWS="default tdd adversarial hypothesis"
+# Validate workflow name against known workflows (loaded above from workflows.yml files)
 if ! echo "$KNOWN_WORKFLOWS" | grep -qw "$WORKFLOW_NAME"; then
   echo "Warning: Unknown workflow '$WORKFLOW_NAME'. Using 'default'." >&2
   WORKFLOW_NAME="default"
