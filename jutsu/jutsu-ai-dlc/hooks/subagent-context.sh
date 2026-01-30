@@ -40,7 +40,7 @@ WORKFLOW_HATS_STR=$(echo "$WORKFLOW_HATS" | tr -d '[]"' | sed 's/,/ → /g')
 
 echo "## AI-DLC Subagent Context"
 echo ""
-echo "**Iteration:** $ITERATION | **Hat:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
+echo "**Iteration:** $ITERATION | **Role:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
 # Load intent
@@ -103,21 +103,22 @@ if [ -n "$INTENT_SLUG" ]; then
       fi
       echo ""
     else
-      # Fallback: simple unit list
-      echo "| Unit | Status |"
-      echo "|------|--------|"
+      # Fallback: simple unit list with discipline
+      echo "| Unit | Status | Discipline |"
+      echo "|------|--------|------------|"
       for unit_file in "$INTENT_DIR"/unit-*.md; do
         [ -f "$unit_file" ] || continue
         NAME=$(basename "$unit_file" .md)
         UNIT_STATUS=$(han parse yaml status -r --default pending < "$unit_file" 2>/dev/null || echo "pending")
-        echo "| $NAME | $UNIT_STATUS |"
+        DISCIPLINE=$(han parse yaml discipline -r --default "-" < "$unit_file" 2>/dev/null || echo "-")
+        echo "| $NAME | $UNIT_STATUS | $DISCIPLINE |"
       done
       echo ""
     fi
   fi
 fi
 
-# Load hat instructions
+# Load role/hat instructions (builder/reviewer are orchestration roles)
 HAT_FILE=""
 if [ -f ".ai-dlc/hats/${HAT}.md" ]; then
   HAT_FILE=".ai-dlc/hats/${HAT}.md"
@@ -125,7 +126,7 @@ elif [ -n "$CLAUDE_PLUGIN_ROOT" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/hats/${HAT}.md"
   HAT_FILE="${CLAUDE_PLUGIN_ROOT}/hats/${HAT}.md"
 fi
 
-echo "### Current Hat: $HAT"
+echo "### Current Role: $HAT"
 echo ""
 
 if [ -n "$HAT_FILE" ] && [ -f "$HAT_FILE" ]; then
@@ -142,6 +143,10 @@ if [ -n "$HAT_FILE" ] && [ -f "$HAT_FILE" ]; then
     echo "$INSTRUCTIONS"
     echo ""
   fi
+else
+  # No hat file - role is an orchestrator that spawns discipline-specific agents
+  echo "**$HAT** orchestrates work by spawning discipline-specific agents based on unit requirements."
+  echo ""
 fi
 
 # AI-DLC Workflow Rules (mandatory for all subagents)

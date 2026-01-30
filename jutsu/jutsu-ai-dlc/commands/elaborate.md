@@ -192,12 +192,16 @@ status: active
 status: pending
 depends_on: []
 branch: ai-dlc/{intent-slug}/NN-{slug}
+discipline: {discipline}  # frontend, backend, api, documentation, devops, etc.
 ---
 
 # unit-NN-{slug}
 
 ## Description
 {What this unit accomplishes}
+
+## Discipline
+{discipline} - This unit will be executed by `do-{discipline}` specialized agents.
 
 ## Success Criteria
 - [ ] Specific criterion for this unit
@@ -206,6 +210,13 @@ branch: ai-dlc/{intent-slug}/NN-{slug}
 ## Notes
 {Implementation hints, context}
 ```
+
+**Discipline determines which specialized agents execute the unit:**
+- `frontend` → `do-frontend-development` agents
+- `backend` → backend-focused agents
+- `api` → API development agents
+- `documentation` → `do-technical-documentation` agents
+- `devops` → infrastructure/deployment agents
 
 ### 3. Save iteration state to han keep:
 ```javascript
