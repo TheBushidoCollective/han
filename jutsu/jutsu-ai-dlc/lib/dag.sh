@@ -8,9 +8,6 @@
 # branch: ai-dlc/intent/04-auth
 # ---
 
-# Source directory for this script
-DAG_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Parse unit status from frontmatter
 # Usage: parse_unit_status <unit_file>
 parse_unit_status() {
