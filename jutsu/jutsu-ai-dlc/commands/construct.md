@@ -38,6 +38,26 @@ User: /construct           # Continue the loop
 - User intervention - You can skip `/construct` to intervene manually
 - State preserved - Progress saved in han keep between sessions
 
+**CRITICAL: No Questions During Construction**
+
+During the construction loop, you MUST NOT:
+- Use AskUserQuestion tool
+- Ask clarifying questions
+- Request user decisions
+- Pause for user feedback
+
+This breaks han's hook logic. The construction loop must be fully autonomous.
+
+If you encounter ambiguity:
+1. Make a reasonable decision based on available context
+2. Document the assumption in your work
+3. Let the reviewer hat catch issues on the next pass
+
+If truly blocked (cannot proceed without user input):
+1. Document the blocker clearly
+2. Stop the loop naturally (don't call /advance)
+3. The Stop hook will prompt the user to `/clear` and intervene
+
 ## Implementation
 
 ### Step 1: Load State
