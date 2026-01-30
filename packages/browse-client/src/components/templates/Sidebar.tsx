@@ -2,12 +2,14 @@
  * Sidebar Template
  *
  * Main navigation sidebar with app branding and nav items.
+ * Shows org selector in hosted mode.
  */
 
 import type React from 'react';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getActiveEnvironment } from '../../config/environments.ts';
+import { useMode } from '../../contexts/index.ts';
 import { colors, createStyles } from '../../theme.ts';
 import {
   Box,
@@ -17,6 +19,7 @@ import {
   Text,
   VStack,
 } from '../atoms/index.ts';
+import { OrgSelector } from '../molecules/index.ts';
 import { EnvironmentSwitcher, NavItem } from '../organisms/index.ts';
 
 /**
@@ -101,6 +104,7 @@ export function Sidebar(): React.ReactElement {
   const navigate = useNavigate();
   const [showEnvSwitcher, setShowEnvSwitcher] = useState(false);
   const activeEnv = getActiveEnvironment();
+  const { isHosted, orgs, currentOrg, setCurrentOrg } = useMode();
 
   const handleClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -117,12 +121,23 @@ export function Sidebar(): React.ReactElement {
           {/* Header with logo */}
           <Box px="lg" py="lg" style={styles.header}>
             <HStack gap="sm" align="center">
-              <Text size="xl">⛩️</Text>
+              <Text size="xl">{'\u26E9\uFE0F'}</Text>
               <Heading as="h1" size="md">
                 Han
               </Heading>
             </HStack>
           </Box>
+
+          {/* Organization selector - hosted mode only */}
+          {isHosted && orgs.length > 0 && (
+            <Box px="sm" py="sm" style={{ borderBottom: `1px solid ${colors.border.default}` }}>
+              <OrgSelector
+                orgs={orgs}
+                currentOrg={currentOrg}
+                onOrgChange={setCurrentOrg}
+              />
+            </Box>
+          )}
 
           {/* Navigation list */}
           <Box px="sm" py="md" style={styles.navContainer}>

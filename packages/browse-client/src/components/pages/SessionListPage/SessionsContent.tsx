@@ -3,6 +3,7 @@
  *
  * Displays sessions list with pagination using usePaginationFragment.
  * Uses usePreloadedQuery to read from the preloaded query reference.
+ * In hosted mode, shows team filter and view toggle components.
  */
 
 import type React from 'react';
@@ -17,7 +18,10 @@ import { Input } from '@/components/atoms/Input.tsx';
 import { Spinner } from '@/components/atoms/Spinner.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
 import { VStack } from '@/components/atoms/VStack.tsx';
+import { TeamFilter, ViewToggle, type ViewMode } from '@/components/molecules';
 import { SessionListItem } from '@/components/organisms/SessionListItem.tsx';
+import { useMode } from '@/contexts';
+import type { DateRange } from '@/types/auth.ts';
 import type { SessionListPageQuery } from './__generated__/SessionListPageQuery.graphql.ts';
 import type { SessionsContent_query$key } from './__generated__/SessionsContent_query.graphql.ts';
 import type { SessionsContentPaginationQuery } from './__generated__/SessionsContentPaginationQuery.graphql.ts';
@@ -78,6 +82,15 @@ export function SessionsContent({
 }: SessionsContentProps): React.ReactElement {
   const [filter, setFilter] = useState('');
   const [isPending, startTransition] = useTransition();
+  const { isHosted, orgMembers } = useMode();
+
+  // Team filter state (hosted mode only)
+  const [viewMode, setViewMode] = useState<ViewMode>('personal');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    start: null,
+    end: null,
+  });
 
   // First, read the preloaded query data
   const preloadedData = usePreloadedQuery<SessionListPageQuery>(
@@ -154,41 +167,70 @@ export function SessionsContent({
   return (
     <VStack style={{ height: '100%', overflow: 'hidden' }}>
       {/* Header with title and filter */}
-      <HStack
-        justify="space-between"
-        align="center"
+      <VStack
         style={{
-          padding: theme.spacing.lg,
           borderBottom: `1px solid ${theme.colors.border.subtle}`,
           flexShrink: 0,
         }}
       >
-        <HStack gap="md" align="center">
-          <Heading size="md">{pageTitle}</Heading>
-          {pageSubtitle && (
-            <>
-              <Text color="muted">|</Text>
-              <Text color="secondary" size="sm">
-                {pageSubtitle}
-              </Text>
-            </>
-          )}
-          {data.sessions?.totalCount !== undefined && (
-            <>
-              <Text color="muted">|</Text>
-              <Text color="muted" size="sm">
-                {data.sessions.totalCount} total
-              </Text>
-            </>
-          )}
+        <HStack
+          justify="space-between"
+          align="center"
+          style={{
+            padding: theme.spacing.lg,
+          }}
+        >
+          <HStack gap="md" align="center">
+            <Heading size="md">{pageTitle}</Heading>
+            {pageSubtitle && (
+              <>
+                <Text color="muted">|</Text>
+                <Text color="secondary" size="sm">
+                  {pageSubtitle}
+                </Text>
+              </>
+            )}
+            {data.sessions?.totalCount !== undefined && (
+              <>
+                <Text color="muted">|</Text>
+                <Text color="muted" size="sm">
+                  {data.sessions.totalCount} total
+                </Text>
+              </>
+            )}
+          </HStack>
+          <HStack gap="md" align="center">
+            {/* View toggle - hosted mode only */}
+            {isHosted && (
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+            )}
+            <Input
+              placeholder="Filter sessions..."
+              value={filter}
+              onChange={setFilter}
+              style={{ width: '250px' }}
+            />
+          </HStack>
         </HStack>
-        <Input
-          placeholder="Filter sessions..."
-          value={filter}
-          onChange={setFilter}
-          style={{ width: '250px' }}
-        />
-      </HStack>
+
+        {/* Team filters - hosted mode + team view only */}
+        {isHosted && viewMode === 'team' && (
+          <Box
+            style={{
+              padding: theme.spacing.lg,
+              paddingTop: 0,
+            }}
+          >
+            <TeamFilter
+              members={orgMembers}
+              selectedUserId={selectedUserId}
+              onUserChange={setSelectedUserId}
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+            />
+          </Box>
+        )}
+      </VStack>
 
       {/* Scrollable list */}
       <Box
