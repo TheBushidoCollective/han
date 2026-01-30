@@ -1832,13 +1832,35 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 			}
 		}
 
-		// Report advisory hooks separately
+		// Report advisory hooks separately (grouped by execution batch)
 		if (advisoryHooks.length > 0) {
 			console.error(
 				`${colors.dim}Advisory hooks (run after validation):${colors.reset}`,
 			);
-			for (const h of advisoryHooks) {
-				console.error(`  - ${h.plugin}/${h.hook} in ${h.directory}`);
+			// Sort advisory hooks by their dependencies to show execution order
+			const advisoryTasks = advisoryHooks
+				.map((h) =>
+					tasks.find((t) => t.plugin === h.plugin && t.hookName === h.hook),
+				)
+				.filter((t): t is HookTask => t !== undefined);
+			const sortedAdvisoryBatches = resolveDependencies(advisoryTasks);
+
+			// Display by batch group
+			for (let i = 0; i < sortedAdvisoryBatches.length; i++) {
+				const batch = sortedAdvisoryBatches[i];
+				if (sortedAdvisoryBatches.length > 1) {
+					console.error(`  ${colors.dim}Batch ${i + 1}:${colors.reset}`);
+				}
+				for (const task of batch) {
+					const h = advisoryHooks.find(
+						(hook) =>
+							hook.plugin === task.plugin && hook.hook === task.hookName,
+					);
+					if (h) {
+						const indent = sortedAdvisoryBatches.length > 1 ? "    " : "  ";
+						console.error(`${indent}- ${h.plugin}/${h.hook} in ${h.directory}`);
+					}
+				}
 			}
 		}
 
