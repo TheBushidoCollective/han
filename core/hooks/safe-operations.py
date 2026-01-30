@@ -21,8 +21,8 @@ from pathlib import Path
 
 # Dangerous bash patterns - operations that could harm the system
 DANGEROUS_BASH_PATTERNS = [
-    # Destructive operations on root/system paths
-    (r'\brm\s+(-[rRfiv]+\s+)*/', "Cannot delete files with absolute paths starting from root"),
+    # Destructive operations on root/system paths (but allow /tmp/ and /private/tmp/)
+    (r'\brm\s+(-[rRfiv]+\s+)*/(?!tmp/|private/tmp/)', "Cannot delete files with absolute paths starting from root (except /tmp/)"),
     (r'\brm\s+(-[rRfiv]+\s+)*~/', "Cannot delete files in home directory via rm"),
     (r'\brm\s+.*\.\.[/\s]', "Cannot use .. in rm commands - potential path traversal"),
 
