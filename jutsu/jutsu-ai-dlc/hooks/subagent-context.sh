@@ -154,9 +154,32 @@ echo "---"
 echo ""
 echo "## AI-DLC Workflow Rules"
 echo ""
+
+# Get current branch and working directory
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+CURRENT_DIR=$(pwd)
+IS_WORKTREE=$(git rev-parse --is-inside-work-tree 2>/dev/null && [ -f "$(git rev-parse --git-dir)/commondir" ] && echo "yes" || echo "no")
+
+echo "### Current Working Context"
+echo ""
+echo "- **Branch:** \`${CURRENT_BRANCH}\`"
+echo "- **Directory:** \`${CURRENT_DIR}\`"
+[ "$IS_WORKTREE" = "yes" ] && echo "- **Worktree:** Yes (isolated workspace)"
+echo ""
+
 echo "### Branch Per Unit (MANDATORY)"
 echo ""
-echo "Work MUST happen on a dedicated branch: \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
+echo "Work MUST happen on the unit's dedicated branch."
+echo "Expected pattern: \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
+echo ""
+if [[ "$CURRENT_BRANCH" == ai-dlc/* ]]; then
+  echo "✓ You are on an AI-DLC branch. Continue working here."
+else
+  echo "⚠️ You are NOT on an AI-DLC branch! Switch before making changes:"
+  echo "\`\`\`bash"
+  echo "git checkout -B ai-dlc/${INTENT_SLUG:-intent}/{unit-slug}"
+  echo "\`\`\`"
+fi
 echo ""
 echo "### Before Stopping"
 echo ""
