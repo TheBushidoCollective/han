@@ -141,6 +141,15 @@ import {
 } from "./types/slot-manager.ts";
 import { SlotReleaseResultType } from "./types/slot-release-result.ts";
 import { SlotStatusType } from "./types/slot-status.ts";
+// Team platform types
+import {
+	OrgType,
+	TeamMemberType,
+	UserType,
+	type OrgData,
+	type TeamMemberData,
+	type UserData,
+} from "./types/team/index.ts";
 
 // =============================================================================
 // Direct Root Queries (no viewer pattern)
@@ -452,6 +461,84 @@ builder.queryField("sessions", (t) =>
 				projectId: args.projectId,
 				worktreeName: args.worktreeName,
 			});
+		},
+	}),
+);
+
+// =============================================================================
+// Team Platform Queries (hosted mode only)
+// =============================================================================
+
+/**
+ * Query for current user (hosted mode only)
+ * Returns null in local mode
+ */
+builder.queryField("currentUser", (t) =>
+	t.field({
+		type: UserType,
+		nullable: true,
+		description:
+			"Current authenticated user (only available in hosted team mode)",
+		resolve: (): UserData | null => {
+			// In local mode, return null
+			// In hosted mode, this would be populated from auth context
+			// For now, return null - will be extended when team backend is ready
+			return null;
+		},
+	}),
+);
+
+/**
+ * Query for current organization (hosted mode only)
+ * Returns null in local mode
+ */
+builder.queryField("currentOrg", (t) =>
+	t.field({
+		type: OrgType,
+		nullable: true,
+		description:
+			"Current organization context (only available in hosted team mode)",
+		resolve: (): OrgData | null => {
+			// In local mode, return null
+			// In hosted mode, this would be populated from auth context
+			return null;
+		},
+	}),
+);
+
+/**
+ * Query for user's organizations (hosted mode only)
+ * Returns empty array in local mode
+ */
+builder.queryField("orgs", (t) =>
+	t.field({
+		type: [OrgType],
+		description:
+			"Organizations the current user belongs to (only available in hosted team mode)",
+		resolve: (): OrgData[] => {
+			// In local mode, return empty array
+			// In hosted mode, this would fetch user's orgs
+			return [];
+		},
+	}),
+);
+
+/**
+ * Query for organization members (hosted mode only)
+ * Returns empty array in local mode
+ */
+builder.queryField("orgMembers", (t) =>
+	t.field({
+		type: [TeamMemberType],
+		args: {
+			orgId: t.arg.string({ required: true }),
+		},
+		description:
+			"Members of an organization (only available in hosted team mode)",
+		resolve: (_parent, _args): TeamMemberData[] => {
+			// In local mode, return empty array
+			// In hosted mode, this would fetch org members
+			return [];
 		},
 	}),
 );
@@ -1463,6 +1550,10 @@ export {
 	// Inline result types for tool calls
 	McpToolResultType,
 	ExposedToolResultType,
+	// Team platform types
+	UserType,
+	OrgType,
+	TeamMemberType,
 };
 
 // Define the @defer directive for incremental delivery
