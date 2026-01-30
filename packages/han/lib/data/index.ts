@@ -6,6 +6,7 @@
  *
  * Usage:
  *   import { DataSource, LocalDataSource, getLocalDataSource } from '../data';
+ *   import { HostedDataSource, createHostedDataSource } from '../data';
  *
  * All GraphQL resolvers should use context.dataSource instead of
  * importing from db/index.ts directly.
@@ -26,9 +27,28 @@ export type {
 	TaskMetricsOptions,
 } from "./interfaces.ts";
 
-// Local implementation
+// Local implementation (SQLite via han-native)
 export {
 	_resetLocalDataSource,
 	getLocalDataSource,
 	LocalDataSource,
 } from "./local/index.ts";
+
+// Hosted implementation (PostgreSQL via Drizzle ORM)
+export {
+	clearTenantContext,
+	closeDb,
+	createHostedDataSource,
+	getDb,
+	getPostgresConfig,
+	getTenantContext,
+	HostedDataSource,
+	setTenantContext,
+	withTenantContext,
+	type DrizzleDb,
+	type PostgresConfig,
+	type TenantContext,
+} from "./hosted/index.ts";
+
+// Re-export schema for migrations
+export * as hostedSchema from "./hosted/schema/index.ts";

@@ -209,7 +209,21 @@ export class LocalDataSource implements DataSource {
 			const { getHookExecutionsForSession } = await import(
 				"../../api/hooks.ts"
 			);
-			return getHookExecutionsForSession(sessionId);
+			const results = await getHookExecutionsForSession(sessionId);
+			// Convert null to undefined for native type compatibility
+			return results.map((r) => ({
+				...r,
+				id: r.id ?? undefined,
+				sessionId: r.sessionId ?? undefined,
+				taskId: r.taskId ?? undefined,
+				hookSource: r.hookSource ?? undefined,
+				directory: r.directory ?? undefined,
+				output: r.output ?? undefined,
+				error: r.error ?? undefined,
+				ifChanged: r.ifChanged ? JSON.stringify(r.ifChanged) : undefined,
+				command: r.command ?? undefined,
+				executedAt: r.timestamp ?? undefined,
+			}));
 		},
 
 		async queryStats(options?: HookStatsOptions) {
