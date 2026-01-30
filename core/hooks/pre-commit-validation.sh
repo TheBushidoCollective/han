@@ -56,15 +56,21 @@ export HAN_SESSION_ID="$SESSION_ID"
 VALIDATION_OUTPUT=$(echo "$STOP_PAYLOAD" | han hook orchestrate Stop 2>&1) || VALIDATION_EXIT=$?
 VALIDATION_EXIT=${VALIDATION_EXIT:-0}
 
-# If validation failed, block the commit
+# If validation failed, replace command with no-op that shows the error
 if [ "$VALIDATION_EXIT" -ne 0 ]; then
-  # Output deny JSON
+  # Escape the output for JSON (replace newlines and quotes)
+  ESCAPED_OUTPUT=$(echo "$VALIDATION_OUTPUT" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+  # Output JSON to replace command with echo that shows validation errors
   cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
-    "permissionDecision": "deny",
-    "permissionDecisionReason": "Pre-commit validation failed. Fix the issues before committing:\n\n$VALIDATION_OUTPUT"
+    "permissionDecision": "allow",
+    "updatedInput": {
+      "command": "echo 'Pre-commit validation failed. Fix the issues before committing:\\n\\n$ESCAPED_OUTPUT' >&2 && exit 1"
+    },
+    "additionalContext": "Pre-commit validation failed. The commit was skipped. Fix the issues and try again."
   }
 }
 EOF
