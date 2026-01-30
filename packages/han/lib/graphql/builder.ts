@@ -11,6 +11,7 @@
 
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
+import type { DataSource, DataSourceMode } from "../data/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
 import {
 	decodeGlobalId,
@@ -23,12 +24,19 @@ import {
  *
  * Includes DataLoaders for efficient batching and caching.
  * Loaders are created per-request to ensure proper isolation.
+ *
+ * The dataSource field provides abstracted database access that works
+ * with both SQLite (local mode) and PostgreSQL (hosted mode).
  */
 export interface GraphQLContext {
 	/** Request object for headers, etc. */
 	request?: Request;
 	/** DataLoaders for batching database access */
 	loaders: GraphQLLoaders;
+	/** DataSource for abstracted database operations */
+	dataSource: DataSource;
+	/** Mode indicator: 'local' for SQLite, 'hosted' for PostgreSQL */
+	mode: DataSourceMode;
 }
 
 /**
