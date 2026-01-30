@@ -1772,29 +1772,8 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 		});
 		const orchestrationId = orchestration.id;
 
-		// Separate validation hooks from advisory hooks (wildcard dependencies)
-		const validationHooks: typeof hooksToRun = [];
-		const advisoryHooks: typeof hooksToRun = [];
-
+		// Queue all hooks for later execution
 		for (const h of hooksToRun) {
-			const task = tasks.find(
-				(t) => t.plugin === h.plugin && t.hookName === h.hook,
-			);
-			if (!task) continue;
-
-			const hasWildcardDep = task.dependsOn?.some(
-				(dep) => dep.plugin === "*" || dep.hook === "*",
-			);
-
-			if (hasWildcardDep) {
-				advisoryHooks.push(h);
-			} else {
-				validationHooks.push(h);
-			}
-		}
-
-		// Queue validation hooks for later execution
-		for (const h of validationHooks) {
 			const task = tasks.find(
 				(t) => t.plugin === h.plugin && t.hookName === h.hook,
 			);
@@ -1820,45 +1799,63 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 			});
 		}
 
-		// Report validation hooks
-		if (validationHooks.length > 0) {
-			console.error(
-				`${colors.yellow}Validation required${colors.reset} - ${validationHooks.length} hook(s) need to run:`,
+		// Get tasks for hooks that need to run, with phase dependencies injected
+		const hooksToRunTasks = hooksToRun
+			.map((h) =>
+				tasks.find((t) => t.plugin === h.plugin && t.hookName === h.hook),
+			)
+			.filter((t): t is HookTask => t !== undefined);
+		const tasksWithPhaseDeps = injectPhaseDependencies(hooksToRunTasks);
+		const executionBatches = resolveDependencies(tasksWithPhaseDeps);
+
+		// Report hooks grouped by execution batch
+		console.error(
+			`${colors.yellow}Hooks to run${colors.reset} - ${hooksToRun.length} hook(s) in ${executionBatches.length} batch(es):`,
+		);
+
+		// Collect batches by phase type
+		const phaseBatches: HookTask[][] = [];
+		const postValidationBatches: HookTask[][] = [];
+
+		for (const batch of executionBatches) {
+			const hasWildcard = batch.some((t) =>
+				t.dependsOn?.some((d) => d.plugin === "*" || d.hook === "*"),
 			);
-			for (const h of validationHooks) {
-				console.error(
-					`  - ${h.plugin}/${h.hook} in ${h.directory} (${h.reason})`,
-				);
+			if (hasWildcard) {
+				postValidationBatches.push(batch);
+			} else {
+				phaseBatches.push(batch);
 			}
 		}
 
-		// Report advisory hooks separately (grouped by execution batch)
-		if (advisoryHooks.length > 0) {
-			console.error(
-				`${colors.dim}Advisory hooks (run after validation):${colors.reset}`,
-			);
-			// Sort advisory hooks by their dependencies to show execution order
-			const advisoryTasks = advisoryHooks
-				.map((h) =>
-					tasks.find((t) => t.plugin === h.plugin && t.hookName === h.hook),
-				)
-				.filter((t): t is HookTask => t !== undefined);
-			const sortedAdvisoryBatches = resolveDependencies(advisoryTasks);
-
-			// Display by batch group
-			for (let i = 0; i < sortedAdvisoryBatches.length; i++) {
-				const batch = sortedAdvisoryBatches[i];
-				if (sortedAdvisoryBatches.length > 1) {
-					console.error(`  ${colors.dim}Batch ${i + 1}:${colors.reset}`);
+		// Display phase batches with phase labels
+		for (const batch of phaseBatches) {
+			const batchPhase =
+				batch.length > 0
+					? inferCategoryFromHookName(batch[0].hookName)
+					: "lint";
+			console.error(`  ${colors.cyan}${batchPhase}:${colors.reset}`);
+			for (const task of batch) {
+				const h = hooksToRun.find(
+					(hook) => hook.plugin === task.plugin && hook.hook === task.hookName,
+				);
+				if (h) {
+					console.error(`    - ${h.plugin}/${h.hook} in ${h.directory}`);
 				}
+			}
+		}
+
+		// Display post-validation batches under a single heading
+		if (postValidationBatches.length > 0) {
+			console.error(`  ${colors.dim}post-validation:${colors.reset}`);
+			for (const batch of postValidationBatches) {
 				for (const task of batch) {
-					const h = advisoryHooks.find(
+					const h = hooksToRun.find(
 						(hook) =>
 							hook.plugin === task.plugin && hook.hook === task.hookName,
 					);
 					if (h) {
-						const indent = sortedAdvisoryBatches.length > 1 ? "    " : "  ";
-						console.error(`${indent}- ${h.plugin}/${h.hook} in ${h.directory}`);
+						console.error(`    - ${h.plugin}/${h.hook} in ${h.directory}`);
 					}
 				}
 			}

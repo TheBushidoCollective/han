@@ -1,5 +1,5 @@
 hooks:
-  check_commits:
+  commit:
     command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\" ${HAN_FILES}"
     description: "Commit work early and often for git storytelling"
     depends_on:

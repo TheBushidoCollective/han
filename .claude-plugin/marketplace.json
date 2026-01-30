@@ -945,7 +945,15 @@
       "description": "Vite build validation with automatic package manager detection.",
       "source": "./jutsu/jutsu-vite",
       "category": "Technique",
-      "keywords": ["vite", "bundler", "build", "javascript", "typescript", "vue", "svelte"]
+      "keywords": [
+        "vite",
+        "bundler",
+        "build",
+        "javascript",
+        "typescript",
+        "vue",
+        "svelte"
+      ]
     },
     {
       "name": "jutsu-vue",
@@ -1321,13 +1329,6 @@
       "source": "./do/do-embedded-development",
       "category": "Discipline",
       "keywords": ["embedded-systems", "firmware", "iot", "agent"]
-    },
-    {
-      "name": "do-enforce-planning",
-      "description": "Enforces planning before implementation work begins",
-      "source": "./do/do-enforce-planning",
-      "category": "Discipline",
-      "keywords": ["planning", "workflow", "agent", "hook"]
     },
     {
       "name": "do-frontend-development",
