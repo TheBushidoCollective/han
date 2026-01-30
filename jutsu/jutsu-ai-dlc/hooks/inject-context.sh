@@ -218,6 +218,15 @@ if [ -n "$SCRATCHPAD" ]; then
   echo ""
 fi
 
+# Load and display next prompt (what to continue with)
+NEXT_PROMPT=$(han keep load --branch next-prompt.md --quiet 2>/dev/null || echo "")
+if [ -n "$NEXT_PROMPT" ]; then
+  echo "### Continue With"
+  echo ""
+  echo "$NEXT_PROMPT"
+  echo ""
+fi
+
 # Load and display DAG status (if units exist)
 INTENT_SLUG=$(han keep load --branch intent-slug --quiet 2>/dev/null || echo "")
 if [ -n "$INTENT_SLUG" ]; then
@@ -326,17 +335,61 @@ else
   echo "\`\`\`"
 fi
 
+# ============================================================================
+# SHARED ITERATION MANAGEMENT INSTRUCTIONS
+# These apply to ALL hats and are not customizable
+# ============================================================================
+
+echo ""
+echo "---"
+echo ""
+echo "## Iteration Management (Required for ALL Hats)"
+echo ""
+echo "### Branch Per Unit (MANDATORY)"
+echo ""
+echo "You MUST work on a dedicated branch for this unit:"
+echo ""
+echo "\`\`\`bash"
+echo "# Create if not exists:"
+echo "git checkout -b ai-dlc/{intent-slug}/{unit-number}-{unit-slug}"
+echo "# Or use worktrees for parallel work:"
+echo "git worktree add ../{unit-slug} ai-dlc/{intent-slug}/{unit-number}-{unit-slug}"
+echo "\`\`\`"
+echo ""
+echo "You MUST NOT work directly on main/master. This isolates work and prevents conflicts."
+echo ""
+echo "### Before Stopping (MANDATORY)"
+echo ""
+echo "Before every stop, you MUST:"
+echo ""
+echo "1. **Commit working changes**: \`git add -A && git commit\`"
+echo "2. **Save scratchpad**: \`han keep save --branch scratchpad.md \"...\"\`"
+echo "3. **Write next prompt**: \`han keep save --branch next-prompt.md \"...\"\`"
+echo ""
+echo "The next-prompt.md should contain what to continue with after \`/clear\`."
+echo "Without this, progress is lost on context reset."
+echo ""
+echo "### Never Stop Arbitrarily"
+echo ""
+echo "- You MUST NOT stop mid-bolt without saving state"
+echo "- If you need user input, use \`AskUserQuestion\` tool"
+echo "- If blocked, document in \`han keep save --branch blockers.md\`"
+echo ""
+
 # Check branch naming convention (informational only)
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
 if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ]; then
   if ! echo "$CURRENT_BRANCH" | grep -qE '^ai-dlc/[a-z0-9-]+/[0-9]+-[a-z0-9-]+$'; then
+    echo "> **WARNING:** Current branch \`$CURRENT_BRANCH\` doesn't follow AI-DLC convention."
+    echo "> Expected: \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
+    echo "> Create correct branch before proceeding."
     echo ""
-    echo "> **Note:** Branch \`$CURRENT_BRANCH\` doesn't follow AI-DLC convention:"
-    echo "> \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
   fi
+else
+  echo "> **WARNING:** You are on \`${CURRENT_BRANCH:-main}\`. Create a unit branch before working."
+  echo ""
 fi
 
-echo ""
 echo "---"
 echo ""
 echo "**Commands:** \`/construct\` (continue loop) | \`/reset\` (abandon task)"
