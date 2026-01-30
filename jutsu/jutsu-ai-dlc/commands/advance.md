@@ -36,6 +36,7 @@ const nextHat = workflow[nextIndex];
 
 ```javascript
 state.hat = nextHat;
+state.needsAdvance = true;  // Signal SessionStart to increment iteration
 han_keep_save({
   scope: "branch",
   key: "iteration.json",
