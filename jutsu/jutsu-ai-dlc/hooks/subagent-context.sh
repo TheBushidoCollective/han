@@ -164,21 +164,31 @@ echo "### Current Working Context"
 echo ""
 echo "- **Branch:** \`${CURRENT_BRANCH}\`"
 echo "- **Directory:** \`${CURRENT_DIR}\`"
-[ "$IS_WORKTREE" = "yes" ] && echo "- **Worktree:** Yes (isolated workspace)"
+if [ "$IS_WORKTREE" = "yes" ]; then
+  echo "- **Worktree:** ✅ Yes (isolated workspace)"
+else
+  echo "- **Worktree:** ⚠️ NO - You should be in a worktree!"
+fi
 echo ""
 
-echo "### Branch Per Unit (MANDATORY)"
+echo "### Worktree Isolation (MANDATORY)"
 echo ""
-echo "Work MUST happen on the unit's dedicated branch."
-echo "Expected pattern: \`ai-dlc/{intent-slug}/{unit-number}-{unit-slug}\`"
+echo "All bolt work MUST happen in an isolated worktree at:"
+echo "\`/tmp/ai-dlc-{intent-slug}-{unit-slug}/\`"
 echo ""
-if [[ "$CURRENT_BRANCH" == ai-dlc/* ]]; then
-  echo "✓ You are on an AI-DLC branch. Continue working here."
+if [ "$IS_WORKTREE" = "yes" ] && [[ "$CURRENT_BRANCH" == ai-dlc/* ]]; then
+  echo "✅ You are in the correct worktree on an AI-DLC branch. Continue working here."
+elif [[ "$CURRENT_DIR" == /tmp/ai-dlc-* ]]; then
+  echo "✅ You are in an AI-DLC worktree directory. Continue working here."
 else
-  echo "⚠️ You are NOT on an AI-DLC branch! Switch before making changes:"
-  echo "\`\`\`bash"
-  echo "git checkout -B ai-dlc/${INTENT_SLUG:-intent}/{unit-slug}"
-  echo "\`\`\`"
+  echo "🛑 **STOP!** You are NOT in a worktree!"
+  echo ""
+  echo "Before doing ANY work, you must:"
+  echo "1. Have the parent create the worktree"
+  echo "2. cd to the worktree directory"
+  echo "3. Verify you're on the unit branch"
+  echo ""
+  echo "Working outside a worktree will cause conflicts with the parent session."
 fi
 echo ""
 echo "### Before Stopping"

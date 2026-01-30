@@ -80,32 +80,32 @@ If status is "complete":
 Task already complete! Run /reset to start a new task.
 ```
 
-### Step 2: Ensure Unit Branch
+### Step 2: Create Unit Worktree
 
-**CRITICAL: All work MUST happen on the unit's dedicated branch.**
+**CRITICAL: All work MUST happen in an isolated worktree.**
 
-Branch naming: `ai-dlc/{intent-slug}/{unit-number}-{unit-slug}`
+This prevents conflicts with the parent session and enables true isolation.
 
 ```bash
 # Determine current unit from state or find next ready unit
 UNIT_FILE=$(find_ready_unit "$INTENT_DIR")
 UNIT_NAME=$(basename "$UNIT_FILE" .md)  # e.g., unit-01-core-backend
-UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT_NAME#unit-}"  # e.g., ai-dlc/han-team-platform/01-core-backend
+UNIT_SLUG="${UNIT_NAME#unit-}"  # e.g., 01-core-backend
+UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT_SLUG}"
+WORKTREE_PATH="/tmp/ai-dlc-${intentSlug}-${UNIT_SLUG}"
 
-# Check if on correct branch
-CURRENT_BRANCH=$(git branch --show-current)
-
-if [ "$CURRENT_BRANCH" != "$UNIT_BRANCH" ]; then
-  # Create branch if it doesn't exist, then switch
-  git checkout -B "$UNIT_BRANCH"
+# Create worktree if it doesn't exist
+if [ ! -d "$WORKTREE_PATH" ]; then
+  git worktree add -B "$UNIT_BRANCH" "$WORKTREE_PATH"
 fi
 ```
 
-**Why branches matter:**
-- Isolates work per unit (clean PRs)
-- Enables parallel execution via worktrees
-- Preserves main branch stability
-- Allows easy rollback if unit fails
+**Why worktrees are mandatory:**
+- Isolates work completely from parent session
+- Parent can't accidentally revert subagent's changes
+- Each unit has its own working directory
+- Clean git history per unit
+- Enables true parallel execution
 
 ### Step 3: Spawn Subagent for Current Role
 
@@ -132,6 +132,16 @@ Task({
   description: `${state.hat}: ${unit.name}`,
   prompt: `
     Execute the ${state.hat} role for this AI-DLC unit.
+
+    ## CRITICAL: Work in Worktree
+    **Worktree path:** ${WORKTREE_PATH}
+    **Branch:** ${UNIT_BRANCH}
+
+    You MUST:
+    1. cd ${WORKTREE_PATH}
+    2. Verify you're on branch ${UNIT_BRANCH}
+    3. Do ALL work in that directory
+    4. Commit changes to that branch
 
     ## Unit: ${unit.name}
     ## Completion Criteria
