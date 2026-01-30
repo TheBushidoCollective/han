@@ -3,13 +3,27 @@ description: (Internal) Complete the AI-DLC task (only valid from the last hat)
 internal: true
 ---
 
-# /done - Complete Task
+## Name
+
+`/done` - Mark the AI-DLC task as complete.
+
+## Synopsis
+
+```
+/done
+```
+
+## Description
 
 **Internal command** - Called by the AI during `/construct`, not directly by users.
 
-Mark the AI-DLC task as complete. This command is **guarded** - it can only be called from the last hat in the workflow (typically reviewer).
+Marks the AI-DLC task as complete. This command is **guarded** - it can only be called from the last hat in the workflow (typically reviewer).
 
-## Guard Check
+- Only the last hat (reviewer) can complete
+- All completion criteria must be verified
+- This ends the AI-DLC loop for this task
+
+## Implementation
 
 ### Step 1: Load Current State
 
@@ -28,8 +42,6 @@ if (currentIndex !== lastIndex) {
   return `Cannot complete from ${state.hat} hat. Only the ${lastHat} can mark the task as done.\n\nUse /advance to progress to the next hat.`;
 }
 ```
-
-## Completion Process
 
 ### Step 3: Verify Criteria Met
 
@@ -96,9 +108,3 @@ const workflowHats = state.workflow.join(" → ");
 
 Run `/reset` to clear AI-DLC state and start a new task.
 ```
-
-## Important
-
-- Only the last hat (reviewer) can complete
-- All completion criteria must be verified
-- This ends the AI-DLC loop for this task

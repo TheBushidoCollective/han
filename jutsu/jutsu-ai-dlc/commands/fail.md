@@ -3,16 +3,28 @@ description: (Internal) Return to the previous hat in the AI-DLC workflow (e.g.,
 internal: true
 ---
 
-# /fail - Return to Previous Hat
+## Name
+
+`/fail` - Return to the previous hat in the AI-DLC workflow.
+
+## Synopsis
+
+```
+/fail
+```
+
+## Description
 
 **Internal command** - Called by the AI during `/construct`, not directly by users.
 
-Go back to the previous hat in the workflow. Typically used when:
+Goes back to the previous hat in the workflow. Typically used when:
 - Reviewer finds issues → return to builder
 - Builder hits fundamental blocker → return to planner
 - Planner realizes requirements unclear → return to elaborator
 
-## Process
+If already at the first hat (elaborator by default), this command is blocked.
+
+## Implementation
 
 ### Step 1: Load Current State
 
@@ -70,14 +82,6 @@ Returning to **{prevHat}** hat.
 
 Run `/clear` to start fresh with the previous hat's context.
 ```
-
-## Common Scenarios
-
-| From | To | Why |
-|------|-----|-----|
-| reviewer | builder | Code review found issues to fix |
-| builder | planner | Requirements need clarification |
-| planner | elaborator | Scope needs to change |
 
 ## Guard
 

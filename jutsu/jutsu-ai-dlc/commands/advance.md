@@ -3,13 +3,28 @@ description: (Internal) Advance to the next hat in the AI-DLC workflow
 internal: true
 ---
 
-# /advance - Move to Next Hat
+## Name
+
+`/advance` - Move to the next hat in the AI-DLC workflow sequence.
+
+## Synopsis
+
+```
+/advance
+```
+
+## Description
 
 **Internal command** - Called by the AI during `/construct`, not directly by users.
 
-Advance to the next hat in the workflow sequence.
+Advances to the next hat in the workflow sequence. For example, in the default workflow:
+- elaborator → planner (intent defined, now plan the work)
+- planner → builder (plan ready, now implement)
+- builder → reviewer (bolt complete, now review)
 
-## Process
+If already at the last hat (reviewer by default), this command is blocked - use `/done` instead.
+
+## Implementation
 
 ### Step 1: Load Current State
 
@@ -52,17 +67,6 @@ Advanced to **{nextHat}** hat.
 
 Run `/clear` to start fresh with the new hat's context.
 ```
-
-## Workflow Sequence
-
-Default workflow: `elaborator → planner → builder → reviewer`
-
-| From | To | Purpose |
-|------|-----|---------|
-| elaborator | planner | Intent defined, now plan the work |
-| planner | builder | Plan ready, now implement |
-| builder | reviewer | Bolt complete, now review |
-| reviewer | (done) | Use `/done` instead |
 
 ## Guard
 

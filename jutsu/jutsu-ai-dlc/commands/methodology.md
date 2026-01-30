@@ -2,22 +2,23 @@
 description: Ask questions about AI-DLC methodology (spawns research agent to avoid context bloat)
 ---
 
-# /methodology - AI-DLC Methodology Guide
+## Name
 
-**User-facing command** - Ask questions about the AI-DLC 2026 methodology without bloating your main context window.
+`/methodology` - Get answers about the AI-DLC 2026 methodology.
 
-## How It Works
-
-This command spawns a **research agent** that reads the AI-DLC paper and runbooks to answer your question. The agent's research stays in its own context, returning only the concise answer to you.
-
-## Usage
+## Synopsis
 
 ```
 /methodology [your question]
 ```
 
-### Examples
+## Description
 
+**User-facing command** - Ask questions about the AI-DLC 2026 methodology without bloating your main context window.
+
+This command spawns a **research agent** that reads the AI-DLC paper and runbooks to answer your question. The agent's research stays in its own context, returning only the concise answer to you.
+
+**Examples:**
 ```
 /methodology When should I use HITL vs OHOTL mode?
 /methodology How do I handle a blocked unit?
@@ -25,15 +26,13 @@ This command spawns a **research agent** that reads the AI-DLC paper and runbook
 /methodology How does AI-DLC compare to traditional Agile?
 ```
 
-## Instructions for Claude
+## Implementation
 
-When the user runs `/methodology`, spawn a research agent to answer their question.
-
-**Step 1: Extract the question**
+### Step 1: Extract the Question
 
 The user's question follows the command. If no question provided, ask what they'd like to know about AI-DLC.
 
-**Step 2: Spawn the research agent**
+### Step 2: Spawn Research Agent
 
 Use the Task tool to spawn an Explore agent with this prompt:
 
@@ -55,7 +54,7 @@ Key runbooks by topic:
 Provide a concise, actionable answer. Include specific references to sections when helpful.
 ```
 
-**Step 3: Return the answer**
+### Step 3: Return the Answer
 
 Share the agent's response with the user. Keep it concise - the point is to avoid context bloat.
 
@@ -75,9 +74,3 @@ The AI-DLC paper and runbooks cover:
 | Building organizational trust | building-trust.md |
 | Completion criteria | completion-criteria.md |
 | Backpressure patterns | backpressure.md |
-
-## Why Use This?
-
-- **Context efficiency** - Research happens in a separate agent's context
-- **Fresh perspective** - Each query gets full attention without prior conversation baggage
-- **Deep answers** - Agent can read full paper sections, returning only what's relevant

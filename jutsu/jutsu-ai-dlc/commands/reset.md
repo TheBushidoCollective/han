@@ -2,16 +2,33 @@
 description: Clear all AI-DLC state and start fresh (user-facing command)
 ---
 
-# /reset - Clear AI-DLC State
+## Name
+
+`/reset` - Clear AI-DLC state and start fresh.
+
+## Synopsis
+
+```
+/reset
+```
+
+## Description
 
 **User-facing command** - Run this to abandon current task or start fresh.
 
-Clear all AI-DLC state for the current branch. Use this to:
+Clears all AI-DLC state for the current branch. Use this to:
 - Start fresh on a new task
 - Clean up after completing a task
 - Abandon a task that's no longer needed
 
-## Process
+This only clears AI-DLC state. It does not:
+- Undo code changes
+- Delete branches
+- Revert commits
+
+The work you did is preserved in git. Only the AI-DLC workflow state is cleared.
+
+## Implementation
 
 ### Step 1: Confirm (Optional)
 
@@ -64,12 +81,3 @@ To start a new task, run `/elaborate`.
 | `current-plan.md` | Plan for current iteration |
 | `scratchpad.md` | Learnings and notes |
 | `blockers.md` | Documented blockers |
-
-## Note
-
-This only clears AI-DLC state. It does not:
-- Undo code changes
-- Delete branches
-- Revert commits
-
-The work you did is preserved in git. Only the AI-DLC workflow state is cleared.
