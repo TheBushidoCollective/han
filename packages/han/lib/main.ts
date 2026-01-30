@@ -30,6 +30,7 @@ import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerParseCommands } from "./commands/parse/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
+import { registerSyncCommands } from "./commands/sync/index.ts";
 import { registerWorktreeCommands } from "./commands/worktree/index.ts";
 import { getMergedHanConfig } from "./config/han-settings.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
@@ -225,6 +226,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerCompletionCommand(program);
 	registerDoctorCommand(program);
 	registerWorktreeCommands(program);
+	registerSyncCommands(program);
 
 	// Register browse command
 	program
