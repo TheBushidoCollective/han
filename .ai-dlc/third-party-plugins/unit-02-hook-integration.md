@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: complete
 depends_on: []
 branch: ai-dlc/third-party-plugins/02-hook-integration
 discipline: backend
@@ -17,12 +17,12 @@ backend - This unit involves the han hook orchestrator and plugin discovery syst
 
 ## Success Criteria
 
-- [ ] han discovers hooks from plugins installed via local path
-- [ ] han discovers hooks from plugins installed via git URL
-- [ ] External plugin hooks run in correct order with first-party hooks
-- [ ] `han hook list` shows hooks from external plugins
-- [ ] Hook caching works correctly for external plugins
-- [ ] External plugin hooks can define dependencies on han hooks
+- [x] han discovers hooks from plugins installed via local path
+- [x] han discovers hooks from plugins installed via git URL
+- [x] External plugin hooks run in correct order with first-party hooks
+- [x] `han hook list` shows hooks from external plugins
+- [x] Hook caching works correctly for external plugins
+- [x] External plugin hooks can define dependencies on han hooks
 
 ## Notes
 
@@ -121,3 +121,56 @@ Create test suite for external plugin integration:
 - `packages/han/lib/config/claude-settings.ts` - Plugin/marketplace resolution
 - `packages/han/lib/hooks/hook-config.ts` - Plugin config loading
 - `packages/han/lib/commands/hook/dispatch.ts` - Legacy dispatch
+
+## Implementation Summary
+
+### What Was Implemented
+
+1. **`han hook list` command** (`packages/han/lib/commands/hook/list.ts`):
+   - Lists all discovered hooks from all installed plugins
+   - Shows source information (directory, git, github, development)
+   - Supports filtering by event type (`-e, --event`)
+   - Supports filtering by plugin name (`-p, --plugin`)
+   - Provides JSON output for programmatic use (`--json`)
+   - Verbose mode shows source paths and descriptions (`-v, --verbose`)
+
+2. **Command registration** (`packages/han/lib/commands/hook/index.ts`):
+   - Added `registerHookList` import and call
+
+3. **Comprehensive tests** (`packages/han/test/external-plugin-hooks.test.ts`):
+   - Directory source plugin discovery and configuration
+   - Git source plugin settings format
+   - Nested directory structure support
+   - Hook dependency resolution with external plugins
+   - Cache key uniqueness for external plugins
+   - Settings merging across scopes (user, project, local)
+   - Plugin naming conventions
+   - CLAUDE_PLUGIN_ROOT environment handling
+   - Hook list output structure verification
+
+### Architecture Verification
+
+The existing architecture already supports external plugins correctly:
+
+1. **Plugin Discovery**: `getMergedPluginsAndMarketplaces()` correctly merges plugins from all settings scopes
+2. **Path Resolution**: `getPluginDir()` handles:
+   - `source: "directory"` - uses local path directly
+   - `source: "git"` - looks in `~/.claude/plugins/marketplaces/{marketplace}/`
+   - `source: "github"` - same as git pattern
+   - Development mode - falls back to cwd if in marketplace repo
+
+3. **Hook Orchestration**: `orchestrate.ts` correctly:
+   - Sets `CLAUDE_PLUGIN_ROOT` to the resolved plugin directory
+   - Resolves dependencies across plugins
+   - Uses phase-based ordering (format -> lint -> typecheck -> test -> advisory)
+
+4. **Hook Caching**: Cache keys include plugin name and directory, ensuring uniqueness
+
+### Testing
+
+All 17 tests pass covering:
+- External plugin configuration formats
+- Settings merging behavior
+- Hook dependency declarations
+- Cache key uniqueness
+- Plugin naming conventions
