@@ -25,7 +25,7 @@ function getPath(obj: unknown, path: string): unknown {
 		if (typeof current !== "object") return undefined;
 
 		const index = parseInt(part, 10);
-		if (!isNaN(index) && Array.isArray(current)) {
+		if (!Number.isNaN(index) && Array.isArray(current)) {
 			current = current[index];
 		} else {
 			current = (current as Record<string, unknown>)[part];
@@ -49,7 +49,7 @@ function setPath(obj: unknown, path: string, value: unknown): unknown {
 	for (let i = 0; i < parts.length - 1; i++) {
 		const part = parts[i];
 		const nextPart = parts[i + 1];
-		const nextIsIndex = !isNaN(parseInt(nextPart, 10));
+		const nextIsIndex = !Number.isNaN(parseInt(nextPart, 10));
 
 		if (current[part] === undefined || current[part] === null) {
 			current[part] = nextIsIndex ? [] : {};
@@ -110,10 +110,7 @@ function updateFrontmatter(
 	updates: Record<string, unknown>,
 ): string {
 	const trimmed = content.trimStart();
-	const leadingWhitespace = content.slice(
-		0,
-		content.length - trimmed.length,
-	);
+	const leadingWhitespace = content.slice(0, content.length - trimmed.length);
 
 	// Check if frontmatter exists
 	if (!trimmed.startsWith("---")) {
@@ -149,7 +146,7 @@ function updateFrontmatter(
 
 	// Reconstruct document
 	const body = lines.slice(endIndex + 1).join("\n");
-	return `${leadingWhitespace}---\n${newFrontmatter}\n---${body ? "\n" + body : ""}`;
+	return `${leadingWhitespace}---\n${newFrontmatter}\n---${body ? `\n${body}` : ""}`;
 }
 
 /**
