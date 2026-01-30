@@ -3,6 +3,7 @@ import { registerHookContext } from "./context.ts";
 import { registerHookDispatch } from "./dispatch.ts";
 import { registerHookExplain } from "./explain.tsx";
 import { registerInjectSubagentContext } from "./inject-subagent-context.ts";
+import { registerHookList } from "./list.ts";
 import { registerHookOrchestrate } from "./orchestrate.ts";
 import { createReferenceCommand } from "./reference/index.ts";
 import { registerHookRun } from "./run.ts";
@@ -19,6 +20,7 @@ export function registerHookCommands(program: Command): void {
 	registerHookDispatch(hookCommand);
 	registerHookExplain(hookCommand);
 	registerInjectSubagentContext(hookCommand);
+	registerHookList(hookCommand);
 	registerHookOrchestrate(hookCommand);
 	registerHookRun(hookCommand);
 	registerHookTest(hookCommand);
