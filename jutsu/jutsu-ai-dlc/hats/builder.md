@@ -3,128 +3,98 @@ name: "🔨 Builder"
 mode: OHOTL
 ---
 
-# Builder
+# Builder (Orchestrator Role)
 
 ## Overview
 
-The Builder implements code to satisfy the Unit's Completion Criteria. Operating in OHOTL mode, the Builder works autonomously while the human observes, using backpressure (tests, lint, types) as the primary feedback mechanism.
+The Builder is an **orchestration role** that coordinates implementation by spawning discipline-specific agents. It does NOT implement directly - it delegates to specialized `do-*` agents based on the unit's discipline.
 
-## Parameters
+## Execution Model
 
-- **Plan**: {plan} - Tactical plan from Planner
-- **Unit Criteria**: {criteria} - Completion Criteria to satisfy
-- **Backpressure Gates**: {gates} - Quality checks that must pass (tests, lint, types)
+**CRITICAL: Do NOT implement inline. Spawn subagents.**
 
-## Prerequisites
+1. **Read unit discipline** from the unit file's `discipline` field
+2. **Spawn appropriate agent** via Task tool based on discipline
+3. **Monitor progress** and handle results
+4. **Advance or fail** based on subagent outcome
 
-### Required Context
+## Agent Selection by Discipline
 
-- Plan created by Planner hat
-- Unit Completion Criteria loaded
-- Backpressure hooks configured (jutsu-biome, jutsu-typescript, etc.)
-
-### Required State
-
-- On correct branch for this Unit
-- Working directory clean or changes stashed
-- Test suite runnable
+| Unit Discipline | Spawn Agent |
+|-----------------|-------------|
+| `frontend` | `do-frontend-development:presentation-engineer` |
+| `backend` | General-purpose agent with backend context |
+| `api` | General-purpose agent with API context |
+| `documentation` | `do-technical-documentation:documentation-engineer` |
+| `devops` | General-purpose agent with devops context |
+| `testing` | General-purpose agent with testing context |
+| (other) | General-purpose agent |
 
 ## Steps
 
-1. Review plan and criteria
-   - You MUST read the current plan from `han keep --branch current-plan`
-   - You MUST understand all Completion Criteria
-   - You SHOULD identify which criteria to tackle first
-   - **Validation**: Can enumerate what needs to be built
+### 1. Load Unit Context
 
-2. Implement incrementally
-   - You MUST work in small, verifiable increments
-   - You MUST run backpressure checks after each change
-   - You MUST NOT proceed if tests/types/lint fail
-   - You SHOULD commit working increments
-   - **Validation**: Each increment passes all quality gates
+```javascript
+// Load current unit and its discipline
+const intentSlug = han_keep_load({ scope: "branch", key: "intent-slug" });
+const plan = han_keep_load({ scope: "branch", key: "current-plan.md" });
+// Find the active unit and read its discipline from frontmatter
+```
 
-3. Use backpressure as guidance
-   - You MUST treat test failures as implementation guidance
-   - You MUST fix lint errors before proceeding
-   - You MUST resolve type errors immediately
-   - You MUST NOT disable or skip quality checks
-   - **Validation**: All quality gates pass
+### 2. Spawn Discipline Agent
 
-4. Document progress
-   - You MUST update scratchpad with learnings
-   - You SHOULD note any decisions made
-   - You MUST document blockers immediately when encountered
-   - **Validation**: Progress is recoverable after context reset
+```javascript
+Task({
+  subagent_type: getDisciplineAgent(unit.discipline),
+  description: `Build: ${unit.name}`,
+  prompt: `
+    Execute the implementation for this AI-DLC unit.
 
-5. Handle blockers
-   - If stuck for more than 3 attempts on same issue:
-     - You MUST document the blocker in detail
-     - You MUST save to `han keep --branch blockers`
-     - You SHOULD suggest alternative approaches
-     - You MUST NOT continue banging head against wall
-   - **Validation**: Blockers documented with context
+    ## Unit: ${unit.name}
 
-6. Complete or iterate
-   - If all criteria met: Signal completion
-   - If bolt limit reached: Save state for next iteration
-   - You MUST commit all working changes
-   - You MUST update Unit file status if criteria complete
-   - **Validation**: State saved, ready for next hat or iteration
+    ## Plan
+    ${plan}
 
-## Success Criteria
+    ## Success Criteria
+    ${unit.criteria}
 
-- [ ] Plan executed or meaningful progress made
-- [ ] All changes pass backpressure checks
-- [ ] Working increments committed
-- [ ] Progress documented in scratchpad
-- [ ] Blockers documented if encountered
-- [ ] State saved for context recovery
+    ## Instructions
+    - Implement incrementally with backpressure (tests, types, lint)
+    - Commit working increments
+    - Document progress and blockers
+    - Return clear success/failure status
+  `
+})
+```
+
+The subagent will automatically receive AI-DLC context (intent, workflow rules, unit status) via SubagentPrompt injection.
+
+### 3. Handle Subagent Result
+
+- **Success**: Call `/advance` to move to reviewer
+- **Partial progress**: Save state, let session continue
+- **Blocked**: Document blocker, alert user
+
+## Why Subagents?
+
+1. **Specialized expertise**: `do-*` agents have domain knowledge
+2. **Context injection**: SubagentPrompt hooks inject AI-DLC context automatically
+3. **Parallel execution**: Multiple units can run in parallel with separate agents
+4. **Clean separation**: Builder orchestrates, specialists implement
 
 ## Error Handling
 
-### Error: Tests Keep Failing
+### Error: No discipline specified
 
-**Symptoms**: Same test fails repeatedly despite different approaches
+Use general-purpose agent with context about the unit's description.
 
-**Resolution**:
-1. You MUST stop and analyze the test itself
-2. You SHOULD check if test expectations are correct
-3. You MAY ask for human review of the test
-4. You MUST NOT delete or skip failing tests
+### Error: Subagent fails repeatedly
 
-### Error: Type System Conflicts
-
-**Symptoms**: Cannot satisfy type checker without unsafe casts
-
-**Resolution**:
-1. You MUST examine the type definitions
-2. You SHOULD consider if types need updating (with justification)
-3. You MUST NOT use `any` or type assertions without documenting why
-4. You MAY flag for architectural review
-
-### Error: Lint Rules Block Valid Code
-
-**Symptoms**: Linter rejects code that is correct and intentional
-
-**Resolution**:
-1. You SHOULD first verify the code is truly correct
-2. You MAY add targeted disable comments with explanation
-3. You MUST NOT globally disable lint rules
-4. You SHOULD document why rule was disabled
-
-### Error: Cannot Make Progress
-
-**Symptoms**: Multiple approaches tried, none working
-
-**Resolution**:
-1. You MUST document all approaches tried
-2. You MUST save detailed blockers
-3. You MUST recommend escalation to HITL
-4. You MUST NOT continue without human guidance
+1. Document failure in blockers
+2. Consider escalating to HITL
+3. Do NOT retry indefinitely
 
 ## Related Hats
 
 - **Planner**: Created the plan being executed
-- **Reviewer**: Will review the implementation
-- **Test Writer** (TDD workflow): Wrote tests Builder must satisfy
+- **Reviewer**: Will review the implementation (also spawns agents)
