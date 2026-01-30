@@ -13,6 +13,7 @@ import type {
 	AccessLevel,
 	AuthenticatedUser,
 	DEFAULT_ORG_VISIBILITY,
+	OrgRole,
 	OrgVisibilitySettings,
 	PermissionResult,
 	SessionForPermission,
@@ -308,7 +309,7 @@ export class PermissionService {
 	/**
 	 * Check user's role in an organization
 	 */
-	private async checkOrgRole(orgName: string): Promise<AccessLevel> {
+	private async checkOrgRole(orgName: string): Promise<OrgRole> {
 		const provider = getProvider(this.user.provider);
 		if (!provider) {
 			return "none";
@@ -324,17 +325,7 @@ export class PermissionService {
 			return "none";
 		}
 
-		// Map org role to access level
-		switch (result.role) {
-			case "owner":
-				return "admin";
-			case "admin":
-				return "maintain";
-			case "member":
-				return "read";
-			default:
-				return "none";
-		}
+		return result.role;
 	}
 
 	/**
