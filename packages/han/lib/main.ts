@@ -17,6 +17,7 @@ import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
 import { registerBlueprintsCommands } from "./commands/blueprints/index.ts";
 import { browse } from "./commands/browse/index.ts";
+import { registerCreateCommands } from "./commands/create/index.ts";
 import {
 	handleGetCompletions,
 	registerCompletionCommand,
@@ -214,6 +215,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 
 	// Register command groups
 	registerPluginCommands(program);
+	registerCreateCommands(program);
 	registerHookCommands(program);
 	registerMcpCommands(program);
 	registerBlueprintsCommands(program);
