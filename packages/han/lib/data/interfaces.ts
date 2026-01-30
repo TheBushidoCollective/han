@@ -26,6 +26,147 @@ import type {
 } from "../db/index.ts";
 
 // =============================================================================
+// Multi-tenant Entity Types (Hosted Mode Only)
+// =============================================================================
+
+/**
+ * Organization entity (multi-tenant platform)
+ */
+export interface Organization {
+	id: string;
+	name: string;
+	slug: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+/**
+ * Team entity within an organization
+ */
+export interface Team {
+	id: string;
+	organizationId: string;
+	name: string;
+	slug: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+/**
+ * User entity (authenticated via OAuth)
+ */
+export interface User {
+	id: string;
+	email?: string;
+	name?: string;
+	avatarUrl?: string;
+	provider?: string;
+	providerId?: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+/**
+ * Membership linking users to organizations/teams
+ */
+export interface Membership {
+	id: string;
+	userId: string;
+	organizationId: string;
+	teamId?: string;
+	role: MembershipRole;
+	createdAt?: string;
+}
+
+/**
+ * Role types for memberships
+ */
+export type MembershipRole = "owner" | "admin" | "member" | "viewer";
+
+// =============================================================================
+// Input Types for Write Operations
+// =============================================================================
+
+/**
+ * Input for creating an organization
+ */
+export interface CreateOrganizationInput {
+	name: string;
+	slug: string;
+}
+
+/**
+ * Input for updating an organization
+ */
+export interface UpdateOrganizationInput {
+	name?: string;
+	slug?: string;
+}
+
+/**
+ * Input for creating a team
+ */
+export interface CreateTeamInput {
+	name: string;
+	slug: string;
+}
+
+/**
+ * Input for updating a team
+ */
+export interface UpdateTeamInput {
+	name?: string;
+	slug?: string;
+}
+
+/**
+ * Input for creating a user
+ */
+export interface CreateUserInput {
+	email?: string;
+	name?: string;
+	avatarUrl?: string;
+	provider?: string;
+	providerId?: string;
+}
+
+/**
+ * Input for updating a user
+ */
+export interface UpdateUserInput {
+	email?: string;
+	name?: string;
+	avatarUrl?: string;
+}
+
+/**
+ * Input for creating a membership
+ */
+export interface CreateMembershipInput {
+	userId: string;
+	organizationId: string;
+	teamId?: string;
+	role?: MembershipRole;
+}
+
+/**
+ * Input for updating a membership
+ */
+export interface UpdateMembershipInput {
+	teamId?: string;
+	role?: MembershipRole;
+}
+
+/**
+ * Input for linking a repository to an organization
+ */
+export interface LinkRepositoryInput {
+	remote: string;
+	name: string;
+	defaultBranch?: string;
+}
+
+// =============================================================================
 // Query Options Types
 // =============================================================================
 
@@ -322,3 +463,218 @@ export interface DataSource {
  * DataSource mode indicator
  */
 export type DataSourceMode = "local" | "hosted";
+
+// =============================================================================
+// Write Operations Interface (Hosted Mode Only)
+// =============================================================================
+
+/**
+ * Organization write operations
+ *
+ * Only available in hosted mode. Local mode is single-user and doesn't need
+ * multi-tenant organization management.
+ */
+export interface OrganizationWriteOperations {
+	/**
+	 * Create a new organization
+	 */
+	create(data: CreateOrganizationInput): Promise<Organization>;
+
+	/**
+	 * Update an organization
+	 */
+	update(id: string, data: UpdateOrganizationInput): Promise<Organization>;
+
+	/**
+	 * Delete an organization (cascades to all related data)
+	 */
+	delete(id: string): Promise<void>;
+
+	/**
+	 * Get an organization by ID
+	 */
+	get(id: string): Promise<Organization | null>;
+
+	/**
+	 * Get an organization by slug
+	 */
+	getBySlug(slug: string): Promise<Organization | null>;
+
+	/**
+	 * List all organizations (for admin views)
+	 */
+	list(): Promise<Organization[]>;
+}
+
+/**
+ * Team write operations
+ */
+export interface TeamWriteOperations {
+	/**
+	 * Create a new team in the current organization
+	 */
+	create(data: CreateTeamInput): Promise<Team>;
+
+	/**
+	 * Update a team
+	 */
+	update(id: string, data: UpdateTeamInput): Promise<Team>;
+
+	/**
+	 * Delete a team
+	 */
+	delete(id: string): Promise<void>;
+
+	/**
+	 * Get a team by ID
+	 */
+	get(id: string): Promise<Team | null>;
+
+	/**
+	 * Get a team by slug within the current organization
+	 */
+	getBySlug(slug: string): Promise<Team | null>;
+
+	/**
+	 * List all teams in the current organization
+	 */
+	list(): Promise<Team[]>;
+}
+
+/**
+ * User write operations
+ */
+export interface UserWriteOperations {
+	/**
+	 * Create or update a user (upsert by provider + providerId)
+	 */
+	upsert(data: CreateUserInput): Promise<User>;
+
+	/**
+	 * Update a user
+	 */
+	update(id: string, data: UpdateUserInput): Promise<User>;
+
+	/**
+	 * Delete a user
+	 */
+	delete(id: string): Promise<void>;
+
+	/**
+	 * Get a user by ID
+	 */
+	get(id: string): Promise<User | null>;
+
+	/**
+	 * Get a user by email
+	 */
+	getByEmail(email: string): Promise<User | null>;
+
+	/**
+	 * Get a user by provider credentials
+	 */
+	getByProvider(provider: string, providerId: string): Promise<User | null>;
+}
+
+/**
+ * Membership write operations
+ */
+export interface MembershipWriteOperations {
+	/**
+	 * Add a user to an organization (with optional team and role)
+	 */
+	create(data: CreateMembershipInput): Promise<Membership>;
+
+	/**
+	 * Update a membership (change role or team)
+	 */
+	update(id: string, data: UpdateMembershipInput): Promise<Membership>;
+
+	/**
+	 * Remove a user from an organization/team
+	 */
+	delete(id: string): Promise<void>;
+
+	/**
+	 * Get a membership by ID
+	 */
+	get(id: string): Promise<Membership | null>;
+
+	/**
+	 * List memberships for a user
+	 */
+	listForUser(userId: string): Promise<Membership[]>;
+
+	/**
+	 * List memberships for an organization
+	 */
+	listForOrganization(organizationId: string): Promise<Membership[]>;
+
+	/**
+	 * List memberships for a team
+	 */
+	listForTeam(teamId: string): Promise<Membership[]>;
+
+	/**
+	 * Check if a user is a member of an organization
+	 */
+	isMember(userId: string, organizationId: string): Promise<boolean>;
+
+	/**
+	 * Get a user's role in an organization
+	 */
+	getRole(userId: string, organizationId: string): Promise<MembershipRole | null>;
+}
+
+/**
+ * Repository linking operations
+ */
+export interface RepositoryWriteOperations {
+	/**
+	 * Link a repository to the current organization
+	 */
+	link(data: LinkRepositoryInput): Promise<Repo>;
+
+	/**
+	 * Unlink a repository from the organization
+	 */
+	unlink(id: string): Promise<void>;
+
+	/**
+	 * Update repository metadata
+	 */
+	update(id: string, data: Partial<LinkRepositoryInput>): Promise<Repo>;
+}
+
+/**
+ * Extended DataSource with write operations (hosted mode only)
+ *
+ * These operations are optional on the base DataSource interface because
+ * local mode doesn't need multi-tenant CRUD operations.
+ */
+export interface HostedDataSourceWriteOps {
+	/**
+	 * Organization CRUD operations
+	 */
+	organizations: OrganizationWriteOperations;
+
+	/**
+	 * Team management operations
+	 */
+	teams: TeamWriteOperations;
+
+	/**
+	 * User management operations
+	 */
+	users: UserWriteOperations;
+
+	/**
+	 * Membership management operations
+	 */
+	memberships: MembershipWriteOperations;
+
+	/**
+	 * Repository linking operations
+	 */
+	repositoryLinks: RepositoryWriteOperations;
+}

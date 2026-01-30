@@ -11,12 +11,27 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import type {
 	Connection,
 	ConnectionArgs,
+	CreateMembershipInput,
+	CreateOrganizationInput,
+	CreateTeamInput,
+	CreateUserInput,
 	DataSource,
 	HookStatsOptions,
+	HostedDataSourceWriteOps,
+	LinkRepositoryInput,
+	Membership as InterfaceMembership,
+	MembershipRole as InterfaceMembershipRole,
 	MessageListOptions,
 	MessageSearchOptions,
+	Organization as InterfaceOrganization,
 	SessionListOptions,
 	TaskMetricsOptions,
+	Team as InterfaceTeam,
+	UpdateMembershipInput,
+	UpdateOrganizationInput,
+	UpdateTeamInput,
+	UpdateUserInput,
+	User as InterfaceUser,
 } from "../interfaces.ts";
 
 // Import native types for return type compatibility
@@ -212,6 +227,71 @@ function toNativeNativeTask(task: schema.NativeTask): NativeNativeTask {
 }
 
 // =============================================================================
+// Multi-tenant Type Converters
+// =============================================================================
+
+/**
+ * Convert hosted Organization to interface Organization
+ */
+function toInterfaceOrganization(
+	org: schema.Organization,
+): InterfaceOrganization {
+	return {
+		id: org.id,
+		name: org.name,
+		slug: org.slug,
+		createdAt: org.createdAt?.toISOString(),
+		updatedAt: org.updatedAt?.toISOString(),
+	};
+}
+
+/**
+ * Convert hosted Team to interface Team
+ */
+function toInterfaceTeam(team: schema.Team): InterfaceTeam {
+	return {
+		id: team.id,
+		organizationId: team.organizationId,
+		name: team.name,
+		slug: team.slug,
+		createdAt: team.createdAt?.toISOString(),
+		updatedAt: team.updatedAt?.toISOString(),
+	};
+}
+
+/**
+ * Convert hosted User to interface User
+ */
+function toInterfaceUser(user: schema.User): InterfaceUser {
+	return {
+		id: user.id,
+		email: user.email ?? undefined,
+		name: user.name ?? undefined,
+		avatarUrl: user.avatarUrl ?? undefined,
+		provider: user.provider ?? undefined,
+		providerId: user.providerId ?? undefined,
+		createdAt: user.createdAt?.toISOString(),
+		updatedAt: user.updatedAt?.toISOString(),
+	};
+}
+
+/**
+ * Convert hosted Membership to interface Membership
+ */
+function toInterfaceMembership(
+	membership: schema.Membership,
+): InterfaceMembership {
+	return {
+		id: membership.id,
+		userId: membership.userId,
+		organizationId: membership.organizationId,
+		teamId: membership.teamId ?? undefined,
+		role: membership.role as InterfaceMembershipRole,
+		createdAt: membership.createdAt?.toISOString(),
+	};
+}
+
+// =============================================================================
 // HostedDataSource Implementation
 // =============================================================================
 
@@ -220,8 +300,10 @@ function toNativeNativeTask(task: schema.NativeTask): NativeNativeTask {
  *
  * Implements DataSource interface using Drizzle ORM with PostgreSQL.
  * All queries are automatically scoped to the current organization.
+ *
+ * Also implements HostedDataSourceWriteOps for multi-tenant CRUD operations.
  */
-export class HostedDataSource implements DataSource {
+export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
 	private db: DrizzleDb;
 	private tenant: TenantContext;
 
@@ -949,6 +1031,462 @@ export class HostedDataSource implements DataSource {
 			// Session todos are not yet implemented in hosted schema
 			// Return null for now
 			return null;
+		},
+	};
+
+	// =========================================================================
+	// Organization CRUD Operations (Multi-tenant)
+	// =========================================================================
+	organizations = {
+		create: async (
+			data: CreateOrganizationInput,
+		): Promise<InterfaceOrganization> => {
+			const [result] = await this.db
+				.insert(schema.organizations)
+				.values({
+					name: data.name,
+					slug: data.slug,
+				})
+				.returning();
+
+			return toInterfaceOrganization(result);
+		},
+
+		update: async (
+			id: string,
+			data: UpdateOrganizationInput,
+		): Promise<InterfaceOrganization> => {
+			const updateData: Partial<schema.NewOrganization> = {};
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.slug !== undefined) updateData.slug = data.slug;
+
+			const [result] = await this.db
+				.update(schema.organizations)
+				.set({ ...updateData, updatedAt: new Date() })
+				.where(eq(schema.organizations.id, id))
+				.returning();
+
+			if (!result) {
+				throw new Error(`Organization not found: ${id}`);
+			}
+
+			return toInterfaceOrganization(result);
+		},
+
+		delete: async (id: string): Promise<void> => {
+			await this.db
+				.delete(schema.organizations)
+				.where(eq(schema.organizations.id, id));
+		},
+
+		get: async (id: string): Promise<InterfaceOrganization | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.organizations)
+				.where(eq(schema.organizations.id, id))
+				.limit(1);
+
+			return result ? toInterfaceOrganization(result) : null;
+		},
+
+		getBySlug: async (slug: string): Promise<InterfaceOrganization | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.organizations)
+				.where(eq(schema.organizations.slug, slug))
+				.limit(1);
+
+			return result ? toInterfaceOrganization(result) : null;
+		},
+
+		list: async (): Promise<InterfaceOrganization[]> => {
+			const results = await this.db
+				.select()
+				.from(schema.organizations)
+				.orderBy(schema.organizations.name);
+
+			return results.map(toInterfaceOrganization);
+		},
+	};
+
+	// =========================================================================
+	// Team CRUD Operations
+	// =========================================================================
+	teams = {
+		create: async (data: CreateTeamInput): Promise<InterfaceTeam> => {
+			const [result] = await this.db
+				.insert(schema.teams)
+				.values({
+					organizationId: this.tenant.organizationId,
+					name: data.name,
+					slug: data.slug,
+				})
+				.returning();
+
+			return toInterfaceTeam(result);
+		},
+
+		update: async (
+			id: string,
+			data: UpdateTeamInput,
+		): Promise<InterfaceTeam> => {
+			const updateData: Partial<schema.NewTeam> = {};
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.slug !== undefined) updateData.slug = data.slug;
+
+			const [result] = await this.db
+				.update(schema.teams)
+				.set({ ...updateData, updatedAt: new Date() })
+				.where(
+					and(
+						eq(schema.teams.id, id),
+						eq(schema.teams.organizationId, this.tenant.organizationId),
+					),
+				)
+				.returning();
+
+			if (!result) {
+				throw new Error(`Team not found: ${id}`);
+			}
+
+			return toInterfaceTeam(result);
+		},
+
+		delete: async (id: string): Promise<void> => {
+			await this.db
+				.delete(schema.teams)
+				.where(
+					and(
+						eq(schema.teams.id, id),
+						eq(schema.teams.organizationId, this.tenant.organizationId),
+					),
+				);
+		},
+
+		get: async (id: string): Promise<InterfaceTeam | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.teams)
+				.where(
+					and(
+						eq(schema.teams.id, id),
+						eq(schema.teams.organizationId, this.tenant.organizationId),
+					),
+				)
+				.limit(1);
+
+			return result ? toInterfaceTeam(result) : null;
+		},
+
+		getBySlug: async (slug: string): Promise<InterfaceTeam | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.teams)
+				.where(
+					and(
+						eq(schema.teams.slug, slug),
+						eq(schema.teams.organizationId, this.tenant.organizationId),
+					),
+				)
+				.limit(1);
+
+			return result ? toInterfaceTeam(result) : null;
+		},
+
+		list: async (): Promise<InterfaceTeam[]> => {
+			const results = await this.db
+				.select()
+				.from(schema.teams)
+				.where(eq(schema.teams.organizationId, this.tenant.organizationId))
+				.orderBy(schema.teams.name);
+
+			return results.map(toInterfaceTeam);
+		},
+	};
+
+	// =========================================================================
+	// User CRUD Operations
+	// =========================================================================
+	users = {
+		upsert: async (data: CreateUserInput): Promise<InterfaceUser> => {
+			// Try to find existing user by provider credentials
+			if (data.provider && data.providerId) {
+				const existing = await this.users.getByProvider(
+					data.provider,
+					data.providerId,
+				);
+				if (existing) {
+					// Update existing user
+					return this.users.update(existing.id, {
+						email: data.email,
+						name: data.name,
+						avatarUrl: data.avatarUrl,
+					});
+				}
+			}
+
+			// Create new user
+			const [result] = await this.db
+				.insert(schema.users)
+				.values({
+					email: data.email,
+					name: data.name,
+					avatarUrl: data.avatarUrl,
+					provider: data.provider,
+					providerId: data.providerId,
+				})
+				.returning();
+
+			return toInterfaceUser(result);
+		},
+
+		update: async (
+			id: string,
+			data: UpdateUserInput,
+		): Promise<InterfaceUser> => {
+			const updateData: Partial<schema.NewUser> = {};
+			if (data.email !== undefined) updateData.email = data.email;
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+
+			const [result] = await this.db
+				.update(schema.users)
+				.set({ ...updateData, updatedAt: new Date() })
+				.where(eq(schema.users.id, id))
+				.returning();
+
+			if (!result) {
+				throw new Error(`User not found: ${id}`);
+			}
+
+			return toInterfaceUser(result);
+		},
+
+		delete: async (id: string): Promise<void> => {
+			await this.db.delete(schema.users).where(eq(schema.users.id, id));
+		},
+
+		get: async (id: string): Promise<InterfaceUser | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.users)
+				.where(eq(schema.users.id, id))
+				.limit(1);
+
+			return result ? toInterfaceUser(result) : null;
+		},
+
+		getByEmail: async (email: string): Promise<InterfaceUser | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.users)
+				.where(eq(schema.users.email, email))
+				.limit(1);
+
+			return result ? toInterfaceUser(result) : null;
+		},
+
+		getByProvider: async (
+			provider: string,
+			providerId: string,
+		): Promise<InterfaceUser | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.users)
+				.where(
+					and(
+						eq(schema.users.provider, provider),
+						eq(schema.users.providerId, providerId),
+					),
+				)
+				.limit(1);
+
+			return result ? toInterfaceUser(result) : null;
+		},
+	};
+
+	// =========================================================================
+	// Membership CRUD Operations
+	// =========================================================================
+	memberships = {
+		create: async (
+			data: CreateMembershipInput,
+		): Promise<InterfaceMembership> => {
+			const [result] = await this.db
+				.insert(schema.memberships)
+				.values({
+					userId: data.userId,
+					organizationId: data.organizationId,
+					teamId: data.teamId,
+					role: data.role ?? "member",
+				})
+				.returning();
+
+			return toInterfaceMembership(result);
+		},
+
+		update: async (
+			id: string,
+			data: UpdateMembershipInput,
+		): Promise<InterfaceMembership> => {
+			const updateData: Partial<schema.NewMembership> = {};
+			if (data.teamId !== undefined) updateData.teamId = data.teamId;
+			if (data.role !== undefined) updateData.role = data.role;
+
+			const [result] = await this.db
+				.update(schema.memberships)
+				.set(updateData)
+				.where(eq(schema.memberships.id, id))
+				.returning();
+
+			if (!result) {
+				throw new Error(`Membership not found: ${id}`);
+			}
+
+			return toInterfaceMembership(result);
+		},
+
+		delete: async (id: string): Promise<void> => {
+			await this.db
+				.delete(schema.memberships)
+				.where(eq(schema.memberships.id, id));
+		},
+
+		get: async (id: string): Promise<InterfaceMembership | null> => {
+			const [result] = await this.db
+				.select()
+				.from(schema.memberships)
+				.where(eq(schema.memberships.id, id))
+				.limit(1);
+
+			return result ? toInterfaceMembership(result) : null;
+		},
+
+		listForUser: async (userId: string): Promise<InterfaceMembership[]> => {
+			const results = await this.db
+				.select()
+				.from(schema.memberships)
+				.where(eq(schema.memberships.userId, userId))
+				.orderBy(schema.memberships.createdAt);
+
+			return results.map(toInterfaceMembership);
+		},
+
+		listForOrganization: async (
+			organizationId: string,
+		): Promise<InterfaceMembership[]> => {
+			const results = await this.db
+				.select()
+				.from(schema.memberships)
+				.where(eq(schema.memberships.organizationId, organizationId))
+				.orderBy(schema.memberships.createdAt);
+
+			return results.map(toInterfaceMembership);
+		},
+
+		listForTeam: async (teamId: string): Promise<InterfaceMembership[]> => {
+			const results = await this.db
+				.select()
+				.from(schema.memberships)
+				.where(eq(schema.memberships.teamId, teamId))
+				.orderBy(schema.memberships.createdAt);
+
+			return results.map(toInterfaceMembership);
+		},
+
+		isMember: async (
+			userId: string,
+			organizationId: string,
+		): Promise<boolean> => {
+			const [result] = await this.db
+				.select({ count: count() })
+				.from(schema.memberships)
+				.where(
+					and(
+						eq(schema.memberships.userId, userId),
+						eq(schema.memberships.organizationId, organizationId),
+					),
+				);
+
+			return (result?.count ?? 0) > 0;
+		},
+
+		getRole: async (
+			userId: string,
+			organizationId: string,
+		): Promise<InterfaceMembershipRole | null> => {
+			const [result] = await this.db
+				.select({ role: schema.memberships.role })
+				.from(schema.memberships)
+				.where(
+					and(
+						eq(schema.memberships.userId, userId),
+						eq(schema.memberships.organizationId, organizationId),
+						// Get org-level membership (no specific team)
+						sql`${schema.memberships.teamId} IS NULL`,
+					),
+				)
+				.limit(1);
+
+			return (result?.role as InterfaceMembershipRole) ?? null;
+		},
+	};
+
+	// =========================================================================
+	// Repository Linking Operations
+	// =========================================================================
+	repositoryLinks = {
+		link: async (data: LinkRepositoryInput): Promise<NativeRepo> => {
+			const [result] = await this.db
+				.insert(schema.repositories)
+				.values({
+					organizationId: this.tenant.organizationId,
+					remote: data.remote,
+					name: data.name,
+					defaultBranch: data.defaultBranch,
+				})
+				.returning();
+
+			return toNativeRepo(result);
+		},
+
+		unlink: async (id: string): Promise<void> => {
+			await this.db
+				.delete(schema.repositories)
+				.where(
+					and(
+						eq(schema.repositories.id, id),
+						eq(schema.repositories.organizationId, this.tenant.organizationId),
+					),
+				);
+		},
+
+		update: async (
+			id: string,
+			data: Partial<LinkRepositoryInput>,
+		): Promise<NativeRepo> => {
+			const updateData: Partial<schema.NewRepository> = {};
+			if (data.remote !== undefined) updateData.remote = data.remote;
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.defaultBranch !== undefined)
+				updateData.defaultBranch = data.defaultBranch;
+
+			const [result] = await this.db
+				.update(schema.repositories)
+				.set({ ...updateData, updatedAt: new Date() })
+				.where(
+					and(
+						eq(schema.repositories.id, id),
+						eq(schema.repositories.organizationId, this.tenant.organizationId),
+					),
+				)
+				.returning();
+
+			if (!result) {
+				throw new Error(`Repository not found: ${id}`);
+			}
+
+			return toNativeRepo(result);
 		},
 	};
 }
