@@ -47,6 +47,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook inject-subagent-context",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
         "hooks": [
           {
             "type": "command",

@@ -67,6 +67,18 @@ hooks:
     command: han hook reference hooks/memory-confidence.md --must-read-first "memory-augmented answers"
     description: Reference memory confidence guidelines
 
+  # SubagentPrompt hooks - Han virtual hook for gathering subagent context
+  # These are dispatched by the PreToolUse:Task hook to gather content for injection
+  subagent-no-time-estimates:
+    event: SubagentPrompt
+    command: han hook reference hooks/no-time-estimates.md --must-read-first "no time estimates policy"
+    description: Inject no-time-estimates policy to subagents
+
+  subagent-professional-honesty:
+    event: SubagentPrompt
+    command: han hook reference hooks/professional-honesty.md --must-read-first "professional honesty policy"
+    description: Inject professional honesty policy to subagents
+
   # PreToolUse safety hooks - prevent dangerous operations
   safe-operations:
     event: PreToolUse

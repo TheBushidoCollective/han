@@ -12,6 +12,12 @@ hooks:
     event: SessionStart
     description: Inject AI-DLC iteration context (hat, intent, criteria, scratchpad)
 
+  # SubagentPrompt hook - inject condensed AI-DLC context into subagents
+  subagent-context:
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-context.sh"
+    event: SubagentPrompt
+    description: Inject AI-DLC intent and hat context to subagents
+
   iterate:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/enforce-iteration.sh"
     event: Stop
