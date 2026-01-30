@@ -11,6 +11,7 @@
 
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
+import type { AuthenticatedUser, PermissionService } from "../permissions/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
 import {
 	decodeGlobalId,
@@ -19,16 +20,31 @@ import {
 } from "./node-registry.ts";
 
 /**
+ * Server mode determining permission enforcement
+ */
+export type ServerMode = "local" | "hosted";
+
+/**
  * Context type for GraphQL resolvers
  *
  * Includes DataLoaders for efficient batching and caching.
  * Loaders are created per-request to ensure proper isolation.
+ *
+ * In hosted mode, also includes:
+ * - Authenticated user information
+ * - Permission service for access control
  */
 export interface GraphQLContext {
 	/** Request object for headers, etc. */
 	request?: Request;
 	/** DataLoaders for batching database access */
 	loaders: GraphQLLoaders;
+	/** Server mode - "local" bypasses auth, "hosted" requires it */
+	mode?: ServerMode;
+	/** Authenticated user (only in hosted mode) */
+	user?: AuthenticatedUser;
+	/** Permission service for access control (only in hosted mode) */
+	permissions?: PermissionService;
 }
 
 /**
