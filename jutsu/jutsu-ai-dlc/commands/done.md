@@ -5,7 +5,7 @@ internal: true
 
 ## Name
 
-`/done` - Mark the AI-DLC task as complete.
+`jutsu-ai-dlc:done` - Mark the AI-DLC task as complete.
 
 ## Synopsis
 

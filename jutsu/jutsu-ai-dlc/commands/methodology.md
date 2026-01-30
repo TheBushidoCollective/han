@@ -4,7 +4,7 @@ description: Ask questions about AI-DLC methodology (spawns research agent to av
 
 ## Name
 
-`/methodology` - Get answers about the AI-DLC 2026 methodology.
+`jutsu-ai-dlc:methodology` - Get answers about the AI-DLC 2026 methodology.
 
 ## Synopsis
 

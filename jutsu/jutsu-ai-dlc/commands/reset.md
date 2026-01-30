@@ -4,7 +4,7 @@ description: Clear all AI-DLC state and start fresh (user-facing command)
 
 ## Name
 
-`/reset` - Clear AI-DLC state and start fresh.
+`jutsu-ai-dlc:reset` - Clear AI-DLC state and start fresh.
 
 ## Synopsis
 

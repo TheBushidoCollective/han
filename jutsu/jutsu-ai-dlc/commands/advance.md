@@ -5,7 +5,7 @@ internal: true
 
 ## Name
 
-`/advance` - Move to the next hat in the AI-DLC workflow sequence.
+`jutsu-ai-dlc:advance` - Move to the next hat in the AI-DLC workflow sequence.
 
 ## Synopsis
 

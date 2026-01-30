@@ -4,7 +4,7 @@ description: Start AI-DLC mob elaboration to collaboratively define intent and c
 
 ## Name
 
-`/elaborate` - Start mob elaboration to define intent and completion criteria.
+`jutsu-ai-dlc:elaborate` - Start mob elaboration to define intent and completion criteria.
 
 ## Synopsis
 

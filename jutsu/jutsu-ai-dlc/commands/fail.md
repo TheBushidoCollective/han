@@ -5,7 +5,7 @@ internal: true
 
 ## Name
 
-`/fail` - Return to the previous hat in the AI-DLC workflow.
+`jutsu-ai-dlc:fail` - Return to the previous hat in the AI-DLC workflow.
 
 ## Synopsis
 

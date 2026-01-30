@@ -4,7 +4,7 @@ description: Continue the AI-DLC construction loop - autonomous build/review cyc
 
 ## Name
 
-`/construct` - Run the autonomous AI-DLC construction loop.
+`jutsu-ai-dlc:construct` - Run the autonomous AI-DLC construction loop.
 
 ## Synopsis
 
