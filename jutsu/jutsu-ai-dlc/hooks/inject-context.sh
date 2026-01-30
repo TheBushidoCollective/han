@@ -9,6 +9,12 @@
 
 set -e
 
+# Read stdin to get SessionStart payload
+HOOK_INPUT=$(cat)
+
+# Extract source field (startup, clear, compact)
+SOURCE=$(echo "$HOOK_INPUT" | han parse json source -r 2>/dev/null || echo "startup")
+
 # Check for han CLI (only dependency needed)
 if ! command -v han &> /dev/null; then
   echo "Warning: han CLI is required for AI-DLC but not installed. Skipping context injection." >&2
@@ -39,8 +45,9 @@ if ! echo "$ITERATION_JSON" | han parse json-validate \
 fi
 
 # Check for needsAdvance flag (set by Stop hook to signal iteration should increment)
+# Only advance on 'clear' or 'startup' sources - NOT on 'compact' events
 NEEDS_ADVANCE=$(echo "$ITERATION_JSON" | han parse json needsAdvance -r --default false 2>/dev/null || echo "false")
-if [ "$NEEDS_ADVANCE" = "true" ]; then
+if [ "$NEEDS_ADVANCE" = "true" ] && [ "$SOURCE" != "compact" ]; then
   # Increment iteration and clear the flag
   CURRENT_ITER=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
   NEW_ITER=$((CURRENT_ITER + 1))
