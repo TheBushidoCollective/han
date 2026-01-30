@@ -13,6 +13,7 @@
  *   --repo      Repository-scoped (shared across branches)
  *   --branch    Branch-scoped (default)
  */
+import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import {
 	type Scope,
@@ -62,14 +63,23 @@ export function registerKeepCommands(program: Command): void {
 			"--branch [name]",
 			"Use branch scope (default). Optionally specify explicit branch name.",
 		)
+		.option("--file <path>", "Read content from file")
 		.action(async (key: string, contentParts: string[], options) => {
 			// Join content parts back together (handles space-separated arguments)
 			let content: string | undefined =
 				contentParts.length > 0 ? contentParts.join(" ") : undefined;
 			const { scope, storageOptions } = parseScopeAndOptions(options);
 
-			// If no content provided, read from stdin
-			if (content === undefined) {
+			// Priority: --file > argument > stdin
+			if (options.file) {
+				try {
+					content = readFileSync(options.file, "utf-8");
+				} catch (err) {
+					console.error(`Error reading file: ${options.file}`);
+					process.exit(1);
+				}
+			} else if (content === undefined) {
+				// No content argument, read from stdin
 				const chunks: Buffer[] = [];
 				for await (const chunk of process.stdin) {
 					chunks.push(chunk);
