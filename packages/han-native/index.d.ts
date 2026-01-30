@@ -161,6 +161,12 @@ export interface GitLogEntry {
 export declare function gitLog(directory: string, maxCount?: number | undefined | null): Array<GitLogEntry>
 /** Get file content at a specific commit (equivalent to `git show <commit>:<path>`) */
 export declare function gitShowFile(directory: string, commit: string, filePath: string): string
+/** Create a new branch from current HEAD */
+export declare function gitCreateBranch(directory: string, branchName: string): void
+/** Add a worktree at specified path for a branch */
+export declare function gitWorktreeAdd(directory: string, worktreePath: string, branch: string): void
+/** Remove a worktree */
+export declare function gitWorktreeRemove(directory: string, worktreePath: string, force?: boolean | undefined | null): void
 /** Diff statistics for a file */
 export interface GitDiffStat {
   /** File path */

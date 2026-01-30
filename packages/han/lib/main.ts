@@ -25,9 +25,12 @@ import { registerCoordinatorCommands } from "./commands/coordinator/index.ts";
 import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
 import { registerReindexCommand } from "./commands/index/index.ts";
+import { registerKeepCommands } from "./commands/keep/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
+import { registerParseCommands } from "./commands/parse/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
 import { registerPluginCommands } from "./commands/plugin/index.ts";
+import { registerWorktreeCommands } from "./commands/worktree/index.ts";
 import { getMergedHanConfig } from "./config/han-settings.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
 
@@ -112,14 +115,26 @@ export function shouldReexec(): { reexec: boolean; binary?: string } {
  * Re-exec to a different han binary if configured.
  * This function never returns if re-exec happens.
  */
+/**
+ * Shell-escape an argument for safe passing through shell.
+ * Wraps in single quotes and escapes any single quotes within.
+ */
+function shellEscape(arg: string): string {
+	// Use single quotes to prevent most shell interpretation
+	// Escape any existing single quotes by ending the string, adding escaped quote, and resuming
+	return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
 export function maybeReexec(): void {
 	const { reexec, binary } = shouldReexec();
 	if (reexec && binary) {
 		const args = process.argv.slice(2);
-		const result = spawnSync(binary, args, {
+		// Shell-escape each argument to preserve quoting through shell interpretation
+		const escapedArgs = args.map(shellEscape).join(" ");
+		const result = spawnSync(`${binary} ${escapedArgs}`, {
 			stdio: "inherit",
 			env: { ...process.env, HAN_REEXEC: "1" },
-			shell: true,
+			shell: true, // Needed for hanBinary commands with shell expansion like $(git ...)
 		});
 		process.exit(result.status ?? 0);
 	}
@@ -203,10 +218,13 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerMcpCommands(program);
 	registerBlueprintsCommands(program);
 	registerMemoryCommand(program);
+	registerKeepCommands(program);
+	registerParseCommands(program);
 	registerReindexCommand(program);
 	registerAliasCommands(program);
 	registerCompletionCommand(program);
 	registerDoctorCommand(program);
+	registerWorktreeCommands(program);
 
 	// Register browse command
 	program

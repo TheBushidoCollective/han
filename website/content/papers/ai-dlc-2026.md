@@ -530,6 +530,7 @@ A **Unit** represents a cohesive, self-contained work element derived from an In
 - **Loosely coupled:** Minimal dependencies on other Units
 - **Independently deployable:** Can go to production without other Units
 - **Clear boundaries:** Ownership and scope are unambiguous
+- **Explicit dependencies:** Upstream Units are declared in frontmatter
 
 Each Unit encompasses:
 
@@ -537,10 +538,57 @@ Each Unit encompasses:
 - Non-functional requirements specific to that Unit
 - Completion criteria for verification
 - Risk descriptions
+- Dependencies on other Units (if any)
 
 The process of decomposing Intents into Units is driven by AI, with developers and Product Owners validating and refining the resulting Units to ensure alignment with business and technical objectives.
 
-Units should be sized for parallel autonomous execution. If a Unit requires constant coordination with other Units, it's too tightly coupled and should be restructured.
+**Unit Dependencies form a DAG:**
+
+Units can declare dependencies on other Units using the `depends_on` frontmatter field. This creates a Directed Acyclic Graph (DAG) that enables:
+
+- **Fan-out:** Multiple Units with no shared dependencies execute in parallel
+- **Fan-in:** Units that depend on multiple upstream Units wait for all to complete
+- **Maximum parallelism:** Ready Units (dependencies satisfied) can start immediately
+
+```
+unit-01 ─────────────────┐
+                         ├──→ unit-04 ──→ unit-05
+unit-02 ──→ unit-03 ────┘
+```
+
+In this example:
+- unit-01 and unit-02 start in parallel (no dependencies)
+- unit-03 waits for unit-02
+- unit-04 waits for both unit-01 AND unit-03 (fan-in)
+- unit-05 waits for unit-04
+
+**Unit file naming convention:**
+
+Units use a numerical index prefix followed by a meaningful slug:
+
+```
+.ai-dlc/
+└── add-oauth-login/
+    ├── INTENT.md
+    ├── unit-01-setup-provider.md
+    ├── unit-02-callback-handler.md
+    ├── unit-03-session-management.md
+    └── unit-04-auth-integration.md
+```
+
+**Unit frontmatter example:**
+
+```yaml
+---
+status: pending
+depends_on: [unit-01-setup-provider, unit-03-session-management]
+branch: ai-dlc/add-oauth-login/04-auth-integration
+---
+```
+
+The numerical prefix ensures ordering visibility; the slug provides semantic meaning. Dependencies reference the full unit identifier (number + slug).
+
+A Unit becomes **ready** when all its dependencies have status `completed`. Units with no dependencies are ready immediately.
 
 #### Bolt
 
@@ -979,9 +1027,15 @@ based on purchase history and browsing behavior.
 > - What's the cold-start strategy for new users with no history?
 > - Are there any products that should never be recommended together?"
 
-**Team provides answers, AI elaborates into Units:**
+**Team provides answers, AI elaborates into Units with dependencies:**
 
-**Unit 1: Data Collection & Processing**
+```
+unit-01-data-collection ──→ unit-02-model ──┐
+                                            ├──→ unit-04-frontend
+                       unit-03-api ─────────┘
+```
+
+**unit-01-data-collection.md** (`depends_on: []`)
 Capture user behavior (views, clicks, purchases), build feature pipelines, create user and product embeddings.
 
 Completion Criteria:
@@ -991,8 +1045,8 @@ Completion Criteria:
 - User embeddings update nightly
 - Data retention complies with GDPR (consent, deletion)
 
-**Unit 2: Recommendation Model**
-Train and serve ML model for product recommendations.
+**unit-02-model.md** (`depends_on: [unit-01-data-collection]`)
+Train and serve ML model for product recommendations. Requires data pipeline from unit-01.
 
 Completion Criteria:
 
@@ -1001,8 +1055,8 @@ Completion Criteria:
 - A/B test framework integrated
 - Model retraining pipeline automated
 
-**Unit 3: API Integration**
-Real-time serving API integrated with product catalog.
+**unit-03-api.md** (`depends_on: []`)
+Real-time serving API integrated with product catalog. Can start in parallel with unit-01.
 
 Completion Criteria:
 
@@ -1012,8 +1066,8 @@ Completion Criteria:
 - Rate limiting: 1000 req/min/user
 - Authentication via existing JWT tokens
 
-**Unit 4: Frontend Integration**
-Display recommendations in product pages and cart.
+**unit-04-frontend.md** (`depends_on: [unit-02-model, unit-03-api]`)
+Display recommendations in product pages and cart. Fan-in: requires both model and API.
 
 Completion Criteria:
 
@@ -1023,14 +1077,16 @@ Completion Criteria:
 - A/B test variant support
 - Accessibility: WCAG 2.1 AA compliant
 
+**Parallel execution:** unit-01-data-collection and unit-03-api start immediately (no dependencies). unit-02-model waits for unit-01-data-collection. unit-04-frontend waits for both unit-02-model and unit-03-api (fan-in point).
+
 **AI recommends Bolt modes:**
 
 | Unit | Recommended Mode | Rationale |
 |------|------------------|-----------|
-| Data Collection | Autonomous (AHOTL) | Clear criteria, established patterns |
-| Recommendation Model | Supervised (HITL) | Novel ML decisions, trade-offs |
-| API Integration | Autonomous (AHOTL) | Standard REST patterns, clear criteria |
-| Frontend Integration | Supervised (HITL) | UX decisions, accessibility judgment |
+| unit-01-data-collection | Autonomous (AHOTL) | Clear criteria, established patterns |
+| unit-02-model | Supervised (HITL) | Novel ML decisions, trade-offs |
+| unit-03-api | Autonomous (AHOTL) | Standard REST patterns, clear criteria |
+| unit-04-frontend | Supervised (HITL) | UX decisions, accessibility judgment |
 
 ### Construction Phase
 
@@ -1161,7 +1217,7 @@ Selecting the right operating mode is critical to AI-DLC success. The decision d
 
 Work can transition between modes as understanding develops. The flexibility to switch modes mid-work is a key feature of AI-DLC 2026.
 
-**→ See the [Mode Selection Runbook](./ai-dlc-2026/runbooks/mode-selection) for the complete decision tree and transition triggers.**
+**→ See the [Mode Selection Runbook](./ai-dlc-2026/runbooks/construction/mode-selection) for the complete decision tree and transition triggers.**
 
 ---
 
@@ -1178,7 +1234,11 @@ The Ralph Wiggum pattern, named after the Simpsons character, embraces "determin
 
 The pattern has evolved from simple single-agent loops to hat-based orchestration for complex workflows—but the core philosophy remains: sophisticated behavior emerges from simple loops with good backpressure, not from complex multi-agent architectures.
 
-**→ See the [Autonomous Bolt Runbook](./ai-dlc-2026/runbooks/autonomous-bolt) for implementation templates, safety configuration, and the Many Hats orchestration pattern.**
+Teams can customize hat behavior through configuration files, defining custom hats with specific triggers, events, and instructions tailored to their workflows.
+
+**→ See the [Autonomous Bolt Runbook](./ai-dlc-2026/runbooks/construction/autonomous-bolt) for implementation templates, safety configuration, and the Many Hats orchestration pattern.**
+
+**→ See the [Han Runbook](./ai-dlc-2026/runbooks/tooling/han) for Claude Code-native implementation with `jutsu-ai-dlc`.**
 
 ---
 
@@ -1194,7 +1254,7 @@ AI-DLC adoption follows a progressive pattern: start with Mob Elaboration to bui
 
 **Skills evolve** from writing code to defining success criteria, from reviewing PRs to designing quality gates, from manual testing to test specification.
 
-**→ See the [Incremental Adoption Runbook](./ai-dlc-2026/runbooks/incremental-adoption) for step-by-step guidance and the [Organizational Adoption Runbook](./ai-dlc-2026/runbooks/organizational-adoption) for governance and scaling considerations.**
+**→ See the [Incremental Adoption Runbook](./ai-dlc-2026/runbooks/adoption/incremental-adoption) for step-by-step guidance and the [Organizational Adoption Runbook](./ai-dlc-2026/runbooks/adoption/organizational-adoption) for governance and scaling considerations.**
 
 ---
 
@@ -1211,7 +1271,7 @@ AI-DLC shifts from activity-based metrics (lines of code, story points) to outco
 | **Churn Rate** | Iterations per bolt (high = poor criteria) |
 | **Criteria Escape Rate** | Defects found post-deployment |
 
-**→ See the [Metrics & Measurement Runbook](./ai-dlc-2026/runbooks/metrics-measurement) for dashboards, ROI calculation, and early warning signs.**
+**→ See the [Metrics & Measurement Runbook](./ai-dlc-2026/runbooks/adoption/metrics-measurement) for dashboards, ROI calculation, and early warning signs.**
 
 ---
 
@@ -1224,7 +1284,7 @@ AI-DLC integrates with regulated environments through structured audit patterns 
 
 The key insight: audit trails emerge naturally from the AI-DLC workflow rather than being bolted on afterward. The workflow *is* the audit trail.
 
-**→ See the [Compliance & Audit Runbook](./ai-dlc-2026/runbooks/compliance-audit) for framework mappings (SOC2, HIPAA, PCI-DSS) and implementation patterns.**
+**→ See the [Compliance & Audit Runbook](./ai-dlc-2026/runbooks/operations/compliance-audit) for framework mappings (SOC2, HIPAA, PCI-DSS) and implementation patterns.**
 
 ---
 
@@ -1252,7 +1312,8 @@ For detailed runbooks with system prompts, entry/exit criteria, and failure mode
 | **OHOTL** | Observed Human-on-the-Loop: human watches AI work in real-time with ability to intervene; synchronous awareness with asynchronous control; used for creative, subjective, or training scenarios |
 | **Quality Gate** | Automated check (tests, types, lint, security) that provides pass/fail feedback |
 | **Ralph Wiggum Pattern** | Autonomous loop methodology: try, fail, learn, iterate until success criteria met |
-| **Unit** | Cohesive, independently deployable work element derived from an Intent |
+| **Unit** | Cohesive, independently deployable work element derived from an Intent; named with numerical prefix + slug (e.g., `unit-01-setup-auth`); can declare dependencies via `depends_on` forming a DAG |
+| **Unit DAG** | Directed Acyclic Graph of unit dependencies enabling parallel execution (fan-out) and convergence (fan-in) |
 
 ---
 

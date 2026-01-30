@@ -25,7 +25,7 @@ export default function Home() {
 				</p>
 				<div className="flex flex-col sm:flex-row gap-4 justify-center">
 					<a
-						href="#getting-started"
+						href="#get-plugin"
 						className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-gray-100 transition"
 					>
 						Get Started
@@ -57,25 +57,34 @@ export default function Home() {
 						works. Learn how to write completion criteria, choose operating
 						modes, and let AI iterate autonomously.
 					</p>
-					<Link
-						href="/papers/ai-dlc-2026"
-						className="inline-flex items-center px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition"
-					>
-						Read the Paper
-						<svg
-							className="ml-2 w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
+					<div className="flex flex-col sm:flex-row gap-4 justify-center">
+						<Link
+							href="/plugins/jutsu/jutsu-ai-dlc"
+							className="inline-flex items-center px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition"
 						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 5l7 7-7 7"
-							/>
-						</svg>
-					</Link>
+							Get the Plugin
+						</Link>
+						<Link
+							href="/papers/ai-dlc-2026"
+							className="inline-flex items-center px-6 py-3 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white/10 transition"
+						>
+							Read the Paper
+							<svg
+								className="ml-2 w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9 5l7 7-7 7"
+								/>
+							</svg>
+						</Link>
+					</div>
 				</div>
 			</section>
 
@@ -204,14 +213,101 @@ export default function Home() {
 				</div>
 			</section>
 
-			{/* Getting Started */}
+			{/* Get the Plugin */}
+			<section
+				id="get-plugin"
+				className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+			>
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
+						Get Started
+					</h2>
+					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
+						Install directly in Claude Code with a few simple commands.
+					</p>
+
+					<div className="max-w-3xl mx-auto">
+						<div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+							<div className="space-y-6">
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium">
+										1. Add the Han marketplace:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+										<code>/plugin marketplace add thebushidocollective/han</code>
+									</pre>
+								</div>
+
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium">
+										2. Install the core plugin:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+										<code>/plugin install core@thebushidocollective-han</code>
+									</pre>
+								</div>
+
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium">
+										3. Install backpressure plugins for your stack:
+									</p>
+									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+										<code>
+											{`# TypeScript projects
+/plugin install jutsu-typescript@thebushidocollective-han
+/plugin install jutsu-biome@thebushidocollective-han
+
+# Python projects
+/plugin install jutsu-ruff@thebushidocollective-han
+/plugin install jutsu-pytest@thebushidocollective-han`}
+										</code>
+									</pre>
+								</div>
+							</div>
+
+							<div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+								<p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+									Backpressure plugins provide quality gates that guide AI
+									iteration.
+									<br />
+									Linting, type checking, and test failures create feedback
+									loops that improve output.
+								</p>
+							</div>
+						</div>
+
+						<div className="mt-8 grid sm:grid-cols-3 gap-4 text-center">
+							<div className="p-4">
+								<div className="text-2xl mb-2">🎯</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Backpressure guides iteration
+								</p>
+							</div>
+							<div className="p-4">
+								<div className="text-2xl mb-2">⚡</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Smart caching for speed
+								</p>
+							</div>
+							<div className="p-4">
+								<div className="text-2xl mb-2">🔒</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									All data stays local
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			{/* Getting Started (CLI) */}
 			<section id="getting-started" className="py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
-						Getting Started
+						CLI Installation
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-						Two commands. That&apos;s it.
+						Prefer the command line? Install the han CLI for more control.
 					</p>
 
 					<div className="max-w-2xl mx-auto">

@@ -1230,8 +1230,8 @@ pub fn full_scan_and_index(_db_path: String) -> napi::Result<Vec<indexer::IndexR
 // Re-export git types and functions from git module
 pub use git::{
     get_git_branch, get_git_common_dir, get_git_info, get_git_remote_url, get_git_root,
-    git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_list, GitDiffStat, GitInfo,
-    GitLogEntry, GitWorktree,
+    git_create_branch, git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_add,
+    git_worktree_list, git_worktree_remove, GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
 };
 
 // ============================================================================
@@ -1245,4 +1245,1030 @@ pub use git::{
 #[napi]
 pub fn truncate_derived_tables(_db_path: String) -> napi::Result<u32> {
     crud::truncate_derived_tables()
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::fs::{self, File};
+    use std::io::Write;
+    use std::path::PathBuf;
+
+    /// Create a temporary test directory with a unique name
+    fn setup_test_dir(prefix: &str) -> PathBuf {
+        let test_dir = env::temp_dir().join(format!(
+            "han-native-test-{}-{}-{}",
+            prefix,
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&test_dir).expect("Failed to create test directory");
+        test_dir
+    }
+
+    /// Cleanup a test directory
+    fn cleanup_test_dir(path: &PathBuf) {
+        let _ = fs::remove_dir_all(path);
+    }
+
+    // ============================================================================
+    // File Hash Tests
+    // ============================================================================
+
+    #[test]
+    fn test_compute_file_hash_valid_file() {
+        let test_dir = setup_test_dir("hash-valid");
+        let file_path = test_dir.join("test.txt");
+
+        // Create a file with known content
+        let mut file = File::create(&file_path).expect("Failed to create test file");
+        file.write_all(b"hello world")
+            .expect("Failed to write to test file");
+        drop(file);
+
+        let hash = compute_file_hash(file_path.to_string_lossy().to_string());
+
+        // SHA256 of "hello world" is well-known
+        assert_eq!(
+            hash,
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        );
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_compute_file_hash_empty_file() {
+        let test_dir = setup_test_dir("hash-empty");
+        let file_path = test_dir.join("empty.txt");
+
+        File::create(&file_path).expect("Failed to create empty file");
+
+        let hash = compute_file_hash(file_path.to_string_lossy().to_string());
+
+        // SHA256 of empty string
+        assert_eq!(
+            hash,
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_compute_file_hash_nonexistent_file() {
+        let hash = compute_file_hash("/nonexistent/path/to/file.txt".to_string());
+        assert_eq!(hash, ""); // Returns empty string for non-existent files
+    }
+
+    #[test]
+    fn test_compute_file_hash_large_file() {
+        let test_dir = setup_test_dir("hash-large");
+        let file_path = test_dir.join("large.bin");
+
+        // Create a file larger than the internal buffer (8192 bytes)
+        let mut file = File::create(&file_path).expect("Failed to create large file");
+        let data: Vec<u8> = (0..=255).cycle().take(20000).collect();
+        file.write_all(&data).expect("Failed to write large file");
+        drop(file);
+
+        let hash = compute_file_hash(file_path.to_string_lossy().to_string());
+
+        // Should produce a valid 64-character hex hash
+        assert_eq!(hash.len(), 64);
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_compute_file_hashes_parallel_multiple_files() {
+        let test_dir = setup_test_dir("hash-parallel");
+
+        // Create multiple test files
+        let mut paths = Vec::new();
+        for i in 0..5 {
+            let file_path = test_dir.join(format!("file{}.txt", i));
+            let mut file = File::create(&file_path).expect("Failed to create file");
+            file.write_all(format!("content {}", i).as_bytes())
+                .expect("Failed to write");
+            paths.push(file_path.to_string_lossy().to_string());
+        }
+
+        let hashes = compute_file_hashes_parallel(paths.clone());
+
+        // Should have all files
+        assert_eq!(hashes.len(), 5);
+
+        // Each hash should be valid and unique
+        let unique_hashes: std::collections::HashSet<_> = hashes.values().collect();
+        assert_eq!(unique_hashes.len(), 5);
+
+        // Each hash should be 64 hex characters
+        for hash in hashes.values() {
+            assert_eq!(hash.len(), 64);
+        }
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_compute_file_hashes_parallel_empty_input() {
+        let hashes = compute_file_hashes_parallel(Vec::new());
+        assert!(hashes.is_empty());
+    }
+
+    #[test]
+    fn test_compute_file_hashes_parallel_mixed_existence() {
+        let test_dir = setup_test_dir("hash-mixed");
+
+        let valid_path = test_dir.join("exists.txt");
+        let mut file = File::create(&valid_path).expect("Failed to create file");
+        file.write_all(b"test").expect("Failed to write");
+        drop(file);
+
+        let paths = vec![
+            valid_path.to_string_lossy().to_string(),
+            "/nonexistent/file.txt".to_string(),
+        ];
+
+        let hashes = compute_file_hashes_parallel(paths);
+
+        assert_eq!(hashes.len(), 2);
+        assert!(!hashes
+            .get(&valid_path.to_string_lossy().to_string())
+            .unwrap()
+            .is_empty());
+        assert_eq!(hashes.get("/nonexistent/file.txt").unwrap(), "");
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    // ============================================================================
+    // Glob/File Finding Tests
+    // ============================================================================
+
+    #[test]
+    fn test_find_files_with_glob_basic() {
+        let test_dir = setup_test_dir("glob-basic");
+
+        // Create some test files
+        File::create(test_dir.join("file1.txt")).unwrap();
+        File::create(test_dir.join("file2.txt")).unwrap();
+        File::create(test_dir.join("file3.rs")).unwrap();
+
+        let results = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+        );
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|p| p.ends_with(".txt")));
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_files_with_glob_nested() {
+        let test_dir = setup_test_dir("glob-nested");
+
+        // Create nested structure
+        let sub_dir = test_dir.join("subdir");
+        fs::create_dir_all(&sub_dir).unwrap();
+
+        File::create(test_dir.join("root.txt")).unwrap();
+        File::create(sub_dir.join("nested.txt")).unwrap();
+
+        let results = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["**/*.txt".to_string()],
+        );
+
+        assert_eq!(results.len(), 2);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_files_with_glob_multiple_patterns() {
+        let test_dir = setup_test_dir("glob-multi");
+
+        File::create(test_dir.join("file.txt")).unwrap();
+        File::create(test_dir.join("file.rs")).unwrap();
+        File::create(test_dir.join("file.md")).unwrap();
+
+        let results = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string(), "*.rs".to_string()],
+        );
+
+        assert_eq!(results.len(), 2);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_files_with_glob_nonexistent_dir() {
+        let results = find_files_with_glob(
+            "/nonexistent/directory".to_string(),
+            vec!["*.txt".to_string()],
+        );
+
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_find_files_with_glob_empty_patterns() {
+        let test_dir = setup_test_dir("glob-empty");
+        File::create(test_dir.join("file.txt")).unwrap();
+
+        let results = find_files_with_glob(test_dir.to_string_lossy().to_string(), Vec::new());
+
+        assert!(results.is_empty());
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_files_with_glob_no_matches() {
+        let test_dir = setup_test_dir("glob-nomatch");
+        File::create(test_dir.join("file.txt")).unwrap();
+
+        let results = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.xyz".to_string()],
+        );
+
+        assert!(results.is_empty());
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_directories_with_markers_basic() {
+        let test_dir = setup_test_dir("markers-basic");
+
+        // Create a directory with a package.json marker
+        let proj_dir = test_dir.join("my-project");
+        fs::create_dir_all(&proj_dir).unwrap();
+        File::create(proj_dir.join("package.json")).unwrap();
+
+        let results = find_directories_with_markers(
+            test_dir.to_string_lossy().to_string(),
+            vec!["package.json".to_string()],
+        );
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].ends_with("my-project"));
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_directories_with_markers_nested() {
+        let test_dir = setup_test_dir("markers-nested");
+
+        // Create nested project structure
+        let proj1 = test_dir.join("proj1");
+        let proj2 = test_dir.join("level1").join("proj2");
+
+        fs::create_dir_all(&proj1).unwrap();
+        fs::create_dir_all(&proj2).unwrap();
+
+        File::create(proj1.join("Cargo.toml")).unwrap();
+        File::create(proj2.join("Cargo.toml")).unwrap();
+
+        let results = find_directories_with_markers(
+            test_dir.to_string_lossy().to_string(),
+            vec!["Cargo.toml".to_string()],
+        );
+
+        assert_eq!(results.len(), 2);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_directories_with_markers_multiple_markers() {
+        let test_dir = setup_test_dir("markers-multi");
+
+        let npm_proj = test_dir.join("npm-proj");
+        let cargo_proj = test_dir.join("cargo-proj");
+
+        fs::create_dir_all(&npm_proj).unwrap();
+        fs::create_dir_all(&cargo_proj).unwrap();
+
+        File::create(npm_proj.join("package.json")).unwrap();
+        File::create(cargo_proj.join("Cargo.toml")).unwrap();
+
+        let results = find_directories_with_markers(
+            test_dir.to_string_lossy().to_string(),
+            vec!["package.json".to_string(), "Cargo.toml".to_string()],
+        );
+
+        assert_eq!(results.len(), 2);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_directories_with_markers_directory_marker() {
+        let test_dir = setup_test_dir("markers-dir");
+
+        // Create a directory with a .git directory marker
+        let repo_dir = test_dir.join("my-repo");
+        let git_dir = repo_dir.join(".git");
+
+        fs::create_dir_all(&git_dir).unwrap();
+
+        // Note: .git directories are filtered out by WalkBuilder
+        // This tests the directory marker pattern
+        let results = find_directories_with_markers(
+            test_dir.to_string_lossy().to_string(),
+            vec!["node_modules".to_string()],
+        );
+
+        // Should not find anything since we didn't create node_modules
+        assert!(results.is_empty());
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_directories_with_markers_nonexistent_dir() {
+        let results = find_directories_with_markers(
+            "/nonexistent/directory".to_string(),
+            vec!["package.json".to_string()],
+        );
+
+        assert!(results.is_empty());
+    }
+
+    // ============================================================================
+    // Manifest Tests
+    // ============================================================================
+
+    #[test]
+    fn test_build_manifest_basic() {
+        let test_dir = setup_test_dir("manifest-basic");
+
+        let file1 = test_dir.join("file1.txt");
+        let file2 = test_dir.join("file2.txt");
+
+        let mut f1 = File::create(&file1).unwrap();
+        f1.write_all(b"content 1").unwrap();
+
+        let mut f2 = File::create(&file2).unwrap();
+        f2.write_all(b"content 2").unwrap();
+
+        let files = vec![
+            file1.to_string_lossy().to_string(),
+            file2.to_string_lossy().to_string(),
+        ];
+
+        let manifest = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        assert_eq!(manifest.len(), 2);
+        assert!(manifest.contains_key("file1.txt"));
+        assert!(manifest.contains_key("file2.txt"));
+
+        // Hashes should be 64-char hex strings
+        for hash in manifest.values() {
+            assert_eq!(hash.len(), 64);
+        }
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_build_manifest_nested_files() {
+        let test_dir = setup_test_dir("manifest-nested");
+
+        let sub_dir = test_dir.join("subdir");
+        fs::create_dir_all(&sub_dir).unwrap();
+
+        let file1 = test_dir.join("root.txt");
+        let file2 = sub_dir.join("nested.txt");
+
+        File::create(&file1).unwrap();
+        File::create(&file2).unwrap();
+
+        let files = vec![
+            file1.to_string_lossy().to_string(),
+            file2.to_string_lossy().to_string(),
+        ];
+
+        let manifest = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        assert_eq!(manifest.len(), 2);
+        assert!(manifest.contains_key("root.txt"));
+        assert!(manifest.contains_key("subdir/nested.txt"));
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_build_manifest_empty_files() {
+        let test_dir = setup_test_dir("manifest-empty");
+        let manifest = build_manifest(Vec::new(), test_dir.to_string_lossy().to_string());
+        assert!(manifest.is_empty());
+        cleanup_test_dir(&test_dir);
+    }
+
+    // ============================================================================
+    // Has Changes Tests
+    // ============================================================================
+
+    #[test]
+    fn test_has_changes_empty_cache() {
+        let test_dir = setup_test_dir("changes-empty");
+        File::create(test_dir.join("file.txt")).unwrap();
+
+        let result = has_changes(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            HashMap::new(),
+        );
+
+        assert!(result); // Empty cache = always has changes
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_has_changes_no_changes() {
+        let test_dir = setup_test_dir("changes-none");
+
+        let file_path = test_dir.join("file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"content").unwrap();
+        drop(file);
+
+        // Build cache with current state
+        let files = vec![file_path.to_string_lossy().to_string()];
+        let cache = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        let result = has_changes(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            cache,
+        );
+
+        assert!(!result); // Same content = no changes
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_has_changes_content_modified() {
+        let test_dir = setup_test_dir("changes-modified");
+
+        let file_path = test_dir.join("file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"original").unwrap();
+        drop(file);
+
+        // Build cache with original state
+        let files = vec![file_path.to_string_lossy().to_string()];
+        let cache = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        // Modify the file
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"modified").unwrap();
+        drop(file);
+
+        let result = has_changes(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            cache,
+        );
+
+        assert!(result); // Content changed
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_has_changes_file_added() {
+        let test_dir = setup_test_dir("changes-added");
+
+        let file_path = test_dir.join("file1.txt");
+        File::create(&file_path).unwrap();
+
+        // Build cache with original file
+        let files = vec![file_path.to_string_lossy().to_string()];
+        let cache = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        // Add a new file
+        File::create(test_dir.join("file2.txt")).unwrap();
+
+        let result = has_changes(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            cache,
+        );
+
+        assert!(result); // New file added
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_has_changes_file_deleted() {
+        let test_dir = setup_test_dir("changes-deleted");
+
+        let file1 = test_dir.join("file1.txt");
+        let file2 = test_dir.join("file2.txt");
+        File::create(&file1).unwrap();
+        File::create(&file2).unwrap();
+
+        // Build cache with both files
+        let files = vec![
+            file1.to_string_lossy().to_string(),
+            file2.to_string_lossy().to_string(),
+        ];
+        let cache = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+        // Delete one file
+        fs::remove_file(&file2).unwrap();
+
+        let result = has_changes(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            cache,
+        );
+
+        assert!(result); // File deleted
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_has_changes_nonexistent_dir() {
+        let result = has_changes(
+            "/nonexistent/directory".to_string(),
+            vec!["*.txt".to_string()],
+            HashMap::from([("file.txt".to_string(), "abc123".to_string())]),
+        );
+
+        assert!(result); // Nonexistent dir = has changes (error case)
+    }
+
+    // ============================================================================
+    // Check and Build Manifest Tests
+    // ============================================================================
+
+    #[test]
+    fn test_check_and_build_manifest_no_cache() {
+        let test_dir = setup_test_dir("check-nocache");
+
+        let file_path = test_dir.join("file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"content").unwrap();
+        drop(file);
+
+        let result = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            None,
+        );
+
+        assert!(result.has_changes);
+        assert_eq!(result.manifest.len(), 1);
+        assert_eq!(result.files.len(), 1);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_check_and_build_manifest_with_cache_no_changes() {
+        let test_dir = setup_test_dir("check-cache-nochange");
+
+        let file_path = test_dir.join("file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"content").unwrap();
+        drop(file);
+
+        // Build initial manifest
+        let initial = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            None,
+        );
+
+        // Check with same manifest
+        let result = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            Some(initial.manifest),
+        );
+
+        assert!(!result.has_changes);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_check_and_build_manifest_with_changes() {
+        let test_dir = setup_test_dir("check-cache-change");
+
+        let file_path = test_dir.join("file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"original").unwrap();
+        drop(file);
+
+        // Build initial manifest
+        let initial = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            None,
+        );
+
+        // Modify file
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"modified").unwrap();
+        drop(file);
+
+        // Check with old manifest
+        let result = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+            Some(initial.manifest),
+        );
+
+        assert!(result.has_changes);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_check_and_build_manifest_nonexistent_dir() {
+        let result = check_and_build_manifest(
+            "/nonexistent/directory".to_string(),
+            vec!["*.txt".to_string()],
+            None,
+        );
+
+        assert!(result.has_changes);
+        assert!(result.manifest.is_empty());
+        assert!(result.files.is_empty());
+    }
+
+    #[test]
+    fn test_check_and_build_manifest_invalid_glob() {
+        let test_dir = setup_test_dir("check-badglob");
+        File::create(test_dir.join("file.txt")).unwrap();
+
+        // Empty patterns should produce valid result with empty manifest
+        let result =
+            check_and_build_manifest(test_dir.to_string_lossy().to_string(), Vec::new(), None);
+
+        assert!(result.has_changes);
+        assert!(result.manifest.is_empty());
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    // ============================================================================
+    // CheckResult Struct Tests
+    // ============================================================================
+
+    #[test]
+    fn test_check_result_fields() {
+        let result = CheckResult {
+            has_changes: true,
+            manifest: HashMap::from([("file.txt".to_string(), "hash123".to_string())]),
+            files: vec!["/path/to/file.txt".to_string()],
+        };
+
+        assert!(result.has_changes);
+        assert_eq!(result.manifest.len(), 1);
+        assert_eq!(result.files.len(), 1);
+    }
+
+    // ============================================================================
+    // VectorDocumentInput Tests
+    // ============================================================================
+
+    #[test]
+    fn test_vector_document_input_construction() {
+        let doc = VectorDocumentInput {
+            id: "doc-1".to_string(),
+            content: "test content".to_string(),
+            vector: vec![0.1, 0.2, 0.3],
+            metadata: Some(r#"{"key": "value"}"#.to_string()),
+        };
+
+        assert_eq!(doc.id, "doc-1");
+        assert_eq!(doc.content, "test content");
+        assert_eq!(doc.vector.len(), 3);
+        assert!(doc.metadata.is_some());
+    }
+
+    #[test]
+    fn test_vector_document_input_no_metadata() {
+        let doc = VectorDocumentInput {
+            id: "doc-2".to_string(),
+            content: "test".to_string(),
+            vector: vec![0.5],
+            metadata: None,
+        };
+
+        assert!(doc.metadata.is_none());
+    }
+
+    // ============================================================================
+    // SessionTimestamps Tests
+    // ============================================================================
+
+    #[test]
+    fn test_session_timestamps_construction() {
+        let ts = SessionTimestamps {
+            session_id: "session-123".to_string(),
+            started_at: Some("2024-01-01T00:00:00Z".to_string()),
+            ended_at: Some("2024-01-01T01:00:00Z".to_string()),
+        };
+
+        assert_eq!(ts.session_id, "session-123");
+        assert!(ts.started_at.is_some());
+        assert!(ts.ended_at.is_some());
+    }
+
+    #[test]
+    fn test_session_timestamps_partial() {
+        let ts = SessionTimestamps {
+            session_id: "session-456".to_string(),
+            started_at: Some("2024-01-01T00:00:00Z".to_string()),
+            ended_at: None,
+        };
+
+        assert_eq!(ts.session_id, "session-456");
+        assert!(ts.started_at.is_some());
+        assert!(ts.ended_at.is_none());
+    }
+
+    // ============================================================================
+    // Constant/Config Function Tests
+    // ============================================================================
+
+    #[test]
+    fn test_get_embedding_dimension() {
+        let dim = get_embedding_dimension();
+        assert_eq!(dim, 384); // all-MiniLM-L6-v2 produces 384-dimensional vectors
+    }
+
+    #[test]
+    fn test_get_heartbeat_interval() {
+        let interval = get_heartbeat_interval();
+        assert_eq!(interval, 10); // 10 seconds
+    }
+
+    #[test]
+    fn test_get_stale_lock_timeout() {
+        let timeout = get_stale_lock_timeout();
+        assert_eq!(timeout, 30); // 30 seconds
+    }
+
+    // ============================================================================
+    // Type Conversion Tests (VectorDocumentInput -> VectorDocument)
+    // ============================================================================
+
+    #[test]
+    fn test_f64_to_f32_vector_conversion() {
+        // Test the conversion logic used in vector_index
+        let input_vector: Vec<f64> = vec![1.0, 2.5, 3.14159265358979];
+        let output_vector: Vec<f32> = input_vector.into_iter().map(|v| v as f32).collect();
+
+        assert_eq!(output_vector.len(), 3);
+        assert!((output_vector[0] - 1.0_f32).abs() < f32::EPSILON);
+        assert!((output_vector[1] - 2.5_f32).abs() < f32::EPSILON);
+        // f32 has less precision
+        assert!((output_vector[2] - 3.14159265358979_f32).abs() < 0.0001);
+    }
+
+    // ============================================================================
+    // Edge Cases and Error Handling
+    // ============================================================================
+
+    #[test]
+    fn test_compute_file_hash_special_characters_in_path() {
+        let test_dir = setup_test_dir("hash-special");
+
+        let file_path = test_dir.join("file with spaces.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"test").unwrap();
+        drop(file);
+
+        let hash = compute_file_hash(file_path.to_string_lossy().to_string());
+        assert_eq!(hash.len(), 64);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_compute_file_hash_unicode_filename() {
+        let test_dir = setup_test_dir("hash-unicode");
+
+        let file_path = test_dir.join("arquivo_\u{00E9}.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"unicode content").unwrap();
+        drop(file);
+
+        let hash = compute_file_hash(file_path.to_string_lossy().to_string());
+        assert_eq!(hash.len(), 64);
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_find_files_with_glob_hidden_files() {
+        let test_dir = setup_test_dir("glob-hidden");
+
+        // Create regular and hidden files
+        File::create(test_dir.join("visible.txt")).unwrap();
+        File::create(test_dir.join(".hidden.txt")).unwrap();
+
+        let results = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["*.txt".to_string()],
+        );
+
+        // WalkBuilder with hidden(true) should find hidden files
+        // But they need to match the glob pattern
+        assert!(!results.is_empty());
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_build_manifest_handles_symlinks() {
+        let test_dir = setup_test_dir("manifest-symlink");
+
+        let real_file = test_dir.join("real.txt");
+        let mut file = File::create(&real_file).unwrap();
+        file.write_all(b"real content").unwrap();
+        drop(file);
+
+        // Note: This test may behave differently on Windows
+        #[cfg(unix)]
+        {
+            let link_path = test_dir.join("link.txt");
+            std::os::unix::fs::symlink(&real_file, &link_path).unwrap();
+
+            let files = vec![
+                real_file.to_string_lossy().to_string(),
+                link_path.to_string_lossy().to_string(),
+            ];
+
+            let manifest = build_manifest(files, test_dir.to_string_lossy().to_string());
+
+            // build_manifest canonicalizes paths, so symlinks resolve to their targets.
+            // Both paths resolve to real.txt, so manifest has one entry with that key.
+            // The hash should be computed from the symlink path but stored under canonical key.
+            assert!(
+                manifest.contains_key("real.txt"),
+                "manifest should contain real.txt"
+            );
+
+            // Since both files resolve to same canonical path, manifest should have one entry
+            // (HashMap deduplicates by key)
+            assert!(!manifest.is_empty());
+        }
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    // ============================================================================
+    // Integration-style Tests
+    // ============================================================================
+
+    #[test]
+    fn test_full_workflow_build_check_manifest() {
+        let test_dir = setup_test_dir("workflow");
+
+        // Step 1: Create initial files
+        let file1 = test_dir.join("src").join("main.rs");
+        let file2 = test_dir.join("src").join("lib.rs");
+        fs::create_dir_all(test_dir.join("src")).unwrap();
+
+        let mut f1 = File::create(&file1).unwrap();
+        f1.write_all(b"fn main() {}").unwrap();
+        drop(f1);
+
+        let mut f2 = File::create(&file2).unwrap();
+        f2.write_all(b"pub fn foo() {}").unwrap();
+        drop(f2);
+
+        // Step 2: Find files with glob
+        let found = find_files_with_glob(
+            test_dir.to_string_lossy().to_string(),
+            vec!["**/*.rs".to_string()],
+        );
+        assert_eq!(found.len(), 2);
+
+        // Step 3: Build initial manifest
+        let manifest1 = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["**/*.rs".to_string()],
+            None,
+        );
+        assert!(manifest1.has_changes);
+        assert_eq!(manifest1.manifest.len(), 2);
+
+        // Step 4: Check again with same state - should report no changes
+        let manifest2 = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["**/*.rs".to_string()],
+            Some(manifest1.manifest.clone()),
+        );
+        assert!(!manifest2.has_changes);
+
+        // Step 5: Modify a file
+        let mut f1 = File::create(&file1).unwrap();
+        f1.write_all(b"fn main() { println!(\"hello\"); }").unwrap();
+        drop(f1);
+
+        // Step 6: Check again - should report changes
+        let manifest3 = check_and_build_manifest(
+            test_dir.to_string_lossy().to_string(),
+            vec!["**/*.rs".to_string()],
+            Some(manifest1.manifest),
+        );
+        assert!(manifest3.has_changes);
+
+        // Step 7: Verify hash changed for modified file
+        assert_ne!(
+            manifest2.manifest.get("src/main.rs"),
+            manifest3.manifest.get("src/main.rs")
+        );
+
+        cleanup_test_dir(&test_dir);
+    }
+
+    // ============================================================================
+    // Agent ID Filter Logic Tests (list_session_messages conversion)
+    // ============================================================================
+
+    #[test]
+    fn test_agent_id_filter_conversion_logic() {
+        // Test the conversion logic used in list_session_messages
+        // None (undefined/null in JS) -> None (all messages)
+        let input1: Option<String> = None;
+        let result1 = input1.map(|s| if s.is_empty() { None } else { Some(s) });
+        assert!(result1.is_none()); // All messages
+
+        // Some("") -> Some(None) (main conversation only)
+        let input2: Option<String> = Some("".to_string());
+        let result2 = input2.map(|s| if s.is_empty() { None } else { Some(s) });
+        assert_eq!(result2, Some(None)); // Main only
+
+        // Some("xyz") -> Some(Some("xyz")) (specific agent)
+        let input3: Option<String> = Some("agent-123".to_string());
+        let result3 = input3.map(|s| if s.is_empty() { None } else { Some(s) });
+        assert_eq!(result3, Some(Some("agent-123".to_string()))); // Specific agent
+    }
+
+    // ============================================================================
+    // Parallel Processing Consistency Tests
+    // ============================================================================
+
+    #[test]
+    fn test_parallel_hash_determinism() {
+        let test_dir = setup_test_dir("parallel-determinism");
+
+        // Create multiple files
+        for i in 0..10 {
+            let file_path = test_dir.join(format!("file{}.txt", i));
+            let mut file = File::create(&file_path).unwrap();
+            file.write_all(format!("content for file {}", i).as_bytes())
+                .unwrap();
+        }
+
+        let files: Vec<String> = (0..10)
+            .map(|i| {
+                test_dir
+                    .join(format!("file{}.txt", i))
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .collect();
+
+        // Run parallel hash multiple times and verify consistency
+        let result1 = compute_file_hashes_parallel(files.clone());
+        let result2 = compute_file_hashes_parallel(files.clone());
+        let result3 = compute_file_hashes_parallel(files);
+
+        assert_eq!(result1, result2);
+        assert_eq!(result2, result3);
+
+        cleanup_test_dir(&test_dir);
+    }
 }

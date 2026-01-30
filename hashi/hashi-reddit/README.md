@@ -208,17 +208,3 @@ Claude: [uses get_subreddit_top_posts with time='all' parameter]
 
 - **hashi-github**: GitHub repository integration
 - **do-content-creator**: Content creation agents that could use Reddit research
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License - See [LICENSE](../../LICENSE) for details.
-
-## Links
-
-- [mcp-server-reddit on PyPI](https://pypi.org/project/mcp-server-reddit/)
-- [mcp-server-reddit on GitHub](https://github.com/hawstein/mcp-server-reddit)
-- [MCP Protocol Specification](https://modelcontextprotocol.io)

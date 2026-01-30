@@ -197,7 +197,3 @@ The plugin enforces de-duplication through:
 ## Related Plugins
 
 - **bushido**: Core quality principles and standards
-
-## License
-
-MIT

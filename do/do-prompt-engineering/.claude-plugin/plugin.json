@@ -8,6 +8,6 @@
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
-  "license": "FSL-1.1-ALv2",
+  "license": "Apache-2.0",
   "keywords": ["prompt-engineering", "ai", "llm"]
 }

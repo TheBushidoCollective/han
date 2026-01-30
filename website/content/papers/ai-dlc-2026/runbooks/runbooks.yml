@@ -52,6 +52,7 @@ groups:
     icon: "🛠️"
     description: Comprehensive guides for popular AI coding assistants
     runbooks:
+      - han
       - claude-code
       - claude-cowork
       - cursor

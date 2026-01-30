@@ -29,8 +29,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install do-backend-development
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.

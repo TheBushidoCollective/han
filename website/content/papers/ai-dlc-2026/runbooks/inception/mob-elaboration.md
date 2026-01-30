@@ -54,7 +54,28 @@ For each Unit, provide:
 
 - Clear description of scope and boundaries
 - User stories in "As a [user], I want [goal], so that [benefit]" format
-- Dependencies on other Units (if any)
+- Dependencies on other Units via `depends_on` field
+
+**Unit Naming Convention:**
+
+Units use a numerical index prefix followed by a meaningful slug:
+
+- `unit-01-data-collection.md`
+- `unit-02-model.md`
+- `unit-03-api.md`
+- `unit-04-frontend.md`
+
+**Unit Dependencies form a DAG:**
+
+```
+unit-01-data-collection ──→ unit-02-model ──┐
+                                            ├──→ unit-04-frontend
+                       unit-03-api ─────────┘
+```
+
+- **Fan-out:** Units with no shared dependencies execute in parallel
+- **Fan-in:** Units wait for ALL their upstream dependencies to complete
+- **Ready check:** A unit is ready when all its `depends_on` units have status `completed`
 
 ### Phase 3: Completion Criteria
 
@@ -85,11 +106,17 @@ Provide rationale for each recommendation.
 
 ## Output Artifacts
 
-Save to:
+Save to `.ai-dlc/{intent-slug}/`:
 
-- `specs/units/[unit-name].md` — Unit specifications with completion criteria
-- `specs/overview.md` — Unit relationships, dependencies, integration boundaries
-- `specs/risks.md` — Risk register with mitigations
+- `INTENT.md` — Intent definition with business context
+- `unit-01-{slug}.md` — Unit 1 with frontmatter (status, depends_on, branch)
+- `unit-02-{slug}.md` — Unit 2 with frontmatter
+- `...`
+
+Each unit file contains:
+- YAML frontmatter with `status`, `depends_on`, and `branch`
+- Description of scope
+- Completion criteria (verifiable conditions)
 
 ## Constraints
 
@@ -101,7 +128,8 @@ Save to:
 ## Glossary
 
 - **Intent**: High-level statement of purpose that serves as starting point
-- **Unit**: Cohesive, independently deployable work element (like bounded contexts or epics)
+- **Unit**: Cohesive, independently deployable work element; named with numerical prefix + slug (e.g., `unit-01-data-collection`); can declare dependencies via `depends_on` forming a DAG
+- **Unit DAG**: Directed Acyclic Graph of unit dependencies enabling parallel execution (fan-out) and convergence (fan-in)
 - **Completion Criteria**: Programmatically verifiable conditions defining success
 - **Bolt**: Smallest iteration cycle (supervised, observed, or autonomous)
 
@@ -192,20 +220,35 @@ products based on purchase history and browsing behavior.
 
 ### Example Unit Decomposition
 
-| Unit | Scope | Dependencies |
-|------|-------|--------------|
-| Data Collection | Event capture, pipelines, user embeddings | None |
-| Recommendation Model | ML training, inference, A/B framework | Data Collection |
-| API Integration | Serving endpoint, catalog integration | Model |
-| Frontend Integration | Widget, analytics, accessibility | API |
+| Unit | Scope | depends_on |
+|------|-------|------------|
+| unit-01-data-collection | Event capture, pipelines, user embeddings | [] |
+| unit-02-model | ML training, inference, A/B framework | [unit-01-data-collection] |
+| unit-03-api | Serving endpoint, catalog integration | [] |
+| unit-04-frontend | Widget, analytics, accessibility | [unit-02-model, unit-03-api] |
+
+```
+unit-01-data-collection ──→ unit-02-model ──┐
+                                            ├──→ unit-04-frontend (fan-in)
+                       unit-03-api ─────────┘
+```
+
+unit-01 and unit-03 start in parallel (no dependencies). unit-02 waits for unit-01. unit-04 waits for BOTH unit-02 AND unit-03.
 
 ### Example Completion Criteria
 
 ```markdown
+---
+status: pending
+depends_on: []
+branch: ai-dlc/recommendation-engine/03-api
+---
+# unit-03-api
 
-## Unit: API Integration
+## Description
+Real-time serving API integrated with product catalog.
 
-### Completion Criteria
+## Completion Criteria
 
 - [ ] GET /recommendations/{userId} returns product list
 - [ ] Response includes product ID, name, price, relevance score
@@ -215,17 +258,16 @@ products based on purchase history and browsing behavior.
 - [ ] Authentication via existing JWT tokens
 - [ ] Coverage >80% for src/recommendations/
 - [ ] Security scan: no critical/high findings
-
 ```
 
 ### Example Mode Recommendations
 
 | Unit | Mode | Rationale |
 |------|------|-----------|
-| Data Collection | Autonomous | Clear criteria, established ETL patterns |
-| Recommendation Model | Supervised | Novel ML decisions, algorithm trade-offs |
-| API Integration | Autonomous | Standard REST patterns, clear criteria |
-| Frontend Integration | Observed | UX decisions, accessibility judgment |
+| unit-01-data-collection | Autonomous | Clear criteria, established ETL patterns |
+| unit-02-model | Supervised | Novel ML decisions, algorithm trade-offs |
+| unit-03-api | Autonomous | Standard REST patterns, clear criteria |
+| unit-04-frontend | Observed | UX decisions, accessibility judgment |
 
 ## Exit Criteria
 
@@ -243,10 +285,9 @@ You have:
 
 | Artifact | Location | Consumer |
 |----------|----------|----------|
-| Unit specifications | `specs/units/[name].md` | Construction phase |
-| Overview | `specs/overview.md` | All teams |
-| Risk register | `specs/risks.md` | All teams |
-| Integration contracts | `specs/contracts/` | Parallel Units |
+| Intent definition | `.ai-dlc/{intent-slug}/INTENT.md` | Construction phase |
+| Unit specifications | `.ai-dlc/{intent-slug}/unit-NN-{slug}.md` | Construction phase |
+| Dependency graph | Embedded in unit frontmatter (`depends_on`) | Orchestrator |
 
 ## Common Failure Modes
 

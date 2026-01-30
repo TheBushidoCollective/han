@@ -105,7 +105,3 @@ runbooks/
 
 - **jutsu-sop** - Standard operating procedures for AI agent workflows
 - **jutsu-markdown** - Markdown syntax and formatting skills
-
-## License
-
-MIT

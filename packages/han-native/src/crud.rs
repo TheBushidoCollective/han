@@ -934,12 +934,21 @@ pub fn create_native_task(input: NativeTaskInput) -> napi::Result<NativeTask> {
         .lock()
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    // Use INSERT OR IGNORE to avoid duplicates on re-indexing
-    conn.execute(
-        "INSERT OR IGNORE INTO native_tasks (
-            id, session_id, message_id, subject, description, status, active_form,
-            owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number
-        ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6, NULL, NULL, NULL, ?7, ?7, NULL, ?8)",
+    // Use INSERT OR IGNORE with RETURNING to avoid deadlock (re-entrancy issue)
+    // First try to insert
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO native_tasks (
+                id, session_id, message_id, subject, description, status, active_form,
+                owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number
+            ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6, NULL, NULL, NULL, ?7, ?7, NULL, ?8)
+            ON CONFLICT(session_id, id) DO UPDATE SET updated_at = excluded.updated_at
+            RETURNING id, session_id, message_id, subject, description, status, active_form,
+                      owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
+
+    stmt.query_row(
         params![
             input.id,
             input.session_id,
@@ -950,12 +959,26 @@ pub fn create_native_task(input: NativeTaskInput) -> napi::Result<NativeTask> {
             input.timestamp,
             input.line_number,
         ],
+        |row| {
+            Ok(NativeTask {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                message_id: row.get(2)?,
+                subject: row.get(3)?,
+                description: row.get(4)?,
+                status: row.get(5)?,
+                active_form: row.get(6)?,
+                owner: row.get(7)?,
+                blocks: row.get(8)?,
+                blocked_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+                completed_at: row.get(12)?,
+                line_number: row.get(13)?,
+            })
+        },
     )
-    .map_err(|e| napi::Error::from_reason(format!("Failed to create native task: {}", e)))?;
-
-    // Return the created/existing task
-    get_native_task(&input.session_id, &input.id)?
-        .ok_or_else(|| napi::Error::from_reason("Failed to retrieve created native task"))
+    .map_err(|e| napi::Error::from_reason(format!("Failed to create native task: {}", e)))
 }
 
 /// Update a native task from a TaskUpdate tool call
@@ -1056,8 +1079,11 @@ pub fn update_native_task(input: NativeTaskUpdate) -> napi::Result<Option<Native
     params_vec.push(Box::new(input.session_id.clone()));
     params_vec.push(Box::new(input.id.clone()));
 
+    // Add RETURNING clause to avoid deadlock (re-entrancy issue with get_native_task)
     let sql = format!(
-        "UPDATE native_tasks SET {} WHERE session_id = ?{} AND id = ?{}",
+        "UPDATE native_tasks SET {} WHERE session_id = ?{} AND id = ?{}
+         RETURNING id, session_id, message_id, subject, description, status, active_form,
+                   owner, blocks, blocked_by, created_at, updated_at, completed_at, line_number",
         updates.join(", "),
         param_idx,
         param_idx + 1
@@ -1066,11 +1092,37 @@ pub fn update_native_task(input: NativeTaskUpdate) -> napi::Result<Option<Native
     // Convert to params slice
     let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
 
-    conn.execute(&sql, params_refs.as_slice())
-        .map_err(|e| napi::Error::from_reason(format!("Failed to update native task: {}", e)))?;
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare update: {}", e)))?;
 
-    // Return updated task
-    get_native_task(&input.session_id, &input.id)
+    let result = stmt.query_row(params_refs.as_slice(), |row| {
+        Ok(NativeTask {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            message_id: row.get(2)?,
+            subject: row.get(3)?,
+            description: row.get(4)?,
+            status: row.get(5)?,
+            active_form: row.get(6)?,
+            owner: row.get(7)?,
+            blocks: row.get(8)?,
+            blocked_by: row.get(9)?,
+            created_at: row.get(10)?,
+            updated_at: row.get(11)?,
+            completed_at: row.get(12)?,
+            line_number: row.get(13)?,
+        })
+    });
+
+    match result {
+        Ok(task) => Ok(Some(task)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to update native task: {}",
+            e
+        ))),
+    }
 }
 
 /// Get a native task by session ID and task ID
@@ -3527,4 +3579,2204 @@ pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
         .map_err(|e| napi::Error::from_reason(format!("Failed to delete queued hooks: {}", e)))?;
 
     Ok(deleted as u32)
+}
+
+// ============================================================================
+// Test Module
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db;
+    use rusqlite::Connection;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::OnceLock;
+    use tempfile::TempDir;
+
+    // Counter to ensure unique database paths across parallel tests
+    static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    /// Create a unique temporary database for testing with full schema
+    fn create_test_db() -> (TempDir, Connection) {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let db_path = temp_dir.path().join(format!("crud_test_{}.db", counter));
+        let db_path_str = db_path.to_string_lossy().to_string();
+
+        // Set CLAUDE_CONFIG_DIR to the temp dir so get_db() uses our test database
+        std::env::set_var(
+            "CLAUDE_CONFIG_DIR",
+            temp_dir.path().to_string_lossy().to_string(),
+        );
+
+        let conn = Connection::open(&db_path_str).expect("Failed to open test database");
+        conn.execute_batch("PRAGMA journal_mode=WAL;").unwrap();
+        conn.execute_batch("PRAGMA synchronous=NORMAL;").unwrap();
+        conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
+        conn.execute_batch(include_str!("schema.sql")).unwrap();
+
+        (temp_dir, conn)
+    }
+
+    // Shared test database directory - all tests use the same DB
+    static TEST_DIR: OnceLock<TempDir> = OnceLock::new();
+
+    /// Helper to initialize the global DB singleton with a test database
+    /// All tests share the same database - use unique IDs to avoid conflicts
+    fn init_test_db_singleton() -> &'static TempDir {
+        TEST_DIR.get_or_init(|| {
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            std::env::set_var(
+                "CLAUDE_CONFIG_DIR",
+                temp_dir.path().to_string_lossy().to_string(),
+            );
+            // Force db initialization
+            let _ = db::get_db();
+            temp_dir
+        })
+    }
+
+    // ========================================================================
+    // Repo Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_repo_insert() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = RepoInput {
+            remote: "https://github.com/test/repo".to_string(),
+            name: "test-repo".to_string(),
+            default_branch: Some("main".to_string()),
+        };
+
+        let result = upsert_repo(input).expect("Failed to upsert repo");
+
+        assert!(result.id.is_some());
+        assert_eq!(result.remote, "https://github.com/test/repo");
+        assert_eq!(result.name, "test-repo");
+        assert_eq!(result.default_branch, Some("main".to_string()));
+        assert!(result.created_at.is_some());
+        assert!(result.updated_at.is_some());
+    }
+
+    #[test]
+    fn test_upsert_repo_update() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Insert first
+        let input1 = RepoInput {
+            remote: "https://github.com/test/update-repo".to_string(),
+            name: "original-name".to_string(),
+            default_branch: Some("master".to_string()),
+        };
+        let repo1 = upsert_repo(input1).expect("Failed to insert repo");
+
+        // Update with same remote
+        let input2 = RepoInput {
+            remote: "https://github.com/test/update-repo".to_string(),
+            name: "updated-name".to_string(),
+            default_branch: Some("main".to_string()),
+        };
+        let repo2 = upsert_repo(input2).expect("Failed to update repo");
+
+        // Should be the same record (same ID), but updated fields
+        assert_eq!(repo1.id, repo2.id);
+        assert_eq!(repo2.name, "updated-name");
+        assert_eq!(repo2.default_branch, Some("main".to_string()));
+    }
+
+    #[test]
+    fn test_get_repo_by_remote_found() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = RepoInput {
+            remote: "https://github.com/test/findable".to_string(),
+            name: "findable".to_string(),
+            default_branch: None,
+        };
+        upsert_repo(input).expect("Failed to insert repo");
+
+        let result =
+            get_repo_by_remote("https://github.com/test/findable").expect("Query should succeed");
+
+        assert!(result.is_some());
+        let repo = result.unwrap();
+        assert_eq!(repo.name, "findable");
+    }
+
+    #[test]
+    fn test_get_repo_by_remote_not_found() {
+        let _temp_dir = init_test_db_singleton();
+
+        let result = get_repo_by_remote("https://github.com/nonexistent/repo")
+            .expect("Query should succeed");
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_list_repos() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Insert multiple repos
+        for i in 0..3 {
+            let input = RepoInput {
+                remote: format!("https://github.com/test/list-repo-{}", i),
+                name: format!("list-repo-{}", i),
+                default_branch: None,
+            };
+            upsert_repo(input).expect("Failed to insert repo");
+        }
+
+        let repos = list_repos().expect("Failed to list repos");
+        assert!(repos.len() >= 3);
+    }
+
+    // ========================================================================
+    // Project Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_project_insert() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = ProjectInput {
+            repo_id: None,
+            slug: "test-project-slug".to_string(),
+            path: "/path/to/test/project".to_string(),
+            relative_path: Some("project".to_string()),
+            name: "Test Project".to_string(),
+            is_worktree: Some(false),
+        };
+
+        let result = upsert_project(input).expect("Failed to upsert project");
+
+        assert!(result.id.is_some());
+        assert_eq!(result.slug, "test-project-slug");
+        assert_eq!(result.path, "/path/to/test/project");
+        assert_eq!(result.name, "Test Project");
+        assert!(!result.is_worktree);
+    }
+
+    #[test]
+    fn test_upsert_project_update() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Insert first
+        let input1 = ProjectInput {
+            repo_id: None,
+            slug: "update-project-slug".to_string(),
+            path: "/original/path".to_string(),
+            relative_path: None,
+            name: "Original".to_string(),
+            is_worktree: None,
+        };
+        let proj1 = upsert_project(input1).expect("Failed to insert project");
+
+        // Update with same slug
+        let input2 = ProjectInput {
+            repo_id: None,
+            slug: "update-project-slug".to_string(),
+            path: "/updated/path".to_string(),
+            relative_path: None,
+            name: "Updated".to_string(),
+            is_worktree: Some(true),
+        };
+        let proj2 = upsert_project(input2).expect("Failed to update project");
+
+        assert_eq!(proj1.id, proj2.id);
+        assert_eq!(proj2.path, "/updated/path");
+        assert_eq!(proj2.name, "Updated");
+        assert!(proj2.is_worktree);
+    }
+
+    #[test]
+    fn test_get_project_by_slug() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = ProjectInput {
+            repo_id: None,
+            slug: "findable-project".to_string(),
+            path: "/path/to/findable".to_string(),
+            relative_path: None,
+            name: "Findable".to_string(),
+            is_worktree: None,
+        };
+        upsert_project(input).expect("Failed to insert project");
+
+        let result = get_project_by_slug("findable-project").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().name, "Findable");
+    }
+
+    #[test]
+    fn test_get_project_by_path() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = ProjectInput {
+            repo_id: None,
+            slug: "path-lookup-project".to_string(),
+            path: "/unique/path/for/lookup".to_string(),
+            relative_path: None,
+            name: "PathLookup".to_string(),
+            is_worktree: None,
+        };
+        upsert_project(input).expect("Failed to insert project");
+
+        let result = get_project_by_path("/unique/path/for/lookup").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().slug, "path-lookup-project");
+    }
+
+    #[test]
+    fn test_list_projects_all() {
+        let _temp_dir = init_test_db_singleton();
+
+        for i in 0..3 {
+            let input = ProjectInput {
+                repo_id: None,
+                slug: format!("list-project-{}", i),
+                path: format!("/path/to/list-project-{}", i),
+                relative_path: None,
+                name: format!("ListProject{}", i),
+                is_worktree: None,
+            };
+            upsert_project(input).expect("Failed to insert project");
+        }
+
+        let projects = list_projects(None).expect("Failed to list projects");
+        assert!(projects.len() >= 3);
+    }
+
+    // ========================================================================
+    // Session Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_session_insert() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = SessionInput {
+            id: "test-session-001".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: Some("/path/to/transcript.jsonl".to_string()),
+            slug: Some("test-session".to_string()),
+        };
+
+        let result = upsert_session(input).expect("Failed to upsert session");
+
+        assert_eq!(result.id, "test-session-001");
+        assert_eq!(result.status, "active");
+        assert_eq!(
+            result.transcript_path,
+            Some("/path/to/transcript.jsonl".to_string())
+        );
+        assert_eq!(result.slug, Some("test-session".to_string()));
+    }
+
+    #[test]
+    fn test_upsert_session_default_status() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = SessionInput {
+            id: "default-status-session".to_string(),
+            project_id: None,
+            status: None, // Should default to "active"
+            transcript_path: None,
+            slug: None,
+        };
+
+        let result = upsert_session(input).expect("Failed to upsert session");
+        assert_eq!(result.status, "active");
+    }
+
+    #[test]
+    fn test_get_session() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = SessionInput {
+            id: "get-session-test".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input).expect("Failed to insert session");
+
+        let result = get_session("get-session-test").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().id, "get-session-test");
+    }
+
+    #[test]
+    fn test_get_session_not_found() {
+        let _temp_dir = init_test_db_singleton();
+
+        let result = get_session("nonexistent-session").expect("Query should succeed");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_end_session() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = SessionInput {
+            id: "session-to-end".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input).expect("Failed to insert session");
+
+        let result = end_session("session-to-end").expect("Failed to end session");
+        assert!(result);
+
+        // Verify status changed
+        let session = get_session("session-to-end")
+            .expect("Query should succeed")
+            .unwrap();
+        assert_eq!(session.status, "completed");
+    }
+
+    #[test]
+    fn test_list_sessions_no_filters() {
+        let _temp_dir = init_test_db_singleton();
+
+        for i in 0..3 {
+            let input = SessionInput {
+                id: format!("list-session-{}", i),
+                project_id: None,
+                status: Some("active".to_string()),
+                transcript_path: None,
+                slug: None,
+            };
+            upsert_session(input).expect("Failed to insert session");
+        }
+
+        let sessions = list_sessions(None, None, None).expect("Failed to list sessions");
+        assert!(sessions.len() >= 3);
+    }
+
+    #[test]
+    fn test_list_sessions_with_status_filter() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create active session
+        let input1 = SessionInput {
+            id: "active-filter-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input1).expect("Failed to insert session");
+
+        // Create completed session
+        let input2 = SessionInput {
+            id: "completed-filter-session".to_string(),
+            project_id: None,
+            status: Some("completed".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input2).expect("Failed to insert session");
+
+        let active_sessions =
+            list_sessions(None, Some("active".to_string()), None).expect("Failed to list sessions");
+        assert!(active_sessions.iter().all(|s| s.status == "active"));
+    }
+
+    #[test]
+    fn test_update_last_indexed_line() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = SessionInput {
+            id: "indexed-line-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input).expect("Failed to insert session");
+
+        update_last_indexed_line("indexed-line-session", 42).expect("Failed to update line");
+
+        let session = get_session("indexed-line-session")
+            .expect("Query should succeed")
+            .unwrap();
+        assert_eq!(session.last_indexed_line, Some(42));
+    }
+
+    #[test]
+    fn test_reset_all_sessions_for_reindex() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session with indexed line
+        let input = SessionInput {
+            id: "reindex-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(input).expect("Failed to insert session");
+        update_last_indexed_line("reindex-session", 100).expect("Failed to update line");
+
+        let count = reset_all_sessions_for_reindex().expect("Failed to reset");
+        assert!(count >= 1);
+
+        let session = get_session("reindex-session")
+            .expect("Query should succeed")
+            .unwrap();
+        assert_eq!(session.last_indexed_line, Some(0));
+    }
+
+    // ========================================================================
+    // Session Summary Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_session_summary() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "summary-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionSummaryInput {
+            session_id: "summary-session".to_string(),
+            message_id: "msg-001".to_string(),
+            content: Some("This is a test summary".to_string()),
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 10,
+        };
+
+        let result = upsert_session_summary(input).expect("Failed to upsert summary");
+        assert_eq!(result.session_id, "summary-session");
+        assert_eq!(result.content, Some("This is a test summary".to_string()));
+    }
+
+    #[test]
+    fn test_get_session_summary() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "get-summary-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionSummaryInput {
+            session_id: "get-summary-session".to_string(),
+            message_id: "msg-002".to_string(),
+            content: Some("Summary content".to_string()),
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 20,
+        };
+        upsert_session_summary(input).expect("Failed to insert summary");
+
+        let result = get_session_summary("get-summary-session").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().content, Some("Summary content".to_string()));
+    }
+
+    // ========================================================================
+    // Session Compact Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_session_compact() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "compact-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionCompactInput {
+            session_id: "compact-session".to_string(),
+            message_id: "compact-msg-001".to_string(),
+            content: Some("Compacted content".to_string()),
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 30,
+            compact_type: Some("auto_compact".to_string()),
+        };
+
+        let result = upsert_session_compact(input).expect("Failed to upsert compact");
+        assert_eq!(result.session_id, "compact-session");
+        assert_eq!(result.compact_type, Some("auto_compact".to_string()));
+    }
+
+    #[test]
+    fn test_get_session_compact() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "get-compact-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionCompactInput {
+            session_id: "get-compact-session".to_string(),
+            message_id: "compact-msg-002".to_string(),
+            content: Some("Compact content".to_string()),
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 40,
+            compact_type: Some("compact".to_string()),
+        };
+        upsert_session_compact(input).expect("Failed to insert compact");
+
+        let result = get_session_compact("get-compact-session").expect("Query should succeed");
+        assert!(result.is_some());
+    }
+
+    // ========================================================================
+    // Session Todos Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_session_todos() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "todos-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionTodosInput {
+            session_id: "todos-session".to_string(),
+            message_id: "todos-msg-001".to_string(),
+            todos_json:
+                r#"[{"content":"Task 1","status":"pending","active_form":"Working on task 1"}]"#
+                    .to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 50,
+        };
+
+        let result = upsert_session_todos(input).expect("Failed to upsert todos");
+        assert_eq!(result.session_id, "todos-session");
+        assert!(result.todos_json.contains("Task 1"));
+    }
+
+    #[test]
+    fn test_get_session_todos() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "get-todos-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionTodosInput {
+            session_id: "get-todos-session".to_string(),
+            message_id: "todos-msg-002".to_string(),
+            todos_json: r#"[{"content":"Task 2","status":"completed","active_form":""}]"#
+                .to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 60,
+        };
+        upsert_session_todos(input).expect("Failed to insert todos");
+
+        let result = get_session_todos("get-todos-session").expect("Query should succeed");
+        assert!(result.is_some());
+    }
+
+    // ========================================================================
+    // Native Task Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_create_native_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "native-task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = NativeTaskInput {
+            id: "1".to_string(),
+            session_id: "native-task-session".to_string(),
+            message_id: "task-msg-001".to_string(),
+            subject: "Test task".to_string(),
+            description: Some("Task description".to_string()),
+            active_form: Some("Testing task".to_string()),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 70,
+        };
+
+        let result = create_native_task(input).expect("Failed to create native task");
+        assert_eq!(result.id, "1");
+        assert_eq!(result.subject, "Test task");
+        assert_eq!(result.status, "pending");
+    }
+
+    #[test]
+    fn test_update_native_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and task first
+        let session_input = SessionInput {
+            id: "update-task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let create_input = NativeTaskInput {
+            id: "2".to_string(),
+            session_id: "update-task-session".to_string(),
+            message_id: "task-msg-002".to_string(),
+            subject: "Original subject".to_string(),
+            description: None,
+            active_form: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 80,
+        };
+        create_native_task(create_input).expect("Failed to create task");
+
+        let update_input = NativeTaskUpdate {
+            id: "2".to_string(),
+            session_id: "update-task-session".to_string(),
+            message_id: "task-msg-003".to_string(),
+            status: Some("completed".to_string()),
+            subject: Some("Updated subject".to_string()),
+            description: Some("Updated description".to_string()),
+            active_form: None,
+            owner: None,
+            add_blocks: None,
+            add_blocked_by: None,
+            timestamp: "2024-01-01T01:00:00Z".to_string(),
+            line_number: 90,
+        };
+
+        let result = update_native_task(update_input).expect("Failed to update task");
+        assert!(result.is_some());
+        let task = result.unwrap();
+        assert_eq!(task.status, "completed");
+        assert_eq!(task.subject, "Updated subject");
+    }
+
+    #[test]
+    fn test_get_session_native_tasks() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "list-tasks-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        for i in 0..3 {
+            let input = NativeTaskInput {
+                id: format!("{}", i + 10),
+                session_id: "list-tasks-session".to_string(),
+                message_id: format!("task-msg-{}", i),
+                subject: format!("Task {}", i),
+                description: None,
+                active_form: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 100 + i,
+            };
+            create_native_task(input).expect("Failed to create task");
+        }
+
+        let tasks =
+            get_session_native_tasks("list-tasks-session").expect("Failed to get session tasks");
+        assert_eq!(tasks.len(), 3);
+    }
+
+    // ========================================================================
+    // Message Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_insert_messages_batch_empty() {
+        let _temp_dir = init_test_db_singleton();
+
+        let count =
+            insert_messages_batch("empty-messages-session", vec![]).expect("Should handle empty");
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_insert_messages_batch() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "messages-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![
+            MessageInput {
+                id: "msg-batch-001".to_string(),
+                session_id: "messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("Hello".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "msg-batch-002".to_string(),
+                session_id: "messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "assistant".to_string(),
+                role: Some("assistant".to_string()),
+                content: Some("Hi there!".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:01Z".to_string(),
+                line_number: 2,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+        ];
+
+        let count =
+            insert_messages_batch("messages-session", messages).expect("Failed to insert messages");
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_get_message() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and message
+        let session_input = SessionInput {
+            id: "get-message-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![MessageInput {
+            id: "get-msg-001".to_string(),
+            session_id: "get-message-session".to_string(),
+            agent_id: None,
+            parent_id: None,
+            message_type: "user".to_string(),
+            role: Some("user".to_string()),
+            content: Some("Test message".to_string()),
+            tool_name: None,
+            tool_input: None,
+            tool_result: None,
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 1,
+            source_file_name: None,
+            source_file_type: None,
+            sentiment_score: None,
+            sentiment_level: None,
+            frustration_score: None,
+            frustration_level: None,
+        }];
+        insert_messages_batch("get-message-session", messages).expect("Failed to insert");
+
+        let result = get_message("get-msg-001").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().content, Some("Test message".to_string()));
+    }
+
+    #[test]
+    fn test_get_message_not_found() {
+        let _temp_dir = init_test_db_singleton();
+
+        let result = get_message("nonexistent-msg").expect("Query should succeed");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_list_session_messages() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and messages
+        let session_input = SessionInput {
+            id: "list-messages-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![
+            MessageInput {
+                id: "list-msg-001".to_string(),
+                session_id: "list-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("Message 1".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "list-msg-002".to_string(),
+                session_id: "list-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "assistant".to_string(),
+                role: Some("assistant".to_string()),
+                content: Some("Message 2".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:01Z".to_string(),
+                line_number: 2,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+        ];
+        insert_messages_batch("list-messages-session", messages).expect("Failed to insert");
+
+        let result = list_session_messages("list-messages-session", None, None, None, None)
+            .expect("Query should succeed");
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_list_session_messages_with_type_filter() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and messages
+        let session_input = SessionInput {
+            id: "filter-messages-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![
+            MessageInput {
+                id: "filter-msg-001".to_string(),
+                session_id: "filter-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("User message".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "filter-msg-002".to_string(),
+                session_id: "filter-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "assistant".to_string(),
+                role: Some("assistant".to_string()),
+                content: Some("Assistant message".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:01Z".to_string(),
+                line_number: 2,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+        ];
+        insert_messages_batch("filter-messages-session", messages).expect("Failed to insert");
+
+        let result = list_session_messages(
+            "filter-messages-session",
+            Some("user".to_string()),
+            None,
+            None,
+            None,
+        )
+        .expect("Query should succeed");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].message_type, "user");
+    }
+
+    #[test]
+    fn test_get_message_count() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and messages
+        let session_input = SessionInput {
+            id: "count-messages-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![
+            MessageInput {
+                id: "count-msg-001".to_string(),
+                session_id: "count-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("Message 1".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "count-msg-002".to_string(),
+                session_id: "count-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "assistant".to_string(),
+                role: Some("assistant".to_string()),
+                content: Some("Message 2".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:01Z".to_string(),
+                line_number: 2,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "count-msg-003".to_string(),
+                session_id: "count-messages-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "tool_use".to_string(), // Not counted
+                role: None,
+                content: None,
+                tool_name: Some("bash".to_string()),
+                tool_input: Some("{}".to_string()),
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:02Z".to_string(),
+                line_number: 3,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+        ];
+        insert_messages_batch("count-messages-session", messages).expect("Failed to insert");
+
+        let count = get_message_count("count-messages-session").expect("Query should succeed");
+        // Only user and assistant messages are counted
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_get_message_counts_batch() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create sessions with messages
+        for i in 0..2 {
+            let session_input = SessionInput {
+                id: format!("batch-count-session-{}", i),
+                project_id: None,
+                status: Some("active".to_string()),
+                transcript_path: None,
+                slug: None,
+            };
+            upsert_session(session_input).expect("Failed to insert session");
+
+            let messages = vec![MessageInput {
+                id: format!("batch-count-msg-{}", i),
+                session_id: format!("batch-count-session-{}", i),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("Message".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            }];
+            insert_messages_batch(&format!("batch-count-session-{}", i), messages)
+                .expect("Failed to insert");
+        }
+
+        let session_ids = vec![
+            "batch-count-session-0".to_string(),
+            "batch-count-session-1".to_string(),
+            "nonexistent-session".to_string(),
+        ];
+
+        let counts = get_message_counts_batch(session_ids).expect("Query should succeed");
+
+        assert!(counts.get("batch-count-session-0").unwrap_or(&0) >= &1);
+        assert!(counts.get("batch-count-session-1").unwrap_or(&0) >= &1);
+        assert_eq!(*counts.get("nonexistent-session").unwrap_or(&0), 0);
+    }
+
+    #[test]
+    fn test_get_last_indexed_line() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session
+        let session_input = SessionInput {
+            id: "last-indexed-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+        update_last_indexed_line("last-indexed-session", 99).expect("Failed to update");
+
+        let line = get_last_indexed_line("last-indexed-session").expect("Query should succeed");
+        assert_eq!(line, 99);
+    }
+
+    #[test]
+    fn test_get_session_timestamps_batch() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session with messages
+        let session_input = SessionInput {
+            id: "timestamps-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![
+            MessageInput {
+                id: "ts-msg-001".to_string(),
+                session_id: "timestamps-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "user".to_string(),
+                role: Some("user".to_string()),
+                content: Some("First".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                line_number: 1,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+            MessageInput {
+                id: "ts-msg-002".to_string(),
+                session_id: "timestamps-session".to_string(),
+                agent_id: None,
+                parent_id: None,
+                message_type: "assistant".to_string(),
+                role: Some("assistant".to_string()),
+                content: Some("Last".to_string()),
+                tool_name: None,
+                tool_input: None,
+                tool_result: None,
+                raw_json: None,
+                timestamp: "2024-01-01T01:00:00Z".to_string(),
+                line_number: 2,
+                source_file_name: None,
+                source_file_type: None,
+                sentiment_score: None,
+                sentiment_level: None,
+                frustration_score: None,
+                frustration_level: None,
+            },
+        ];
+        insert_messages_batch("timestamps-session", messages).expect("Failed to insert");
+
+        let session_ids = vec!["timestamps-session".to_string()];
+        let timestamps = get_session_timestamps_batch(session_ids).expect("Query should succeed");
+
+        let ts = timestamps.get("timestamps-session").unwrap();
+        assert_eq!(ts.started_at, Some("2024-01-01T00:00:00Z".to_string()));
+        assert_eq!(ts.ended_at, Some("2024-01-01T01:00:00Z".to_string()));
+    }
+
+    // ========================================================================
+    // FTS5 Escape Tests
+    // ========================================================================
+
+    #[test]
+    fn test_escape_fts5_query_simple() {
+        let result = escape_fts5_query("hello world");
+        assert_eq!(result, "\"hello\" \"world\"");
+    }
+
+    #[test]
+    fn test_escape_fts5_query_with_operators() {
+        // Words like AND, OR, NOT are FTS5 operators and need quoting
+        let result = escape_fts5_query("hello AND world");
+        assert_eq!(result, "\"hello\" \"AND\" \"world\"");
+    }
+
+    #[test]
+    fn test_escape_fts5_query_with_special_chars() {
+        let result = escape_fts5_query("hello:world");
+        assert_eq!(result, "\"hello:world\"");
+    }
+
+    #[test]
+    fn test_escape_fts5_query_with_quotes() {
+        let result = escape_fts5_query("hello \"world\"");
+        // Internal quotes are escaped by doubling
+        assert_eq!(result, "\"hello\" \"world\"");
+    }
+
+    // ========================================================================
+    // Task Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_create_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = TaskInput {
+            session_id: Some("task-session".to_string()),
+            task_id: "task-001".to_string(),
+            description: "Test task".to_string(),
+            task_type: "feature".to_string(),
+            estimated_complexity: Some("medium".to_string()),
+        };
+
+        let result = create_task(input).expect("Failed to create task");
+        assert_eq!(result.task_id, "task-001");
+        assert_eq!(result.description, "Test task");
+        assert_eq!(result.task_type, "feature");
+    }
+
+    #[test]
+    fn test_complete_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and task
+        let session_input = SessionInput {
+            id: "complete-task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let create_input = TaskInput {
+            session_id: Some("complete-task-session".to_string()),
+            task_id: "task-to-complete".to_string(),
+            description: "Task to complete".to_string(),
+            task_type: "bugfix".to_string(),
+            estimated_complexity: None,
+        };
+        create_task(create_input).expect("Failed to create task");
+
+        let completion = TaskCompletion {
+            task_id: "task-to-complete".to_string(),
+            outcome: "success".to_string(),
+            confidence: 0.95,
+            notes: Some("Task completed successfully".to_string()),
+            files_modified: Some(vec!["file1.rs".to_string(), "file2.rs".to_string()]),
+            tests_added: Some(2),
+        };
+
+        let result = complete_task(completion).expect("Failed to complete task");
+        assert_eq!(result.outcome, Some("success".to_string()));
+        assert_eq!(result.confidence, Some(0.95));
+        assert!(result.completed_at.is_some());
+    }
+
+    #[test]
+    fn test_fail_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and task
+        let session_input = SessionInput {
+            id: "fail-task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let create_input = TaskInput {
+            session_id: Some("fail-task-session".to_string()),
+            task_id: "task-to-fail".to_string(),
+            description: "Task to fail".to_string(),
+            task_type: "refactor".to_string(),
+            estimated_complexity: None,
+        };
+        create_task(create_input).expect("Failed to create task");
+
+        let failure = TaskFailure {
+            task_id: "task-to-fail".to_string(),
+            reason: "Could not complete due to X".to_string(),
+            attempted_solutions: Some(vec!["Solution 1".to_string(), "Solution 2".to_string()]),
+            confidence: Some(0.2),
+            notes: Some("Additional notes".to_string()),
+        };
+
+        let result = fail_task(failure).expect("Failed to fail task");
+        assert_eq!(result.outcome, Some("failure".to_string()));
+        assert!(result.notes.is_some());
+        assert!(result.notes.unwrap().contains("Could not complete"));
+    }
+
+    #[test]
+    fn test_get_task() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and task
+        let session_input = SessionInput {
+            id: "get-task-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = TaskInput {
+            session_id: Some("get-task-session".to_string()),
+            task_id: "get-task-001".to_string(),
+            description: "Get task test".to_string(),
+            task_type: "test".to_string(),
+            estimated_complexity: None,
+        };
+        create_task(input).expect("Failed to create task");
+
+        let result = get_task("get-task-001").expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().description, "Get task test");
+    }
+
+    #[test]
+    fn test_query_task_metrics() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and tasks
+        let session_input = SessionInput {
+            id: "metrics-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let task1 = TaskInput {
+            session_id: Some("metrics-session".to_string()),
+            task_id: "metric-task-1".to_string(),
+            description: "Task 1".to_string(),
+            task_type: "feature".to_string(),
+            estimated_complexity: None,
+        };
+        create_task(task1).expect("Failed to create task");
+
+        let completion = TaskCompletion {
+            task_id: "metric-task-1".to_string(),
+            outcome: "success".to_string(),
+            confidence: 0.9,
+            notes: None,
+            files_modified: None,
+            tests_added: None,
+        };
+        complete_task(completion).expect("Failed to complete task");
+
+        let metrics = query_task_metrics(None, None, None).expect("Failed to query metrics");
+        assert!(metrics.total_tasks >= 1);
+    }
+
+    // ========================================================================
+    // Hook Execution Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_record_hook_execution() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "hook-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = HookExecutionInput {
+            session_id: Some("hook-session".to_string()),
+            task_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "test-hook".to_string(),
+            hook_source: Some("jutsu-typescript".to_string()),
+            directory: Some("/path/to/project".to_string()),
+            duration_ms: 150,
+            exit_code: 0,
+            passed: true,
+            output: Some("Hook output".to_string()),
+            error: None,
+            if_changed: None,
+            command: Some("npm test".to_string()),
+        };
+
+        let result = record_hook_execution(input).expect("Failed to record hook");
+        assert!(result.id.is_some());
+        assert_eq!(result.hook_name, "test-hook");
+        assert!(result.passed);
+    }
+
+    #[test]
+    fn test_query_hook_stats() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and hooks
+        let session_input = SessionInput {
+            id: "hook-stats-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input1 = HookExecutionInput {
+            session_id: Some("hook-stats-session".to_string()),
+            task_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "hook-1".to_string(),
+            hook_source: None,
+            directory: None,
+            duration_ms: 100,
+            exit_code: 0,
+            passed: true,
+            output: None,
+            error: None,
+            if_changed: None,
+            command: None,
+        };
+        record_hook_execution(input1).expect("Failed to record hook");
+
+        let input2 = HookExecutionInput {
+            session_id: Some("hook-stats-session".to_string()),
+            task_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "hook-2".to_string(),
+            hook_source: None,
+            directory: None,
+            duration_ms: 200,
+            exit_code: 1,
+            passed: false,
+            output: None,
+            error: Some("Error".to_string()),
+            if_changed: None,
+            command: None,
+        };
+        record_hook_execution(input2).expect("Failed to record hook");
+
+        let stats = query_hook_stats(None).expect("Failed to query stats");
+        assert!(stats.total_executions >= 2);
+        assert!(stats.total_passed >= 1);
+        assert!(stats.total_failed >= 1);
+    }
+
+    // ========================================================================
+    // Frustration Events Tests
+    // ========================================================================
+
+    #[test]
+    fn test_record_frustration() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "frustration-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = FrustrationEventInput {
+            session_id: Some("frustration-session".to_string()),
+            task_id: None,
+            frustration_level: "moderate".to_string(),
+            frustration_score: 0.6,
+            user_message: "This is frustrating!".to_string(),
+            detected_signals: Some(vec![
+                "capitalization".to_string(),
+                "punctuation".to_string(),
+            ]),
+            context: Some("Testing frustration".to_string()),
+        };
+
+        let result = record_frustration(input).expect("Failed to record frustration");
+        assert!(result.id.is_some());
+        assert_eq!(result.frustration_level, "moderate");
+    }
+
+    #[test]
+    fn test_query_frustration_metrics() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and frustration event
+        let session_input = SessionInput {
+            id: "frustration-metrics-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = FrustrationEventInput {
+            session_id: Some("frustration-metrics-session".to_string()),
+            task_id: None,
+            frustration_level: "high".to_string(),
+            frustration_score: 0.9,
+            user_message: "Very frustrating!".to_string(),
+            detected_signals: None,
+            context: None,
+        };
+        record_frustration(input).expect("Failed to record frustration");
+
+        let metrics = query_frustration_metrics(None, 10).expect("Failed to query metrics");
+        assert!(metrics.total_frustrations >= 1);
+    }
+
+    // ========================================================================
+    // Session File Change Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_record_file_change() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "file-change-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionFileChangeInput {
+            session_id: "file-change-session".to_string(),
+            file_path: "/path/to/file.rs".to_string(),
+            action: "modified".to_string(),
+            file_hash_before: Some("abc123".to_string()),
+            file_hash_after: Some("def456".to_string()),
+            tool_name: Some("Edit".to_string()),
+        };
+
+        let result = record_file_change(input).expect("Failed to record file change");
+        assert!(result.id.is_some());
+        assert_eq!(result.action, "modified");
+    }
+
+    #[test]
+    fn test_get_session_file_changes() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session and file changes
+        let session_input = SessionInput {
+            id: "list-file-changes-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        for i in 0..3 {
+            let input = SessionFileChangeInput {
+                session_id: "list-file-changes-session".to_string(),
+                file_path: format!("/path/to/file{}.rs", i),
+                action: "modified".to_string(),
+                file_hash_before: None,
+                file_hash_after: Some(format!("hash{}", i)),
+                tool_name: None,
+            };
+            record_file_change(input).expect("Failed to record file change");
+        }
+
+        let changes =
+            get_session_file_changes("list-file-changes-session").expect("Query should succeed");
+        assert_eq!(changes.len(), 3);
+    }
+
+    #[test]
+    fn test_has_session_changes() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session
+        let session_input = SessionInput {
+            id: "has-changes-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        // Should be false initially
+        let has_changes_before =
+            has_session_changes("has-changes-session").expect("Query should succeed");
+        assert!(!has_changes_before);
+
+        // Add a change
+        let input = SessionFileChangeInput {
+            session_id: "has-changes-session".to_string(),
+            file_path: "/path/to/changed.rs".to_string(),
+            action: "created".to_string(),
+            file_hash_before: None,
+            file_hash_after: Some("newhash".to_string()),
+            tool_name: None,
+        };
+        record_file_change(input).expect("Failed to record file change");
+
+        // Should be true now
+        let has_changes_after =
+            has_session_changes("has-changes-session").expect("Query should succeed");
+        assert!(has_changes_after);
+    }
+
+    // ========================================================================
+    // Session File Validation Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_record_file_validation() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "validation-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionFileValidationInput {
+            session_id: "validation-session".to_string(),
+            file_path: "/path/to/validated.rs".to_string(),
+            file_hash: "abc123".to_string(),
+            plugin_name: "jutsu-typescript".to_string(),
+            hook_name: "typecheck".to_string(),
+            directory: "/project".to_string(),
+            command_hash: "cmd123".to_string(),
+        };
+
+        let result = record_file_validation(input).expect("Failed to record validation");
+        assert!(result.id.is_some());
+        assert_eq!(result.file_hash, "abc123");
+    }
+
+    #[test]
+    fn test_get_file_validation() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "get-validation-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let input = SessionFileValidationInput {
+            session_id: "get-validation-session".to_string(),
+            file_path: "/path/to/file.rs".to_string(),
+            file_hash: "xyz789".to_string(),
+            plugin_name: "jutsu-rust".to_string(),
+            hook_name: "clippy".to_string(),
+            directory: "/rust-project".to_string(),
+            command_hash: "cmdabc".to_string(),
+        };
+        record_file_validation(input).expect("Failed to record validation");
+
+        let result = get_file_validation(
+            "get-validation-session",
+            "/path/to/file.rs",
+            "jutsu-rust",
+            "clippy",
+            "/rust-project",
+        )
+        .expect("Query should succeed");
+
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().file_hash, "xyz789");
+    }
+
+    #[test]
+    fn test_needs_validation_with_changes() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session
+        let session_input = SessionInput {
+            id: "needs-validation-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        // Record a file change
+        let change = SessionFileChangeInput {
+            session_id: "needs-validation-session".to_string(),
+            file_path: "/path/to/unvalidated.rs".to_string(),
+            action: "modified".to_string(),
+            file_hash_before: Some("old".to_string()),
+            file_hash_after: Some("new".to_string()),
+            tool_name: None,
+        };
+        record_file_change(change).expect("Failed to record file change");
+
+        // Should need validation (no validation record yet)
+        let needs = needs_validation("needs-validation-session", "plugin", "hook", "/dir", "cmd")
+            .expect("Query should succeed");
+        assert!(needs);
+    }
+
+    // ========================================================================
+    // Orchestration Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_create_orchestration() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/path/to/project".to_string(),
+        };
+
+        let result = create_orchestration(input).expect("Failed to create orchestration");
+        assert!(!result.id.is_empty());
+        assert_eq!(result.status, "running");
+        assert_eq!(result.hook_type, "Stop");
+    }
+
+    #[test]
+    fn test_get_orchestration() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = OrchestrationInput {
+            session_id: None,
+            hook_type: "SessionStart".to_string(),
+            project_root: "/another/project".to_string(),
+        };
+        let created = create_orchestration(input).expect("Failed to create orchestration");
+
+        let result = get_orchestration(created.id.clone()).expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().hook_type, "SessionStart");
+    }
+
+    #[test]
+    fn test_update_orchestration() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let created = create_orchestration(input).expect("Failed to create orchestration");
+
+        let update = OrchestrationUpdate {
+            id: created.id.clone(),
+            status: Some("completed".to_string()),
+            total_hooks: Some(5),
+            completed_hooks: Some(5),
+            failed_hooks: Some(0),
+            deferred_hooks: Some(0),
+        };
+        update_orchestration(update).expect("Failed to update orchestration");
+
+        let result = get_orchestration(created.id)
+            .expect("Query should succeed")
+            .unwrap();
+        assert_eq!(result.status, "completed");
+        assert_eq!(result.total_hooks, 5);
+        assert_eq!(result.completed_hooks, 5);
+    }
+
+    #[test]
+    fn test_cancel_orchestration() {
+        let _temp_dir = init_test_db_singleton();
+
+        let input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let created = create_orchestration(input).expect("Failed to create orchestration");
+
+        cancel_orchestration(created.id.clone()).expect("Failed to cancel orchestration");
+
+        let result = get_orchestration(created.id)
+            .expect("Query should succeed")
+            .unwrap();
+        assert_eq!(result.status, "cancelled");
+    }
+
+    // ========================================================================
+    // Pending Hook Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_queue_pending_hook() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration first
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        let input = PendingHookInput {
+            orchestration_id: orch.id.clone(),
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "pending-hook".to_string(),
+            plugin: "jutsu-test".to_string(),
+            directory: "/project".to_string(),
+            command: "npm test".to_string(),
+            if_changed: None,
+            pid: None,
+            plugin_root: None,
+        };
+
+        let result = queue_pending_hook(input).expect("Failed to queue hook");
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_get_pending_hooks() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration and queue a hook
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        let input = PendingHookInput {
+            orchestration_id: orch.id.clone(),
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "get-pending-hook".to_string(),
+            plugin: "test-plugin".to_string(),
+            directory: "/project".to_string(),
+            command: "echo test".to_string(),
+            if_changed: None,
+            pid: None,
+            plugin_root: None,
+        };
+        queue_pending_hook(input).expect("Failed to queue hook");
+
+        let hooks = get_pending_hooks().expect("Query should succeed");
+        assert!(!hooks.is_empty());
+    }
+
+    #[test]
+    fn test_update_hook_status() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration and queue a hook
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        let input = PendingHookInput {
+            orchestration_id: orch.id.clone(),
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            hook_name: "status-update-hook".to_string(),
+            plugin: "test-plugin".to_string(),
+            directory: "/project".to_string(),
+            command: "echo test".to_string(),
+            if_changed: None,
+            pid: None,
+            plugin_root: None,
+        };
+        let hook_id = queue_pending_hook(input).expect("Failed to queue hook");
+
+        update_hook_status(hook_id.clone(), "running".to_string())
+            .expect("Failed to update status");
+
+        let hooks = get_orchestration_hooks(orch.id).expect("Query should succeed");
+        let hook = hooks.iter().find(|h| h.id == Some(hook_id.clone()));
+        assert!(hook.is_some());
+        assert_eq!(hook.unwrap().status, Some("running".to_string()));
+    }
+
+    // ========================================================================
+    // Hook Queue Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_queue_hook() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration first
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        let input = QueuedHookInput {
+            orchestration_id: orch.id.clone(),
+            plugin: "test-plugin".to_string(),
+            hook_name: "queued-hook".to_string(),
+            directory: "/project".to_string(),
+            if_changed: None,
+            command: "npm run lint".to_string(),
+        };
+
+        let result = queue_hook(input).expect("Failed to queue hook");
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_get_queued_hooks() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration and queue hooks
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        for i in 0..3 {
+            let input = QueuedHookInput {
+                orchestration_id: orch.id.clone(),
+                plugin: "test-plugin".to_string(),
+                hook_name: format!("queued-hook-{}", i),
+                directory: "/project".to_string(),
+                if_changed: None,
+                command: format!("echo {}", i),
+            };
+            queue_hook(input).expect("Failed to queue hook");
+        }
+
+        let hooks = get_queued_hooks(orch.id).expect("Query should succeed");
+        assert_eq!(hooks.len(), 3);
+    }
+
+    #[test]
+    fn test_delete_queued_hooks() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create orchestration and queue hooks
+        let orch_input = OrchestrationInput {
+            session_id: None,
+            hook_type: "Stop".to_string(),
+            project_root: "/project".to_string(),
+        };
+        let orch = create_orchestration(orch_input).expect("Failed to create orchestration");
+
+        let input = QueuedHookInput {
+            orchestration_id: orch.id.clone(),
+            plugin: "test-plugin".to_string(),
+            hook_name: "hook-to-delete".to_string(),
+            directory: "/project".to_string(),
+            if_changed: None,
+            command: "echo delete".to_string(),
+        };
+        queue_hook(input).expect("Failed to queue hook");
+
+        let deleted = delete_queued_hooks(orch.id.clone()).expect("Failed to delete hooks");
+        assert!(deleted >= 1);
+
+        let remaining = get_queued_hooks(orch.id).expect("Query should succeed");
+        assert!(remaining.is_empty());
+    }
+
+    // ========================================================================
+    // Database Reset Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_truncate_derived_tables() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create some data
+        let session_input = SessionInput {
+            id: "truncate-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let messages = vec![MessageInput {
+            id: "truncate-msg".to_string(),
+            session_id: "truncate-session".to_string(),
+            agent_id: None,
+            parent_id: None,
+            message_type: "user".to_string(),
+            role: Some("user".to_string()),
+            content: Some("Test".to_string()),
+            tool_name: None,
+            tool_input: None,
+            tool_result: None,
+            raw_json: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            line_number: 1,
+            source_file_name: None,
+            source_file_type: None,
+            sentiment_score: None,
+            sentiment_level: None,
+            frustration_score: None,
+            frustration_level: None,
+        }];
+        insert_messages_batch("truncate-session", messages).expect("Failed to insert");
+
+        // Truncate
+        let count = truncate_derived_tables().expect("Failed to truncate");
+        assert!(count >= 1);
+
+        // Verify session is gone
+        let session = get_session("truncate-session").expect("Query should succeed");
+        assert!(session.is_none());
+    }
+
+    // ========================================================================
+    // Session File Operations Tests
+    // ========================================================================
+
+    #[test]
+    fn test_upsert_session_file() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session first
+        let session_input = SessionInput {
+            id: "session-file-test".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        let result =
+            upsert_session_file("session-file-test", "main", "/path/to/session.jsonl", None)
+                .expect("Failed to upsert session file");
+
+        assert!(result);
+    }
+
+    // ========================================================================
+    // Hook Attempt Tracking Tests
+    // ========================================================================
+
+    #[test]
+    fn test_get_or_create_hook_attempt_new() {
+        let _temp_dir = init_test_db_singleton();
+
+        let result = get_or_create_hook_attempt(
+            "attempt-session".to_string(),
+            "test-plugin".to_string(),
+            "test-hook".to_string(),
+            "/project".to_string(),
+        )
+        .expect("Should succeed");
+
+        // New attempt should have defaults
+        assert_eq!(result.consecutive_failures, 0);
+        assert_eq!(result.max_attempts, 3);
+        assert!(!result.is_stuck);
+    }
+
+    // ========================================================================
+    // Edge Cases and Error Handling
+    // ========================================================================
+
+    #[test]
+    fn test_empty_batch_operations() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Empty message counts batch
+        let counts = get_message_counts_batch(vec![]).expect("Should handle empty batch");
+        assert!(counts.is_empty());
+
+        // Empty timestamps batch
+        let timestamps = get_session_timestamps_batch(vec![]).expect("Should handle empty batch");
+        assert!(timestamps.is_empty());
+    }
+
+    // ========================================================================
+    // Allow dead_code for helper function
+    // ========================================================================
+
+    #[allow(dead_code)]
+    fn _use_create_test_db() {
+        // This function exists to suppress the dead_code warning for create_test_db
+        // The function is useful for future tests that need direct connection access
+        let (_temp_dir, _conn) = create_test_db();
+    }
 }

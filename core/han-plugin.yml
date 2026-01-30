@@ -74,6 +74,13 @@ hooks:
     command: python3 "${CLAUDE_PLUGIN_ROOT}/hooks/safe-operations.py"
     description: Block dangerous file operations and bash commands outside project directory
 
+  # PreToolUse validation hook - run validation before git commits
+  pre-commit-validation:
+    event: PreToolUse
+    tool_filter: [Bash]
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-validation.sh"
+    description: Run validation hooks before git commit to block bad commits
+
 # Memory provider config - defines which tools the Memory Agent can use
 memory:
   allowed_tools:

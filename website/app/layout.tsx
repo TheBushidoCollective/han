@@ -3,7 +3,6 @@ import "./globals.css";
 import Analytics from "./components/Analytics";
 import Footer from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { ThemeToggle } from "./components/ThemeToggle";
 
 export const metadata: Metadata = {
 	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",

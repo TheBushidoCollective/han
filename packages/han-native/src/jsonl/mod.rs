@@ -807,7 +807,859 @@ fn days_from_epoch(year: i32, month: u32, day: u32) -> Option<i64> {
     let (y, m) = if m <= 2 { (y - 1, m + 12) } else { (y, m) };
 
     // Days calculation (formula for Gregorian calendar)
-    let days = 365 * y + y / 4 - y / 100 + y / 400 + (153 * (m - 3) + 2) / 5 + d - 719528;
+    // 719469 is the offset to make 1970-01-01 = day 0 (Unix epoch)
+    let days = 365 * y + y / 4 - y / 100 + y / 400 + (153 * (m - 3) + 2) / 5 + d - 719469;
 
     Some(days)
+}
+
+// ============================================================================
+// Unit Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // ========================================================================
+    // Helper Functions for Tests
+    // ========================================================================
+
+    /// Create a temporary JSONL file with the given content
+    fn create_temp_jsonl(content: &str) -> NamedTempFile {
+        let mut file = NamedTempFile::new().expect("Failed to create temp file");
+        file.write_all(content.as_bytes())
+            .expect("Failed to write to temp file");
+        file.flush().expect("Failed to flush temp file");
+        file
+    }
+
+    /// Create sample JSONL content with multiple events
+    fn sample_jsonl_content() -> &'static str {
+        r#"{"type":"user","message":"Hello world","timestamp":"2024-01-15T10:30:00Z"}
+{"type":"assistant","message":"Hi there!","timestamp":"2024-01-15T10:30:05Z"}
+{"type":"tool_use","name":"read_file","input":{"path":"/test.txt"},"timestamp":"2024-01-15T10:30:10Z"}
+{"type":"tool_result","content":"file contents here","timestamp":"2024-01-15T10:30:11Z"}
+{"type":"assistant","message":"I found the file.","timestamp":"2024-01-15T10:30:15Z"}
+"#
+    }
+
+    // ========================================================================
+    // Line Counting Tests
+    // ========================================================================
+
+    #[test]
+    fn test_count_lines_empty_file() {
+        let file = create_temp_jsonl("");
+        let count = jsonl_count_lines(file.path().to_string_lossy().to_string()).unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_count_lines_single_line_with_newline() {
+        let file = create_temp_jsonl("{\"type\":\"test\"}\n");
+        let count = jsonl_count_lines(file.path().to_string_lossy().to_string()).unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_count_lines_single_line_no_newline() {
+        let file = create_temp_jsonl("{\"type\":\"test\"}");
+        let count = jsonl_count_lines(file.path().to_string_lossy().to_string()).unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_count_lines_multiple_lines() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let count = jsonl_count_lines(file.path().to_string_lossy().to_string()).unwrap();
+        assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn test_count_lines_nonexistent_file() {
+        let result = jsonl_count_lines("/nonexistent/path/file.jsonl".to_string());
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Stats Tests
+    // ========================================================================
+
+    #[test]
+    fn test_stats_basic() {
+        let content = sample_jsonl_content();
+        let file = create_temp_jsonl(content);
+        let stats = jsonl_stats(file.path().to_string_lossy().to_string()).unwrap();
+
+        assert_eq!(stats.line_count, 5);
+        assert_eq!(stats.file_size, content.len() as i64);
+        assert!(!stats.has_index);
+        assert!(!stats.index_stale);
+    }
+
+    #[test]
+    fn test_stats_with_index() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        // Build and save index
+        let index = jsonl_build_index(path.clone()).unwrap();
+        jsonl_save_index(index).unwrap();
+
+        // Check stats now shows index exists
+        let stats = jsonl_stats(path.clone()).unwrap();
+        assert!(stats.has_index);
+
+        // Clean up index file
+        let index_path = format!("{}.idx", path);
+        std::fs::remove_file(&index_path).ok();
+    }
+
+    // ========================================================================
+    // Pagination Tests
+    // ========================================================================
+
+    #[test]
+    fn test_read_page_first_page() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 2).unwrap();
+
+        assert_eq!(result.lines.len(), 2);
+        assert_eq!(result.total_lines, 5);
+        assert!(result.has_more);
+        assert_eq!(result.next_offset, 2);
+        assert_eq!(result.lines[0].line_number, 0);
+        assert_eq!(result.lines[1].line_number, 1);
+    }
+
+    #[test]
+    fn test_read_page_middle_page() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 2, 2).unwrap();
+
+        assert_eq!(result.lines.len(), 2);
+        assert!(result.has_more);
+        assert_eq!(result.lines[0].line_number, 2);
+        assert_eq!(result.lines[1].line_number, 3);
+    }
+
+    #[test]
+    fn test_read_page_last_page() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 4, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 1);
+        assert!(!result.has_more);
+        assert_eq!(result.lines[0].line_number, 4);
+    }
+
+    #[test]
+    fn test_read_page_offset_beyond_file() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 100, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 0);
+        assert!(!result.has_more);
+    }
+
+    #[test]
+    fn test_read_page_empty_file() {
+        let file = create_temp_jsonl("");
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 0);
+        assert_eq!(result.total_lines, 0);
+        assert!(!result.has_more);
+    }
+
+    #[test]
+    fn test_read_page_skips_empty_lines() {
+        let content = "{\"type\":\"a\"}\n\n{\"type\":\"b\"}\n";
+        let file = create_temp_jsonl(content);
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        // Should skip the empty line in the middle
+        assert_eq!(result.lines.len(), 2);
+    }
+
+    #[test]
+    fn test_read_page_file_without_trailing_newline() {
+        let content = "{\"type\":\"a\"}\n{\"type\":\"b\"}";
+        let file = create_temp_jsonl(content);
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 2);
+        assert_eq!(result.total_lines, 2);
+    }
+
+    // ========================================================================
+    // Reverse Reading Tests
+    // ========================================================================
+
+    #[test]
+    fn test_read_reverse_basic() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let lines = jsonl_read_reverse(file.path().to_string_lossy().to_string(), 3).unwrap();
+
+        assert_eq!(lines.len(), 3);
+        // Lines should be in reverse order (most recent first)
+        assert_eq!(lines[0].line_number, 4);
+        assert_eq!(lines[1].line_number, 3);
+        assert_eq!(lines[2].line_number, 2);
+    }
+
+    #[test]
+    fn test_read_reverse_limit_exceeds_file() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let lines = jsonl_read_reverse(file.path().to_string_lossy().to_string(), 100).unwrap();
+
+        assert_eq!(lines.len(), 5);
+    }
+
+    #[test]
+    fn test_read_reverse_empty_file() {
+        let file = create_temp_jsonl("");
+        let lines = jsonl_read_reverse(file.path().to_string_lossy().to_string(), 10).unwrap();
+
+        assert_eq!(lines.len(), 0);
+    }
+
+    // ========================================================================
+    // Index Building and Loading Tests
+    // ========================================================================
+
+    #[test]
+    fn test_build_index() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+        let index = jsonl_build_index(path.clone()).unwrap();
+
+        assert_eq!(index.file_path, path);
+        assert_eq!(index.line_offsets.len(), 5);
+        assert_eq!(index.line_offsets[0], 0);
+        assert!(index.file_size > 0);
+        assert!(index.file_mtime > 0);
+    }
+
+    #[test]
+    fn test_save_and_load_index() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        // Build and save
+        let index = jsonl_build_index(path.clone()).unwrap();
+        jsonl_save_index(index.clone()).unwrap();
+
+        // Load
+        let loaded = jsonl_load_index(path.clone()).unwrap();
+        assert!(loaded.is_some());
+
+        let loaded = loaded.unwrap();
+        assert_eq!(loaded.file_path, path);
+        assert_eq!(loaded.line_offsets, index.line_offsets);
+        assert_eq!(loaded.file_mtime, index.file_mtime);
+        assert_eq!(loaded.file_size, index.file_size);
+
+        // Clean up
+        let index_path = format!("{}.idx", path);
+        std::fs::remove_file(&index_path).ok();
+    }
+
+    #[test]
+    fn test_load_index_nonexistent() {
+        let result = jsonl_load_index("/nonexistent/file.jsonl".to_string()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_load_index_invalid_magic() {
+        let file = create_temp_jsonl("not a valid index");
+        let path = file.path().to_string_lossy().to_string();
+
+        // Create a fake .idx file
+        let index_path = format!("{}.idx", path);
+        std::fs::write(&index_path, b"FAKE").unwrap();
+
+        let result = jsonl_load_index(path).unwrap();
+        assert!(result.is_none());
+
+        std::fs::remove_file(&index_path).ok();
+    }
+
+    // ========================================================================
+    // Indexed Reading Tests
+    // ========================================================================
+
+    #[test]
+    fn test_read_indexed_specific_lines() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        let index = jsonl_build_index(path.clone()).unwrap();
+        let lines = jsonl_read_indexed(path, index, vec![0, 2, 4]).unwrap();
+
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0].line_number, 0);
+        assert_eq!(lines[1].line_number, 2);
+        assert_eq!(lines[2].line_number, 4);
+    }
+
+    #[test]
+    fn test_read_indexed_out_of_bounds() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        let index = jsonl_build_index(path.clone()).unwrap();
+        let lines = jsonl_read_indexed(path, index, vec![0, 100, 200]).unwrap();
+
+        // Only line 0 should be returned, others are out of bounds
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].line_number, 0);
+    }
+
+    // ========================================================================
+    // Filter Tests
+    // ========================================================================
+
+    #[test]
+    fn test_filter_eq() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "eq".to_string(),
+                value: "assistant".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 2);
+        assert_eq!(result.scanned_count, 5);
+        assert_eq!(result.lines.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_ne() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "ne".to_string(),
+                value: "assistant".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 3);
+    }
+
+    #[test]
+    fn test_filter_contains() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "message".to_string(),
+                operator: "contains".to_string(),
+                value: "Hello".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 1);
+    }
+
+    #[test]
+    fn test_filter_with_limit() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "ne".to_string(),
+                value: "invalid".to_string(),
+            }],
+            Some(2),
+        )
+        .unwrap();
+
+        // matched_count should be total matches found
+        assert_eq!(result.matched_count, 5);
+        // But lines should be limited
+        assert_eq!(result.lines.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_nested_field() {
+        let content = r#"{"type":"tool_use","input":{"path":"/test.txt"}}
+{"type":"tool_use","input":{"path":"/other.txt"}}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "input.path".to_string(),
+                operator: "eq".to_string(),
+                value: "/test.txt".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 1);
+    }
+
+    #[test]
+    fn test_filter_multiple_conditions() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![
+                JsonlFilter {
+                    field_path: "type".to_string(),
+                    operator: "eq".to_string(),
+                    value: "assistant".to_string(),
+                },
+                JsonlFilter {
+                    field_path: "message".to_string(),
+                    operator: "contains".to_string(),
+                    value: "file".to_string(),
+                },
+            ],
+            None,
+        )
+        .unwrap();
+
+        // Only one assistant message contains "file"
+        assert_eq!(result.matched_count, 1);
+    }
+
+    #[test]
+    fn test_filter_numeric_comparison_gt() {
+        let content = r#"{"value":10}
+{"value":20}
+{"value":30}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "value".to_string(),
+                operator: "gt".to_string(),
+                value: "15".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 2);
+    }
+
+    #[test]
+    fn test_filter_numeric_comparison_lt() {
+        let content = r#"{"value":10}
+{"value":20}
+{"value":30}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "value".to_string(),
+                operator: "lt".to_string(),
+                value: "25".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 2);
+    }
+
+    #[test]
+    fn test_filter_gte_lte() {
+        let content = r#"{"value":10}
+{"value":20}
+{"value":30}
+"#;
+        let file = create_temp_jsonl(content);
+
+        let result_gte = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "value".to_string(),
+                operator: "gte".to_string(),
+                value: "20".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+        assert_eq!(result_gte.matched_count, 2);
+
+        let result_lte = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "value".to_string(),
+                operator: "lte".to_string(),
+                value: "20".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+        assert_eq!(result_lte.matched_count, 2);
+    }
+
+    #[test]
+    fn test_filter_missing_field() {
+        let content = r#"{"type":"a"}
+{"type":"b","extra":"data"}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "extra".to_string(),
+                operator: "eq".to_string(),
+                value: "data".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 1);
+    }
+
+    #[test]
+    fn test_filter_invalid_json_line() {
+        let content = r#"{"type":"valid"}
+not valid json
+{"type":"also_valid"}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "ne".to_string(),
+                value: "nothing".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        // Should skip invalid JSON and process valid ones
+        assert_eq!(result.matched_count, 2);
+        assert_eq!(result.scanned_count, 3);
+    }
+
+    #[test]
+    fn test_filter_unknown_operator() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "unknown_op".to_string(),
+                value: "test".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        // Unknown operator should match nothing
+        assert_eq!(result.matched_count, 0);
+    }
+
+    // ========================================================================
+    // Time Range Filter Tests
+    // ========================================================================
+
+    #[test]
+    fn test_filter_time_range_basic() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter_time_range(
+            file.path().to_string_lossy().to_string(),
+            "timestamp".to_string(),
+            "2024-01-15T10:30:00Z".to_string(),
+            "2024-01-15T10:30:10Z".to_string(),
+            None,
+        )
+        .unwrap();
+
+        // Should match first 3 events (10:30:00, 10:30:05, 10:30:10)
+        assert_eq!(result.matched_count, 3);
+    }
+
+    #[test]
+    fn test_filter_time_range_with_limit() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter_time_range(
+            file.path().to_string_lossy().to_string(),
+            "timestamp".to_string(),
+            "2024-01-15T10:00:00Z".to_string(),
+            "2024-01-15T11:00:00Z".to_string(),
+            Some(2),
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 5);
+        assert_eq!(result.lines.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_time_range_no_matches() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let result = jsonl_filter_time_range(
+            file.path().to_string_lossy().to_string(),
+            "timestamp".to_string(),
+            "2025-01-01T00:00:00Z".to_string(),
+            "2025-12-31T23:59:59Z".to_string(),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 0);
+    }
+
+    // ========================================================================
+    // Helper Function Tests
+    // ========================================================================
+
+    #[test]
+    fn test_get_field_value_simple() {
+        let json: serde_json::Value = serde_json::json!({
+            "type": "test",
+            "count": 42,
+            "active": true
+        });
+
+        assert_eq!(get_field_value(&json, "type"), Some("test".to_string()));
+        assert_eq!(get_field_value(&json, "count"), Some("42".to_string()));
+        assert_eq!(get_field_value(&json, "active"), Some("true".to_string()));
+    }
+
+    #[test]
+    fn test_get_field_value_nested() {
+        let json: serde_json::Value = serde_json::json!({
+            "outer": {
+                "inner": {
+                    "value": "deep"
+                }
+            }
+        });
+
+        assert_eq!(
+            get_field_value(&json, "outer.inner.value"),
+            Some("deep".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_field_value_missing() {
+        let json: serde_json::Value = serde_json::json!({"type": "test"});
+
+        assert_eq!(get_field_value(&json, "missing"), None);
+        assert_eq!(get_field_value(&json, "missing.nested"), None);
+    }
+
+    #[test]
+    fn test_compare_values_numeric() {
+        assert_eq!(compare_values("10", "5"), 1);
+        assert_eq!(compare_values("5", "10"), -1);
+        assert_eq!(compare_values("10", "10"), 0);
+        assert_eq!(compare_values("10.5", "10.1"), 1);
+    }
+
+    #[test]
+    fn test_compare_values_string() {
+        assert_eq!(compare_values("apple", "banana"), -1);
+        assert_eq!(compare_values("banana", "apple"), 1);
+        assert_eq!(compare_values("test", "test"), 0);
+    }
+
+    #[test]
+    fn test_parse_iso8601_valid() {
+        let ts = parse_iso8601("2024-01-15T10:30:00Z").unwrap();
+        // Should be a valid Unix timestamp for 2024-01-15 10:30:00 UTC
+        assert!(ts > 0);
+    }
+
+    #[test]
+    fn test_parse_iso8601_with_milliseconds() {
+        let ts = parse_iso8601("2024-01-15T10:30:00.123Z").unwrap();
+        assert!(ts > 0);
+    }
+
+    #[test]
+    fn test_parse_iso8601_invalid() {
+        assert!(parse_iso8601("not a date").is_none());
+        assert!(parse_iso8601("2024-01-15").is_none()); // Missing time
+        assert!(parse_iso8601("10:30:00").is_none()); // Missing date
+    }
+
+    #[test]
+    fn test_days_from_epoch() {
+        // Unix epoch is 1970-01-01
+        assert_eq!(days_from_epoch(1970, 1, 1), Some(0));
+        // 2024-01-15 should be a positive number
+        let days = days_from_epoch(2024, 1, 15).unwrap();
+        assert!(days > 0);
+    }
+
+    #[test]
+    fn test_chrono_parse_valid() {
+        let result = chrono_parse("2024-01-15T10:30:00Z");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_chrono_parse_invalid() {
+        let result = chrono_parse("invalid");
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Edge Case Tests
+    // ========================================================================
+
+    #[test]
+    fn test_unicode_content() {
+        let content = r#"{"message":"Hello 世界 🌍"}
+{"message":"Привет мир"}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 2);
+        assert!(result.lines[0].content.contains("世界"));
+        assert!(result.lines[1].content.contains("Привет"));
+    }
+
+    #[test]
+    fn test_large_line() {
+        let large_value = "x".repeat(10000);
+        let content = format!("{{\"data\":\"{}\"}}\n", large_value);
+        let file = create_temp_jsonl(&content);
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        assert_eq!(result.lines.len(), 1);
+        assert!(result.lines[0].content.len() > 10000);
+    }
+
+    #[test]
+    fn test_byte_offset_accuracy() {
+        let content = "abc\ndef\n";
+        let file = create_temp_jsonl(content);
+        let result = jsonl_read_page(file.path().to_string_lossy().to_string(), 0, 10).unwrap();
+
+        assert_eq!(result.lines[0].byte_offset, 0);
+        assert_eq!(result.lines[1].byte_offset, 4); // "abc\n" = 4 bytes
+    }
+
+    #[test]
+    fn test_filter_with_file_without_trailing_newline() {
+        let content = r#"{"type":"first"}
+{"type":"second"}"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "type".to_string(),
+                operator: "eq".to_string(),
+                value: "second".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 1);
+    }
+
+    #[test]
+    fn test_filter_time_range_with_file_without_trailing_newline() {
+        let content = r#"{"timestamp":"2024-01-15T10:30:00Z"}
+{"timestamp":"2024-01-15T10:31:00Z"}"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter_time_range(
+            file.path().to_string_lossy().to_string(),
+            "timestamp".to_string(),
+            "2024-01-15T10:30:30Z".to_string(),
+            "2024-01-15T10:32:00Z".to_string(),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 1);
+    }
+
+    // ========================================================================
+    // Boolean Value Tests
+    // ========================================================================
+
+    #[test]
+    fn test_filter_boolean_field() {
+        let content = r#"{"active":true,"name":"a"}
+{"active":false,"name":"b"}
+{"active":true,"name":"c"}
+"#;
+        let file = create_temp_jsonl(content);
+        let result = jsonl_filter(
+            file.path().to_string_lossy().to_string(),
+            vec![JsonlFilter {
+                field_path: "active".to_string(),
+                operator: "eq".to_string(),
+                value: "true".to_string(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.matched_count, 2);
+    }
+
+    // ========================================================================
+    // Index Version Tests
+    // ========================================================================
+
+    #[test]
+    fn test_load_index_unsupported_version() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        // Create an index file with unsupported version
+        let index_path = format!("{}.idx", path);
+        let mut data = vec![];
+        data.extend_from_slice(b"JIDX");
+        data.push(99); // Unsupported version
+        std::fs::write(&index_path, &data).unwrap();
+
+        let result = jsonl_load_index(path).unwrap();
+        assert!(result.is_none());
+
+        std::fs::remove_file(&index_path).ok();
+    }
+
+    // ========================================================================
+    // Concurrent Access Simulation Tests
+    // ========================================================================
+
+    #[test]
+    fn test_multiple_reads_same_file() {
+        let file = create_temp_jsonl(sample_jsonl_content());
+        let path = file.path().to_string_lossy().to_string();
+
+        // Perform multiple reads
+        for _ in 0..10 {
+            let result = jsonl_read_page(path.clone(), 0, 5).unwrap();
+            assert_eq!(result.lines.len(), 5);
+        }
+    }
 }

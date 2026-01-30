@@ -35,8 +35,11 @@ import {
 	buildCommandWithFiles,
 	checkForChangesAsync,
 	findDirectoriesWithMarkers,
+	type HookCategory,
 	hookMatchesEvent,
+	inferCategoryFromHookName,
 	loadPluginConfig,
+	PHASE_ORDER,
 	type PluginHookDefinition,
 	trackFilesAsync,
 } from "../../hooks/index.ts";
@@ -625,9 +628,17 @@ function resolveDependencies(tasks: HookTask[]): HookTask[][] {
 		for (const dep of task.dependsOn) {
 			// Handle wildcard dependencies: { plugin: "*", hook: "*" }
 			if (dep.plugin === "*" || dep.hook === "*") {
-				// Match all tasks except self
+				// Match all tasks except self AND except other wildcard tasks
+				// (to avoid circular dependencies between advisory hooks)
 				for (const [depKey, depTask] of taskMap.entries()) {
 					if (depKey === key) continue; // Don't depend on self
+
+					// Skip other tasks that also have wildcard dependencies
+					// This prevents cycles like: A depends on *, B depends on * → A↔B cycle
+					const depTaskHasWildcard = depTask.dependsOn.some(
+						(d) => d.plugin === "*" || d.hook === "*",
+					);
+					if (depTaskHasWildcard) continue;
 
 					// Check if pattern matches
 					const matches =
@@ -713,6 +724,87 @@ function resolveDependencies(tasks: HookTask[]): HookTask[][] {
 	}
 
 	return batches;
+}
+
+/**
+ * Check if a hook has wildcard dependencies (depends_on: [{plugin: "*", hook: "*"}])
+ * Hooks with wildcard deps already handle their ordering explicitly.
+ */
+function hasWildcardDependencies(task: HookTask): boolean {
+	return task.dependsOn.some((dep) => dep.plugin === "*" || dep.hook === "*");
+}
+
+/**
+ * Inject implicit phase-based dependencies into tasks.
+ * Hooks are executed in phase order: format → lint → typecheck → test → advisory.
+ * All hooks in phase N must complete before phase N+1 starts.
+ *
+ * This adds implicit dependencies so that each task depends on ALL tasks in previous phases.
+ * Explicit dependsOn relationships are preserved and take precedence.
+ *
+ * Category is inferred from the hook name (e.g., "lint" → lint, "format" → format).
+ *
+ * Note: Hooks with wildcard dependencies (plugin: "*" or hook: "*") are excluded from
+ * phase injection to avoid circular dependencies.
+ *
+ * @param tasks - The hook tasks to process
+ * @returns Tasks with injected phase dependencies
+ */
+function injectPhaseDependencies(tasks: HookTask[]): HookTask[] {
+	// Separate tasks with wildcard dependencies - they manage their own ordering
+	const tasksWithWildcard = tasks.filter(hasWildcardDependencies);
+	const tasksWithoutWildcard = tasks.filter((t) => !hasWildcardDependencies(t));
+
+	// Group non-wildcard tasks by phase index
+	const tasksByPhase = new Map<number, HookTask[]>();
+
+	for (const task of tasksWithoutWildcard) {
+		// Infer category from hook name (e.g., "lint" → lint, "format" → format)
+		const category: HookCategory = inferCategoryFromHookName(task.hookName);
+		const phaseIndex = PHASE_ORDER.indexOf(category);
+		// If category is invalid or not in PHASE_ORDER, default to lint (index 1)
+		const phase = phaseIndex === -1 ? 1 : phaseIndex;
+
+		if (!tasksByPhase.has(phase)) {
+			tasksByPhase.set(phase, []);
+		}
+		tasksByPhase.get(phase)?.push(task);
+	}
+
+	// Add implicit dependencies to non-wildcard tasks
+	const processedTasks = tasksWithoutWildcard.map((task) => {
+		// Infer category from hook name
+		const category: HookCategory = inferCategoryFromHookName(task.hookName);
+		const myPhaseIndex = PHASE_ORDER.indexOf(category);
+		const myPhase = myPhaseIndex === -1 ? 1 : myPhaseIndex;
+
+		const implicitDeps: Array<{
+			plugin: string;
+			hook: string;
+			optional: boolean;
+		}> = [];
+
+		// Add dependencies on all tasks in earlier phases
+		for (let p = 0; p < myPhase; p++) {
+			for (const prevTask of tasksByPhase.get(p) ?? []) {
+				implicitDeps.push({
+					plugin: prevTask.plugin,
+					hook: prevTask.hookName,
+					optional: true, // Phase dependencies are optional (don't fail if plugin not installed)
+				});
+			}
+		}
+
+		// Merge implicit dependencies with explicit ones
+		// Explicit deps come after so they take precedence in deduplication
+		return {
+			...task,
+			dependsOn: [...implicitDeps, ...task.dependsOn],
+		};
+	});
+
+	// Return all tasks (wildcard tasks unchanged, others with phase deps)
+	return [...processedTasks, ...tasksWithWildcard];
 }
 
 /**
@@ -1688,29 +1780,8 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 		});
 		const orchestrationId = orchestration.id;
 
-		// Separate validation hooks from advisory hooks (wildcard dependencies)
-		const validationHooks: typeof hooksToRun = [];
-		const advisoryHooks: typeof hooksToRun = [];
-
+		// Queue all hooks for later execution
 		for (const h of hooksToRun) {
-			const task = tasks.find(
-				(t) => t.plugin === h.plugin && t.hookName === h.hook,
-			);
-			if (!task) continue;
-
-			const hasWildcardDep = task.dependsOn?.some(
-				(dep) => dep.plugin === "*" || dep.hook === "*",
-			);
-
-			if (hasWildcardDep) {
-				advisoryHooks.push(h);
-			} else {
-				validationHooks.push(h);
-			}
-		}
-
-		// Queue validation hooks for later execution
-		for (const h of validationHooks) {
 			const task = tasks.find(
 				(t) => t.plugin === h.plugin && t.hookName === h.hook,
 			);
@@ -1736,25 +1807,65 @@ ${colors.dim}Note: The wait command automatically sets HAN_STOP_ORCHESTRATING=1 
 			});
 		}
 
-		// Report validation hooks
-		if (validationHooks.length > 0) {
-			console.error(
-				`${colors.yellow}Validation required${colors.reset} - ${validationHooks.length} hook(s) need to run:`,
+		// Get tasks for hooks that need to run, with phase dependencies injected
+		const hooksToRunTasks = hooksToRun
+			.map((h) =>
+				tasks.find((t) => t.plugin === h.plugin && t.hookName === h.hook),
+			)
+			.filter((t): t is HookTask => t !== undefined);
+		const tasksWithPhaseDeps = injectPhaseDependencies(hooksToRunTasks);
+		const executionBatches = resolveDependencies(tasksWithPhaseDeps);
+
+		// Report hooks grouped by execution batch
+		console.error(
+			`${colors.yellow}Hooks to run${colors.reset} - ${hooksToRun.length} hook(s) in ${executionBatches.length} batch(es):`,
+		);
+
+		// Collect batches by phase type
+		const phaseBatches: HookTask[][] = [];
+		const postValidationBatches: HookTask[][] = [];
+
+		for (const batch of executionBatches) {
+			const hasWildcard = batch.some((t) =>
+				t.dependsOn?.some((d) => d.plugin === "*" || d.hook === "*"),
 			);
-			for (const h of validationHooks) {
-				console.error(
-					`  - ${h.plugin}/${h.hook} in ${h.directory} (${h.reason})`,
-				);
+			if (hasWildcard) {
+				postValidationBatches.push(batch);
+			} else {
+				phaseBatches.push(batch);
 			}
 		}
 
-		// Report advisory hooks separately
-		if (advisoryHooks.length > 0) {
-			console.error(
-				`${colors.dim}Advisory hooks (run after validation):${colors.reset}`,
-			);
-			for (const h of advisoryHooks) {
-				console.error(`  - ${h.plugin}/${h.hook} in ${h.directory}`);
+		// Display phase batches with phase labels
+		for (const batch of phaseBatches) {
+			const batchPhase =
+				batch.length > 0
+					? inferCategoryFromHookName(batch[0].hookName)
+					: "lint";
+			console.error(`  ${colors.cyan}${batchPhase}:${colors.reset}`);
+			for (const task of batch) {
+				const h = hooksToRun.find(
+					(hook) => hook.plugin === task.plugin && hook.hook === task.hookName,
+				);
+				if (h) {
+					console.error(`    - ${h.plugin}/${h.hook} in ${h.directory}`);
+				}
+			}
+		}
+
+		// Display post-validation batches under a single heading
+		if (postValidationBatches.length > 0) {
+			console.error(`  ${colors.dim}post-validation:${colors.reset}`);
+			for (const batch of postValidationBatches) {
+				for (const task of batch) {
+					const h = hooksToRun.find(
+						(hook) =>
+							hook.plugin === task.plugin && hook.hook === task.hookName,
+					);
+					if (h) {
+						console.error(`    - ${h.plugin}/${h.hook} in ${h.directory}`);
+					}
+				}
 			}
 		}
 
@@ -1782,7 +1893,7 @@ ${colors.dim}The wait command automatically prevents recursion during execution.
 /**
  * Main orchestration function
  */
-async function orchestrate(
+export async function orchestrate(
 	eventType: string,
 	options: {
 		onlyChanged: boolean;
@@ -2027,8 +2138,12 @@ async function orchestrate(
 		);
 	}
 
+	// Inject phase-based dependencies (format → lint → typecheck → test → advisory)
+	// This ensures hooks run in the correct order based on their category
+	const tasksWithPhaseDeps = injectPhaseDependencies(tasks);
+
 	// Resolve dependencies into execution batches
-	const batches = resolveDependencies(tasks);
+	const batches = resolveDependencies(tasksWithPhaseDeps);
 
 	if (isDebugMode()) {
 		console.error(
@@ -2401,14 +2516,19 @@ When done, the Stop hook will run again to verify the fixes.`);
 				);
 
 				if (wildcardTasks.length > 0) {
+					// Sort wildcard tasks by their dependencies on each other
+					// (e.g., enforce-iteration depends on check_commits)
+					const sortedBatches = resolveDependencies(wildcardTasks);
+					const sortedTasks = sortedBatches.flat();
+
 					if (isDebugMode()) {
 						console.error(
-							`${colors.dim}[orchestrate]${colors.reset} Running ${wildcardTasks.length} wildcard dependency hooks inline`,
+							`${colors.dim}[orchestrate]${colors.reset} Running ${wildcardTasks.length} wildcard hooks in order: ${sortedTasks.map((t) => `${t.plugin}/${t.hookName}`).join(" → ")}`,
 						);
 					}
 
-					// Execute wildcard dependency hooks sequentially
-					for (const task of wildcardTasks) {
+					// Execute wildcard dependency hooks sequentially in dependency order
+					for (const task of sortedTasks) {
 						for (const directory of task.directories) {
 							const relativePath = relative(projectRoot, directory);
 							const displayDir = relativePath || ".";

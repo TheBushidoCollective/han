@@ -1,0 +1,42 @@
+# jutsu-ai-dlc - AI-DLC 2026 Methodology Plugin
+#
+# Provides iterative AI-driven development workflow with:
+# - Hat-based role switching
+# - Named workflows (patterns)
+# - Completion criteria tracking
+# - Automatic context preservation across /clear
+
+# Named workflows - each is a sequence of hats
+workflows:
+  default:
+    description: Standard development workflow
+    hats: [elaborator, planner, builder, reviewer]
+
+  tdd:
+    description: Test-Driven Development (Red-Green-Refactor)
+    hats: [test-writer, implementer, refactorer]
+
+  adversarial:
+    description: Security-focused with Red/Blue team phases
+    hats: [builder, red-team, blue-team, reviewer]
+
+  hypothesis:
+    description: Scientific debugging for investigating bugs
+    hats: [observer, hypothesizer, experimenter, analyst]
+
+hooks:
+  inject-context:
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/inject-context.sh"
+    event: SessionStart
+    description: Inject AI-DLC iteration context (hat, intent, criteria, scratchpad)
+
+  iterate:
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/enforce-iteration.sh"
+    event: Stop
+    description: Enforce iteration pattern - prompt for /clear to continue
+    depends_on:
+      - plugin: "*"
+        hook: "*"
+      - plugin: jutsu-git-storytelling
+        hook: commit
+        optional: true

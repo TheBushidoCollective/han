@@ -387,8 +387,9 @@ function computeSectionChanges(
 			// This is a rename
 			usedOldSections.add(bestMatch.normalizedName);
 			const oldSection = unmatchedOld.find(
-				(s) => s.normalizedName === bestMatch!.normalizedName,
-			)!;
+				(s) => s.normalizedName === bestMatch.normalizedName,
+			);
+			if (!oldSection) continue; // Should never happen, but satisfies type checker
 			const { stats } = computeDiff(oldSection.content, newSection.content);
 
 			changes.push({

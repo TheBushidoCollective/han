@@ -24,6 +24,60 @@ export type HookEventType =
 	| "SubagentStart";
 
 /**
+ * Hook category for phase-based execution ordering.
+ * Hooks are executed in phase order: format → lint → typecheck → test → advisory.
+ * All hooks in phase N must complete before phase N+1 starts.
+ */
+export type HookCategory = "format" | "lint" | "typecheck" | "test" | "advisory";
+
+/**
+ * Phase execution order for hook categories.
+ * Hooks are grouped by category and executed in this order.
+ */
+export const PHASE_ORDER: HookCategory[] = [
+	"format",
+	"lint",
+	"typecheck",
+	"test",
+	"advisory",
+];
+
+/**
+ * Default category for hooks that don't match a known category name.
+ * Most validation hooks are linters, so this is the sensible default.
+ */
+export const DEFAULT_HOOK_CATEGORY: HookCategory = "lint";
+
+/**
+ * Infer the hook category from the hook name.
+ * The hook name itself determines the category:
+ * - "format" or names starting with "format_" → format
+ * - "lint" or names starting with "lint_" → lint
+ * - "typecheck" or names starting with "typecheck_" → typecheck
+ * - "test" or names starting with "test_" → test
+ * - "advisory" or names starting with "advisory_" → advisory
+ * - Other names → lint (default)
+ */
+export function inferCategoryFromHookName(hookName: string): HookCategory {
+	const normalizedName = hookName.toLowerCase();
+
+	// Check exact matches first
+	if (PHASE_ORDER.includes(normalizedName as HookCategory)) {
+		return normalizedName as HookCategory;
+	}
+
+	// Check for prefix matches (e.g., "format_files", "lint_typescript")
+	for (const category of PHASE_ORDER) {
+		if (normalizedName.startsWith(`${category}_`)) {
+			return category;
+		}
+	}
+
+	// Default to lint for unrecognized names
+	return DEFAULT_HOOK_CATEGORY;
+}
+
+/**
  * Default events for hooks that don't specify an event field.
  * Most hooks are validation hooks that should run on both Stop and SubagentStop.
  */

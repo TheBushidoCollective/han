@@ -75,7 +75,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install jutsu-tdd
 ```
-
-## License
-
-MIT

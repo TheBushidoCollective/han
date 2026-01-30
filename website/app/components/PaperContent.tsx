@@ -455,15 +455,15 @@ export default function PaperContent({
 			const codeText = extractCodeText(child?.props?.children);
 
 			return (
-				<div className="group relative not-prose my-4 rounded-lg overflow-hidden shadow-lg">
+				<div className="group relative not-prose my-4 rounded-lg overflow-hidden shadow-xl border border-gray-700/50">
 					{/* Title bar */}
-					<div className="flex items-center justify-between px-4 py-2 bg-[#1e293b]">
+					<div className="flex items-center justify-between px-4 py-2 bg-[#1e293b] border-b border-gray-600/50 shadow-sm">
 						<div className="flex items-center gap-2">
 							{/* macOS-style dots */}
 							<div className="flex gap-1.5">
-								<span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-								<span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-								<span className="w-3 h-3 rounded-full bg-[#27c93f]" />
+								<span className="w-3 h-3 rounded-full bg-[#ff5f56] shadow-sm" />
+								<span className="w-3 h-3 rounded-full bg-[#ffbd2e] shadow-sm" />
+								<span className="w-3 h-3 rounded-full bg-[#27c93f] shadow-sm" />
 							</div>
 							{language && (
 								<span className="ml-3 text-xs text-gray-400 font-mono">

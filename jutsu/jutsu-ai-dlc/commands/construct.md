@@ -1,0 +1,191 @@
+---
+description: Continue the AI-DLC construction loop - autonomous build/review cycles until completion
+---
+
+## Name
+
+`jutsu-ai-dlc:construct` - Run the autonomous AI-DLC construction loop.
+
+## Synopsis
+
+```
+/construct
+```
+
+## Description
+
+**User-facing command** - Continue the AI-DLC autonomous construction loop.
+
+This command resumes work from the current hat and runs until:
+- Task is complete (`/done` called internally)
+- User intervention needed (blockers, questions)
+- Session ends (Stop hook prompts for `/clear`)
+
+**User Flow:**
+```
+User: /elaborate           # Once - define intent, criteria, and workflow
+User: /construct           # Kicks off autonomous loop
+...AI works autonomously...
+Stop hook: "Run /clear"
+User: /clear
+User: /construct           # Continue the loop
+...repeat until done...
+```
+
+**Important:**
+- Run after `/clear` - This is how you continue the loop
+- Autonomous operation - AI manages hat transitions internally
+- User intervention - You can skip `/construct` to intervene manually
+- State preserved - Progress saved in han keep between sessions
+
+**CRITICAL: No Questions During Construction**
+
+During the construction loop, you MUST NOT:
+- Use AskUserQuestion tool
+- Ask clarifying questions
+- Request user decisions
+- Pause for user feedback
+
+This breaks han's hook logic. The construction loop must be fully autonomous.
+
+If you encounter ambiguity:
+1. Make a reasonable decision based on available context
+2. Document the assumption in your work
+3. Let the reviewer hat catch issues on the next pass
+
+If truly blocked (cannot proceed without user input):
+1. Document the blocker clearly
+2. Stop the loop naturally (don't call /advance)
+3. The Stop hook will prompt the user to `/clear` and intervene
+
+## Implementation
+
+### Step 1: Load State
+
+```javascript
+const state = JSON.parse(han_keep_load({ scope: "branch", key: "iteration.json" }));
+const intentSlug = han_keep_load({ scope: "branch", key: "intent-slug" }) || null;
+```
+
+If no state exists:
+```
+No AI-DLC state found. Run /elaborate first to define intent and completion criteria.
+```
+
+If status is "complete":
+```
+Task already complete! Run /reset to start a new task.
+```
+
+### Step 2: Read Hat Instructions
+
+Based on `state.hat`, load the hat's instructions from:
+1. User override: `.ai-dlc/hats/{hat}.md`
+2. Plugin built-in: `hats/{hat}.md`
+
+The hat file contains the role's responsibilities, guidelines, and transition conditions.
+
+### Step 3: Execute Current Hat
+
+Work according to the hat's instructions. Each hat has:
+- **Focus** - What to concentrate on
+- **Responsibilities** - What to accomplish
+- **Guidelines** - How to approach the work
+- **Transitions** - When to `/advance`, `/fail`, or `/done`
+
+#### Workflow-Specific Examples
+
+**Default Workflow** (elaborator → planner → builder → reviewer):
+- elaborator: Define intent and criteria
+- planner: Create iteration plan
+- builder: Implement to spec
+- reviewer: Verify against criteria
+
+**TDD Workflow** (test-writer → implementer → refactorer):
+- test-writer: Write failing tests first
+- implementer: Make tests pass
+- refactorer: Improve code quality
+
+**Hypothesis Workflow** (observer → hypothesizer → experimenter → analyst):
+- observer: Gather data about the bug
+- hypothesizer: Form theories
+- experimenter: Test hypotheses
+- analyst: Evaluate and fix
+
+### Step 3b: Parallel Unit Orchestration
+
+When the intent has been decomposed into units (`.ai-dlc/{intent-slug}/unit-*.md` files exist), the construction loop changes to unit-based execution.
+
+#### Finding Ready Units
+
+A unit is **ready** when:
+- Status is `pending`
+- All units in `depends_on` have status `completed`
+
+#### Serial vs Parallel Execution
+
+**Serial (single ready unit):** Execute directly in current session.
+
+**Parallel (multiple ready units):** Spawn subagents in worktrees:
+
+```javascript
+Task({
+  description: `Execute AI-DLC unit: ${UNIT_NAME}`,
+  prompt: `Execute AI-DLC unit in isolated worktree.
+    Working directory: /tmp/worktree-${UNIT_NAME}
+    Intent branch for shared state: ${INTENT_BRANCH}
+    ...`
+})
+```
+
+### Step 4: Internal Commands
+
+The AI calls these internally (user does not call directly):
+
+- **`/advance`** - Move to next hat in workflow
+- **`/fail`** - Return to previous hat (issues found)
+- **`/done`** - Mark task complete (only from last hat)
+
+### Step 5: Loop Behavior
+
+The construction loop continues within a session until:
+1. **Blocked** - Need user input or hit a blocker
+2. **Session limit** - Stop hook fires, prompts for `/clear`
+3. **Complete** - All criteria met, `/done` called
+4. **All units blocked** - No forward progress possible, alert user
+
+After `/clear`, user runs `/construct` again to continue.
+
+## Example Session
+
+```
+[Session 1]
+User: /elaborate
+...collaborative discussion...
+AI: Intent and criteria saved. /advance
+AI: Now in planner phase. Creating plan...
+AI: Plan saved. /advance
+AI: Now in builder phase. Starting implementation...
+...builds...
+Stop hook: "Run /clear to continue"
+
+[Session 2]
+User: /clear
+User: /construct
+AI: Continuing builder phase...
+...builds more...
+AI: Bolt complete. /advance
+AI: Now in reviewer phase. Checking criteria...
+AI: Issue found - missing test. /fail
+AI: Back to builder. Fixing...
+Stop hook: "Run /clear to continue"
+
+[Session 3]
+User: /clear
+User: /construct
+AI: Continuing builder phase...
+AI: Test added. /advance
+AI: Now in reviewer phase. Checking criteria...
+AI: All criteria satisfied! /done
+AI: Task complete!
+```

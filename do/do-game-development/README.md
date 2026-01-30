@@ -30,8 +30,3 @@ Install with npx (no installation required):
 ```bash
 han plugin install do-game-development
 ```
-
-## License
-
-Licensed under MIT -
-see repository for details.
