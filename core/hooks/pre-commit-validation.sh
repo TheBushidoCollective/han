@@ -14,9 +14,10 @@ set -e
 # Read stdin into variable
 INPUT=$(cat)
 
-# Parse tool_name and command from JSON
+# Parse tool_name, command, and session_id from JSON
 TOOL_NAME=$(echo "$INPUT" | han parse json tool_name -r 2>/dev/null || echo "")
 COMMAND=$(echo "$INPUT" | han parse json tool_input.command -r 2>/dev/null || echo "")
+SESSION_ID=$(echo "$INPUT" | han parse json session_id -r 2>/dev/null || echo "")
 
 # Only care about Bash tool
 if [ "$TOOL_NAME" != "Bash" ]; then
@@ -30,17 +31,20 @@ if ! echo "$COMMAND" | grep -qE '\bgit\s+commit\b'; then
 fi
 
 # This is a git commit - run Stop hook validation
-# Construct a minimal Stop payload for the hooks
+# Construct a minimal Stop payload for the hooks, including session_id
 STOP_PAYLOAD=$(cat <<EOF
 {
   "stopReason": "pre_commit_validation",
-  "hook_event": "Stop"
+  "hook_event": "Stop",
+  "session_id": "$SESSION_ID"
 }
 EOF
 )
 
 # Run validation hooks via orchestrate
+# Pass session ID via env var for hooks that need it
 # Capture both stdout and exit code
+export HAN_SESSION_ID="$SESSION_ID"
 VALIDATION_OUTPUT=$(echo "$STOP_PAYLOAD" | han hook orchestrate Stop 2>&1) || VALIDATION_EXIT=$?
 VALIDATION_EXIT=${VALIDATION_EXIT:-0}
 
