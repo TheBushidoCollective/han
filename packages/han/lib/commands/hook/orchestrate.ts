@@ -620,9 +620,17 @@ function resolveDependencies(tasks: HookTask[]): HookTask[][] {
 		for (const dep of task.dependsOn) {
 			// Handle wildcard dependencies: { plugin: "*", hook: "*" }
 			if (dep.plugin === "*" || dep.hook === "*") {
-				// Match all tasks except self
+				// Match all tasks except self AND except other wildcard tasks
+				// (to avoid circular dependencies between advisory hooks)
 				for (const [depKey, depTask] of taskMap.entries()) {
 					if (depKey === key) continue; // Don't depend on self
+
+					// Skip other tasks that also have wildcard dependencies
+					// This prevents cycles like: A depends on *, B depends on * → A↔B cycle
+					const depTaskHasWildcard = depTask.dependsOn.some(
+						(d) => d.plugin === "*" || d.hook === "*",
+					);
+					if (depTaskHasWildcard) continue;
 
 					// Check if pattern matches
 					const matches =
