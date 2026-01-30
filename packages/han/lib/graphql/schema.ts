@@ -98,6 +98,18 @@ import {
 } from "./types/metrics.ts";
 import { PageInfoType } from "./types/pagination.ts";
 import { PermissionsType } from "./types/permissions.ts";
+// Auth types - registers mutations and queries via side effects
+import {
+	AuthUserType,
+	AuthSessionType,
+	OAuthConnectionType,
+	TokenPairType,
+	OAuthInitiateResultType,
+	AuthResultType,
+	MagicLinkResultType,
+	LinkResultType,
+	OAuthProviderEnum,
+} from "./types/auth/index.ts";
 import {
 	getAllPlugins,
 	PluginType,
@@ -1463,6 +1475,16 @@ export {
 	// Inline result types for tool calls
 	McpToolResultType,
 	ExposedToolResultType,
+	// Auth types
+	AuthUserType,
+	AuthSessionType,
+	OAuthConnectionType,
+	TokenPairType,
+	OAuthInitiateResultType,
+	AuthResultType,
+	MagicLinkResultType,
+	LinkResultType,
+	OAuthProviderEnum,
 };
 
 // Define the @defer directive for incremental delivery

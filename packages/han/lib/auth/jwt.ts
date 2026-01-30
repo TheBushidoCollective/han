@@ -130,11 +130,12 @@ export async function verifyAccessToken(
 		});
 
 		// Validate token type
-		if ((payload as AccessTokenPayload).type !== "access") {
+		const typedPayload = payload as unknown as AccessTokenPayload;
+		if (typedPayload.type !== "access") {
 			return null;
 		}
 
-		return payload as AccessTokenPayload;
+		return typedPayload;
 	} catch {
 		return null;
 	}
@@ -158,11 +159,12 @@ export async function verifyRefreshToken(
 		});
 
 		// Validate token type
-		if ((payload as RefreshTokenPayload).type !== "refresh") {
+		const typedPayload = payload as unknown as RefreshTokenPayload;
+		if (typedPayload.type !== "refresh") {
 			return null;
 		}
 
-		return payload as RefreshTokenPayload;
+		return typedPayload;
 	} catch {
 		return null;
 	}
@@ -180,7 +182,7 @@ export function decodeTokenUnsafe(
 ): AccessTokenPayload | RefreshTokenPayload | null {
 	try {
 		const decoded = jose.decodeJwt(token);
-		return decoded as AccessTokenPayload | RefreshTokenPayload;
+		return decoded as unknown as AccessTokenPayload | RefreshTokenPayload;
 	} catch {
 		return null;
 	}

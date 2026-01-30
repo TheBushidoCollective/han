@@ -90,7 +90,7 @@ export async function createSession(
 		id: sessionId,
 		userId: user.id,
 		tokenHash: getTokenHash(tokens.refreshToken),
-		deviceInfo: deviceInfo || null,
+		deviceInfo: deviceInfo as Record<string, unknown> | null,
 		ipAddress: ipAddress || null,
 		expiresAt: new Date(now.getTime() + refreshExpiry * 1000),
 		revokedAt: null,
