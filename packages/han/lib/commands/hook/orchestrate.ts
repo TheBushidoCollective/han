@@ -32,8 +32,8 @@ import {
 	buildCommandWithFiles,
 	checkForChangesAsync,
 	findDirectoriesWithMarkers,
-	hookMatchesEvent,
 	type HookCategory,
+	hookMatchesEvent,
 	inferCategoryFromHookName,
 	loadPluginConfig,
 	PHASE_ORDER,
@@ -752,7 +752,7 @@ function injectPhaseDependencies(tasks: HookTask[]): HookTask[] {
 		if (!tasksByPhase.has(phase)) {
 			tasksByPhase.set(phase, []);
 		}
-		tasksByPhase.get(phase)!.push(task);
+		tasksByPhase.get(phase)?.push(task);
 	}
 
 	// Add implicit dependencies to non-wildcard tasks
@@ -762,7 +762,11 @@ function injectPhaseDependencies(tasks: HookTask[]): HookTask[] {
 		const myPhaseIndex = PHASE_ORDER.indexOf(category);
 		const myPhase = myPhaseIndex === -1 ? 1 : myPhaseIndex;
 
-		const implicitDeps: Array<{ plugin: string; hook: string; optional: boolean }> = [];
+		const implicitDeps: Array<{
+			plugin: string;
+			hook: string;
+			optional: boolean;
+		}> = [];
 
 		// Add dependencies on all tasks in earlier phases
 		for (let p = 0; p < myPhase; p++) {
@@ -2477,14 +2481,19 @@ When done, the Stop hook will run again to verify the fixes.`);
 				);
 
 				if (wildcardTasks.length > 0) {
+					// Sort wildcard tasks by their dependencies on each other
+					// (e.g., enforce-iteration depends on check_commits)
+					const sortedBatches = resolveDependencies(wildcardTasks);
+					const sortedTasks = sortedBatches.flat();
+
 					if (isDebugMode()) {
 						console.error(
-							`${colors.dim}[orchestrate]${colors.reset} Running ${wildcardTasks.length} wildcard dependency hooks inline`,
+							`${colors.dim}[orchestrate]${colors.reset} Running ${wildcardTasks.length} wildcard hooks in order: ${sortedTasks.map((t) => `${t.plugin}/${t.hookName}`).join(" → ")}`,
 						);
 					}
 
-					// Execute wildcard dependency hooks sequentially
-					for (const task of wildcardTasks) {
+					// Execute wildcard dependency hooks sequentially in dependency order
+					for (const task of sortedTasks) {
 						for (const directory of task.directories) {
 							const relativePath = relative(projectRoot, directory);
 							const displayDir = relativePath || ".";
