@@ -18,6 +18,7 @@ fi
 # Source DAG library if available
 DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
 if [ -f "$DAG_LIB" ]; then
+  # shellcheck source=/dev/null
   source "$DAG_LIB"
 fi
 
