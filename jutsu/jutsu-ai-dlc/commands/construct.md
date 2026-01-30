@@ -80,21 +80,50 @@ If status is "complete":
 Task already complete! Run /reset to start a new task.
 ```
 
-### Step 2: Read Hat Instructions
+### Step 2: Spawn Subagent for Current Role
 
-Based on `state.hat`, load the hat's instructions from:
-1. User override: `.ai-dlc/hats/{hat}.md`
-2. Plugin built-in: `hats/{hat}.md`
+**CRITICAL: Do NOT execute hat work inline. Always spawn a subagent.**
 
-The hat file contains the role's responsibilities, guidelines, and transition conditions.
+Based on `state.hat`, spawn the appropriate subagent via Task tool:
 
-### Step 3: Execute Current Hat
+| Role | Agent Type | Description |
+|------|------------|-------------|
+| `planner` | `Plan` | Creates tactical implementation plan |
+| `builder` | Based on unit `discipline` | Implements the plan |
+| `reviewer` | `general-purpose` | Verifies completion criteria |
 
-Work according to the hat's instructions. Each hat has:
-- **Focus** - What to concentrate on
-- **Responsibilities** - What to accomplish
-- **Guidelines** - How to approach the work
-- **Transitions** - When to `/advance`, `/fail`, or `/done`
+**Builder agent selection by unit discipline:**
+- `frontend` → `do-frontend-development:presentation-engineer`
+- `backend` → `general-purpose` with backend context
+- `documentation` → `do-technical-documentation:documentation-engineer`
+- (other) → `general-purpose`
+
+**Example spawn:**
+```javascript
+Task({
+  subagent_type: getAgentForRole(state.hat, unit.discipline),
+  description: `${state.hat}: ${unit.name}`,
+  prompt: `
+    Execute the ${state.hat} role for this AI-DLC unit.
+
+    ## Unit: ${unit.name}
+    ## Completion Criteria
+    ${unit.criteria}
+
+    Work according to your role. Return clear status when done.
+  `
+})
+```
+
+The subagent automatically receives AI-DLC context (hat instructions, intent, workflow rules, unit status) via SubagentPrompt injection.
+
+### Step 3: Handle Subagent Result
+
+Based on the subagent's response:
+- **Success/Complete**: Call `/advance` to move to next role
+- **Issues found** (reviewer): Call `/fail` to return to builder
+- **Blocked**: Document and stop loop for user intervention
+- **All criteria met** (from reviewer): Call `/done`
 
 #### Workflow-Specific Examples
 
@@ -164,31 +193,37 @@ After `/clear`, user runs `/construct` again to continue.
 ```
 [Session 1]
 User: /elaborate
-...collaborative discussion...
+...collaborative discussion (elaborator agent)...
 AI: Intent and criteria saved. /advance
-AI: Now in planner phase. Creating plan...
+AI: Now in planner role. Spawning Plan agent...
+[Plan subagent runs, receives AI-DLC context]
 AI: Plan saved. /advance
-AI: Now in builder phase. Starting implementation...
+AI: Now in builder role. Spawning frontend agent...
+[Builder subagent runs, receives AI-DLC context + builder hat]
 ...builds...
 Stop hook: "Run /clear to continue"
 
 [Session 2]
 User: /clear
 User: /construct
-AI: Continuing builder phase...
-...builds more...
-AI: Bolt complete. /advance
-AI: Now in reviewer phase. Checking criteria...
+AI: Resuming builder role. Spawning frontend agent...
+[Builder subagent continues work]
+AI: Builder complete. /advance
+AI: Now in reviewer role. Spawning review agent...
+[Reviewer subagent runs, receives AI-DLC context + reviewer hat]
 AI: Issue found - missing test. /fail
-AI: Back to builder. Fixing...
+AI: Back to builder. Spawning frontend agent...
+[Builder subagent fixes issue]
 Stop hook: "Run /clear to continue"
 
 [Session 3]
 User: /clear
 User: /construct
-AI: Continuing builder phase...
-AI: Test added. /advance
-AI: Now in reviewer phase. Checking criteria...
+AI: Resuming builder role. Spawning frontend agent...
+[Builder subagent adds test]
+AI: Builder complete. /advance
+AI: Now in reviewer role. Spawning review agent...
+[Reviewer subagent verifies]
 AI: All criteria satisfied! /done
 AI: Task complete!
 ```
