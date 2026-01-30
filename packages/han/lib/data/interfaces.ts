@@ -9,6 +9,7 @@
  * injected via the GraphQL context.
  */
 
+// Re-export types from db/index.ts which already re-exports from han-native
 import type {
 	HookExecution,
 	HookStats,
@@ -22,7 +23,7 @@ import type {
 	SessionTimestamps,
 	SessionTodos,
 	TaskMetrics,
-} from "../../han-native";
+} from "../db/index.ts";
 
 // =============================================================================
 // Query Options Types

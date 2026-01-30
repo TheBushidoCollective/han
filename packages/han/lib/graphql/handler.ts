@@ -66,7 +66,7 @@ export function createGraphQLHandler(options?: GraphQLHandlerOptions) {
 		},
 		context: ({ request }) => ({
 			request,
-			loaders: createLoaders(),
+			loaders: createLoaders(dataSource),
 			dataSource,
 			mode,
 		}),

@@ -15,7 +15,8 @@ import {
 	GraphQLString,
 } from "graphql";
 import type { ProjectGroup } from "../api/sessions.ts";
-import { getMessage, indexer } from "../db/index.ts";
+import { getLocalDataSource } from "../data/index.ts";
+import { indexer } from "../db/index.ts";
 import { startMemoryQuerySession } from "../memory/streaming.ts";
 import { builder } from "./builder.ts";
 import { decodeGlobalId } from "./node-registry.ts";
@@ -270,7 +271,8 @@ builder.queryField("activity", (t) =>
 			days: t.arg.int({ defaultValue: 365 }),
 		},
 		description: "Activity data for dashboard visualizations",
-		resolve: async (_parent, args) => queryActivityData(args.days ?? 365),
+		resolve: async (_parent, args, context) =>
+			queryActivityData(args.days ?? 365, context.dataSource),
 	}),
 );
 
@@ -360,7 +362,7 @@ builder.queryField("message", (t) =>
 		},
 		description:
 			"Get a message by its UUID (optionally prefixed with 'Message:')",
-		resolve: async (_parent, args) => {
+		resolve: async (_parent, args, context) => {
 			// Extract the UUID from the ID
 			// Accept either raw UUID or "Message:{uuid}" format
 			let messageId = args.id;
@@ -370,8 +372,8 @@ builder.queryField("message", (t) =>
 				messageId = messageId.slice(8);
 			}
 
-			// Fetch message by UUID directly from the database
-			const msg = await getMessage(messageId);
+			// Fetch message by UUID using DataSource
+			const msg = await context.dataSource.messages.get(messageId);
 			if (!msg) {
 				return null;
 			}

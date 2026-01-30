@@ -18,7 +18,7 @@ import type {
 	SessionListOptions,
 	TaskMetricsOptions,
 } from "../interfaces.ts";
-import type { Session } from "../../../han-native";
+import type { Session } from "../../db/index.ts";
 
 /**
  * LocalDataSource implementation
