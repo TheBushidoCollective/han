@@ -235,4 +235,7 @@ fi
 echo ""
 echo "---"
 echo ""
-echo "**User commands:** \`/construct\` (continue loop) | \`/reset\` (abandon task)"
+echo "**Commands:** \`/construct\` (continue loop) | \`/reset\` (abandon task)"
+echo ""
+echo "> **No file changes?** If this hat's work is complete but no files were modified,"
+echo "> save findings to scratchpad and run \`/advance\` then \`/clear\`."
