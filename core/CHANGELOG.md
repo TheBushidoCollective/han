@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-01-30
+
+### Added
+
+- add SubagentPrompt hook for context injection to subagents ([a16668ba](../../commit/a16668ba))
+- add pre-commit validation via PreToolUse hook ([477be1e5](../../commit/477be1e5))
+
+### Fixed
+
+- allow rm in /tmp/ for safe-operations ([fd302885](../../commit/fd302885))
+- address shell injection and path traversal vulnerabilities ([e9d5a985](../../commit/e9d5a985))
+- use updatedInput instead of deny for pre-commit validation ([7513ad98](../../commit/7513ad98))
+- pass full context through pre-commit validation hook ([4c04f452](../../commit/4c04f452))
+- pass session_id through pre-commit validation hook ([7d44693f](../../commit/7d44693f))
+- resolve lint errors and update tests for refactored hook UI ([c293a849](../../commit/c293a849))
+- resolve hook test failures ([4c22c83e](../../commit/4c22c83e))
+- resolve startup race conditions and improve LSP resilience ([4f2c642a](../../commit/4f2c642a))
+
+### Changed
+
+- replace jq/grep JSON parsing with han parse ([4211ef6a](../../commit/4211ef6a))
+
+### Other
+
+- Merge pull request #41 from TheBushidoCollective/han-1 ([0b677ba6](../../commit/0b677ba6))
+
 ## [1.9.3] - 2026-01-29
 
 ### Fixed
