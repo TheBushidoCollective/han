@@ -30,6 +30,16 @@ han plugin install jutsu-ai-dlc
 | **Bolt** | A single iteration/session bounded by `/clear` cycles - one focused work period |
 | **Hat** | Role/responsibility for a phase of work (e.g., Builder, Reviewer) |
 
+### Operating Modes
+
+Each hat operates in one of three modes that define the level of human oversight:
+
+| Mode | Name | Description |
+|------|------|-------------|
+| **HITL** | Human-In-The-Loop | Human validates each significant step before AI proceeds. AI proposes, human reviews, AI executes. Used for novel, high-risk, or foundational work. |
+| **OHOTL** | Observed Human-On-The-Loop | Human watches AI work in real-time with ability to intervene. Synchronous awareness with asynchronous control—progress isn't blocked waiting for approval. Used for creative, subjective, or training scenarios. |
+| **AHOTL** | Autonomous Human-On-The-Loop | AI operates autonomously within defined boundaries until success criteria are met, alerting humans only when intervention is required. Human defines criteria and reviews output. Used for well-defined, programmatically verifiable work. |
+
 ## The Unit Model
 
 AI-DLC organizes work into **Intents** and **Units**:

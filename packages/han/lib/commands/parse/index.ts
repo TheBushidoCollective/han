@@ -98,6 +98,61 @@ function extractFrontmatter(content: string): string | null {
 }
 
 /**
+ * Update frontmatter in markdown content while preserving body
+ * If no frontmatter exists, adds one
+ *
+ * @example
+ * updateFrontmatter("---\nstatus: pending\n---\n# Content", { status: "completed" })
+ * // returns "---\nstatus: completed\n---\n# Content"
+ */
+function updateFrontmatter(
+	content: string,
+	updates: Record<string, unknown>,
+): string {
+	const trimmed = content.trimStart();
+	const leadingWhitespace = content.slice(
+		0,
+		content.length - trimmed.length,
+	);
+
+	// Check if frontmatter exists
+	if (!trimmed.startsWith("---")) {
+		// No frontmatter - add one with updates
+		const newFrontmatter = yaml.stringify(updates).trim();
+		return `---\n${newFrontmatter}\n---\n${content}`;
+	}
+
+	// Find the closing ---
+	const lines = trimmed.split("\n");
+	let endIndex = -1;
+
+	for (let i = 1; i < lines.length; i++) {
+		if (lines[i].trim() === "---") {
+			endIndex = i;
+			break;
+		}
+	}
+
+	if (endIndex === -1) {
+		// Malformed frontmatter - treat as no frontmatter
+		const newFrontmatter = yaml.stringify(updates).trim();
+		return `---\n${newFrontmatter}\n---\n${content}`;
+	}
+
+	// Parse existing frontmatter
+	const frontmatterContent = lines.slice(1, endIndex).join("\n");
+	const existingData = yaml.parse(frontmatterContent) || {};
+
+	// Merge updates
+	const updatedData = { ...existingData, ...updates };
+	const newFrontmatter = yaml.stringify(updatedData).trim();
+
+	// Reconstruct document
+	const body = lines.slice(endIndex + 1).join("\n");
+	return `${leadingWhitespace}---\n${newFrontmatter}\n---${body ? "\n" + body : ""}`;
+}
+
+/**
  * Validate JSON against a simple schema
  * Schema format: { field: "type", field2: "type" }
  * Types: string, number, boolean, array, object
@@ -168,7 +223,7 @@ export function registerParseCommands(program: Command): void {
 
 				// If --keys flag, output object keys
 				if (opts.keys) {
-					if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+					if (typeof result === "object" && !Array.isArray(result)) {
 						const keys = Object.keys(result as Record<string, unknown>);
 						for (const key of keys) {
 							console.log(key);
@@ -299,6 +354,34 @@ export function registerParseCommands(program: Command): void {
 				} else {
 					console.log(yaml.stringify(result).trim());
 				}
+			} catch (error) {
+				console.error(
+					`Error: ${error instanceof Error ? error.message : error}`,
+				);
+				process.exit(1);
+			}
+		});
+
+	// han parse yaml-set <path> <value>
+	// Reads markdown with frontmatter from stdin, sets value in frontmatter, outputs result
+	parseCmd
+		.command("yaml-set")
+		.description(
+			"Set a value in YAML frontmatter (reads markdown from stdin, outputs to stdout)",
+		)
+		.argument("<path>", "Path to set (dot notation)")
+		.argument("<value>", "Value to set (string, or JSON with --json flag)")
+		.option("--json", "Parse value as JSON")
+		.action(async (pathArg: string, valueArg: string, opts) => {
+			try {
+				const input = await Bun.stdin.text();
+				const value = opts.json ? JSON.parse(valueArg) : valueArg;
+				const update = setPath({}, pathArg, value);
+				const result = updateFrontmatter(
+					input,
+					update as Record<string, unknown>,
+				);
+				console.log(result);
 			} catch (error) {
 				console.error(
 					`Error: ${error instanceof Error ? error.message : error}`,

@@ -75,28 +75,23 @@ Example format:
 
 ### Step 5: Save State
 
-Once you've collaborated on intent, criteria, and workflow, save them:
+Once you've collaborated on intent, criteria, and workflow, save them.
 
-```javascript
-han_keep_save({ scope: "branch", key: "intent.md", content: "..." })
-han_keep_save({ scope: "branch", key: "completion-criteria.md", content: "..." })
-han_keep_save({ scope: "branch", key: "intent-slug", content: "{intent-slug}" })
+> **Note:** The examples below show MCP tool calls (`han_keep_save`). Use the Han MCP server tools
+> or equivalent CLI commands: `han keep save --branch <key> "<content>"`
+
+```bash
+# CLI equivalent commands:
+han keep save --branch intent.md "Your intent description"
+han keep save --branch completion-criteria.md "- [ ] Criterion 1\n- [ ] Criterion 2"
+han keep save --branch intent-slug "my-feature"
 ```
 
 Then initialize the iteration state with the selected workflow:
 
-```javascript
-han_keep_save({
-  scope: "branch",
-  key: "iteration.json",
-  content: JSON.stringify({
-    iteration: 1,
-    hat: "elaborator",  // or first hat of selected workflow
-    workflowName: "default",
-    workflow: ["elaborator", "planner", "builder", "reviewer"],
-    status: "active"
-  })
-})
+```bash
+# Initialize iteration state (JSON)
+han keep save --branch iteration.json '{"iteration":1,"hat":"elaborator","workflowName":"default","workflow":["elaborator","planner","builder","reviewer"],"status":"active"}'
 ```
 
 ### Step 5b: Decompose into Units (Optional)

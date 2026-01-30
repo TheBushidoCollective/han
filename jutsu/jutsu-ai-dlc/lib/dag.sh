@@ -283,13 +283,8 @@ update_unit_status() {
       ;;
   esac
 
-  # Read current file
-  local content
-  content=$(cat "$unit_file")
-
-  # Update status in frontmatter using sed
-  # This replaces "status: <old>" with "status: <new>"
-  echo "$content" | sed "s/^status: .*/status: $new_status/" > "$unit_file"
+  # Update status in frontmatter using han parse yaml-set
+  han parse yaml-set status "$new_status" < "$unit_file" > "$unit_file.tmp" && mv "$unit_file.tmp" "$unit_file"
 }
 
 # Get DAG summary counts
