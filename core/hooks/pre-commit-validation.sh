@@ -14,10 +14,15 @@ set -e
 # Read stdin into variable
 INPUT=$(cat)
 
-# Parse tool_name, command, and session_id from JSON
+# Parse tool_name and command from JSON
 TOOL_NAME=$(echo "$INPUT" | han parse json tool_name -r 2>/dev/null || echo "")
 COMMAND=$(echo "$INPUT" | han parse json tool_input.command -r 2>/dev/null || echo "")
+
+# Extract context fields to pass through to Stop hooks
 SESSION_ID=$(echo "$INPUT" | han parse json session_id -r 2>/dev/null || echo "")
+TRANSCRIPT_PATH=$(echo "$INPUT" | han parse json transcript_path -r 2>/dev/null || echo "")
+CWD=$(echo "$INPUT" | han parse json cwd -r 2>/dev/null || echo "")
+PERMISSION_MODE=$(echo "$INPUT" | han parse json permission_mode -r 2>/dev/null || echo "default")
 
 # Only care about Bash tool
 if [ "$TOOL_NAME" != "Bash" ]; then
@@ -31,12 +36,15 @@ if ! echo "$COMMAND" | grep -qE '\bgit\s+commit\b'; then
 fi
 
 # This is a git commit - run Stop hook validation
-# Construct a minimal Stop payload for the hooks, including session_id
+# Construct Stop payload with context from parent hook
 STOP_PAYLOAD=$(cat <<EOF
 {
-  "stopReason": "pre_commit_validation",
-  "hook_event": "Stop",
-  "session_id": "$SESSION_ID"
+  "session_id": "$SESSION_ID",
+  "transcript_path": "$TRANSCRIPT_PATH",
+  "cwd": "$CWD",
+  "permission_mode": "$PERMISSION_MODE",
+  "hook_event_name": "Stop",
+  "stop_hook_active": true
 }
 EOF
 )
