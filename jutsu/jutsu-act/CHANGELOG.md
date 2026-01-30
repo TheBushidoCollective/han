@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.2] - 2026-01-30
+
+### Fixed
+
+- increase validate hook timeout to 2 minutes ([f20c8bf8](../../commit/f20c8bf8))
+- resolve hook test failures ([4c22c83e](../../commit/4c22c83e))
+
+### Other
+
+- Merge pull request #41 from TheBushidoCollective/han-1 ([0b677ba6](../../commit/0b677ba6))
+
 ## [1.10.2] - 2026-01-29
 
 ### Fixed

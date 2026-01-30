@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-01-30
+
+### Added
+
+- add DAG-based unit dependencies with numerical index + slug naming ([1feb893c](../../commit/1feb893c))
+- add AI-DLC 2026 methodology plugin ([ed938138](../../commit/ed938138))
+- add AI-DLC callout to homepage ([3778f9b6](../../commit/3778f9b6))
+
+### Fixed
+
+- resolve lint errors and update tests for refactored hook UI ([c293a849](../../commit/c293a849))
+- prevent white flash on dark mode load ([283ccc95](../../commit/283ccc95))
+- complete remaining review items ([cd873817](../../commit/cd873817))
+- use lowercase org name for shields.io ([78df2565](../../commit/78df2565))
+- convert all AI-DLC runbook Mermaid diagrams to TB layout ([f0aa107a](../../commit/f0aa107a))
+- narrow wide Mermaid diagrams in building-trust runbook ([a010dc05](../../commit/a010dc05))
+- narrow wide Mermaid diagrams in AI-DLC paper ([599113e9](../../commit/599113e9))
+- wrap TOC in PaperChangesProvider ([aafb0b5c](../../commit/aafb0b5c))
+- update lockfile for CI ([0379583e](../../commit/0379583e))
+
+### Changed
+
+- trim Adoption Path to summary with runbook links ([560f6667](../../commit/560f6667))
+
+### Other
+
+- Merge pull request #41 from TheBushidoCollective/han-1 ([0b677ba6](../../commit/0b677ba6))
+- add Han runbook and fix homepage installation commands ([b4ef7cd9](../../commit/b4ef7cd9))
+
 ## [1.35.0] - 2026-01-29
 
 ### Added
