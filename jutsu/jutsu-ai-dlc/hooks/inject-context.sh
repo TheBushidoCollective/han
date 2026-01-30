@@ -37,6 +37,17 @@ if ! echo "$ITERATION_JSON" | han parse json-validate \
   exit 0
 fi
 
+# Check for needsAdvance flag (set by Stop hook to signal iteration should increment)
+NEEDS_ADVANCE=$(echo "$ITERATION_JSON" | han parse json needsAdvance -r --default false 2>/dev/null || echo "false")
+if [ "$NEEDS_ADVANCE" = "true" ]; then
+  # Increment iteration and clear the flag
+  CURRENT_ITER=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
+  NEW_ITER=$((CURRENT_ITER + 1))
+  ITERATION_JSON=$(echo "$ITERATION_JSON" | han parse json-set iteration "$NEW_ITER" 2>/dev/null)
+  ITERATION_JSON=$(echo "$ITERATION_JSON" | han parse json-set needsAdvance false 2>/dev/null)
+  han keep save --branch iteration.json "$ITERATION_JSON" 2>/dev/null || true
+fi
+
 # Parse iteration state using han parse (no jq needed)
 ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
 HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default elaborator)

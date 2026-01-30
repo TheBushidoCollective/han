@@ -1,8 +1,8 @@
 #!/bin/bash
 # enforce-iteration.sh - Stop hook for AI-DLC
 #
-# At the end of each session, prompts user to /clear for next iteration.
-# The iteration count is incremented automatically.
+# At the end of each session, marks state for advancement and prompts for /clear.
+# The actual iteration increment happens at SessionStart to ensure it always fires.
 
 set -e
 
@@ -34,17 +34,15 @@ if [ "$STATUS" = "complete" ]; then
   exit 0
 fi
 
-# Get current iteration and increment
+# Get current iteration
 CURRENT_ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
-NEW_ITERATION=$((CURRENT_ITERATION + 1))
+HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 
-# Update iteration.json with new count using han parse json-set
-UPDATED_JSON=$(echo "$ITERATION_JSON" | han parse json-set iteration "$NEW_ITERATION" 2>/dev/null)
+# Mark for advancement (SessionStart will increment)
+UPDATED_JSON=$(echo "$ITERATION_JSON" | han parse json-set needsAdvance true 2>/dev/null)
 if [ -n "$UPDATED_JSON" ]; then
   han keep save --branch iteration.json "$UPDATED_JSON" 2>/dev/null || true
 fi
-
-HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 
 echo ""
 echo "---"
@@ -53,6 +51,6 @@ echo "## AI-DLC: Iteration $CURRENT_ITERATION Complete"
 echo ""
 echo "**Current hat:** $HAT"
 echo ""
-echo "Run \`/clear\` to start iteration $NEW_ITERATION with fresh context."
+echo "Run \`/clear\` to start iteration $((CURRENT_ITERATION + 1)) with fresh context."
 echo ""
 echo "Your progress has been preserved in han keep storage."
