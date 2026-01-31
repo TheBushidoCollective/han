@@ -3,14 +3,14 @@ import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import Header from "@/app/components/Header";
+import MarkdownContent from "@/app/components/MarkdownContent";
+import Sidebar from "@/app/components/Sidebar";
 import {
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
 	getPluginContent,
-} from "../../../../../../lib/plugins";
-import Header from "../../../../../components/Header";
-import Sidebar from "../../../../../components/Sidebar";
+} from "@/lib/plugins";
 
 export async function generateStaticParams() {
 	const allPlugins = getAllPluginsAcrossCategories();
@@ -216,15 +216,11 @@ export default async function HookFilePage({
 
 						{/* Content */}
 						{hookFile.path.endsWith(".md") ? (
-							<article className="prose prose-lg dark:prose-invert max-w-none">
-								<ReactMarkdown>{hookFile.content}</ReactMarkdown>
-							</article>
+							<MarkdownContent content={hookFile.content} />
 						) : (
-							<div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-6 overflow-x-auto">
-								<pre className="text-sm text-gray-100">
-									<code>{hookFile.content}</code>
-								</pre>
-							</div>
+							<MarkdownContent
+								content={`\`\`\`${hookFile.path.split(".").pop() || ""}\n${hookFile.content}\n\`\`\``}
+							/>
 						)}
 
 						{/* Back Link */}

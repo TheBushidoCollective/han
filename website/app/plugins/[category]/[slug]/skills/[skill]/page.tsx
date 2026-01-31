@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { getAllPlugins, getPluginContent } from "../../../../../../lib/plugins";
-import Header from "../../../../../components/Header";
-import Sidebar from "../../../../../components/Sidebar";
+import Header from "@/app/components/Header";
+import MarkdownContent from "@/app/components/MarkdownContent";
+import Sidebar from "@/app/components/Sidebar";
+import { getAllPlugins, getPluginContent } from "@/lib/plugins";
 
 export async function generateStaticParams() {
 	const categories = ["core", "jutsu", "do", "hashi"] as const;
@@ -172,11 +171,9 @@ export default async function SkillPage({
 						<br />
 
 						{/* Markdown Content */}
-						<div className="prose dark:prose-invert max-w-none prose-p:my-3 prose-headings:mb-3 prose-headings:mt-6">
-							<ReactMarkdown remarkPlugins={[remarkGfm]}>
-								{skill.content.replace(/^\s*#\s+.+/, "# Overview")}
-							</ReactMarkdown>
-						</div>
+						<MarkdownContent
+							content={skill.content.replace(/^\s*#\s+.+/, "# Overview")}
+						/>
 					</main>
 				</div>
 			</div>
