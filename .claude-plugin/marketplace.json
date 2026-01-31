@@ -163,10 +163,10 @@
       ]
     },
     {
-      "name": "hashi-blueprints",
+      "name": "blueprints",
       "description": "MCP server for managing technical blueprint documentation. Provides tools to search, read, and write blueprints programmatically, plus skills and hooks for quality enforcement.",
-      "source": "./hashi/hashi-blueprints",
-      "category": "Bridge",
+      "source": "./services/blueprints",
+      "category": "Integration",
       "keywords": [
         "blueprints",
         "documentation",
@@ -1479,10 +1479,10 @@
       ]
     },
     {
-      "name": "hashi-clickup",
+      "name": "clickup",
       "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
-      "source": "./hashi/hashi-clickup",
-      "category": "Bridge",
+      "source": "./services/clickup",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "clickup",
@@ -1494,10 +1494,10 @@
       ]
     },
     {
-      "name": "hashi-playwright-mcp",
+      "name": "playwright-mcp",
       "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
-      "source": "./hashi/hashi-playwright-mcp",
-      "category": "Bridge",
+      "source": "./services/playwright-mcp",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "playwright",
@@ -1507,10 +1507,10 @@
       ]
     },
     {
-      "name": "hashi-gitlab",
+      "name": "gitlab",
       "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
-      "source": "./hashi/hashi-gitlab",
-      "category": "Bridge",
+      "source": "./services/gitlab",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "gitlab",
@@ -1523,10 +1523,10 @@
       ]
     },
     {
-      "name": "hashi-github",
+      "name": "github",
       "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
-      "source": "./hashi/hashi-github",
-      "category": "Bridge",
+      "source": "./services/github",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "github",
@@ -1540,10 +1540,10 @@
       ]
     },
     {
-      "name": "hashi-jira",
+      "name": "jira",
       "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
-      "source": "./hashi/hashi-jira",
-      "category": "Bridge",
+      "source": "./services/jira",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "jira",
@@ -1555,10 +1555,10 @@
       ]
     },
     {
-      "name": "hashi-linear",
+      "name": "linear",
       "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
-      "source": "./hashi/hashi-linear",
-      "category": "Bridge",
+      "source": "./services/linear",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "linear",
@@ -1570,10 +1570,10 @@
       ]
     },
     {
-      "name": "hashi-agent-sop",
+      "name": "agent-sop",
       "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring skills.",
-      "source": "./hashi/hashi-agent-sop",
-      "category": "Bridge",
+      "source": "./services/agent-sop",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "agent-sop",
@@ -1588,10 +1588,10 @@
       ]
     },
     {
-      "name": "hashi-figma",
+      "name": "figma",
       "description": "MCP server for Figma integration providing design-to-code generation, design token extraction, component sync, and frame analysis via Figma Desktop MCP server.",
-      "source": "./hashi/hashi-figma",
-      "category": "Bridge",
+      "source": "./services/figma",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "figma",
@@ -1604,10 +1604,10 @@
       ]
     },
     {
-      "name": "hashi-sentry",
+      "name": "sentry",
       "description": "MCP server for Sentry integration providing error tracking, performance monitoring, release health, incident response, and Seer AI root cause analysis via remote HTTP OAuth server.",
-      "source": "./hashi/hashi-sentry",
-      "category": "Bridge",
+      "source": "./services/sentry",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "sentry",
@@ -1621,10 +1621,10 @@
       ]
     },
     {
-      "name": "hashi-reddit",
+      "name": "reddit",
       "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
-      "source": "./hashi/hashi-reddit",
-      "category": "Bridge",
+      "source": "./services/reddit",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "reddit",
@@ -1637,10 +1637,10 @@
       ]
     },
     {
-      "name": "hashi-notion",
+      "name": "notion",
       "description": "MCP server for Notion integration providing workspace search, page management, database operations, comments, and AI-optimized content access via Notion's hosted MCP server.",
-      "source": "./hashi/hashi-notion",
-      "category": "Bridge",
+      "source": "./services/notion",
+      "category": "Integration",
       "keywords": [
         "mcp",
         "notion",

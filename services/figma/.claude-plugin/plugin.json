@@ -1,0 +1,20 @@
+{
+  "name": "figma",
+  "version": "1.1.0",
+  "description": "MCP server configuration for Figma integration providing design-to-code workflows, component access, and design system integration via the official Figma desktop server.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "figma",
+    "design",
+    "design-to-code",
+    "design-system",
+    "server"
+  ]
+}

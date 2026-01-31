@@ -1,0 +1,27 @@
+{
+  "name": "github",
+  "version": "1.3.0",
+  "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search via GitHub Copilot's hosted MCP server. Zero configuration required.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "github",
+    "git",
+    "repository",
+    "issues",
+    "pull-requests",
+    "actions",
+    "code-search"
+  ],
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    }
+  }
+}
