@@ -1,0 +1,19 @@
+{
+  "name": "effect",
+  "version": "1.3.0",
+  "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "effect",
+    "typescript",
+    "functional-programming",
+    "type-safety",
+    "dependency-injection"
+  ]
+}

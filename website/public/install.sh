@@ -11,8 +11,9 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Install to user's local bin directory
+# HAN_INSTALL_TARGET allows wrapper to specify 'han-bin' while manual installs use 'han'
 BIN_DIR="${HOME}/.local/bin"
-HAN_BIN="${BIN_DIR}/han"
+HAN_BIN="${BIN_DIR}/${HAN_INSTALL_TARGET:-han}"
 
 echo -e "${GREEN}Installing han binary to $HAN_BIN...${NC}"
 

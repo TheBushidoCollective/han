@@ -1,0 +1,13 @@
+{
+  "name": "npm",
+  "version": "1.4.0",
+  "description": "NPM package manager skills with dependency validation hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["npm", "package-manager", "dependencies", "node"]
+}

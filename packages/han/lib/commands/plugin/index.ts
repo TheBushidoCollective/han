@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { registerPluginInstall } from "./install.ts";
 import { registerPluginList } from "./list.ts";
+import { registerPluginMigrate } from "./migrate.ts";
 import { registerPluginSearch } from "./search.ts";
 import { registerPluginUninstall } from "./uninstall.ts";
 import { registerPluginUpdateMarketplace } from "./update.ts";
@@ -16,6 +17,7 @@ export function registerPluginCommands(program: Command): void {
 
 	registerPluginInstall(pluginCommand);
 	registerPluginList(pluginCommand);
+	registerPluginMigrate(pluginCommand);
 	registerPluginUninstall(pluginCommand);
 	registerPluginSearch(pluginCommand);
 	registerPluginUpdateMarketplace(pluginCommand);

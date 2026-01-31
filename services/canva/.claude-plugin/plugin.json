@@ -1,0 +1,9 @@
+{
+	"name": "canva",
+	"description": "Canva design platform integration for creating, editing, and exporting designs",
+	"version": "1.0.0",
+	"author": "The Bushido Collective",
+	"icon": "🎨",
+	"license": "Apache-2.0",
+	"keywords": ["canva", "design", "graphics", "templates", "images", "pdf", "export"]
+}

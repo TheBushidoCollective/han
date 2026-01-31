@@ -1,0 +1,27 @@
+{
+  "name": "scala",
+  "version": "1.10.0",
+  "description": "Advanced Scala programming skills for functional programming and type systems",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["scala", "functional", "jvm", "type-system"],
+  "lspServers": {
+    "metals": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".scala": "scala",
+        ".sc": "scala",
+        ".sbt": "sbt"
+      },
+      "startupTimeout": 120000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}

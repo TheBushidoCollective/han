@@ -1,0 +1,8 @@
+# Testing requirements configured during elaboration
+# The reviewer hat enforces these requirements
+
+testing:
+  unit_tests: true          # Alias resolution must have unit tests
+  integration_tests: true   # Test full plugin install flow with old names
+  coverage_threshold: 70    # Minimum 70% on new alias code
+  e2e_tests: false          # E2E tests not required

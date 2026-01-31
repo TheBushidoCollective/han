@@ -11,16 +11,16 @@ Feature: Plugin Pages
 
   Scenario: Plugin categories are displayed
     Then I should see a link to "Core"
-    And I should see a link to "Jutsu"
+    And I should see a link to "Languages"
 
   Scenario: Navigate to core category
     When I click on link "Core"
     Then the url should contain "/plugins/core"
     And I should see heading "Core"
 
-  Scenario: View plugins in jutsu category
-    When I navigate to "/plugins/jutsu"
-    Then I should see at least 1 "a[href*='/plugins/jutsu/']" elements
+  Scenario: View plugins in tools category
+    When I navigate to "/plugins/tools"
+    Then I should see at least 1 "a[href*='/plugins/tools/']" elements
 
   Scenario: Plugin detail page shows information
     When I navigate to "/plugins/core/core"

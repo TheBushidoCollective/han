@@ -1,0 +1,21 @@
+{
+  "name": "mise",
+  "version": "1.3.0",
+  "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mise",
+    "validation",
+    "task-runner",
+    "version-manager",
+    "quality",
+    "enforcement",
+    "dev-tools"
+  ]
+}

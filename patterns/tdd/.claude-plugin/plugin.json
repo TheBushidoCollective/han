@@ -1,0 +1,19 @@
+{
+  "name": "tdd",
+  "version": "1.5.0",
+  "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "tdd",
+    "test-driven-development",
+    "testing",
+    "red-green-refactor",
+    "quality"
+  ]
+}

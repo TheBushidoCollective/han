@@ -1,0 +1,13 @@
+{
+  "name": "yarn",
+  "version": "1.4.0",
+  "description": "Yarn package manager skills with dependency validation hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["yarn", "package-manager", "dependencies", "node"]
+}

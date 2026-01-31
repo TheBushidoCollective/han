@@ -1,0 +1,13 @@
+{
+  "name": "objective-c",
+  "version": "1.1.2",
+  "description": "Advanced Objective-C programming skills for iOS and macOS development",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["objective-c", "objc", "ios", "macos", "arc"]
+}

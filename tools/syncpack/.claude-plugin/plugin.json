@@ -1,0 +1,22 @@
+{
+  "name": "syncpack",
+  "version": "1.1.0",
+  "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "syncpack",
+    "monorepo",
+    "dependencies",
+    "version-management",
+    "npm",
+    "yarn",
+    "pnpm",
+    "workspaces"
+  ]
+}

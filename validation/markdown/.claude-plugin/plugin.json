@@ -1,0 +1,32 @@
+{
+  "name": "markdown",
+  "version": "2.4.0",
+  "description": "Markdown documentation skills and linting with markdownlint.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "markdown",
+    "markdownlint",
+    "documentation",
+    "linting",
+    "formatting"
+  ],
+  "lspServers": {
+    "markdown": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".md": "markdown",
+        ".mdx": "markdown"
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}
