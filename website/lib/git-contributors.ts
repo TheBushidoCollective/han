@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { getDisplayName } from "./contributor-names";
 
 export interface Contributor {
 	name: string;
@@ -69,10 +70,11 @@ export function getFileContributors(filePath: string): Contributor[] {
 }
 
 /**
- * Get contributor names for a file, sorted by number of commits
+ * Get contributor display names for a file, sorted by number of commits
+ * Maps git usernames to full display names using contributor-names.ts
  */
 export function getFileContributorNames(filePath: string): string[] {
-	return getFileContributors(filePath).map((c) => c.name);
+	return getFileContributors(filePath).map((c) => getDisplayName(c.name, c.email));
 }
 
 /**
