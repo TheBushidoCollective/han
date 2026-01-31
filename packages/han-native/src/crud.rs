@@ -943,13 +943,13 @@ pub fn upsert_generated_summary(
     let files_json = input
         .files_modified
         .as_ref()
-        .map(|f| serde_json::to_string(f))
+        .map(serde_json::to_string)
         .transpose()
         .map_err(|e| napi::Error::from_reason(format!("Failed to serialize files: {}", e)))?;
     let tools_json = input
         .tools_used
         .as_ref()
-        .map(|t| serde_json::to_string(t))
+        .map(serde_json::to_string)
         .transpose()
         .map_err(|e| napi::Error::from_reason(format!("Failed to serialize tools: {}", e)))?;
 
