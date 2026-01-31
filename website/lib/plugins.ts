@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import yaml from "yaml";
-import { getCategoryIcon } from "./constants";
+import { type PluginCategory, getCategoryIcon } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
 
@@ -12,7 +12,7 @@ export interface PluginMetadata {
 	description: string;
 	icon: string;
 	kanji?: string;
-	category: "core" | "jutsu" | "do" | "hashi";
+	category: PluginCategory;
 }
 
 export interface AgentMetadata {
@@ -104,35 +104,28 @@ export interface PluginDetails {
 	mcpServers: MCPServerMetadata[];
 }
 
-function getCategoryFromMarketplace(
-	marketplaceCategory: string,
-): "core" | "jutsu" | "do" | "hashi" {
-	// Core category
-	if (marketplaceCategory === "Core") return "core";
+function getCategoryFromMarketplace(marketplaceCategory: string): PluginCategory {
+	// Map marketplace category names to URL-friendly slugs
+	const categoryMap: Record<string, PluginCategory> = {
+		Core: "core",
+		Language: "languages",
+		Framework: "frameworks",
+		Validation: "validation",
+		Tool: "tools",
+		Integration: "services",
+		Discipline: "disciplines",
+		Pattern: "patterns",
+		Specialized: "specialized",
+		// Legacy mappings for backwards compatibility
+		Technique: "tools",
+		Bridge: "services",
+	};
 
-	// Discipline category (do plugins - specialized agents)
-	if (marketplaceCategory === "Discipline") return "do";
-
-	// Integration/Bridge category (hashi plugins - MCP servers, external services)
-	if (
-		marketplaceCategory === "Integration" ||
-		marketplaceCategory === "Bridge"
-	)
-		return "hashi";
-
-	// Everything else maps to jutsu (techniques/tools):
-	// - Language: Programming language support
-	// - Framework: Framework integrations
-	// - Validation: Code quality tools
-	// - Tool: Development tools
-	// - Pattern: Architectural patterns
-	// - Specialized: Niche/specialized tools
-	// - Technique: Legacy category name
-	return "jutsu";
+	return categoryMap[marketplaceCategory] || "tools";
 }
 
-// Re-export getCategoryIcon from constants for convenience
-export { getCategoryIcon } from "./constants";
+// Re-export from constants for convenience
+export { getCategoryIcon, type PluginCategory, CATEGORY_ORDER, CATEGORY_META } from "./constants";
 
 /**
  * Titleize a string by capitalizing words and replacing hyphens with spaces
@@ -158,7 +151,7 @@ function stripPrefix(name: string, category: string): string {
 function getPluginMetadata(
 	pluginPath: string,
 	pluginName: string,
-	category: "core" | "jutsu" | "do" | "hashi",
+	category: PluginCategory,
 ): PluginMetadata {
 	try {
 		const pluginJsonPath = path.join(
@@ -237,9 +230,7 @@ export function getAllPluginsAcrossCategories(): Array<
 }
 
 // Get all plugins in a category from marketplace.json
-export function getAllPlugins(
-	category: "core" | "jutsu" | "do" | "hashi",
-): PluginMetadata[] {
+export function getAllPlugins(category: PluginCategory): PluginMetadata[] {
 	try {
 		const marketplacePath = path.join(
 			PLUGINS_DIR,
@@ -789,7 +780,7 @@ function getPluginReadme(pluginPath: string): string | null {
 
 // Get full plugin details with agents and skills
 export function getPluginContent(
-	category: "core" | "jutsu" | "do" | "hashi",
+	category: PluginCategory,
 	slug: string,
 ): PluginDetails | null {
 	try {

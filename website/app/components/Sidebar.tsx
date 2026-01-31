@@ -3,20 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
-import { getCategoryIcon } from "../../lib/constants";
+import {
+	type PluginCategory,
+	CATEGORY_META,
+	CATEGORY_ORDER,
+	getCategoryIcon,
+} from "../../lib/constants";
 import SidebarScrollContainer from "./SidebarScrollContainer";
 
-interface SidebarProps {
-	jutsuPlugins: Array<{ name: string; title: string }>;
-	doPlugins: Array<{ name: string; title: string }>;
-	hashiPlugins: Array<{ name: string; title: string }>;
+interface PluginInfo {
+	name: string;
+	title: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-	jutsuPlugins,
-	doPlugins,
-	hashiPlugins,
-}) => {
+interface SidebarProps {
+	pluginsByCategory: Record<PluginCategory, PluginInfo[]>;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ pluginsByCategory }) => {
 	const pathname = usePathname();
 
 	const isActive = (href: string) => {
@@ -74,93 +78,42 @@ const Sidebar: React.FC<SidebarProps> = ({
 						</Link>
 					</div>
 
-					{/* Core */}
-					<div>
-						<Link
-							href="/plugins/core"
-							className={`${getLinkClass("/plugins/core")} mb-2`}
-						>
-							{getCategoryIcon("core")} Core
-						</Link>
-						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
-							Essential infrastructure and optional philosophy
-						</p>
-					</div>
+					{/* Dynamic categories */}
+					{CATEGORY_ORDER.map((category) => {
+						const plugins = pluginsByCategory[category] || [];
+						const meta = CATEGORY_META[category];
 
-					{/* Dō */}
-					<div>
-						<Link
-							href="/plugins/do"
-							className={`${getLinkClass("/plugins/do")} mb-2`}
-						>
-							{getCategoryIcon("do")} Dō
-						</Link>
-						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
-							Specialized development disciplines
-						</p>
-						<ul className="space-y-1 ml-4">
-							{doPlugins.map((plugin) => (
-								<li key={plugin.name}>
-									<Link
-										href={`/plugins/do/${plugin.name}`}
-										className={getSubLinkClass(`/plugins/do/${plugin.name}`)}
-									>
-										{plugin.title}
-									</Link>
-								</li>
-							))}
-						</ul>
-					</div>
+						// Skip empty categories
+						if (plugins.length === 0) return null;
 
-					{/* Jutsu */}
-					<div>
-						<Link
-							href="/plugins/jutsu"
-							className={`${getLinkClass("/plugins/jutsu")} mb-2`}
-						>
-							{getCategoryIcon("jutsu")} Jutsu
-						</Link>
-						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
-							Technology skills and validations
-						</p>
-						<ul className="space-y-1 ml-4">
-							{jutsuPlugins.map((plugin) => (
-								<li key={plugin.name}>
-									<Link
-										href={`/plugins/jutsu/${plugin.name}`}
-										className={getSubLinkClass(`/plugins/jutsu/${plugin.name}`)}
-									>
-										{plugin.title}
-									</Link>
-								</li>
-							))}
-						</ul>
-					</div>
-
-					{/* Hashi */}
-					<div>
-						<Link
-							href="/plugins/hashi"
-							className={`${getLinkClass("/plugins/hashi")} mb-2`}
-						>
-							{getCategoryIcon("hashi")} Hashi
-						</Link>
-						<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
-							MCP servers for external integrations
-						</p>
-						<ul className="space-y-1 ml-4">
-							{hashiPlugins.map((plugin) => (
-								<li key={plugin.name}>
-									<Link
-										href={`/plugins/hashi/${plugin.name}`}
-										className={getSubLinkClass(`/plugins/hashi/${plugin.name}`)}
-									>
-										{plugin.title}
-									</Link>
-								</li>
-							))}
-						</ul>
-					</div>
+						return (
+							<div key={category}>
+								<Link
+									href={`/plugins/${category}`}
+									className={`${getLinkClass(`/plugins/${category}`)} mb-2`}
+								>
+									{getCategoryIcon(category)} {meta.title}
+								</Link>
+								<p className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-4 mb-2">
+									{meta.subtitle}
+								</p>
+								<ul className="space-y-1 ml-4">
+									{plugins.map((plugin) => (
+										<li key={plugin.name}>
+											<Link
+												href={`/plugins/${category}/${plugin.name}`}
+												className={getSubLinkClass(
+													`/plugins/${category}/${plugin.name}`,
+												)}
+											>
+												{plugin.title}
+											</Link>
+										</li>
+									))}
+								</ul>
+							</div>
+						);
+					})}
 				</nav>
 			</SidebarScrollContainer>
 		</aside>

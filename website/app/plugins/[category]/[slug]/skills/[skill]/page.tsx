@@ -4,13 +4,18 @@ import { notFound } from "next/navigation";
 import Header from "@/app/components/Header";
 import MarkdownContent from "@/app/components/MarkdownContent";
 import Sidebar from "@/app/components/Sidebar";
-import { getAllPlugins, getPluginContent } from "@/lib/plugins";
+import {
+	getAllPlugins,
+	getPluginContent,
+	type PluginCategory,
+	CATEGORY_ORDER,
+	CATEGORY_META,
+} from "@/lib/plugins";
 
 export async function generateStaticParams() {
-	const categories = ["core", "jutsu", "do", "hashi"] as const;
 	const params: { category: string; slug: string; skill: string }[] = [];
 
-	for (const category of categories) {
+	for (const category of CATEGORY_ORDER) {
 		const plugins = getAllPlugins(category);
 		for (const plugin of plugins) {
 			const details = getPluginContent(category, plugin.name);
@@ -29,12 +34,29 @@ export async function generateStaticParams() {
 	return params;
 }
 
-const categoryLabels = {
-	core: "Core",
-	jutsu: "Jutsu",
-	do: "Dō",
-	hashi: "Hashi",
-} as const;
+// Build plugins by category for sidebar
+function getPluginsByCategory() {
+	const result: Record<PluginCategory, { name: string; title: string }[]> = {
+		core: [],
+		languages: [],
+		frameworks: [],
+		validation: [],
+		tools: [],
+		services: [],
+		disciplines: [],
+		patterns: [],
+		specialized: [],
+	};
+
+	for (const category of CATEGORY_ORDER) {
+		result[category] = getAllPlugins(category).map((p) => ({
+			name: p.name,
+			title: p.title,
+		}));
+	}
+
+	return result;
+}
 
 export async function generateMetadata({
 	params,
@@ -43,16 +65,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { category, slug, skill: skillName } = await params;
 
-	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
+	if (!CATEGORY_ORDER.includes(category as PluginCategory)) {
 		return {
 			title: "Skill Not Found - Han",
 		};
 	}
 
-	const plugin = getPluginContent(
-		category as "core" | "jutsu" | "do" | "hashi",
-		slug,
-	);
+	const plugin = getPluginContent(category as PluginCategory, slug);
 
 	if (!plugin) {
 		return {
@@ -81,32 +100,18 @@ export default async function SkillPage({
 }) {
 	const { category, slug, skill: skillName } = await params;
 
-	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
+	if (!CATEGORY_ORDER.includes(category as PluginCategory)) {
 		notFound();
 	}
 
-	const plugin = getPluginContent(
-		category as "core" | "jutsu" | "do" | "hashi",
-		slug,
-	);
+	const plugin = getPluginContent(category as PluginCategory, slug);
 
 	if (!plugin) {
 		notFound();
 	}
 
 	// Get plugins for sidebar
-	const jutsuPlugins = getAllPlugins("jutsu").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
-	const doPlugins = getAllPlugins("do").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
-	const hashiPlugins = getAllPlugins("hashi").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
+	const pluginsByCategory = getPluginsByCategory();
 
 	const skill = plugin.skills.find((s) => s.name === skillName);
 
@@ -132,7 +137,7 @@ export default async function SkillPage({
 						href={`/plugins/${category}`}
 						className="hover:text-gray-900 dark:hover:text-white"
 					>
-						{categoryLabels[category as keyof typeof categoryLabels]}
+						{CATEGORY_META[category as PluginCategory]?.title || category}
 					</Link>
 					<span>/</span>
 					<Link
@@ -151,11 +156,7 @@ export default async function SkillPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar
-						jutsuPlugins={jutsuPlugins}
-						doPlugins={doPlugins}
-						hashiPlugins={hashiPlugins}
-					/>
+					<Sidebar pluginsByCategory={pluginsByCategory} />
 					<main className="flex-1 min-w-0">
 						{/* Header */}
 						<div className="mb-8">
