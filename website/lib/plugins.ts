@@ -107,10 +107,27 @@ export interface PluginDetails {
 function getCategoryFromMarketplace(
 	marketplaceCategory: string,
 ): "core" | "jutsu" | "do" | "hashi" {
+	// Core category
 	if (marketplaceCategory === "Core") return "core";
-	if (marketplaceCategory === "Technique") return "jutsu";
+
+	// Discipline category (do plugins - specialized agents)
 	if (marketplaceCategory === "Discipline") return "do";
-	if (marketplaceCategory === "Bridge") return "hashi";
+
+	// Integration/Bridge category (hashi plugins - MCP servers, external services)
+	if (
+		marketplaceCategory === "Integration" ||
+		marketplaceCategory === "Bridge"
+	)
+		return "hashi";
+
+	// Everything else maps to jutsu (techniques/tools):
+	// - Language: Programming language support
+	// - Framework: Framework integrations
+	// - Validation: Code quality tools
+	// - Tool: Development tools
+	// - Pattern: Architectural patterns
+	// - Specialized: Niche/specialized tools
+	// - Technique: Legacy category name
 	return "jutsu";
 }
 

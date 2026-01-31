@@ -202,12 +202,11 @@ export default async function PluginPage({
 	}));
 
 	// Load plugin metadata for tags
+	// Always use plugin.source which contains the actual filesystem path
 	const pluginDir = path.join(
 		process.cwd(),
 		"..",
-		plugin.metadata.category === "core"
-			? plugin.source.replace("./", "")
-			: `${plugin.metadata.category}/${plugin.metadata.name}`,
+		plugin.source.replace("./", ""),
 	);
 	const pluginJsonPath = path.join(pluginDir, ".claude-plugin/plugin.json");
 	const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
