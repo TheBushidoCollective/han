@@ -14,7 +14,7 @@ export interface ParsedQuery {
  * Supports special syntax:
  * - `tag:typescript` or `tags:typescript,react` - filter by tags
  * - `component:skill` or `components:skill,agent` - filter by component types
- * - `category:jutsu` or `categories:jutsu,do` - filter by plugin category
+ * - `category:languages` or `categories:tools,services` - filter by plugin category
  *
  * Regular text is treated as a fuzzy search query
  */

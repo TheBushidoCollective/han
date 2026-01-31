@@ -294,6 +294,22 @@
       ]
     },
     {
+      "name": "canva",
+      "description": "Canva design platform integration for creating, editing, and exporting designs",
+      "source": "./services/canva",
+      "category": "Integration",
+      "keywords": [
+        "canva",
+        "design",
+        "graphics",
+        "templates",
+        "images",
+        "pdf",
+        "export",
+        "mcp"
+      ]
+    },
+    {
       "name": "checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
       "source": "./validation/checkstyle",
@@ -841,6 +857,18 @@
       ]
     },
     {
+      "name": "graphics",
+      "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
+      "source": "./disciplines/graphics",
+      "category": "Discipline",
+      "keywords": [
+        "graphics",
+        "gpu",
+        "shaders",
+        "agent"
+      ]
+    },
+    {
       "name": "graphql",
       "description": "Skills for GraphQL schema design and queries.",
       "source": "./tools/graphql",
@@ -864,18 +892,6 @@
         "breaking-changes",
         "diff",
         "operations"
-      ]
-    },
-    {
-      "name": "graphics",
-      "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./disciplines/graphics",
-      "category": "Discipline",
-      "keywords": [
-        "graphics",
-        "gpu",
-        "shaders",
-        "agent"
       ]
     },
     {

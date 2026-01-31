@@ -49,41 +49,41 @@ test("parseQuery extracts multiple components", () => {
 });
 
 test("parseQuery extracts category filter", () => {
-	const result = parseQuery("category:jutsu");
+	const result = parseQuery("category:tools");
 	strictEqual(result.textQuery, "");
-	deepStrictEqual(result.categoryFilters, ["jutsu"]);
+	deepStrictEqual(result.categoryFilters, ["tools"]);
 });
 
 test("parseQuery extracts multiple categories", () => {
-	const result = parseQuery("categories:jutsu,do,hashi");
+	const result = parseQuery("categories:tools,services,disciplines");
 	strictEqual(result.textQuery, "");
-	deepStrictEqual(result.categoryFilters, ["jutsu", "do", "hashi"]);
+	deepStrictEqual(result.categoryFilters, ["tools", "services", "disciplines"]);
 });
 
 test("parseQuery handles mixed query with text and filters", () => {
 	const result = parseQuery(
-		"typescript tag:react component:skill category:jutsu",
+		"typescript tag:react component:skill category:languages",
 	);
 	strictEqual(result.textQuery, "typescript");
 	deepStrictEqual(result.tagFilters, ["react"]);
 	deepStrictEqual(result.componentFilters, ["skill"]);
-	deepStrictEqual(result.categoryFilters, ["jutsu"]);
+	deepStrictEqual(result.categoryFilters, ["languages"]);
 });
 
 test("parseQuery handles complex mixed query", () => {
 	const result = parseQuery(
-		"linting tags:eslint,biome category:jutsu formatting",
+		"linting tags:eslint,biome category:validation formatting",
 	);
 	strictEqual(result.textQuery, "linting formatting");
 	deepStrictEqual(result.tagFilters, ["eslint", "biome"]);
-	deepStrictEqual(result.categoryFilters, ["jutsu"]);
+	deepStrictEqual(result.categoryFilters, ["validation"]);
 });
 
 test("parseQuery is case-insensitive for filter prefixes", () => {
-	const result = parseQuery("TAG:typescript COMPONENT:skill CATEGORY:jutsu");
+	const result = parseQuery("TAG:typescript COMPONENT:skill CATEGORY:languages");
 	deepStrictEqual(result.tagFilters, ["typescript"]);
 	deepStrictEqual(result.componentFilters, ["skill"]);
-	deepStrictEqual(result.categoryFilters, ["jutsu"]);
+	deepStrictEqual(result.categoryFilters, ["languages"]);
 });
 
 test("parseQuery handles empty query", () => {

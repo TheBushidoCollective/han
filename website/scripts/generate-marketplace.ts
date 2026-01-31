@@ -10,8 +10,17 @@ import path from "node:path";
 interface SourcePlugin {
 	name: string;
 	description: string;
-	source: string; // e.g., "./jutsu/jutsu-react"
-	category: "Core" | "Technique" | "Discipline" | "Bridge";
+	source: string; // e.g., "./languages/typescript"
+	category:
+		| "Core"
+		| "Language"
+		| "Framework"
+		| "Validation"
+		| "Tool"
+		| "Integration"
+		| "Discipline"
+		| "Pattern"
+		| "Specialized";
 	keywords: string[];
 }
 
@@ -38,7 +47,16 @@ interface PublicPlugin {
 	name: string;
 	description: string;
 	source: PublicPluginSource;
-	category: "Core" | "Technique" | "Discipline" | "Bridge";
+	category:
+		| "Core"
+		| "Language"
+		| "Framework"
+		| "Validation"
+		| "Tool"
+		| "Integration"
+		| "Discipline"
+		| "Pattern"
+		| "Specialized";
 	keywords: string[];
 }
 
@@ -65,7 +83,7 @@ function transformMarketplace(source: SourceMarketplace): PublicMarketplace {
 		source: {
 			type: "github" as const,
 			repo: REPO,
-			path: plugin.source.replace("./", ""), // "./jutsu/jutsu-react" -> "jutsu/jutsu-react"
+			path: plugin.source.replace("./", ""), // "./languages/typescript" -> "languages/typescript"
 		},
 		category: plugin.category,
 		keywords: plugin.keywords,
@@ -103,11 +121,26 @@ console.log(
 	`  - Core: ${publicMarketplace.plugins.filter((p) => p.category === "Core").length}`,
 );
 console.log(
-	`  - Technique: ${publicMarketplace.plugins.filter((p) => p.category === "Technique").length}`,
+	`  - Language: ${publicMarketplace.plugins.filter((p) => p.category === "Language").length}`,
+);
+console.log(
+	`  - Framework: ${publicMarketplace.plugins.filter((p) => p.category === "Framework").length}`,
+);
+console.log(
+	`  - Validation: ${publicMarketplace.plugins.filter((p) => p.category === "Validation").length}`,
+);
+console.log(
+	`  - Tool: ${publicMarketplace.plugins.filter((p) => p.category === "Tool").length}`,
+);
+console.log(
+	`  - Integration: ${publicMarketplace.plugins.filter((p) => p.category === "Integration").length}`,
 );
 console.log(
 	`  - Discipline: ${publicMarketplace.plugins.filter((p) => p.category === "Discipline").length}`,
 );
 console.log(
-	`  - Bridge: ${publicMarketplace.plugins.filter((p) => p.category === "Bridge").length}`,
+	`  - Pattern: ${publicMarketplace.plugins.filter((p) => p.category === "Pattern").length}`,
+);
+console.log(
+	`  - Specialized: ${publicMarketplace.plugins.filter((p) => p.category === "Specialized").length}`,
 );
