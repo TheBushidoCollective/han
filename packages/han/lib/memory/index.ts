@@ -23,6 +23,19 @@
 
 // Context Injection (for SessionStart hook)
 export { injectSessionContext } from "./context-injection.ts";
+// Query Expansion (for FTS semantic bridging)
+export type {
+	ExpandedQuery,
+	ExpandQueryOptions,
+	ExpansionLevel,
+} from "./query-expansion.ts";
+export {
+	ACRONYMS,
+	expandQuery,
+	getExpansions,
+	hasExpansion,
+	SYNONYMS,
+} from "./query-expansion.ts";
 // Indexer (FTS + Vector hybrid search)
 export type { FtsResult, IndexDocument, IndexLayer } from "./indexer.ts";
 export {
