@@ -1,0 +1,13 @@
+{
+  "name": "example-jutsu-plugin",
+  "version": "1.0.0",
+  "description": "A reference implementation for third-party Han plugins. Demonstrates skills, commands, and hooks.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["example", "reference", "tutorial", "plugin-development"]
+}

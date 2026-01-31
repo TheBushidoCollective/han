@@ -1,0 +1,26 @@
+# Example Jutsu Plugin Configuration
+# This file demonstrates how to configure hooks for a Han plugin.
+#
+# Hooks are run by the han orchestrator at various lifecycle events.
+# Available hook events: Stop, SessionStart, UserPromptSubmit, PreToolUse, PostToolUse
+
+hooks:
+  # Example validation hook - runs on Stop event
+  # This hook demonstrates a simple validation that always passes
+  validate-example:
+    event: Stop
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/validate-example.sh"
+    description: Example validation hook that logs when work completes
+    # Only run if certain files were changed (optional)
+    # if_changed:
+    #   - "**/*.ts"
+    #   - "**/*.js"
+
+  # Example hook that runs only in directories with a specific file
+  # Uncomment to enable directory-scoped hooks
+  # project-check:
+  #   event: Stop
+  #   command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/project-check.sh"
+  #   description: Runs only in directories containing example.config.json
+  #   dirs_with:
+  #     - "example.config.json"
