@@ -272,7 +272,7 @@ export function SessionListItem({
               </Badge>
             )}
             {/* Show session owner in team mode */}
-            {isHosted && session.owner && (
+            {isHosted && session.owner && session.owner.id && session.owner.email && session.owner.name && (
               <SessionOwner
                 owner={{
                   id: session.owner.id,

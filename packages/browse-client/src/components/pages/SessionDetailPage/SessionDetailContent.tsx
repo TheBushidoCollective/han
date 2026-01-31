@@ -344,7 +344,7 @@ export function SessionDetailContent({
               {session.messageCount} msgs
             </Text>
             {/* Show session owner in team mode */}
-            {isHosted && session.owner && (
+            {isHosted && session.owner && session.owner.id && session.owner.email && session.owner.name && (
               <>
                 <Text color="muted" size="sm">
                   |

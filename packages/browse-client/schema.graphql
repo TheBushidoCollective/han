@@ -1956,6 +1956,21 @@ type NodeUpdatedPayload {
   typename: String
 }
 
+"""An organization that users belong to"""
+type Org {
+  """Organization ID"""
+  id: ID
+
+  """URL to organization logo image"""
+  logoUrl: String
+
+  """Organization name"""
+  name: String
+
+  """URL-safe organization slug"""
+  slug: String
+}
+
 """Pagination information for a connection"""
 type PageInfo {
   """Cursor of the last item in the current page"""
@@ -2119,6 +2134,12 @@ type Query {
   """Aggregate cache statistics"""
   cacheStats: CacheStats
 
+  """Current organization context (only available in hosted team mode)"""
+  currentOrg: Org
+
+  """Current authenticated user (only available in hosted team mode)"""
+  currentUser: User
+
   """Memory query interface"""
   memory: MemoryQuery
 
@@ -2131,6 +2152,14 @@ type Query {
   """Fetch any node by its global ID"""
   node(id: ID!): Node
   nodes(ids: [ID!]!): [Node]!
+
+  """Members of an organization (only available in hosted team mode)"""
+  orgMembers(orgId: String!): [TeamMember!]
+
+  """
+  Organizations the current user belongs to (only available in hosted team mode)
+  """
+  orgs: [Org!]
 
   """Plugin counts by category"""
   pluginCategories: [PluginCategory!]
@@ -2172,6 +2201,9 @@ type Query {
 
     """Filter by project ID (groups all worktrees)"""
     projectId: String
+
+    """Filter by user ID (team mode only - filters sessions by owner)"""
+    userId: String
 
     """Filter by worktree name/path"""
     worktreeName: String
@@ -2541,6 +2573,12 @@ type Session implements Node {
   Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
   """
   nativeTasks: [NativeTask!]
+
+  """Organization ID this session belongs to (only in hosted team mode)"""
+  orgId: String
+
+  """User who ran this session (only populated in hosted team mode)"""
+  owner: User
 
   """The project this session belongs to"""
   project: Project
@@ -3059,6 +3097,36 @@ type TaskTypeCount {
   type: TaskType
 }
 
+"""A member of an organization"""
+type TeamMember {
+  """Team member ID"""
+  id: ID
+
+  """Organization ID"""
+  orgId: String
+
+  """Role within the organization"""
+  role: TeamMemberRole
+
+  """The user"""
+  user: User
+
+  """User ID"""
+  userId: String
+}
+
+"""Role of a team member within an organization"""
+enum TeamMemberRole {
+  """Organization administrator"""
+  ADMIN
+
+  """Full team member"""
+  MEMBER
+
+  """Read-only viewer"""
+  VIEWER
+}
+
 """Regular text content"""
 type TextBlock implements ContentBlock {
   """The text content"""
@@ -3328,6 +3396,21 @@ type UnknownEventMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""A user in the team platform"""
+type User {
+  """URL to user avatar image"""
+  avatarUrl: String
+
+  """User email address"""
+  email: String
+
+  """User ID"""
+  id: ID
+
+  """User display name"""
+  name: String
 }
 
 """

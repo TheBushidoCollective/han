@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<5a603cdad0e0c299b8bbc3d4fb458c8b>>
+ * @generated SignedSource<<c925728f87b2c8e3e82704aeb140532b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,6 +13,7 @@ import { FragmentRefs } from "relay-runtime";
 export type SessionListPageQuery$variables = {
   first?: number | null | undefined;
   projectId?: string | null | undefined;
+  userId?: string | null | undefined;
   worktreeName?: string | null | undefined;
 };
 export type SessionListPageQuery$data = {
@@ -24,24 +25,27 @@ export type SessionListPageQuery = {
 };
 
 const node: ConcreteRequest = (function(){
-var v0 = [
-  {
-    "defaultValue": null,
-    "kind": "LocalArgument",
-    "name": "first"
-  },
-  {
-    "defaultValue": null,
-    "kind": "LocalArgument",
-    "name": "projectId"
-  },
-  {
-    "defaultValue": null,
-    "kind": "LocalArgument",
-    "name": "worktreeName"
-  }
-],
-v1 = [
+var v0 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "first"
+},
+v1 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "projectId"
+},
+v2 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "userId"
+},
+v3 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "worktreeName"
+},
+v4 = [
   {
     "kind": "Variable",
     "name": "first",
@@ -54,25 +58,37 @@ v1 = [
   },
   {
     "kind": "Variable",
+    "name": "userId",
+    "variableName": "userId"
+  },
+  {
+    "kind": "Variable",
     "name": "worktreeName",
     "variableName": "worktreeName"
   }
 ],
-v2 = {
+v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "id",
   "storageKey": null
 },
-v3 = {
+v6 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "name",
+  "storageKey": null
+},
+v7 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "status",
   "storageKey": null
 },
-v4 = {
+v8 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -81,13 +97,18 @@ v4 = {
 };
 return {
   "fragment": {
-    "argumentDefinitions": (v0/*: any*/),
+    "argumentDefinitions": [
+      (v0/*: any*/),
+      (v1/*: any*/),
+      (v2/*: any*/),
+      (v3/*: any*/)
+    ],
     "kind": "Fragment",
     "metadata": null,
     "name": "SessionListPageQuery",
     "selections": [
       {
-        "args": (v1/*: any*/),
+        "args": (v4/*: any*/),
         "kind": "FragmentSpread",
         "name": "SessionsContent_query"
       }
@@ -97,13 +118,18 @@ return {
   },
   "kind": "Request",
   "operation": {
-    "argumentDefinitions": (v0/*: any*/),
+    "argumentDefinitions": [
+      (v0/*: any*/),
+      (v1/*: any*/),
+      (v3/*: any*/),
+      (v2/*: any*/)
+    ],
     "kind": "Operation",
     "name": "SessionListPageQuery",
     "selections": [
       {
         "alias": null,
-        "args": (v1/*: any*/),
+        "args": (v4/*: any*/),
         "concreteType": "SessionConnection",
         "kind": "LinkedField",
         "name": "sessions",
@@ -125,7 +151,7 @@ return {
                 "name": "node",
                 "plural": false,
                 "selections": [
-                  (v2/*: any*/),
+                  (v5/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -175,13 +201,7 @@ return {
                     "name": "gitBranch",
                     "storageKey": null
                   },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "name",
-                    "storageKey": null
-                  },
+                  (v6/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -206,6 +226,33 @@ return {
                   {
                     "alias": null,
                     "args": null,
+                    "concreteType": "User",
+                    "kind": "LinkedField",
+                    "name": "owner",
+                    "plural": false,
+                    "selections": [
+                      (v5/*: any*/),
+                      (v6/*: any*/),
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "email",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "avatarUrl",
+                        "storageKey": null
+                      }
+                    ],
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
                     "concreteType": "Todo",
                     "kind": "LinkedField",
                     "name": "currentTodo",
@@ -225,8 +272,8 @@ return {
                         "name": "activeForm",
                         "storageKey": null
                       },
-                      (v3/*: any*/),
-                      (v2/*: any*/)
+                      (v7/*: any*/),
+                      (v5/*: any*/)
                     ],
                     "storageKey": null
                   },
@@ -238,7 +285,7 @@ return {
                     "name": "activeTasks",
                     "plural": false,
                     "selections": [
-                      (v4/*: any*/),
+                      (v8/*: any*/),
                       {
                         "alias": null,
                         "args": null,
@@ -255,7 +302,7 @@ return {
                             "name": "node",
                             "plural": false,
                             "selections": [
-                              (v2/*: any*/),
+                              (v5/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -277,7 +324,7 @@ return {
                                 "name": "type",
                                 "storageKey": null
                               },
-                              (v3/*: any*/)
+                              (v7/*: any*/)
                             ],
                             "storageKey": null
                           }
@@ -371,7 +418,7 @@ return {
             ],
             "storageKey": null
           },
-          (v4/*: any*/),
+          (v8/*: any*/),
           {
             "kind": "ClientExtension",
             "selections": [
@@ -389,10 +436,11 @@ return {
       },
       {
         "alias": null,
-        "args": (v1/*: any*/),
+        "args": (v4/*: any*/),
         "filters": [
           "projectId",
-          "worktreeName"
+          "worktreeName",
+          "userId"
         ],
         "handle": "connection",
         "key": "SessionsContent_sessions",
@@ -402,16 +450,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "b3cf06520890d75394f85eea4f4d0ee6",
+    "cacheID": "4e248bfefe7a409272d02d31b983b344",
     "id": null,
     "metadata": {},
     "name": "SessionListPageQuery",
     "operationKind": "query",
-    "text": "query SessionListPageQuery(\n  $first: Int\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_1W0IEr\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_1W0IEr on Query {\n  sessions(first: $first, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
+    "text": "query SessionListPageQuery(\n  $first: Int\n  $projectId: String\n  $worktreeName: String\n  $userId: String\n) {\n  ...SessionsContent_query_hTAo9\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_hTAo9 on Query {\n  sessions(first: $first, projectId: $projectId, worktreeName: $worktreeName, userId: $userId) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "6902f7320cb56357a09885dedbff8e3f";
+(node as any).hash = "72fe2bb5a9d66499f256d3079621caf3";
 
 export default node;
