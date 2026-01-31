@@ -11,6 +11,56 @@ Then you'll write these as files in `.ai-dlc/{intent-slug}/` for the constructio
 
 ---
 
+## Phase 0: Check for Existing Intent (if slug provided)
+
+If the user invoked `/elaborate <slug>` with an argument:
+
+1. Check if `.ai-dlc/{slug}/intent.md` exists
+2. If it exists and no units are completed (all units have `status: pending`):
+   - **Assume the user wants to modify the existing intent**
+   - Read ALL files in `.ai-dlc/{slug}/` directory
+   - **Display FULL file contents** to the user in markdown code blocks (never summarize or truncate):
+     ```
+     ## Current Intent: {slug}
+
+     ### intent.md
+     ```markdown
+     {full contents of intent.md - every line}
+     ```
+
+     ### unit-01-{name}.md
+     ```markdown
+     {full contents - every line}
+     ```
+
+     ... (repeat for all unit files)
+     ```
+   - Ask with `AskUserQuestion`:
+   ```json
+   {
+     "questions": [{
+       "question": "I found an existing intent that hasn't been started. What would you like to do?",
+       "header": "Action",
+       "options": [
+         {"label": "Modify intent", "description": "Review and update the intent definition"},
+         {"label": "Modify units", "description": "Adjust the unit breakdown"},
+         {"label": "Start fresh", "description": "Delete and re-elaborate from scratch"},
+         {"label": "Looks good", "description": "Proceed to /construct as-is"}
+       ],
+       "multiSelect": false
+     }]
+   }
+   ```
+3. Based on their choice:
+   - **Modify intent**: Jump to Phase 4 (Success Criteria) with current values pre-filled
+   - **Modify units**: Jump to Phase 5 (Decompose) with current units shown
+   - **Start fresh**: Delete `.ai-dlc/{slug}/` and proceed to Phase 1
+   - **Looks good**: Tell them to run `/construct` to begin
+
+If no slug provided, or the intent doesn't exist, proceed to Phase 1.
+
+---
+
 ## Phase 1: Gather Intent
 
 Ask the user: "What do you want to build or accomplish?"
