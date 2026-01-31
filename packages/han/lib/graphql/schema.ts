@@ -96,6 +96,11 @@ import {
 	queryMetrics,
 	TaskType,
 } from "./types/metrics.ts";
+import {
+	GranularityEnum,
+	queryTeamMetrics,
+	TeamMetricsType,
+} from "./types/team-metrics/index.ts";
 import { PageInfoType } from "./types/pagination.ts";
 import { PermissionsType } from "./types/permissions.ts";
 import {
@@ -211,6 +216,30 @@ builder.queryField("metrics", (t) =>
 		description: "Task metrics for a time period",
 		resolve: (_parent, args) => {
 			return queryMetrics(args.period ?? undefined);
+		},
+	}),
+);
+
+/**
+ * Query for team metrics (aggregate dashboard data)
+ */
+builder.queryField("teamMetrics", (t) =>
+	t.field({
+		type: TeamMetricsType,
+		args: {
+			startDate: t.arg.string({ description: "Start date (ISO format)" }),
+			endDate: t.arg.string({ description: "End date (ISO format)" }),
+			projectIds: t.arg.stringList({ description: "Filter by project IDs" }),
+			granularity: t.arg({ type: GranularityEnum, description: "Time grouping" }),
+		},
+		description: "Team-level aggregate metrics for dashboard",
+		resolve: async (_parent, args) => {
+			return queryTeamMetrics({
+				startDate: args.startDate,
+				endDate: args.endDate,
+				projectIds: args.projectIds,
+				granularity: args.granularity as "day" | "week" | "month" | null,
+			});
 		},
 	}),
 );
@@ -1410,6 +1439,7 @@ builder.mutationType({
 export {
 	RuleType,
 	TaskType,
+	TeamMetricsType,
 	MemorySearchResultType,
 	MemoryAgentProgressType,
 	MemoryAgentResultType,

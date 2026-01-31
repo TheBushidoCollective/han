@@ -67,6 +67,21 @@ type ActivityData {
   totalSessions: Int
 }
 
+"""Single data point in the activity timeline"""
+type ActivityTimelineEntry {
+  """Messages exchanged in this period"""
+  messageCount: Int
+
+  """Time period label"""
+  period: String
+
+  """Sessions started in this period"""
+  sessionCount: Int
+
+  """Tasks created in this period"""
+  taskCount: Int
+}
+
 """A subagent task spawned by a Task tool call"""
 type AgentTask {
   """Unique ID of the agent task"""
@@ -295,6 +310,24 @@ enum ContentBlockType {
   THINKING
   TOOL_RESULT
   TOOL_USE
+}
+
+"""Anonymized metrics for a contributor"""
+type ContributorMetrics {
+  """Anonymized contributor identifier"""
+  contributorId: String
+
+  """Display name (e.g., 'Project A', 'Workstation 1')"""
+  displayName: String
+
+  """Total sessions by this contributor"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks by this contributor"""
+  taskCount: Int
 }
 
 """Activity metrics for a single day"""
@@ -618,6 +651,13 @@ type FrustrationSummary {
 
   """Total messages analyzed for sentiment"""
   totalAnalyzed: Int
+}
+
+"""Time period granularity for aggregation"""
+enum Granularity {
+  DAY
+  MONTH
+  WEEK
 }
 
 """Summary of Han user configuration"""
@@ -1971,6 +2011,21 @@ type PageInfo {
   startCursor: String
 }
 
+"""Session count aggregated by time period"""
+type PeriodSessionCount {
+  """Time period label (e.g., '2026-01-30' or '2026-W05')"""
+  period: String
+
+  """Number of sessions in this period"""
+  sessionCount: Int
+
+  """Number of tasks in this period"""
+  taskCount: Int
+
+  """Total tokens used in this period"""
+  tokenUsage: Int
+}
+
 """Claude permissions configuration"""
 type Permissions {
   """Additional allowed directories"""
@@ -2106,6 +2161,24 @@ type ProjectAddedPayload {
   projectId: String
 }
 
+"""Session and task metrics aggregated by project"""
+type ProjectSessionCount {
+  """Unique project identifier"""
+  projectId: String
+
+  """Human-readable project name"""
+  projectName: String
+
+  """Number of sessions in this project"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Number of tasks in this project"""
+  taskCount: Int
+}
+
 type Query {
   """Activity data for dashboard visualizations"""
   activity(days: Int = 365): ActivityData
@@ -2182,6 +2255,21 @@ type Query {
 
   """Global slot pool status for cross-session resource management"""
   slots: SlotStatus
+
+  """Team-level aggregate metrics for dashboard"""
+  teamMetrics(
+    """End date (ISO format)"""
+    endDate: String
+
+    """Time grouping"""
+    granularity: Granularity
+
+    """Filter by project IDs"""
+    projectIds: [String!]
+
+    """Start date (ISO format)"""
+    startDate: String
+  ): TeamMetrics
 }
 
 """A queue state change operation"""
@@ -3004,6 +3092,30 @@ type Task {
   type: TaskType
 }
 
+"""Aggregate task completion statistics"""
+type TaskCompletionMetrics {
+  """Average confidence score (0-1)"""
+  averageConfidence: Float
+
+  """Tasks completed with failure outcome"""
+  failureCount: Int
+
+  """Tasks completed with partial outcome"""
+  partialCount: Int
+
+  """Tasks completed with success outcome"""
+  successCount: Int
+
+  """Success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks completed (any outcome)"""
+  totalCompleted: Int
+
+  """Total tasks created"""
+  totalCreated: Int
+}
+
 """A paginated list of tasks"""
 type TaskConnection {
   """List of task edges"""
@@ -3057,6 +3169,39 @@ enum TaskType {
 type TaskTypeCount {
   count: Int
   type: TaskType
+}
+
+"""Aggregate team-level metrics for dashboard"""
+type TeamMetrics {
+  """Activity over time"""
+  activityTimeline: [ActivityTimelineEntry!]
+
+  """Estimated total cost in USD"""
+  estimatedCostUsd: Float
+
+  """Sessions grouped by time period"""
+  sessionsByPeriod: [PeriodSessionCount!]
+
+  """Sessions grouped by project"""
+  sessionsByProject: [ProjectSessionCount!]
+
+  """Task completion statistics"""
+  taskCompletionMetrics: TaskCompletionMetrics
+
+  """Token usage aggregation"""
+  tokenUsageAggregation: TokenUsageAggregation
+
+  """Top contributors (anonymized)"""
+  topContributors: [ContributorMetrics!]
+
+  """Total number of sessions"""
+  totalSessions: Int
+
+  """Total number of tasks"""
+  totalTasks: Int
+
+  """Total tokens used"""
+  totalTokens: Int
 }
 
 """Regular text content"""
@@ -3135,6 +3280,24 @@ enum TodoStatus {
   COMPLETED
   IN_PROGRESS
   PENDING
+}
+
+"""Aggregated token usage statistics"""
+type TokenUsageAggregation {
+  """Estimated cost in USD"""
+  estimatedCostUsd: Float
+
+  """Total cached tokens used"""
+  totalCachedTokens: Int
+
+  """Total input tokens consumed"""
+  totalInputTokens: Int
+
+  """Total output tokens generated"""
+  totalOutputTokens: Int
+
+  """Total tokens (input + output)"""
+  totalTokens: Int
 }
 
 """Aggregate token usage statistics"""
