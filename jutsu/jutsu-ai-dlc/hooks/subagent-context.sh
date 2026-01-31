@@ -15,7 +15,21 @@ if ! command -v han &> /dev/null; then
 fi
 
 # Check for AI-DLC state
-ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
+# Intent-level state is stored on the intent branch
+# If we're on a unit branch (ai-dlc/intent/unit), we need to check the parent intent branch
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+INTENT_BRANCH=""
+ITERATION_JSON=""
+
+# Try current branch first
+ITERATION_JSON=$(han keep load iteration.json --quiet 2>/dev/null || echo "")
+
+# If not found and we're on a unit branch, try the parent intent branch
+if [ -z "$ITERATION_JSON" ] && [[ "$CURRENT_BRANCH" == ai-dlc/*/* ]]; then
+  # Extract intent branch: ai-dlc/intent-slug/unit-slug -> ai-dlc/intent-slug
+  INTENT_BRANCH=$(echo "$CURRENT_BRANCH" | sed 's|^\(ai-dlc/[^/]*\)/.*|\1|')
+  ITERATION_JSON=$(han keep load --branch "$INTENT_BRANCH" iteration.json --quiet 2>/dev/null || echo "")
+fi
 
 if [ -z "$ITERATION_JSON" ]; then
   # No AI-DLC state - nothing to inject
@@ -38,13 +52,23 @@ WORKFLOW_HATS=$(echo "$ITERATION_JSON" | han parse json workflow 2>/dev/null || 
 WORKFLOW_HATS_STR=$(echo "$WORKFLOW_HATS" | tr -d '[]"' | sed 's/,/ → /g')
 [ -z "$WORKFLOW_HATS_STR" ] && WORKFLOW_HATS_STR="elaborator → planner → builder → reviewer"
 
+# Helper function to load intent-level state
+load_intent_state() {
+  local key="$1"
+  if [ -n "$INTENT_BRANCH" ]; then
+    han keep load --branch "$INTENT_BRANCH" "$key" --quiet 2>/dev/null || echo ""
+  else
+    han keep load "$key" --quiet 2>/dev/null || echo ""
+  fi
+}
+
 echo "## AI-DLC Subagent Context"
 echo ""
 echo "**Iteration:** $ITERATION | **Role:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
-# Load intent
-INTENT=$(han keep load --branch intent.md --quiet 2>/dev/null || echo "")
+# Load intent (intent-level state from intent branch)
+INTENT=$(load_intent_state intent.md)
 if [ -n "$INTENT" ]; then
   echo "### Intent"
   echo ""
@@ -52,8 +76,8 @@ if [ -n "$INTENT" ]; then
   echo ""
 fi
 
-# Load completion criteria
-CRITERIA=$(han keep load --branch completion-criteria.md --quiet 2>/dev/null || echo "")
+# Load completion criteria (intent-level state from intent branch)
+CRITERIA=$(load_intent_state completion-criteria.md)
 if [ -n "$CRITERIA" ]; then
   echo "### Completion Criteria"
   echo ""
@@ -61,8 +85,8 @@ if [ -n "$CRITERIA" ]; then
   echo ""
 fi
 
-# Load current plan
-PLAN=$(han keep load --branch current-plan.md --quiet 2>/dev/null || echo "")
+# Load current plan (intent-level state from intent branch)
+PLAN=$(load_intent_state current-plan.md)
 if [ -n "$PLAN" ]; then
   echo "### Current Plan"
   echo ""
@@ -70,10 +94,40 @@ if [ -n "$PLAN" ]; then
   echo ""
 fi
 
-# Load Unit/Bolt context
-INTENT_SLUG=$(han keep load --branch intent-slug --quiet 2>/dev/null || echo "")
+# Load Unit/Bolt context (intent slug is intent-level state from intent branch)
+INTENT_SLUG=$(load_intent_state intent-slug)
 if [ -n "$INTENT_SLUG" ]; then
   INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+
+  # Display testing requirements if configured
+  if [ -f "$INTENT_DIR/intent.yaml" ]; then
+    TESTING_JSON=$(han parse yaml testing --json < "$INTENT_DIR/intent.yaml" 2>/dev/null || echo "")
+    if [ -n "$TESTING_JSON" ] && [ "$TESTING_JSON" != "null" ] && [ "$TESTING_JSON" != "{}" ]; then
+      echo "### Testing Requirements"
+      echo ""
+
+      # Parse individual fields
+      UNIT_TESTS=$(echo "$TESTING_JSON" | han parse json unit_tests -r --default "" 2>/dev/null || echo "")
+      INTEGRATION_TESTS=$(echo "$TESTING_JSON" | han parse json integration_tests -r --default "" 2>/dev/null || echo "")
+      COVERAGE=$(echo "$TESTING_JSON" | han parse json coverage_threshold -r --default "" 2>/dev/null || echo "")
+      E2E_TESTS=$(echo "$TESTING_JSON" | han parse json e2e_tests -r --default "" 2>/dev/null || echo "")
+
+      echo "| Requirement | Status |"
+      echo "|-------------|--------|"
+      [ "$UNIT_TESTS" = "true" ] && echo "| Unit Tests | Required |"
+      [ "$UNIT_TESTS" = "false" ] && echo "| Unit Tests | Optional |"
+      [ "$INTEGRATION_TESTS" = "true" ] && echo "| Integration Tests | Required |"
+      [ "$INTEGRATION_TESTS" = "false" ] && echo "| Integration Tests | Optional |"
+      if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "null" ]; then
+        echo "| Coverage Threshold | ${COVERAGE}% |"
+      else
+        echo "| Coverage Threshold | None |"
+      fi
+      [ "$E2E_TESTS" = "true" ] && echo "| E2E Tests | Required |"
+      [ "$E2E_TESTS" = "false" ] && echo "| E2E Tests | Optional |"
+      echo ""
+    fi
+  fi
 
   # Source DAG library if available
   DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
@@ -194,8 +248,11 @@ echo ""
 echo "### Before Stopping"
 echo ""
 echo "1. **Commit changes**: \`git add -A && git commit\`"
-echo "2. **Save scratchpad**: \`han keep save --branch scratchpad.md \"...\"\`"
-echo "3. **Write next prompt**: \`han keep save --branch next-prompt.md \"...\"\`"
+echo "2. **Save scratchpad** (unit-scoped - your branch): \`han keep save scratchpad.md \"...\"\`"
+echo "3. **Write next prompt** (unit-scoped - your branch): \`han keep save next-prompt.md \"...\"\`"
+echo ""
+echo "**Note:** Unit-level state (scratchpad.md, next-prompt.md, blockers.md) is saved to YOUR branch."
+echo "Intent-level state (iteration.json, intent.md, etc.) is managed by the orchestrator on main."
 echo ""
 echo "### Resilience (CRITICAL)"
 echo ""
@@ -218,5 +275,5 @@ echo "- \`🛑 Blocked:\` When genuinely stuck after rescue attempts"
 echo "- \`❓ Decision needed:\` Use \`AskUserQuestion\` for user input"
 echo ""
 echo "Output status messages directly - users see them in real-time."
-echo "Document blockers in \`han keep save --branch blockers.md\` for persistence."
+echo "Document blockers in \`han keep save blockers.md\` for persistence (unit-scoped)."
 echo ""

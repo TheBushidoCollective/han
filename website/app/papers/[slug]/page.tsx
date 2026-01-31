@@ -3,7 +3,12 @@ import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatDate, getAllPapers, getPaper } from "../../../lib/papers";
+import {
+	formatAuthors,
+	formatDate,
+	getAllPapers,
+	getPaper,
+} from "../../../lib/papers";
 import {
 	formatPhaseName,
 	getPhaseIcon,
@@ -215,7 +220,7 @@ export default async function PaperPage({
 									{paper.authors.length > 0 && (
 										<>
 											<span>•</span>
-											<span>By {paper.authors.join(", ")}</span>
+											<span>By {formatAuthors(paper.authors)}</span>
 										</>
 									)}
 								</div>

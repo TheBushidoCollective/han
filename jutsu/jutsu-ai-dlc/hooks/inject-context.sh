@@ -97,7 +97,20 @@ AVAILABLE_WORKFLOWS="${AVAILABLE_WORKFLOWS#
 }"  # Remove leading newline
 
 # Check for AI-DLC state
-ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
+# Intent-level state is stored on the current branch (intent branch for orchestrator, unit branch for subagents)
+# If we're on a unit branch (ai-dlc/intent/unit), we need to check the parent intent branch
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+ITERATION_JSON=""
+
+# Try current branch first
+ITERATION_JSON=$(han keep load iteration.json --quiet 2>/dev/null || echo "")
+
+# If not found and we're on a unit branch, try the parent intent branch
+if [ -z "$ITERATION_JSON" ] && [[ "$CURRENT_BRANCH" == ai-dlc/*/* ]]; then
+  # Extract intent branch: ai-dlc/intent-slug/unit-slug -> ai-dlc/intent-slug
+  INTENT_BRANCH=$(echo "$CURRENT_BRANCH" | sed 's|^\(ai-dlc/[^/]*\)/.*|\1|')
+  ITERATION_JSON=$(han keep load --branch "$INTENT_BRANCH" iteration.json --quiet 2>/dev/null || echo "")
+fi
 
 if [ -z "$ITERATION_JSON" ]; then
   # Check for resumable intents in .ai-dlc/*/intent.md
@@ -180,7 +193,12 @@ if [ "$NEEDS_ADVANCE" = "true" ] && [ "$SOURCE" != "compact" ]; then
   NEW_ITER=$((CURRENT_ITER + 1))
   ITERATION_JSON=$(echo "$ITERATION_JSON" | han parse json-set iteration "$NEW_ITER" 2>/dev/null)
   ITERATION_JSON=$(echo "$ITERATION_JSON" | han parse json-set needsAdvance false 2>/dev/null)
-  han keep save --branch iteration.json "$ITERATION_JSON" 2>/dev/null || true
+  # Intent-level state saved to current branch (or intent branch if on unit branch)
+  if [ -n "$INTENT_BRANCH" ]; then
+    han keep save --branch "$INTENT_BRANCH" iteration.json "$ITERATION_JSON" 2>/dev/null || true
+  else
+    han keep save iteration.json "$ITERATION_JSON" 2>/dev/null || true
+  fi
 fi
 
 # Parse iteration state using han parse (no jq needed)
@@ -214,8 +232,18 @@ echo ""
 echo "**Iteration:** $ITERATION | **Hat:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
-# Load and display intent
-INTENT=$(han keep load --branch intent.md --quiet 2>/dev/null || echo "")
+# Helper function to load intent-level state
+load_intent_state() {
+  local key="$1"
+  if [ -n "$INTENT_BRANCH" ]; then
+    han keep load --branch "$INTENT_BRANCH" "$key" --quiet 2>/dev/null || echo ""
+  else
+    han keep load "$key" --quiet 2>/dev/null || echo ""
+  fi
+}
+
+# Load and display intent (intent-level state from intent branch)
+INTENT=$(load_intent_state intent.md)
 if [ -n "$INTENT" ]; then
   echo "### Intent"
   echo ""
@@ -223,8 +251,8 @@ if [ -n "$INTENT" ]; then
   echo ""
 fi
 
-# Load and display completion criteria
-CRITERIA=$(han keep load --branch completion-criteria.md --quiet 2>/dev/null || echo "")
+# Load and display completion criteria (intent-level state from intent branch)
+CRITERIA=$(load_intent_state completion-criteria.md)
 if [ -n "$CRITERIA" ]; then
   echo "### Completion Criteria"
   echo ""
@@ -232,8 +260,8 @@ if [ -n "$CRITERIA" ]; then
   echo ""
 fi
 
-# Load and display current plan
-PLAN=$(han keep load --branch current-plan.md --quiet 2>/dev/null || echo "")
+# Load and display current plan (intent-level state from intent branch)
+PLAN=$(load_intent_state current-plan.md)
 if [ -n "$PLAN" ]; then
   echo "### Current Plan"
   echo ""
@@ -241,8 +269,8 @@ if [ -n "$PLAN" ]; then
   echo ""
 fi
 
-# Load and display blockers (if any)
-BLOCKERS=$(han keep load --branch blockers.md --quiet 2>/dev/null || echo "")
+# Load and display blockers (unit-level state from current branch)
+BLOCKERS=$(han keep load blockers.md --quiet 2>/dev/null || echo "")
 if [ -n "$BLOCKERS" ]; then
   echo "### Previous Blockers"
   echo ""
@@ -250,8 +278,8 @@ if [ -n "$BLOCKERS" ]; then
   echo ""
 fi
 
-# Load and display scratchpad
-SCRATCHPAD=$(han keep load --branch scratchpad.md --quiet 2>/dev/null || echo "")
+# Load and display scratchpad (unit-level state from current branch)
+SCRATCHPAD=$(han keep load scratchpad.md --quiet 2>/dev/null || echo "")
 if [ -n "$SCRATCHPAD" ]; then
   echo "### Learnings from Previous Iteration"
   echo ""
@@ -259,8 +287,8 @@ if [ -n "$SCRATCHPAD" ]; then
   echo ""
 fi
 
-# Load and display next prompt (what to continue with)
-NEXT_PROMPT=$(han keep load --branch next-prompt.md --quiet 2>/dev/null || echo "")
+# Load and display next prompt (unit-level state from current branch)
+NEXT_PROMPT=$(han keep load next-prompt.md --quiet 2>/dev/null || echo "")
 if [ -n "$NEXT_PROMPT" ]; then
   echo "### Continue With"
   echo ""
@@ -269,7 +297,8 @@ if [ -n "$NEXT_PROMPT" ]; then
 fi
 
 # Load and display DAG status (if units exist)
-INTENT_SLUG=$(han keep load --branch intent-slug --quiet 2>/dev/null || echo "")
+# Intent slug is intent-level state from intent branch
+INTENT_SLUG=$(load_intent_state intent-slug)
 if [ -n "$INTENT_SLUG" ]; then
   INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
 
@@ -404,8 +433,8 @@ echo ""
 echo "Before every stop, you MUST:"
 echo ""
 echo "1. **Commit working changes**: \`git add -A && git commit\`"
-echo "2. **Save scratchpad**: \`han keep save --branch scratchpad.md \"...\"\`"
-echo "3. **Write next prompt**: \`han keep save --branch next-prompt.md \"...\"\`"
+echo "2. **Save scratchpad**: \`han keep save scratchpad.md \"...\"\`"
+echo "3. **Write next prompt**: \`han keep save next-prompt.md \"...\"\`"
 echo ""
 echo "The next-prompt.md should contain what to continue with after \`/clear\`."
 echo "Without this, progress is lost on context reset."

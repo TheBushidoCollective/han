@@ -439,6 +439,7 @@ AI can apply design patterns during execution without requiring explicit design 
 ### Everyone Becomes a Builder
 
 In traditional development, "design" and "build" are distinct phases requiring different specialists:
+
 - Designer creates mockups (Figma, wireframes)
 - Developer implements the specs
 - Handoff is a document or image—and often a source of friction
@@ -575,6 +576,7 @@ When implementing a vertical feature that spans multiple layers, decompose into 
 ```
 
 This decomposition provides:
+
 - **Focused context:** Each unit gets discipline-appropriate context (design system for frontend, API specs for backend)
 - **Clear ownership:** No ambiguity about what each unit delivers
 - **Parallel potential:** Independent units can work simultaneously
@@ -605,6 +607,7 @@ unit-02 ──→ unit-03 ────┘
 ```
 
 In this example:
+
 - unit-01 and unit-02 start in parallel (no dependencies)
 - unit-03 waits for unit-02
 - unit-04 waits for both unit-01 AND unit-03 (fan-in)

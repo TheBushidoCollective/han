@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { getFileContributorNames } from "./git-contributors";
 
 const PAPERS_DIR = path.join(process.cwd(), "content", "papers");
 
@@ -46,13 +47,18 @@ export function getAllPapers(): PaperMetadata[] {
 				const fileContent = fs.readFileSync(filePath, "utf-8");
 				const { data } = matter(fileContent);
 
+				// Get authors from git history, sorted by number of contributions
+				const gitAuthors = getFileContributorNames(filePath);
+				// Fall back to frontmatter authors if no git history
+				const authors = gitAuthors.length > 0 ? gitAuthors : data.authors || [];
+
 				return {
 					slug,
 					title: data.title || "",
 					subtitle: data.subtitle,
 					description: data.description || "",
 					date: data.date || "",
-					authors: data.authors || [],
+					authors,
 					tags: data.tags || [],
 				};
 			})
@@ -88,6 +94,11 @@ export function getPaper(slug: string): Paper | null {
 
 		const fileContent = fs.readFileSync(filePath, "utf-8");
 		const { data, content } = matter(fileContent);
+
+		// Get authors from git history, sorted by number of contributions
+		const gitAuthors = getFileContributorNames(filePath);
+		// Fall back to frontmatter authors if no git history
+		const authors = gitAuthors.length > 0 ? gitAuthors : data.authors || [];
 
 		// Strip duplicate title and subtitle from content
 		let processedContent = content;
@@ -132,7 +143,7 @@ export function getPaper(slug: string): Paper | null {
 			subtitle: data.subtitle,
 			description: data.description || "",
 			date: data.date || "",
-			authors: data.authors || [],
+			authors,
 			tags: data.tags || [],
 			content: processedContent,
 			isMdx,
@@ -141,6 +152,19 @@ export function getPaper(slug: string): Paper | null {
 		console.error(`Error reading paper ${slug}:`, error);
 		return null;
 	}
+}
+
+/**
+ * Format authors list with "and" before the last author
+ * - 1 author: "John"
+ * - 2 authors: "John and Jane"
+ * - 3+ authors: "John, Jane, and Bob"
+ */
+export function formatAuthors(authors: string[]): string {
+	if (authors.length === 0) return "";
+	if (authors.length === 1) return authors[0];
+	if (authors.length === 2) return `${authors[0]} and ${authors[1]}`;
+	return `${authors.slice(0, -1).join(", ")}, and ${authors[authors.length - 1]}`;
 }
 
 /**

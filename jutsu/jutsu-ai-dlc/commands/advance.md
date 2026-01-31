@@ -29,6 +29,7 @@ If already at the last hat (reviewer by default), this command is blocked - use 
 ### Step 1: Load Current State
 
 ```javascript
+// Intent-level state is stored on current branch (intent branch)
 const state = JSON.parse(han_keep_load({ scope: "branch", key: "iteration.json" }));
 ```
 
@@ -52,6 +53,7 @@ const nextHat = workflow[nextIndex];
 ```javascript
 state.hat = nextHat;
 state.needsAdvance = true;  // Signal SessionStart to increment iteration
+// Intent-level state saved to current branch (intent branch)
 han_keep_save({
   scope: "branch",
   key: "iteration.json",

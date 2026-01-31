@@ -29,7 +29,7 @@ describe("Blog utilities", () => {
 				expect(post).toHaveProperty("title");
 				expect(post).toHaveProperty("description");
 				expect(post).toHaveProperty("date");
-				expect(post).toHaveProperty("author");
+				expect(post).toHaveProperty("authors");
 				expect(post).toHaveProperty("tags");
 				expect(post).toHaveProperty("category");
 			}
@@ -87,7 +87,7 @@ describe("Blog utilities", () => {
 				expect(post).toHaveProperty("title");
 				expect(post).toHaveProperty("description");
 				expect(post).toHaveProperty("date");
-				expect(post).toHaveProperty("author");
+				expect(post).toHaveProperty("authors");
 				expect(post).toHaveProperty("tags");
 				expect(post).toHaveProperty("category");
 				expect(post).toHaveProperty("content");
