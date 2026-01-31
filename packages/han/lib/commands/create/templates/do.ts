@@ -12,6 +12,7 @@ import {
 } from "./index.ts";
 
 export interface DoTemplateFiles {
+	[key: string]: string;
 	".claude-plugin/plugin.json": string;
 	"agents/specialist.md": string;
 	"README.md": string;
