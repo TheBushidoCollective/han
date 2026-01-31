@@ -450,6 +450,9 @@ builder.queryField("sessions", (t) =>
 			worktreeName: t.arg.string({
 				description: "Filter by worktree name/path",
 			}),
+			userId: t.arg.string({
+				description: "Filter by user ID (team mode only - filters sessions by owner)",
+			}),
 		},
 		description: "Get sessions with cursor-based pagination",
 		resolve: (_parent, args) => {
@@ -460,6 +463,7 @@ builder.queryField("sessions", (t) =>
 				before: args.before,
 				projectId: args.projectId,
 				worktreeName: args.worktreeName,
+				userId: args.userId,
 			});
 		},
 	}),

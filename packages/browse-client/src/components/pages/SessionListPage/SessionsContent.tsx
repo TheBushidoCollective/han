@@ -7,7 +7,7 @@
  */
 
 import type React from 'react';
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import type { PreloadedQuery } from 'react-relay';
 import { graphql, usePaginationFragment, usePreloadedQuery } from 'react-relay';
 import { theme } from '@/components/atoms';
@@ -37,6 +37,7 @@ const SessionsConnectionFragment = graphql`
     after: { type: "String" }
     projectId: { type: "String" }
     worktreeName: { type: "String" }
+    userId: { type: "String" }
   )
   @refetchable(queryName: "SessionsContentPaginationQuery") {
     sessions(
@@ -44,6 +45,7 @@ const SessionsConnectionFragment = graphql`
       after: $after
       projectId: $projectId
       worktreeName: $worktreeName
+      userId: $userId
     ) @connection(key: "SessionsContent_sessions") {
       __id
       edges {
@@ -99,10 +101,24 @@ export function SessionsContent({
   );
 
   // Then use pagination fragment to get paginated data
-  const { data, loadNext, hasNext, isLoadingNext } = usePaginationFragment<
+  const { data, loadNext, hasNext, isLoadingNext, refetch } = usePaginationFragment<
     SessionsContentPaginationQuery,
     SessionsContent_query$key
   >(SessionsConnectionFragment, preloadedData);
+
+  // Refetch when userId filter changes (team mode)
+  useEffect(() => {
+    if (isHosted && viewMode === 'team') {
+      startTransition(() => {
+        refetch({
+          first: 50,
+          projectId: projectId ?? undefined,
+          worktreeName: worktreeName ?? undefined,
+          userId: selectedUserId ?? undefined,
+        });
+      });
+    }
+  }, [isHosted, viewMode, selectedUserId, projectId, worktreeName, refetch]);
 
   // Extract session edges and sort by updatedAt (most recent first)
   type SessionEdge = NonNullable<
