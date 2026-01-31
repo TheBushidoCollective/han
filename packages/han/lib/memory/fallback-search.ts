@@ -191,12 +191,12 @@ interface RecentSession {
 
 /** Limits for input validation */
 const LIMITS = {
-	MAX_RECENT_SESSIONS: 100,
-	DEFAULT_RECENT_SESSIONS: 10,
-	MAX_GREP_LIMIT: 50,
-	DEFAULT_GREP_LIMIT: 10,
-	DEFAULT_GREP_TIMEOUT_MS: 5000,
-} as const;
+	MAX_RECENT_SESSIONS: 100 as number,
+	DEFAULT_RECENT_SESSIONS: 10 as number,
+	MAX_GREP_LIMIT: 50 as number,
+	DEFAULT_GREP_LIMIT: 10 as number,
+	DEFAULT_GREP_TIMEOUT_MS: 5000 as number,
+};
 
 /**
  * Get recent sessions sorted by modification time
