@@ -25,10 +25,9 @@ import {
 	type SessionDetail,
 	type SessionMessage,
 } from "../api/sessions.ts";
-import {
-	type SessionFileValidation,
-	sessionFileValidations,
-} from "../db/index.ts";
+import type { DataSource } from "../data/index.ts";
+import { getLocalDataSource } from "../data/index.ts";
+import type { SessionFileValidation } from "../db/index.ts";
 
 /**
  * Parsed paired event data for nested resolution
@@ -295,8 +294,11 @@ export interface GraphQLLoaders {
  * - Request isolation (no data leaking between requests)
  * - Proper batching window (loaders collect keys during single tick)
  * - Cache scoped to request lifetime
+ *
+ * @param dataSource - Optional DataSource for database operations. Uses LocalDataSource if not provided.
  */
-export function createLoaders(): GraphQLLoaders {
+export function createLoaders(dataSource?: DataSource): GraphQLLoaders {
+	const ds = dataSource ?? getLocalDataSource();
 	// Create messages loader first since paired events loader depends on it
 	const sessionMessagesLoader = new DataLoader<string, SessionMessage[]>(
 		async (sessionIds) => {
@@ -369,9 +371,9 @@ export function createLoaders(): GraphQLLoaders {
 			SessionFileValidation[]
 		>(
 			async (sessionIds) => {
-				// Load file validations for all sessions in parallel
+				// Load file validations for all sessions in parallel using DataSource
 				const results = await Promise.all(
-					sessionIds.map((id) => sessionFileValidations.listAll(id)),
+					sessionIds.map((id) => ds.fileValidations.listAll(id)),
 				);
 				return results;
 			},
