@@ -152,6 +152,31 @@ const MEMORY_AGENT_PROMPT = `You are a Memory Agent with READ-ONLY access to a p
 4. Synthesize information from multiple sources when available
 5. Be concise but thorough
 
+## Search Strategy
+
+Use this priority order for searching:
+
+1. **memory_search_with_fallbacks** - RECOMMENDED for most queries. Runs all strategies in parallel with automatic fallbacks if nothing found.
+2. **memory_search_multi_strategy** - Fast parallel search without fallbacks. Good when you need quick results.
+3. **memory_scan_recent_sessions** - For temporal queries like "what was I working on", "recent activity", "yesterday".
+4. **memory_grep_transcripts** - LAST RESORT. Slow but thorough raw file search. Only use if other methods return nothing.
+
+## Handling Empty Results
+
+If no results found after primary search:
+1. Check if the query is temporal ("what was I working on") - use memory_scan_recent_sessions
+2. Try rephrasing the query with synonyms
+3. Use memory_grep_transcripts as a final fallback
+4. If the response includes a clarificationPrompt, relay it to help the user refine their query
+5. If still nothing, clearly state "I couldn't find information about X" with suggestions for what to search instead
+
+## Temporal Queries
+
+For questions like "what was I working on" or "recent activity":
+1. Use memory_scan_recent_sessions to get chronologically sorted results
+2. Focus on the most recent sessions (last 24-48 hours)
+3. Summarize the topics, files modified, and key decisions
+
 ## How to Answer
 1. Search relevant memory layers for the question
 2. Analyze the results for relevance
@@ -163,6 +188,8 @@ When citing sources, use this format:
 - [rules:api] - from .claude/rules/api.md
 - [summary:abc123] - from session abc123's summary
 - [transcript:abc123:42] - from session abc123, message 42
+- [recent:abc123] - from recent session scan
+- [grep:abc123:100] - from grep result (session abc123, line 100)
 - [git:commit:a1b2c3d] - from commit a1b2c3d
 - [github:pr:123] - from GitHub PR #123
 - [github:issue:45] - from GitHub issue #45
@@ -377,22 +404,26 @@ IMPORTANT: You ONLY have access to MCP search tools listed in allowedTools. Do N
 
 			// Handle tool results - count results for progress
 			if (message.type === "user" && message.message?.content) {
-				for (const block of message.message.content) {
-					if (
-						block.type === "tool_result" &&
-						typeof block.content === "string"
-					) {
-						try {
-							const parsed = JSON.parse(block.content);
-							if (Array.isArray(parsed)) {
-								onProgress?.({
-									type: "found",
-									content: `Found ${parsed.length} results`,
-									resultCount: parsed.length,
-								});
+				const content = message.message.content;
+				if (Array.isArray(content)) {
+					for (const block of content) {
+						if (
+							typeof block === "object" &&
+							block.type === "tool_result" &&
+							typeof block.content === "string"
+						) {
+							try {
+								const parsed = JSON.parse(block.content);
+								if (Array.isArray(parsed)) {
+									onProgress?.({
+										type: "found",
+										content: `Found ${parsed.length} results`,
+										resultCount: parsed.length,
+									});
+								}
+							} catch {
+								// Not JSON array, ignore
 							}
-						} catch {
-							// Not JSON array, ignore
 						}
 					}
 				}
