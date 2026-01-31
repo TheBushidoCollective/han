@@ -23,7 +23,7 @@
  * ```
  */
 
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join, basename, dirname } from "node:path";
 import type { SearchResultWithCitation } from "./multi-strategy-search.ts";
