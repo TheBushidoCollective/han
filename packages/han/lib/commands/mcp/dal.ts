@@ -25,8 +25,14 @@ import {
 	getTableName,
 	hybridSearch,
 	searchFts,
+	searchNativeSummaries,
 	searchVector,
 } from "../../memory/index.ts";
+import {
+	type MultiStrategySearchResult,
+	type SearchStrategy,
+	multiStrategySearch,
+} from "../../memory/multi-strategy-search.ts";
 import { tryGetNativeModule } from "../../native.ts";
 
 interface JsonRpcRequest {
@@ -327,6 +333,61 @@ async function searchMemoryHybrid(
 }
 
 /**
+ * Search native summaries and return SearchResultWithCitation format
+ *
+ * Wrapper around searchNativeSummaries that normalizes the return type.
+ */
+async function searchSummariesForMultiStrategy(
+	query: string,
+	limit: number,
+): Promise<SearchResultWithCitation[]> {
+	const results = await searchNativeSummaries(query, { limit });
+	return results.map((r) => ({
+		id: `summary:${r.sessionId}`,
+		content: r.content,
+		score: r.score,
+		layer: "summaries",
+		metadata: {
+			sessionId: r.sessionId,
+			projectSlug: r.projectSlug,
+			timestamp: r.timestamp,
+		},
+		browseUrl: `/sessions/${r.sessionId}`,
+	}));
+}
+
+/**
+ * Execute multi-strategy search
+ *
+ * Runs all strategies (direct FTS, expanded FTS, semantic, summaries) in parallel
+ * and fuses results using Reciprocal Rank Fusion.
+ */
+async function executeMultiStrategySearch(
+	query: string,
+	layer: MemoryLayer,
+	limit: number,
+	expansion: ExpansionLevel,
+	timeout: number,
+	strategies?: SearchStrategy[],
+): Promise<MultiStrategySearchResult> {
+	return multiStrategySearch(
+		{
+			query,
+			layer,
+			limit,
+			expansion,
+			timeout,
+			strategies,
+		},
+		{
+			searchMemoryFts,
+			searchMemoryVector,
+			searchSummariesNative: searchSummariesForMultiStrategy,
+		},
+	);
+}
+
+/**
  * DAL tools - all read-only
  */
 const DAL_TOOLS: McpTool[] = [
@@ -459,6 +520,58 @@ const DAL_TOOLS: McpTool[] = [
 			type: "object",
 			properties: {},
 			required: [],
+		},
+	},
+	{
+		name: "memory_search_multi_strategy",
+		description:
+			"RECOMMENDED: Search memory using multiple strategies in parallel (direct FTS, expanded FTS, semantic, summaries). Fuses results using Reciprocal Rank Fusion and provides confidence scores based on strategy coverage. Returns higher confidence when multiple strategies return overlapping results.",
+		annotations: {
+			title: "Multi-Strategy Search",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "The search query (can be keywords or natural language)",
+				},
+				layer: {
+					type: "string",
+					enum: ["rules", "transcripts", "team", "all"],
+					description:
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				expansion: {
+					type: "string",
+					enum: ["none", "minimal", "full"],
+					description:
+						"Query expansion level for FTS strategies. 'none' = exact match, 'minimal' = acronyms (PR->pull request), 'full' = acronyms + synonyms. Default: minimal",
+				},
+				timeout: {
+					type: "number",
+					description:
+						"Per-strategy timeout in milliseconds (default: 5000). Strategies exceeding timeout return empty results.",
+				},
+				strategies: {
+					type: "array",
+					items: {
+						type: "string",
+						enum: ["direct_fts", "expanded_fts", "semantic", "summaries"],
+					},
+					description:
+						"Specific strategies to run (default: all). 'direct_fts' = exact FTS, 'expanded_fts' = FTS with query expansion, 'semantic' = vector similarity, 'summaries' = session summaries.",
+				},
+			},
+			required: ["query"],
 		},
 	},
 ];
@@ -619,6 +732,60 @@ async function handleToolsCall(params: {
 						{
 							type: "text",
 							text: JSON.stringify({ layers }, null, 2),
+						},
+					],
+				};
+			}
+
+			case "memory_search_multi_strategy": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const layer = (args.layer as MemoryLayer) || "all";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const expansion = (args.expansion as ExpansionLevel) || "minimal";
+				const timeout = typeof args.timeout === "number" ? args.timeout : 5000;
+				const strategies = Array.isArray(args.strategies)
+					? (args.strategies as SearchStrategy[])
+					: undefined;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await executeMultiStrategySearch(
+					query,
+					layer,
+					limit,
+					expansion,
+					timeout,
+					strategies,
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "multi_strategy",
+									layer,
+									expansion,
+									confidence: result.confidence,
+									strategiesAttempted: result.strategiesAttempted,
+									strategiesSucceeded: result.strategiesSucceeded,
+									resultCount: result.results.length,
+									results: result.results,
+									strategyResults: result.strategyResults.map((sr) => ({
+										strategy: sr.strategy,
+										resultCount: sr.results.length,
+										duration: sr.duration,
+										success: sr.success,
+										error: sr.error,
+									})),
+									searchStats: result.searchStats,
+								},
+								null,
+								2,
+							),
 						},
 					],
 				};

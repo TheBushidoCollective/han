@@ -38,6 +38,21 @@ export {
 } from "./query-expansion.ts";
 // Indexer (FTS + Vector hybrid search)
 export type { FtsResult, IndexDocument, IndexLayer } from "./indexer.ts";
+// Multi-Strategy Search
+export type {
+	MemoryLayer,
+	MultiStrategySearchOptions,
+	MultiStrategySearchResult,
+	SearchResultWithCitation,
+	SearchStrategy,
+	StrategyResult,
+} from "./multi-strategy-search.ts";
+export {
+	calculateConfidence,
+	executeStrategy,
+	fuseResults,
+	multiStrategySearch,
+} from "./multi-strategy-search.ts";
 export {
 	getTableName,
 	hybridSearch,
