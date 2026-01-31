@@ -38,10 +38,10 @@
       ]
     },
     {
-      "name": "jutsu-ai-dlc",
+      "name": "ai-dlc",
       "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation.",
-      "source": "./jutsu/jutsu-ai-dlc",
-      "category": "Technique",
+      "source": "./patterns/ai-dlc",
+      "category": "Pattern",
       "keywords": [
         "ai-dlc",
         "methodology",
@@ -116,10 +116,10 @@
       ]
     },
     {
-      "name": "jutsu-atomic-design",
+      "name": "atomic-design",
       "description": "Validation and quality enforcement for Atomic Design methodology in component-based projects.",
-      "source": "./jutsu/jutsu-atomic-design",
-      "category": "Technique",
+      "source": "./patterns/atomic-design",
+      "category": "Pattern",
       "keywords": [
         "atomic-design",
         "components",
@@ -136,10 +136,10 @@
       ]
     },
     {
-      "name": "jutsu-bdd",
+      "name": "bdd",
       "description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns",
-      "source": "./jutsu/jutsu-bdd",
-      "category": "Technique",
+      "source": "./patterns/bdd",
+      "category": "Pattern",
       "keywords": [
         "bdd",
         "behavior-driven-development",
@@ -520,10 +520,10 @@
       ]
     },
     {
-      "name": "jutsu-functional-programming",
+      "name": "functional-programming",
       "description": "Functional programming paradigm, patterns, and best practices across languages",
-      "source": "./jutsu/jutsu-functional-programming",
-      "category": "Technique",
+      "source": "./patterns/functional-programming",
+      "category": "Pattern",
       "keywords": [
         "functional-programming",
         "fp",
@@ -790,10 +790,10 @@
       ]
     },
     {
-      "name": "jutsu-monorepo",
+      "name": "monorepo",
       "description": "Advanced monorepo development skills for architecture, tooling, and workflow management across multiple packages and projects.",
-      "source": "./jutsu/jutsu-monorepo",
-      "category": "Technique",
+      "source": "./patterns/monorepo",
+      "category": "Pattern",
       "keywords": [
         "monorepo",
         "workspace",
@@ -866,10 +866,10 @@
       ]
     },
     {
-      "name": "jutsu-oop",
+      "name": "oop",
       "description": "Object-Oriented Programming principles, design patterns, and best practices",
-      "source": "./jutsu/jutsu-oop",
-      "category": "Technique",
+      "source": "./patterns/oop",
+      "category": "Pattern",
       "keywords": [
         "oop",
         "object-oriented",
@@ -1276,10 +1276,10 @@
       ]
     },
     {
-      "name": "jutsu-tdd",
+      "name": "tdd",
       "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement",
-      "source": "./jutsu/jutsu-tdd",
-      "category": "Technique",
+      "source": "./patterns/tdd",
+      "category": "Pattern",
       "keywords": [
         "tdd",
         "test-driven-development",
@@ -1380,10 +1380,10 @@
       ]
     },
     {
-      "name": "jutsu-git-storytelling",
+      "name": "git-storytelling",
       "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
-      "source": "./jutsu/jutsu-git-storytelling",
-      "category": "Technique",
+      "source": "./patterns/git-storytelling",
+      "category": "Pattern",
       "keywords": [
         "git",
         "storytelling",

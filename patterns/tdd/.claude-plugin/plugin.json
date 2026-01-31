@@ -1,7 +1,7 @@
 {
-  "name": "jutsu-bdd",
+  "name": "tdd",
   "version": "1.5.0",
-  "description": "Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns.",
+  "description": "Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -10,10 +10,10 @@
   "repository": "https://github.com/thebushidocollective/han",
   "license": "Apache-2.0",
   "keywords": [
-    "bdd",
-    "behavior-driven-development",
+    "tdd",
+    "test-driven-development",
     "testing",
-    "collaboration",
-    "agile"
+    "red-green-refactor",
+    "quality"
   ]
 }

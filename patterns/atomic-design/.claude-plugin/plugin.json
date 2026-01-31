@@ -1,5 +1,5 @@
 {
-  "name": "jutsu-atomic-design",
+  "name": "atomic-design",
   "version": "1.1.0",
   "description": "Validation and quality enforcement for Atomic Design methodology in component-based projects.",
   "author": {
