@@ -356,10 +356,10 @@ describe("Hook run", () => {
 });
 
 // ============================================
-// Validate command tests (alias for hook run)
+// Validate-legacy command tests (deprecated alias for hook run)
 // ============================================
 
-describe("Validate command", () => {
+describe("Validate-legacy command", () => {
 	let testDir: string;
 
 	beforeEach(() => {
@@ -371,7 +371,7 @@ describe("Validate command", () => {
 	});
 
 	test(
-		"works as alias for hook run",
+		"works as legacy alias for hook run",
 		() => {
 			mkdirSync(join(testDir, "pkg1"));
 			writeFileSync(join(testDir, "pkg1", "package.json"), "{}");
@@ -380,7 +380,7 @@ describe("Validate command", () => {
 			execSync("git add .", { cwd: testDir, stdio: "pipe" });
 
 			const output = execSync(
-				`${binCommand} validate --dirs-with package.json -- echo success`,
+				`${binCommand} validate-legacy --dirs-with package.json -- echo success`,
 				{
 					cwd: testDir,
 					encoding: "utf8",
