@@ -68,9 +68,11 @@ Units use a numerical index prefix followed by a meaningful slug:
 **Unit Dependencies form a DAG:**
 
 ```
+
 unit-01-data-collection ──→ unit-02-model ──┐
                                             ├──→ unit-04-frontend
                        unit-03-api ─────────┘
+
 ```
 
 - **Fan-out:** Units with no shared dependencies execute in parallel

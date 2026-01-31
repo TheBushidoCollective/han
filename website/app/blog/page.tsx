@@ -113,8 +113,12 @@ export default function BlogPage() {
 													<time dateTime={post.date}>
 														{formatDate(post.date)}
 													</time>
-													<span>•</span>
-													<span>{post.author}</span>
+													{post.authors.length > 0 && (
+														<>
+															<span>•</span>
+															<span>By {post.authors.join(", ")}</span>
+														</>
+													)}
 													{post.category && (
 														<>
 															<span>•</span>

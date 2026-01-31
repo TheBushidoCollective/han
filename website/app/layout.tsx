@@ -36,6 +36,7 @@ export default function RootLayout({
 			<head>
 				{/* Blocking script to prevent theme flash - runs before body renders */}
 				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for theme flash prevention - content is static
 					dangerouslySetInnerHTML={{
 						__html: `
 							(function() {
