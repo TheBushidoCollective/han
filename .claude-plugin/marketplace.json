@@ -61,10 +61,10 @@
       "keywords": ["crystal", "linting", "style", "analysis"]
     },
     {
-      "name": "jutsu-angular",
+      "name": "angular",
       "description": "Advanced Angular skills for dependency injection, RxJS, and signals.",
-      "source": "./jutsu/jutsu-angular",
-      "category": "Technique",
+      "source": "./frameworks/angular",
+      "category": "Framework",
       "keywords": ["angular", "rxjs", "signals", "skill"]
     },
     {
@@ -317,10 +317,10 @@
       "keywords": ["elixir", "erlang", "static-analysis", "types"]
     },
     {
-      "name": "jutsu-django",
+      "name": "django",
       "description": "Advanced Django skills for ORM, class-based views, and REST framework.",
-      "source": "./jutsu/jutsu-django",
-      "category": "Technique",
+      "source": "./frameworks/django",
+      "category": "Framework",
       "keywords": ["django", "python", "orm", "skill"]
     },
     {
@@ -386,17 +386,17 @@
       "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
     },
     {
-      "name": "jutsu-expo",
+      "name": "expo",
       "description": "Validation and quality enforcement for Expo React Native projects with config, router, modules, updates, and build skills.",
-      "source": "./jutsu/jutsu-expo",
-      "category": "Technique",
+      "source": "./frameworks/expo",
+      "category": "Framework",
       "keywords": ["expo", "react-native", "mobile", "ios", "android"]
     },
     {
-      "name": "jutsu-fastapi",
+      "name": "fastapi",
       "description": "Advanced FastAPI skills for dependency injection, async patterns, and validation.",
-      "source": "./jutsu/jutsu-fastapi",
-      "category": "Technique",
+      "source": "./frameworks/fastapi",
+      "category": "Framework",
       "keywords": ["fastapi", "python", "async", "skill"]
     },
     {
@@ -462,10 +462,10 @@
       "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
     },
     {
-      "name": "jutsu-ink",
+      "name": "ink",
       "description": "Advanced Ink skills for building beautiful terminal UIs with React components, hooks, and Flexbox layouts.",
-      "source": "./jutsu/jutsu-ink",
-      "category": "Technique",
+      "source": "./frameworks/ink",
+      "category": "Framework",
       "keywords": ["ink", "terminal", "cli", "react", "ui", "skill"]
     },
     {
@@ -587,17 +587,17 @@
       "keywords": ["monorepo", "workspace", "turborepo", "nx", "lerna", "skill"]
     },
     {
-      "name": "jutsu-nestjs",
+      "name": "nestjs",
       "description": "Advanced NestJS skills for dependency injection, guards, and testing.",
-      "source": "./jutsu/jutsu-nestjs",
-      "category": "Technique",
+      "source": "./frameworks/nestjs",
+      "category": "Framework",
       "keywords": ["nestjs", "typescript", "nodejs", "skill"]
     },
     {
-      "name": "jutsu-nextjs",
+      "name": "nextjs",
       "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
-      "source": "./jutsu/jutsu-nextjs",
-      "category": "Technique",
+      "source": "./frameworks/nextjs",
+      "category": "Framework",
       "keywords": ["nextjs", "react", "ssr", "skill"]
     },
     {
@@ -629,10 +629,10 @@
       "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
-      "name": "jutsu-phoenix",
+      "name": "phoenix",
       "description": "Phoenix Framework skills for building web applications",
-      "source": "./jutsu/jutsu-phoenix",
-      "category": "Technique",
+      "source": "./frameworks/phoenix",
+      "category": "Framework",
       "keywords": ["elixir", "phoenix", "web", "framework"]
     },
     {
@@ -706,31 +706,31 @@
       "keywords": ["python", "types", "async", "skill"]
     },
     {
-      "name": "jutsu-rails",
+      "name": "rails",
       "description": "Advanced Ruby on Rails skills for MVC patterns, Active Record, and Hotwire",
-      "source": "./jutsu/jutsu-rails",
-      "category": "Technique",
+      "source": "./frameworks/rails",
+      "category": "Framework",
       "keywords": ["rails", "ruby", "mvc", "active-record", "hotwire", "skill"]
     },
     {
-      "name": "jutsu-react",
+      "name": "react",
       "description": "Advanced React skills for hooks, context, and performance optimization.",
-      "source": "./jutsu/jutsu-react",
-      "category": "Technique",
+      "source": "./frameworks/react",
+      "category": "Framework",
       "keywords": ["react", "hooks", "performance", "skill"]
     },
     {
-      "name": "jutsu-react-native",
+      "name": "react-native",
       "description": "Validation and quality enforcement for React Native mobile applications with components, navigation, styling, and native modules.",
-      "source": "./jutsu/jutsu-react-native",
-      "category": "Technique",
+      "source": "./frameworks/react-native",
+      "category": "Framework",
       "keywords": ["react-native", "mobile", "ios", "android", "native"]
     },
     {
-      "name": "jutsu-react-native-web",
+      "name": "react-native-web",
       "description": "Validation and quality enforcement for React Native Web projects with cross-platform components, styling, navigation, performance, and testing.",
-      "source": "./jutsu/jutsu-react-native-web",
-      "category": "Technique",
+      "source": "./frameworks/react-native-web",
+      "category": "Framework",
       "keywords": [
         "react-native-web",
         "react-native",
@@ -741,10 +741,10 @@
       ]
     },
     {
-      "name": "jutsu-relay",
+      "name": "relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
-      "source": "./jutsu/jutsu-relay",
-      "category": "Technique",
+      "source": "./frameworks/relay",
+      "category": "Framework",
       "keywords": ["relay", "graphql", "react", "fragments", "skill"]
     },
     {
@@ -956,10 +956,10 @@
       ]
     },
     {
-      "name": "jutsu-vue",
+      "name": "vue",
       "description": "Advanced Vue skills for Composition API, components, and reactivity.",
-      "source": "./jutsu/jutsu-vue",
-      "category": "Technique",
+      "source": "./frameworks/vue",
+      "category": "Framework",
       "keywords": ["vue", "composition-api", "reactivity", "skill"]
     },
     {
@@ -1018,10 +1018,10 @@
       ]
     },
     {
-      "name": "jutsu-gluestack",
+      "name": "gluestack",
       "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, theming, and MCP server integration for component discovery.",
-      "source": "./jutsu/jutsu-gluestack",
-      "category": "Technique",
+      "source": "./frameworks/gluestack",
+      "category": "Framework",
       "keywords": [
         "gluestack",
         "gluestack-ui",
