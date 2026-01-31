@@ -139,6 +139,21 @@ import {
 	TeamMemoryQueryInput,
 	UserContextInput,
 } from "./types/team-memory-query.ts";
+// Team Memory mutations (share, export/import, admin controls)
+import {
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
+} from "./types/team-memory-mutations.ts";
 import {
 	CitationVisibilityEnum,
 	MemoryLayerInfoType,
@@ -1493,6 +1508,19 @@ export {
 	OrgLearningsResultType,
 	OrgLearningsTimeRangeType,
 	MemoryLayerInfoType,
+	// Team Memory mutation types
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
 };
 
 // Define the @defer directive for incremental delivery

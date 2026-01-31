@@ -34,6 +34,26 @@ export const DEFAULT_RATE_LIMITS: Record<string, RateLimitConfig> = {
 		maxRequests: 120, // 120 searches per minute
 		windowMs: 60 * 1000,
 	},
+	/** Share learning with team */
+	share: {
+		maxRequests: 20, // 20 shares per minute
+		windowMs: 60 * 1000,
+	},
+	/** Export team knowledge */
+	export: {
+		maxRequests: 5, // 5 exports per minute
+		windowMs: 60 * 1000,
+	},
+	/** Import team knowledge */
+	import: {
+		maxRequests: 5, // 5 imports per minute
+		windowMs: 60 * 1000,
+	},
+	/** Admin moderation actions */
+	moderate: {
+		maxRequests: 100, // 100 moderation actions per minute
+		windowMs: 60 * 1000,
+	},
 };
 
 /**
