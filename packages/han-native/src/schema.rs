@@ -669,3 +669,40 @@ pub struct FileValidationStatus {
     /// Command hash used in last validation, if any
     pub validation_command_hash: Option<String>,
 }
+
+// ============================================================================
+// Data Structures - Generated Session Summaries (LLM-analyzed)
+// ============================================================================
+
+/// A generated session summary (created by Han using Haiku for semantic analysis)
+/// Unlike SessionSummary (Claude's native context compression), these contain
+/// extracted topics, files, tools, and outcome assessment.
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GeneratedSessionSummary {
+    pub id: String,
+    pub session_id: String,
+    pub summary_text: String,            // 2-3 sentence summary
+    pub topics: Vec<String>,              // Parsed from JSON array
+    pub files_modified: Option<Vec<String>>,
+    pub tools_used: Option<Vec<String>>,
+    pub outcome: Option<String>,          // 'completed', 'partial', 'abandoned'
+    pub message_count: Option<i32>,
+    pub duration_seconds: Option<i32>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+/// Input for creating/updating a generated session summary
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GeneratedSessionSummaryInput {
+    pub session_id: String,
+    pub summary_text: String,
+    pub topics: Vec<String>,
+    pub files_modified: Option<Vec<String>>,
+    pub tools_used: Option<Vec<String>>,
+    pub outcome: Option<String>,
+    pub message_count: Option<i32>,
+    pub duration_seconds: Option<i32>,
+}

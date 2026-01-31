@@ -727,6 +727,35 @@ export interface FileValidationStatus {
   /** Command hash used in last validation, if any */
   validationCommandHash?: string
 }
+/**
+ * A generated session summary (created by Han using Haiku for semantic analysis)
+ * Unlike SessionSummary (Claude's native context compression), these contain
+ * extracted topics, files, tools, and outcome assessment.
+ */
+export interface GeneratedSessionSummary {
+  id: string
+  sessionId: string
+  summaryText: string
+  topics: Array<string>
+  filesModified?: Array<string>
+  toolsUsed?: Array<string>
+  outcome?: string
+  messageCount?: number
+  durationSeconds?: number
+  createdAt?: string
+  updatedAt?: string
+}
+/** Input for creating/updating a generated session summary */
+export interface GeneratedSessionSummaryInput {
+  sessionId: string
+  summaryText: string
+  topics: Array<string>
+  filesModified?: Array<string>
+  toolsUsed?: Array<string>
+  outcome?: string
+  messageCount?: number
+  durationSeconds?: number
+}
 /** A file operation extracted from transcript content */
 export interface FileOperation {
   /** File path */
@@ -1002,6 +1031,17 @@ export declare function getSessionCompact(dbPath: string, sessionId: string): Se
 export declare function upsertSessionTodos(dbPath: string, input: SessionTodosInput): SessionTodos
 /** Get session todos by session ID */
 export declare function getSessionTodos(dbPath: string, sessionId: string): SessionTodos | null
+/** Upsert a generated session summary (creates or updates based on session_id) */
+export declare function upsertGeneratedSummary(dbPath: string, input: GeneratedSessionSummaryInput): GeneratedSessionSummary
+/** Get generated summary by session ID */
+export declare function getGeneratedSummary(dbPath: string, sessionId: string): GeneratedSessionSummary | null
+/** Search generated summaries using FTS */
+export declare function searchGeneratedSummaries(dbPath: string, query: string, limit?: number | undefined | null): Array<GeneratedSessionSummary>
+/**
+ * List sessions that don't have generated summaries yet
+ * Returns session IDs ordered by most recent first
+ */
+export declare function listSessionsWithoutSummaries(dbPath: string, limit?: number | undefined | null): Array<string>
 /** Get all native tasks for a session */
 export declare function getSessionNativeTasks(dbPath: string, sessionId: string): Array<NativeTask>
 /** Get a specific native task by session ID and task ID */
