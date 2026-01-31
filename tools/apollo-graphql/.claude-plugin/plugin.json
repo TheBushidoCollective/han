@@ -1,0 +1,26 @@
+{
+  "name": "apollo-graphql",
+  "version": "1.2.0",
+  "description": "Advanced Apollo GraphQL skills for client and server development",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["apollo", "graphql", "client", "server"],
+  "lspServers": {
+    "apollo": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".graphql": "graphql",
+        ".gql": "graphql"
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}

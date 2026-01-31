@@ -1,0 +1,13 @@
+{
+  "name": "absinthe-graphql",
+  "version": "1.1.0",
+  "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"]
+}

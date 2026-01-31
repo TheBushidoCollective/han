@@ -10,16 +10,28 @@
   },
   "plugins": [
     {
-      "name": "jutsu-absinthe-graphql",
+      "name": "absinthe-graphql",
       "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
-      "source": "./jutsu/jutsu-absinthe-graphql",
-      "category": "Technique",
+      "source": "./tools/absinthe-graphql",
+      "category": "Tool",
       "keywords": [
         "absinthe",
         "graphql",
         "elixir",
         "api",
         "subscriptions"
+      ]
+    },
+    {
+      "name": "accessibility",
+      "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
+      "source": "./disciplines/accessibility",
+      "category": "Discipline",
+      "keywords": [
+        "accessibility",
+        "wcag",
+        "inclusive-design",
+        "agent"
       ]
     },
     {
@@ -38,6 +50,24 @@
       ]
     },
     {
+      "name": "agent-sop",
+      "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring skills.",
+      "source": "./services/agent-sop",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "agent-sop",
+        "workflows",
+        "sop",
+        "standard-operating-procedures",
+        "rfc2119",
+        "documentation",
+        "agent-workflows",
+        "templates",
+        "server"
+      ]
+    },
+    {
       "name": "ai-dlc",
       "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation.",
       "source": "./patterns/ai-dlc",
@@ -53,20 +83,6 @@
       ]
     },
     {
-      "name": "jutsu-android",
-      "description": "Android development validation with Gradle build hooks.",
-      "source": "./jutsu/jutsu-android",
-      "category": "Technique",
-      "keywords": [
-        "android",
-        "gradle",
-        "kotlin",
-        "java",
-        "build",
-        "validation"
-      ]
-    },
-    {
       "name": "ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
       "source": "./validation/ameba",
@@ -76,6 +92,20 @@
         "linting",
         "style",
         "analysis"
+      ]
+    },
+    {
+      "name": "android",
+      "description": "Android development validation with Gradle build hooks.",
+      "source": "./specialized/android",
+      "category": "Specialized",
+      "keywords": [
+        "android",
+        "gradle",
+        "kotlin",
+        "java",
+        "build",
+        "validation"
       ]
     },
     {
@@ -91,10 +121,10 @@
       ]
     },
     {
-      "name": "jutsu-ansible",
+      "name": "ansible",
       "description": "Ansible playbook validation and configuration management best practices",
-      "source": "./jutsu/jutsu-ansible",
-      "category": "Technique",
+      "source": "./tools/ansible",
+      "category": "Tool",
       "keywords": [
         "ansible",
         "configuration-management",
@@ -103,16 +133,39 @@
       ]
     },
     {
-      "name": "jutsu-apollo-graphql",
+      "name": "api",
+      "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
+      "source": "./disciplines/api",
+      "category": "Discipline",
+      "keywords": [
+        "api",
+        "rest",
+        "graphql",
+        "agent"
+      ]
+    },
+    {
+      "name": "apollo-graphql",
       "description": "Advanced Apollo GraphQL skills for client and server development",
-      "source": "./jutsu/jutsu-apollo-graphql",
-      "category": "Technique",
+      "source": "./tools/apollo-graphql",
+      "category": "Tool",
       "keywords": [
         "apollo",
         "graphql",
         "client",
         "server",
         "skill"
+      ]
+    },
+    {
+      "name": "architecture",
+      "description": "Agents for system design and architectural thinking.",
+      "source": "./disciplines/architecture",
+      "category": "Discipline",
+      "keywords": [
+        "architecture",
+        "design",
+        "patterns"
       ]
     },
     {
@@ -133,6 +186,20 @@
         "react",
         "vue",
         "angular"
+      ]
+    },
+    {
+      "name": "backend",
+      "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
+      "source": "./disciplines/backend",
+      "category": "Discipline",
+      "keywords": [
+        "backend",
+        "api",
+        "architecture",
+        "data",
+        "server",
+        "agent"
       ]
     },
     {
@@ -163,6 +230,18 @@
       ]
     },
     {
+      "name": "blockchain",
+      "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
+      "source": "./disciplines/blockchain",
+      "category": "Discipline",
+      "keywords": [
+        "blockchain",
+        "web3",
+        "smart-contracts",
+        "agent"
+      ]
+    },
+    {
       "name": "blueprints",
       "description": "MCP server for managing technical blueprint documentation. Provides tools to search, read, and write blueprints programmatically, plus skills and hooks for quality enforcement.",
       "source": "./services/blueprints",
@@ -190,14 +269,81 @@
       ]
     },
     {
+      "name": "bushido",
+      "description": "The philosophy of the Samurai applied to software development. The seven virtues guide agent behavior. Requires core for infrastructure.",
+      "source": "./bushido",
+      "category": "Core",
+      "keywords": [
+        "philosophy",
+        "bushido",
+        "virtues",
+        "honor",
+        "quality"
+      ]
+    },
+    {
       "name": "c",
       "description": "Advanced C programming skills for systems programming and memory management",
       "source": "./languages/c",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "c",
         "systems-programming",
         "memory-management",
+        "skill"
+      ]
+    },
+    {
+      "name": "checkstyle",
+      "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
+      "source": "./validation/checkstyle",
+      "category": "Validation",
+      "keywords": [
+        "checkstyle",
+        "linting",
+        "java",
+        "skill"
+      ]
+    },
+    {
+      "name": "claude-agent-sdk",
+      "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
+      "source": "./specialized/claude-agent-sdk",
+      "category": "Specialized",
+      "keywords": [
+        "claude",
+        "agent-sdk",
+        "validation",
+        "typescript",
+        "quality",
+        "enforcement",
+        "ai-agents"
+      ]
+    },
+    {
+      "name": "clickup",
+      "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
+      "source": "./services/clickup",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "clickup",
+        "project-management",
+        "tasks",
+        "acceptance-criteria",
+        "validation",
+        "productivity"
+      ]
+    },
+    {
+      "name": "clippy",
+      "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
+      "source": "./validation/clippy",
+      "category": "Validation",
+      "keywords": [
+        "clippy",
+        "linting",
+        "rust",
         "skill"
       ]
     },
@@ -219,97 +365,52 @@
       ]
     },
     {
-      "name": "checkstyle",
-      "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
-      "source": "./validation/checkstyle",
-      "category": "Validation",
+      "name": "compilers",
+      "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
+      "source": "./disciplines/compilers",
+      "category": "Discipline",
       "keywords": [
-        "checkstyle",
-        "linting",
-        "java",
-        "skill"
+        "compiler",
+        "language-design",
+        "parsing",
+        "agent"
       ]
     },
     {
-      "name": "jutsu-claude-agent-sdk",
-      "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
-      "source": "./jutsu/jutsu-claude-agent-sdk",
-      "category": "Technique",
+      "name": "content",
+      "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
+      "source": "./disciplines/content",
+      "category": "Discipline",
       "keywords": [
-        "claude",
-        "agent-sdk",
-        "validation",
-        "typescript",
+        "content",
+        "writing",
+        "marketing",
+        "storytelling",
+        "engagement",
+        "agent"
+      ]
+    },
+    {
+      "name": "core",
+      "description": "Essential infrastructure for the Han plugin marketplace including skills, commands, MCP servers, and quality enforcement hooks.",
+      "source": "./core",
+      "category": "Core",
+      "keywords": [
+        "infrastructure",
+        "marketplace",
+        "mcp",
+        "hooks",
         "quality",
-        "enforcement",
-        "ai-agents"
-      ]
-    },
-    {
-      "name": "jutsu-fnox",
-      "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
-      "source": "./jutsu/jutsu-fnox",
-      "category": "Technique",
-      "keywords": [
-        "fnox",
-        "secrets",
-        "validation",
-        "security",
-        "encryption",
-        "configuration",
-        "quality",
-        "enforcement"
-      ]
-    },
-    {
-      "name": "mise",
-      "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
-      "source": "./tools/mise",
-      "category": "Tool",
-      "keywords": [
-        "mise",
-        "validation",
-        "task-runner",
-        "version-manager",
-        "quality",
-        "enforcement",
-        "dev-tools"
-      ]
-    },
-    {
-      "name": "jutsu-notetaker",
-      "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
-      "source": "./jutsu/jutsu-notetaker",
-      "category": "Technique",
-      "keywords": [
-        "notes",
-        "comments",
-        "todo",
-        "annotations",
-        "documentation",
-        "code-comments",
-        "ai-notes",
-        "developer-notes",
-        "skill"
-      ]
-    },
-    {
-      "name": "clippy",
-      "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
-      "source": "./validation/clippy",
-      "category": "Validation",
-      "keywords": [
-        "clippy",
-        "linting",
-        "rust",
-        "skill"
+        "principles",
+        "delegation",
+        "metrics"
       ]
     },
     {
       "name": "cpp",
       "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
       "source": "./languages/cpp",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "cpp",
         "c++",
@@ -334,7 +435,7 @@
       "name": "crystal",
       "description": "Skills for Crystal language development.",
       "source": "./languages/crystal",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "crystal",
         "language",
@@ -345,7 +446,7 @@
       "name": "csharp",
       "description": "Advanced C# programming skills for async patterns and LINQ",
       "source": "./languages/csharp",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "csharp",
         "c#",
@@ -379,6 +480,30 @@
         "e2e",
         "javascript",
         "skill"
+      ]
+    },
+    {
+      "name": "data-engineering",
+      "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
+      "source": "./disciplines/data-engineering",
+      "category": "Discipline",
+      "keywords": [
+        "data-engineering",
+        "etl",
+        "streaming",
+        "agent"
+      ]
+    },
+    {
+      "name": "databases",
+      "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
+      "source": "./disciplines/databases",
+      "category": "Discipline",
+      "keywords": [
+        "database",
+        "sql",
+        "query-optimization",
+        "agent"
       ]
     },
     {
@@ -418,10 +543,22 @@
       ]
     },
     {
-      "name": "jutsu-ecto",
+      "name": "documentation",
+      "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
+      "source": "./disciplines/documentation",
+      "category": "Discipline",
+      "keywords": [
+        "documentation",
+        "technical-writing",
+        "knowledge",
+        "agent"
+      ]
+    },
+    {
+      "name": "ecto",
       "description": "Ecto skills for database interactions in Elixir",
-      "source": "./jutsu/jutsu-ecto",
-      "category": "Technique",
+      "source": "./frameworks/ecto",
+      "category": "Framework",
       "keywords": [
         "elixir",
         "database",
@@ -430,10 +567,10 @@
       ]
     },
     {
-      "name": "jutsu-effect",
+      "name": "effect",
       "description": "Effect validation and type checking for TypeScript projects using the Effect library.",
-      "source": "./jutsu/jutsu-effect",
-      "category": "Technique",
+      "source": "./frameworks/effect",
+      "category": "Framework",
       "keywords": [
         "effect",
         "typescript",
@@ -446,7 +583,7 @@
       "name": "elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
       "source": "./languages/elixir",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "elixir",
         "otp",
@@ -455,10 +592,22 @@
       ]
     },
     {
+      "name": "embedded",
+      "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
+      "source": "./disciplines/embedded",
+      "category": "Discipline",
+      "keywords": [
+        "embedded-systems",
+        "firmware",
+        "iot",
+        "agent"
+      ]
+    },
+    {
       "name": "erlang",
       "description": "Advanced Erlang programming skills for concurrent and distributed systems",
       "source": "./languages/erlang",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "erlang",
         "beam",
@@ -520,6 +669,52 @@
       ]
     },
     {
+      "name": "figma",
+      "description": "MCP server for Figma integration providing design-to-code generation, design token extraction, component sync, and frame analysis via Figma Desktop MCP server.",
+      "source": "./services/figma",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "figma",
+        "design",
+        "design-tokens",
+        "components",
+        "code-generation",
+        "ui",
+        "server"
+      ]
+    },
+    {
+      "name": "fnox",
+      "description": "Validation and quality enforcement for Fnox secrets management with configuration checking and provider validation.",
+      "source": "./specialized/fnox",
+      "category": "Specialized",
+      "keywords": [
+        "fnox",
+        "secrets",
+        "validation",
+        "security",
+        "encryption",
+        "configuration",
+        "quality",
+        "enforcement"
+      ]
+    },
+    {
+      "name": "frontend",
+      "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
+      "source": "./disciplines/frontend",
+      "category": "Discipline",
+      "keywords": [
+        "frontend",
+        "ui",
+        "ux",
+        "design",
+        "presentation",
+        "agent"
+      ]
+    },
+    {
       "name": "functional-programming",
       "description": "Functional programming paradigm, patterns, and best practices across languages",
       "source": "./patterns/functional-programming",
@@ -532,10 +727,82 @@
       ]
     },
     {
+      "name": "games",
+      "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
+      "source": "./disciplines/games",
+      "category": "Discipline",
+      "keywords": [
+        "game-development",
+        "game-engine",
+        "gameplay",
+        "agent"
+      ]
+    },
+    {
+      "name": "git-storytelling",
+      "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
+      "source": "./patterns/git-storytelling",
+      "category": "Pattern",
+      "keywords": [
+        "git",
+        "storytelling",
+        "commit",
+        "version-control",
+        "workflow"
+      ]
+    },
+    {
+      "name": "github",
+      "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
+      "source": "./services/github",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "github",
+        "git",
+        "repository",
+        "issues",
+        "pull-requests",
+        "actions",
+        "code-search",
+        "server"
+      ]
+    },
+    {
+      "name": "gitlab",
+      "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
+      "source": "./services/gitlab",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "gitlab",
+        "git",
+        "issues",
+        "merge-requests",
+        "ci-cd",
+        "devops",
+        "server"
+      ]
+    },
+    {
+      "name": "gitlab-ci",
+      "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations using glab CLI.",
+      "source": "./tools/gitlab-ci",
+      "category": "Tool",
+      "keywords": [
+        "gitlab",
+        "gitlab-ci",
+        "ci-cd",
+        "pipelines",
+        "devops",
+        "validation"
+      ]
+    },
+    {
       "name": "gleam",
       "description": "Advanced Gleam programming skills for functional BEAM development",
       "source": "./languages/gleam",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "gleam",
         "beam",
@@ -545,10 +812,27 @@
       ]
     },
     {
+      "name": "gluestack",
+      "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, theming, and MCP server integration for component discovery.",
+      "source": "./frameworks/gluestack",
+      "category": "Framework",
+      "keywords": [
+        "gluestack",
+        "gluestack-ui",
+        "react",
+        "react-native",
+        "nativewind",
+        "tailwind",
+        "ui-components",
+        "accessibility",
+        "mcp"
+      ]
+    },
+    {
       "name": "go",
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
       "source": "./languages/go",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "go",
         "golang",
@@ -557,10 +841,10 @@
       ]
     },
     {
-      "name": "jutsu-graphql",
+      "name": "graphql",
       "description": "Skills for GraphQL schema design and queries.",
-      "source": "./jutsu/jutsu-graphql",
-      "category": "Technique",
+      "source": "./tools/graphql",
+      "category": "Tool",
       "keywords": [
         "graphql",
         "api",
@@ -568,10 +852,10 @@
       ]
     },
     {
-      "name": "jutsu-graphql-inspector",
+      "name": "graphql-inspector",
       "description": "GraphQL Inspector validation for schema diffing, breaking change detection, and operation validation.",
-      "source": "./jutsu/jutsu-graphql-inspector",
-      "category": "Technique",
+      "source": "./tools/graphql-inspector",
+      "category": "Tool",
       "keywords": [
         "graphql",
         "graphql-inspector",
@@ -583,10 +867,22 @@
       ]
     },
     {
-      "name": "jutsu-han-plugins",
+      "name": "graphics",
+      "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
+      "source": "./disciplines/graphics",
+      "category": "Discipline",
+      "keywords": [
+        "graphics",
+        "gpu",
+        "shaders",
+        "agent"
+      ]
+    },
+    {
+      "name": "han-plugins",
       "description": "Validates Han plugin structure and configuration files.",
-      "source": "./jutsu/jutsu-han-plugins",
-      "category": "Technique",
+      "source": "./specialized/han-plugins",
+      "category": "Specialized",
       "keywords": [
         "han",
         "plugins",
@@ -595,16 +891,28 @@
       ]
     },
     {
-      "name": "jutsu-helm",
+      "name": "helm",
       "description": "Helm chart validation and best practices for Kubernetes package management",
-      "source": "./jutsu/jutsu-helm",
-      "category": "Technique",
+      "source": "./tools/helm",
+      "category": "Tool",
       "keywords": [
         "helm",
         "kubernetes",
         "k8s",
         "charts",
         "devops"
+      ]
+    },
+    {
+      "name": "infrastructure",
+      "description": "Agents for operational excellence and reliability engineering.",
+      "source": "./disciplines/infrastructure",
+      "category": "Discipline",
+      "keywords": [
+        "devops",
+        "sre",
+        "deployment",
+        "operations"
       ]
     },
     {
@@ -622,10 +930,10 @@
       ]
     },
     {
-      "name": "jutsu-ios",
+      "name": "ios",
       "description": "iOS development validation with Xcode build hooks.",
-      "source": "./jutsu/jutsu-ios",
-      "category": "Technique",
+      "source": "./specialized/ios",
+      "category": "Specialized",
       "keywords": [
         "ios",
         "xcode",
@@ -639,7 +947,7 @@
       "name": "java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
       "source": "./languages/java",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "java",
         "streams",
@@ -661,10 +969,25 @@
       ]
     },
     {
-      "name": "jutsu-junit",
+      "name": "jira",
+      "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
+      "source": "./services/jira",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "jira",
+        "atlassian",
+        "project-management",
+        "tickets",
+        "acceptance-criteria",
+        "validation"
+      ]
+    },
+    {
+      "name": "junit",
       "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
-      "source": "./jutsu/jutsu-junit",
-      "category": "Technique",
+      "source": "./tools/junit",
+      "category": "Tool",
       "keywords": [
         "junit",
         "testing",
@@ -673,30 +996,40 @@
       ]
     },
     {
-      "name": "jutsu-testng",
-      "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
-      "source": "./jutsu/jutsu-testng",
-      "category": "Technique",
-      "keywords": [
-        "testng",
-        "testing",
-        "java",
-        "data-providers",
-        "parallel",
-        "skill"
-      ]
-    },
-    {
       "name": "kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./languages/kotlin",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "kotlin",
         "coroutines",
         "android",
         "jvm",
         "skill"
+      ]
+    },
+    {
+      "name": "kubernetes",
+      "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
+      "source": "./tools/kubernetes",
+      "category": "Tool",
+      "keywords": [
+        "kubernetes",
+        "k8s",
+        "devops",
+        "infrastructure"
+      ]
+    },
+    {
+      "name": "kustomize",
+      "description": "Kustomize configuration validation for Kubernetes customization",
+      "source": "./tools/kustomize",
+      "category": "Tool",
+      "keywords": [
+        "kustomize",
+        "kubernetes",
+        "k8s",
+        "devops"
       ]
     },
     {
@@ -713,40 +1046,43 @@
       ]
     },
     {
-      "name": "jutsu-kubernetes",
-      "description": "Kubernetes manifest validation and best practices for cloud-native deployments",
-      "source": "./jutsu/jutsu-kubernetes",
-      "category": "Technique",
+      "name": "linear",
+      "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
+      "source": "./services/linear",
+      "category": "Integration",
       "keywords": [
-        "kubernetes",
-        "k8s",
-        "devops",
-        "infrastructure"
-      ]
-    },
-    {
-      "name": "jutsu-kustomize",
-      "description": "Kustomize configuration validation for Kubernetes customization",
-      "source": "./jutsu/jutsu-kustomize",
-      "category": "Technique",
-      "keywords": [
-        "kustomize",
-        "kubernetes",
-        "k8s",
-        "devops"
+        "mcp",
+        "linear",
+        "project-management",
+        "issues",
+        "acceptance-criteria",
+        "validation",
+        "workflow"
       ]
     },
     {
       "name": "lua",
       "description": "Advanced Lua programming skills for embedded scripting and game development",
       "source": "./languages/lua",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "lua",
         "scripting",
         "embedded",
         "gaming",
         "skill"
+      ]
+    },
+    {
+      "name": "machine-learning",
+      "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
+      "source": "./disciplines/machine-learning",
+      "category": "Discipline",
+      "keywords": [
+        "ml-engineering",
+        "mlops",
+        "inference",
+        "agent"
       ]
     },
     {
@@ -774,6 +1110,34 @@
         "dependency-management",
         "pom",
         "validation"
+      ]
+    },
+    {
+      "name": "mise",
+      "description": "Validation and quality enforcement for Mise projects with task validation and configuration checking.",
+      "source": "./tools/mise",
+      "category": "Tool",
+      "keywords": [
+        "mise",
+        "validation",
+        "task-runner",
+        "version-manager",
+        "quality",
+        "enforcement",
+        "dev-tools"
+      ]
+    },
+    {
+      "name": "mobile",
+      "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
+      "source": "./disciplines/mobile",
+      "category": "Discipline",
+      "keywords": [
+        "mobile",
+        "ios",
+        "android",
+        "development",
+        "agent"
       ]
     },
     {
@@ -816,6 +1180,18 @@
       ]
     },
     {
+      "name": "networking",
+      "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
+      "source": "./disciplines/networking",
+      "category": "Discipline",
+      "keywords": [
+        "network",
+        "protocols",
+        "distributed-systems",
+        "agent"
+      ]
+    },
+    {
       "name": "nextjs",
       "description": "Advanced Next.js skills for App Router, Server Components, and data fetching.",
       "source": "./frameworks/nextjs",
@@ -831,12 +1207,46 @@
       "name": "nim",
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
       "source": "./languages/nim",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "nim",
         "systems-programming",
         "metaprogramming",
         "skill"
+      ]
+    },
+    {
+      "name": "notetaker",
+      "description": "Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.",
+      "source": "./specialized/notetaker",
+      "category": "Specialized",
+      "keywords": [
+        "notes",
+        "comments",
+        "todo",
+        "annotations",
+        "documentation",
+        "code-comments",
+        "ai-notes",
+        "developer-notes",
+        "skill"
+      ]
+    },
+    {
+      "name": "notion",
+      "description": "MCP server for Notion integration providing workspace search, page management, database operations, comments, and AI-optimized content access via Notion's hosted MCP server.",
+      "source": "./services/notion",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "notion",
+        "knowledge-management",
+        "pages",
+        "databases",
+        "workspace",
+        "documentation",
+        "productivity",
+        "server"
       ]
     },
     {
@@ -855,7 +1265,7 @@
       "name": "objective-c",
       "description": "Advanced Objective-C programming skills for iOS and macOS development",
       "source": "./languages/objective-c",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "objective-c",
         "objc",
@@ -863,6 +1273,18 @@
         "macos",
         "arc",
         "skill"
+      ]
+    },
+    {
+      "name": "observability",
+      "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
+      "source": "./disciplines/observability",
+      "category": "Discipline",
+      "keywords": [
+        "observability",
+        "monitoring",
+        "tracing",
+        "agent"
       ]
     },
     {
@@ -875,6 +1297,18 @@
         "object-oriented",
         "design-patterns",
         "encapsulation"
+      ]
+    },
+    {
+      "name": "performance",
+      "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
+      "source": "./disciplines/performance",
+      "category": "Discipline",
+      "keywords": [
+        "performance",
+        "optimization",
+        "scalability",
+        "agent"
       ]
     },
     {
@@ -893,13 +1327,25 @@
       "name": "php",
       "description": "Advanced PHP programming skills for modern PHP and security patterns",
       "source": "./languages/php",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "php",
         "composer",
         "security",
         "web",
         "skill"
+      ]
+    },
+    {
+      "name": "platform",
+      "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
+      "source": "./disciplines/platform",
+      "category": "Discipline",
+      "keywords": [
+        "platform-engineering",
+        "infrastructure",
+        "devex",
+        "agent"
       ]
     },
     {
@@ -931,6 +1377,32 @@
       ]
     },
     {
+      "name": "playwright-mcp",
+      "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
+      "source": "./services/playwright-mcp",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "playwright",
+        "testing",
+        "automation",
+        "server"
+      ]
+    },
+    {
+      "name": "plugin-development",
+      "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
+      "source": "./disciplines/plugin-development",
+      "category": "Discipline",
+      "keywords": [
+        "plugin",
+        "development",
+        "claude-code",
+        "quality",
+        "agent"
+      ]
+    },
+    {
       "name": "prettier",
       "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
       "source": "./validation/prettier",
@@ -944,10 +1416,46 @@
       ]
     },
     {
-      "name": "jutsu-pulumi",
+      "name": "product",
+      "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
+      "source": "./disciplines/product",
+      "category": "Discipline",
+      "keywords": [
+        "product",
+        "strategy",
+        "vision",
+        "planning",
+        "agent"
+      ]
+    },
+    {
+      "name": "project-management",
+      "description": "Agents for workflow orchestration and team coordination.",
+      "source": "./disciplines/project-management",
+      "category": "Discipline",
+      "keywords": [
+        "project-management",
+        "coordination",
+        "workflow"
+      ]
+    },
+    {
+      "name": "prompts",
+      "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
+      "source": "./disciplines/prompts",
+      "category": "Discipline",
+      "keywords": [
+        "prompt-engineering",
+        "ai",
+        "llm",
+        "agent"
+      ]
+    },
+    {
+      "name": "pulumi",
       "description": "Pulumi infrastructure-as-code validation and best practices",
-      "source": "./jutsu/jutsu-pulumi",
-      "category": "Technique",
+      "source": "./tools/pulumi",
+      "category": "Tool",
       "keywords": [
         "pulumi",
         "infrastructure",
@@ -983,12 +1491,25 @@
       "name": "python",
       "description": "Advanced Python skills for type system, async patterns, and data modeling.",
       "source": "./languages/python",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "python",
         "types",
         "async",
         "skill"
+      ]
+    },
+    {
+      "name": "quality",
+      "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
+      "source": "./disciplines/quality",
+      "category": "Discipline",
+      "keywords": [
+        "quality",
+        "testing",
+        "qa",
+        "reliability",
+        "agent"
       ]
     },
     {
@@ -1045,6 +1566,22 @@
       ]
     },
     {
+      "name": "reddit",
+      "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+      "source": "./services/reddit",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "reddit",
+        "social-media",
+        "content",
+        "posts",
+        "comments",
+        "subreddits",
+        "server"
+      ]
+    },
+    {
       "name": "relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./frameworks/relay",
@@ -1054,19 +1591,6 @@
         "graphql",
         "react",
         "fragments",
-        "skill"
-      ]
-    },
-    {
-      "name": "jutsu-rspec",
-      "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
-      "source": "./jutsu/jutsu-rspec",
-      "category": "Technique",
-      "keywords": [
-        "rspec",
-        "testing",
-        "ruby",
-        "bdd",
         "skill"
       ]
     },
@@ -1084,16 +1608,15 @@
       ]
     },
     {
-      "name": "ruby",
-      "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
-      "source": "./languages/ruby",
-      "category": "Technique",
+      "name": "rspec",
+      "description": "Comprehensive RSpec testing framework skills for Ruby projects with behavior-driven development patterns.",
+      "source": "./tools/rspec",
+      "category": "Tool",
       "keywords": [
+        "rspec",
+        "testing",
         "ruby",
-        "metaprogramming",
-        "blocks",
-        "gems",
-        "oop",
+        "bdd",
         "skill"
       ]
     },
@@ -1110,10 +1633,24 @@
       ]
     },
     {
-      "name": "jutsu-runbooks",
+      "name": "ruby",
+      "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
+      "source": "./languages/ruby",
+      "category": "Language",
+      "keywords": [
+        "ruby",
+        "metaprogramming",
+        "blocks",
+        "gems",
+        "oop",
+        "skill"
+      ]
+    },
+    {
+      "name": "runbooks",
       "description": "Structured operational documentation and runbook patterns for human operators. Helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance.",
-      "source": "./jutsu/jutsu-runbooks",
-      "category": "Technique",
+      "source": "./specialized/runbooks",
+      "category": "Specialized",
       "keywords": [
         "runbooks",
         "operations",
@@ -1129,7 +1666,7 @@
       "name": "rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
       "source": "./languages/rust",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "rust",
         "ownership",
@@ -1141,13 +1678,69 @@
       "name": "scala",
       "description": "Advanced Scala programming skills for functional programming and type systems",
       "source": "./languages/scala",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "scala",
         "functional",
         "jvm",
         "type-system",
         "skill"
+      ]
+    },
+    {
+      "name": "scratch",
+      "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
+      "source": "./specialized/scratch",
+      "category": "Specialized",
+      "keywords": [
+        "scratch",
+        "workspace",
+        "gitignore",
+        "temporary",
+        "workflow"
+      ]
+    },
+    {
+      "name": "security",
+      "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
+      "source": "./disciplines/security",
+      "category": "Discipline",
+      "keywords": [
+        "security",
+        "compliance",
+        "vulnerability",
+        "threat",
+        "agent"
+      ]
+    },
+    {
+      "name": "sentry",
+      "description": "Best practices and patterns for Sentry error monitoring and observability.",
+      "source": "./specialized/sentry",
+      "category": "Specialized",
+      "keywords": [
+        "sentry",
+        "error-monitoring",
+        "observability",
+        "performance",
+        "tracing"
+      ]
+    },
+    {
+      "name": "sentry-mcp",
+      "description": "MCP server for Sentry integration providing error tracking, performance monitoring, release health, incident response, and Seer AI root cause analysis via remote HTTP OAuth server.",
+      "source": "./services/sentry",
+      "category": "Integration",
+      "keywords": [
+        "mcp",
+        "sentry",
+        "error-tracking",
+        "observability",
+        "performance",
+        "monitoring",
+        "incidents",
+        "seer-ai",
+        "server"
       ]
     },
     {
@@ -1179,15 +1772,29 @@
       ]
     },
     {
-      "name": "jutsu-sip",
+      "name": "sip",
       "description": "Session Initiation Protocol (SIP) skills for VoIP and real-time communications",
-      "source": "./jutsu/jutsu-sip",
-      "category": "Technique",
+      "source": "./specialized/sip",
+      "category": "Specialized",
       "keywords": [
         "sip",
         "voip",
         "telecommunications",
         "real-time"
+      ]
+    },
+    {
+      "name": "sre",
+      "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+      "source": "./disciplines/sre",
+      "category": "Discipline",
+      "keywords": [
+        "sre",
+        "reliability",
+        "monitoring",
+        "incidents",
+        "devops",
+        "agent"
       ]
     },
     {
@@ -1207,6 +1814,19 @@
       ]
     },
     {
+      "name": "swift",
+      "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
+      "source": "./languages/swift",
+      "category": "Language",
+      "keywords": [
+        "swift",
+        "ios",
+        "protocol-oriented",
+        "concurrency",
+        "skill"
+      ]
+    },
+    {
       "name": "syncpack",
       "description": "Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.",
       "source": "./tools/syncpack",
@@ -1223,23 +1843,10 @@
       ]
     },
     {
-      "name": "swift",
-      "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
-      "source": "./languages/swift",
-      "category": "Technique",
-      "keywords": [
-        "swift",
-        "ios",
-        "protocol-oriented",
-        "concurrency",
-        "skill"
-      ]
-    },
-    {
-      "name": "jutsu-tailwind",
+      "name": "tailwind",
       "description": "Validation and quality enforcement for Tailwind CSS projects with comprehensive utility-first CSS patterns and best practices.",
-      "source": "./jutsu/jutsu-tailwind",
-      "category": "Technique",
+      "source": "./tools/tailwind",
+      "category": "Tool",
       "keywords": [
         "tailwind",
         "tailwindcss",
@@ -1248,31 +1855,6 @@
         "styling",
         "validation",
         "quality"
-      ]
-    },
-    {
-      "name": "jutsu-tensorflow",
-      "description": "TensorFlow machine learning and deep learning framework skills",
-      "source": "./jutsu/jutsu-tensorflow",
-      "category": "Technique",
-      "keywords": [
-        "tensorflow",
-        "machine-learning",
-        "deep-learning",
-        "neural-networks"
-      ]
-    },
-    {
-      "name": "jutsu-terraform",
-      "description": "Terraform configuration validation and infrastructure-as-code best practices",
-      "source": "./jutsu/jutsu-terraform",
-      "category": "Technique",
-      "keywords": [
-        "terraform",
-        "infrastructure",
-        "iac",
-        "devops",
-        "hashicorp"
       ]
     },
     {
@@ -1289,14 +1871,68 @@
       ]
     },
     {
+      "name": "tensorflow",
+      "description": "TensorFlow machine learning and deep learning framework skills",
+      "source": "./specialized/tensorflow",
+      "category": "Specialized",
+      "keywords": [
+        "tensorflow",
+        "machine-learning",
+        "deep-learning",
+        "neural-networks"
+      ]
+    },
+    {
+      "name": "terraform",
+      "description": "Terraform configuration validation and infrastructure-as-code best practices",
+      "source": "./tools/terraform",
+      "category": "Tool",
+      "keywords": [
+        "terraform",
+        "infrastructure",
+        "iac",
+        "devops",
+        "hashicorp"
+      ]
+    },
+    {
+      "name": "testng",
+      "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
+      "source": "./tools/testng",
+      "category": "Tool",
+      "keywords": [
+        "testng",
+        "testing",
+        "java",
+        "data-providers",
+        "parallel",
+        "skill"
+      ]
+    },
+    {
       "name": "typescript",
       "description": "Skills for TypeScript type system mastery.",
       "source": "./languages/typescript",
-      "category": "Technique",
+      "category": "Language",
       "keywords": [
         "typescript",
         "types",
         "language"
+      ]
+    },
+    {
+      "name": "vite",
+      "description": "Vite build validation with automatic package manager detection.",
+      "source": "./tools/vite",
+      "category": "Tool",
+      "keywords": [
+        "vite",
+        "bundler",
+        "build",
+        "javascript",
+        "typescript",
+        "vue",
+        "svelte"
       ]
     },
     {
@@ -1314,18 +1950,16 @@
       ]
     },
     {
-      "name": "vite",
-      "description": "Vite build validation with automatic package manager detection.",
-      "source": "./tools/vite",
-      "category": "Tool",
+      "name": "voip",
+      "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
+      "source": "./disciplines/voip",
+      "category": "Discipline",
       "keywords": [
-        "vite",
-        "bundler",
-        "build",
-        "javascript",
-        "typescript",
-        "vue",
-        "svelte"
+        "voip",
+        "telecommunications",
+        "sip",
+        "rtp",
+        "engineering"
       ]
     },
     {
@@ -1354,20 +1988,6 @@
       ]
     },
     {
-      "name": "jutsu-zustand",
-      "description": "Comprehensive Zustand state management skills for React applications with store patterns, middleware, and TypeScript integration.",
-      "source": "./jutsu/jutsu-zustand",
-      "category": "Technique",
-      "keywords": [
-        "zustand",
-        "state-management",
-        "react",
-        "typescript",
-        "store",
-        "hooks"
-      ]
-    },
-    {
       "name": "yarn",
       "description": "Yarn package manager skills with dependency validation hooks.",
       "source": "./tools/yarn",
@@ -1380,637 +2000,17 @@
       ]
     },
     {
-      "name": "git-storytelling",
-      "description": "Git storytelling enforcement - commit early and often to tell the story of your development process.",
-      "source": "./patterns/git-storytelling",
-      "category": "Pattern",
-      "keywords": [
-        "git",
-        "storytelling",
-        "commit",
-        "version-control",
-        "workflow"
-      ]
-    },
-    {
-      "name": "jutsu-gitlab-ci",
-      "description": "Validation and quality enforcement for GitLab CI/CD pipeline configurations using glab CLI.",
-      "source": "./jutsu/jutsu-gitlab-ci",
-      "category": "Technique",
-      "keywords": [
-        "gitlab",
-        "gitlab-ci",
-        "ci-cd",
-        "pipelines",
-        "devops",
-        "validation"
-      ]
-    },
-    {
-      "name": "gluestack",
-      "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, theming, and MCP server integration for component discovery.",
-      "source": "./frameworks/gluestack",
+      "name": "zustand",
+      "description": "Comprehensive Zustand state management skills for React applications with store patterns, middleware, and TypeScript integration.",
+      "source": "./frameworks/zustand",
       "category": "Framework",
       "keywords": [
-        "gluestack",
-        "gluestack-ui",
+        "zustand",
+        "state-management",
         "react",
-        "react-native",
-        "nativewind",
-        "tailwind",
-        "ui-components",
-        "accessibility",
-        "mcp"
-      ]
-    },
-    {
-      "name": "jutsu-sentry",
-      "description": "Best practices and patterns for Sentry error monitoring and observability.",
-      "source": "./jutsu/jutsu-sentry",
-      "category": "Technique",
-      "keywords": [
-        "sentry",
-        "error-monitoring",
-        "observability",
-        "performance",
-        "tracing"
-      ]
-    },
-    {
-      "name": "jutsu-scratch",
-      "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
-      "source": "./jutsu/jutsu-scratch",
-      "category": "Technique",
-      "keywords": [
-        "scratch",
-        "workspace",
-        "gitignore",
-        "temporary",
-        "workflow"
-      ]
-    },
-    {
-      "name": "core",
-      "description": "Essential infrastructure for the Han plugin marketplace including skills, commands, MCP servers, and quality enforcement hooks.",
-      "source": "./core",
-      "category": "Core",
-      "keywords": [
-        "infrastructure",
-        "marketplace",
-        "mcp",
-        "hooks",
-        "quality",
-        "principles",
-        "delegation",
-        "metrics"
-      ]
-    },
-    {
-      "name": "bushido",
-      "description": "The philosophy of the Samurai applied to software development. The seven virtues guide agent behavior. Requires core for infrastructure.",
-      "source": "./bushido",
-      "category": "Core",
-      "keywords": [
-        "philosophy",
-        "bushido",
-        "virtues",
-        "honor",
-        "quality"
-      ]
-    },
-    {
-      "name": "clickup",
-      "description": "MCP server for ClickUp integration with automatic acceptance criteria validation. Provides task management, workspace access, and ensures work completeness.",
-      "source": "./services/clickup",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "clickup",
-        "project-management",
-        "tasks",
-        "acceptance-criteria",
-        "validation",
-        "productivity"
-      ]
-    },
-    {
-      "name": "playwright-mcp",
-      "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
-      "source": "./services/playwright-mcp",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "playwright",
-        "testing",
-        "automation",
-        "server"
-      ]
-    },
-    {
-      "name": "gitlab",
-      "description": "MCP server configuration for GitLab integration providing issue management, merge request operations, code search, and project data access.",
-      "source": "./services/gitlab",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "gitlab",
-        "git",
-        "issues",
-        "merge-requests",
-        "ci-cd",
-        "devops",
-        "server"
-      ]
-    },
-    {
-      "name": "github",
-      "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
-      "source": "./services/github",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "github",
-        "git",
-        "repository",
-        "issues",
-        "pull-requests",
-        "actions",
-        "code-search",
-        "server"
-      ]
-    },
-    {
-      "name": "jira",
-      "description": "MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Provides ticket management, JQL search, and ensures work completeness.",
-      "source": "./services/jira",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "jira",
-        "atlassian",
-        "project-management",
-        "tickets",
-        "acceptance-criteria",
-        "validation"
-      ]
-    },
-    {
-      "name": "linear",
-      "description": "MCP server for Linear integration with automatic acceptance criteria validation. Provides issue management, project tracking, and ensures work completeness.",
-      "source": "./services/linear",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "linear",
-        "project-management",
-        "issues",
-        "acceptance-criteria",
-        "validation",
-        "workflow"
-      ]
-    },
-    {
-      "name": "agent-sop",
-      "description": "MCP server for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring skills.",
-      "source": "./services/agent-sop",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "agent-sop",
-        "workflows",
-        "sop",
-        "standard-operating-procedures",
-        "rfc2119",
-        "documentation",
-        "agent-workflows",
-        "templates",
-        "server"
-      ]
-    },
-    {
-      "name": "figma",
-      "description": "MCP server for Figma integration providing design-to-code generation, design token extraction, component sync, and frame analysis via Figma Desktop MCP server.",
-      "source": "./services/figma",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "figma",
-        "design",
-        "design-tokens",
-        "components",
-        "code-generation",
-        "ui",
-        "server"
-      ]
-    },
-    {
-      "name": "sentry",
-      "description": "MCP server for Sentry integration providing error tracking, performance monitoring, release health, incident response, and Seer AI root cause analysis via remote HTTP OAuth server.",
-      "source": "./services/sentry",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "sentry",
-        "error-tracking",
-        "observability",
-        "performance",
-        "monitoring",
-        "incidents",
-        "seer-ai",
-        "server"
-      ]
-    },
-    {
-      "name": "reddit",
-      "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
-      "source": "./services/reddit",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "reddit",
-        "social-media",
-        "content",
-        "posts",
-        "comments",
-        "subreddits",
-        "server"
-      ]
-    },
-    {
-      "name": "notion",
-      "description": "MCP server for Notion integration providing workspace search, page management, database operations, comments, and AI-optimized content access via Notion's hosted MCP server.",
-      "source": "./services/notion",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "notion",
-        "knowledge-management",
-        "pages",
-        "databases",
-        "workspace",
-        "documentation",
-        "productivity",
-        "server"
-      ]
-    },
-    {
-      "name": "accessibility",
-      "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
-      "source": "./disciplines/accessibility",
-      "category": "Discipline",
-      "keywords": [
-        "accessibility",
-        "wcag",
-        "inclusive-design",
-        "agent"
-      ]
-    },
-    {
-      "name": "api",
-      "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
-      "source": "./disciplines/api",
-      "category": "Discipline",
-      "keywords": [
-        "api",
-        "rest",
-        "graphql",
-        "agent"
-      ]
-    },
-    {
-      "name": "architecture",
-      "description": "Agents for system design and architectural thinking.",
-      "source": "./disciplines/architecture",
-      "category": "Discipline",
-      "keywords": [
-        "architecture",
-        "design",
-        "patterns"
-      ]
-    },
-    {
-      "name": "backend",
-      "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
-      "source": "./disciplines/backend",
-      "category": "Discipline",
-      "keywords": [
-        "backend",
-        "api",
-        "architecture",
-        "data",
-        "server",
-        "agent"
-      ]
-    },
-    {
-      "name": "blockchain",
-      "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
-      "source": "./disciplines/blockchain",
-      "category": "Discipline",
-      "keywords": [
-        "blockchain",
-        "web3",
-        "smart-contracts",
-        "agent"
-      ]
-    },
-    {
-      "name": "plugin-development",
-      "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./disciplines/plugin-development",
-      "category": "Discipline",
-      "keywords": [
-        "plugin",
-        "development",
-        "claude-code",
-        "quality",
-        "agent"
-      ]
-    },
-    {
-      "name": "compilers",
-      "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-      "source": "./disciplines/compilers",
-      "category": "Discipline",
-      "keywords": [
-        "compiler",
-        "language-design",
-        "parsing",
-        "agent"
-      ]
-    },
-    {
-      "name": "content",
-      "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-      "source": "./disciplines/content",
-      "category": "Discipline",
-      "keywords": [
-        "content",
-        "writing",
-        "marketing",
-        "storytelling",
-        "engagement",
-        "agent"
-      ]
-    },
-    {
-      "name": "data-engineering",
-      "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
-      "source": "./disciplines/data-engineering",
-      "category": "Discipline",
-      "keywords": [
-        "data-engineering",
-        "etl",
-        "streaming",
-        "agent"
-      ]
-    },
-    {
-      "name": "databases",
-      "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
-      "source": "./disciplines/databases",
-      "category": "Discipline",
-      "keywords": [
-        "database",
-        "sql",
-        "query-optimization",
-        "agent"
-      ]
-    },
-    {
-      "name": "embedded",
-      "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
-      "source": "./disciplines/embedded",
-      "category": "Discipline",
-      "keywords": [
-        "embedded-systems",
-        "firmware",
-        "iot",
-        "agent"
-      ]
-    },
-    {
-      "name": "frontend",
-      "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-      "source": "./disciplines/frontend",
-      "category": "Discipline",
-      "keywords": [
-        "frontend",
-        "ui",
-        "ux",
-        "design",
-        "presentation",
-        "agent"
-      ]
-    },
-    {
-      "name": "games",
-      "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
-      "source": "./disciplines/games",
-      "category": "Discipline",
-      "keywords": [
-        "game-development",
-        "game-engine",
-        "gameplay",
-        "agent"
-      ]
-    },
-    {
-      "name": "graphics",
-      "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./disciplines/graphics",
-      "category": "Discipline",
-      "keywords": [
-        "graphics",
-        "gpu",
-        "shaders",
-        "agent"
-      ]
-    },
-    {
-      "name": "infrastructure",
-      "description": "Agents for operational excellence and reliability engineering.",
-      "source": "./disciplines/infrastructure",
-      "category": "Discipline",
-      "keywords": [
-        "devops",
-        "sre",
-        "deployment",
-        "operations"
-      ]
-    },
-    {
-      "name": "machine-learning",
-      "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
-      "source": "./disciplines/machine-learning",
-      "category": "Discipline",
-      "keywords": [
-        "ml-engineering",
-        "mlops",
-        "inference",
-        "agent"
-      ]
-    },
-    {
-      "name": "mobile",
-      "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
-      "source": "./disciplines/mobile",
-      "category": "Discipline",
-      "keywords": [
-        "mobile",
-        "ios",
-        "android",
-        "development",
-        "agent"
-      ]
-    },
-    {
-      "name": "networking",
-      "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
-      "source": "./disciplines/networking",
-      "category": "Discipline",
-      "keywords": [
-        "network",
-        "protocols",
-        "distributed-systems",
-        "agent"
-      ]
-    },
-    {
-      "name": "observability",
-      "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-      "source": "./disciplines/observability",
-      "category": "Discipline",
-      "keywords": [
-        "observability",
-        "monitoring",
-        "tracing",
-        "agent"
-      ]
-    },
-    {
-      "name": "performance",
-      "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
-      "source": "./disciplines/performance",
-      "category": "Discipline",
-      "keywords": [
-        "performance",
-        "optimization",
-        "scalability",
-        "agent"
-      ]
-    },
-    {
-      "name": "platform",
-      "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
-      "source": "./disciplines/platform",
-      "category": "Discipline",
-      "keywords": [
-        "platform-engineering",
-        "infrastructure",
-        "devex",
-        "agent"
-      ]
-    },
-    {
-      "name": "product",
-      "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
-      "source": "./disciplines/product",
-      "category": "Discipline",
-      "keywords": [
-        "product",
-        "strategy",
-        "vision",
-        "planning",
-        "agent"
-      ]
-    },
-    {
-      "name": "project-management",
-      "description": "Agents for workflow orchestration and team coordination.",
-      "source": "./disciplines/project-management",
-      "category": "Discipline",
-      "keywords": [
-        "project-management",
-        "coordination",
-        "workflow"
-      ]
-    },
-    {
-      "name": "prompts",
-      "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
-      "source": "./disciplines/prompts",
-      "category": "Discipline",
-      "keywords": [
-        "prompt-engineering",
-        "ai",
-        "llm",
-        "agent"
-      ]
-    },
-    {
-      "name": "quality",
-      "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
-      "source": "./disciplines/quality",
-      "category": "Discipline",
-      "keywords": [
-        "quality",
-        "testing",
-        "qa",
-        "reliability",
-        "agent"
-      ]
-    },
-    {
-      "name": "security",
-      "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
-      "source": "./disciplines/security",
-      "category": "Discipline",
-      "keywords": [
-        "security",
-        "compliance",
-        "vulnerability",
-        "threat",
-        "agent"
-      ]
-    },
-    {
-      "name": "sre",
-      "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-      "source": "./disciplines/sre",
-      "category": "Discipline",
-      "keywords": [
-        "sre",
-        "reliability",
-        "monitoring",
-        "incidents",
-        "devops",
-        "agent"
-      ]
-    },
-    {
-      "name": "documentation",
-      "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-      "source": "./disciplines/documentation",
-      "category": "Discipline",
-      "keywords": [
-        "documentation",
-        "technical-writing",
-        "knowledge",
-        "agent"
-      ]
-    },
-    {
-      "name": "voip",
-      "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
-      "source": "./disciplines/voip",
-      "category": "Discipline",
-      "keywords": [
-        "voip",
-        "telecommunications",
-        "sip",
-        "rtp",
-        "engineering"
+        "typescript",
+        "store",
+        "hooks"
       ]
     }
   ]
