@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-01-31
+
+### Added
+
+- add VCS configuration system ([64d8030e](../../commit/64d8030e))
+- add SubagentPrompt hook for context injection to subagents ([a16668ba](../../commit/a16668ba))
+- add /resume command to recover from lost ephemeral state ([5b4bb303](../../commit/5b4bb303))
+
+### Fixed
+
+- bolts MUST use worktrees, not just branches ([4d5e15dd](../../commit/4d5e15dd))
+- add HITL communication guidelines for subagents ([8fa1c4df](../../commit/8fa1c4df))
+- bolts must rescue before declaring blocked ([43517dd9](../../commit/43517dd9))
+- inject concrete branch/worktree context to subagents ([c8fda6de](../../commit/c8fda6de))
+- bolts MUST use dedicated unit branches ([fa3be1e1](../../commit/fa3be1e1))
+- /construct spawns subagents, hats are behavioral context ([56551249](../../commit/56551249))
+- add mandatory iteration management instructions to SessionStart ([28c77b12](../../commit/28c77b12))
+
+### Changed
+
+- hats are orchestrators that spawn subagents ([df79d5ca](../../commit/df79d5ca))
+- elaborator is an agent, not a hat ([aa8623d2](../../commit/aa8623d2))
+
+### Other
+
+- other AI DLC changes ([c257ec79](../../commit/c257ec79))
+- Revert "refactor(ai-dlc): hats are orchestrators that spawn subagents" ([ab63d884](../../commit/ab63d884))
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([48615d5f](../../commit/48615d5f))
+- ai dlc fixes ([1546f13a](../../commit/1546f13a))
+
 ## [1.0.6] - 2026-01-31
 
 ### Added
