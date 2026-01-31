@@ -1,3 +1,4 @@
+import { resolvePluginNames } from "./plugin-aliases.ts";
 import { showPluginSelector } from "./plugin-selector-wrapper.tsx";
 import {
 	ensureClaudeDirectory,
@@ -66,8 +67,11 @@ export async function installPlugins(
 		process.exit(1);
 	}
 
+	// Resolve aliases (short names, new paths, old names all resolve to canonical names)
+	const resolvedNames = resolvePluginNames(pluginNames);
+
 	// Always include bushido plugin as a dependency
-	const pluginsToInstall = new Set(pluginNames);
+	const pluginsToInstall = new Set(resolvedNames);
 	pluginsToInstall.add("bushido");
 
 	ensureClaudeDirectory(scope);

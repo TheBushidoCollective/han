@@ -32,6 +32,7 @@ import {
 import { DETECT_PLUGINS_PROMPT } from "../build-info.generated.ts";
 import { getHanBinary } from "../config/han-settings.ts";
 import { getMarketplacePlugins } from "../marketplace-cache.ts";
+import { resolvePluginNames } from "../plugin-aliases.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -677,8 +678,9 @@ export function parsePluginRecommendations(content: string): string[] {
 				const stringPlugins = plugins.filter(
 					(p): p is string => typeof p === "string",
 				);
-				// Always include bushido and deduplicate
-				const uniquePlugins = new Set([...stringPlugins, "bushido"]);
+				// Resolve aliases and always include bushido
+				const resolvedPlugins = resolvePluginNames(stringPlugins);
+				const uniquePlugins = new Set([...resolvedPlugins, "bushido"]);
 				return Array.from(uniquePlugins);
 			}
 		} catch {
@@ -686,12 +688,14 @@ export function parsePluginRecommendations(content: string): string[] {
 		}
 	}
 
-	// Fallback: look for plugin names mentioned
-	const pluginPattern = /(jutsu-[\w-]+|do-[\w-]+|hashi-[\w-]+|bushido)/g;
+	// Fallback: look for plugin names mentioned (including new path formats)
+	const pluginPattern =
+		/(jutsu-[\w-]+|do-[\w-]+|hashi-[\w-]+|bushido|[a-z]+\/[\w-]+)/g;
 	const matches = content.match(pluginPattern);
 	if (matches) {
-		// Ensure bushido is included and deduplicate
-		const uniquePlugins = new Set([...matches, "bushido"]);
+		// Resolve aliases and ensure bushido is included
+		const resolvedMatches = resolvePluginNames(matches);
+		const uniquePlugins = new Set([...resolvedMatches, "bushido"]);
 		return Array.from(uniquePlugins);
 	}
 

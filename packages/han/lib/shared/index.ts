@@ -40,3 +40,17 @@ export {
 	writeGlobalSettings,
 	writeSettings,
 } from "./shared.ts";
+
+// Plugin alias resolution
+export {
+	getNewPluginPath,
+	getOldPluginName,
+	getPluginCategories,
+	getPluginsInCategory,
+	isKnownPlugin,
+	PLUGIN_ALIASES,
+	resolvePluginName,
+	resolvePluginNames,
+	REVERSE_ALIASES,
+	SHORT_NAME_ALIASES,
+} from "../plugin-aliases.ts";
