@@ -1,536 +1,265 @@
-# Implementation Plan for Unit 01: Core Backend
+# Implementation Plan for Unit 02: Authentication
 
-## Executive Summary
+## Overview
 
-This unit builds the foundational data abstraction layer that enables the same GraphQL schema to work with both SQLite (local mode) and PostgreSQL (hosted mode). The critical path is the DataSource interface abstraction, followed by PostgreSQL schema design with multi-tenant isolation.
+The authentication unit must implement multi-provider OAuth (GitHub, GitLab), magic link email authentication, JWT-based API auth, and session management. This builds on top of the data abstraction layer from unit-01 (HostedDataSource interface).
 
----
+## Architecture Design
 
-## Phase 1: DataSource Interface Definition
+### 1. Database Schema (PostgreSQL - Hosted Mode)
 
-**Goal**: Define a clean abstraction that resolvers can use without knowing the underlying database.
+**New Tables Required:**
 
-**Location**: `packages/han/lib/data/`
+```sql
+-- OAuth connections (supports multiple providers per user)
+CREATE TABLE oauth_connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL, -- 'github', 'gitlab'
+    provider_user_id TEXT NOT NULL,
+    provider_email TEXT,
+    provider_username TEXT,
+    access_token_encrypted BYTEA NOT NULL,
+    refresh_token_encrypted BYTEA,
+    token_expires_at TIMESTAMPTZ,
+    scopes TEXT[], -- e.g., ['read:user', 'read:org', 'repo']
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(provider, provider_user_id)
+);
 
-### 1.1 Core Interface (`packages/han/lib/data/interfaces.ts`)
+-- API sessions (JWT tracking for revocation)
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT UNIQUE NOT NULL, -- SHA-256 of JWT for revocation lookup
+    device_info JSONB,
+    ip_address INET,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-```typescript
-// Define the DataSource interface with all query methods
-interface DataSource {
-  // Session operations
-  sessions: {
-    get(sessionId: string): Promise<Session | null>;
-    list(options?: SessionListOptions): Promise<Session[]>;
-    getConnection(options: ConnectionArgs): Promise<SessionConnection>;
-  };
+-- Magic link tokens
+CREATE TABLE magic_link_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-  // Message operations
-  messages: {
-    list(options: MessageListOptions): Promise<Message[]>;
-    count(sessionId: string): Promise<number>;
-    countBatch(sessionIds: string[]): Promise<Record<string, number>>;
-    timestampsBatch(sessionIds: string[]): Promise<Record<string, SessionTimestamps>>;
-    search(options: SearchOptions): Promise<Message[]>;
-  };
+-- Rate limiting
+CREATE TABLE auth_rate_limits (
+    key TEXT PRIMARY KEY, -- e.g., 'email:user@example.com', 'ip:1.2.3.4'
+    attempts INTEGER DEFAULT 0,
+    blocked_until TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
 
-  // Project/Repo operations
-  projects: {
-    get(projectId: string): Promise<Project | null>;
-    list(): Promise<Project[]>;
-    getBySlug(slug: string): Promise<Project | null>;
-  };
+### 2. Library Selection
 
-  repos: {
-    get(repoId: string): Promise<Repo | null>;
-    list(): Promise<Repo[]>;
-  };
+- **jose** - JWT creation/verification
+- **oauth4webapi** - Modern OAuth 2.0 client with PKCE support
+- Encryption: Node.js crypto (AES-256-GCM for token encryption at rest)
 
-  // Task/Metrics operations
-  tasks: {
-    queryMetrics(options?: MetricsOptions): Promise<TaskMetrics>;
-    list(sessionId: string): Promise<NativeTask[]>;
-  };
+### 3. File Structure
 
-  // Hook operations
-  hookExecutions: {
-    list(sessionId: string): Promise<HookExecution[]>;
-    queryStats(period?: string): Promise<HookStats>;
-  };
+```
+packages/han/lib/
+├── auth/
+│   ├── index.ts                 # Export public auth API
+│   ├── types.ts                 # AuthUser, AuthSession, etc.
+│   ├── jwt.ts                   # JWT creation/verification
+│   ├── encryption.ts            # Token encryption at rest
+│   ├── oauth/
+│   │   ├── index.ts             # OAuth flow orchestration
+│   │   ├── github.ts            # GitHub-specific OAuth
+│   │   ├── gitlab.ts            # GitLab-specific OAuth
+│   │   └── pkce.ts              # PKCE challenge generation
+│   ├── magic-link.ts            # Email magic link flow
+│   ├── session-manager.ts       # Session CRUD, refresh, revoke
+│   ├── rate-limiter.ts          # Rate limiting logic
+│   └── middleware.ts            # GraphQL auth middleware
+```
 
-  // File operations
-  fileChanges: {
-    list(sessionId: string): Promise<SessionFileChange[]>;
-  };
+### 4. GraphQL Schema Extensions
 
-  fileValidations: {
-    listAll(sessionId: string): Promise<SessionFileValidation[]>;
-  };
+```graphql
+# New types
+type AuthUser {
+  id: ID!
+  email: String
+  displayName: String
+  avatarUrl: String
+  oauthConnections: [OAuthConnection!]!
+  createdAt: DateTime!
+}
+
+type OAuthConnection {
+  id: ID!
+  provider: OAuthProvider!
+  providerUsername: String
+  connectedAt: DateTime!
+}
+
+enum OAuthProvider {
+  GITHUB
+  GITLAB
+}
+
+type AuthSession {
+  id: ID!
+  user: AuthUser!
+  expiresAt: DateTime!
+  deviceInfo: String
+}
+
+# New queries
+extend type Query {
+  viewer: AuthUser
+  currentSession: AuthSession
+}
+
+# New mutations
+type Mutation {
+  # OAuth flow
+  initiateOAuth(provider: OAuthProvider!): OAuthInitiateResult!
+  completeOAuth(provider: OAuthProvider!, code: String!, state: String!, codeVerifier: String!): AuthResult!
+
+  # Magic link flow
+  requestMagicLink(email: String!): MagicLinkResult!
+  verifyMagicLink(token: String!): AuthResult!
+
+  # Session management
+  refreshSession: AuthResult!
+  revokeSession(sessionId: ID!): Boolean!
+  revokeAllSessions: Boolean!
+
+  # Account linking
+  linkOAuthProvider(provider: OAuthProvider!, code: String!, state: String!, codeVerifier: String!): LinkResult!
+  unlinkOAuthProvider(connectionId: ID!): Boolean!
 }
 ```
 
-### 1.2 Type Definitions (`packages/han/lib/data/types.ts`)
+### 5. GraphQL Context Extension
 
-Define shared types that work across both implementations:
-- Re-export existing types from `han-native`
-- Add connection/pagination types for GraphQL
-- Add filter option types
-
----
-
-## Phase 2: LocalDataSource Implementation
-
-**Goal**: Wrap existing han-native SQLite operations into the DataSource interface.
-
-**Location**: `packages/han/lib/data/local/`
-
-### 2.1 LocalDataSource Class (`packages/han/lib/data/local/index.ts`)
-
-```typescript
-import * as db from '../../db/index.ts';
-import type { DataSource } from '../interfaces.ts';
-
-export class LocalDataSource implements DataSource {
-  sessions = {
-    async get(sessionId: string) {
-      return db.sessions.get(sessionId);
-    },
-    async list(options) {
-      return db.sessions.list(options);
-    },
-    // ... wrap all existing db.sessions methods
-  };
-
-  messages = {
-    async list(options) {
-      return db.messages.list(options);
-    },
-    async count(sessionId) {
-      return db.messages.count(sessionId);
-    },
-    // ... wrap all existing db.messages methods
-  };
-
-  // ... wrap remaining operations
-}
-```
-
-**Key Insight**: This is a thin wrapper. All current `db/index.ts` operations get delegated through the interface. No logic changes, just structural wrapping.
-
----
-
-## Phase 3: GraphQL Context Refactoring
-
-**Goal**: Inject DataSource into GraphQL context so resolvers use abstraction.
-
-### 3.1 Update GraphQL Context (`packages/han/lib/graphql/builder.ts`)
+Extend `GraphQLContext` in `builder.ts`:
 
 ```typescript
 export interface GraphQLContext {
   request?: Request;
   loaders: GraphQLLoaders;
-  dataSource: DataSource;  // ADD THIS
-  mode: 'local' | 'hosted';  // ADD THIS
-}
-```
-
-### 3.2 Update Handler (`packages/han/lib/graphql/handler.ts`)
-
-```typescript
-import { LocalDataSource } from '../data/local/index.ts';
-
-export function createGraphQLHandler(options?: { dataSource?: DataSource }) {
-  const dataSource = options?.dataSource ?? new LocalDataSource();
-
-  return createYoga<GraphQLContext>({
-    // ...existing config...
-    context: ({ request }) => ({
-      request,
-      loaders: createLoaders(),
-      dataSource,
-      mode: dataSource instanceof LocalDataSource ? 'local' : 'hosted',
-    }),
-  });
-}
-```
-
----
-
-## Phase 4: Resolver Migration
-
-**Goal**: Update existing resolvers to use `context.dataSource` instead of direct `db` imports.
-
-### 4.1 Resolver Changes Pattern
-
-**Before** (direct db access):
-```typescript
-// packages/han/lib/graphql/types/session.ts
-import { sessions } from '../../db/index.ts';
-
-resolve: async (_parent, args) => {
-  return sessions.get(args.id);
-}
-```
-
-**After** (context-based):
-```typescript
-resolve: async (_parent, args, context) => {
-  return context.dataSource.sessions.get(args.id);
-}
-```
-
-### 4.2 Files Requiring Updates
-
-Based on grep analysis, these files import from `db/index.ts` and need migration:
-
-1. `packages/han/lib/graphql/types/session.ts`
-2. `packages/han/lib/graphql/types/project.ts`
-3. `packages/han/lib/graphql/types/repo.ts`
-4. `packages/han/lib/graphql/types/metrics.ts`
-5. `packages/han/lib/graphql/types/hook-execution.ts`
-6. `packages/han/lib/graphql/types/activity-data.ts`
-7. `packages/han/lib/graphql/loaders.ts`
-8. `packages/han/lib/api/sessions.ts`
-
-### 4.3 Loaders Refactoring
-
-Update `createLoaders()` to accept DataSource:
-
-```typescript
-export function createLoaders(dataSource: DataSource): GraphQLLoaders {
-  return {
-    sessionMessagesLoader: new DataLoader(async (sessionIds) => {
-      // Use dataSource instead of direct db calls
-      const results = await Promise.all(
-        sessionIds.map(id => dataSource.messages.list({ sessionId: id }))
-      );
-      return results;
-    }),
-    // ... update other loaders
+  auth?: {
+    user: AuthUser | null;
+    session: AuthSession | null;
   };
 }
 ```
 
----
+## Implementation Phases
 
-## Phase 5: PostgreSQL Schema Design
+### Phase 1: Core Infrastructure
+1. Create auth types and interfaces
+2. Implement JWT utilities (create, verify, decode)
+3. Implement AES-256-GCM encryption for token storage
+4. Add auth tables to PostgreSQL schema
 
-**Goal**: Design multi-tenant schema for hosted mode.
+### Phase 2: OAuth Implementation
+1. GitHub OAuth with PKCE
+   - Scopes: `read:user`, `read:org`, `repo`
+   - Handle token exchange and refresh
+2. GitLab OAuth with PKCE
+3. Account creation/linking logic
+4. Token encryption before storage
 
-**Location**: `packages/han/lib/data/hosted/schema/`
+### Phase 3: Magic Link Email
+1. Token generation (cryptographically secure, 15-min expiry)
+2. Email sending integration (abstract over provider)
+3. Token verification and session creation
 
-### 5.1 Core Multi-Tenant Tables
+### Phase 4: Session Management
+1. JWT-based sessions with 1-hour expiry
+2. Refresh token flow (7-day refresh tokens)
+3. Session revocation (single and all)
+4. Device tracking (optional)
 
-```sql
--- Organization (top-level tenant)
-CREATE TABLE organizations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(255) NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+### Phase 5: GraphQL Integration
+1. Auth middleware that extracts JWT from headers
+2. Populate `context.auth` for resolvers
+3. Viewer query implementation
+4. Protected mutations
 
--- Teams within organizations
-CREATE TABLE teams (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(255) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(organization_id, slug)
-);
+### Phase 6: Rate Limiting
+1. IP-based rate limiting
+2. Email-based rate limiting for magic links
+3. Exponential backoff on failures
 
--- Projects within teams
-CREATE TABLE projects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(255) NOT NULL,
-  path TEXT,
-  relative_path TEXT,
-  is_worktree BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(organization_id, slug)
-);
+## Security Considerations
 
--- Repositories linked to projects
-CREATE TABLE repositories (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-  remote VARCHAR(512) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  default_branch VARCHAR(255),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(organization_id, remote)
-);
+**Token Security:**
+- JWT secret from environment (32+ bytes, cryptographically random)
+- Tokens encrypted at rest using AES-256-GCM with unique IV per token
+- Encryption key from environment (separate from JWT secret)
 
--- Users (synced from OAuth providers)
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE,
-  name VARCHAR(255),
-  avatar_url TEXT,
-  provider VARCHAR(50), -- 'github', 'gitlab', 'email'
-  provider_id VARCHAR(255),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(provider, provider_id)
-);
+**PKCE:**
+- Always use code_challenge_method=S256
+- Generate 43-128 character code_verifier
+- Store code_verifier client-side during flow
 
--- Memberships (user access to orgs/teams)
-CREATE TABLE memberships (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
-  role VARCHAR(50) NOT NULL DEFAULT 'member', -- 'owner', 'admin', 'member', 'viewer'
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, organization_id, team_id)
-);
-
--- Sessions (Claude Code sessions synced from local)
-CREATE TABLE sessions (
-  id UUID PRIMARY KEY, -- Matches local session ID
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-  user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Who ran the session
-  status VARCHAR(50) DEFAULT 'active',
-  slug VARCHAR(255), -- Human-readable session name
-  started_at TIMESTAMPTZ,
-  ended_at TIMESTAMPTZ,
-  synced_at TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Messages (synced from local JSONL)
-CREATE TABLE messages (
-  id UUID PRIMARY KEY, -- Matches local message ID
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  agent_id VARCHAR(50),
-  parent_id UUID REFERENCES messages(id),
-  message_type VARCHAR(100) NOT NULL,
-  role VARCHAR(50),
-  content TEXT,
-  tool_name VARCHAR(255),
-  raw_json JSONB,
-  timestamp TIMESTAMPTZ NOT NULL,
-  line_number INT NOT NULL,
-  indexed_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Indexes for multi-tenant queries
-CREATE INDEX idx_sessions_org ON sessions(organization_id);
-CREATE INDEX idx_sessions_project ON sessions(project_id);
-CREATE INDEX idx_sessions_user ON sessions(user_id);
-CREATE INDEX idx_messages_session ON messages(session_id);
-CREATE INDEX idx_messages_org ON messages(organization_id);
-CREATE INDEX idx_messages_timestamp ON messages(session_id, timestamp DESC);
-```
-
-### 5.2 Row-Level Security Policies
-
-```sql
--- Enable RLS on all tenant tables
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-
--- Session policy: users see sessions in their orgs
-CREATE POLICY session_access ON sessions
-  USING (
-    organization_id IN (
-      SELECT organization_id FROM memberships
-      WHERE user_id = current_setting('app.user_id')::uuid
-    )
-  );
-
--- Message policy: follows session access
-CREATE POLICY message_access ON messages
-  USING (
-    organization_id IN (
-      SELECT organization_id FROM memberships
-      WHERE user_id = current_setting('app.user_id')::uuid
-    )
-  );
-```
-
----
-
-## Phase 6: HostedDataSource Implementation
-
-**Goal**: Implement DataSource interface for PostgreSQL.
-
-**Location**: `packages/han/lib/data/hosted/`
-
-### 6.1 Database Connection (`packages/han/lib/data/hosted/db.ts`)
-
-Use Drizzle ORM for type-safe PostgreSQL access:
-
+**Cookie Settings:**
 ```typescript
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import * as schema from './schema.ts';
-
-export function createHostedDb(connectionString: string) {
-  const pool = new Pool({ connectionString });
-  return drizzle(pool, { schema });
-}
-```
-
-### 6.2 HostedDataSource Class (`packages/han/lib/data/hosted/index.ts`)
-
-```typescript
-import { eq, desc, and, inArray } from 'drizzle-orm';
-import type { DataSource } from '../interfaces.ts';
-import * as schema from './schema.ts';
-
-export class HostedDataSource implements DataSource {
-  constructor(
-    private db: ReturnType<typeof createHostedDb>,
-    private organizationId: string, // Tenant context
-  ) {}
-
-  sessions = {
-    async get(sessionId: string) {
-      const result = await this.db.query.sessions.findFirst({
-        where: and(
-          eq(schema.sessions.id, sessionId),
-          eq(schema.sessions.organizationId, this.organizationId),
-        ),
-      });
-      return result ? this.mapSession(result) : null;
-    },
-
-    async list(options) {
-      const results = await this.db.query.sessions.findMany({
-        where: eq(schema.sessions.organizationId, this.organizationId),
-        orderBy: desc(schema.sessions.startedAt),
-        limit: options?.limit ?? 100,
-      });
-      return results.map(this.mapSession);
-    },
-    // ... implement remaining methods
-  };
-
-  // Map PostgreSQL row to common type
-  private mapSession(row: typeof schema.sessions.$inferSelect): Session {
-    return {
-      id: row.id,
-      projectId: row.projectId,
-      status: row.status,
-      slug: row.slug,
-      // ... map all fields
-    };
-  }
-}
-```
-
----
-
-## Phase 7: Migrations Infrastructure
-
-**Goal**: Set up database migration system for PostgreSQL.
-
-**Location**: `packages/han/lib/data/hosted/migrations/`
-
-### 7.1 Migration Tool
-
-Use Drizzle-Kit for migrations:
-
-```typescript
-// drizzle.config.ts
-export default {
-  schema: './packages/han/lib/data/hosted/schema.ts',
-  out: './packages/han/lib/data/hosted/migrations',
-  driver: 'pg',
-  dbCredentials: {
-    connectionString: process.env.DATABASE_URL!,
-  },
-};
-```
-
-### 7.2 Migration Commands
-
-Add to `packages/han/package.json`:
-
-```json
 {
-  "scripts": {
-    "db:generate": "drizzle-kit generate:pg",
-    "db:migrate": "drizzle-kit push:pg",
-    "db:studio": "drizzle-kit studio"
-  }
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 3600  // 1 hour
 }
 ```
 
----
+**Rate Limiting Rules:**
+- Magic link requests: 5 per email per hour
+- OAuth initiates: 10 per IP per minute
+- Failed logins: 5 attempts then 15-minute lockout
 
-## Phase 8: Testing and Verification
-
-**Goal**: Ensure local mode continues working with no regressions.
-
-### 8.1 Test Strategy
-
-1. **Unit Tests**: Test DataSource interface implementations
-2. **Integration Tests**: Test GraphQL resolvers with both data sources
-3. **Regression Tests**: Ensure `han browse` works identically
-
-### 8.2 Verification Steps
+## Environment Variables
 
 ```bash
-# 1. Start local browse and verify all features work
-cd packages/han && bun lib/main.ts browse
+# JWT
+AUTH_JWT_SECRET=<32+ byte secret>
+AUTH_JWT_ISSUER=https://han.guru
 
-# 2. Run existing tests
-bun test
+# Token encryption
+AUTH_ENCRYPTION_KEY=<32 byte key>
 
-# 3. Test GraphQL queries work
-curl -X POST http://localhost:41956/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ sessions(first: 5) { edges { node { id } } } }"}'
+# GitHub OAuth
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# GitLab OAuth
+GITLAB_CLIENT_ID=
+GITLAB_CLIENT_SECRET=
+GITLAB_INSTANCE_URL=https://gitlab.com
+
+# Email (for magic links)
+EMAIL_PROVIDER=resend
+EMAIL_API_KEY=
+EMAIL_FROM=noreply@han.guru
 ```
 
----
+## Integration Points
 
-## Dependencies and Sequencing
+**With Unit 01 (Core Backend):**
+- HostedDataSource must implement auth-related queries
+- User table links to organization memberships
 
-```
-Phase 1 (Interface)
-    │
-    ├──► Phase 2 (LocalDataSource)
-    │
-    ├──► Phase 3 (Context Refactor) ─────► Phase 4 (Resolver Migration)
-    │
-    └──► Phase 5 (PostgreSQL Schema) ────► Phase 6 (HostedDataSource)
-                                              │
-                                              └──► Phase 7 (Migrations)
+**With Unit 03 (Data Sync):**
+- Sync API authenticated via JWT
+- API key alternative for automated sync
 
-Phase 8 (Testing) runs continuously after Phase 2 completes
-```
-
----
-
-## Risks and Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Breaking existing browse | High | Phase 2 creates thin wrapper, minimal code changes |
-| Type mismatches between SQLite/PostgreSQL | Medium | Define canonical types in `interfaces.ts`, map in implementations |
-| Performance regression | Medium | Keep DataLoaders, add PostgreSQL-specific batching |
-| Migration complexity | Low | Use Drizzle ORM with generated migrations |
-
----
-
-## Critical Files for Implementation
-
-- `packages/han/lib/db/index.ts` - Current SQLite data access layer to wrap
-- `packages/han/lib/graphql/builder.ts` - GraphQL context definition to extend
-- `packages/han/lib/graphql/loaders.ts` - DataLoaders to refactor for abstraction
-- `packages/han-native/src/schema.rs` - Type definitions to align with PostgreSQL schema
-- `packages/han/lib/graphql/types/session.ts` - Example resolver pattern to follow for migration
+**With Unit 04 (Permissions):**
+- OAuth tokens used to fetch repo permissions from GitHub/GitLab APIs
+- Permission checks reference user from auth context
