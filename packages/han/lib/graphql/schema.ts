@@ -133,6 +133,23 @@ import {
 	querySettingsSummary,
 	SettingsSummaryType,
 } from "./types/settings-summary.ts";
+// Team Memory types (adds teamMemory and orgLearnings queries)
+import {
+	OrgLearningsQueryInput,
+	TeamMemoryQueryInput,
+	UserContextInput,
+} from "./types/team-memory-query.ts";
+import {
+	CitationVisibilityEnum,
+	MemoryLayerInfoType,
+	MemoryScopeEnum,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	OrgLearningType,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+} from "./types/memory/index.ts";
 import { SlotAcquireResultType } from "./types/slot-acquire-result.ts";
 import {
 	acquireSlot,
@@ -1463,6 +1480,19 @@ export {
 	// Inline result types for tool calls
 	McpToolResultType,
 	ExposedToolResultType,
+	// Team Memory types
+	TeamMemoryQueryInput,
+	UserContextInput,
+	OrgLearningsQueryInput,
+	CitationVisibilityEnum,
+	MemoryScopeEnum,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+	OrgLearningType,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	MemoryLayerInfoType,
 };
 
 // Define the @defer directive for incremental delivery
