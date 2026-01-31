@@ -60,9 +60,39 @@ If truly blocked (cannot proceed without user input):
 
 ## Implementation
 
+### Step 0: Ensure Intent Branch
+
+**CRITICAL: The orchestrator MUST run on the intent branch, not main.**
+
+Before loading state, verify we're on the correct intent branch:
+
+```bash
+# First, check if we have an intent slug saved (try to find it)
+# Look for .ai-dlc/*/intent.md files to detect intent
+INTENT_SLUG=""
+for intent_file in .ai-dlc/*/intent.md; do
+  [ -f "$intent_file" ] || continue
+  dir=$(dirname "$intent_file")
+  slug=$(basename "$dir")
+  status=$(han parse yaml status -r --default active < "$intent_file" 2>/dev/null || echo "active")
+  [ "$status" = "active" ] && INTENT_SLUG="$slug" && break
+done
+
+# If we found an intent, ensure we're on its branch
+if [ -n "$INTENT_SLUG" ]; then
+  INTENT_BRANCH="ai-dlc/${INTENT_SLUG}"
+  CURRENT_BRANCH=$(git branch --show-current)
+  if [ "$CURRENT_BRANCH" != "$INTENT_BRANCH" ]; then
+    # Switch to intent branch (create if doesn't exist)
+    git checkout "$INTENT_BRANCH" 2>/dev/null || git checkout -B "$INTENT_BRANCH"
+  fi
+fi
+```
+
 ### Step 1: Load State
 
 ```javascript
+// Intent-level state is stored on the current branch (intent branch)
 const state = JSON.parse(han_keep_load({ scope: "branch", key: "iteration.json" }));
 const intentSlug = han_keep_load({ scope: "branch", key: "intent-slug" }) || null;
 ```
@@ -99,6 +129,38 @@ if [ ! -d "$WORKTREE_PATH" ]; then
   git worktree add -B "$UNIT_BRANCH" "$WORKTREE_PATH"
 fi
 ```
+
+### Step 2b: Update Unit Status and Track Current Unit
+
+**CRITICAL: Mark the unit as `in_progress` BEFORE spawning the subagent.**
+
+This ensures the DAG accurately reflects that work has started on this unit.
+
+```bash
+# Source the DAG library (CLAUDE_PLUGIN_ROOT is the jutsu-ai-dlc plugin directory)
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Update unit status to in_progress in the intent worktree
+# UNIT_FILE points to the file in .ai-dlc/{intent-slug}/
+update_unit_status "$UNIT_FILE" "in_progress"
+```
+
+**Track current unit in iteration state** so `/done` knows which unit to mark completed:
+
+```javascript
+state.currentUnit = UNIT_NAME;  // e.g., "unit-01-core-backend"
+// Intent-level state saved to current branch (intent branch)
+han_keep_save({
+  scope: "branch",
+  key: "iteration.json",
+  content: JSON.stringify(state)
+});
+```
+
+**Note:** The `update_unit_status` function validates that:
+- The file exists and is within `.ai-dlc/`
+- The file is a unit file (`unit-*.md`)
+- The status is valid (`pending`, `in_progress`, `completed`, `blocked`)
 
 **Why worktrees are mandatory:**
 - Isolates work completely from parent session
@@ -305,3 +367,63 @@ AI: Moving to next unit: unit-02-dashboard-ui
 AI: Switching to branch: ai-dlc/my-feature/02-dashboard-ui
 ...continues with next unit...
 ```
+
+## State Scoping
+
+**CRITICAL: Subagents run on unit branches but intent state lives on the intent branch.**
+
+### Intent-Level State (stored on intent branch)
+
+These are managed by the orchestrator and stored on the intent branch (`ai-dlc/{intent-slug}`):
+
+| Key | Description |
+|-----|-------------|
+| `iteration.json` | Workflow state, current hat, iteration count |
+| `intent.md` | Intent description |
+| `completion-criteria.md` | Success criteria |
+| `current-plan.md` | Planner's output |
+| `intent-slug` | Slug identifier |
+
+```javascript
+// Orchestrator reads/writes to current branch (intent branch)
+han_keep_load({ scope: "branch", key: "iteration.json" })
+han_keep_save({ scope: "branch", key: "iteration.json", content: "..." })
+```
+
+### Unit-Level State (use current branch - omit `branch_name`)
+
+These are specific to each unit's worktree branch:
+
+| Key | Description |
+|-----|-------------|
+| `scratchpad.md` | Working notes for this unit |
+| `next-prompt.md` | Continuation prompt for this unit |
+| `blockers.md` | Blockers specific to this unit |
+
+```javascript
+// Subagent reads/writes to its own branch (current branch)
+han_keep_load({ scope: "branch", key: "scratchpad.md" })
+han_keep_save({ scope: "branch", key: "scratchpad.md", content: "..." })
+```
+
+**Why this matters:** When a subagent runs in a worktree on branch `ai-dlc/{intent}/{unit}`, it saves its own working notes to its unit branch. The orchestrator runs on the intent branch and manages intent-level state there.
+
+## Branch Architecture
+
+The AI-DLC workflow uses a branch hierarchy:
+
+```
+main
+  └── ai-dlc/{intent-slug}           <-- Orchestrator runs here (intent branch)
+        ├── ai-dlc/{intent-slug}/01-unit  <-- Unit worktree branch
+        └── ai-dlc/{intent-slug}/02-unit  <-- Unit worktree branch
+```
+
+1. **Intent branch** (`ai-dlc/{intent-slug}`): Where the orchestrator runs. Intent-level state (iteration.json, intent.md, etc.) is stored here via han keep.
+
+2. **Unit branches** (`ai-dlc/{intent-slug}/{unit-slug}`): Where subagents work in isolated worktrees. Unit-level state (scratchpad, blockers) is stored here.
+
+The orchestrator MUST be on the intent branch before spawning subagents. This ensures:
+- Intent state is properly scoped to the intent
+- Multiple intents can run in parallel on different branches
+- Clean separation between orchestration state and unit work

@@ -79,7 +79,22 @@ starting_hat=$(get_recommended_hat ".ai-dlc/${slug}" "${workflow}")
 - Any units in_progress or ready → `builder` (continue work)
 - All units blocked → `planner` (resolve dependencies)
 
-### Step 4: Get Workflow Hats Array
+### Step 4: Switch to Intent Branch
+
+**CRITICAL: The orchestrator MUST run on the intent branch.**
+
+```bash
+# Switch to intent branch (create if doesn't exist)
+INTENT_BRANCH="ai-dlc/${slug}"
+git checkout "$INTENT_BRANCH" 2>/dev/null || git checkout -B "$INTENT_BRANCH"
+```
+
+This ensures:
+- All subsequent `han keep` operations use the intent branch's storage
+- State is properly scoped to this intent
+- Multiple intents can run in parallel on different branches
+
+### Step 5: Get Workflow Hats Array
 
 Load the workflow definition:
 
@@ -89,15 +104,15 @@ workflow_hats=$(han parse yaml "${workflow}.hats" < "$hats_file" 2>/dev/null)
 # Convert to JSON array: ["elaborator", "planner", "builder", "reviewer"]
 ```
 
-### Step 5: Initialize State
+### Step 6: Initialize State
 
-Save to han keep storage:
+Save to han keep storage (intent-level state goes to current branch, which is now the intent branch):
 
 ```javascript
-// Save intent slug
+// Save intent slug (intent-level state → current branch / intent branch)
 han_keep_save({ scope: "branch", key: "intent-slug", content: slug });
 
-// Save iteration state
+// Save iteration state (intent-level state → current branch / intent branch)
 han_keep_save({
   scope: "branch",
   key: "iteration.json",
@@ -111,23 +126,25 @@ han_keep_save({
 });
 ```
 
-### Step 6: Load Intent Content
+### Step 7: Load Intent Content
 
-Load and display the intent for context:
+Load and display the intent for context (save to current branch / intent branch):
 
 ```javascript
 const intentContent = Read(`.ai-dlc/${slug}/intent.md`);
+// Intent-level state → current branch (intent branch)
 han_keep_save({ scope: "branch", key: "intent.md", content: intentContent });
 
 // Also load completion criteria if exists
 const criteriaFile = `.ai-dlc/${slug}/completion-criteria.md`;
 if (fileExists(criteriaFile)) {
   const criteria = Read(criteriaFile);
+  // Intent-level state → current branch (intent branch)
   han_keep_save({ scope: "branch", key: "completion-criteria.md", content: criteria });
 }
 ```
 
-### Step 7: Output Confirmation
+### Step 8: Output Confirmation
 
 ```markdown
 ## AI-DLC Intent Resumed

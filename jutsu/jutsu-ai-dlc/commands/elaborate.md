@@ -207,6 +207,59 @@ If yes, define each unit with:
 
 ---
 
+## Phase 5.5: Define Testing Requirements
+
+Ask the user about testing expectations for this intent:
+
+```json
+{
+  "questions": [
+    {
+      "question": "What testing requirements should we enforce for this intent?",
+      "header": "Unit Tests",
+      "options": [
+        {"label": "Required", "description": "New code must have unit tests"},
+        {"label": "Not required", "description": "Unit tests are optional"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Integration tests?",
+      "header": "Integration Tests",
+      "options": [
+        {"label": "Required", "description": "Integration tests must verify component interactions"},
+        {"label": "Not required", "description": "Integration tests are optional"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Coverage threshold?",
+      "header": "Coverage",
+      "options": [
+        {"label": "80%", "description": "Minimum 80% code coverage"},
+        {"label": "70%", "description": "Minimum 70% code coverage"},
+        {"label": "60%", "description": "Minimum 60% code coverage"},
+        {"label": "None", "description": "No coverage requirement"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "End-to-end tests?",
+      "header": "E2E Tests",
+      "options": [
+        {"label": "Required", "description": "E2E tests must pass"},
+        {"label": "Not required", "description": "E2E tests are optional"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+Store the testing configuration for the reviewer hat to enforce.
+
+---
+
 ## Phase 6: Write AI-DLC Artifacts
 
 Create the `.ai-dlc/{intent-slug}/` directory and write files:
@@ -236,7 +289,27 @@ status: active
 {Relevant background, constraints, decisions}
 ```
 
-### 2. Write `unit-NN-{slug}.md` for each unit:
+### 2. Write `intent.yaml` (testing configuration):
+```yaml
+# Testing requirements configured during elaboration
+# The reviewer hat enforces these requirements
+
+testing:
+  unit_tests: true          # true = required, false = optional
+  integration_tests: false  # true = required, false = optional
+  coverage_threshold: 80    # percentage (0-100), or null for no requirement
+  e2e_tests: false          # true = required, false = optional
+```
+
+**Schema:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `testing.unit_tests` | boolean | Whether unit tests are required for new code |
+| `testing.integration_tests` | boolean | Whether integration tests are required |
+| `testing.coverage_threshold` | number or null | Minimum coverage percentage, or null if no requirement |
+| `testing.e2e_tests` | boolean | Whether E2E tests must pass |
+
+### 3. Write `unit-NN-{slug}.md` for each unit:
 ```markdown
 ---
 status: pending
@@ -268,14 +341,36 @@ discipline: {discipline}  # frontend, backend, api, documentation, devops, etc.
 - `documentation` → `do-technical-documentation` agents
 - `devops` → infrastructure/deployment agents
 
-### 3. Save iteration state to han keep:
+### 4. Create and switch to intent branch:
+
+**CRITICAL: The orchestrator MUST run on the intent branch, not main.**
+
+After creating the intent artifacts, create and switch to the intent branch:
+
+```bash
+# Create and switch to intent branch
+INTENT_BRANCH="ai-dlc/${intentSlug}"
+git checkout -B "$INTENT_BRANCH"
+```
+
+This ensures:
+- All subsequent `han keep` operations use the intent branch's storage
+- Multiple intents can run in parallel on different branches
+- Clean separation between main and AI-DLC orchestration state
+
+### 5. Save iteration state to han keep:
+
+Intent-level state is saved to the current branch (which is now the intent branch):
+
 ```javascript
+// Intent-level state → current branch (intent branch)
 han_keep_save({
   scope: "branch",
   key: "intent-slug",
   content: "{intent-slug}"
 })
 
+// Intent-level state → current branch (intent branch)
 han_keep_save({
   scope: "branch",
   key: "iteration.json",
@@ -300,6 +395,7 @@ Elaboration complete!
 
 Created: .ai-dlc/{intent-slug}/
 - intent.md
+- intent.yaml (testing requirements)
 - unit-01-{name}.md
 - unit-02-{name}.md
 ...

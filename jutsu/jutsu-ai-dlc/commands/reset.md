@@ -35,6 +35,7 @@ The work you did is preserved in git. Only the AI-DLC workflow state is cleared.
 If the task is not complete, warn:
 
 ```javascript
+// Intent-level state is on current branch (intent branch)
 const state = JSON.parse(han_keep_load({ scope: "branch", key: "iteration.json" }) || "{}");
 
 if (state.status !== "complete") {
@@ -46,18 +47,32 @@ if (state.status !== "complete") {
 ### Step 2: Delete All AI-DLC Keys
 
 ```javascript
-// Clear all AI-DLC state keys
+// Clear intent-level state (from current branch / intent branch)
 han_keep_delete({ scope: "branch", key: "iteration.json" });
 han_keep_delete({ scope: "branch", key: "intent.md" });
 han_keep_delete({ scope: "branch", key: "completion-criteria.md" });
 han_keep_delete({ scope: "branch", key: "current-plan.md" });
+han_keep_delete({ scope: "branch", key: "intent-slug" });
+
+// Clear unit-level state (from current branch, if on a unit branch)
 han_keep_delete({ scope: "branch", key: "scratchpad.md" });
 han_keep_delete({ scope: "branch", key: "blockers.md" });
+han_keep_delete({ scope: "branch", key: "next-prompt.md" });
 ```
 
 Or use the CLI:
 ```bash
-han keep clear --branch
+# Clear intent-level state from current branch (intent branch)
+han keep delete iteration.json
+han keep delete intent.md
+han keep delete completion-criteria.md
+han keep delete current-plan.md
+han keep delete intent-slug
+
+# Clear unit-level state from current branch
+han keep delete scratchpad.md
+han keep delete blockers.md
+han keep delete next-prompt.md
 ```
 
 ### Step 3: Confirm
@@ -73,11 +88,20 @@ To start a new task, run `/elaborate`.
 
 ## What Gets Cleared
 
+### Intent-Level State (from intent branch)
+
 | Key | Purpose |
 |-----|---------|
 | `iteration.json` | Hat, iteration count, workflow, status |
 | `intent.md` | What we're building |
 | `completion-criteria.md` | How we know it's done |
 | `current-plan.md` | Plan for current iteration |
+| `intent-slug` | Slug identifier |
+
+### Unit-Level State (from current branch)
+
+| Key | Purpose |
+|-----|---------|
 | `scratchpad.md` | Learnings and notes |
 | `blockers.md` | Documented blockers |
+| `next-prompt.md` | Continuation prompt |

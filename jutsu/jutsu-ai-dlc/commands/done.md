@@ -28,6 +28,7 @@ Marks the AI-DLC task as complete. This command is **guarded** - it can only be 
 ### Step 1: Load Current State
 
 ```javascript
+// Intent-level state is stored on current branch (intent branch)
 const state = JSON.parse(han_keep_load({ scope: "branch", key: "iteration.json" }));
 const workflow = state.workflow || ["elaborator", "planner", "builder", "reviewer"];
 const currentIndex = workflow.indexOf(state.hat);
@@ -48,6 +49,7 @@ if (currentIndex !== lastIndex) {
 Load and check completion criteria:
 
 ```javascript
+// Intent-level state from current branch (intent branch)
 const criteria = han_keep_load({ scope: "branch", key: "completion-criteria.md" });
 ```
 
@@ -72,10 +74,79 @@ Cannot complete - the following criteria are not satisfied:
 Use /fail to return to builder and address these items.
 ```
 
-### Step 4: Mark Complete
+### Step 3b: Update Current Unit Status to Completed
+
+If working on a unit-based task, mark the current unit as completed:
+
+```bash
+# Source the DAG library
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Get the current unit file from state (intent-level from current branch / intent branch)
+INTENT_SLUG=$(han keep load intent-slug --quiet)
+INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+CURRENT_UNIT=$(cat iteration.json | jq -r '.currentUnit // empty')
+
+# If there's a current unit, mark it completed
+if [ -n "$CURRENT_UNIT" ] && [ -f "$INTENT_DIR/${CURRENT_UNIT}.md" ]; then
+  update_unit_status "$INTENT_DIR/${CURRENT_UNIT}.md" "completed"
+  echo "Unit ${CURRENT_UNIT} marked as completed."
+fi
+```
+
+**Note:** This happens in the intent worktree (main branch), not the unit worktree. The orchestrator is responsible for tracking unit progress.
+
+### Step 3c: Check for More Units (Unit-Based Workflows)
+
+For unit-based tasks, check if all units are now complete or if there are more ready units:
+
+```bash
+# Source the DAG library
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Check if DAG is complete (all units finished)
+if is_dag_complete "$INTENT_DIR"; then
+  echo "All units completed! Task is fully done."
+  # Continue to Step 4 to mark the entire task complete
+else
+  # Find next ready units
+  READY_UNITS=$(find_ready_units "$INTENT_DIR")
+
+  if [ -n "$READY_UNITS" ]; then
+    # More units are ready to work on
+    echo "Unit completed. Ready units available: $READY_UNITS"
+
+    # Reset hat to builder (or first hat after planner) for the next unit
+    state.hat = workflow[2]  // Typically "builder"
+    state.currentUnit = null  // Will be set by /construct
+    // Intent-level state saved to current branch (intent branch)
+    han_keep_save({
+      scope: "branch",
+      key: "iteration.json",
+      content: JSON.stringify(state)
+    })
+
+    # Output status and continue construction
+    echo "Moving to next unit. Run /construct to continue."
+    return  # Do NOT proceed to Step 4 (full task completion)
+  else
+    # Units remain but are blocked
+    BLOCKED_UNITS=$(find_blocked_units "$INTENT_DIR")
+    echo "Warning: Remaining units are blocked:"
+    echo "$BLOCKED_UNITS"
+    # Continue to wait or alert user
+    return
+  fi
+fi
+```
+
+**Note:** If there are more units, `/done` does NOT mark the task as complete. Instead, it resets the hat and signals the construct loop to pick up the next unit.
+
+### Step 4: Mark Task Complete (Only When All Units Done)
 
 ```javascript
 state.status = "complete";
+// Intent-level state saved to current branch (intent branch)
 han_keep_save({
   scope: "branch",
   key: "iteration.json",

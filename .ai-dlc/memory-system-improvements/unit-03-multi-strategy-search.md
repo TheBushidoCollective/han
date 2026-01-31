@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: [unit-02-query-expansion]
 branch: ai-dlc/memory-system-improvements/03-multi-strategy-search
 discipline: backend

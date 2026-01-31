@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: []
 branch: ai-dlc/memory-system-improvements/02-query-expansion
 discipline: backend

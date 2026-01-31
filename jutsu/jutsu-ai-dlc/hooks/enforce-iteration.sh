@@ -13,7 +13,21 @@ if ! command -v han &> /dev/null; then
 fi
 
 # Check for AI-DLC state
-ITERATION_JSON=$(han keep load --branch iteration.json --quiet 2>/dev/null || echo "")
+# Intent-level state is stored on the intent branch
+# If we're on a unit branch (ai-dlc/intent/unit), we need to check the parent intent branch
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+INTENT_BRANCH=""
+ITERATION_JSON=""
+
+# Try current branch first
+ITERATION_JSON=$(han keep load iteration.json --quiet 2>/dev/null || echo "")
+
+# If not found and we're on a unit branch, try the parent intent branch
+if [ -z "$ITERATION_JSON" ] && [[ "$CURRENT_BRANCH" == ai-dlc/*/* ]]; then
+  # Extract intent branch: ai-dlc/intent-slug/unit-slug -> ai-dlc/intent-slug
+  INTENT_BRANCH=$(echo "$CURRENT_BRANCH" | sed 's|^\(ai-dlc/[^/]*\)/.*|\1|')
+  ITERATION_JSON=$(han keep load --branch "$INTENT_BRANCH" iteration.json --quiet 2>/dev/null || echo "")
+fi
 
 if [ -z "$ITERATION_JSON" ]; then
   # No AI-DLC state - not using the methodology, skip
@@ -41,7 +55,12 @@ HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 # Mark for advancement (SessionStart will increment)
 UPDATED_JSON=$(echo "$ITERATION_JSON" | han parse json-set needsAdvance true 2>/dev/null)
 if [ -n "$UPDATED_JSON" ]; then
-  han keep save --branch iteration.json "$UPDATED_JSON" 2>/dev/null || true
+  # Intent-level state saved to intent branch (or current branch if on intent branch)
+  if [ -n "$INTENT_BRANCH" ]; then
+    han keep save --branch "$INTENT_BRANCH" iteration.json "$UPDATED_JSON" 2>/dev/null || true
+  else
+    han keep save iteration.json "$UPDATED_JSON" 2>/dev/null || true
+  fi
 fi
 
 echo ""
