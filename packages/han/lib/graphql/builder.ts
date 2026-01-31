@@ -19,6 +19,27 @@ import {
 } from "./node-registry.ts";
 
 /**
+ * User role for access control
+ */
+export type UserRole = "ic" | "manager" | "admin";
+
+/**
+ * User information extracted from request headers or auth
+ */
+export interface UserContext {
+	/** User ID */
+	id: string;
+	/** User display name */
+	displayName?: string;
+	/** User role */
+	role: UserRole;
+	/** Organization ID the user belongs to */
+	orgId?: string;
+	/** Project IDs the user has access to */
+	projectIds?: string[];
+}
+
+/**
  * Context type for GraphQL resolvers
  *
  * Includes DataLoaders for efficient batching and caching.
@@ -29,6 +50,8 @@ export interface GraphQLContext {
 	request?: Request;
 	/** DataLoaders for batching database access */
 	loaders: GraphQLLoaders;
+	/** User information for access control */
+	user?: UserContext;
 }
 
 /**

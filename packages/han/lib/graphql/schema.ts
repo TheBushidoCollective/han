@@ -233,12 +233,36 @@ builder.queryField("teamMetrics", (t) =>
 			granularity: t.arg({ type: GranularityEnum, description: "Time grouping" }),
 		},
 		description: "Team-level aggregate metrics for dashboard",
-		resolve: async (_parent, args) => {
+		resolve: async (_parent, args, context) => {
+			// Permission check: user must be authenticated
+			if (!context.user) {
+				throw new Error("Authentication required to access team metrics");
+			}
+
+			// Permission check: if projectIds specified, user must have access to all of them
+			if (args.projectIds && args.projectIds.length > 0) {
+				const userProjectIds = context.user.projectIds || [];
+				const isAdmin = context.user.role === "admin";
+
+				// Admins can access all projects, others need explicit access
+				if (!isAdmin) {
+					const unauthorizedProjects = args.projectIds.filter(
+						(pid) => !userProjectIds.includes(pid)
+					);
+					if (unauthorizedProjects.length > 0) {
+						throw new Error(
+							`Access denied to projects: ${unauthorizedProjects.join(", ")}`
+						);
+					}
+				}
+			}
+
 			return queryTeamMetrics({
 				startDate: args.startDate,
 				endDate: args.endDate,
 				projectIds: args.projectIds,
 				granularity: args.granularity as "day" | "week" | "month" | null,
+				userContext: context.user,
 			});
 		},
 	}),
