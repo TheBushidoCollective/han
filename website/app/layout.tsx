@@ -35,6 +35,7 @@ export default function RootLayout({
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				{/* Blocking script to prevent theme flash - runs before body renders */}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Static script for theme flash prevention, no user input */}
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `
