@@ -44,6 +44,7 @@ function isNavItemActive(pathname: string, itemPath: string): boolean {
 
 const navItems: { id: string; path: string; label: string; icon: string }[] = [
   { id: 'dashboard', path: '/', label: 'Dashboard', icon: '🏠' },
+  { id: 'team', path: '/team', label: 'Team', icon: '👥' },
   { id: 'projects', path: '/projects', label: 'Projects', icon: '📁' },
   { id: 'repos', path: '/repos', label: 'Repos', icon: '🗂️' },
   { id: 'sessions', path: '/sessions', label: 'Sessions', icon: '📋' },

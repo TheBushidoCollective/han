@@ -6,53 +6,60 @@
  *
  * Creates DataLoaders per-request to ensure proper request isolation
  * and efficient batching of database access.
- *
- * Supports both local (SQLite) and hosted (PostgreSQL) modes via
- * the DataSource abstraction layer.
  */
 
 import { useDeferStream } from "@graphql-yoga/plugin-defer-stream";
 import { makeServer } from "graphql-ws";
 import { createYoga } from "graphql-yoga";
-import {
-	type DataSource,
-	type DataSourceMode,
-	getLocalDataSource,
-	LocalDataSource,
-} from "../data/index.ts";
-import type { GraphQLContext } from "./builder.ts";
+import type { GraphQLContext, UserContext, UserRole } from "./builder.ts";
 import { createLoaders } from "./loaders.ts";
 import { schema } from "./schema.ts";
 
-export { schema };
-
 /**
- * Options for creating the GraphQL handler
+ * Extract user context from request headers
+ * In production, this would validate JWT tokens or session cookies
  */
-export interface GraphQLHandlerOptions {
-	/**
-	 * The DataSource to use for database operations.
-	 * Defaults to LocalDataSource (SQLite) if not provided.
-	 */
-	dataSource?: DataSource;
+function extractUserContext(request: Request): UserContext | undefined {
+	// Check for user ID header (set by auth middleware in production)
+	const userId = request.headers.get("x-user-id");
+	if (!userId) {
+		return undefined;
+	}
+
+	// Extract role from header, default to 'ic'
+	const roleHeader = request.headers.get("x-user-role");
+	const role: UserRole =
+		roleHeader === "manager" || roleHeader === "admin"
+			? roleHeader
+			: "ic";
+
+	// Extract organization ID
+	const orgId = request.headers.get("x-org-id") || undefined;
+
+	// Extract project access list (comma-separated)
+	const projectIdsHeader = request.headers.get("x-project-ids");
+	const projectIds = projectIdsHeader
+		? projectIdsHeader.split(",").map((id) => id.trim())
+		: undefined;
+
+	return {
+		id: userId,
+		displayName: request.headers.get("x-user-name") || undefined,
+		role,
+		orgId,
+		projectIds,
+	};
 }
+
+export { schema };
 
 /**
  * Create a GraphQL Yoga instance configured for Next.js
  *
  * Sets up per-request context with fresh DataLoader instances.
  * Enables @defer and @stream directives for incremental delivery.
- *
- * @param options - Optional configuration including custom DataSource
  */
-export function createGraphQLHandler(options?: GraphQLHandlerOptions) {
-	// Use provided DataSource or default to LocalDataSource
-	const dataSource = options?.dataSource ?? getLocalDataSource();
-
-	// Determine mode based on DataSource type
-	const mode: DataSourceMode =
-		dataSource instanceof LocalDataSource ? "local" : "hosted";
-
+export function createGraphQLHandler() {
 	return createYoga<GraphQLContext>({
 		schema,
 		graphqlEndpoint: "/api/graphql",
@@ -66,9 +73,8 @@ export function createGraphQLHandler(options?: GraphQLHandlerOptions) {
 		},
 		context: ({ request }) => ({
 			request,
-			loaders: createLoaders(dataSource),
-			dataSource,
-			mode,
+			loaders: createLoaders(),
+			user: extractUserContext(request),
 		}),
 	});
 }

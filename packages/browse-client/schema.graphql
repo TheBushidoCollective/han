@@ -67,6 +67,21 @@ type ActivityData {
   totalSessions: Int
 }
 
+"""Single data point in the activity timeline"""
+type ActivityTimelineEntry {
+  """Messages exchanged in this period"""
+  messageCount: Int
+
+  """Time period label"""
+  period: String
+
+  """Sessions started in this period"""
+  sessionCount: Int
+
+  """Tasks created in this period"""
+  taskCount: Int
+}
+
 """A subagent task spawned by a Task tool call"""
 type AgentTask {
   """Unique ID of the agent task"""
@@ -295,6 +310,24 @@ enum ContentBlockType {
   THINKING
   TOOL_RESULT
   TOOL_USE
+}
+
+"""Anonymized metrics for a contributor"""
+type ContributorMetrics {
+  """Anonymized contributor identifier"""
+  contributorId: String
+
+  """Display name (e.g., 'Project A', 'Workstation 1')"""
+  displayName: String
+
+  """Total sessions by this contributor"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks by this contributor"""
+  taskCount: Int
 }
 
 """Activity metrics for a single day"""
@@ -618,6 +651,13 @@ type FrustrationSummary {
 
   """Total messages analyzed for sentiment"""
   totalAnalyzed: Int
+}
+
+"""Time period granularity for aggregation"""
+enum Granularity {
+  DAY
+  MONTH
+  WEEK
 }
 
 """Summary of Han user configuration"""
@@ -1956,21 +1996,6 @@ type NodeUpdatedPayload {
   typename: String
 }
 
-"""An organization that users belong to"""
-type Org {
-  """Organization ID"""
-  id: ID
-
-  """URL to organization logo image"""
-  logoUrl: String
-
-  """Organization name"""
-  name: String
-
-  """URL-safe organization slug"""
-  slug: String
-}
-
 """Pagination information for a connection"""
 type PageInfo {
   """Cursor of the last item in the current page"""
@@ -1984,6 +2009,21 @@ type PageInfo {
 
   """Cursor of the first item in the current page"""
   startCursor: String
+}
+
+"""Session count aggregated by time period"""
+type PeriodSessionCount {
+  """Time period label (e.g., '2026-01-30' or '2026-W05')"""
+  period: String
+
+  """Number of sessions in this period"""
+  sessionCount: Int
+
+  """Number of tasks in this period"""
+  taskCount: Int
+
+  """Total tokens used in this period"""
+  tokenUsage: Int
 }
 
 """Claude permissions configuration"""
@@ -2121,6 +2161,24 @@ type ProjectAddedPayload {
   projectId: String
 }
 
+"""Session and task metrics aggregated by project"""
+type ProjectSessionCount {
+  """Unique project identifier"""
+  projectId: String
+
+  """Human-readable project name"""
+  projectName: String
+
+  """Number of sessions in this project"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Number of tasks in this project"""
+  taskCount: Int
+}
+
 type Query {
   """Activity data for dashboard visualizations"""
   activity(days: Int = 365): ActivityData
@@ -2134,12 +2192,6 @@ type Query {
   """Aggregate cache statistics"""
   cacheStats: CacheStats
 
-  """Current organization context (only available in hosted team mode)"""
-  currentOrg: Org
-
-  """Current authenticated user (only available in hosted team mode)"""
-  currentUser: User
-
   """Memory query interface"""
   memory: MemoryQuery
 
@@ -2152,14 +2204,6 @@ type Query {
   """Fetch any node by its global ID"""
   node(id: ID!): Node
   nodes(ids: [ID!]!): [Node]!
-
-  """Members of an organization (only available in hosted team mode)"""
-  orgMembers(orgId: String!): [TeamMember!]
-
-  """
-  Organizations the current user belongs to (only available in hosted team mode)
-  """
-  orgs: [Org!]
 
   """Plugin counts by category"""
   pluginCategories: [PluginCategory!]
@@ -2202,9 +2246,6 @@ type Query {
     """Filter by project ID (groups all worktrees)"""
     projectId: String
 
-    """Filter by user ID (team mode only - filters sessions by owner)"""
-    userId: String
-
     """Filter by worktree name/path"""
     worktreeName: String
   ): SessionConnection
@@ -2214,6 +2255,21 @@ type Query {
 
   """Global slot pool status for cross-session resource management"""
   slots: SlotStatus
+
+  """Team-level aggregate metrics for dashboard"""
+  teamMetrics(
+    """End date (ISO format)"""
+    endDate: String
+
+    """Time grouping"""
+    granularity: Granularity
+
+    """Filter by project IDs"""
+    projectIds: [String!]
+
+    """Start date (ISO format)"""
+    startDate: String
+  ): TeamMetrics
 }
 
 """A queue state change operation"""
@@ -2573,12 +2629,6 @@ type Session implements Node {
   Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
   """
   nativeTasks: [NativeTask!]
-
-  """Organization ID this session belongs to (only in hosted team mode)"""
-  orgId: String
-
-  """User who ran this session (only populated in hosted team mode)"""
-  owner: User
 
   """The project this session belongs to"""
   project: Project
@@ -3042,6 +3092,30 @@ type Task {
   type: TaskType
 }
 
+"""Aggregate task completion statistics"""
+type TaskCompletionMetrics {
+  """Average confidence score (0-1)"""
+  averageConfidence: Float
+
+  """Tasks completed with failure outcome"""
+  failureCount: Int
+
+  """Tasks completed with partial outcome"""
+  partialCount: Int
+
+  """Tasks completed with success outcome"""
+  successCount: Int
+
+  """Success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks completed (any outcome)"""
+  totalCompleted: Int
+
+  """Total tasks created"""
+  totalCreated: Int
+}
+
 """A paginated list of tasks"""
 type TaskConnection {
   """List of task edges"""
@@ -3097,34 +3171,37 @@ type TaskTypeCount {
   type: TaskType
 }
 
-"""A member of an organization"""
-type TeamMember {
-  """Team member ID"""
-  id: ID
+"""Aggregate team-level metrics for dashboard"""
+type TeamMetrics {
+  """Activity over time"""
+  activityTimeline: [ActivityTimelineEntry!]
 
-  """Organization ID"""
-  orgId: String
+  """Estimated total cost in USD"""
+  estimatedCostUsd: Float
 
-  """Role within the organization"""
-  role: TeamMemberRole
+  """Sessions grouped by time period"""
+  sessionsByPeriod: [PeriodSessionCount!]
 
-  """The user"""
-  user: User
+  """Sessions grouped by project"""
+  sessionsByProject: [ProjectSessionCount!]
 
-  """User ID"""
-  userId: String
-}
+  """Task completion statistics"""
+  taskCompletionMetrics: TaskCompletionMetrics
 
-"""Role of a team member within an organization"""
-enum TeamMemberRole {
-  """Organization administrator"""
-  ADMIN
+  """Token usage aggregation"""
+  tokenUsageAggregation: TokenUsageAggregation
 
-  """Full team member"""
-  MEMBER
+  """Top contributors (anonymized)"""
+  topContributors: [ContributorMetrics!]
 
-  """Read-only viewer"""
-  VIEWER
+  """Total number of sessions"""
+  totalSessions: Int
+
+  """Total number of tasks"""
+  totalTasks: Int
+
+  """Total tokens used"""
+  totalTokens: Int
 }
 
 """Regular text content"""
@@ -3203,6 +3280,24 @@ enum TodoStatus {
   COMPLETED
   IN_PROGRESS
   PENDING
+}
+
+"""Aggregated token usage statistics"""
+type TokenUsageAggregation {
+  """Estimated cost in USD"""
+  estimatedCostUsd: Float
+
+  """Total cached tokens used"""
+  totalCachedTokens: Int
+
+  """Total input tokens consumed"""
+  totalInputTokens: Int
+
+  """Total output tokens generated"""
+  totalOutputTokens: Int
+
+  """Total tokens (input + output)"""
+  totalTokens: Int
 }
 
 """Aggregate token usage statistics"""
@@ -3396,21 +3491,6 @@ type UnknownEventMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
-}
-
-"""A user in the team platform"""
-type User {
-  """URL to user avatar image"""
-  avatarUrl: String
-
-  """User email address"""
-  email: String
-
-  """User ID"""
-  id: ID
-
-  """User display name"""
-  name: String
 }
 
 """
