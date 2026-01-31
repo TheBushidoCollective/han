@@ -67,7 +67,7 @@ interface McpTool {
 /**
  * Memory layer names for searching
  */
-type MemoryLayer = "rules" | "transcripts" | "team" | "all";
+type MemoryLayer = "rules" | "transcripts" | "team" | "summaries" | "all";
 
 /**
  * Search result with citations
@@ -169,6 +169,44 @@ async function searchTranscriptsNative(
 }
 
 /**
+ * Search generated session summaries using the native module
+ * Returns semantic summaries with topics for "which session discussed X" queries
+ */
+async function searchSummariesNative(
+	query: string,
+	limit: number,
+): Promise<SearchResultWithCitation[]> {
+	const nativeModule = tryGetNativeModule();
+	if (!nativeModule) {
+		return [];
+	}
+
+	try {
+		const dbPath = join(homedir(), ".claude", "han", "han.db");
+		const summaries = nativeModule.searchGeneratedSummaries(dbPath, query, limit);
+
+		return summaries.map((s) => ({
+			id: `summary:${s.sessionId}`,
+			content: `${s.summaryText}\n\nTopics: ${s.topics.join(", ")}`,
+			score: 0.8, // Generated summaries get higher score than raw transcripts
+			layer: "summaries",
+			metadata: {
+				sessionId: s.sessionId,
+				topics: s.topics,
+				outcome: s.outcome,
+				filesModified: s.filesModified,
+				toolsUsed: s.toolsUsed,
+				messageCount: s.messageCount,
+			},
+			browseUrl: `/sessions/${s.sessionId}`,
+		}));
+	} catch (error) {
+		console.error("[DAL] Summary search error:", error);
+		return [];
+	}
+}
+
+/**
  * Search across memory layers using FTS
  */
 async function searchMemoryFts(
@@ -177,6 +215,12 @@ async function searchMemoryFts(
 	limit: number,
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
+
+	// Handle summaries layer - semantic session summaries
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
 
 	// Handle transcripts specially - use native module
 	if (layer === "all" || layer === "transcripts") {
@@ -205,7 +249,7 @@ async function searchMemoryFts(
 
 /**
  * Search across memory layers using vector similarity
- * Note: For transcripts, falls back to FTS since native module only has FTS
+ * Note: For transcripts/summaries, falls back to FTS since native module only has FTS
  */
 async function searchMemoryVector(
 	query: string,
@@ -213,6 +257,12 @@ async function searchMemoryVector(
 	limit: number,
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
+
+	// Handle summaries layer - semantic session summaries (FTS for now)
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
 
 	// Handle transcripts specially - use native module (FTS only for now)
 	if (layer === "all" || layer === "transcripts") {
@@ -248,6 +298,12 @@ async function searchMemoryHybrid(
 	limit: number,
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
+
+	// Handle summaries layer - semantic session summaries (FTS for now)
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
 
 	// Handle transcripts specially - use native module
 	if (layer === "all" || layer === "transcripts") {
@@ -298,9 +354,9 @@ const DAL_TOOLS: McpTool[] = [
 				},
 				layer: {
 					type: "string",
-					enum: ["rules", "transcripts", "team", "all"],
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
 					description:
-						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
 				},
 				limit: {
 					type: "number",
@@ -330,9 +386,9 @@ const DAL_TOOLS: McpTool[] = [
 				},
 				layer: {
 					type: "string",
-					enum: ["rules", "transcripts", "team", "all"],
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
 					description:
-						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
 				},
 				limit: {
 					type: "number",
@@ -362,9 +418,9 @@ const DAL_TOOLS: McpTool[] = [
 				},
 				layer: {
 					type: "string",
-					enum: ["rules", "transcripts", "team", "all"],
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
 					description:
-						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
 				},
 				limit: {
 					type: "number",
@@ -517,7 +573,12 @@ async function handleToolsCall(params: {
 					},
 					{
 						name: "transcripts",
-						description: "Past Claude Code sessions",
+						description: "Past Claude Code sessions (raw messages)",
+						available: true,
+					},
+					{
+						name: "summaries",
+						description: "Session summaries with topics (for 'which session discussed X' queries)",
 						available: true,
 					},
 					{
