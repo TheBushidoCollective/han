@@ -1,7 +1,7 @@
 ---
 workflow: default
 created: 2026-01-31
-status: active
+status: completed
 ---
 
 # Plugin Reorganization: Branded to Tech Layer Categories
@@ -32,14 +32,14 @@ Any plugin in any category can have hooks, MCP servers, agents, skills, and comm
 
 ## Success Criteria
 
-- [ ] All plugins moved from `jutsu/`, `do/`, `hashi/` to new category directories
-- [ ] Plugin names no longer have prefixes (e.g., `typescript` not `jutsu-typescript`)
-- [ ] Alias map in code resolves old names to new paths
-- [ ] `han plugin install jutsu-typescript` still works (via alias resolution)
-- [ ] Website plugin index reflects new structure and categories
-- [ ] Marketplace.json updated with new plugin paths
-- [ ] All cross-plugin dependencies updated to new names
-- [ ] Existing user installations auto-migrate on next `han` run
+- [x] All plugins moved from `jutsu/`, `do/`, `hashi/` to new category directories
+- [x] Plugin names no longer have prefixes (e.g., `typescript` not `jutsu-typescript`)
+- [x] Alias map in code resolves old names to new paths
+- [x] `han plugin install jutsu-typescript` still works (via alias resolution)
+- [x] Website plugin index reflects new structure and categories
+- [x] Marketplace.json updated with new plugin paths
+- [x] All cross-plugin dependencies updated to new names
+- [x] Existing user installations auto-migrate on next `han` run
 - [ ] Minor version bump (backwards compatible)
 
 ## Context
