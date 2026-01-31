@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on:
   - unit-01-alias-system
 branch: ai-dlc/plugin-reorganization/10-auto-migration

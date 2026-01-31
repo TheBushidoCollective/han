@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: []
 branch: ai-dlc/plugin-reorganization/04-move-validation
 discipline: devops
