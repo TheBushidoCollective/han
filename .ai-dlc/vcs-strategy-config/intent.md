@@ -106,6 +106,23 @@ When `/construct` called from default branch:
 - [ ] Strategy-specific instructions injected into subagent prompts
 - [ ] Subagents know when to create MRs vs auto-merge
 
+### Integrator Hat
+- [ ] Integrator hat added for `trunk` and `intent` strategies only
+- [ ] `trunk`: integrator validates auto-merged state, runs Stop hooks
+- [ ] `intent`: integrator creates/merges the single PR, validates
+- [ ] `unit`/`bolt`: no integrator (reviewer merges each PR, completion is implicit)
+
+### Conflict Resolution Protocol
+- [ ] Builder rebases onto main before submitting for review
+- [ ] Reviewer handles any late conflicts during merge
+- [ ] Conflict resolution documented as a skill for builder/reviewer
+
+### Announcement Generation
+- [ ] During elaboration, ask what announcement formats are needed
+- [ ] Store announcement config in intent.md frontmatter
+- [ ] On intent completion, generate configured formats
+- [ ] Supported formats: CHANGELOG, release notes, social posts, blog draft
+
 ## Context
 
 ### Existing Code Locations
@@ -121,6 +138,19 @@ When `/construct` called from default branch:
 3. **Elaboration is reviewable** - Plan can be MR'd before code, catching bad decomposition early
 4. **Repo defaults, intent overrides** - One config for team, override when needed
 5. **Both VCS supported** - git and jj are first-class citizens
+6. **Builder = Creator** - No separate designer hat; AI creates directly in the target medium
+7. **Discipline provides context, not workflow** - All units use builder → reviewer; discipline determines which agents and context
+8. **Single-discipline units** - Vertical slices decompose into discipline-specific units
+9. **Integrator is conditional** - Only meaningful for trunk/intent strategies where automated merge or single-PR happens
+
+### Workflow by Strategy
+
+| Strategy | Unit Flow | Integrator? |
+|----------|-----------|-------------|
+| `trunk` | builder → reviewer → auto-merge | Yes (validates final state) |
+| `bolt` | builder → reviewer → manual merge (per bolt) | No |
+| `unit` | builder → reviewer → manual merge (per unit) | No |
+| `intent` | builder → reviewer (stays on branch) | Yes (creates single PR) |
 
 ### Defaults
 - `change_strategy`: `unit`

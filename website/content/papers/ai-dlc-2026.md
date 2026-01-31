@@ -436,6 +436,38 @@ AI can apply design patterns during execution without requiring explicit design 
 
 **The test suite, not the architecture document, becomes the source of truth.** If the tests pass and the code meets non-functional requirements, the implementation is valid regardless of whether it matches a pre-specified design.
 
+### Building Is Designing
+
+In traditional development, "design" and "build" are distinct phases with distinct artifacts:
+- Designer creates mockups (Figma, wireframes)
+- Developer implements the specs
+- Handoff is a document or image
+
+**For AI, this distinction collapses.** When an AI generates a React component:
+- It decides structure (design)
+- It decides layout (design)
+- It writes JSX (build)
+- It adds styles (design)
+
+There's no mockup-to-code handoff. **The code IS the design.** AI creates directly in the target medium.
+
+This insight simplifies the workflow:
+
+| Traditional | AI-DLC 2026 |
+|-------------|-------------|
+| Designer → mockup | Builder → code |
+| Developer → code | (same) |
+| Reviewer → feedback | Reviewer → feedback |
+
+The "builder" hat is the creator. It produces the artifact—whether code, documentation, or configuration. Separate "designer" and "builder" hats are legacy concepts from human-driven workflows where specialists handed off between phases.
+
+**Discipline provides context, not workflow.** A frontend unit and a backend unit both use the same workflow (builder → reviewer), but:
+- Frontend builder gets design system context, component patterns
+- Backend builder gets API specs, service patterns
+- Documentation builder gets style guides, terminology
+
+The workflow is universal; the context is discipline-specific.
+
 ### Streamline Responsibilities
 
 AI's ability to perform task decomposition, code generation, testing, documentation, and deployment reduces the need for specialized roles. A single developer supervising AI can accomplish what previously required separate specialists for frontend, backend, infrastructure, testing, and documentation.
@@ -531,6 +563,26 @@ A **Unit** represents a cohesive, self-contained work element derived from an In
 - **Independently deployable:** Can go to production without other Units
 - **Clear boundaries:** Ownership and scope are unambiguous
 - **Explicit dependencies:** Upstream Units are declared in frontmatter
+- **Single discipline:** Each Unit focuses on one discipline (frontend, backend, api, documentation)
+
+**Single-Discipline Units and Vertical Slices:**
+
+When implementing a vertical feature that spans multiple layers, decompose into discipline-specific units:
+
+```
+"User Profile" intent:
+├── unit-01-user-profile-api (discipline: api)
+├── unit-02-user-profile-backend (discipline: backend)
+│       depends_on: [unit-01]
+└── unit-03-user-profile-ui (discipline: frontend)
+        depends_on: [unit-02]
+```
+
+This decomposition provides:
+- **Focused context:** Each unit gets discipline-appropriate context (design system for frontend, API specs for backend)
+- **Clear ownership:** No ambiguity about what each unit delivers
+- **Parallel potential:** Independent units can work simultaneously
+- **Appropriate tooling:** Discipline-specific agents and validation hooks
 
 Each Unit encompasses:
 
@@ -705,6 +757,32 @@ Completion Criteria can include:
 - Security scan results
 - Documentation requirements
 - Integration validation
+
+#### Completion Announcements
+
+When an Intent completes, the work isn't done—it needs to be communicated. AI-DLC 2026 includes **Completion Announcements** as a first-class artifact.
+
+During Mob Elaboration, teams specify announcement formats:
+
+```yaml
+# intent.md frontmatter
+announcements:
+  - changelog      # Conventional changelog entry
+  - release-notes  # User-facing summary
+  - social-posts   # Twitter/LinkedIn ready
+  - blog-draft     # Long-form announcement
+```
+
+On completion, AI generates each configured format:
+
+| Format | Purpose | Audience |
+|--------|---------|----------|
+| **CHANGELOG** | Technical record of changes | Developers |
+| **Release Notes** | User-facing feature summary | End users |
+| **Social Posts** | Platform-optimized snippets | Community |
+| **Blog Draft** | Detailed announcement | Marketing |
+
+**Why this matters:** Shipping features without communication is incomplete work. The announcement artifacts ensure every completed Intent has the materials needed for proper release communication, reducing the gap between "code complete" and "users know about it."
 
 #### Deployment Unit
 
@@ -1305,6 +1383,7 @@ For detailed runbooks with system prompts, entry/exit criteria, and failure mode
 | **Context Budget** | Available attention capacity in AI context window; quality degrades when overloaded |
 | **HITL** | Human-in-the-Loop: human validates each significant step before AI proceeds; used for novel, high-risk, or foundational work |
 | **AHOTL** | Autonomous Human-on-the-Loop: human defines criteria and reviews output; AI operates autonomously within boundaries; used for well-defined, programmatically verifiable work |
+| **Integrator** | Final validation hat that runs conditionally based on VCS strategy; validates auto-merged state (trunk) or creates single PR (intent); skipped for unit/bolt strategies |
 | **Intent** | High-level statement of purpose with completion criteria that serves as starting point for decomposition |
 | **Memory Provider** | Source of persistent context (files, git, tickets, ADRs, runbooks) accessible to AI agents |
 | **Mob Elaboration** | Collaborative ritual where humans and AI decompose Intent into Units with Completion Criteria |
