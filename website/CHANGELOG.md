@@ -22,6 +22,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
+- publish paper v3 ([fa99438f](../../commit/fa99438f))
+- rewrite as marketing piece for Han vs standard plugins ([bd481969](../../commit/bd481969))
+- announce third-party plugin platform ([39a19234](../../commit/39a19234))
+- add comprehensive plugin development guide ([823da54e](../../commit/823da54e))
+- Merge pull request #41 from TheBushidoCollective/han-1 ([0b677ba6](../../commit/0b677ba6))
+- add Han runbook and fix homepage installation commands ([b4ef7cd9](../../commit/b4ef7cd9))
+
+## [1.35.1] - 2026-01-31
+
+### Added
+
+- refine workflow model from elaboration discussion ([b583b142](../../commit/b583b142))
+- add DAG-based unit dependencies with numerical index + slug naming ([1feb893c](../../commit/1feb893c))
+- add AI-DLC 2026 methodology plugin ([ed938138](../../commit/ed938138))
+
+### Fixed
+
+- designers as builders, not just curators ([90f9a6e7](../../commit/90f9a6e7))
+- reframe "building is designing" as empowerment, not replacement ([e2188397](../../commit/e2188397))
+- resolve lint errors and update tests for refactored hook UI ([c293a849](../../commit/c293a849))
+- complete remaining review items ([cd873817](../../commit/cd873817))
+
+### Other
+
 - rewrite as marketing piece for Han vs standard plugins ([bd481969](../../commit/bd481969))
 - announce third-party plugin platform ([39a19234](../../commit/39a19234))
 - add comprehensive plugin development guide ([823da54e](../../commit/823da54e))
