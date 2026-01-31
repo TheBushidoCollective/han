@@ -22,14 +22,11 @@ export function getFileContributors(filePath: string): Contributor[] {
 		// -s: summary (commit counts only)
 		// -n: sort by number of commits (descending)
 		// -e: show email addresses
-		const result = execSync(
-			`git shortlog -sne --all -- "${absolutePath}"`,
-			{
-				encoding: "utf-8",
-				cwd: process.cwd(),
-				stdio: ["pipe", "pipe", "pipe"],
-			}
-		);
+		const result = execSync(`git shortlog -sne --all -- "${absolutePath}"`, {
+			encoding: "utf-8",
+			cwd: process.cwd(),
+			stdio: ["pipe", "pipe", "pipe"],
+		});
 
 		if (!result.trim()) {
 			return [];
@@ -74,14 +71,18 @@ export function getFileContributors(filePath: string): Contributor[] {
  * Maps git usernames to full display names using contributor-names.ts
  */
 export function getFileContributorNames(filePath: string): string[] {
-	return getFileContributors(filePath).map((c) => getDisplayName(c.name, c.email));
+	return getFileContributors(filePath).map((c) =>
+		getDisplayName(c.name, c.email),
+	);
 }
 
 /**
  * Format contributors as a display string
  * Example: "Alice (5), Bob (3), Charlie (1)"
  */
-export function formatContributorsWithCounts(contributors: Contributor[]): string {
+export function formatContributorsWithCounts(
+	contributors: Contributor[],
+): string {
 	return contributors.map((c) => `${c.name} (${c.commits})`).join(", ");
 }
 

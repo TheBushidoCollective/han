@@ -50,7 +50,7 @@ export function getAllPapers(): PaperMetadata[] {
 				// Get authors from git history, sorted by number of contributions
 				const gitAuthors = getFileContributorNames(filePath);
 				// Fall back to frontmatter authors if no git history
-				const authors = gitAuthors.length > 0 ? gitAuthors : (data.authors || []);
+				const authors = gitAuthors.length > 0 ? gitAuthors : data.authors || [];
 
 				return {
 					slug,
@@ -98,7 +98,7 @@ export function getPaper(slug: string): Paper | null {
 		// Get authors from git history, sorted by number of contributions
 		const gitAuthors = getFileContributorNames(filePath);
 		// Fall back to frontmatter authors if no git history
-		const authors = gitAuthors.length > 0 ? gitAuthors : (data.authors || []);
+		const authors = gitAuthors.length > 0 ? gitAuthors : data.authors || [];
 
 		// Strip duplicate title and subtitle from content
 		let processedContent = content;

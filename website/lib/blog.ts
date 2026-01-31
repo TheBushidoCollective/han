@@ -50,9 +50,8 @@ export function getAllBlogPosts(): BlogPostMetadata[] {
 				// Get authors from git history, sorted by number of contributions
 				const gitAuthors = getFileContributorNames(filePath);
 				// Fall back to frontmatter author if no git history
-				const authors = gitAuthors.length > 0
-					? gitAuthors
-					: (data.author ? [data.author] : []);
+				const authors =
+					gitAuthors.length > 0 ? gitAuthors : data.author ? [data.author] : [];
 
 				return {
 					slug,
@@ -100,9 +99,8 @@ export function getBlogPost(slug: string): BlogPost | null {
 		// Get authors from git history, sorted by number of contributions
 		const gitAuthors = getFileContributorNames(filePath);
 		// Fall back to frontmatter author if no git history
-		const authors = gitAuthors.length > 0
-			? gitAuthors
-			: (data.author ? [data.author] : []);
+		const authors =
+			gitAuthors.length > 0 ? gitAuthors : data.author ? [data.author] : [];
 
 		return {
 			slug,

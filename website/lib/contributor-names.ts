@@ -4,11 +4,11 @@
  */
 export const contributorDisplayNames: Record<string, string> = {
 	// Map by git username
-	"jwaldrip": "Jason Waldrip",
+	jwaldrip: "Jason Waldrip",
 	"Jason Waldrip": "Jason Waldrip",
 
 	// Map by email (without the @domain part for privacy)
-	"jason": "Jason Waldrip",
+	jason: "Jason Waldrip",
 
 	// Add more mappings as needed:
 	// "github-username": "Full Display Name",
