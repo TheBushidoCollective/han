@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.1] - 2026-01-31
+
+### Added
+
+- add DAG-based unit dependencies with numerical index + slug naming ([1feb893c](../../commit/1feb893c))
+- add AI-DLC 2026 methodology plugin ([ed938138](../../commit/ed938138))
+
+### Fixed
+
+- resolve lint errors and update tests for refactored hook UI ([c293a849](../../commit/c293a849))
+- complete remaining review items ([cd873817](../../commit/cd873817))
+
+### Other
+
+- announce third-party plugin platform ([39a19234](../../commit/39a19234))
+- add comprehensive plugin development guide ([823da54e](../../commit/823da54e))
+- Merge pull request #41 from TheBushidoCollective/han-1 ([0b677ba6](../../commit/0b677ba6))
+- add Han runbook and fix homepage installation commands ([b4ef7cd9](../../commit/b4ef7cd9))
+
 ## [1.35.0] - 2026-01-30
 
 ### Added
