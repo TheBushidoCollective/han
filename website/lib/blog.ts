@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { getFileContributorNames } from "./git-contributors";
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 
@@ -9,7 +10,7 @@ export interface BlogPost {
 	title: string;
 	description: string;
 	date: string;
-	author: string;
+	authors: string[];
 	tags: string[];
 	category: string;
 	content: string;
@@ -21,7 +22,7 @@ export interface BlogPostMetadata {
 	title: string;
 	description: string;
 	date: string;
-	author: string;
+	authors: string[];
 	tags: string[];
 	category: string;
 }
@@ -46,12 +47,19 @@ export function getAllBlogPosts(): BlogPostMetadata[] {
 				const fileContent = fs.readFileSync(filePath, "utf-8");
 				const { data } = matter(fileContent);
 
+				// Get authors from git history, sorted by number of contributions
+				const gitAuthors = getFileContributorNames(filePath);
+				// Fall back to frontmatter author if no git history
+				const authors = gitAuthors.length > 0
+					? gitAuthors
+					: (data.author ? [data.author] : []);
+
 				return {
 					slug,
 					title: data.title || "",
 					description: data.description || "",
 					date: data.date || "",
-					author: data.author || "",
+					authors,
 					tags: data.tags || [],
 					category: data.category || "Uncategorized",
 				};
@@ -89,12 +97,19 @@ export function getBlogPost(slug: string): BlogPost | null {
 		const fileContent = fs.readFileSync(filePath, "utf-8");
 		const { data, content } = matter(fileContent);
 
+		// Get authors from git history, sorted by number of contributions
+		const gitAuthors = getFileContributorNames(filePath);
+		// Fall back to frontmatter author if no git history
+		const authors = gitAuthors.length > 0
+			? gitAuthors
+			: (data.author ? [data.author] : []);
+
 		return {
 			slug,
 			title: data.title || "",
 			description: data.description || "",
 			date: data.date || "",
-			author: data.author || "",
+			authors,
 			tags: data.tags || [],
 			category: data.category || "Uncategorized",
 			content,
