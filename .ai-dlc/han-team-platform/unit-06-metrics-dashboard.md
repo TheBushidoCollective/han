@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: ["01-core-backend", "02-authentication", "03-data-sync"]
 branch: ai-dlc/han-team-platform/06-metrics-dashboard
 ---
