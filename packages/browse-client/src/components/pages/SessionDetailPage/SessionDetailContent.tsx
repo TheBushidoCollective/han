@@ -18,6 +18,9 @@ import { Center } from '@/components/atoms/Center.tsx';
 import { Heading } from '@/components/atoms/Heading.tsx';
 import { HStack } from '@/components/atoms/HStack.tsx';
 import { Text } from '@/components/atoms/Text.tsx';
+import { AccessDenied, SessionOwner } from '@/components/molecules';
+import { useMode } from '@/contexts';
+import { usePermissions } from '@/hooks';
 import { colors, spacing } from '@/theme.ts';
 import type { SessionDetailContentFilesSubscription } from './__generated__/SessionDetailContentFilesSubscription.graphql.ts';
 import type { SessionDetailContentHooksSubscription } from './__generated__/SessionDetailContentHooksSubscription.graphql.ts';
@@ -100,6 +103,8 @@ export function SessionDetailContent({
   const navigate = useNavigate();
   const [, setRefreshKey] = useState(0);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isHosted } = useMode();
+  const { canAccessSession, isPermissionCheckEnabled } = usePermissions();
 
   const data = usePreloadedQuery<SessionDetailPageQuery>(
     SessionDetailPageQueryDef,
@@ -108,6 +113,18 @@ export function SessionDetailContent({
 
   // Cast node to session type (node query returns union type)
   const session = data.node;
+
+  // Check permissions for team mode
+  const permissionResult = useMemo(() => {
+    if (!session || !isPermissionCheckEnabled) {
+      return { allowed: true };
+    }
+    return canAccessSession({
+      sessionId: session.sessionId ?? sessionId,
+      ownerId: session.owner?.id ?? undefined,
+      orgId: session.orgId ?? undefined,
+    });
+  }, [session, isPermissionCheckEnabled, canAccessSession, sessionId]);
 
   // Subscription config for live updates - watches for new messages in this session
   const subscriptionConfig = useMemo<
@@ -249,6 +266,35 @@ export function SessionDetailContent({
     );
   }
 
+  // Check permissions - show access denied if not allowed
+  if (!permissionResult.allowed) {
+    return (
+      <Box
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          padding: spacing.lg,
+        }}
+      >
+        <HStack style={{ marginBottom: spacing.md }}>
+          <Button variant="secondary" onClick={handleBack}>
+            Back to Sessions
+          </Button>
+        </HStack>
+        <AccessDenied
+          reason={permissionResult.reason}
+          resourceType="session"
+          action={
+            <Button variant="secondary" onClick={handleBack}>
+              View Available Sessions
+            </Button>
+          }
+        />
+      </Box>
+    );
+  }
+
   return (
     <Box
       style={{
@@ -297,6 +343,23 @@ export function SessionDetailContent({
             <Text size="xs" color="muted">
               {session.messageCount} msgs
             </Text>
+            {/* Show session owner in team mode */}
+            {isHosted && session.owner && (
+              <>
+                <Text color="muted" size="sm">
+                  |
+                </Text>
+                <SessionOwner
+                  owner={{
+                    id: session.owner.id,
+                    email: session.owner.email,
+                    name: session.owner.name,
+                    avatarUrl: session.owner.avatarUrl ?? undefined,
+                  }}
+                  size="sm"
+                />
+              </>
+            )}
           </HStack>
           <Button variant="secondary" size="sm" onClick={handleBack}>
             Back to Sessions
