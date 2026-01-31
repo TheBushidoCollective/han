@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- reorganize plugins from branded to tech layer categories (#45) ([23a8c08a](../../commit/23a8c08a))
+- format authors with "and" before last name ([37c03261](../../commit/37c03261))
+- map git usernames to full display names ([6d6b9cec](../../commit/6d6b9cec))
+- derive authors from git contributors sorted by commit count ([f9a03cf2](../../commit/f9a03cf2))
+- unify markdown rendering with syntax highlighting ([321b2f10](../../commit/321b2f10))
+- refine workflow model from elaboration discussion ([b583b142](../../commit/b583b142))
+
+### Fixed
+
+- enable auto-fix for all branch pushes and fix validation errors ([a25a22f8](../../commit/a25a22f8))
+- designers as builders, not just curators ([90f9a6e7](../../commit/90f9a6e7))
+- reframe "building is designing" as empowerment, not replacement ([e2188397](../../commit/e2188397))
+
+### Other
+
+- Update version entry for v3 in ai-dlc-2026.versions ([5cf9fc5c](../../commit/5cf9fc5c))
+- fix biome formatting and add lint suppression ([b808d392](../../commit/b808d392))
+- apply biome formatting fixes ([810df24a](../../commit/810df24a))
+- publish paper v3 ([fa99438f](../../commit/fa99438f))
+- rewrite as marketing piece for Han vs standard plugins ([bd481969](../../commit/bd481969))
+- announce third-party plugin platform ([39a19234](../../commit/39a19234))
+- add comprehensive plugin development guide ([823da54e](../../commit/823da54e))
+
+## [1.36.0] - 2026-01-31
+
+### Added
+
 - format authors with "and" before last name ([37c03261](../../commit/37c03261))
 - map git usernames to full display names ([6d6b9cec](../../commit/6d6b9cec))
 - derive authors from git contributors sorted by commit count ([f9a03cf2](../../commit/f9a03cf2))
