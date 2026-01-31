@@ -1,0 +1,13 @@
+{
+  "name": "shfmt",
+  "version": "1.2.0",
+  "description": "Validation and quality enforcement for shell scripts using shfmt.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["shell", "bash", "shfmt", "formatter", "validation", "quality"]
+}

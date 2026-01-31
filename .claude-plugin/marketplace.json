@@ -54,10 +54,10 @@
       "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
     },
     {
-      "name": "jutsu-ameba",
+      "name": "ameba",
       "description": "Ameba skills for Crystal code analysis and style checking",
-      "source": "./jutsu/jutsu-ameba",
-      "category": "Technique",
+      "source": "./validation/ameba",
+      "category": "Validation",
       "keywords": ["crystal", "linting", "style", "analysis"]
     },
     {
@@ -120,10 +120,10 @@
       ]
     },
     {
-      "name": "jutsu-biome",
+      "name": "biome",
       "description": "Comprehensive Biome skills for fast JavaScript/TypeScript linting and formatting with modern tooling and performance optimization.",
-      "source": "./jutsu/jutsu-biome",
-      "category": "Technique",
+      "source": "./validation/biome",
+      "category": "Validation",
       "keywords": [
         "biome",
         "linting",
@@ -185,10 +185,10 @@
       ]
     },
     {
-      "name": "jutsu-checkstyle",
+      "name": "checkstyle",
       "description": "Comprehensive Checkstyle skills for Java code quality and style enforcement with configuration, checks, and custom check development.",
-      "source": "./jutsu/jutsu-checkstyle",
-      "category": "Technique",
+      "source": "./validation/checkstyle",
+      "category": "Validation",
       "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
@@ -255,10 +255,10 @@
       ]
     },
     {
-      "name": "jutsu-clippy",
+      "name": "clippy",
       "description": "Comprehensive Clippy skills for Rust linting and code quality with lint configuration, categories, and custom lint development.",
-      "source": "./jutsu/jutsu-clippy",
-      "category": "Technique",
+      "source": "./validation/clippy",
+      "category": "Validation",
       "keywords": ["clippy", "linting", "rust", "skill"]
     },
     {
@@ -269,10 +269,10 @@
       "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"]
     },
     {
-      "name": "jutsu-credo",
+      "name": "credo",
       "description": "Credo skills for Elixir code analysis and style checking",
-      "source": "./jutsu/jutsu-credo",
-      "category": "Technique",
+      "source": "./validation/credo",
+      "category": "Validation",
       "keywords": ["elixir", "linting", "style", "analysis"]
     },
     {
@@ -310,10 +310,10 @@
       "keywords": ["cypress", "testing", "e2e", "javascript", "skill"]
     },
     {
-      "name": "jutsu-dialyzer",
+      "name": "dialyzer",
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
-      "source": "./jutsu/jutsu-dialyzer",
-      "category": "Technique",
+      "source": "./validation/dialyzer",
+      "category": "Validation",
       "keywords": ["elixir", "erlang", "static-analysis", "types"]
     },
     {
@@ -379,10 +379,10 @@
       "keywords": ["esbuild", "bundler", "build", "javascript", "typescript"]
     },
     {
-      "name": "jutsu-eslint",
+      "name": "eslint",
       "description": "Comprehensive ESLint skills for JavaScript and TypeScript linting with configuration, rules, and custom plugin development.",
-      "source": "./jutsu/jutsu-eslint",
-      "category": "Technique",
+      "source": "./validation/eslint",
+      "category": "Validation",
       "keywords": ["eslint", "linting", "javascript", "typescript", "skill"]
     },
     {
@@ -546,10 +546,10 @@
       "keywords": ["lua", "scripting", "embedded", "gaming", "skill"]
     },
     {
-      "name": "jutsu-markdown",
+      "name": "markdown",
       "description": "Markdown documentation skills and linting with markdownlint for consistent formatting.",
-      "source": "./jutsu/jutsu-markdown",
-      "category": "Technique",
+      "source": "./validation/markdown",
+      "category": "Validation",
       "keywords": [
         "markdown",
         "markdownlint",
@@ -665,10 +665,10 @@
       ]
     },
     {
-      "name": "jutsu-prettier",
+      "name": "prettier",
       "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
-      "source": "./jutsu/jutsu-prettier",
-      "category": "Technique",
+      "source": "./validation/prettier",
+      "category": "Validation",
       "keywords": [
         "prettier",
         "formatting",
@@ -685,10 +685,10 @@
       "keywords": ["pulumi", "infrastructure", "iac", "devops"]
     },
     {
-      "name": "jutsu-pylint",
+      "name": "pylint",
       "description": "Comprehensive Pylint skills for Python linting and code quality with configuration, checkers, and CI integration.",
-      "source": "./jutsu/jutsu-pylint",
-      "category": "Technique",
+      "source": "./validation/pylint",
+      "category": "Validation",
       "keywords": ["pylint", "linting", "python", "skill"]
     },
     {
@@ -769,10 +769,10 @@
       "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"]
     },
     {
-      "name": "jutsu-rubocop",
+      "name": "rubocop",
       "description": "Comprehensive RuboCop skills for Ruby linting and style enforcement with configuration, cops, and CI integration.",
-      "source": "./jutsu/jutsu-rubocop",
-      "category": "Technique",
+      "source": "./validation/rubocop",
+      "category": "Validation",
       "keywords": ["rubocop", "linting", "ruby", "skill"]
     },
     {
@@ -806,10 +806,10 @@
       "keywords": ["scala", "functional", "jvm", "type-system", "skill"]
     },
     {
-      "name": "jutsu-shellcheck",
+      "name": "shellcheck",
       "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck with portability and error handling skills.",
-      "source": "./jutsu/jutsu-shellcheck",
-      "category": "Technique",
+      "source": "./validation/shellcheck",
+      "category": "Validation",
       "keywords": [
         "bash",
         "shell",
@@ -820,10 +820,10 @@
       ]
     },
     {
-      "name": "jutsu-shfmt",
+      "name": "shfmt",
       "description": "Validation and quality enforcement for shell scripts using shfmt formatter with configuration, formatting patterns, and best practices.",
-      "source": "./jutsu/jutsu-shfmt",
-      "category": "Technique",
+      "source": "./validation/shfmt",
+      "category": "Validation",
       "keywords": ["bash", "shell", "shfmt", "formatter", "validation", "posix"]
     },
     {
