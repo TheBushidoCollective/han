@@ -1,0 +1,13 @@
+{
+  "name": "embedded",
+  "version": "1.1.2",
+  "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["embedded-systems", "firmware", "iot"]
+}

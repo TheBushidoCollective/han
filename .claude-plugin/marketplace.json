@@ -1654,9 +1654,9 @@
       ]
     },
     {
-      "name": "do-accessibility-engineering",
+      "name": "accessibility",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
-      "source": "./do/do-accessibility-engineering",
+      "source": "./disciplines/accessibility",
       "category": "Discipline",
       "keywords": [
         "accessibility",
@@ -1666,9 +1666,9 @@
       ]
     },
     {
-      "name": "do-api-engineering",
+      "name": "api",
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
-      "source": "./do/do-api-engineering",
+      "source": "./disciplines/api",
       "category": "Discipline",
       "keywords": [
         "api",
@@ -1678,9 +1678,9 @@
       ]
     },
     {
-      "name": "do-architecture",
+      "name": "architecture",
       "description": "Agents for system design and architectural thinking.",
-      "source": "./do/do-architecture",
+      "source": "./disciplines/architecture",
       "category": "Discipline",
       "keywords": [
         "architecture",
@@ -1689,9 +1689,9 @@
       ]
     },
     {
-      "name": "do-backend-development",
+      "name": "backend",
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
-      "source": "./do/do-backend-development",
+      "source": "./disciplines/backend",
       "category": "Discipline",
       "keywords": [
         "backend",
@@ -1703,9 +1703,9 @@
       ]
     },
     {
-      "name": "do-blockchain-development",
+      "name": "blockchain",
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
-      "source": "./do/do-blockchain-development",
+      "source": "./disciplines/blockchain",
       "category": "Discipline",
       "keywords": [
         "blockchain",
@@ -1715,9 +1715,9 @@
       ]
     },
     {
-      "name": "do-claude-plugin-development",
+      "name": "plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./do/do-claude-plugin-development",
+      "source": "./disciplines/plugin-development",
       "category": "Discipline",
       "keywords": [
         "plugin",
@@ -1728,9 +1728,9 @@
       ]
     },
     {
-      "name": "do-compiler-development",
+      "name": "compilers",
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-      "source": "./do/do-compiler-development",
+      "source": "./disciplines/compilers",
       "category": "Discipline",
       "keywords": [
         "compiler",
@@ -1740,9 +1740,9 @@
       ]
     },
     {
-      "name": "do-content-creator",
+      "name": "content",
       "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-      "source": "./do/do-content-creator",
+      "source": "./disciplines/content",
       "category": "Discipline",
       "keywords": [
         "content",
@@ -1754,9 +1754,9 @@
       ]
     },
     {
-      "name": "do-data-engineering",
+      "name": "data-engineering",
       "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
-      "source": "./do/do-data-engineering",
+      "source": "./disciplines/data-engineering",
       "category": "Discipline",
       "keywords": [
         "data-engineering",
@@ -1766,9 +1766,9 @@
       ]
     },
     {
-      "name": "do-database-engineering",
+      "name": "databases",
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
-      "source": "./do/do-database-engineering",
+      "source": "./disciplines/databases",
       "category": "Discipline",
       "keywords": [
         "database",
@@ -1778,9 +1778,9 @@
       ]
     },
     {
-      "name": "do-embedded-development",
+      "name": "embedded",
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
-      "source": "./do/do-embedded-development",
+      "source": "./disciplines/embedded",
       "category": "Discipline",
       "keywords": [
         "embedded-systems",
@@ -1790,9 +1790,9 @@
       ]
     },
     {
-      "name": "do-frontend-development",
+      "name": "frontend",
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-      "source": "./do/do-frontend-development",
+      "source": "./disciplines/frontend",
       "category": "Discipline",
       "keywords": [
         "frontend",
@@ -1804,9 +1804,9 @@
       ]
     },
     {
-      "name": "do-game-development",
+      "name": "games",
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
-      "source": "./do/do-game-development",
+      "source": "./disciplines/games",
       "category": "Discipline",
       "keywords": [
         "game-development",
@@ -1816,9 +1816,9 @@
       ]
     },
     {
-      "name": "do-graphics-engineering",
+      "name": "graphics",
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./do/do-graphics-engineering",
+      "source": "./disciplines/graphics",
       "category": "Discipline",
       "keywords": [
         "graphics",
@@ -1828,9 +1828,9 @@
       ]
     },
     {
-      "name": "do-infrastructure",
+      "name": "infrastructure",
       "description": "Agents for operational excellence and reliability engineering.",
-      "source": "./do/do-infrastructure",
+      "source": "./disciplines/infrastructure",
       "category": "Discipline",
       "keywords": [
         "devops",
@@ -1840,9 +1840,9 @@
       ]
     },
     {
-      "name": "do-machine-learning-engineering",
+      "name": "machine-learning",
       "description": "ML engineering agents providing expertise in MLOps, model deployment, and inference optimization",
-      "source": "./do/do-machine-learning-engineering",
+      "source": "./disciplines/machine-learning",
       "category": "Discipline",
       "keywords": [
         "ml-engineering",
@@ -1852,9 +1852,9 @@
       ]
     },
     {
-      "name": "do-mobile-development",
+      "name": "mobile",
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
-      "source": "./do/do-mobile-development",
+      "source": "./disciplines/mobile",
       "category": "Discipline",
       "keywords": [
         "mobile",
@@ -1865,9 +1865,9 @@
       ]
     },
     {
-      "name": "do-network-engineering",
+      "name": "networking",
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
-      "source": "./do/do-network-engineering",
+      "source": "./disciplines/networking",
       "category": "Discipline",
       "keywords": [
         "network",
@@ -1877,9 +1877,9 @@
       ]
     },
     {
-      "name": "do-observability-engineering",
+      "name": "observability",
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-      "source": "./do/do-observability-engineering",
+      "source": "./disciplines/observability",
       "category": "Discipline",
       "keywords": [
         "observability",
@@ -1889,9 +1889,9 @@
       ]
     },
     {
-      "name": "do-performance-engineering",
+      "name": "performance",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
-      "source": "./do/do-performance-engineering",
+      "source": "./disciplines/performance",
       "category": "Discipline",
       "keywords": [
         "performance",
@@ -1901,9 +1901,9 @@
       ]
     },
     {
-      "name": "do-platform-engineering",
+      "name": "platform",
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
-      "source": "./do/do-platform-engineering",
+      "source": "./disciplines/platform",
       "category": "Discipline",
       "keywords": [
         "platform-engineering",
@@ -1913,9 +1913,9 @@
       ]
     },
     {
-      "name": "do-product-management",
+      "name": "product",
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
-      "source": "./do/do-product-management",
+      "source": "./disciplines/product",
       "category": "Discipline",
       "keywords": [
         "product",
@@ -1926,9 +1926,9 @@
       ]
     },
     {
-      "name": "do-project-management",
+      "name": "project-management",
       "description": "Agents for workflow orchestration and team coordination.",
-      "source": "./do/do-project-management",
+      "source": "./disciplines/project-management",
       "category": "Discipline",
       "keywords": [
         "project-management",
@@ -1937,9 +1937,9 @@
       ]
     },
     {
-      "name": "do-prompt-engineering",
+      "name": "prompts",
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
-      "source": "./do/do-prompt-engineering",
+      "source": "./disciplines/prompts",
       "category": "Discipline",
       "keywords": [
         "prompt-engineering",
@@ -1949,9 +1949,9 @@
       ]
     },
     {
-      "name": "do-quality-assurance",
+      "name": "quality",
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
-      "source": "./do/do-quality-assurance",
+      "source": "./disciplines/quality",
       "category": "Discipline",
       "keywords": [
         "quality",
@@ -1962,9 +1962,9 @@
       ]
     },
     {
-      "name": "do-security-engineering",
+      "name": "security",
       "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
-      "source": "./do/do-security-engineering",
+      "source": "./disciplines/security",
       "category": "Discipline",
       "keywords": [
         "security",
@@ -1975,9 +1975,9 @@
       ]
     },
     {
-      "name": "do-site-reliability-engineering",
+      "name": "sre",
       "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-      "source": "./do/do-site-reliability-engineering",
+      "source": "./disciplines/sre",
       "category": "Discipline",
       "keywords": [
         "sre",
@@ -1989,9 +1989,9 @@
       ]
     },
     {
-      "name": "do-technical-documentation",
+      "name": "documentation",
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-      "source": "./do/do-technical-documentation",
+      "source": "./disciplines/documentation",
       "category": "Discipline",
       "keywords": [
         "documentation",
@@ -2001,9 +2001,9 @@
       ]
     },
     {
-      "name": "do-voip-engineering",
+      "name": "voip",
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
-      "source": "./do/do-voip-engineering",
+      "source": "./disciplines/voip",
       "category": "Discipline",
       "keywords": [
         "voip",
