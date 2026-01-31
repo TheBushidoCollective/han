@@ -110,6 +110,7 @@ Build the authentication system...
 ```
 
 Every subagent automatically knows:
+
 - What it's building and why
 - What branch to work on
 - What to do before stopping
@@ -140,6 +141,7 @@ Standard plugins are islands. Each one does its thing, unaware of the others.
 Han plugins are an ecosystem:
 
 **Semantic categories** tell Claude what each plugin does:
+
 - **Jutsu** (techniques): Skills and validation for languages/tools
 - **Do** (disciplines): Specialized agents for domains
 - **Hashi** (bridges): MCP integrations to external services
@@ -155,6 +157,7 @@ Today, we're opening Han to third-party plugins.
 Build your own jutsu for your internal linter. Create a do agent for your compliance workflow. Ship a hashi bridge to your internal APIs.
 
 You get all of Han's intelligent infrastructure:
+
 - Resource-efficient hooks with `if_changed` and caching
 - Dependency resolution and phase ordering
 - Subagent context injection

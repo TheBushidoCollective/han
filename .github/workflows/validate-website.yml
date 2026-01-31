@@ -6,8 +6,6 @@ on:
       - "website/**"
       - ".github/workflows/validate-website.yml"
   push:
-    branches:
-      - main
     paths:
       - "website/**"
       - ".github/workflows/validate-website.yml"
