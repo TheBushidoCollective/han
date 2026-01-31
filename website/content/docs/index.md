@@ -11,6 +11,7 @@ Welcome to the Han documentation. Han brings automatic quality gates to Claude C
 - [Installation](/docs/installation) - Get started with Han in minutes
 - [Plugin Categories](/docs/plugin-categories) - Explore the four types of Han plugins
 - [Configuration](/docs/configuration) - Customize Han for your workflow
+- [Plugin Development](/docs/plugin-development) - Create your own Han plugins
 - [CLI Reference](/docs/cli) - Complete command-line interface guide
 - [Metrics System](/docs/metrics) - Understand how Han tracks and improves quality
 
