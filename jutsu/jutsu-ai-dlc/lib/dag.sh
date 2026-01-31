@@ -8,6 +8,11 @@
 # branch: ai-dlc/intent/04-auth
 # ---
 
+# Source configuration system
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=config.sh
+source "$SCRIPT_DIR/config.sh"
+
 # Parse unit status from frontmatter
 # Usage: parse_unit_status <unit_file>
 parse_unit_status() {
