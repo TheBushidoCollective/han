@@ -70,6 +70,18 @@ jobs:
         run: biome lint --files-ignore-unknown=true .
         working-directory: ./packages/han
 
+      - name: Generate build-info stub
+        working-directory: ./packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          // Auto-generated stub for CI
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
+
       - name: TypeScript type check
         run: bun run tsc --noEmit
         working-directory: ./packages/han
