@@ -102,7 +102,12 @@ export interface MultiStrategySearchResult {
 	};
 }
 
-/** RRF constant - higher values smooth ranking differences */
+/**
+ * Reciprocal Rank Fusion constant (k=60 is standard in IR literature)
+ * Higher values smooth ranking differences between strategies.
+ * k=60 is the commonly used value from the original RRF paper:
+ * "Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods"
+ */
 const RRF_K = 60;
 
 /** Default per-strategy timeout */

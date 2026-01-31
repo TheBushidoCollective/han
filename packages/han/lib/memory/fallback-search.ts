@@ -23,7 +23,8 @@
  * ```
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { createInterface } from "node:readline";
 import { join, basename, dirname } from "node:path";
 import type { SearchResultWithCitation } from "./multi-strategy-search.ts";
 import { findAllTranscriptFiles, getClaudeProjectsDir } from "./transcript-search.ts";
@@ -293,8 +294,11 @@ export async function scanRecentSessions(
 						browseUrl: `/sessions/${session.sessionId}`,
 					});
 				}
-			} catch {
-				// Skip sessions that can't be read
+			} catch (sessionError) {
+				// Log at debug level - skip sessions that can't be read
+				if (process.env.HAN_DEBUG) {
+					console.warn(`[recent_sessions] Failed to read session ${session.sessionId}:`, sessionError instanceof Error ? sessionError.message : String(sessionError));
+				}
 			}
 		}
 
@@ -362,15 +366,18 @@ export async function grepTranscripts(
 				try {
 					const stat = statSync(filePath);
 					sortedTranscripts.push({ slug, filePath, mtime: stat.mtimeMs });
-				} catch {
-					// Skip files that can't be stat'd
+				} catch (statError) {
+					// Log at debug level - skip files that can't be stat'd
+					if (process.env.HAN_DEBUG) {
+						console.warn(`[grep] Failed to stat ${filePath}:`, statError instanceof Error ? statError.message : String(statError));
+					}
 				}
 			}
 		}
 
 		sortedTranscripts.sort((a, b) => b.mtime - a.mtime);
 
-		// Search through files
+		// Search through files using streaming to avoid OOM on large files
 		for (const { slug, filePath, mtime } of sortedTranscripts) {
 			// Check timeout
 			if (Date.now() - startTime > timeout) {
@@ -383,65 +390,101 @@ export async function grepTranscripts(
 			}
 
 			try {
-				const content = readFileSync(filePath, "utf-8");
-				const lines = content.split("\n");
 				const sessionId = basename(filePath, ".jsonl").replace(/-han$/, "");
 
-				for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-					const line = lines[lineNum];
-					if (!line.trim()) continue;
+				// Use streaming to read file line-by-line (avoids OOM on large files)
+				await new Promise<void>((resolve, reject) => {
+					const stream = createReadStream(filePath, { encoding: "utf-8" });
+					const rl = createInterface({ input: stream, crlfDelay: Infinity });
+					let lineNum = 0;
+					let aborted = false;
 
-					try {
-						const entry = JSON.parse(line);
-						let text = "";
+					rl.on("line", (line) => {
+						if (aborted) return;
 
-						// Extract searchable text
-						if (entry.message?.content) {
-							const msgContent = entry.message.content;
-							if (typeof msgContent === "string") {
-								text = msgContent;
-							} else if (Array.isArray(msgContent)) {
-								for (const block of msgContent) {
-									if (block.type === "text" && block.text) {
-										text += block.text + " ";
+						// Check timeout during streaming
+						if (Date.now() - startTime > timeout) {
+							aborted = true;
+							rl.close();
+							stream.destroy();
+							return;
+						}
+
+						lineNum++;
+						if (!line.trim()) return;
+
+						try {
+							const entry = JSON.parse(line);
+							let text = "";
+
+							// Extract searchable text
+							if (entry.message?.content) {
+								const msgContent = entry.message.content;
+								if (typeof msgContent === "string") {
+									text = msgContent;
+								} else if (Array.isArray(msgContent)) {
+									for (const block of msgContent) {
+										if (block.type === "text" && block.text) {
+											text += block.text + " ";
+										}
 									}
 								}
+							} else if (entry.type === "summary" && entry.summary) {
+								text = entry.summary;
 							}
-						} else if (entry.type === "summary" && entry.summary) {
-							text = entry.summary;
-						}
 
-						if (!text) continue;
+							if (!text) return;
 
-						// Check for query match
-						const textLower = text.toLowerCase();
-						let matchCount = 0;
-						for (const word of queryWords) {
-							if (textLower.includes(word)) matchCount++;
-						}
+							// Check for query match
+							const textLower = text.toLowerCase();
+							let matchCount = 0;
+							for (const word of queryWords) {
+								if (textLower.includes(word)) matchCount++;
+							}
 
-						if (matchCount > 0) {
-							const score = matchCount / queryWords.length;
-							results.push({
-								id: `grep:${sessionId}:${lineNum}`,
-								content: text.slice(0, 500), // First 500 chars
-								score,
-								layer: "grep",
-								metadata: {
-									sessionId,
-									projectSlug: slug,
-									lineNumber: lineNum,
-									lastModified: mtime,
-								},
-								browseUrl: `/sessions/${sessionId}#line-${lineNum}`,
-							});
+							if (matchCount > 0) {
+								const score = matchCount / queryWords.length;
+								results.push({
+									id: `grep:${sessionId}:${lineNum}`,
+									content: text.slice(0, 500), // First 500 chars
+									score,
+									layer: "grep",
+									metadata: {
+										sessionId,
+										projectSlug: slug,
+										lineNumber: lineNum,
+										lastModified: mtime,
+									},
+									browseUrl: `/sessions/${sessionId}#line-${lineNum}`,
+								});
+							}
+						} catch (parseError) {
+							// Skip unparseable lines - this is expected for malformed JSON
+							if (process.env.HAN_DEBUG) {
+								console.warn(`[grep] Skipping unparseable line ${lineNum} in ${filePath}`);
+							}
 						}
-					} catch {
-						// Skip unparseable lines
-					}
+					});
+
+					rl.on("close", resolve);
+					rl.on("error", (err) => {
+						if (process.env.HAN_DEBUG) {
+							console.warn(`[grep] Error reading ${filePath}:`, err.message);
+						}
+						resolve(); // Don't reject, just skip this file
+					});
+					stream.on("error", (err) => {
+						if (process.env.HAN_DEBUG) {
+							console.warn(`[grep] Stream error for ${filePath}:`, err.message);
+						}
+						resolve(); // Don't reject, just skip this file
+					});
+				});
+			} catch (fileError) {
+				// Log file read errors at debug level
+				if (process.env.HAN_DEBUG) {
+					console.warn(`[grep] Failed to process ${filePath}:`, fileError instanceof Error ? fileError.message : String(fileError));
 				}
-			} catch {
-				// Skip files that can't be read
 			}
 		}
 
@@ -451,7 +494,10 @@ export async function grepTranscripts(
 		const seenSessions = new Set<string>();
 		const deduped: SearchResultWithCitation[] = [];
 		for (const result of results) {
-			const sessionId = result.metadata?.sessionId as string;
+			// Use nullish coalescing for type safety instead of 'as string'
+			const sessionId = typeof result.metadata?.sessionId === "string"
+				? result.metadata.sessionId
+				: "unknown";
 			if (!seenSessions.has(sessionId)) {
 				seenSessions.add(sessionId);
 				deduped.push(result);

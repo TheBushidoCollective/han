@@ -49,6 +49,22 @@ Respond ONLY with valid JSON in this exact format:
 {"summary": "2-3 sentence summary here", "topics": ["topic-1", "topic-2"], "outcome": "completed|partial|abandoned"}`;
 
 /**
+ * Validate API key format
+ * Anthropic API keys typically start with sk-ant- and are 40+ characters
+ */
+function isValidApiKeyFormat(apiKey: string): boolean {
+	// Must be a non-empty string with reasonable length
+	if (!apiKey || apiKey.length < 20) return false;
+
+	// Anthropic keys start with sk-ant- (public) or similar patterns
+	// Allow any sk- prefix for flexibility with different key types
+	if (apiKey.startsWith("sk-")) return true;
+
+	// Also accept test keys that might use different patterns
+	return /^[a-zA-Z0-9_-]{20,}$/.test(apiKey);
+}
+
+/**
  * Build a transcript summary for LLM analysis
  */
 function buildTranscriptForSummary(
@@ -210,10 +226,13 @@ export async function generateSessionSummary(
 		includeToolInputs,
 	);
 
-	// Check for API key
+	// Check for API key and validate format
 	const apiKey = process.env.ANTHROPIC_API_KEY;
-	if (!apiKey) {
+	if (!apiKey || !isValidApiKeyFormat(apiKey)) {
 		// Return a basic summary without LLM
+		if (process.env.HAN_DEBUG && apiKey && !isValidApiKeyFormat(apiKey)) {
+			console.warn("[summary] ANTHROPIC_API_KEY appears malformed - expected sk-ant-* or similar format");
+		}
 		return {
 			summaryText: `Session with ${messages.length} messages. ${filesModified.length} files modified.`,
 			topics: toolsUsed.slice(0, 5).map((t) => t.toLowerCase()),
