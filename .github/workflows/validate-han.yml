@@ -40,6 +40,15 @@ jobs:
         run: biome lint --files-ignore-unknown=true .
         working-directory: ./packages/han
 
+      - name: Generate build-info stub for type checking
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          // Auto-generated stub for CI type checking
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "";
+          EOF
+        working-directory: ./packages/han
+
       - name: TypeScript type check
         run: bun run tsc --noEmit
         working-directory: ./packages/han
