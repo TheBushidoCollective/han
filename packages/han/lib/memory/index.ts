@@ -43,6 +43,8 @@ export type {
 	MemoryLayer,
 	MultiStrategySearchOptions,
 	MultiStrategySearchResult,
+	MultiStrategySearchWithFallbacksOptions,
+	MultiStrategySearchWithFallbacksResult,
 	SearchResultWithCitation,
 	SearchStrategy,
 	StrategyResult,
@@ -52,7 +54,26 @@ export {
 	executeStrategy,
 	fuseResults,
 	multiStrategySearch,
+	multiStrategySearchWithFallbacks,
 } from "./multi-strategy-search.ts";
+// Fallback Search
+export type {
+	FallbackResult,
+	FallbackStrategy,
+	SearchWithFallbacksOptions,
+	SearchWithFallbacksResult,
+} from "./fallback-search.ts";
+export {
+	calculateKeywordScore,
+	calculateTemporalScore,
+	detectTemporalQuery,
+	executeFallbacks,
+	getRecentSessions,
+	grepTranscripts,
+	isVagueQuery,
+	needsClarification,
+	scanRecentSessions,
+} from "./fallback-search.ts";
 export {
 	getTableName,
 	hybridSearch,

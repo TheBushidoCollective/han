@@ -30,9 +30,16 @@ import {
 } from "../../memory/index.ts";
 import {
 	type MultiStrategySearchResult,
+	type MultiStrategySearchWithFallbacksResult,
 	type SearchStrategy,
 	multiStrategySearch,
+	multiStrategySearchWithFallbacks,
 } from "../../memory/multi-strategy-search.ts";
+import {
+	grepTranscripts,
+	scanRecentSessions,
+	detectTemporalQuery,
+} from "../../memory/fallback-search.ts";
 import { tryGetNativeModule } from "../../native.ts";
 
 interface JsonRpcRequest {
@@ -630,6 +637,113 @@ const DAL_TOOLS: McpTool[] = [
 			required: ["query"],
 		},
 	},
+	{
+		name: "memory_search_with_fallbacks",
+		description:
+			"BEST FOR COMPREHENSIVE SEARCH: Multi-strategy search with automatic fallbacks. " +
+			"Runs all strategies in parallel, then applies fallbacks if no results: " +
+			"1) Recent sessions scan (for 'what was I working on' queries), " +
+			"2) Raw JSONL grep (slow but thorough), " +
+			"3) Returns clarification prompt if query is ambiguous. " +
+			"Use this when you need guaranteed coverage and are willing to wait longer.",
+		annotations: {
+			title: "Search with Fallbacks",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "The search query (can be keywords or natural language)",
+				},
+				layer: {
+					type: "string",
+					enum: ["rules", "transcripts", "team", "all"],
+					description:
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				enableGrep: {
+					type: "boolean",
+					description:
+						"Whether to enable raw grep fallback (slower but thorough). Default: true",
+				},
+				grepTimeout: {
+					type: "number",
+					description: "Timeout for grep fallback in milliseconds (default: 5000)",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "memory_grep_transcripts",
+		description:
+			"Raw grep search through transcript JSONL files. Use as a LAST RESORT " +
+			"when FTS and other strategies return nothing. Slower but guaranteed to find " +
+			"exact matches. Searches most recent files first.",
+		annotations: {
+			title: "Grep Transcripts",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "Search query (keywords to match)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				timeout: {
+					type: "number",
+					description: "Search timeout in milliseconds (default: 5000)",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "memory_scan_recent_sessions",
+		description:
+			"Scan the most recently modified sessions. Best for temporal queries like " +
+			"'what was I working on yesterday' or 'recent activity'. " +
+			"Returns sessions sorted by modification time with relevance scoring.",
+		annotations: {
+			title: "Scan Recent Sessions",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description:
+						"Optional search query to filter results. If empty, returns most recent sessions.",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum sessions to return (default: 10)",
+				},
+			},
+			required: [],
+		},
+	},
 ];
 
 function handleInitialize(): unknown {
@@ -843,6 +957,132 @@ async function handleToolsCall(params: {
 										error: sr.error,
 									})),
 									searchStats: result.searchStats,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_search_with_fallbacks": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const layer = (args.layer as MemoryLayer) || "all";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const enableGrep = args.enableGrep !== false; // Default true
+				const grepTimeout =
+					typeof args.grepTimeout === "number" ? args.grepTimeout : 5000;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await multiStrategySearchWithFallbacks(
+					{
+						query,
+						layer,
+						limit,
+						enableFallbacks: true,
+						enableGrep,
+						grepTimeout,
+					},
+					{
+						searchMemoryFts,
+						searchMemoryVector,
+						searchSummariesNative: searchSummariesForMultiStrategy,
+					},
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "multi_strategy_with_fallbacks",
+									layer,
+									confidence: result.confidence,
+									strategiesAttempted: result.strategiesAttempted,
+									strategiesSucceeded: result.strategiesSucceeded,
+									fallbacksUsed: result.fallbacksUsed,
+									fallbacksAttempted: result.fallbacksAttempted,
+									clarificationPrompt: result.clarificationPrompt,
+									resultCount: result.results.length,
+									results: result.results,
+									strategyResults: result.strategyResults.map((sr) => ({
+										strategy: sr.strategy,
+										resultCount: sr.results.length,
+										duration: sr.duration,
+										success: sr.success,
+										error: sr.error,
+									})),
+									searchStats: result.searchStats,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_grep_transcripts": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const timeout = typeof args.timeout === "number" ? args.timeout : 5000;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await grepTranscripts(query, { limit, timeout });
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "grep",
+									success: result.success,
+									duration: result.duration,
+									error: result.error,
+									resultCount: result.results.length,
+									results: result.results,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_scan_recent_sessions": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+
+				const result = await scanRecentSessions(query || "recent activity", {
+					limit,
+				});
+
+				// Check if this is a temporal query for additional context
+				const isTemporal = query ? detectTemporalQuery(query) : true;
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "recent_sessions",
+									isTemporalQuery: isTemporal,
+									success: result.success,
+									duration: result.duration,
+									error: result.error,
+									resultCount: result.results.length,
+									results: result.results,
 								},
 								null,
 								2,

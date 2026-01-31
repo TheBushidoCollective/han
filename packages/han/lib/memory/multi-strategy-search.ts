@@ -379,3 +379,144 @@ export async function multiStrategySearch(
 		},
 	};
 }
+
+/**
+ * Options for multi-strategy search with fallbacks
+ */
+export interface MultiStrategySearchWithFallbacksOptions
+	extends MultiStrategySearchOptions {
+	/** Whether to enable fallback strategies (default: true) */
+	enableFallbacks?: boolean;
+	/** Whether to run grep fallback (slow, default: true) */
+	enableGrep?: boolean;
+	/** Timeout for grep in ms (default: 5000) */
+	grepTimeout?: number;
+	/** Number of recent sessions to scan (default: 10) */
+	recentSessionsLimit?: number;
+}
+
+/**
+ * Result from multi-strategy search with fallbacks
+ */
+export interface MultiStrategySearchWithFallbacksResult
+	extends MultiStrategySearchResult {
+	/** Fallback strategies that were used */
+	fallbacksUsed: string[];
+	/** Clarification prompt if query needs more details */
+	clarificationPrompt?: string;
+	/** Whether any fallbacks were attempted */
+	fallbacksAttempted: boolean;
+}
+
+/**
+ * Multi-strategy search with automatic fallbacks
+ *
+ * Extends the standard multi-strategy search with fallback mechanisms:
+ * 1. Primary: FTS + semantic + summaries in parallel (RRF fusion)
+ * 2. Fallback 1: Recent sessions scan (for temporal queries)
+ * 3. Fallback 2: Raw JSONL grep (slow but thorough)
+ * 4. Fallback 3: Clarification prompt (when no results found)
+ *
+ * @example
+ * ```typescript
+ * const result = await multiStrategySearchWithFallbacks({
+ *   query: "what was I working on yesterday",
+ *   layer: "all",
+ *   enableFallbacks: true,
+ * }, searchFns);
+ *
+ * if (result.clarificationPrompt) {
+ *   console.log(result.clarificationPrompt);
+ * }
+ * ```
+ */
+export async function multiStrategySearchWithFallbacks(
+	options: MultiStrategySearchWithFallbacksOptions,
+	searchFns: {
+		searchMemoryFts: (
+			query: string,
+			layer: MemoryLayer,
+			limit: number,
+			expansion: ExpansionLevel,
+		) => Promise<SearchResultWithCitation[]>;
+		searchMemoryVector: (
+			query: string,
+			layer: MemoryLayer,
+			limit: number,
+			expansion: ExpansionLevel,
+		) => Promise<SearchResultWithCitation[]>;
+		searchSummariesNative: (
+			query: string,
+			limit: number,
+		) => Promise<SearchResultWithCitation[]>;
+	},
+): Promise<MultiStrategySearchWithFallbacksResult> {
+	// Import fallback functions dynamically to avoid circular dependencies
+	const { executeFallbacks } = await import("./fallback-search.ts");
+
+	const {
+		enableFallbacks = true,
+		enableGrep = true,
+		grepTimeout = 5000,
+		recentSessionsLimit = 10,
+		...searchOptions
+	} = options;
+
+	// Run primary multi-strategy search first
+	const primaryResult = await multiStrategySearch(searchOptions, searchFns);
+
+	// If fallbacks disabled or we have results, return primary result
+	if (!enableFallbacks || primaryResult.results.length > 0) {
+		return {
+			...primaryResult,
+			fallbacksUsed: [],
+			fallbacksAttempted: false,
+		};
+	}
+
+	// Execute fallbacks
+	const fallbackResult = await executeFallbacks(
+		options.query,
+		primaryResult.results.length,
+		primaryResult.strategiesSucceeded,
+		{
+			enableFallbacks,
+			enableGrep,
+			grepTimeout,
+			recentSessionsLimit,
+		},
+	);
+
+	// Combine results: primary results (if any) + fallback results
+	const combinedResults = [
+		...primaryResult.results,
+		...fallbackResult.results,
+	].slice(0, options.limit || 10);
+
+	// Recalculate confidence based on combined results
+	const hasResults = combinedResults.length > 0;
+	const usedFallbacks = fallbackResult.fallbacksUsed.length > 0;
+
+	// Confidence is lower if we had to use fallbacks
+	let confidence = primaryResult.confidence;
+	if (!hasResults) {
+		confidence = "low";
+	} else if (usedFallbacks && confidence === "high") {
+		confidence = "medium"; // Downgrade if we only got results from fallbacks
+	}
+
+	return {
+		...primaryResult,
+		results: combinedResults,
+		confidence,
+		fallbacksUsed: fallbackResult.fallbacksUsed,
+		clarificationPrompt: fallbackResult.clarificationPrompt,
+		fallbacksAttempted: fallbackResult.fallbacksAttempted,
+		searchStats: {
+			...primaryResult.searchStats,
+			totalDuration:
+				primaryResult.searchStats.totalDuration +
+				fallbackResult.fallbackDuration,
+		},
+	};
+}
