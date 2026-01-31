@@ -20,7 +20,9 @@ hooks:
 
   iterate:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/enforce-iteration.sh"
-    event: Stop
+    event:
+      - Stop
+      - SubagentStop
     description: Enforce iteration pattern - prompt for /clear to continue
     depends_on:
       - plugin: "*"

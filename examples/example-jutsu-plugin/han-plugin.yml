@@ -5,10 +5,12 @@
 # Available hook events: Stop, SessionStart, UserPromptSubmit, PreToolUse, PostToolUse
 
 hooks:
-  # Example validation hook - runs on Stop event
+  # Example validation hook - runs on Stop and SubagentStop events
   # This hook demonstrates a simple validation that always passes
   validate-example:
-    event: Stop
+    event:
+      - Stop
+      - SubagentStop
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/validate-example.sh"
     description: Example validation hook that logs when work completes
     # Only run if certain files were changed (optional)
