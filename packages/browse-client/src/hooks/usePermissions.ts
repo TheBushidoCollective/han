@@ -8,7 +8,6 @@
 
 import { useCallback, useMemo } from 'react';
 import { useMode } from '@/contexts';
-import type { Org, User } from '@/types/auth.ts';
 
 /**
  * Permission check result

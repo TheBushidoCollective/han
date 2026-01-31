@@ -5,6 +5,7 @@
  * Configuration is loaded from environment variables.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.ts";
@@ -100,13 +101,22 @@ let _db: DrizzleDb | null = null;
 export function getPostgresClient(): PostgresClient {
 	if (!_sql) {
 		const config = getPostgresConfig();
+		// SSL configuration - always validate certificates in production
+		// Set POSTGRES_SSL_REJECT_UNAUTHORIZED=false only for development with self-signed certs
+		const sslConfig = config.ssl
+			? {
+					rejectUnauthorized:
+						process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED !== "false",
+				}
+			: false;
+
 		_sql = postgres({
 			host: config.host,
 			port: config.port,
 			database: config.database,
 			username: config.user,
 			password: config.password,
-			ssl: config.ssl ? { rejectUnauthorized: false } : false,
+			ssl: sslConfig,
 			max: config.maxConnections,
 		});
 	}
@@ -161,17 +171,28 @@ export interface TenantContext {
 }
 
 /**
- * Thread-local storage for tenant context
- * In a real implementation, this would use AsyncLocalStorage
+ * AsyncLocalStorage for request-scoped tenant context
+ * This ensures proper isolation between concurrent requests in multi-tenant scenarios.
+ * Each request has its own context that cannot leak to other requests.
  */
-let _currentTenant: TenantContext | null = null;
+const tenantStorage = new AsyncLocalStorage<TenantContext>();
 
 /**
  * Set the current tenant context
  * Call this at the start of each request after authentication
+ *
+ * @deprecated Use withTenantContext() instead for proper async isolation
  */
 export function setTenantContext(context: TenantContext): void {
-	_currentTenant = context;
+	// For backwards compatibility, we store in AsyncLocalStorage
+	// but this only works if called within an async context
+	const store = tenantStorage.getStore();
+	if (store) {
+		// If we're already in a context, update it (this shouldn't normally happen)
+		Object.assign(store, context);
+	}
+	// Note: Without an async context, this is a no-op.
+	// Use withTenantContext() for proper request handling.
 }
 
 /**
@@ -179,35 +200,49 @@ export function setTenantContext(context: TenantContext): void {
  * Throws if no tenant context is set
  */
 export function getTenantContext(): TenantContext {
-	if (!_currentTenant) {
+	const context = tenantStorage.getStore();
+	if (!context) {
 		throw new Error(
-			"No tenant context set. Call setTenantContext() first.",
+			"No tenant context set. Wrap your request handler with withTenantContext().",
 		);
 	}
-	return _currentTenant;
+	return context;
 }
 
 /**
  * Clear the current tenant context
  * Call this at the end of each request
+ *
+ * @deprecated Use withTenantContext() instead - it automatically clears on exit
  */
 export function clearTenantContext(): void {
-	_currentTenant = null;
+	// No-op with AsyncLocalStorage - context is automatically scoped
+	// to the async execution context and cleaned up when it exits
 }
 
 /**
  * Execute a function with a specific tenant context
- * Automatically clears the context when done
+ * This is the recommended way to handle tenant isolation.
+ *
+ * Uses AsyncLocalStorage to ensure the context is:
+ * - Isolated to this specific async execution chain
+ * - Automatically propagated to all nested async calls
+ * - Automatically cleaned up when the function completes
+ * - Cannot leak to concurrent requests
+ *
+ * @example
+ * ```typescript
+ * app.use(async (req, res, next) => {
+ *   const tenant = await authenticateAndGetTenant(req);
+ *   await withTenantContext(tenant, async () => {
+ *     return next();
+ *   });
+ * });
+ * ```
  */
 export async function withTenantContext<T>(
 	context: TenantContext,
 	fn: () => Promise<T>,
 ): Promise<T> {
-	const previousContext = _currentTenant;
-	try {
-		setTenantContext(context);
-		return await fn();
-	} finally {
-		_currentTenant = previousContext;
-	}
+	return tenantStorage.run(context, fn);
 }

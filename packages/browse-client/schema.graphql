@@ -167,6 +167,66 @@ type AssistantMessage implements Message {
   uuid: String
 }
 
+"""Result of an authentication operation"""
+type AuthResult {
+  """Error message (if failed)"""
+  error: String
+
+  """Whether the authentication succeeded"""
+  success: Boolean
+
+  """JWT tokens (if successful)"""
+  tokens: TokenPair
+
+  """The authenticated user (if successful)"""
+  user: AuthUser
+}
+
+"""An active user session"""
+type AuthSession {
+  """When this session was created"""
+  createdAt: DateTime
+
+  """Device information (browser, platform)"""
+  deviceInfo: String
+
+  """When this session expires"""
+  expiresAt: DateTime
+
+  """Unique session identifier"""
+  id: ID
+
+  """IP address of the session"""
+  ipAddress: String
+
+  """Whether this session is still active"""
+  isActive: Boolean
+
+  """The user this session belongs to"""
+  user: AuthUser
+}
+
+"""An authenticated user"""
+type AuthUser {
+  """URL to user's avatar image"""
+  avatarUrl: String
+
+  """When the user account was created"""
+  createdAt: DateTime
+
+  """User's display name"""
+  displayName: String
+
+  """User's email address"""
+  email: String
+
+  """Unique user identifier"""
+  id: ID
+
+  """Number of active sessions"""
+  sessionCount: Int
+}
+
 scalar BigInt
 
 """A cached hook run entry"""
@@ -227,6 +287,18 @@ type Citation {
 
   """Timestamp if known"""
   timestamp: DateTime
+}
+
+"""Visibility level for a citation"""
+enum CitationVisibility {
+  """Only visible to the session owner"""
+  PRIVATE
+
+  """Safe to share broadly within the org"""
+  PUBLIC
+
+  """Visible to team members with repo access"""
+  TEAM
 }
 
 """Summary of Claude user settings"""
@@ -379,6 +451,20 @@ enum EventAction {
   CREATED
   DELETED
   UPDATED
+}
+
+input ExportOptionsInput {
+  """Only export approved learnings"""
+  approvedOnly: Boolean
+
+  """Description for the export"""
+  description: String
+
+  """Filter by domains"""
+  domains: [String!]
+
+  """Include aggregated patterns"""
+  includePatterns: Boolean
 }
 
 """An exposed tool call event"""
@@ -1278,6 +1364,20 @@ type ImageBlock implements ContentBlock {
   type: ContentBlockType
 }
 
+input ImportOptionsInput {
+  """Auto-approve imported learnings"""
+  autoApprove: Boolean
+
+  """Filter to specific domains"""
+  domains: [String!]
+
+  """Dry run without importing"""
+  dryRun: Boolean
+
+  """How to handle duplicates: skip, replace, create_new"""
+  duplicateStrategy: String
+}
+
 """Result of indexing sessions"""
 type IndexingResult {
   """Any errors encountered during indexing"""
@@ -1328,6 +1428,27 @@ type InterruptUserMessage implements Message & UserMessage {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""Result of linking an OAuth provider to an account"""
+type LinkResult {
+  """The new OAuth connection (if successful)"""
+  connection: OAuthConnection
+
+  """Error message (if failed)"""
+  error: String
+
+  """Whether the linking succeeded"""
+  success: Boolean
+}
+
+"""Result of requesting a magic link"""
+type MagicLinkResult {
+  """Status message or error"""
+  message: String
+
+  """Whether the magic link was sent"""
+  success: Boolean
 }
 
 """An MCP server configuration"""
@@ -1566,6 +1687,21 @@ enum MemoryLayer {
   TRANSCRIPTS
 }
 
+"""Information about a memory layer available to the user"""
+type MemoryLayerInfo {
+  """Whether this layer is available to the user"""
+  available: Boolean
+
+  """Human-readable description"""
+  description: String
+
+  """Layer name (personal, project, team, org)"""
+  name: String
+
+  """Number of sessions accessible in this layer"""
+  sessionCount: Int
+}
+
 """A memory learn event"""
 type MemoryLearnMessage implements Message {
   """
@@ -1679,6 +1815,21 @@ type MemoryQueryStartResult {
 
   """Whether the query was started successfully"""
   success: Boolean
+}
+
+"""Memory access scope levels"""
+enum MemoryScope {
+  """Aggregated learnings only (no raw data)"""
+  ORG
+
+  """User's own sessions (always accessible)"""
+  PERSONAL
+
+  """Sessions in projects user belongs to"""
+  PROJECT
+
+  """Sessions visible via repo permissions"""
+  TEAM
 }
 
 """Result from memory search"""
@@ -1894,20 +2045,72 @@ type ModelUsageStats {
   totalTokens: BigInt
 }
 
+"""Result of a moderation action"""
+type ModerationResult {
+  learningId: String
+  message: String
+  success: Boolean
+}
+
 type Mutation {
   """
   Acquire a global execution slot. Returns slot ID if granted, -1 if no slots available.
   """
   acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
 
+  """Approve a pending learning (admin only)"""
+  approveLearning(context: TeamUserContextInput!, learningId: String!, notes: String): ModerationResult
+
+  """Complete OAuth flow after user authorization"""
+  completeOAuth(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): AuthResult
+
+  """Export team knowledge to JSON format"""
+  exportTeamKnowledge(context: TeamUserContextInput!, options: ExportOptionsInput): TeamKnowledgeExportResult
+
+  """Import team knowledge from JSON format"""
+  importTeamKnowledge(
+    context: TeamUserContextInput!
+
+    """JSON string of export data"""
+    importJson: String!
+    options: ImportOptionsInput
+  ): TeamKnowledgeImportResult
+
   """Trigger full indexing of all Claude Code sessions from JSONL files"""
   indexSessions: IndexingResult
+
+  """Initiate OAuth flow with a provider. Returns URL to redirect user to."""
+  initiateOAuth(provider: OAuthProvider!): OAuthInitiateResult
+
+  """Link an OAuth provider to the current user's account"""
+  linkOAuthProvider(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): LinkResult
+
+  """Refresh an existing session using a refresh token"""
+  refreshSession(refreshToken: String!): AuthResult
+
+  """Reject a pending learning (admin only)"""
+  rejectLearning(context: TeamUserContextInput!, learningId: String!, reason: String!): ModerationResult
 
   """Release a previously acquired slot"""
   releaseSlot(pid: Int!, slotId: Int!): SlotReleaseResult
 
   """Remove a plugin from settings"""
   removePlugin(marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
+
+  """Remove a shared learning (admin only)"""
+  removeSharedLearning(context: TeamUserContextInput!, learningId: String!, reason: String!): ModerationResult
+
+  """Request a magic link to be sent to the specified email"""
+  requestMagicLink(email: String!): MagicLinkResult
+
+  """Revoke all sessions for the current user"""
+  revokeAllSessions: Boolean
+
+  """Revoke a specific session"""
+  revokeSession(sessionId: ID!): Boolean
+
+  """Share a personal learning with the team"""
+  shareWithTeam(context: TeamUserContextInput!, input: ShareLearningInput!): ShareLearningResult
 
   """
   Start a memory query with streaming. Returns a session ID to subscribe to progress updates.
@@ -1924,6 +2127,15 @@ type Mutation {
 
   """Enable or disable a plugin"""
   togglePlugin(enabled: Boolean!, marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
+
+  """Remove an OAuth provider connection from the current user's account"""
+  unlinkOAuthProvider(connectionId: ID!): Boolean
+
+  """Update organization sharing policy (admin only)"""
+  updateSharingPolicy(context: TeamUserContextInput!, policy: SharingPolicyInput!): PolicyUpdateResult
+
+  """Verify a magic link token and create a session"""
+  verifyMagicLink(token: String!): AuthResult
 }
 
 """A task from Claude Code's built-in task management system"""
@@ -1994,6 +2206,133 @@ type NodeUpdatedPayload {
 
   """GraphQL typename of the updated node"""
   typename: String
+}
+
+"""A connection between a user and an OAuth provider"""
+type OAuthConnection {
+  """When this provider was connected"""
+  connectedAt: DateTime
+
+  """Whether the stored token is still valid"""
+  hasValidToken: Boolean
+
+  """Unique connection identifier"""
+  id: ID
+
+  """The OAuth provider (GITHUB, GITLAB)"""
+  provider: OAuthProvider
+
+  """Email from the OAuth provider"""
+  providerEmail: String
+
+  """Username on the OAuth provider"""
+  providerUsername: String
+
+  """OAuth scopes granted to this connection"""
+  scopes: [String!]
+}
+
+"""Result of initiating an OAuth flow"""
+type OAuthInitiateResult {
+  """URL to redirect the user to for authorization"""
+  authorizationUrl: String
+
+  """PKCE code verifier (store securely and send with token exchange)"""
+  codeVerifier: String
+
+  """State parameter for CSRF protection (store and verify on callback)"""
+  state: String
+}
+
+"""Supported OAuth providers"""
+enum OAuthProvider {
+  GITHUB
+  GITLAB
+}
+
+"""An organization that users belong to"""
+type Org {
+  """Organization ID"""
+  id: ID
+
+  """URL to organization logo image"""
+  logoUrl: String
+
+  """Organization name"""
+  name: String
+
+  """URL-safe organization slug"""
+  slug: String
+}
+
+"""Aggregated learning/pattern detected across organization sessions"""
+type OrgLearning {
+  """Confidence level based on consistency"""
+  confidence: Confidence
+
+  """Domain/category (e.g., api, testing, database)"""
+  domain: String
+
+  """How many sessions exhibited this pattern"""
+  frequency: Int
+
+  """When this pattern was last observed"""
+  lastSeen: DateTime
+
+  """Pattern or convention observed"""
+  pattern: String
+}
+
+"""Input for org learnings query"""
+input OrgLearningsQueryInput {
+  """Filter by domain (e.g., api, testing)"""
+  domain: String
+
+  """Maximum learnings to return (default: 50)"""
+  limit: Int
+
+  """Minimum confidence level to include"""
+  minConfidence: Confidence
+
+  """Whether to use cached results (default: true)"""
+  useCache: Boolean
+}
+
+"""Result of org learnings query"""
+type OrgLearningsResult {
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Aggregated learnings"""
+  learnings: [OrgLearning!]
+
+  """Total sessions analyzed"""
+  sessionsAnalyzed: Int
+
+  """Time range of analysis"""
+  timeRange: OrgLearningsTimeRange
+}
+
+"""Time range of analysis"""
+type OrgLearningsTimeRange {
+  """End of analysis period"""
+  end: DateTime
+
+  """Start of analysis period"""
+  start: DateTime
+}
+
+"""Organization sharing policy"""
+type OrgSharingPolicy {
+  allowAnonymous: Boolean
+  allowedDomains: [String!]
+  blockedDomains: [String!]
+  maxContentLength: Int
+  maxLearningsPerDay: Int
+  minContentLength: Int
+  requireApproval: Boolean
+  updatedAt: Float
+  updatedBy: String
 }
 
 """Pagination information for a connection"""
@@ -2102,6 +2441,13 @@ type PluginStats {
   userPlugins: Int
 }
 
+"""Result of updating sharing policy"""
+type PolicyUpdateResult {
+  message: String
+  policy: OrgSharingPolicy
+  success: Boolean
+}
+
 """A project with sessions"""
 type Project {
   """Global ID (Project_{projectId})"""
@@ -2192,6 +2538,15 @@ type Query {
   """Aggregate cache statistics"""
   cacheStats: CacheStats
 
+  """Current organization context (only available in hosted team mode)"""
+  currentOrg: Org
+
+  """The current authentication session, or null if not authenticated"""
+  currentSession: AuthSession
+
+  """Current authenticated user (only available in hosted team mode)"""
+  currentUser: User
+
   """Memory query interface"""
   memory: MemoryQuery
 
@@ -2201,9 +2556,26 @@ type Query {
   """Task metrics for a time period"""
   metrics(period: MetricsPeriod): MetricsData
 
+  """All active sessions for the current user"""
+  mySessions: [AuthSession!]
+
   """Fetch any node by its global ID"""
   node(id: ID!): Node
   nodes(ids: [ID!]!): [Node]!
+
+  """Get aggregated learnings across the organization"""
+  orgLearnings(input: OrgLearningsQueryInput, userContext: UserContextInput!): OrgLearningsResult
+
+  """Members of an organization (only available in hosted team mode)"""
+  orgMembers(orgId: String!): [TeamMember!]
+
+  """
+  Organizations the current user belongs to (only available in hosted team mode)
+  """
+  orgs: [Org!]
+
+  """Get pending learnings for review (admin only)"""
+  pendingLearnings(context: TeamUserContextInput!, domain: String, limit: Int): [SharedLearning!]
 
   """Plugin counts by category"""
   pluginCategories: [PluginCategory!]
@@ -2246,6 +2618,9 @@ type Query {
     """Filter by project ID (groups all worktrees)"""
     projectId: String
 
+    """Filter by user ID (team mode only - filters sessions by owner)"""
+    userId: String
+
     """Filter by worktree name/path"""
     worktreeName: String
   ): SessionConnection
@@ -2255,6 +2630,12 @@ type Query {
 
   """Global slot pool status for cross-session resource management"""
   slots: SlotStatus
+
+  """Query team memory with permission filtering"""
+  teamMemory(input: TeamMemoryQueryInput!, userContext: UserContextInput!): TeamMemoryResult
+
+  """Get available memory layers for the user"""
+  teamMemoryLayers(userContext: UserContextInput!): [MemoryLayerInfo!]
 
   """Team-level aggregate metrics for dashboard"""
   teamMetrics(
@@ -2270,6 +2651,9 @@ type Query {
     """Start date (ISO format)"""
     startDate: String
   ): TeamMetrics
+
+  """The currently authenticated user, or null if not authenticated"""
+  viewer: AuthUser
 }
 
 """A queue state change operation"""
@@ -2630,6 +3014,12 @@ type Session implements Node {
   """
   nativeTasks: [NativeTask!]
 
+  """Organization ID this session belongs to (only in hosted team mode)"""
+  orgId: String
+
+  """User who ran this session (only populated in hosted team mode)"""
+  owner: User
+
   """The project this session belongs to"""
   project: Project
 
@@ -2842,6 +3232,54 @@ type SettingsSummary {
 
   """Permissions configuration"""
   permissions: Permissions
+}
+
+input ShareLearningInput {
+  """Learning content to share"""
+  content: String!
+
+  """Domain/category for the learning"""
+  domain: String!
+
+  """Require admin approval"""
+  requireApproval: Boolean
+
+  """Original source reference"""
+  source: String
+
+  """Tags for categorization"""
+  tags: [String!]
+}
+
+"""Result of sharing a learning with the team"""
+type ShareLearningResult {
+  learningId: String
+  message: String
+  success: Boolean
+}
+
+"""A learning shared with the team"""
+type SharedLearning {
+  content: String
+  domain: String
+  id: String
+  moderationNotes: String
+  sharedAt: Float
+  sharedBy: String
+  sharedByEmail: String
+  source: String
+  status: String
+  tags: [String!]
+}
+
+input SharingPolicyInput {
+  allowAnonymous: Boolean
+  allowedDomains: [String!]
+  blockedDomains: [String!]
+  maxContentLength: Int
+  maxLearningsPerDay: Int
+  minContentLength: Int
+  requireApproval: Boolean
 }
 
 """Result of slot acquisition attempt"""
@@ -3171,6 +3609,128 @@ type TaskTypeCount {
   type: TaskType
 }
 
+"""Citation from team memory with visibility metadata"""
+type TeamCitation {
+  """Author if known"""
+  author: String
+
+  """Relevant excerpt (sanitized for privacy)"""
+  excerpt: String
+
+  """Session ID if from a session"""
+  sessionId: String
+
+  """Source identifier (e.g., transcript:sessionId:msgId)"""
+  source: String
+
+  """Timestamp if known"""
+  timestamp: DateTime
+
+  """Visibility level of the source"""
+  visibility: CitationVisibility
+}
+
+"""Result of exporting team knowledge"""
+type TeamKnowledgeExportResult {
+  """JSON string of the export data"""
+  exportJson: String
+  message: String
+  success: Boolean
+}
+
+"""Result of importing team knowledge"""
+type TeamKnowledgeImportResult {
+  errors: Int
+  imported: Int
+  message: String
+  skipped: Int
+  success: Boolean
+}
+
+"""A member of an organization"""
+type TeamMember {
+  """Team member ID"""
+  id: ID
+
+  """Organization ID"""
+  orgId: String
+
+  """Role within the organization"""
+  role: TeamMemberRole
+
+  """The user"""
+  user: User
+
+  """User ID"""
+  userId: String
+}
+
+"""Role of a team member within an organization"""
+enum TeamMemberRole {
+  """Organization administrator"""
+  ADMIN
+
+  """Full team member"""
+  MEMBER
+
+  """Read-only viewer"""
+  VIEWER
+}
+
+"""Input for team memory query"""
+input TeamMemoryQueryInput {
+  """Maximum results to return (default: 20)"""
+  limit: Int
+
+  """Project path for context-aware search"""
+  projectPath: String
+
+  """The question to research in team memory"""
+  question: String!
+
+  """Memory scope to search (default: TEAM)"""
+  scope: MemoryScope
+
+  """Whether to use cached results (default: true)"""
+  useCache: Boolean
+}
+
+"""Result of a team memory query"""
+type TeamMemoryResult {
+  """Synthesized answer based on team memory"""
+  answer: String
+
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Citations with visibility metadata"""
+  citations: [TeamCitation!]
+
+  """Confidence level based on source quality"""
+  confidence: Confidence
+
+  """Number of sessions searched"""
+  sessionsSearched: Int
+
+  """Search statistics"""
+  stats: TeamMemoryStats
+}
+
+"""Statistics from team memory search"""
+type TeamMemoryStats {
+  """Sessions user has permission to access"""
+  permittedSessions: Int
+
+  """Number of results filtered out by permissions"""
+  resultsFiltered: Int
+
+  """Number of results found"""
+  resultsFound: Int
+
+  """Total sessions available"""
+  totalSessions: Int
+}
+
 """Aggregate team-level metrics for dashboard"""
 type TeamMetrics {
   """Activity over time"""
@@ -3202,6 +3762,20 @@ type TeamMetrics {
 
   """Total tokens used"""
   totalTokens: Int
+}
+
+input TeamUserContextInput {
+  """User email"""
+  email: String
+
+  """Whether user is an admin"""
+  isAdmin: Boolean
+
+  """Organization ID"""
+  orgId: String
+
+  """User ID"""
+  userId: String!
 }
 
 """Regular text content"""
@@ -3280,6 +3854,21 @@ enum TodoStatus {
   COMPLETED
   IN_PROGRESS
   PENDING
+}
+
+"""JWT token pair for authentication"""
+type TokenPair {
+  """Short-lived access token (1 hour)"""
+  accessToken: String
+
+  """When the access token expires"""
+  accessTokenExpiresAt: DateTime
+
+  """Long-lived refresh token (7 days)"""
+  refreshToken: String
+
+  """When the refresh token expires"""
+  refreshTokenExpiresAt: DateTime
 }
 
 """Aggregated token usage statistics"""
@@ -3491,6 +4080,33 @@ type UnknownEventMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""A user in the team platform"""
+type User {
+  """URL to user avatar image"""
+  avatarUrl: String
+
+  """User email address"""
+  email: String
+
+  """User ID"""
+  id: ID
+
+  """User display name"""
+  name: String
+}
+
+"""User context for permission checking"""
+input UserContextInput {
+  """User email for matching git authors"""
+  email: String
+
+  """Organization identifier"""
+  orgId: String
+
+  """User identifier"""
+  userId: String!
 }
 
 """

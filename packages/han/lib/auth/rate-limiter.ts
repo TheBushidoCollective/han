@@ -3,6 +3,13 @@
  *
  * Protects authentication endpoints from brute force attacks.
  * Implements sliding window rate limiting with exponential backoff.
+ *
+ * PRODUCTION NOTE: This implementation uses in-memory storage which:
+ * - Resets on process restart
+ * - Does not work across multiple instances
+ *
+ * For production multi-instance deployments, Redis-based rate limiting
+ * should be implemented. Set REDIS_URL to enable when available.
  */
 
 import type { AuthRateLimit } from "./types.ts";
@@ -70,7 +77,11 @@ export const RATE_LIMIT_KEYS = {
 
 /**
  * In-memory rate limit store
- * In production, use Redis for distributed rate limiting
+ *
+ * WARNING: This store is not suitable for production multi-instance deployments.
+ * Rate limits will not be shared across instances and will reset on restart.
+ *
+ * For production, implement a Redis-based store using the RateLimitStore interface.
  */
 const rateLimitStore = new Map<string, AuthRateLimit>();
 
@@ -84,6 +95,19 @@ const attemptHistory = new Map<string, number[]>();
  */
 const consecutiveBlocks = new Map<string, number>();
 
+// Log warning on first use in production
+let _warnedAboutInMemory = false;
+function warnIfProduction(): void {
+	if (!_warnedAboutInMemory && process.env.NODE_ENV === "production") {
+		console.warn(
+			"[rate-limiter] WARNING: Using in-memory rate limiting. " +
+				"Rate limits will reset on restart and not work across multiple instances. " +
+				"For production, implement Redis-based rate limiting.",
+		);
+		_warnedAboutInMemory = true;
+	}
+}
+
 /**
  * Check if a key is rate limited
  *
@@ -95,6 +119,7 @@ export function checkRateLimit(
 	key: string,
 	config: RateLimitConfig,
 ): { allowed: boolean; retryAfterMs?: number; remaining?: number } {
+	warnIfProduction();
 	const now = Date.now();
 	const record = rateLimitStore.get(key);
 
@@ -133,6 +158,7 @@ export function recordAttempt(
 	config: RateLimitConfig,
 	success: boolean,
 ): { blocked: boolean; retryAfterMs?: number } {
+	warnIfProduction();
 	const now = Date.now();
 
 	// Get or create history

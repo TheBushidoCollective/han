@@ -11,6 +11,8 @@
 
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
+import type { DataSource, DataSourceMode } from "../data/index.ts";
+import type { PermissionService } from "../permissions/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
 import {
 	decodeGlobalId,
@@ -52,6 +54,12 @@ export interface GraphQLContext {
 	loaders: GraphQLLoaders;
 	/** User information for access control */
 	user?: UserContext;
+	/** Data source for database access (local SQLite or hosted PostgreSQL) */
+	dataSource: DataSource;
+	/** Current mode (local or hosted) */
+	mode: DataSourceMode;
+	/** Permission service for access control (only in hosted mode) */
+	permissions?: PermissionService;
 }
 
 /**

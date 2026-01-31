@@ -77,7 +77,7 @@ export function ModeProvider({ children }: ModeProviderProps) {
   const mode = useMemo(() => detectMode(), []);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentOrg, setCurrentOrg] = useState<Org | null>(null);
-  const [orgs, setOrgs] = useState<Org[]>([]);
+  const [orgs, _setOrgs] = useState<Org[]>([]);
   const [orgMembers, setOrgMembers] = useState<TeamMember[]>([]);
   const [isLoadingAuth, setIsLoadingAuth] = useState(mode === 'hosted');
 
