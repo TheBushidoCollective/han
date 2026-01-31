@@ -35,6 +35,17 @@
 			]
 		},
 		{
+			"title": "Plugin Development",
+			"items": [
+				{ "title": "Development Guide", "slug": "plugin-development" },
+				{ "title": "Plugin Types", "slug": "plugin-development/types" },
+				{ "title": "Hook Configuration", "slug": "plugin-development/hooks" },
+				{ "title": "Skills and Commands", "slug": "plugin-development/skills" },
+				{ "title": "Testing Plugins", "slug": "plugin-development/testing" },
+				{ "title": "Distribution", "slug": "plugin-development/distribution" }
+			]
+		},
+		{
 			"title": "CLI Reference",
 			"items": [
 				{ "title": "Overview", "slug": "cli" },
