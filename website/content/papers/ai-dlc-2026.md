@@ -436,37 +436,33 @@ AI can apply design patterns during execution without requiring explicit design 
 
 **The test suite, not the architecture document, becomes the source of truth.** If the tests pass and the code meets non-functional requirements, the implementation is valid regardless of whether it matches a pre-specified design.
 
-### Building Is Designing
+### Everyone Becomes a Builder
 
-In traditional development, "design" and "build" are distinct phases with distinct artifacts:
+In traditional development, "design" and "build" are distinct phases requiring different specialists:
 - Designer creates mockups (Figma, wireframes)
 - Developer implements the specs
-- Handoff is a document or image
+- Handoff is a document or image—and often a source of friction
 
-**For AI, this distinction collapses.** When an AI generates a React component:
-- It decides structure (design)
-- It decides layout (design)
-- It writes JSX (build)
-- It adds styles (design)
+**AI collapses this gap.** When AI generates a React component, it simultaneously designs and implements. There's no mockup-to-code handoff. The artifact IS the design.
 
-There's no mockup-to-code handoff. **The code IS the design.** AI creates directly in the target medium.
-
-This insight simplifies the workflow:
+**This doesn't eliminate designers—it empowers everyone to build.**
 
 | Traditional | AI-DLC 2026 |
 |-------------|-------------|
-| Designer → mockup | Builder → code |
-| Developer → code | (same) |
-| Reviewer → feedback | Reviewer → feedback |
+| Designer creates mockup, waits for developer | Designer directs AI, sees result immediately |
+| Developer interprets spec, may misunderstand | Developer directs AI with technical precision |
+| Handoffs lose context | No handoffs—same person refines until done |
 
-The "builder" hat is the creator. It produces the artifact—whether code, documentation, or configuration. Separate "designer" and "builder" hats are legacy concepts from human-driven workflows where specialists handed off between phases.
+**Your discipline is your superpower.** Everyone uses the same workflow (builder → reviewer), but discipline provides context that makes you better at directing AI:
 
-**Discipline provides context, not workflow.** A frontend unit and a backend unit both use the same workflow (builder → reviewer), but:
-- Frontend builder gets design system context, component patterns
-- Backend builder gets API specs, service patterns
-- Documentation builder gets style guides, terminology
+- **Designer as builder:** Visual intuition, UX sensibility, and aesthetic judgment guide the AI toward beautiful, usable interfaces. Designers can now manifest their vision directly—no waiting for developer availability.
+- **Backend engineer as builder:** System design knowledge, performance intuition, and architectural patterns guide the AI toward robust, scalable services.
+- **Product manager as builder:** User empathy, business context, and prioritization skills guide the AI toward features that matter.
+- **Technical writer as builder:** Communication clarity, audience awareness, and information architecture guide the AI toward documentation people actually read.
 
-The workflow is universal; the context is discipline-specific.
+**The skill shifts from execution to refinement.** Instead of manually implementing every pixel or line of code, you review what AI produces and guide it toward your vision. Your years of experience in your discipline make you better at recognizing what's good, what's off, and how to improve it.
+
+This is democratization, not elimination. A designer who could previously only create mockups can now ship working code. A backend engineer who avoided frontend can now build full features. Everyone gains capabilities; no one loses their value. **Your expertise makes you a better director of AI—not a victim of it.**
 
 ### Streamline Responsibilities
 
