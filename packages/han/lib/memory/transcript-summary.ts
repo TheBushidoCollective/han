@@ -9,8 +9,38 @@
 
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
-import { getNativeModule } from "../native.ts";
+import { tryGetNativeModule } from "../native.ts";
 import { getGitRemote } from "./paths.ts";
+
+/**
+ * JavaScript fallback for extractFileOperations when native module unavailable.
+ * Extracts file paths from "Writing to X" and "Editing X" patterns in text.
+ */
+function extractFileOperationsJS(
+	content: string,
+): { operations: Array<{ path: string; operation: "write" | "edit" | "read" | "delete" }> } {
+	const operations: Array<{ path: string; operation: "write" | "edit" | "read" | "delete" }> = [];
+
+	// Match "Writing to <path>" patterns
+	const writeMatches = content.matchAll(/Writing to\s+([^\s]+)/gi);
+	for (const match of writeMatches) {
+		operations.push({ path: match[1], operation: "write" });
+	}
+
+	// Match "Editing <path>" patterns
+	const editMatches = content.matchAll(/Editing\s+([^\s]+)/gi);
+	for (const match of editMatches) {
+		operations.push({ path: match[1], operation: "edit" });
+	}
+
+	// Match "Reading <path>" patterns
+	const readMatches = content.matchAll(/Reading\s+([^\s]+)/gi);
+	for (const match of readMatches) {
+		operations.push({ path: match[1], operation: "read" });
+	}
+
+	return { operations };
+}
 import {
 	parseTranscript,
 	type TranscriptMessage,
@@ -151,14 +181,16 @@ async function parseTranscriptWithToolUse(
  * - Bash commands: git, npm, etc.
  */
 function extractFileOperations(messages: TranscriptMessage[]): FileOperation[] {
-	const native = getNativeModule();
+	const native = tryGetNativeModule();
 	const operations: FileOperation[] = [];
 
 	for (const message of messages) {
 		if (message.type !== "assistant") continue;
 
-		// Use native regex extraction for performance
-		const result = native.extractFileOperations(message.content);
+		// Use native regex extraction for performance, with JS fallback
+		const result = native
+			? native.extractFileOperations(message.content)
+			: extractFileOperationsJS(message.content);
 
 		for (const op of result.operations) {
 			operations.push({

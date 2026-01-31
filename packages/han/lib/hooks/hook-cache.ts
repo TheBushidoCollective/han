@@ -3,10 +3,12 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	readdirSync,
 	realpathSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { getClaudeConfigDir } from "../config/claude-settings.ts";
 import {
 	getHookCache,
@@ -14,7 +16,179 @@ import {
 	setHookCache,
 } from "../db/index.ts";
 import type { EventLogger } from "../events/logger.ts";
-import { getGitRemoteUrl, getNativeModule } from "../native.ts";
+import { getGitRemoteUrl, tryGetNativeModule } from "../native.ts";
+
+/**
+ * JS fallback for computeFileHash when native module unavailable
+ */
+function computeFileHashJS(filePath: string): string {
+	try {
+		const content = readFileSync(filePath);
+		return createHash("sha256").update(content).digest("hex");
+	} catch {
+		return "";
+	}
+}
+
+/**
+ * JS fallback for findFilesWithGlob when native module unavailable
+ * Simple implementation that doesn't respect gitignore for fallback purposes
+ */
+function findFilesWithGlobJS(rootDir: string, patterns: string[]): string[] {
+	const results: string[] = [];
+
+	function walkDir(dir: string) {
+		try {
+			const entries = readdirSync(dir, { withFileTypes: true });
+			for (const entry of entries) {
+				const fullPath = join(dir, entry.name);
+				if (entry.isDirectory()) {
+					// Skip hidden directories and node_modules
+					if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
+						walkDir(fullPath);
+					}
+				} else if (entry.isFile()) {
+					// Simple pattern matching - check if file matches any pattern
+					const relPath = relative(rootDir, fullPath);
+					for (const pattern of patterns) {
+						if (matchSimpleGlob(relPath, pattern)) {
+							results.push(fullPath);
+							break;
+						}
+					}
+				}
+			}
+		} catch {
+			// Ignore directories we can't read
+		}
+	}
+
+	walkDir(rootDir);
+	return results;
+}
+
+/**
+ * Simple glob pattern matching for fallback
+ * Supports: *, **, ?, and basic extension matching
+ */
+function matchSimpleGlob(path: string, pattern: string): boolean {
+	// Handle ** (match any path segment)
+	if (pattern === "**/*") return true;
+	if (pattern.startsWith("**/")) {
+		const rest = pattern.slice(3);
+		// Check if the filename matches
+		const fileName = path.split("/").pop() || path;
+		return matchSimpleGlob(fileName, rest) || matchSimpleGlob(path, rest);
+	}
+
+	// Handle file extensions like *.ts
+	if (pattern.startsWith("*.")) {
+		const ext = pattern.slice(1);
+		return path.endsWith(ext);
+	}
+
+	// Exact match
+	if (pattern === path) return true;
+
+	// Basic * wildcard
+	if (pattern.includes("*")) {
+		const regex = new RegExp(`^${pattern.replace(/\*/g, ".*").replace(/\?/g, ".")}$`);
+		return regex.test(path);
+	}
+
+	return false;
+}
+
+/**
+ * JS fallback for buildManifest when native module unavailable
+ */
+function buildManifestJS(files: string[], rootDir: string): CacheManifest {
+	const manifest: CacheManifest = {};
+	for (const file of files) {
+		const relPath = relative(rootDir, file);
+		const hash = computeFileHashJS(file);
+		if (hash) {
+			manifest[relPath] = hash;
+		}
+	}
+	return manifest;
+}
+
+/**
+ * JS fallback for hasChanges when native module unavailable
+ */
+function hasChangesJS(
+	rootDir: string,
+	patterns: string[],
+	cachedManifest: CacheManifest | null,
+): boolean {
+	if (!cachedManifest) {
+		return true;
+	}
+
+	const currentFiles = findFilesWithGlobJS(rootDir, patterns);
+	const currentManifest = buildManifestJS(currentFiles, rootDir);
+
+	// Check for added or changed files
+	for (const [path, hash] of Object.entries(currentManifest)) {
+		if (cachedManifest[path] !== hash) {
+			return true;
+		}
+	}
+
+	// Check for deleted files
+	for (const path of Object.keys(cachedManifest)) {
+		if (!(path in currentManifest)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * JS fallback for findDirectoriesWithMarkers when native module unavailable
+ */
+function findDirectoriesWithMarkersJS(
+	rootDir: string,
+	markerPatterns: string[],
+): string[] {
+	const results: string[] = [];
+
+	function walkDir(dir: string) {
+		try {
+			const entries = readdirSync(dir, { withFileTypes: true });
+			let hasMarker = false;
+
+			for (const entry of entries) {
+				if (entry.isFile()) {
+					for (const pattern of markerPatterns) {
+						if (matchSimpleGlob(entry.name, pattern)) {
+							hasMarker = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if (hasMarker) {
+				results.push(dir);
+			}
+
+			// Continue to subdirectories
+			for (const entry of entries) {
+				if (entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules") {
+					walkDir(join(dir, entry.name));
+				}
+			}
+		} catch {
+			// Ignore directories we can't read
+		}
+	}
+
+	walkDir(rootDir);
+	return results;
+}
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -92,7 +266,8 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
-	return getNativeModule().computeFileHash(filePath);
+	const native = tryGetNativeModule();
+	return native ? native.computeFileHash(filePath) : computeFileHashJS(filePath);
 }
 
 /**
@@ -211,14 +386,16 @@ export function findFilesWithGlob(
 	rootDir: string,
 	patterns: string[],
 ): string[] {
-	return getNativeModule().findFilesWithGlob(rootDir, patterns);
+	const native = tryGetNativeModule();
+	return native ? native.findFilesWithGlob(rootDir, patterns) : findFilesWithGlobJS(rootDir, patterns);
 }
 
 /**
  * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
-	return getNativeModule().buildManifest(files, rootDir);
+	const native = tryGetNativeModule();
+	return native ? native.buildManifest(files, rootDir) : buildManifestJS(files, rootDir);
 }
 
 /**
@@ -233,7 +410,8 @@ function hasChanges(
 	if (!cachedManifest) {
 		return true;
 	}
-	return getNativeModule().hasChanges(rootDir, patterns, cachedManifest);
+	const native = tryGetNativeModule();
+	return native ? native.hasChanges(rootDir, patterns, cachedManifest) : hasChangesJS(rootDir, patterns, cachedManifest);
 }
 
 /**
@@ -587,5 +765,6 @@ export function findDirectoriesWithMarkers(
 	rootDir: string,
 	markerPatterns: string[],
 ): string[] {
-	return getNativeModule().findDirectoriesWithMarkers(rootDir, markerPatterns);
+	const native = tryGetNativeModule();
+	return native ? native.findDirectoriesWithMarkers(rootDir, markerPatterns) : findDirectoriesWithMarkersJS(rootDir, markerPatterns);
 }
