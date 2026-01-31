@@ -12,12 +12,18 @@
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
 import type { DataSource, DataSourceMode } from "../data/index.ts";
+import type { AuthenticatedUser, PermissionService } from "../permissions/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
 import {
 	decodeGlobalId,
 	encodeGlobalId,
 	resolveNode,
 } from "./node-registry.ts";
+
+/**
+ * Server mode determining permission enforcement
+ */
+export type ServerMode = "local" | "hosted";
 
 /**
  * Context type for GraphQL resolvers
@@ -27,6 +33,10 @@ import {
  *
  * The dataSource field provides abstracted database access that works
  * with both SQLite (local mode) and PostgreSQL (hosted mode).
+ *
+ * In hosted mode, also includes:
+ * - Authenticated user information
+ * - Permission service for access control
  */
 export interface GraphQLContext {
 	/** Request object for headers, etc. */
@@ -37,6 +47,10 @@ export interface GraphQLContext {
 	dataSource: DataSource;
 	/** Mode indicator: 'local' for SQLite, 'hosted' for PostgreSQL */
 	mode: DataSourceMode;
+	/** Authenticated user (only in hosted mode) */
+	user?: AuthenticatedUser;
+	/** Permission service for access control (only in hosted mode) */
+	permissions?: PermissionService;
 }
 
 /**

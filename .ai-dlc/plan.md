@@ -1,201 +1,157 @@
-# Data Synchronization System - Implementation Plan
+# Implementation Plan: unit-04-permissions
 
 ## Overview
 
-This plan details the implementation of a data synchronization system that transfers session data from local han instances to the hosted team platform. The system must be:
-- **Resilient**: Queue-based with retry logic and offline support
-- **Efficient**: Incremental sync with compression and delta encoding
-- **Privacy-aware**: Personal repos excluded, org ownership validation
+This unit implements the permissions system that enforces repo-based access control, privacy rules, and configurable manager visibility for the Han Team Platform.
 
 ## Architecture
 
 ```
-Local Han Instance                           Hosted Platform
-┌─────────────────────┐                    ┌─────────────────────┐
-│ SQLite Database     │                    │ PostgreSQL Database │
-└────────┬────────────┘                    └──────────┬──────────┘
-         │                                            │
-         ▼                                            ▼
-┌─────────────────────┐   HTTPS POST       ┌─────────────────────┐
-│ Sync Client         │ ───────────────►   │ Sync Receiver API   │
-│ - Queue Manager     │   /api/sync        │ - Auth validation   │
-│ - Privacy Filter    │   (gzipped JSON)   │ - Deduplication     │
-│ - Delta Calculator  │                    │ - Org mapping       │
-└─────────────────────┘                    └─────────────────────┘
+GraphQL Request → Permission Middleware → Resolver → PermissionService → GitProviderService
+                                                            ↓
+                                                    Permission Cache (5min TTL)
 ```
 
-## Phase 1: Sync Protocol Definition
+## Phase 1: Permission Service Foundation
 
-### 1.1 Data Model for Sync
+### 1.1 Define Permission Types
 
-**File: `packages/han/lib/sync/types.ts`**
+**File**: `packages/han/lib/permissions/types.ts`
 
 ```typescript
-interface SyncPayload {
-  version: "1.0";
-  clientId: string;
+export type AccessLevel = "none" | "read" | "write" | "maintain" | "admin";
+export type OrgRole = "owner" | "admin" | "member" | "viewer";
+
+export interface PermissionResult {
+  allowed: boolean;
+  accessLevel: AccessLevel;
+  reason: string;
+  source: "cache" | "api" | "override";
+}
+
+export interface CachedPermission {
   userId: string;
+  repoId: string;
+  accessLevel: AccessLevel;
+  cachedAt: number;
+  expiresAt: number;
+}
+```
+
+### 1.2 Git Provider Service Interface
+
+**File**: `packages/han/lib/permissions/git-provider.ts`
+
+```typescript
+export interface GitProviderService {
+  name: "github" | "gitlab";
+  checkRepoAccess(token, owner, repo, username): Promise<AccessLevel>;
+  getRepoOwnership(token, owner, repo): Promise<RepoOwnership>;
+  checkOrgMembership(token, orgName, username): Promise<{ isMember: boolean }>;
+}
+```
+
+### 1.3 GitHub Provider
+
+**File**: `packages/han/lib/permissions/providers/github.ts`
+
+- `GET /repos/{owner}/{repo}/collaborators/{username}/permission`
+- `GET /repos/{owner}/{repo}` for owner type
+- `GET /orgs/{org}/members/{username}`
+
+### 1.4 GitLab Provider
+
+**File**: `packages/han/lib/permissions/providers/gitlab.ts`
+
+- `GET /api/v4/projects/:id/members/:user_id`
+- `GET /api/v4/projects/:id`
+- `GET /api/v4/groups/:id/members/:user_id`
+
+## Phase 2: Permission Caching Layer
+
+**File**: `packages/han/lib/permissions/cache.ts`
+
+- 5-minute TTL
+- In-memory LRU cache with size limit
+- Background refresh for active users
+- Webhook-based invalidation (optional)
+
+## Phase 3: Core Permission Service
+
+**File**: `packages/han/lib/permissions/service.ts`
+
+```typescript
+async canViewSession(user, session): Promise<PermissionResult> {
+  // 1. Personal repo check - only owner can view
+  // 2. Org membership check
+  // 3. Repo access check (cached)
+  // 4. Manager override check
+  // 5. Default deny + audit log
+}
+```
+
+### Personal Repo Detection
+
+**File**: `packages/han/lib/permissions/repo-ownership.ts`
+
+Parse remote URLs:
+- `git@github.com:owner/repo.git`
+- `https://github.com/owner/repo.git`
+
+## Phase 4: GraphQL Field-Level Authorization
+
+### Extend GraphQL Context
+
+```typescript
+export interface GraphQLContext {
+  user?: AuthenticatedUser;
+  permissions?: PermissionService;
+  mode: "local" | "hosted";
+}
+```
+
+### Session Query with Authorization
+
+- Local mode: no auth needed
+- Hosted mode: check `permissions.canViewSession()`
+- Filter session lists by permission
+
+## Phase 5: Audit Logging
+
+**File**: `packages/han/lib/permissions/audit.ts`
+
+```typescript
+interface AuditLogEntry {
+  eventType: "permission_denied" | "permission_granted";
+  userId: string;
+  targetType: "session" | "org" | "repo";
+  targetId: string;
+  reason: string;
   timestamp: string;
-  cursor: SyncCursor;
-  sessions: SyncSession[];
-  checksum: string;
-}
-
-interface SyncSession {
-  id: string;
-  projectSlug: string;
-  repoRemote: string;
-  status: string;
-  slug: string | null;
-  messages: SyncMessage[];
-  tasks: SyncTask[];
-  lastModified: string;
-}
-
-interface SyncCursor {
-  lastSessionId: string | null;
-  lastMessageLineNumber: number;
-  lastSyncTimestamp: string;
 }
 ```
 
-### 1.2 Sync Protocol Specification
+PostgreSQL table: `permission_audit_logs`
 
-**Endpoint:** `POST /api/sync`
+## Phase 6: Manager Visibility Configuration
 
-**Headers:**
-- `Authorization: Bearer <api_key>`
-- `Content-Type: application/json`
-- `Content-Encoding: gzip`
-
-**Response:**
-```typescript
-interface SyncResponse {
-  status: "success" | "partial" | "error";
-  cursor: SyncCursor;
-  processed: number;
-  errors: SyncError[];
-}
+```sql
+ALTER TABLE organizations ADD COLUMN visibility_settings JSONB DEFAULT '{
+  "managerCanSeeAll": false,
+  "aggregatedMetricsPublic": true,
+  "failMode": "closed"
+}';
 ```
 
-## Phase 2: Configuration System
-
-**File: `packages/han/lib/config/han-settings.ts`**
-
-```typescript
-interface SyncConfig {
-  enabled?: boolean;
-  endpoint?: string;
-  apiKey?: string;
-  interval?: number;        // seconds (default: 300)
-  batchSize?: number;       // messages per batch (default: 1000)
-  includePersonal?: boolean;
-  forceInclude?: string[];
-  forceExclude?: string[];
-}
-```
-
-Environment variables:
-- `HAN_SYNC_ENABLED`
-- `HAN_SYNC_API_KEY`
-- `HAN_SYNC_ENDPOINT`
-
-## Phase 3: Privacy Filtering
-
-**File: `packages/han/lib/sync/privacy-filter.ts`**
-
-```typescript
-function checkSyncEligibility(
-  session: Session,
-  repo: Repo,
-  config: SyncConfig,
-  userId: string
-): SyncEligibility {
-  // 1. Check forced exclusions
-  // 2. Check forced inclusions
-  // 3. Check personal repo (excluded by default)
-  // 4. Org repo = eligible
-}
-```
-
-## Phase 4: Sync Client Implementation
-
-### 4.1 Queue Manager
-
-**File: `packages/han/lib/sync/queue.ts`**
-
-- Persist queue to `~/.claude/han/sync-queue.json`
-- Exponential backoff: 1s, 2s, 4s... max 1 hour
-- Process on session end + periodic catch-up
-
-### 4.2 Delta Calculator
-
-**File: `packages/han/lib/sync/delta.ts`**
-
-- Track `lastSyncedLine` per session
-- Only sync messages after last synced line
-- Store state in `~/.claude/han/sync-state.json`
-
-### 4.3 Sync Client
-
-**File: `packages/han/lib/sync/client.ts`**
-
-- Check eligibility before sync
-- Build payload with unsyced data
-- Compress with gzip
-- Update cursors on success
-
-## Phase 5: Server-Side Receiver
-
-**File: `packages/han/lib/api/sync-receiver.ts`**
-
-```typescript
-async function processSyncPayload(payload, user) {
-  for (const session of payload.sessions) {
-    // Validate repo ownership
-    // Upsert session and messages
-    // Update aggregated metrics
-  }
-}
-```
-
-Deduplication via composite key `(session_id, message_id)` with ON CONFLICT.
-
-## Phase 6: Integration Points
-
-### Session End Hook
-Trigger sync when session ends with high priority.
-
-### CLI Commands
-```bash
-han sync status
-han sync session <id>
-han sync all
-han sync queue
-```
-
-## Phase 7: Monitoring
-
-- SyncStatus type exposed via GraphQL
-- Structured logging for all operations
-- Error tracking with retry counts
-
-## Implementation Sequence
-
-1. Define sync types and protocol
-2. Extend configuration system
-3. Implement privacy filtering
-4. Build sync client (queue, delta, client)
-5. Build sync receiver API
-6. Add integration hooks and CLI
-7. Add monitoring and status tracking
+GraphQL mutation for org admins to update settings.
 
 ## Key Files to Create
 
-1. `packages/han/lib/sync/types.ts`
-2. `packages/han/lib/sync/privacy-filter.ts`
-3. `packages/han/lib/sync/queue.ts`
-4. `packages/han/lib/sync/delta.ts`
-5. `packages/han/lib/sync/client.ts`
-6. `packages/han/lib/api/sync-receiver.ts`
-7. `packages/han/lib/commands/sync/index.ts`
+1. `packages/han/lib/permissions/types.ts`
+2. `packages/han/lib/permissions/git-provider.ts`
+3. `packages/han/lib/permissions/providers/github.ts`
+4. `packages/han/lib/permissions/providers/gitlab.ts`
+5. `packages/han/lib/permissions/cache.ts`
+6. `packages/han/lib/permissions/service.ts`
+7. `packages/han/lib/permissions/repo-ownership.ts`
+8. `packages/han/lib/permissions/audit.ts`
