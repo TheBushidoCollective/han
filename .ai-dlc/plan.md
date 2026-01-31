@@ -1,265 +1,201 @@
-# Implementation Plan for Unit 02: Authentication
+# Data Synchronization System - Implementation Plan
 
 ## Overview
 
-The authentication unit must implement multi-provider OAuth (GitHub, GitLab), magic link email authentication, JWT-based API auth, and session management. This builds on top of the data abstraction layer from unit-01 (HostedDataSource interface).
+This plan details the implementation of a data synchronization system that transfers session data from local han instances to the hosted team platform. The system must be:
+- **Resilient**: Queue-based with retry logic and offline support
+- **Efficient**: Incremental sync with compression and delta encoding
+- **Privacy-aware**: Personal repos excluded, org ownership validation
 
-## Architecture Design
-
-### 1. Database Schema (PostgreSQL - Hosted Mode)
-
-**New Tables Required:**
-
-```sql
--- OAuth connections (supports multiple providers per user)
-CREATE TABLE oauth_connections (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    provider TEXT NOT NULL, -- 'github', 'gitlab'
-    provider_user_id TEXT NOT NULL,
-    provider_email TEXT,
-    provider_username TEXT,
-    access_token_encrypted BYTEA NOT NULL,
-    refresh_token_encrypted BYTEA,
-    token_expires_at TIMESTAMPTZ,
-    scopes TEXT[], -- e.g., ['read:user', 'read:org', 'repo']
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(provider, provider_user_id)
-);
-
--- API sessions (JWT tracking for revocation)
-CREATE TABLE user_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token_hash TEXT UNIQUE NOT NULL, -- SHA-256 of JWT for revocation lookup
-    device_info JSONB,
-    ip_address INET,
-    expires_at TIMESTAMPTZ NOT NULL,
-    revoked_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Magic link tokens
-CREATE TABLE magic_link_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email TEXT NOT NULL,
-    token_hash TEXT UNIQUE NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Rate limiting
-CREATE TABLE auth_rate_limits (
-    key TEXT PRIMARY KEY, -- e.g., 'email:user@example.com', 'ip:1.2.3.4'
-    attempts INTEGER DEFAULT 0,
-    blocked_until TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-### 2. Library Selection
-
-- **jose** - JWT creation/verification
-- **oauth4webapi** - Modern OAuth 2.0 client with PKCE support
-- Encryption: Node.js crypto (AES-256-GCM for token encryption at rest)
-
-### 3. File Structure
+## Architecture
 
 ```
-packages/han/lib/
-├── auth/
-│   ├── index.ts                 # Export public auth API
-│   ├── types.ts                 # AuthUser, AuthSession, etc.
-│   ├── jwt.ts                   # JWT creation/verification
-│   ├── encryption.ts            # Token encryption at rest
-│   ├── oauth/
-│   │   ├── index.ts             # OAuth flow orchestration
-│   │   ├── github.ts            # GitHub-specific OAuth
-│   │   ├── gitlab.ts            # GitLab-specific OAuth
-│   │   └── pkce.ts              # PKCE challenge generation
-│   ├── magic-link.ts            # Email magic link flow
-│   ├── session-manager.ts       # Session CRUD, refresh, revoke
-│   ├── rate-limiter.ts          # Rate limiting logic
-│   └── middleware.ts            # GraphQL auth middleware
+Local Han Instance                           Hosted Platform
+┌─────────────────────┐                    ┌─────────────────────┐
+│ SQLite Database     │                    │ PostgreSQL Database │
+└────────┬────────────┘                    └──────────┬──────────┘
+         │                                            │
+         ▼                                            ▼
+┌─────────────────────┐   HTTPS POST       ┌─────────────────────┐
+│ Sync Client         │ ───────────────►   │ Sync Receiver API   │
+│ - Queue Manager     │   /api/sync        │ - Auth validation   │
+│ - Privacy Filter    │   (gzipped JSON)   │ - Deduplication     │
+│ - Delta Calculator  │                    │ - Org mapping       │
+└─────────────────────┘                    └─────────────────────┘
 ```
 
-### 4. GraphQL Schema Extensions
+## Phase 1: Sync Protocol Definition
 
-```graphql
-# New types
-type AuthUser {
-  id: ID!
-  email: String
-  displayName: String
-  avatarUrl: String
-  oauthConnections: [OAuthConnection!]!
-  createdAt: DateTime!
-}
+### 1.1 Data Model for Sync
 
-type OAuthConnection {
-  id: ID!
-  provider: OAuthProvider!
-  providerUsername: String
-  connectedAt: DateTime!
-}
-
-enum OAuthProvider {
-  GITHUB
-  GITLAB
-}
-
-type AuthSession {
-  id: ID!
-  user: AuthUser!
-  expiresAt: DateTime!
-  deviceInfo: String
-}
-
-# New queries
-extend type Query {
-  viewer: AuthUser
-  currentSession: AuthSession
-}
-
-# New mutations
-type Mutation {
-  # OAuth flow
-  initiateOAuth(provider: OAuthProvider!): OAuthInitiateResult!
-  completeOAuth(provider: OAuthProvider!, code: String!, state: String!, codeVerifier: String!): AuthResult!
-
-  # Magic link flow
-  requestMagicLink(email: String!): MagicLinkResult!
-  verifyMagicLink(token: String!): AuthResult!
-
-  # Session management
-  refreshSession: AuthResult!
-  revokeSession(sessionId: ID!): Boolean!
-  revokeAllSessions: Boolean!
-
-  # Account linking
-  linkOAuthProvider(provider: OAuthProvider!, code: String!, state: String!, codeVerifier: String!): LinkResult!
-  unlinkOAuthProvider(connectionId: ID!): Boolean!
-}
-```
-
-### 5. GraphQL Context Extension
-
-Extend `GraphQLContext` in `builder.ts`:
+**File: `packages/han/lib/sync/types.ts`**
 
 ```typescript
-export interface GraphQLContext {
-  request?: Request;
-  loaders: GraphQLLoaders;
-  auth?: {
-    user: AuthUser | null;
-    session: AuthSession | null;
-  };
+interface SyncPayload {
+  version: "1.0";
+  clientId: string;
+  userId: string;
+  timestamp: string;
+  cursor: SyncCursor;
+  sessions: SyncSession[];
+  checksum: string;
+}
+
+interface SyncSession {
+  id: string;
+  projectSlug: string;
+  repoRemote: string;
+  status: string;
+  slug: string | null;
+  messages: SyncMessage[];
+  tasks: SyncTask[];
+  lastModified: string;
+}
+
+interface SyncCursor {
+  lastSessionId: string | null;
+  lastMessageLineNumber: number;
+  lastSyncTimestamp: string;
 }
 ```
 
-## Implementation Phases
+### 1.2 Sync Protocol Specification
 
-### Phase 1: Core Infrastructure
-1. Create auth types and interfaces
-2. Implement JWT utilities (create, verify, decode)
-3. Implement AES-256-GCM encryption for token storage
-4. Add auth tables to PostgreSQL schema
+**Endpoint:** `POST /api/sync`
 
-### Phase 2: OAuth Implementation
-1. GitHub OAuth with PKCE
-   - Scopes: `read:user`, `read:org`, `repo`
-   - Handle token exchange and refresh
-2. GitLab OAuth with PKCE
-3. Account creation/linking logic
-4. Token encryption before storage
+**Headers:**
+- `Authorization: Bearer <api_key>`
+- `Content-Type: application/json`
+- `Content-Encoding: gzip`
 
-### Phase 3: Magic Link Email
-1. Token generation (cryptographically secure, 15-min expiry)
-2. Email sending integration (abstract over provider)
-3. Token verification and session creation
-
-### Phase 4: Session Management
-1. JWT-based sessions with 1-hour expiry
-2. Refresh token flow (7-day refresh tokens)
-3. Session revocation (single and all)
-4. Device tracking (optional)
-
-### Phase 5: GraphQL Integration
-1. Auth middleware that extracts JWT from headers
-2. Populate `context.auth` for resolvers
-3. Viewer query implementation
-4. Protected mutations
-
-### Phase 6: Rate Limiting
-1. IP-based rate limiting
-2. Email-based rate limiting for magic links
-3. Exponential backoff on failures
-
-## Security Considerations
-
-**Token Security:**
-- JWT secret from environment (32+ bytes, cryptographically random)
-- Tokens encrypted at rest using AES-256-GCM with unique IV per token
-- Encryption key from environment (separate from JWT secret)
-
-**PKCE:**
-- Always use code_challenge_method=S256
-- Generate 43-128 character code_verifier
-- Store code_verifier client-side during flow
-
-**Cookie Settings:**
+**Response:**
 ```typescript
-{
-  httpOnly: true,
-  secure: true,
-  sameSite: 'lax',
-  path: '/',
-  maxAge: 3600  // 1 hour
+interface SyncResponse {
+  status: "success" | "partial" | "error";
+  cursor: SyncCursor;
+  processed: number;
+  errors: SyncError[];
 }
 ```
 
-**Rate Limiting Rules:**
-- Magic link requests: 5 per email per hour
-- OAuth initiates: 10 per IP per minute
-- Failed logins: 5 attempts then 15-minute lockout
+## Phase 2: Configuration System
 
-## Environment Variables
+**File: `packages/han/lib/config/han-settings.ts`**
 
+```typescript
+interface SyncConfig {
+  enabled?: boolean;
+  endpoint?: string;
+  apiKey?: string;
+  interval?: number;        // seconds (default: 300)
+  batchSize?: number;       // messages per batch (default: 1000)
+  includePersonal?: boolean;
+  forceInclude?: string[];
+  forceExclude?: string[];
+}
+```
+
+Environment variables:
+- `HAN_SYNC_ENABLED`
+- `HAN_SYNC_API_KEY`
+- `HAN_SYNC_ENDPOINT`
+
+## Phase 3: Privacy Filtering
+
+**File: `packages/han/lib/sync/privacy-filter.ts`**
+
+```typescript
+function checkSyncEligibility(
+  session: Session,
+  repo: Repo,
+  config: SyncConfig,
+  userId: string
+): SyncEligibility {
+  // 1. Check forced exclusions
+  // 2. Check forced inclusions
+  // 3. Check personal repo (excluded by default)
+  // 4. Org repo = eligible
+}
+```
+
+## Phase 4: Sync Client Implementation
+
+### 4.1 Queue Manager
+
+**File: `packages/han/lib/sync/queue.ts`**
+
+- Persist queue to `~/.claude/han/sync-queue.json`
+- Exponential backoff: 1s, 2s, 4s... max 1 hour
+- Process on session end + periodic catch-up
+
+### 4.2 Delta Calculator
+
+**File: `packages/han/lib/sync/delta.ts`**
+
+- Track `lastSyncedLine` per session
+- Only sync messages after last synced line
+- Store state in `~/.claude/han/sync-state.json`
+
+### 4.3 Sync Client
+
+**File: `packages/han/lib/sync/client.ts`**
+
+- Check eligibility before sync
+- Build payload with unsyced data
+- Compress with gzip
+- Update cursors on success
+
+## Phase 5: Server-Side Receiver
+
+**File: `packages/han/lib/api/sync-receiver.ts`**
+
+```typescript
+async function processSyncPayload(payload, user) {
+  for (const session of payload.sessions) {
+    // Validate repo ownership
+    // Upsert session and messages
+    // Update aggregated metrics
+  }
+}
+```
+
+Deduplication via composite key `(session_id, message_id)` with ON CONFLICT.
+
+## Phase 6: Integration Points
+
+### Session End Hook
+Trigger sync when session ends with high priority.
+
+### CLI Commands
 ```bash
-# JWT
-AUTH_JWT_SECRET=<32+ byte secret>
-AUTH_JWT_ISSUER=https://han.guru
-
-# Token encryption
-AUTH_ENCRYPTION_KEY=<32 byte key>
-
-# GitHub OAuth
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-
-# GitLab OAuth
-GITLAB_CLIENT_ID=
-GITLAB_CLIENT_SECRET=
-GITLAB_INSTANCE_URL=https://gitlab.com
-
-# Email (for magic links)
-EMAIL_PROVIDER=resend
-EMAIL_API_KEY=
-EMAIL_FROM=noreply@han.guru
+han sync status
+han sync session <id>
+han sync all
+han sync queue
 ```
 
-## Integration Points
+## Phase 7: Monitoring
 
-**With Unit 01 (Core Backend):**
-- HostedDataSource must implement auth-related queries
-- User table links to organization memberships
+- SyncStatus type exposed via GraphQL
+- Structured logging for all operations
+- Error tracking with retry counts
 
-**With Unit 03 (Data Sync):**
-- Sync API authenticated via JWT
-- API key alternative for automated sync
+## Implementation Sequence
 
-**With Unit 04 (Permissions):**
-- OAuth tokens used to fetch repo permissions from GitHub/GitLab APIs
-- Permission checks reference user from auth context
+1. Define sync types and protocol
+2. Extend configuration system
+3. Implement privacy filtering
+4. Build sync client (queue, delta, client)
+5. Build sync receiver API
+6. Add integration hooks and CLI
+7. Add monitoring and status tracking
+
+## Key Files to Create
+
+1. `packages/han/lib/sync/types.ts`
+2. `packages/han/lib/sync/privacy-filter.ts`
+3. `packages/han/lib/sync/queue.ts`
+4. `packages/han/lib/sync/delta.ts`
+5. `packages/han/lib/sync/client.ts`
+6. `packages/han/lib/api/sync-receiver.ts`
+7. `packages/han/lib/commands/sync/index.ts`

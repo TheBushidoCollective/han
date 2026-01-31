@@ -1,0 +1,362 @@
+/**
+ * Sync CLI Commands
+ *
+ * Commands for managing data synchronization to the team platform:
+ * - han sync status - Show sync status and configuration
+ * - han sync session <id> - Sync a specific session
+ * - han sync all - Sync all pending sessions
+ * - han sync queue - Show and manage the sync queue
+ */
+
+import type { Command } from "commander";
+import {
+	getStatus,
+	sync,
+	processQueue,
+	enqueueSyncSession,
+	enqueuePendingSessions,
+} from "../../sync/client.ts";
+import { getQueueManager } from "../../sync/queue.ts";
+import { isSyncEnabled, getSyncConfig } from "../../config/han-settings.ts";
+
+/**
+ * Format bytes to human readable string
+ */
+function formatBytes(bytes: number): string {
+	if (bytes === 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(1024));
+	return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
+/**
+ * Format duration to human readable string
+ */
+function formatDuration(ms: number): string {
+	if (ms < 1000) return `${ms}ms`;
+	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+	return `${(ms / 60000).toFixed(1)}m`;
+}
+
+/**
+ * Format timestamp to relative time
+ */
+function formatRelativeTime(timestamp: string | null): string {
+	if (!timestamp) return "never";
+
+	const date = new Date(timestamp);
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+
+	if (diffMs < 60000) return "just now";
+	if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)} minutes ago`;
+	if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)} hours ago`;
+	return `${Math.floor(diffMs / 86400000)} days ago`;
+}
+
+/**
+ * Register sync commands
+ */
+export function registerSyncCommands(program: Command): void {
+	const syncCommand = program
+		.command("sync")
+		.description("Manage data synchronization to team platform");
+
+	// sync status
+	syncCommand
+		.command("status")
+		.description("Show sync status and configuration")
+		.action(async () => {
+			try {
+				const status = await getStatus();
+				const config = getSyncConfig();
+
+				console.log("\n=== Han Sync Status ===\n");
+
+				// Configuration
+				console.log("Configuration:");
+				console.log(
+					`  Enabled:     ${status.enabled ? "\x1b[32myes\x1b[0m" : "\x1b[33mno\x1b[0m"}`,
+				);
+				console.log(
+					`  Configured:  ${status.configured ? "\x1b[32myes\x1b[0m" : "\x1b[31mno\x1b[0m"}`,
+				);
+				if (status.endpoint) {
+					console.log(`  Endpoint:    ${status.endpoint}`);
+				}
+				if (config) {
+					console.log(`  Batch Size:  ${config.batchSize ?? 1000} messages`);
+					console.log(`  Interval:    ${config.interval ?? 300}s`);
+					console.log(`  Compression: ${config.compression !== false ? "yes" : "no"}`);
+					console.log(
+						`  Personal:    ${config.includePersonal ? "included" : "excluded"}`,
+					);
+				}
+
+				console.log("\nSync Status:");
+				console.log(
+					`  Last Sync:        ${formatRelativeTime(status.lastSyncTime)}`,
+				);
+				console.log(`  Queue Size:       ${status.queueSize} items`);
+				console.log(`  Pending Sessions: ${status.pendingSessions}`);
+				console.log(`  Pending Messages: ${status.pendingMessages}`);
+
+				console.log("\nSession Eligibility:");
+				console.log(`  Eligible:  ${status.eligibleSessions}`);
+				console.log(`  Excluded:  ${status.excludedSessions}`);
+
+				console.log("\nStatistics:");
+				console.log(`  Total Synced:      ${status.stats.totalSynced} messages`);
+				console.log(`  Successful Syncs:  ${status.stats.successfulSyncs}`);
+				console.log(`  Failed Attempts:   ${status.stats.failedAttempts}`);
+				if (status.stats.lastSyncDuration) {
+					console.log(
+						`  Last Duration:     ${formatDuration(status.stats.lastSyncDuration)}`,
+					);
+				}
+
+				if (!status.enabled) {
+					console.log("\n\x1b[33mSync is disabled.\x1b[0m");
+					console.log("To enable, add to han.yml:");
+					console.log("  sync:");
+					console.log("    enabled: true");
+					console.log("    endpoint: https://your-team-platform.com/api/sync");
+					console.log("    apiKey: han_xxx (or set HAN_SYNC_API_KEY env var)");
+				}
+
+				console.log("");
+			} catch (error) {
+				console.error(
+					"Error getting sync status:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
+	// sync session <id>
+	syncCommand
+		.command("session <sessionId>")
+		.description("Sync a specific session immediately")
+		.option("--force", "Force sync even if sync is disabled")
+		.action(async (sessionId: string, options: { force?: boolean }) => {
+			try {
+				if (!options.force && !isSyncEnabled()) {
+					console.log("\x1b[33mSync is not enabled.\x1b[0m");
+					console.log("Use --force to sync anyway, or enable sync in han.yml");
+					process.exit(1);
+				}
+
+				console.log(`Syncing session ${sessionId}...`);
+
+				const result = await sync({
+					sessionId,
+					force: options.force,
+				});
+
+				if (result.success) {
+					console.log("\x1b[32mSync successful!\x1b[0m");
+					console.log(`  Sessions: ${result.sessionsProcessed}`);
+					console.log(`  Messages: ${result.messagesProcessed}`);
+					console.log(`  Transferred: ${formatBytes(result.bytesTransferred)}`);
+					console.log(`  Duration: ${formatDuration(result.durationMs)}`);
+				} else {
+					console.log("\x1b[31mSync failed:\x1b[0m", result.error);
+					process.exit(1);
+				}
+			} catch (error) {
+				console.error(
+					"Error syncing session:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
+	// sync all
+	syncCommand
+		.command("all")
+		.description("Sync all pending sessions")
+		.option("--force", "Force sync even if sync is disabled")
+		.option("--enqueue-only", "Only add sessions to queue, do not process")
+		.action(async (options: { force?: boolean; enqueueOnly?: boolean }) => {
+			try {
+				if (!options.force && !isSyncEnabled()) {
+					console.log("\x1b[33mSync is not enabled.\x1b[0m");
+					console.log("Use --force to sync anyway, or enable sync in han.yml");
+					process.exit(1);
+				}
+
+				if (options.enqueueOnly) {
+					console.log("Enqueueing pending sessions...");
+					const enqueued = await enqueuePendingSessions();
+					console.log(`Enqueued ${enqueued} sessions for sync.`);
+					return;
+				}
+
+				console.log("Syncing all pending sessions...");
+
+				const result = await sync({ force: options.force });
+
+				if (result.success) {
+					console.log("\x1b[32mSync successful!\x1b[0m");
+					console.log(`  Sessions: ${result.sessionsProcessed}`);
+					console.log(`  Messages: ${result.messagesProcessed}`);
+					console.log(`  Transferred: ${formatBytes(result.bytesTransferred)}`);
+					console.log(`  Duration: ${formatDuration(result.durationMs)}`);
+
+					if (result.response?.errors && result.response.errors.length > 0) {
+						console.log("\n\x1b[33mWarnings:\x1b[0m");
+						for (const err of result.response.errors) {
+							console.log(`  ${err.sessionId}: ${err.message}`);
+						}
+					}
+				} else {
+					console.log("\x1b[31mSync failed:\x1b[0m", result.error);
+					process.exit(1);
+				}
+			} catch (error) {
+				console.error(
+					"Error syncing:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+
+	// sync queue
+	syncCommand
+		.command("queue")
+		.description("Show and manage the sync queue")
+		.option("--process", "Process pending items in the queue")
+		.option("--clear-completed", "Remove completed items from queue")
+		.option("--clear-failed", "Remove permanently failed items from queue")
+		.option("--reset", "Reset the entire queue (dangerous)")
+		.action(
+			async (options: {
+				process?: boolean;
+				clearCompleted?: boolean;
+				clearFailed?: boolean;
+				reset?: boolean;
+			}) => {
+				try {
+					const queueManager = getQueueManager();
+
+					if (options.reset) {
+						console.log("\x1b[31mResetting sync queue...\x1b[0m");
+						queueManager.reset();
+						console.log("Queue has been reset.");
+						return;
+					}
+
+					if (options.clearCompleted) {
+						const removed = queueManager.cleanupCompleted();
+						console.log(`Removed ${removed} completed items from queue.`);
+						return;
+					}
+
+					if (options.clearFailed) {
+						const removed = queueManager.removeFailed();
+						console.log(`Removed ${removed} permanently failed items from queue.`);
+						return;
+					}
+
+					if (options.process) {
+						console.log("Processing sync queue...");
+						const result = await processQueue({ maxItems: 10 });
+						console.log(`\nProcessed: ${result.processed}`);
+						console.log(`Succeeded: ${result.succeeded}`);
+						console.log(`Failed: ${result.failed}`);
+						if (result.errors.length > 0) {
+							console.log("\nErrors:");
+							for (const err of result.errors) {
+								console.log(`  ${err}`);
+							}
+						}
+						return;
+					}
+
+					// Show queue status
+					const queue = queueManager.getQueue();
+
+					console.log("\n=== Sync Queue ===\n");
+					console.log(`Total items: ${queue.length}`);
+					console.log(
+						`Pending: ${queue.filter((i) => i.status === "pending").length}`,
+					);
+					console.log(
+						`In Progress: ${queue.filter((i) => i.status === "in_progress").length}`,
+					);
+					console.log(
+						`Completed: ${queue.filter((i) => i.status === "completed").length}`,
+					);
+					console.log(
+						`Failed: ${queue.filter((i) => i.status === "failed").length}`,
+					);
+
+					if (queue.length > 0) {
+						console.log("\nRecent items:");
+						const recent = queue.slice(-10);
+						for (const item of recent) {
+							const statusColor =
+								item.status === "completed"
+									? "\x1b[32m"
+									: item.status === "failed"
+										? "\x1b[31m"
+										: item.status === "in_progress"
+											? "\x1b[34m"
+											: "\x1b[33m";
+							console.log(
+								`  ${statusColor}[${item.status}]\x1b[0m ${item.sessionId.slice(0, 8)}... ` +
+									`(${item.priority}, attempts: ${item.attempts})`,
+							);
+							if (item.error) {
+								console.log(`    Error: ${item.error}`);
+							}
+							if (item.nextRetry) {
+								console.log(
+									`    Next retry: ${formatRelativeTime(item.nextRetry)}`,
+								);
+							}
+						}
+					}
+
+					console.log("");
+				} catch (error) {
+					console.error(
+						"Error managing queue:",
+						error instanceof Error ? error.message : error,
+					);
+					process.exit(1);
+				}
+			},
+		);
+
+	// sync enqueue <sessionId>
+	syncCommand
+		.command("enqueue <sessionId>")
+		.description("Add a session to the sync queue")
+		.option("--priority <level>", "Priority level: high, normal, low", "normal")
+		.action(async (sessionId: string, options: { priority: string }) => {
+			try {
+				const priority = options.priority as "high" | "normal" | "low";
+				if (!["high", "normal", "low"].includes(priority)) {
+					console.error('Priority must be "high", "normal", or "low"');
+					process.exit(1);
+				}
+
+				const queueManager = getQueueManager();
+				const item = queueManager.enqueue(sessionId, priority);
+
+				console.log(`Added to queue: ${item.id}`);
+				console.log(`  Session: ${sessionId}`);
+				console.log(`  Priority: ${priority}`);
+			} catch (error) {
+				console.error(
+					"Error enqueueing session:",
+					error instanceof Error ? error.message : error,
+				);
+				process.exit(1);
+			}
+		});
+}

@@ -36,6 +36,32 @@ export interface PortConfig {
 }
 
 /**
+ * Sync configuration for team platform data synchronization
+ */
+export interface SyncConfig {
+	/** Enable sync to team platform (default: false) */
+	enabled?: boolean;
+	/** Sync server endpoint URL */
+	endpoint?: string;
+	/** API key for authentication (prefer env var HAN_SYNC_API_KEY) */
+	apiKey?: string;
+	/** Sync interval in seconds (default: 300) */
+	interval?: number;
+	/** Maximum messages per batch (default: 1000) */
+	batchSize?: number;
+	/** Include personal repos in sync (default: false) */
+	includePersonal?: boolean;
+	/** Force include specific repos by remote URL pattern */
+	forceInclude?: string[];
+	/** Force exclude specific repos by remote URL pattern */
+	forceExclude?: string[];
+	/** Include full message content (default: false for privacy) */
+	includeContent?: boolean;
+	/** Enable compression (default: true) */
+	compression?: boolean;
+}
+
+/**
  * Han configuration structure
  */
 export interface HanConfig {
@@ -65,6 +91,10 @@ export interface HanConfig {
 	metrics?: {
 		enabled?: boolean; // Enable metrics tracking (default: true)
 	};
+	/**
+	 * Sync configuration for team platform data synchronization
+	 */
+	sync?: SyncConfig;
 	plugins?: {
 		[pluginName: string]: PluginSettings;
 	};
@@ -258,6 +288,19 @@ export function getMergedHanConfig(): HanConfig {
 				};
 			}
 
+			// Merge sync section
+			if (config.sync) {
+				merged.sync = {
+					...merged.sync,
+					...config.sync,
+					// Arrays need special handling - later config replaces
+					forceInclude:
+						config.sync.forceInclude ?? merged.sync?.forceInclude ?? [],
+					forceExclude:
+						config.sync.forceExclude ?? merged.sync?.forceExclude ?? [],
+				};
+			}
+
 			// Merge plugins section
 			if (config.plugins) {
 				merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
@@ -312,6 +355,19 @@ export function getMergedHanConfigForDirectory(directory: string): HanConfig {
 				merged.metrics = {
 					...merged.metrics,
 					...config.metrics,
+				};
+			}
+
+			// Merge sync section
+			if (config.sync) {
+				merged.sync = {
+					...merged.sync,
+					...config.sync,
+					// Arrays need special handling - later config replaces
+					forceInclude:
+						config.sync.forceInclude ?? merged.sync?.forceInclude ?? [],
+					forceExclude:
+						config.sync.forceExclude ?? merged.sync?.forceExclude ?? [],
 				};
 			}
 
@@ -441,4 +497,63 @@ export function getHanBinary(): string {
 
 	const config = getMergedHanConfig();
 	return config.hanBinary || "han";
+}
+
+/**
+ * Check if sync is enabled (default: false)
+ * Also requires valid endpoint and API key to be truly enabled.
+ */
+export function isSyncEnabled(): boolean {
+	const config = getMergedHanConfig();
+	const syncConfig = config.sync;
+
+	if (!syncConfig?.enabled) {
+		return false;
+	}
+
+	// Check env var override
+	if (process.env.HAN_SYNC_ENABLED === "false") {
+		return false;
+	}
+	if (process.env.HAN_SYNC_ENABLED === "true") {
+		// Still need endpoint and API key
+		const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
+		const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
+		return Boolean(endpoint && apiKey);
+	}
+
+	// Need both endpoint and API key to be enabled
+	const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
+	const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
+
+	return Boolean(endpoint && apiKey);
+}
+
+/**
+ * Get the resolved sync configuration
+ * Environment variables take precedence over config file values.
+ */
+export function getSyncConfig(): SyncConfig | null {
+	const config = getMergedHanConfig();
+	const syncConfig = config.sync;
+
+	if (!syncConfig) {
+		return null;
+	}
+
+	return {
+		enabled:
+			process.env.HAN_SYNC_ENABLED !== undefined
+				? process.env.HAN_SYNC_ENABLED === "true"
+				: syncConfig.enabled,
+		endpoint: process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint,
+		apiKey: process.env.HAN_SYNC_API_KEY || syncConfig.apiKey,
+		interval: syncConfig.interval,
+		batchSize: syncConfig.batchSize,
+		includePersonal: syncConfig.includePersonal,
+		forceInclude: syncConfig.forceInclude,
+		forceExclude: syncConfig.forceExclude,
+		includeContent: syncConfig.includeContent,
+		compression: syncConfig.compression,
+	};
 }
