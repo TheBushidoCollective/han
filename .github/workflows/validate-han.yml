@@ -53,11 +53,13 @@ jobs:
         working-directory: ./packages/han-native
         run: |
           cargo build --release
-          # Copy to where han package expects it (packages/han/native/)
+          # Copy for NAPI-RS loader (packages/han-native/)
+          cp target/release/libhan_native.so han-native.linux-x64-gnu.node
+          # Copy for direct loader (packages/han/native/)
           mkdir -p ../han/native
           cp target/release/libhan_native.so ../han/native/han-native.node
           echo "Built native module:"
-          ls -la ../han/native/han-native.node
+          ls -la han-native.linux-x64-gnu.node ../han/native/han-native.node
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
