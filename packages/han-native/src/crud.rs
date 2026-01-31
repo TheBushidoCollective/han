@@ -924,6 +924,218 @@ pub fn get_session_todos(session_id: &str) -> napi::Result<Option<SessionTodos>>
 }
 
 // ============================================================================
+// Generated Session Summary Operations (LLM-analyzed summaries)
+// ============================================================================
+
+/// Upsert a generated session summary (inserts or updates based on session_id)
+pub fn upsert_generated_summary(
+    input: GeneratedSessionSummaryInput,
+) -> napi::Result<GeneratedSessionSummary> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let topics_json = serde_json::to_string(&input.topics)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize topics: {}", e)))?;
+    let files_json = input
+        .files_modified
+        .as_ref()
+        .map(|f| serde_json::to_string(f))
+        .transpose()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize files: {}", e)))?;
+    let tools_json = input
+        .tools_used
+        .as_ref()
+        .map(|t| serde_json::to_string(t))
+        .transpose()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize tools: {}", e)))?;
+
+    // Use RETURNING to get the inserted/updated row (avoids re-entrancy deadlock)
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO generated_session_summaries (
+                id, session_id, summary_text, topics, files_modified, tools_used,
+                outcome, message_count, duration_seconds, created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+            ON CONFLICT(session_id) DO UPDATE SET
+                summary_text = excluded.summary_text,
+                topics = excluded.topics,
+                files_modified = excluded.files_modified,
+                tools_used = excluded.tools_used,
+                outcome = excluded.outcome,
+                message_count = excluded.message_count,
+                duration_seconds = excluded.duration_seconds,
+                updated_at = excluded.updated_at
+            RETURNING id, session_id, summary_text, topics, files_modified, tools_used,
+                      outcome, message_count, duration_seconds, created_at, updated_at",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
+
+    stmt.query_row(
+        params![
+            id,
+            input.session_id,
+            input.summary_text,
+            topics_json,
+            files_json,
+            tools_json,
+            input.outcome,
+            input.message_count,
+            input.duration_seconds,
+            now,
+        ],
+        |row| {
+            let topics_str: String = row.get(3)?;
+            let files_str: Option<String> = row.get(4)?;
+            let tools_str: Option<String> = row.get(5)?;
+
+            Ok(GeneratedSessionSummary {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                summary_text: row.get(2)?,
+                topics: serde_json::from_str(&topics_str).unwrap_or_default(),
+                files_modified: files_str.and_then(|s| serde_json::from_str(&s).ok()),
+                tools_used: tools_str.and_then(|s| serde_json::from_str(&s).ok()),
+                outcome: row.get(6)?,
+                message_count: row.get(7)?,
+                duration_seconds: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to upsert generated summary: {}", e)))
+}
+
+/// Get generated summary by session ID
+pub fn get_generated_summary(session_id: &str) -> napi::Result<Option<GeneratedSessionSummary>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, summary_text, topics, files_modified, tools_used,
+                    outcome, message_count, duration_seconds, created_at, updated_at
+             FROM generated_session_summaries WHERE session_id = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![session_id], |row| {
+        let topics_str: String = row.get(3)?;
+        let files_str: Option<String> = row.get(4)?;
+        let tools_str: Option<String> = row.get(5)?;
+
+        Ok(GeneratedSessionSummary {
+            id: row.get(0)?,
+            session_id: row.get(1)?,
+            summary_text: row.get(2)?,
+            topics: serde_json::from_str(&topics_str).unwrap_or_default(),
+            files_modified: files_str.and_then(|s| serde_json::from_str(&s).ok()),
+            tools_used: tools_str.and_then(|s| serde_json::from_str(&s).ok()),
+            outcome: row.get(6)?,
+            message_count: row.get(7)?,
+            duration_seconds: row.get(8)?,
+            created_at: row.get(9)?,
+            updated_at: row.get(10)?,
+        })
+    });
+
+    match result {
+        Ok(summary) => Ok(Some(summary)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get generated summary: {}",
+            e
+        ))),
+    }
+}
+
+/// Search generated summaries using FTS
+pub fn search_generated_summaries(
+    query: &str,
+    limit: Option<u32>,
+) -> napi::Result<Vec<GeneratedSessionSummary>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let limit_val = limit.unwrap_or(20);
+
+    // Escape the query to prevent FTS5 syntax errors
+    let escaped_query = escape_fts5_query(query);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT g.id, g.session_id, g.summary_text, g.topics, g.files_modified, g.tools_used,
+                    g.outcome, g.message_count, g.duration_seconds, g.created_at, g.updated_at
+             FROM generated_session_summaries g
+             JOIN generated_session_summaries_fts fts ON fts.rowid = g.rowid
+             WHERE generated_session_summaries_fts MATCH ?1
+             ORDER BY g.created_at DESC
+             LIMIT ?2",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare search: {}", e)))?;
+
+    let rows = stmt
+        .query_map(params![escaped_query, limit_val], |row| {
+            let topics_str: String = row.get(3)?;
+            let files_str: Option<String> = row.get(4)?;
+            let tools_str: Option<String> = row.get(5)?;
+
+            Ok(GeneratedSessionSummary {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                summary_text: row.get(2)?,
+                topics: serde_json::from_str(&topics_str).unwrap_or_default(),
+                files_modified: files_str.and_then(|s| serde_json::from_str(&s).ok()),
+                tools_used: tools_str.and_then(|s| serde_json::from_str(&s).ok()),
+                outcome: row.get(6)?,
+                message_count: row.get(7)?,
+                duration_seconds: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to search summaries: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// List sessions that don't have generated summaries yet
+/// Returns session IDs ordered by most recent first
+pub fn list_sessions_without_summaries(limit: Option<u32>) -> napi::Result<Vec<String>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let limit_val = limit.unwrap_or(100);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT s.id
+             FROM sessions s
+             LEFT JOIN generated_session_summaries gs ON s.id = gs.session_id
+             WHERE gs.id IS NULL
+             ORDER BY (
+                 SELECT MAX(m.timestamp) FROM messages m WHERE m.session_id = s.id
+             ) DESC NULLS LAST
+             LIMIT ?1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map(params![limit_val], |row| row.get(0))
+        .map_err(|e| napi::Error::from_reason(format!("Failed to list sessions: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+// ============================================================================
 // Native Task Operations (Claude Code's built-in task system)
 // ============================================================================
 
