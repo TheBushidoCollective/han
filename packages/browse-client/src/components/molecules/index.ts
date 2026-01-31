@@ -5,6 +5,7 @@
  * simple, reusable UI components with a single purpose.
  */
 
+export { AccessDenied } from './AccessDenied.tsx';
 export { ConfidenceBadge } from './ConfidenceBadge.tsx';
 export { ErrorBoundary } from './ErrorBoundary.tsx';
 export { FeatureBadge } from './FeatureBadge.tsx';
