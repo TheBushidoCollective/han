@@ -1520,7 +1520,12 @@ mod tests {
 
         // Clean up
         let _ = Command::new("git")
-            .args(["worktree", "remove", "--force", &worktree_path.to_string_lossy()])
+            .args([
+                "worktree",
+                "remove",
+                "--force",
+                &worktree_path.to_string_lossy(),
+            ])
             .current_dir(repo.path())
             .output();
     }

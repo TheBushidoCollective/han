@@ -682,11 +682,11 @@ pub struct FileValidationStatus {
 pub struct GeneratedSessionSummary {
     pub id: String,
     pub session_id: String,
-    pub summary_text: String,            // 2-3 sentence summary
-    pub topics: Vec<String>,              // Parsed from JSON array
+    pub summary_text: String, // 2-3 sentence summary
+    pub topics: Vec<String>,  // Parsed from JSON array
     pub files_modified: Option<Vec<String>>,
     pub tools_used: Option<Vec<String>>,
-    pub outcome: Option<String>,          // 'completed', 'partial', 'abandoned'
+    pub outcome: Option<String>, // 'completed', 'partial', 'abandoned'
     pub message_count: Option<i32>,
     pub duration_seconds: Option<i32>,
     pub created_at: Option<String>,

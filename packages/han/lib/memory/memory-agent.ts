@@ -404,22 +404,26 @@ IMPORTANT: You ONLY have access to MCP search tools listed in allowedTools. Do N
 
 			// Handle tool results - count results for progress
 			if (message.type === "user" && message.message?.content) {
-				for (const block of message.message.content) {
-					if (
-						block.type === "tool_result" &&
-						typeof block.content === "string"
-					) {
-						try {
-							const parsed = JSON.parse(block.content);
-							if (Array.isArray(parsed)) {
-								onProgress?.({
-									type: "found",
-									content: `Found ${parsed.length} results`,
-									resultCount: parsed.length,
-								});
+				const content = message.message.content;
+				if (Array.isArray(content)) {
+					for (const block of content) {
+						if (
+							typeof block === "object" &&
+							block.type === "tool_result" &&
+							typeof block.content === "string"
+						) {
+							try {
+								const parsed = JSON.parse(block.content);
+								if (Array.isArray(parsed)) {
+									onProgress?.({
+										type: "found",
+										content: `Found ${parsed.length} results`,
+										resultCount: parsed.length,
+									});
+								}
+							} catch {
+								// Not JSON array, ignore
 							}
-						} catch {
-							// Not JSON array, ignore
 						}
 					}
 				}

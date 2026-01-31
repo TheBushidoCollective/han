@@ -41,7 +41,7 @@ export type SearchStrategy =
 /**
  * Memory layers to search
  */
-export type MemoryLayer = "rules" | "transcripts" | "team" | "all";
+export type MemoryLayer = "rules" | "transcripts" | "team" | "summaries" | "all";
 
 /**
  * Search result with citation metadata
