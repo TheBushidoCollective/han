@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { formatDate, getAllPapers } from "../../lib/papers";
+import { formatAuthors, formatDate, getAllPapers } from "../../lib/papers";
 import Header from "../components/Header";
 
 export const metadata: Metadata = {
@@ -51,7 +51,7 @@ export default function PapersPage() {
 									<div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
 										<time dateTime={paper.date}>{formatDate(paper.date)}</time>
 										<span>•</span>
-										<span>By {paper.authors.join(", ")}</span>
+										<span>By {formatAuthors(paper.authors)}</span>
 									</div>
 
 									<div className="flex flex-wrap gap-2 mt-2">
