@@ -53,9 +53,13 @@ jobs:
         working-directory: ./packages/han-native
         run: |
           cargo build --release
+          # Copy for NAPI-RS loader (packages/han-native/)
           cp target/release/libhan_native.so han-native.linux-x64-gnu.node
+          # Copy for direct loader (packages/han/native/)
+          mkdir -p ../han/native
+          cp target/release/libhan_native.so ../han/native/han-native.node
           echo "Built native module:"
-          ls -la *.node
+          ls -la han-native.linux-x64-gnu.node ../han/native/han-native.node
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -69,6 +73,20 @@ jobs:
       - name: Run Biome lint
         run: biome lint --files-ignore-unknown=true .
         working-directory: ./packages/han
+
+      - name: Generate build-info stub
+        working-directory: ./packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          // Auto-generated stub for CI
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
 
       - name: TypeScript type check
         run: bun run tsc --noEmit

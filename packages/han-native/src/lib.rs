@@ -34,6 +34,9 @@ pub use schema::{
     FrustrationEvent,
     FrustrationEventInput,
     FrustrationMetrics,
+    // Generated session summaries (LLM-analyzed)
+    GeneratedSessionSummary,
+    GeneratedSessionSummaryInput,
     // Hook execution tracking
     HookExecution,
     HookExecutionInput,
@@ -1093,6 +1096,48 @@ pub fn get_session_todos(
     session_id: String,
 ) -> napi::Result<Option<SessionTodos>> {
     crud::get_session_todos(&session_id)
+}
+
+// ============================================================================
+// Generated Session Summary Functions (LLM-analyzed summaries)
+// ============================================================================
+
+/// Upsert a generated session summary (creates or updates based on session_id)
+#[napi]
+pub fn upsert_generated_summary(
+    _db_path: String,
+    input: GeneratedSessionSummaryInput,
+) -> napi::Result<GeneratedSessionSummary> {
+    crud::upsert_generated_summary(input)
+}
+
+/// Get generated summary by session ID
+#[napi]
+pub fn get_generated_summary(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Option<GeneratedSessionSummary>> {
+    crud::get_generated_summary(&session_id)
+}
+
+/// Search generated summaries using FTS
+#[napi]
+pub fn search_generated_summaries(
+    _db_path: String,
+    query: String,
+    limit: Option<u32>,
+) -> napi::Result<Vec<GeneratedSessionSummary>> {
+    crud::search_generated_summaries(&query, limit)
+}
+
+/// List sessions that don't have generated summaries yet
+/// Returns session IDs ordered by most recent first
+#[napi]
+pub fn list_sessions_without_summaries(
+    _db_path: String,
+    limit: Option<u32>,
+) -> napi::Result<Vec<String>> {
+    crud::list_sessions_without_summaries(limit)
 }
 
 // ============================================================================
