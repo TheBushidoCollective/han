@@ -10,6 +10,15 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { tryGetNativeModule } from "../native.ts";
 
+/** Default model for summary generation (can be overridden via HAN_SUMMARY_MODEL env var) */
+const DEFAULT_SUMMARY_MODEL = "claude-3-5-haiku-20241022";
+
+/** Maximum tokens for summary response */
+const MAX_SUMMARY_TOKENS = 500;
+
+/** Maximum transcript characters to include in prompt */
+const MAX_TRANSCRIPT_CHARS = 8000;
+
 /**
  * Generated summary structure
  */
@@ -96,10 +105,10 @@ function buildTranscriptForSummary(
 		}
 	}
 
-	// Limit total transcript size for Haiku
+	// Limit total transcript size for model context window
 	const transcript = lines.join("\n");
-	if (transcript.length > 8000) {
-		return `${transcript.slice(0, 8000)}...\n[truncated]`;
+	if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+		return `${transcript.slice(0, MAX_TRANSCRIPT_CHARS)}...\n[truncated]`;
 	}
 	return transcript;
 }
@@ -242,11 +251,12 @@ export async function generateSessionSummary(
 		};
 	}
 
-	// Call Haiku for fast, cheap summarization
+	// Call LLM for fast, cheap summarization (model configurable via env var)
 	const client = new Anthropic({ apiKey });
+	const model = process.env.HAN_SUMMARY_MODEL || DEFAULT_SUMMARY_MODEL;
 	const response = await client.messages.create({
-		model: "claude-3-5-haiku-20241022",
-		max_tokens: 500,
+		model,
+		max_tokens: MAX_SUMMARY_TOKENS,
 		messages: [
 			{
 				role: "user",

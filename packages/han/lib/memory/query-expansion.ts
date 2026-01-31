@@ -9,6 +9,36 @@
  *   Output: ("vcs" OR "version control" OR "git") "strategy"
  */
 
+/**
+ * FTS5 reserved operators that could cause injection if present in expansions.
+ * These MUST NOT appear unquoted in expansion terms.
+ */
+const FTS5_RESERVED = ["AND", "OR", "NOT", "NEAR", "MATCH"];
+
+/**
+ * Validate that expansion terms don't contain FTS5 operators.
+ * Throws at load time if invalid terms are detected.
+ */
+function validateExpansionTerms(
+	terms: Record<string, string[]>,
+	mapName: string,
+): void {
+	for (const [key, values] of Object.entries(terms)) {
+		for (const value of values) {
+			const upperValue = value.toUpperCase();
+			for (const reserved of FTS5_RESERVED) {
+				// Check if reserved word appears as a standalone word
+				const pattern = new RegExp(`\\b${reserved}\\b`, "i");
+				if (pattern.test(upperValue)) {
+					throw new Error(
+						`Invalid expansion: ${mapName}["${key}"] contains FTS5 operator "${reserved}" in value "${value}"`,
+					);
+				}
+			}
+		}
+	}
+}
+
 /** Expansion level configuration */
 export type ExpansionLevel = "none" | "minimal" | "full";
 
@@ -161,6 +191,10 @@ export const SYNONYMS: Record<string, string[]> = {
 	util: ["utility", "utilities", "helper"],
 	utils: ["utilities", "helpers"],
 };
+
+// Validate expansion maps at module load time to catch FTS5 injection risks early
+validateExpansionTerms(ACRONYMS, "ACRONYMS");
+validateExpansionTerms(SYNONYMS, "SYNONYMS");
 
 /**
  * Expand a query with synonyms and acronyms

@@ -189,10 +189,27 @@ interface RecentSession {
 	lastModified: number;
 }
 
+/** Limits for input validation */
+const LIMITS = {
+	MAX_RECENT_SESSIONS: 100,
+	DEFAULT_RECENT_SESSIONS: 10,
+	MAX_GREP_LIMIT: 50,
+	DEFAULT_GREP_LIMIT: 10,
+	DEFAULT_GREP_TIMEOUT_MS: 5000,
+} as const;
+
 /**
  * Get recent sessions sorted by modification time
+ *
+ * @param limit - Maximum sessions to return (1-100, default: 10)
  */
-export function getRecentSessions(limit = 10): RecentSession[] {
+export function getRecentSessions(limit = LIMITS.DEFAULT_RECENT_SESSIONS): RecentSession[] {
+	// Validate and clamp limit to prevent memory issues
+	const validatedLimit = Math.min(
+		Math.max(1, Math.floor(limit)),
+		LIMITS.MAX_RECENT_SESSIONS,
+	);
+
 	const allTranscripts = findAllTranscriptFiles();
 	const sessions: RecentSession[] = [];
 
@@ -215,7 +232,7 @@ export function getRecentSessions(limit = 10): RecentSession[] {
 	}
 
 	// Sort by modification time (newest first) and limit
-	return sessions.sort((a, b) => b.lastModified - a.lastModified).slice(0, limit);
+	return sessions.sort((a, b) => b.lastModified - a.lastModified).slice(0, validatedLimit);
 }
 
 /**

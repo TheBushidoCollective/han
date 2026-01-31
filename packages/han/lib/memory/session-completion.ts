@@ -32,7 +32,17 @@ export interface CompletionDetectionOptions {
 	limit?: number;
 	/** Minimum messages for a "meaningful" session (default: 5) */
 	minMessages?: number;
+	/** Additional cooldown minutes after completion before summary generation (default: 5) */
+	cooldownMinutes?: number;
 }
+
+/** Default values for completion detection */
+const COMPLETION_DEFAULTS = {
+	MIN_GAP_MINUTES: 30,
+	LIMIT: 50,
+	MIN_MESSAGES: 5,
+	COOLDOWN_MINUTES: 5, // Extra cooldown to prevent race conditions
+} as const;
 
 /**
  * Check if a timestamp is older than the specified gap
@@ -53,14 +63,25 @@ export function isSessionComplete(
  * Detect sessions that appear to be completed but don't have generated summaries yet
  *
  * Criteria for completion:
- * - Last message is older than minGapMinutes
+ * - Last message is older than minGapMinutes + cooldownMinutes
  * - Session has at least minMessages (meaningful session)
  * - No generated summary exists yet
+ *
+ * The cooldown period prevents race conditions where summary generation starts
+ * while the user is still thinking or the assistant is responding slowly.
  */
 export async function detectCompletedSessions(
 	options: CompletionDetectionOptions = {},
 ): Promise<SessionCompletionStatus[]> {
-	const { minGapMinutes = 30, limit = 50, minMessages = 5 } = options;
+	const {
+		minGapMinutes = COMPLETION_DEFAULTS.MIN_GAP_MINUTES,
+		limit = COMPLETION_DEFAULTS.LIMIT,
+		minMessages = COMPLETION_DEFAULTS.MIN_MESSAGES,
+		cooldownMinutes = COMPLETION_DEFAULTS.COOLDOWN_MINUTES,
+	} = options;
+
+	// Total gap includes both the minimum gap and cooldown period
+	const totalGapMinutes = minGapMinutes + cooldownMinutes;
 
 	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) {
@@ -104,8 +125,8 @@ export async function detectCompletedSessions(
 			continue;
 		}
 
-		// Check if session is complete based on time gap
-		const complete = isSessionComplete(lastMessageAt, minGapMinutes);
+		// Check if session is complete based on time gap (includes cooldown)
+		const complete = isSessionComplete(lastMessageAt, totalGapMinutes);
 
 		if (complete) {
 			results.push({
