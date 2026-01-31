@@ -75,6 +75,8 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           // Auto-generated stub for CI
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
           export const gitCommit = "ci";
           export const buildDate = new Date().toISOString();
