@@ -51,16 +51,6 @@ hooks:
     command: han hook reference hooks/no-excuses.md --must-read-first "no excuses for pre-existing issues"
     description: Reference no-excuses policy
 
-  memory-learning-ref:
-    event: UserPromptSubmit
-    command: han hook reference hooks/memory-learning.md --must-read-first "autonomous self-learning rules"
-    description: Reference memory learning guidelines
-
-  memory-confidence-ref:
-    event: UserPromptSubmit
-    command: han hook reference hooks/memory-confidence.md --must-read-first "memory-augmented answers"
-    description: Reference memory confidence guidelines
-
   # SubagentPrompt hooks - Han virtual hook for gathering subagent context
   # These are dispatched by the PreToolUse:Task hook to gather content for injection
   subagent-no-time-estimates:

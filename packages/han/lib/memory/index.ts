@@ -169,16 +169,7 @@ export {
 	getSessionsReadyForSummary,
 	isSessionComplete,
 } from "./session-completion.ts";
-// Session Summary Generation
-export type {
-	GeneratedSummary,
-	SummaryGenerationOptions,
-} from "./summary-generator.ts";
-export {
-	generateSessionSummary,
-	saveGeneratedSummary,
-} from "./summary-generator.ts";
-// Summarization (for Stop hook)
+// Summarization (heuristic-based, no LLM - for local analysis only)
 export type { SummarizeOptions } from "./summarize.ts";
 export { summarizeSession } from "./summarize.ts";
 // Native Summaries (Layer 2 - Claude's context window compression)
