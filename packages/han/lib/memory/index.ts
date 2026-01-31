@@ -110,6 +110,25 @@ export {
 	queryMemoryWithStreaming,
 	startMemoryQuerySession,
 } from "./streaming.ts";
+// Session Completion Detection
+export type {
+	CompletionDetectionOptions,
+	SessionCompletionStatus,
+} from "./session-completion.ts";
+export {
+	detectCompletedSessions,
+	getSessionsReadyForSummary,
+	isSessionComplete,
+} from "./session-completion.ts";
+// Session Summary Generation
+export type {
+	GeneratedSummary,
+	SummaryGenerationOptions,
+} from "./summary-generator.ts";
+export {
+	generateSessionSummary,
+	saveGeneratedSummary,
+} from "./summary-generator.ts";
 // Summarization (for Stop hook)
 export type { SummarizeOptions } from "./summarize.ts";
 export { summarizeSession } from "./summarize.ts";
