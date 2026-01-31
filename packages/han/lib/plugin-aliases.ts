@@ -15,23 +15,91 @@
  * Complete mapping of old plugin names to new organizational paths.
  * Format: { "old-name": "category/short-name" }
  *
- * Categories:
- * - languages: Programming language support (jutsu-typescript, jutsu-python, etc.)
- * - frameworks: Frameworks and libraries (jutsu-react, jutsu-nextjs, etc.)
- * - tools: Developer tools (jutsu-biome, jutsu-eslint, etc.)
- * - testing: Testing frameworks and methodologies (jutsu-jest, jutsu-bdd, etc.)
- * - infrastructure: DevOps and infrastructure (jutsu-kubernetes, jutsu-terraform, etc.)
- * - disciplines: Specialized roles (do-*)
- * - integrations: External service integrations (hashi-*)
+ * These paths MUST match the `source` field (minus ./) in marketplace.json.
  */
 export const PLUGIN_ALIASES: Record<string, string> = {
-	// ============================================
-	// Languages (programming language support)
-	// ============================================
+	// disciplines
+	"do-accessibility": "disciplines/accessibility",
+	"do-accessibility-engineering": "disciplines/accessibility",
+	"do-api": "disciplines/api",
+	"do-api-engineering": "disciplines/api",
+	"do-architecture": "disciplines/architecture",
+	"do-backend": "disciplines/backend",
+	"do-backend-development": "disciplines/backend",
+	"do-blockchain": "disciplines/blockchain",
+	"do-blockchain-development": "disciplines/blockchain",
+	"do-claude-plugin-development": "disciplines/plugin-development",
+	"do-compiler-development": "disciplines/compilers",
+	"do-compilers": "disciplines/compilers",
+	"do-content": "disciplines/content",
+	"do-content-creator": "disciplines/content",
+	"do-data-engineering": "disciplines/data-engineering",
+	"do-database-engineering": "disciplines/databases",
+	"do-databases": "disciplines/databases",
+	"do-documentation": "disciplines/documentation",
+	"do-embedded": "disciplines/embedded",
+	"do-embedded-development": "disciplines/embedded",
+	"do-frontend": "disciplines/frontend",
+	"do-frontend-development": "disciplines/frontend",
+	"do-game-development": "disciplines/games",
+	"do-games": "disciplines/games",
+	"do-graphics": "disciplines/graphics",
+	"do-graphics-engineering": "disciplines/graphics",
+	"do-infrastructure": "disciplines/infrastructure",
+	"do-machine-learning": "disciplines/machine-learning",
+	"do-machine-learning-engineering": "disciplines/machine-learning",
+	"do-mobile": "disciplines/mobile",
+	"do-mobile-development": "disciplines/mobile",
+	"do-network-engineering": "disciplines/networking",
+	"do-networking": "disciplines/networking",
+	"do-observability": "disciplines/observability",
+	"do-observability-engineering": "disciplines/observability",
+	"do-performance": "disciplines/performance",
+	"do-performance-engineering": "disciplines/performance",
+	"do-platform": "disciplines/platform",
+	"do-platform-engineering": "disciplines/platform",
+	"do-plugin-development": "disciplines/plugin-development",
+	"do-product": "disciplines/product",
+	"do-product-management": "disciplines/product",
+	"do-project-management": "disciplines/project-management",
+	"do-prompt-engineering": "disciplines/prompts",
+	"do-prompts": "disciplines/prompts",
+	"do-quality": "disciplines/quality",
+	"do-quality-assurance": "disciplines/quality",
+	"do-security": "disciplines/security",
+	"do-security-engineering": "disciplines/security",
+	"do-site-reliability-engineering": "disciplines/sre",
+	"do-sre": "disciplines/sre",
+	"do-technical-documentation": "disciplines/documentation",
+	"do-voip": "disciplines/voip",
+	"do-voip-engineering": "disciplines/voip",
+
+	// frameworks
+	"jutsu-angular": "frameworks/angular",
+	"jutsu-django": "frameworks/django",
+	"jutsu-ecto": "frameworks/ecto",
+	"jutsu-effect": "frameworks/effect",
+	"jutsu-expo": "frameworks/expo",
+	"jutsu-fastapi": "frameworks/fastapi",
+	"jutsu-gluestack": "frameworks/gluestack",
+	"jutsu-ink": "frameworks/ink",
+	"jutsu-nestjs": "frameworks/nestjs",
+	"jutsu-nextjs": "frameworks/nextjs",
+	"jutsu-phoenix": "frameworks/phoenix",
+	"jutsu-rails": "frameworks/rails",
+	"jutsu-react": "frameworks/react",
+	"jutsu-react-native": "frameworks/react-native",
+	"jutsu-react-native-web": "frameworks/react-native-web",
+	"jutsu-relay": "frameworks/relay",
+	"jutsu-storybook": "tools/storybook",
+	"jutsu-vue": "frameworks/vue",
+	"jutsu-zustand": "frameworks/zustand",
+
+	// languages
 	"jutsu-c": "languages/c",
 	"jutsu-cpp": "languages/cpp",
-	"jutsu-csharp": "languages/csharp",
 	"jutsu-crystal": "languages/crystal",
+	"jutsu-csharp": "languages/csharp",
 	"jutsu-elixir": "languages/elixir",
 	"jutsu-erlang": "languages/erlang",
 	"jutsu-gleam": "languages/gleam",
@@ -49,182 +117,98 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 	"jutsu-swift": "languages/swift",
 	"jutsu-typescript": "languages/typescript",
 
-	// ============================================
-	// Frameworks (web, mobile, backend frameworks)
-	// ============================================
-	"jutsu-angular": "frameworks/angular",
-	"jutsu-django": "frameworks/django",
-	"jutsu-expo": "frameworks/expo",
-	"jutsu-fastapi": "frameworks/fastapi",
-	"jutsu-gluestack": "frameworks/gluestack",
-	"jutsu-ink": "frameworks/ink",
-	"jutsu-nestjs": "frameworks/nestjs",
-	"jutsu-nextjs": "frameworks/nextjs",
-	"jutsu-phoenix": "frameworks/phoenix",
-	"jutsu-rails": "frameworks/rails",
-	"jutsu-react": "frameworks/react",
-	"jutsu-react-native": "frameworks/react-native",
-	"jutsu-react-native-web": "frameworks/react-native-web",
-	"jutsu-storybook": "frameworks/storybook",
-	"jutsu-vue": "frameworks/vue",
-	"jutsu-zustand": "frameworks/zustand",
+	// patterns
+	"jutsu-ai-dlc": "patterns/ai-dlc",
+	"jutsu-atomic-design": "patterns/atomic-design",
+	"jutsu-bdd": "patterns/bdd",
+	"jutsu-functional-programming": "patterns/functional-programming",
+	"jutsu-git-storytelling": "patterns/git-storytelling",
+	"jutsu-monorepo": "patterns/monorepo",
+	"jutsu-oop": "patterns/oop",
+	"jutsu-tdd": "patterns/tdd",
 
-	// ============================================
-	// GraphQL-related
-	// ============================================
-	"jutsu-absinthe-graphql": "graphql/absinthe-graphql",
-	"jutsu-apollo-graphql": "graphql/apollo-graphql",
-	"jutsu-graphql": "graphql/graphql",
-	"jutsu-graphql-inspector": "graphql/graphql-inspector",
-	"jutsu-relay": "graphql/relay",
+	// services
+	"hashi-agent-sop": "services/agent-sop",
+	"hashi-blueprints": "services/blueprints",
+	"hashi-canva": "services/canva",
+	"hashi-clickup": "services/clickup",
+	"hashi-figma": "services/figma",
+	"hashi-github": "services/github",
+	"hashi-gitlab": "services/gitlab",
+	"hashi-jira": "services/jira",
+	"hashi-linear": "services/linear",
+	"hashi-notion": "services/notion",
+	"hashi-playwright-mcp": "services/playwright-mcp",
+	"hashi-reddit": "services/reddit",
+	"hashi-sentry": "services/sentry",
+	"hashi-sentry-mcp": "services/sentry",
 
-	// ============================================
-	// Tools (linters, formatters, build tools)
-	// ============================================
-	"jutsu-ameba": "tools/ameba",
-	"jutsu-biome": "tools/biome",
-	"jutsu-checkstyle": "tools/checkstyle",
-	"jutsu-clippy": "tools/clippy",
-	"jutsu-credo": "tools/credo",
-	"jutsu-dialyzer": "tools/dialyzer",
-	"jutsu-esbuild": "tools/esbuild",
-	"jutsu-eslint": "tools/eslint",
-	"jutsu-fnox": "tools/fnox",
-	"jutsu-markdown": "tools/markdown",
-	"jutsu-mise": "tools/mise",
-	"jutsu-prettier": "tools/prettier",
-	"jutsu-pylint": "tools/pylint",
-	"jutsu-rollup": "tools/rollup",
-	"jutsu-rubocop": "tools/rubocop",
-	"jutsu-shellcheck": "tools/shellcheck",
-	"jutsu-shfmt": "tools/shfmt",
-	"jutsu-syncpack": "tools/syncpack",
-	"jutsu-tailwind": "tools/tailwind",
-	"jutsu-vite": "tools/vite",
-	"jutsu-webpack": "tools/webpack",
-
-	// ============================================
-	// Testing (test frameworks and methodologies)
-	// ============================================
-	"jutsu-bdd": "testing/bdd",
-	"jutsu-cucumber": "testing/cucumber",
-	"jutsu-cypress": "testing/cypress",
-	"jutsu-jest": "testing/jest",
-	"jutsu-junit": "testing/junit",
-	"jutsu-mocha": "testing/mocha",
-	"jutsu-playwright": "testing/playwright",
-	"jutsu-playwright-bdd": "testing/playwright-bdd",
-	"jutsu-pytest": "testing/pytest",
-	"jutsu-rspec": "testing/rspec",
-	"jutsu-tdd": "testing/tdd",
-	"jutsu-testng": "testing/testng",
-	"jutsu-vitest": "testing/vitest",
-
-	// ============================================
-	// Infrastructure (DevOps, containers, cloud)
-	// ============================================
-	"jutsu-act": "infrastructure/act",
-	"jutsu-ansible": "infrastructure/ansible",
-	"jutsu-docker-compose": "infrastructure/docker-compose",
-	"jutsu-gitlab-ci": "infrastructure/gitlab-ci",
-	"jutsu-helm": "infrastructure/helm",
-	"jutsu-kubernetes": "infrastructure/kubernetes",
-	"jutsu-kustomize": "infrastructure/kustomize",
-	"jutsu-pulumi": "infrastructure/pulumi",
-	"jutsu-terraform": "infrastructure/terraform",
-
-	// ============================================
-	// Mobile Development
-	// ============================================
-	"jutsu-android": "mobile/android",
-	"jutsu-cocoapods": "mobile/cocoapods",
-	"jutsu-ios": "mobile/ios",
-
-	// ============================================
-	// Package Managers
-	// ============================================
-	"jutsu-bun": "package-managers/bun",
-	"jutsu-lerna": "package-managers/lerna",
-	"jutsu-maven": "package-managers/maven",
-	"jutsu-npm": "package-managers/npm",
-	"jutsu-yarn": "package-managers/yarn",
-
-	// ============================================
-	// Methodologies and Patterns
-	// ============================================
-	"jutsu-atomic-design": "methodologies/atomic-design",
-	"jutsu-functional-programming": "methodologies/functional-programming",
-	"jutsu-monorepo": "methodologies/monorepo",
-	"jutsu-oop": "methodologies/oop",
-
-	// ============================================
-	// Data and Database
-	// ============================================
-	"jutsu-ecto": "data/ecto",
-	"jutsu-tensorflow": "data/tensorflow",
-
-	// ============================================
-	// Specialized Tools
-	// ============================================
-	"jutsu-ai-dlc": "specialized/ai-dlc",
+	// specialized
+	"jutsu-android": "specialized/android",
 	"jutsu-claude-agent-sdk": "specialized/claude-agent-sdk",
-	"jutsu-effect": "specialized/effect",
-	"jutsu-git-storytelling": "specialized/git-storytelling",
+	"jutsu-fnox": "specialized/fnox",
 	"jutsu-han-plugins": "specialized/han-plugins",
+	"jutsu-ios": "specialized/ios",
 	"jutsu-notetaker": "specialized/notetaker",
 	"jutsu-runbooks": "specialized/runbooks",
 	"jutsu-scratch": "specialized/scratch",
 	"jutsu-sentry": "specialized/sentry",
 	"jutsu-sip": "specialized/sip",
+	"jutsu-tensorflow": "specialized/tensorflow",
 
-	// ============================================
-	// Disciplines (do-* plugins)
-	// ============================================
-	"do-accessibility-engineering": "disciplines/accessibility-engineering",
-	"do-api-engineering": "disciplines/api-engineering",
-	"do-architecture": "disciplines/architecture",
-	"do-backend-development": "disciplines/backend-development",
-	"do-blockchain-development": "disciplines/blockchain-development",
-	"do-claude-plugin-development": "disciplines/claude-plugin-development",
-	"do-compiler-development": "disciplines/compiler-development",
-	"do-content-creator": "disciplines/content-creator",
-	"do-data-engineering": "disciplines/data-engineering",
-	"do-database-engineering": "disciplines/database-engineering",
-	"do-embedded-development": "disciplines/embedded-development",
-	"do-frontend-development": "disciplines/frontend-development",
-	"do-game-development": "disciplines/game-development",
-	"do-graphics-engineering": "disciplines/graphics-engineering",
-	"do-infrastructure": "disciplines/infrastructure",
-	"do-machine-learning-engineering": "disciplines/machine-learning-engineering",
-	"do-mobile-development": "disciplines/mobile-development",
-	"do-network-engineering": "disciplines/network-engineering",
-	"do-observability-engineering": "disciplines/observability-engineering",
-	"do-performance-engineering": "disciplines/performance-engineering",
-	"do-platform-engineering": "disciplines/platform-engineering",
-	"do-product-management": "disciplines/product-management",
-	"do-project-management": "disciplines/project-management",
-	"do-prompt-engineering": "disciplines/prompt-engineering",
-	"do-quality-assurance": "disciplines/quality-assurance",
-	"do-security-engineering": "disciplines/security-engineering",
-	"do-site-reliability-engineering": "disciplines/site-reliability-engineering",
-	"do-technical-documentation": "disciplines/technical-documentation",
-	"do-voip-engineering": "disciplines/voip-engineering",
+	// tools
+	"jutsu-absinthe-graphql": "tools/absinthe-graphql",
+	"jutsu-act": "tools/act",
+	"jutsu-ansible": "tools/ansible",
+	"jutsu-apollo-graphql": "tools/apollo-graphql",
+	"jutsu-bun": "tools/bun",
+	"jutsu-cocoapods": "tools/cocoapods",
+	"jutsu-cucumber": "tools/cucumber",
+	"jutsu-cypress": "tools/cypress",
+	"jutsu-docker-compose": "tools/docker-compose",
+	"jutsu-esbuild": "tools/esbuild",
+	"jutsu-gitlab-ci": "tools/gitlab-ci",
+	"jutsu-graphql": "tools/graphql",
+	"jutsu-graphql-inspector": "tools/graphql-inspector",
+	"jutsu-helm": "tools/helm",
+	"jutsu-jest": "tools/jest",
+	"jutsu-junit": "tools/junit",
+	"jutsu-kubernetes": "tools/kubernetes",
+	"jutsu-kustomize": "tools/kustomize",
+	"jutsu-lerna": "tools/lerna",
+	"jutsu-maven": "tools/maven",
+	"jutsu-mise": "tools/mise",
+	"jutsu-mocha": "tools/mocha",
+	"jutsu-npm": "tools/npm",
+	"jutsu-playwright": "tools/playwright",
+	"jutsu-playwright-bdd": "tools/playwright-bdd",
+	"jutsu-pulumi": "tools/pulumi",
+	"jutsu-pytest": "tools/pytest",
+	"jutsu-rollup": "tools/rollup",
+	"jutsu-rspec": "tools/rspec",
+	"jutsu-syncpack": "tools/syncpack",
+	"jutsu-tailwind": "tools/tailwind",
+	"jutsu-terraform": "tools/terraform",
+	"jutsu-testng": "tools/testng",
+	"jutsu-vite": "tools/vite",
+	"jutsu-vitest": "tools/vitest",
+	"jutsu-webpack": "tools/webpack",
+	"jutsu-yarn": "tools/yarn",
 
-	// ============================================
-	// Integrations (hashi-* plugins)
-	// ============================================
-	"hashi-agent-sop": "integrations/agent-sop",
-	"hashi-blueprints": "integrations/blueprints",
-	"hashi-clickup": "integrations/clickup",
-	"hashi-figma": "integrations/figma",
-	"hashi-github": "integrations/github",
-	"hashi-gitlab": "integrations/gitlab",
-	"hashi-jira": "integrations/jira",
-	"hashi-linear": "integrations/linear",
-	"hashi-notion": "integrations/notion",
-	"hashi-playwright-mcp": "integrations/playwright-mcp",
-	"hashi-reddit": "integrations/reddit",
-	"hashi-sentry": "integrations/sentry",
+	// validation
+	"jutsu-ameba": "validation/ameba",
+	"jutsu-biome": "validation/biome",
+	"jutsu-checkstyle": "validation/checkstyle",
+	"jutsu-clippy": "validation/clippy",
+	"jutsu-credo": "validation/credo",
+	"jutsu-dialyzer": "validation/dialyzer",
+	"jutsu-eslint": "validation/eslint",
+	"jutsu-markdown": "validation/markdown",
+	"jutsu-prettier": "validation/prettier",
+	"jutsu-pylint": "validation/pylint",
+	"jutsu-rubocop": "validation/rubocop",
+	"jutsu-shellcheck": "validation/shellcheck",
+	"jutsu-shfmt": "validation/shfmt",
 };
 
 /**
