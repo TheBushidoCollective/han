@@ -151,6 +151,38 @@ import {
 	querySettingsSummary,
 	SettingsSummaryType,
 } from "./types/settings-summary.ts";
+// Team Memory types (adds teamMemory and orgLearnings queries)
+import {
+	OrgLearningsQueryInput,
+	TeamMemoryQueryInput,
+	UserContextInput,
+} from "./types/team-memory-query.ts";
+// Team Memory mutations (share, export/import, admin controls)
+import {
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
+} from "./types/team-memory-mutations.ts";
+import {
+	CitationVisibilityEnum,
+	MemoryLayerInfoType,
+	MemoryScopeEnum,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	OrgLearningType,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+} from "./types/memory/index.ts";
 import { SlotAcquireResultType } from "./types/slot-acquire-result.ts";
 import {
 	acquireSlot,
@@ -1636,6 +1668,32 @@ export {
 	UserType,
 	OrgType,
 	TeamMemberType,
+	// Team Memory types
+	TeamMemoryQueryInput,
+	UserContextInput,
+	OrgLearningsQueryInput,
+	CitationVisibilityEnum,
+	MemoryScopeEnum,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+	OrgLearningType,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	MemoryLayerInfoType,
+	// Team Memory mutation types
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
 };
 
 // Define the @defer directive for incremental delivery
