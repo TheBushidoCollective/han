@@ -1,7 +1,8 @@
 ---
 workflow: default
 created: 2026-01-30
-status: active
+completed: 2026-01-30
+status: complete
 ---
 
 # Third-Party Plugin Platform
@@ -20,13 +21,13 @@ Enable third-party plugin development by:
 
 ## Success Criteria
 
-- [ ] `han create plugin` command scaffolds a valid plugin structure (jutsu, do, or hashi)
-- [ ] Scaffolded plugin passes `claudelint` validation
-- [ ] External plugins work with `han hook run` when installed via local path
-- [ ] External plugins work with `han hook run` when installed via git URL
-- [ ] External plugin hooks appear in han's hook orchestration
-- [ ] Documentation explains plugin structure, hooks.json format, and distribution
-- [ ] Example third-party plugin repo exists as reference
+- [x] `han create plugin` command scaffolds a valid plugin structure (jutsu, do, or hashi)
+- [x] Scaffolded plugin passes `claudelint` validation
+- [x] External plugins work with `han hook run` when installed via local path
+- [x] External plugins work with `han hook run` when installed via git URL
+- [x] External plugin hooks appear in han's hook orchestration
+- [x] Documentation explains plugin structure, hooks.json format, and distribution
+- [x] Example third-party plugin repo exists as reference
 
 ## Context
 
