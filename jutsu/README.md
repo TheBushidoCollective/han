@@ -12,20 +12,6 @@ provide deep expertise in specific technologies, languages, and tools.
 
 ## Categories
 
-### Programming Languages
-
-Master the fundamentals and advanced patterns of programming languages:
-
-- **C, C++, C#** - Systems programming and memory management
-- **Go, Rust** - Modern systems languages with concurrency
-- **Java, Kotlin, Scala** - JVM ecosystem languages
-- **JavaScript, TypeScript** - Web development foundations
-- **Python** - Data science and general-purpose programming
-- **Ruby, PHP** - Web application languages
-- **Elixir, Erlang, Gleam** - BEAM ecosystem languages
-- **Swift, Objective-C** - Apple platform development
-- **Lua, Nim, Crystal** - Specialized scripting and systems languages
-
 ### Web Frameworks
 
 Build modern web applications with framework-specific patterns:

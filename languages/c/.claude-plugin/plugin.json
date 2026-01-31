@@ -1,0 +1,26 @@
+{
+  "name": "c",
+  "version": "1.2.0",
+  "description": "Advanced C programming skills for systems programming and memory management",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["c", "systems-programming", "memory-management"],
+  "lspServers": {
+    "clangd": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--background-index"],
+      "extensionToLanguage": {
+        ".c": "c",
+        ".h": "c"
+      },
+      "startupTimeout": 120000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}

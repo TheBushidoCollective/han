@@ -161,9 +161,9 @@
       ]
     },
     {
-      "name": "jutsu-c",
+      "name": "c",
       "description": "Advanced C programming skills for systems programming and memory management",
-      "source": "./jutsu/jutsu-c",
+      "source": "./languages/c",
       "category": "Technique",
       "keywords": ["c", "systems-programming", "memory-management", "skill"]
     },
@@ -262,9 +262,9 @@
       "keywords": ["clippy", "linting", "rust", "skill"]
     },
     {
-      "name": "jutsu-cpp",
+      "name": "cpp",
       "description": "Advanced C++ programming skills for modern C++ and template metaprogramming",
-      "source": "./jutsu/jutsu-cpp",
+      "source": "./languages/cpp",
       "category": "Technique",
       "keywords": ["cpp", "c++", "modern-cpp", "templates", "skill"]
     },
@@ -276,16 +276,16 @@
       "keywords": ["elixir", "linting", "style", "analysis"]
     },
     {
-      "name": "jutsu-crystal",
+      "name": "crystal",
       "description": "Skills for Crystal language development.",
-      "source": "./jutsu/jutsu-crystal",
+      "source": "./languages/crystal",
       "category": "Technique",
       "keywords": ["crystal", "language", "performance"]
     },
     {
-      "name": "jutsu-csharp",
+      "name": "csharp",
       "description": "Advanced C# programming skills for async patterns and LINQ",
-      "source": "./jutsu/jutsu-csharp",
+      "source": "./languages/csharp",
       "category": "Technique",
       "keywords": ["csharp", "c#", "dotnet", "async", "linq", "skill"]
     },
@@ -351,16 +351,16 @@
       ]
     },
     {
-      "name": "jutsu-elixir",
+      "name": "elixir",
       "description": "Advanced Elixir skills for OTP, pattern matching, and Ecto.",
-      "source": "./jutsu/jutsu-elixir",
+      "source": "./languages/elixir",
       "category": "Technique",
       "keywords": ["elixir", "otp", "ecto", "skill"]
     },
     {
-      "name": "jutsu-erlang",
+      "name": "erlang",
       "description": "Advanced Erlang programming skills for concurrent and distributed systems",
-      "source": "./jutsu/jutsu-erlang",
+      "source": "./languages/erlang",
       "category": "Technique",
       "keywords": [
         "erlang",
@@ -412,16 +412,16 @@
       ]
     },
     {
-      "name": "jutsu-gleam",
+      "name": "gleam",
       "description": "Advanced Gleam programming skills for functional BEAM development",
-      "source": "./jutsu/jutsu-gleam",
+      "source": "./languages/gleam",
       "category": "Technique",
       "keywords": ["gleam", "beam", "functional", "erlang", "skill"]
     },
     {
-      "name": "jutsu-go",
+      "name": "go",
       "description": "Advanced Go skills for concurrency, error handling, and interfaces.",
-      "source": "./jutsu/jutsu-go",
+      "source": "./languages/go",
       "category": "Technique",
       "keywords": ["go", "golang", "concurrency", "skill"]
     },
@@ -476,9 +476,9 @@
       "keywords": ["ios", "xcode", "swift", "build", "validation", "apple"]
     },
     {
-      "name": "jutsu-java",
+      "name": "java",
       "description": "Advanced Java skills for streams, concurrency, and generics.",
-      "source": "./jutsu/jutsu-java",
+      "source": "./languages/java",
       "category": "Technique",
       "keywords": ["java", "streams", "concurrency", "skill"]
     },
@@ -511,9 +511,9 @@
       ]
     },
     {
-      "name": "jutsu-kotlin",
+      "name": "kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
-      "source": "./jutsu/jutsu-kotlin",
+      "source": "./languages/kotlin",
       "category": "Technique",
       "keywords": ["kotlin", "coroutines", "android", "jvm", "skill"]
     },
@@ -539,9 +539,9 @@
       "keywords": ["kustomize", "kubernetes", "k8s", "devops"]
     },
     {
-      "name": "jutsu-lua",
+      "name": "lua",
       "description": "Advanced Lua programming skills for embedded scripting and game development",
-      "source": "./jutsu/jutsu-lua",
+      "source": "./languages/lua",
       "category": "Technique",
       "keywords": ["lua", "scripting", "embedded", "gaming", "skill"]
     },
@@ -601,9 +601,9 @@
       "keywords": ["nextjs", "react", "ssr", "skill"]
     },
     {
-      "name": "jutsu-nim",
+      "name": "nim",
       "description": "Advanced Nim programming skills for systems programming and metaprogramming",
-      "source": "./jutsu/jutsu-nim",
+      "source": "./languages/nim",
       "category": "Technique",
       "keywords": ["nim", "systems-programming", "metaprogramming", "skill"]
     },
@@ -615,9 +615,9 @@
       "keywords": ["npm", "package-manager", "dependencies", "node"]
     },
     {
-      "name": "jutsu-objective-c",
+      "name": "objective-c",
       "description": "Advanced Objective-C programming skills for iOS and macOS development",
-      "source": "./jutsu/jutsu-objective-c",
+      "source": "./languages/objective-c",
       "category": "Technique",
       "keywords": ["objective-c", "objc", "ios", "macos", "arc", "skill"]
     },
@@ -636,9 +636,9 @@
       "keywords": ["elixir", "phoenix", "web", "framework"]
     },
     {
-      "name": "jutsu-php",
+      "name": "php",
       "description": "Advanced PHP programming skills for modern PHP and security patterns",
-      "source": "./jutsu/jutsu-php",
+      "source": "./languages/php",
       "category": "Technique",
       "keywords": ["php", "composer", "security", "web", "skill"]
     },
@@ -699,9 +699,9 @@
       "keywords": ["pytest", "testing", "python", "skill"]
     },
     {
-      "name": "jutsu-python",
+      "name": "python",
       "description": "Advanced Python skills for type system, async patterns, and data modeling.",
-      "source": "./jutsu/jutsu-python",
+      "source": "./languages/python",
       "category": "Technique",
       "keywords": ["python", "types", "async", "skill"]
     },
@@ -762,9 +762,9 @@
       "keywords": ["rollup", "bundler", "build", "javascript", "typescript"]
     },
     {
-      "name": "jutsu-ruby",
+      "name": "ruby",
       "description": "Advanced Ruby skills for object-oriented programming, metaprogramming, blocks, and gems.",
-      "source": "./jutsu/jutsu-ruby",
+      "source": "./languages/ruby",
       "category": "Technique",
       "keywords": ["ruby", "metaprogramming", "blocks", "gems", "oop", "skill"]
     },
@@ -792,16 +792,16 @@
       ]
     },
     {
-      "name": "jutsu-rust",
+      "name": "rust",
       "description": "Advanced Rust skills for ownership, error handling, and async programming.",
-      "source": "./jutsu/jutsu-rust",
+      "source": "./languages/rust",
       "category": "Technique",
       "keywords": ["rust", "ownership", "async", "skill"]
     },
     {
-      "name": "jutsu-scala",
+      "name": "scala",
       "description": "Advanced Scala programming skills for functional programming and type systems",
-      "source": "./jutsu/jutsu-scala",
+      "source": "./languages/scala",
       "category": "Technique",
       "keywords": ["scala", "functional", "jvm", "type-system", "skill"]
     },
@@ -866,9 +866,9 @@
       ]
     },
     {
-      "name": "jutsu-swift",
+      "name": "swift",
       "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
-      "source": "./jutsu/jutsu-swift",
+      "source": "./languages/swift",
       "category": "Technique",
       "keywords": ["swift", "ios", "protocol-oriented", "concurrency", "skill"]
     },
@@ -920,9 +920,9 @@
       ]
     },
     {
-      "name": "jutsu-typescript",
+      "name": "typescript",
       "description": "Skills for TypeScript type system mastery.",
-      "source": "./jutsu/jutsu-typescript",
+      "source": "./languages/typescript",
       "category": "Technique",
       "keywords": ["typescript", "types", "language"]
     },

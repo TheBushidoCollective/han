@@ -1,0 +1,25 @@
+{
+  "name": "lua",
+  "version": "1.2.0",
+  "description": "Advanced Lua programming skills for embedded scripting and game development",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["lua", "scripting", "embedded", "gaming"],
+  "lspServers": {
+    "lua-language-server": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".lua": "lua"
+      },
+      "startupTimeout": 60000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}
