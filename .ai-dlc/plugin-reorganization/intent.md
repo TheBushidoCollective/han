@@ -40,7 +40,7 @@ Any plugin in any category can have hooks, MCP servers, agents, skills, and comm
 - [x] Marketplace.json updated with new plugin paths
 - [x] All cross-plugin dependencies updated to new names
 - [x] Existing user installations auto-migrate on next `han` run
-- [ ] Minor version bump (backwards compatible)
+- [x] Minor version bump (backwards compatible)
 
 ## Context
 
