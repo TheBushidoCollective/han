@@ -253,40 +253,35 @@ export function tryGetNativeModule(): NativeModule | null {
  * Get the git remote URL for a directory
  */
 export function getGitRemoteUrl(dir: string): string | null {
-	const native = tryGetNativeModule();
-	return native ? native.getGitRemoteUrl(dir) : null;
+	return getNativeModule().getGitRemoteUrl(dir);
 }
 
 /**
  * Get the current git branch for a directory
  */
 export function getGitBranch(dir: string): string | null {
-	const native = tryGetNativeModule();
-	return native ? native.getGitBranch(dir) : null;
+	return getNativeModule().getGitBranch(dir);
 }
 
 /**
  * Get the git root directory
  */
 export function getGitRoot(dir: string): string | null {
-	const native = tryGetNativeModule();
-	return native ? native.getGitRoot(dir) : null;
+	return getNativeModule().getGitRoot(dir);
 }
 
 /**
  * Get the git common directory (for worktrees)
  */
 export function getGitCommonDir(dir: string): string | null {
-	const native = tryGetNativeModule();
-	return native ? native.getGitCommonDir(dir) : null;
+	return getNativeModule().getGitCommonDir(dir);
 }
 
 /**
  * List files tracked by git in a directory
  */
 export function gitLsFiles(dir: string): string[] {
-	const native = tryGetNativeModule();
-	return native ? native.gitLsFiles(dir) : [];
+	return getNativeModule().gitLsFiles(dir);
 }
 
 /**
@@ -295,8 +290,7 @@ export function gitLsFiles(dir: string): string[] {
 export function gitWorktreeList(
 	dir: string,
 ): ReturnType<NativeModule["gitWorktreeList"]> {
-	const native = tryGetNativeModule();
-	return native ? native.gitWorktreeList(dir) : [];
+	return getNativeModule().gitWorktreeList(dir);
 }
 
 /**
@@ -306,8 +300,7 @@ export function getSessionFileChanges(
 	dbPath: string,
 	sessionId: string,
 ): ReturnType<NativeModule["getSessionFileChanges"]> {
-	const native = tryGetNativeModule();
-	return native ? native.getSessionFileChanges(dbPath, sessionId) : [];
+	return getNativeModule().getSessionFileChanges(dbPath, sessionId);
 }
 
 // ============================================================================
