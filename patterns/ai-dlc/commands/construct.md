@@ -123,11 +123,24 @@ Task already complete! Run /reset to start a new task.
 This prevents conflicts with the parent session and enables true isolation.
 
 ```bash
+# Source the strategies library for proper branch naming
+source "${CLAUDE_PLUGIN_ROOT}/lib/strategies.sh"
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Get the configured change strategy
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR")
+STRATEGY=$(echo "$CONFIG" | jq -r '.change_strategy')
+
 # Determine current unit from state or find next ready unit
 UNIT_FILE=$(find_ready_unit "$INTENT_DIR")
 UNIT_NAME=$(basename "$UNIT_FILE" .md)  # e.g., unit-01-core-backend
 UNIT_SLUG="${UNIT_NAME#unit-}"  # e.g., 01-core-backend
-UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT_SLUG}"
+
+# Get branch name based on strategy
+# - trunk/unit: ai-dlc/{intent}/{unit}
+# - bolt: ai-dlc/{intent}/{unit}/{bolt}
+# - intent: ai-dlc/{intent}
+UNIT_BRANCH=$(get_branch_name "$STRATEGY" "$intentSlug" "$UNIT_SLUG")
 WORKTREE_PATH="/tmp/ai-dlc-${intentSlug}-${UNIT_SLUG}"
 
 # Create worktree if it doesn't exist
@@ -135,6 +148,14 @@ if [ ! -d "$WORKTREE_PATH" ]; then
   git worktree add -B "$UNIT_BRANCH" "$WORKTREE_PATH"
 fi
 ```
+
+**Branch naming by strategy:**
+| Strategy | Branch Pattern | Example |
+|----------|---------------|---------|
+| trunk | `ai-dlc/{intent}/{unit}` | `ai-dlc/auth-feature/01-backend` |
+| unit | `ai-dlc/{intent}/{unit}` | `ai-dlc/auth-feature/01-backend` |
+| bolt | `ai-dlc/{intent}/{unit}/{bolt}` | `ai-dlc/auth-feature/01-backend/add-tests` |
+| intent | `ai-dlc/{intent}` | `ai-dlc/auth-feature` |
 
 ### Step 2b: Update Unit Status and Track Current Unit
 
@@ -268,9 +289,17 @@ A unit is **ready** when:
 **Parallel (multiple ready units):** Create worktrees with dedicated branches:
 
 ```bash
+# Source strategies for proper branch naming
+source "${CLAUDE_PLUGIN_ROOT}/lib/strategies.sh"
+
+# Get configured strategy
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR")
+STRATEGY=$(echo "$CONFIG" | jq -r '.change_strategy')
+
 # For each ready unit, create a worktree with its branch
 for UNIT in $READY_UNITS; do
-  UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT#unit-}"
+  UNIT_SLUG="${UNIT#unit-}"
+  UNIT_BRANCH=$(get_branch_name "$STRATEGY" "$intentSlug" "$UNIT_SLUG")
   WORKTREE_PATH="/tmp/ai-dlc-worktree-${UNIT}"
 
   # Create worktree (also creates branch if needed)
@@ -416,8 +445,9 @@ han_keep_save({ scope: "branch", key: "scratchpad.md", content: "..." })
 
 ## Worktree Architecture
 
-The AI-DLC workflow uses worktrees for complete isolation:
+The AI-DLC workflow uses worktrees for complete isolation. Branch naming varies by strategy:
 
+**Unit Strategy (default):**
 ```
 /path/to/repo (main branch)         <-- User's main working directory, stays clean
   │
@@ -431,6 +461,32 @@ The AI-DLC workflow uses worktrees for complete isolation:
         │
         └── /tmp/ai-dlc-{intent}-02-unit/      <-- Unit worktree (subagent)
               branch: ai-dlc/{intent-slug}/02-unit
+```
+
+**Intent Strategy (single branch):**
+```
+/path/to/repo (main branch)
+  │
+  └── git worktrees:
+        │
+        └── /tmp/ai-dlc-{intent}/              <-- All work happens here
+              branch: ai-dlc/{intent-slug}      (single branch for all units)
+```
+
+**Trunk Strategy (ephemeral branches, auto-merge):**
+Same as unit strategy, but branches are automatically merged to main and deleted after each unit passes validation.
+
+**Bolt Strategy (finest granularity):**
+```
+/path/to/repo (main branch)
+  │
+  └── git worktrees:
+        │
+        ├── /tmp/ai-dlc-{intent}-01-unit-add-tests/
+        │     branch: ai-dlc/{intent-slug}/01-unit/add-tests
+        │
+        └── /tmp/ai-dlc-{intent}-01-unit-impl/
+              branch: ai-dlc/{intent-slug}/01-unit/implementation
 ```
 
 1. **Main repo**: User's working directory stays on `main`, unaffected by AI-DLC work.
