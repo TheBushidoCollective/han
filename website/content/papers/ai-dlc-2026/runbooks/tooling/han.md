@@ -4,7 +4,7 @@
 
 ## Overview
 
-Han brings AI-DLC 2026 methodology directly into Claude Code through plugins. The `jutsu-ai-dlc` plugin provides iteration support, state persistence, and multi-hat workflows without external orchestration.
+Han brings AI-DLC 2026 methodology directly into Claude Code through plugins. The `ai-dlc` plugin provides iteration support, state persistence, and multi-hat workflows without external orchestration.
 
 ```mermaid
 flowchart LR
@@ -40,11 +40,11 @@ flowchart LR
 /plugin install core@thebushidocollective-han
 
 # 3. Install the AI-DLC plugin
-/plugin install jutsu-ai-dlc@thebushidocollective-han
+/plugin install ai-dlc@thebushidocollective-han
 
 # 4. Install backpressure plugins for your stack
-/plugin install jutsu-typescript@thebushidocollective-han
-/plugin install jutsu-biome@thebushidocollective-han
+/plugin install typescript@thebushidocollective-han
+/plugin install biome@thebushidocollective-han
 ```
 
 **Or via CLI:**
@@ -55,8 +55,8 @@ curl -fsSL https://han.guru/install.sh | bash
 
 # Install plugins
 han plugin install core
-han plugin install jutsu-ai-dlc
-han plugin install jutsu-typescript jutsu-biome  # For TypeScript projects
+han plugin install ai-dlc
+han plugin install typescript biome  # For TypeScript projects
 ```
 
 ## Quick Start
@@ -261,9 +261,9 @@ During `/construct`, Claude checks unit readiness and selects the next ready uni
 Han plugins provide Stop hooks that validate work:
 
 ```yaml
-# jutsu-typescript - Type checking
-# jutsu-biome - Linting
-# jutsu-vitest - Test validation
+# typescript - Type checking
+# biome - Linting
+# vitest - Test validation
 ```
 
 These create backpressure: if tests fail, lint fails, or types fail, the hook returns `action_needed` and Claude iterates.
@@ -359,7 +359,7 @@ workflows:
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | "No AI-DLC state found" | Didn't run elaboration | Run `/elaborate` first |
-| State not injected after `/clear` | Plugin not installed | Run `/plugin install jutsu-ai-dlc@thebushidocollective-han` |
+| State not injected after `/clear` | Plugin not installed | Run `/plugin install ai-dlc@thebushidocollective-han` |
 | Stuck in wrong hat | State corrupted | Run `/reset` and start over |
 | Lost context | Session ended unexpectedly | Run `/construct` to continue |
 
@@ -378,33 +378,33 @@ han keep clear --branch
 
 ## Recommended Plugin Stack
 
-AI-DLC works best with backpressure from other jutsu plugins:
+AI-DLC works best with backpressure from validation plugins:
 
 **Minimal (any project):**
 
 ```bash
 han plugin install core
-han plugin install jutsu-ai-dlc
-han plugin install jutsu-biome      # Lint + format backpressure
+han plugin install ai-dlc
+han plugin install biome      # Lint + format backpressure
 ```
 
 **TypeScript Projects:**
 
 ```bash
 han plugin install core
-han plugin install jutsu-ai-dlc
-han plugin install jutsu-typescript # Type checking backpressure
-han plugin install jutsu-biome      # Lint backpressure
+han plugin install ai-dlc
+han plugin install typescript # Type checking backpressure
+han plugin install biome      # Lint backpressure
 ```
 
 **Full TDD Stack:**
 
 ```bash
 han plugin install core
-han plugin install jutsu-ai-dlc
-han plugin install jutsu-typescript
-han plugin install jutsu-biome
-han plugin install jutsu-vitest     # Test backpressure
+han plugin install ai-dlc
+han plugin install typescript
+han plugin install biome
+han plugin install vitest     # Test backpressure
 ```
 
 ## Related Runbooks

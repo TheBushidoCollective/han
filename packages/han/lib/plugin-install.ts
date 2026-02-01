@@ -1,4 +1,3 @@
-import { logMigrationResults, migratePluginNames } from "./migrate.ts";
 import { resolvePluginNames } from "./plugin-aliases.ts";
 import { showPluginSelector } from "./plugin-selector-wrapper.tsx";
 import {
@@ -204,9 +203,10 @@ export async function installPlugins(
 	// This is a workaround for Claude Code bug #12151
 	ensureDispatchHooks();
 
-	// Migrate any old plugin names in settings files
-	const migrationResults = migratePluginNames(process.cwd());
-	logMigrationResults(migrationResults);
+	// Note: Migration is NOT run here intentionally. Settings use canonical names
+	// (jutsu-typescript, do-frontend-development, hashi-github) for consistency
+	// with the marketplace. Migration to short names is a separate operation
+	// that should only run on session start for legacy settings.
 
 	if (installed.length > 0) {
 		console.log("\n⚠️  Please restart Claude Code to load the new plugin(s)");

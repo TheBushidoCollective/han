@@ -82,7 +82,7 @@ Returning to **{prevHat}** hat.
 
 **Reason:** {reason}
 
-Run `/clear` to start fresh with the previous hat's context.
+Continuing construction with the previous hat...
 ```
 
 ## Guard

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+- refine methodology for technical accuracy and scope (#46) ([58cb4014](../../commit/58cb4014))
+
+## [1.36.0] - 2026-02-01
+
+### Added
+
 - reorganize plugins from branded to tech layer categories (#45) ([23a8c08a](../../commit/23a8c08a))
 - format authors with "and" before last name ([37c03261](../../commit/37c03261))
 - map git usernames to full display names ([6d6b9cec](../../commit/6d6b9cec))
