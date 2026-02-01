@@ -334,11 +334,13 @@ When hooks fail:
 **Symptom**: Hook skips unexpectedly
 
 **Causes**:
+
 - No files match `if_changed` patterns
 - Config file not found for `dirs_with`
 - Cached result being used
 
 **Solution**:
+
 ```bash
 # Force re-run
 han hook run my-plugin lint --no-cache --verbose
@@ -349,11 +351,13 @@ han hook run my-plugin lint --no-cache --verbose
 **Symptom**: Claude doesn't use your skill
 
 **Causes**:
+
 - Invalid frontmatter YAML
 - Missing `name` or `description`
 - Plugin not installed correctly
 
 **Solution**:
+
 1. Validate frontmatter syntax
 2. Re-install plugin
 3. Restart Claude Code session
@@ -363,11 +367,13 @@ han hook run my-plugin lint --no-cache --verbose
 **Symptom**: MCP tools unavailable
 
 **Causes**:
+
 - Server command fails to start
 - Missing dependencies
 - Invalid `.mcp.json` syntax
 
 **Solution**:
+
 ```bash
 # Test server manually
 npx -y @your-org/mcp-server-your-service

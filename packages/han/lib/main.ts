@@ -15,13 +15,14 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { HAN_VERSION } from "./build-info.generated.ts";
 import { registerAliasCommands } from "./commands/aliases.ts";
+import { registerAuthCommands } from "./commands/auth/index.ts";
 import { registerBlueprintsCommands } from "./commands/blueprints/index.ts";
 import { browse } from "./commands/browse/index.ts";
-import { registerCreateCommands } from "./commands/create/index.ts";
 import {
 	handleGetCompletions,
 	registerCompletionCommand,
 } from "./commands/completion/index.ts";
+import { registerConfigCommands } from "./commands/config/index.ts";
 import { registerCoordinatorCommands } from "./commands/coordinator/index.ts";
 import { registerDoctorCommand } from "./commands/doctor.ts";
 import { registerHookCommands } from "./commands/hook/index.ts";
@@ -30,10 +31,31 @@ import { registerKeepCommands } from "./commands/keep/index.ts";
 import { registerMcpCommands } from "./commands/mcp/index.ts";
 import { registerParseCommands } from "./commands/parse/index.ts";
 import { registerMemoryCommand } from "./commands/memory/index.ts";
-import { registerPluginCommands } from "./commands/plugin/index.ts";
+import { registerSyncCommands } from "./commands/sync/index.ts";
 import { registerWorktreeCommands } from "./commands/worktree/index.ts";
 import { getMergedHanConfig } from "./config/han-settings.ts";
 import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
+
+// Commands that use ink are loaded lazily to avoid hanging in non-TTY environments
+// (ink can block on import when there's no TTY)
+let _registerPluginCommands: typeof import("./commands/plugin/index.ts").registerPluginCommands | null = null;
+let _registerCreateCommands: typeof import("./commands/create/index.ts").registerCreateCommands | null = null;
+
+async function getPluginCommands() {
+	if (!_registerPluginCommands) {
+		const mod = await import("./commands/plugin/index.ts");
+		_registerPluginCommands = mod.registerPluginCommands;
+	}
+	return _registerPluginCommands;
+}
+
+async function getCreateCommands() {
+	if (!_registerCreateCommands) {
+		const mod = await import("./commands/create/index.ts");
+		_registerCreateCommands = mod.registerCreateCommands;
+	}
+	return _registerCreateCommands;
+}
 
 /**
  * Get extended version information including binary location and config status.
@@ -214,8 +236,114 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 		.version(getVersionInfo(), "-V, --version", "output the version number");
 
 	// Register command groups
-	registerPluginCommands(program);
-	registerCreateCommands(program);
+	// Note: Plugin and Create commands use ink and are registered lazily
+	// to avoid hanging in non-TTY environments (ink can block on import when there's no TTY)
+
+	// Lazy-loaded plugin command (uses ink for interactive UI)
+	const pluginCmd = program
+		.command("plugin")
+		.description("Manage Han plugins");
+
+	pluginCmd
+		.command("install")
+		.description("Install plugins")
+		.argument("[plugins...]", "Plugins to install")
+		.option("-a, --auto", "Auto-detect plugins for current project")
+		.option("-s, --scope <scope>", "Installation scope: user, project, or local")
+		.option("-y, --yes", "Skip confirmation prompts")
+		.action(async (plugins, opts) => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			// Create a fresh program with the full plugin commands
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			const args = ["plugin", "install", ...plugins];
+			if (opts.auto) args.push("--auto");
+			if (opts.scope) args.push("--scope", opts.scope);
+			if (opts.yes) args.push("--yes");
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	pluginCmd
+		.command("list")
+		.description("List installed plugins")
+		.option("-j, --json", "Output as JSON")
+		.action(async (opts) => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			const args = ["plugin", "list"];
+			if (opts.json) args.push("--json");
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	pluginCmd
+		.command("uninstall")
+		.description("Uninstall plugins")
+		.argument("<plugin>", "Plugin to uninstall")
+		.option("-s, --scope <scope>", "Installation scope: user, project, or local")
+		.action(async (plugin, opts) => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			const args = ["plugin", "uninstall", plugin];
+			if (opts.scope) args.push("--scope", opts.scope);
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	pluginCmd
+		.command("search")
+		.description("Search for plugins")
+		.argument("[query]", "Search query")
+		.action(async (query) => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			const args = ["plugin", "search"];
+			if (query) args.push(query);
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	pluginCmd
+		.command("update")
+		.description("Update marketplace cache")
+		.action(async () => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			await tempProgram.parseAsync(["node", "han", "plugin", "update"]);
+		});
+
+	pluginCmd
+		.command("validate")
+		.description("Validate plugin configuration")
+		.argument("[path]", "Plugin path to validate")
+		.action(async (path) => {
+			const { registerPluginCommands } = await import("./commands/plugin/index.ts");
+			const tempProgram = new Command();
+			registerPluginCommands(tempProgram);
+			const args = ["plugin", "validate"];
+			if (path) args.push(path);
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	// Lazy-loaded create command (uses ink for interactive UI)
+	program
+		.command("create")
+		.description("Scaffold new Han resources")
+		.argument("[type]", "Type of resource to create")
+		.argument("[name]", "Name of the resource")
+		.action(async (type, name) => {
+			const { registerCreateCommands } = await import("./commands/create/index.ts");
+			const tempProgram = new Command();
+			registerCreateCommands(tempProgram);
+			const args = ["create"];
+			if (type) args.push(type);
+			if (name) args.push(name);
+			await tempProgram.parseAsync(["node", "han", ...args]);
+		});
+
+	registerAuthCommands(program);
+	registerConfigCommands(program);
 	registerHookCommands(program);
 	registerMcpCommands(program);
 	registerBlueprintsCommands(program);
@@ -227,6 +355,7 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 	registerCompletionCommand(program);
 	registerDoctorCommand(program);
 	registerWorktreeCommands(program);
+	registerSyncCommands(program);
 
 	// Register browse command
 	program

@@ -15,7 +15,8 @@ import {
 	GraphQLString,
 } from "graphql";
 import type { ProjectGroup } from "../api/sessions.ts";
-import { getMessage, indexer } from "../db/index.ts";
+import { getLocalDataSource } from "../data/index.ts";
+import { indexer } from "../db/index.ts";
 import { startMemoryQuerySession } from "../memory/streaming.ts";
 import { builder } from "./builder.ts";
 import { decodeGlobalId } from "./node-registry.ts";
@@ -96,8 +97,25 @@ import {
 	queryMetrics,
 	TaskType,
 } from "./types/metrics.ts";
+import {
+	GranularityEnum,
+	queryTeamMetrics,
+	TeamMetricsType,
+} from "./types/team-metrics/index.ts";
 import { PageInfoType } from "./types/pagination.ts";
 import { PermissionsType } from "./types/permissions.ts";
+// Auth types - registers mutations and queries via side effects
+import {
+	AuthUserType,
+	AuthSessionType,
+	OAuthConnectionType,
+	TokenPairType,
+	OAuthInitiateResultType,
+	AuthResultType,
+	MagicLinkResultType,
+	LinkResultType,
+	OAuthProviderEnum,
+} from "./types/auth/index.ts";
 import {
 	getAllPlugins,
 	PluginType,
@@ -133,6 +151,38 @@ import {
 	querySettingsSummary,
 	SettingsSummaryType,
 } from "./types/settings-summary.ts";
+// Team Memory types (adds teamMemory and orgLearnings queries)
+import {
+	OrgLearningsQueryInput,
+	TeamMemoryQueryInput,
+	UserContextInput,
+} from "./types/team-memory-query.ts";
+// Team Memory mutations (share, export/import, admin controls)
+import {
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
+} from "./types/team-memory-mutations.ts";
+import {
+	CitationVisibilityEnum,
+	MemoryLayerInfoType,
+	MemoryScopeEnum,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	OrgLearningType,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+} from "./types/memory/index.ts";
 import { SlotAcquireResultType } from "./types/slot-acquire-result.ts";
 import {
 	acquireSlot,
@@ -141,6 +191,15 @@ import {
 } from "./types/slot-manager.ts";
 import { SlotReleaseResultType } from "./types/slot-release-result.ts";
 import { SlotStatusType } from "./types/slot-status.ts";
+// Team platform types
+import {
+	OrgType,
+	TeamMemberType,
+	UserType,
+	type OrgData,
+	type TeamMemberData,
+	type UserData,
+} from "./types/team/index.ts";
 
 // =============================================================================
 // Direct Root Queries (no viewer pattern)
@@ -216,6 +275,54 @@ builder.queryField("metrics", (t) =>
 );
 
 /**
+ * Query for team metrics (aggregate dashboard data)
+ */
+builder.queryField("teamMetrics", (t) =>
+	t.field({
+		type: TeamMetricsType,
+		args: {
+			startDate: t.arg.string({ description: "Start date (ISO format)" }),
+			endDate: t.arg.string({ description: "End date (ISO format)" }),
+			projectIds: t.arg.stringList({ description: "Filter by project IDs" }),
+			granularity: t.arg({ type: GranularityEnum, description: "Time grouping" }),
+		},
+		description: "Team-level aggregate metrics for dashboard",
+		resolve: async (_parent, args, context) => {
+			// Permission check: user must be authenticated
+			if (!context.user) {
+				throw new Error("Authentication required to access team metrics");
+			}
+
+			// Permission check: if projectIds specified, user must have access to all of them
+			if (args.projectIds && args.projectIds.length > 0) {
+				const userProjectIds = context.user.projectIds || [];
+				const isAdmin = context.user.role === "admin";
+
+				// Admins can access all projects, others need explicit access
+				if (!isAdmin) {
+					const unauthorizedProjects = args.projectIds.filter(
+						(pid) => !userProjectIds.includes(pid)
+					);
+					if (unauthorizedProjects.length > 0) {
+						throw new Error(
+							`Access denied to projects: ${unauthorizedProjects.join(", ")}`
+						);
+					}
+				}
+			}
+
+			return queryTeamMetrics({
+				startDate: args.startDate,
+				endDate: args.endDate,
+				projectIds: args.projectIds,
+				granularity: args.granularity as "day" | "week" | "month" | null,
+				userContext: context.user,
+			});
+		},
+	}),
+);
+
+/**
  * Query for memory
  */
 builder.queryField("memory", (t) =>
@@ -270,7 +377,8 @@ builder.queryField("activity", (t) =>
 			days: t.arg.int({ defaultValue: 365 }),
 		},
 		description: "Activity data for dashboard visualizations",
-		resolve: async (_parent, args) => queryActivityData(args.days ?? 365),
+		resolve: async (_parent, args, context) =>
+			queryActivityData(args.days ?? 365, context.dataSource),
 	}),
 );
 
@@ -360,7 +468,7 @@ builder.queryField("message", (t) =>
 		},
 		description:
 			"Get a message by its UUID (optionally prefixed with 'Message:')",
-		resolve: async (_parent, args) => {
+		resolve: async (_parent, args, context) => {
 			// Extract the UUID from the ID
 			// Accept either raw UUID or "Message:{uuid}" format
 			let messageId = args.id;
@@ -370,8 +478,8 @@ builder.queryField("message", (t) =>
 				messageId = messageId.slice(8);
 			}
 
-			// Fetch message by UUID directly from the database
-			const msg = await getMessage(messageId);
+			// Fetch message by UUID using DataSource
+			const msg = await context.dataSource.messages.get(messageId);
 			if (!msg) {
 				return null;
 			}
@@ -441,6 +549,9 @@ builder.queryField("sessions", (t) =>
 			worktreeName: t.arg.string({
 				description: "Filter by worktree name/path",
 			}),
+			userId: t.arg.string({
+				description: "Filter by user ID (team mode only - filters sessions by owner)",
+			}),
 		},
 		description: "Get sessions with cursor-based pagination",
 		resolve: (_parent, args) => {
@@ -451,7 +562,86 @@ builder.queryField("sessions", (t) =>
 				before: args.before,
 				projectId: args.projectId,
 				worktreeName: args.worktreeName,
+				userId: args.userId,
 			});
+		},
+	}),
+);
+
+// =============================================================================
+// Team Platform Queries (hosted mode only)
+// =============================================================================
+
+/**
+ * Query for current user (hosted mode only)
+ * Returns null in local mode
+ */
+builder.queryField("currentUser", (t) =>
+	t.field({
+		type: UserType,
+		nullable: true,
+		description:
+			"Current authenticated user (only available in hosted team mode)",
+		resolve: (): UserData | null => {
+			// In local mode, return null
+			// In hosted mode, this would be populated from auth context
+			// For now, return null - will be extended when team backend is ready
+			return null;
+		},
+	}),
+);
+
+/**
+ * Query for current organization (hosted mode only)
+ * Returns null in local mode
+ */
+builder.queryField("currentOrg", (t) =>
+	t.field({
+		type: OrgType,
+		nullable: true,
+		description:
+			"Current organization context (only available in hosted team mode)",
+		resolve: (): OrgData | null => {
+			// In local mode, return null
+			// In hosted mode, this would be populated from auth context
+			return null;
+		},
+	}),
+);
+
+/**
+ * Query for user's organizations (hosted mode only)
+ * Returns empty array in local mode
+ */
+builder.queryField("orgs", (t) =>
+	t.field({
+		type: [OrgType],
+		description:
+			"Organizations the current user belongs to (only available in hosted team mode)",
+		resolve: (): OrgData[] => {
+			// In local mode, return empty array
+			// In hosted mode, this would fetch user's orgs
+			return [];
+		},
+	}),
+);
+
+/**
+ * Query for organization members (hosted mode only)
+ * Returns empty array in local mode
+ */
+builder.queryField("orgMembers", (t) =>
+	t.field({
+		type: [TeamMemberType],
+		args: {
+			orgId: t.arg.string({ required: true }),
+		},
+		description:
+			"Members of an organization (only available in hosted team mode)",
+		resolve: (_parent, _args): TeamMemberData[] => {
+			// In local mode, return empty array
+			// In hosted mode, this would fetch org members
+			return [];
 		},
 	}),
 );
@@ -1410,6 +1600,7 @@ builder.mutationType({
 export {
 	RuleType,
 	TaskType,
+	TeamMetricsType,
 	MemorySearchResultType,
 	MemoryAgentProgressType,
 	MemoryAgentResultType,
@@ -1463,6 +1654,46 @@ export {
 	// Inline result types for tool calls
 	McpToolResultType,
 	ExposedToolResultType,
+	// Auth types
+	AuthUserType,
+	AuthSessionType,
+	OAuthConnectionType,
+	TokenPairType,
+	OAuthInitiateResultType,
+	AuthResultType,
+	MagicLinkResultType,
+	LinkResultType,
+	OAuthProviderEnum,
+	// Team platform types
+	UserType,
+	OrgType,
+	TeamMemberType,
+	// Team Memory types
+	TeamMemoryQueryInput,
+	UserContextInput,
+	OrgLearningsQueryInput,
+	CitationVisibilityEnum,
+	MemoryScopeEnum,
+	TeamCitationType,
+	TeamMemoryResultType,
+	TeamMemoryStatsType,
+	OrgLearningType,
+	OrgLearningsResultType,
+	OrgLearningsTimeRangeType,
+	MemoryLayerInfoType,
+	// Team Memory mutation types
+	ShareLearningInput,
+	TeamUserContextInput,
+	ExportOptionsInput,
+	ImportOptionsInput,
+	SharingPolicyInput,
+	ShareLearningResultType,
+	SharedLearningType,
+	TeamKnowledgeExportResultType,
+	TeamKnowledgeImportResultType,
+	ModerationResultType,
+	OrgSharingPolicyType,
+	PolicyUpdateResultType,
 };
 
 // Define the @defer directive for incremental delivery

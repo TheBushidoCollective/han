@@ -4,6 +4,7 @@ import { Box, Center, Text } from '@/components/atoms';
 import type { ToastType } from '@/components/organisms';
 import { ToastContainer } from '@/components/organisms';
 import { Sidebar } from '@/components/templates/Sidebar';
+import { ModeProvider } from '@/contexts';
 import {
   type MemoryUpdateEvent,
   useMemoryUpdates,
@@ -109,22 +110,24 @@ export function App() {
   const routeElement = useRoutes(routes);
 
   return (
-    <RelayProvider>
-      <Box style={appStyle}>
-        <Sidebar />
-        <Box style={mainContentStyle}>
-          <Suspense
-            fallback={
-              <Center style={loadingStyle}>
-                <Text color="muted">Loading...</Text>
-              </Center>
-            }
-          >
-            {routeElement}
-          </Suspense>
+    <ModeProvider>
+      <RelayProvider>
+        <Box style={appStyle}>
+          <Sidebar />
+          <Box style={mainContentStyle}>
+            <Suspense
+              fallback={
+                <Center style={loadingStyle}>
+                  <Text color="muted">Loading...</Text>
+                </Center>
+              }
+            >
+              {routeElement}
+            </Suspense>
+          </Box>
+          <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         </Box>
-        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-      </Box>
-    </RelayProvider>
+      </RelayProvider>
+    </ModeProvider>
   );
 }

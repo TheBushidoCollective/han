@@ -15,7 +15,7 @@ import {
 	gitWorktreeAdd,
 	gitWorktreeList,
 	gitWorktreeRemove,
-} from "../../../../han-native";
+} from "../../native.ts";
 
 /**
  * Register han worktree commands

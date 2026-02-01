@@ -52,6 +52,7 @@ export {
 	getMergedHanConfig,
 	getMergedHanConfigForDirectory,
 	getPluginHookSettings,
+	getSyncConfig,
 	type HanConfig,
 	type HanConfigScope,
 	type HookOverride,
@@ -61,9 +62,11 @@ export {
 	isMemoryEnabled,
 	isMetricsEnabled,
 	isSessionFilteringEnabled,
+	isSyncEnabled,
 	loadHanConfigFile,
 	type PluginSettings,
 	type PortConfig,
+	type SyncConfig,
 } from "./han-settings.ts";
 // Port allocation
 export {
