@@ -557,6 +557,7 @@ unit-02 ──→ unit-03 ────┘
 ```
 
 In this example:
+
 - unit-01 and unit-02 start in parallel (no dependencies)
 - unit-03 waits for unit-02
 - unit-04 waits for both unit-01 AND unit-03 (fan-in)

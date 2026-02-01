@@ -3,8 +3,6 @@ title: Kubernetes Deployment
 description: Deploy Han Team Platform on Kubernetes with Helm
 ---
 
-# Kubernetes Deployment
-
 For production deployments, we recommend using our Helm chart which provides:
 
 - Horizontal Pod Autoscaling (HPA)

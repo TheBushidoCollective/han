@@ -3,8 +3,6 @@ title: Backup and Restore
 description: Protect your Han Team Platform data
 ---
 
-# Backup and Restore
-
 Regular backups are essential for protecting your Han Team Platform data. This guide covers backup strategies for different deployment methods.
 
 ## Backup Strategy
@@ -20,6 +18,7 @@ Regular backups are essential for protecting your Han Team Platform data. This g
 ### Retention Policy
 
 We recommend:
+
 - **Daily backups**: Keep for 30 days
 - **Weekly backups**: Keep for 90 days
 - **Monthly backups**: Keep for 1 year
@@ -223,6 +222,7 @@ docker rm -f restore-test
 ### Alerts
 
 Set up alerts for:
+
 - Backup job failures
 - Backup age > 25 hours
 - Backup size anomalies (sudden drops)

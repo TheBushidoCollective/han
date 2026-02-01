@@ -3,8 +3,6 @@ title: Configuration Reference
 description: Complete list of Han Team Platform configuration options
 ---
 
-# Configuration Reference
-
 Han Team Platform is configured through environment variables. All settings have sensible defaults for development, but production deployments require explicit configuration.
 
 ## Required Variables
@@ -31,6 +29,7 @@ postgres://[user]:[password]@[host]:[port]/[database]?[options]
 ```
 
 **Options:**
+
 - `sslmode=require` - Require SSL (recommended for cloud databases)
 - `connect_timeout=10` - Connection timeout in seconds
 

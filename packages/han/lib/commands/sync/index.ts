@@ -6,6 +6,7 @@
  * - han sync session <id> - Sync a specific session
  * - han sync all - Sync all pending sessions
  * - han sync queue - Show and manage the sync queue
+ * - han sync watch - Continuously sync on session changes
  */
 
 import type { Command } from "commander";
@@ -18,6 +19,13 @@ import {
 } from "../../sync/client.ts";
 import { getQueueManager } from "../../sync/queue.ts";
 import { isSyncEnabled, getSyncConfig } from "../../config/han-settings.ts";
+import {
+	getAuthStatus,
+	syncSession as authSyncSession,
+	syncAllSessions as authSyncAllSessions,
+	watchAndSync,
+	getSyncableSessionCount,
+} from "../../services/index.ts";
 
 /**
  * Format bytes to human readable string
@@ -357,6 +365,105 @@ export function registerSyncCommands(program: Command): void {
 					error instanceof Error ? error.message : error,
 				);
 				process.exit(1);
+			}
+		});
+
+	// sync watch - Continuously sync on session changes (requires auth)
+	syncCommand
+		.command("watch")
+		.description("Continuously sync sessions on changes (requires authentication)")
+		.option(
+			"-i, --interval <seconds>",
+			"Sync interval in seconds",
+			"60"
+		)
+		.action(async (options: { interval?: string }) => {
+			// Check authentication
+			const authStatus = getAuthStatus();
+			if (!authStatus.authenticated) {
+				console.error("\x1b[31mNot authenticated.\x1b[0m");
+				console.log("Run 'han auth login' first to authenticate.");
+				process.exit(1);
+			}
+
+			const interval = parseInt(options.interval || "60", 10) * 1000;
+			const sessionCount = getSyncableSessionCount();
+
+			console.log(`\n=== Han Sync Watch Mode ===\n`);
+			console.log(`Server: ${authStatus.serverUrl}`);
+			console.log(`User: ${authStatus.user?.github_username || authStatus.user?.email || "unknown"}`);
+			console.log(`Sessions: ${sessionCount} available`);
+			console.log(`Interval: ${interval / 1000}s\n`);
+			console.log("Watching for session changes. Press Ctrl+C to stop.\n");
+
+			const watcher = watchAndSync(interval, (result) => {
+				const timestamp = new Date().toLocaleTimeString();
+				if (result.success) {
+					if (result.sessionsProcessed > 0) {
+						console.log(
+							`[${timestamp}] \x1b[32mSynced ${result.sessionsProcessed} session(s)\x1b[0m`
+						);
+					}
+				} else {
+					console.log(
+						`[${timestamp}] \x1b[31mSync failed: ${result.error}\x1b[0m`
+					);
+				}
+			});
+
+			// Handle graceful shutdown
+			process.on("SIGINT", () => {
+				console.log("\n\nStopping watch mode...");
+				watcher.stop();
+				process.exit(0);
+			});
+
+			process.on("SIGTERM", () => {
+				watcher.stop();
+				process.exit(0);
+			});
+
+			// Keep process running
+			await new Promise(() => {});
+		});
+
+	// sync upload <sessionId> - Sync using OAuth authentication (new command)
+	syncCommand
+		.command("upload [sessionId]")
+		.description("Upload session(s) to team server using OAuth authentication")
+		.option("-a, --all", "Upload all sessions")
+		.action(async (sessionId: string | undefined, options: { all?: boolean }) => {
+			// Check authentication
+			const authStatus = getAuthStatus();
+			if (!authStatus.authenticated) {
+				console.error("\x1b[31mNot authenticated.\x1b[0m");
+				console.log("Run 'han auth login' first to authenticate.");
+				process.exit(1);
+			}
+
+			console.log(`\nServer: ${authStatus.serverUrl}`);
+			console.log(`User: ${authStatus.user?.github_username || authStatus.user?.email || "unknown"}\n`);
+
+			if (options.all || !sessionId) {
+				console.log("Uploading all sessions...");
+				const result = await authSyncAllSessions();
+
+				if (result.success) {
+					console.log(`\x1b[32mSuccessfully uploaded ${result.sessionsProcessed} session(s).\x1b[0m`);
+				} else {
+					console.error(`\x1b[31mUpload failed:\x1b[0m ${result.error}`);
+					process.exit(1);
+				}
+			} else {
+				console.log(`Uploading session ${sessionId}...`);
+				const result = await authSyncSession(sessionId);
+
+				if (result.success) {
+					console.log(`\x1b[32mSuccessfully uploaded session.\x1b[0m`);
+				} else {
+					console.error(`\x1b[31mUpload failed:\x1b[0m ${result.error}`);
+					process.exit(1);
+				}
 			}
 		});
 }

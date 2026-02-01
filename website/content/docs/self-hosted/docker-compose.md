@@ -3,8 +3,6 @@ title: Docker Compose Deployment
 description: Deploy Han Team Platform with Docker Compose
 ---
 
-# Docker Compose Deployment
-
 Docker Compose is the simplest way to deploy Han Team Platform for small teams or development environments.
 
 ## Prerequisites

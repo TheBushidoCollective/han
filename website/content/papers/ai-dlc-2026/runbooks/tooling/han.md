@@ -31,6 +31,7 @@ flowchart LR
 ## Installation
 
 **In Claude Code:**
+
 ```bash
 # 1. Add the Han marketplace
 /plugin marketplace add thebushidocollective/han
@@ -47,6 +48,7 @@ flowchart LR
 ```
 
 **Or via CLI:**
+
 ```bash
 # Install Han CLI
 curl -fsSL https://han.guru/install.sh | bash
@@ -68,6 +70,7 @@ han plugin install jutsu-typescript jutsu-biome  # For TypeScript projects
 ```
 
 Work collaboratively with Claude to define:
+
 - **Workflow** - Which development pattern to use (default, tdd, adversarial, hypothesis)
 - **Intent** - What you're building
 - **Units** - How to break down the work (with dependencies forming a DAG)
@@ -80,6 +83,7 @@ Work collaboratively with Claude to define:
 ```
 
 Claude autonomously:
+
 - Creates a branch following conventions
 - Executes the current hat's responsibilities
 - Uses backpressure (tests, lint, types) to guide work
@@ -88,6 +92,7 @@ Claude autonomously:
 **3. Continue After Each Session**
 
 When the Stop hook fires:
+
 ```
 Stop hook: "Run /clear to continue"
 ```
@@ -200,6 +205,7 @@ Session-scoped, cleared on `/reset`:
 | `blockers.md` | Documented blockers |
 
 **Inspect state:**
+
 ```bash
 han keep load --branch iteration.json
 han keep load --branch scratchpad.md
@@ -375,6 +381,7 @@ han keep clear --branch
 AI-DLC works best with backpressure from other jutsu plugins:
 
 **Minimal (any project):**
+
 ```bash
 han plugin install core
 han plugin install jutsu-ai-dlc
@@ -382,6 +389,7 @@ han plugin install jutsu-biome      # Lint + format backpressure
 ```
 
 **TypeScript Projects:**
+
 ```bash
 han plugin install core
 han plugin install jutsu-ai-dlc
@@ -390,6 +398,7 @@ han plugin install jutsu-biome      # Lint backpressure
 ```
 
 **Full TDD Stack:**
+
 ```bash
 han plugin install core
 han plugin install jutsu-ai-dlc

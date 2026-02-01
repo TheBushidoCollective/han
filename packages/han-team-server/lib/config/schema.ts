@@ -63,9 +63,52 @@ export const ConfigSchema = z.object({
   FREE_RETENTION_DAYS: z.coerce.number().default(30),
   PRO_RETENTION_DAYS: z.coerce.number().default(365),
 
+  // Security
+  TRUST_PROXY: z
+    .string()
+    .transform((val) => val === "true")
+    .default("false")
+    .describe("Trust X-Forwarded-For headers (enable behind reverse proxy)"),
+
   // Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
   OTEL_SERVICE_NAME: z.string().default("han-team"),
+
+  // Encryption
+  MASTER_ENCRYPTION_KEY: z
+    .string()
+    .min(32, "MASTER_ENCRYPTION_KEY must be at least 32 characters (base64 encoded 32-byte key)")
+    .optional()
+    .describe(
+      "Master key for bootstrapping team encryption (optional, derive if not set). " +
+      "Base64-encoded 32-byte key. If not provided, encryption will be unavailable " +
+      "until a key is provisioned."
+    ),
+
+  // Stripe billing
+  STRIPE_API_KEY: z
+    .string()
+    .optional()
+    .describe("Stripe secret API key for billing operations"),
+  STRIPE_WEBHOOK_SECRET: z
+    .string()
+    .optional()
+    .describe("Stripe webhook signing secret for signature verification"),
+  STRIPE_PRO_MONTHLY_PRICE_ID: z
+    .string()
+    .optional()
+    .describe("Stripe Price ID for monthly PRO subscription"),
+  STRIPE_PRO_YEARLY_PRICE_ID: z
+    .string()
+    .optional()
+    .describe("Stripe Price ID for yearly PRO subscription"),
+
+  // Application URL
+  APP_BASE_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3000")
+    .describe("Base URL of the application for Stripe redirects"),
 });
 
 /**
@@ -128,4 +171,61 @@ export function isGitHubOAuthEnabled(): boolean {
 export function isOtelEnabled(): boolean {
   const config = getConfig();
   return Boolean(config.OTEL_EXPORTER_OTLP_ENDPOINT);
+}
+
+/**
+ * Check if master encryption key is configured
+ */
+export function isMasterKeyConfigured(): boolean {
+  const config = getConfig();
+  return Boolean(config.MASTER_ENCRYPTION_KEY);
+}
+
+/**
+ * Get the master encryption key (if configured)
+ */
+export function getMasterEncryptionKey(): string | undefined {
+  const config = getConfig();
+  return config.MASTER_ENCRYPTION_KEY;
+}
+
+/**
+ * Check if Stripe billing is configured
+ */
+export function isStripeBillingEnabled(): boolean {
+  const config = getConfig();
+  return Boolean(
+    config.STRIPE_API_KEY &&
+    config.STRIPE_PRO_MONTHLY_PRICE_ID &&
+    config.STRIPE_PRO_YEARLY_PRICE_ID
+  );
+}
+
+/**
+ * Get Stripe configuration (throws if not configured)
+ */
+export function getStripeConfig(): {
+  apiKey: string;
+  webhookSecret: string;
+  proMonthlyPriceId: string;
+  proYearlyPriceId: string;
+  appBaseUrl: string;
+} {
+  const config = getConfig();
+  if (!config.STRIPE_API_KEY) {
+    throw new Error("STRIPE_API_KEY is not configured");
+  }
+  if (!config.STRIPE_PRO_MONTHLY_PRICE_ID) {
+    throw new Error("STRIPE_PRO_MONTHLY_PRICE_ID is not configured");
+  }
+  if (!config.STRIPE_PRO_YEARLY_PRICE_ID) {
+    throw new Error("STRIPE_PRO_YEARLY_PRICE_ID is not configured");
+  }
+  return {
+    apiKey: config.STRIPE_API_KEY,
+    webhookSecret: config.STRIPE_WEBHOOK_SECRET ?? "",
+    proMonthlyPriceId: config.STRIPE_PRO_MONTHLY_PRICE_ID,
+    proYearlyPriceId: config.STRIPE_PRO_YEARLY_PRICE_ID,
+    appBaseUrl: config.APP_BASE_URL,
+  };
 }

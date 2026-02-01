@@ -38,7 +38,6 @@ export async function getRedisConnection(): Promise<Redis> {
     const config = getConfig();
     redisClient = new Redis(config.REDIS_URL, {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
     });
 
     // Test connection

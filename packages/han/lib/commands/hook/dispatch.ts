@@ -791,6 +791,8 @@ export function registerHookDispatch(hookCommand: Command): void {
 					options.cache === false,
 					options.checkpoints === false,
 				);
+				// Explicitly exit to avoid hanging on open handles
+				process.exit(0);
 			},
 		);
 }

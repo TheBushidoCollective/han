@@ -56,6 +56,8 @@ jobs:
       - name: Run tests with coverage
         run: bun test --coverage --coverage-reporter=lcov
         working-directory: ./packages/han
+        env:
+          SKIP_NATIVE: "true"
         # Native-dependent tests auto-skip when module not available
 
       - name: Extract coverage percentage

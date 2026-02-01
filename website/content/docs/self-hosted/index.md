@@ -3,8 +3,6 @@ title: Self-Hosted Deployment
 description: Run Han Team Platform on your own infrastructure
 ---
 
-# Self-Hosted Deployment
-
 Han Team Platform can be deployed on your own infrastructure for complete data sovereignty and compliance requirements.
 
 ## Quick Start
