@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "blueprints": {
-      "command": "han",
-      "args": ["mcp", "blueprints"]
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
     }
   }
 }
