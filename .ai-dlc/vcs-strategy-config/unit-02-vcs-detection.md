@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: [unit-01-config-system]
 branch: ai-dlc/vcs-strategy-config/02-vcs-detection
 discipline: backend
@@ -17,12 +17,12 @@ backend - This unit involves shell/TypeScript utilities for detecting VCS state.
 
 ## Success Criteria
 
-- [ ] Auto-detect VCS type via `.git` vs `.jj` directory presence
-- [ ] Auto-detect git default branch via `git symbolic-ref refs/remotes/origin/HEAD`
-- [ ] Fallback detection for git: check existence of main, master, trunk, develop
-- [ ] Auto-detect jj default branch via trunk() revset alias
-- [ ] Explicit `default_branch` config overrides auto-detection
-- [ ] `getVcsConfig()` function returns unified config for current repo
+- [x] Auto-detect VCS type via `.git` vs `.jj` directory presence
+- [x] Auto-detect git default branch via `git symbolic-ref refs/remotes/origin/HEAD`
+- [x] Fallback detection for git: check existence of main, master, trunk, develop
+- [x] Auto-detect jj default branch via trunk() revset alias
+- [x] Explicit `default_branch` config overrides auto-detection
+- [x] `getVcsConfig()` function returns unified config for current repo
 
 ## Notes
 

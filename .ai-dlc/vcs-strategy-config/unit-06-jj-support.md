@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: [unit-01-config-system, unit-02-vcs-detection]
 branch: ai-dlc/vcs-strategy-config/06-jj-support
 discipline: backend

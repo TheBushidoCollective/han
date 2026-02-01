@@ -30,7 +30,20 @@ git:
   # auto_squash: true
 
 # Jujutsu (jj) configuration (used when repository uses jj)
-# jj:
-#   change_strategy: unit
-#   elaboration_review: true
-#   default_branch: auto
+# jj uses workspaces instead of worktrees for parallel unit execution.
+# AI-DLC will automatically use 'jj workspace add' instead of 'git worktree add'
+# when running in a jj repository.
+jj:
+  change_strategy: unit
+  elaboration_review: true
+  default_branch: auto
+
+  # jj-specific: Automatically squash commits when merging.
+  # This leverages jj's first-class squash support for cleaner history.
+  # Recommended for most workflows.
+  auto_squash: true
+
+  # Note: jj uses bookmarks instead of branches. AI-DLC will:
+  # - Create bookmarks for tracking unit work
+  # - Use 'jj git push' for PR creation in colocated repos
+  # - Handle conflicts using jj's native conflict resolution
