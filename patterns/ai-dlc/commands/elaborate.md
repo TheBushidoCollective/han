@@ -341,22 +341,32 @@ discipline: {discipline}  # frontend, backend, api, documentation, devops, etc.
 - `documentation` → `do-technical-documentation` agents
 - `devops` → infrastructure/deployment agents
 
-### 4. Create and switch to intent branch:
+### 4. Create intent worktree:
 
-**CRITICAL: The orchestrator MUST run on the intent branch, not main.**
+**CRITICAL: The intent MUST run in an isolated worktree, not the main working directory.**
 
-After creating the intent artifacts, create and switch to the intent branch:
+After creating the intent artifacts, create a worktree for the intent:
 
 ```bash
-# Create and switch to intent branch
+# Create intent worktree
 INTENT_BRANCH="ai-dlc/${intentSlug}"
-git checkout -B "$INTENT_BRANCH"
+INTENT_WORKTREE="/tmp/ai-dlc-${intentSlug}"
+
+# Create worktree with intent branch
+git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
+
+# Move into the intent worktree for all subsequent work
+cd "$INTENT_WORKTREE"
 ```
 
 This ensures:
+- Main working directory stays on `main` for other work
 - All subsequent `han keep` operations use the intent branch's storage
-- Multiple intents can run in parallel on different branches
+- Multiple intents can run in parallel in separate worktrees
 - Clean separation between main and AI-DLC orchestration state
+- Subagents spawn from the intent worktree, not the original repo
+
+**Tell the user the worktree location** so they know where to find it.
 
 ### 5. Save iteration state to han keep:
 
@@ -393,6 +403,9 @@ Tell the user:
 ```
 Elaboration complete!
 
+Intent Worktree: /tmp/ai-dlc-{intent-slug}/
+Branch: ai-dlc/{intent-slug}
+
 Created: .ai-dlc/{intent-slug}/
 - intent.md
 - intent.yaml (testing requirements)
@@ -408,4 +421,7 @@ To start the autonomous build loop:
 
 The construction phase will iterate through each unit, using quality gates
 (tests, types, lint) as backpressure until all success criteria are met.
+
+Note: All AI-DLC work happens in the worktree at /tmp/ai-dlc-{intent-slug}/
+Your main working directory stays clean on the main branch.
 ```

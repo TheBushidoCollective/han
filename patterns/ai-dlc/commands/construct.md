@@ -60,11 +60,11 @@ If truly blocked (cannot proceed without user input):
 
 ## Implementation
 
-### Step 0: Ensure Intent Branch
+### Step 0: Ensure Intent Worktree
 
-**CRITICAL: The orchestrator MUST run on the intent branch, not main.**
+**CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
 
-Before loading state, verify we're on the correct intent branch:
+Before loading state, find and switch to the intent worktree:
 
 ```bash
 # First, check if we have an intent slug saved (try to find it)
@@ -78,16 +78,22 @@ for intent_file in .ai-dlc/*/intent.md; do
   [ "$status" = "active" ] && INTENT_SLUG="$slug" && break
 done
 
-# If we found an intent, ensure we're on its branch
+# If we found an intent, ensure we're in its worktree
 if [ -n "$INTENT_SLUG" ]; then
   INTENT_BRANCH="ai-dlc/${INTENT_SLUG}"
-  CURRENT_BRANCH=$(git branch --show-current)
-  if [ "$CURRENT_BRANCH" != "$INTENT_BRANCH" ]; then
-    # Switch to intent branch (create if doesn't exist)
-    git checkout "$INTENT_BRANCH" 2>/dev/null || git checkout -B "$INTENT_BRANCH"
+  INTENT_WORKTREE="/tmp/ai-dlc-${INTENT_SLUG}"
+
+  # Create worktree if it doesn't exist
+  if [ ! -d "$INTENT_WORKTREE" ]; then
+    git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
   fi
+
+  # Switch to the intent worktree
+  cd "$INTENT_WORKTREE"
 fi
 ```
+
+**Important:** The orchestrator runs in `/tmp/ai-dlc-{intent-slug}/`, NOT the original repo directory. This keeps main clean and enables parallel intents.
 
 ### Step 1: Load State
 
@@ -408,22 +414,33 @@ han_keep_save({ scope: "branch", key: "scratchpad.md", content: "..." })
 
 **Why this matters:** When a subagent runs in a worktree on branch `ai-dlc/{intent}/{unit}`, it saves its own working notes to its unit branch. The orchestrator runs on the intent branch and manages intent-level state there.
 
-## Branch Architecture
+## Worktree Architecture
 
-The AI-DLC workflow uses a branch hierarchy:
+The AI-DLC workflow uses worktrees for complete isolation:
 
 ```
-main
-  └── ai-dlc/{intent-slug}           <-- Orchestrator runs here (intent branch)
-        ├── ai-dlc/{intent-slug}/01-unit  <-- Unit worktree branch
-        └── ai-dlc/{intent-slug}/02-unit  <-- Unit worktree branch
+/path/to/repo (main branch)         <-- User's main working directory, stays clean
+  │
+  └── git worktrees:
+        │
+        ├── /tmp/ai-dlc-{intent}/              <-- Intent worktree (orchestrator)
+        │     branch: ai-dlc/{intent-slug}
+        │
+        ├── /tmp/ai-dlc-{intent}-01-unit/      <-- Unit worktree (subagent)
+        │     branch: ai-dlc/{intent-slug}/01-unit
+        │
+        └── /tmp/ai-dlc-{intent}-02-unit/      <-- Unit worktree (subagent)
+              branch: ai-dlc/{intent-slug}/02-unit
 ```
 
-1. **Intent branch** (`ai-dlc/{intent-slug}`): Where the orchestrator runs. Intent-level state (iteration.json, intent.md, etc.) is stored here via han keep.
+1. **Main repo**: User's working directory stays on `main`, unaffected by AI-DLC work.
 
-2. **Unit branches** (`ai-dlc/{intent-slug}/{unit-slug}`): Where subagents work in isolated worktrees. Unit-level state (scratchpad, blockers) is stored here.
+2. **Intent worktree** (`/tmp/ai-dlc-{intent}/`): Where the orchestrator runs. Intent-level state (iteration.json, intent.md, etc.) is stored here via han keep.
 
-The orchestrator MUST be on the intent branch before spawning subagents. This ensures:
+3. **Unit worktrees** (`/tmp/ai-dlc-{intent}-{unit}/`): Where subagents work in isolated worktrees. Unit-level state (scratchpad, blockers) is stored here.
+
+The orchestrator MUST be in the intent worktree before spawning subagents. This ensures:
+- Main working directory stays clean on `main`
 - Intent state is properly scoped to the intent
-- Multiple intents can run in parallel on different branches
+- Multiple intents can run in parallel in separate worktrees
 - Clean separation between orchestration state and unit work
