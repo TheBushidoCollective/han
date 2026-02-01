@@ -95,17 +95,17 @@ describe("plugin alias integration", () => {
 		});
 
 		test("disciplines category resolves to do", () => {
-			expect(resolvePluginName("disciplines/frontend-development")).toBe(
+			expect(resolvePluginName("disciplines/frontend")).toBe(
 				"do-frontend-development",
 			);
-			expect(resolvePluginName("disciplines/backend-development")).toBe(
+			expect(resolvePluginName("disciplines/backend")).toBe(
 				"do-backend-development",
 			);
 		});
 
-		test("integrations category resolves to hashi", () => {
-			expect(resolvePluginName("integrations/github")).toBe("hashi-github");
-			expect(resolvePluginName("integrations/gitlab")).toBe("hashi-gitlab");
+		test("services category resolves to hashi", () => {
+			expect(resolvePluginName("services/github")).toBe("hashi-github");
+			expect(resolvePluginName("services/gitlab")).toBe("hashi-gitlab");
 		});
 	});
 
@@ -130,8 +130,8 @@ describe("plugin alias integration", () => {
 			const testCases = [
 				"languages/typescript",
 				"frameworks/react",
-				"disciplines/frontend-development",
-				"integrations/github",
+				"disciplines/frontend",
+				"services/github",
 			];
 
 			for (const newPath of testCases) {
@@ -150,10 +150,9 @@ describe("plugin alias integration", () => {
 			expect(categories).toContain("languages");
 			expect(categories).toContain("frameworks");
 			expect(categories).toContain("tools");
-			expect(categories).toContain("testing");
-			expect(categories).toContain("infrastructure");
+			expect(categories).toContain("validation");
 			expect(categories).toContain("disciplines");
-			expect(categories).toContain("integrations");
+			expect(categories).toContain("services");
 		});
 
 		test("languages category has all language plugins", () => {
@@ -174,12 +173,12 @@ describe("plugin alias integration", () => {
 			expect(disciplines).toContain("do-security-engineering");
 		});
 
-		test("integrations category has all hashi plugins", () => {
-			const integrations = getPluginsInCategory("integrations");
+		test("services category has all hashi plugins", () => {
+			const services = getPluginsInCategory("services");
 
-			expect(integrations).toContain("hashi-github");
-			expect(integrations).toContain("hashi-gitlab");
-			expect(integrations).toContain("hashi-jira");
+			expect(services).toContain("hashi-github");
+			expect(services).toContain("hashi-gitlab");
+			expect(services).toContain("hashi-jira");
 		});
 	});
 
