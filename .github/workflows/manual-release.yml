@@ -27,12 +27,16 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Found tag: $TAG"
 
-      - name: Trigger release-binaries via workflow_dispatch
+      - name: Trigger release-binaries via repository_dispatch
         env:
-          # Use PAT instead of github.token - the default token lacks
-          # permission to trigger workflow_dispatch events
+          # Use PAT for repository dispatch
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           TAG="${{ steps.get_tag.outputs.tag }}"
-          echo "Triggering release for $TAG"
-          gh workflow run release-binaries.yml --ref "$TAG"
+          echo "Triggering release for $TAG via repository_dispatch"
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d "{\"event_type\":\"manual-release\",\"client_payload\":{\"tag\":\"$TAG\"}}"
