@@ -59,7 +59,7 @@ hooks:
   lint:
     command: "biome check ${HAN_FILES}"
     depends_on:
-      - plugin: jutsu-biome
+      - plugin: biome
         hook: format  # Always runs AFTER formatting
 
   test:
@@ -75,7 +75,7 @@ Optional dependencies mean your hook won't fail if a plugin isn't installed:
 
 ```yaml
 depends_on:
-  - plugin: jutsu-prettier
+  - plugin: prettier
     hook: format
     optional: true  # Skip gracefully if Prettier not installed
 ```
@@ -142,9 +142,9 @@ Han plugins are an ecosystem:
 
 **Semantic categories** tell Claude what each plugin does:
 
-- **Jutsu** (techniques): Skills and validation for languages/tools
-- **Do** (disciplines): Specialized agents for domains
-- **Hashi** (bridges): MCP integrations to external services
+- **Language/Validation plugins**: Skills and validation for languages/tools
+- **Discipline plugins**: Specialized agents for domains
+- **Integration plugins**: MCP integrations to external services
 
 **Cross-plugin dependencies** let hooks reference each other by name, not hoping they're in the right order.
 
@@ -154,7 +154,7 @@ Han plugins are an ecosystem:
 
 Today, we're opening Han to third-party plugins.
 
-Build your own jutsu for your internal linter. Create a do agent for your compliance workflow. Ship a hashi bridge to your internal APIs.
+Build your own validation plugin for your internal linter. Create a discipline agent for your compliance workflow. Ship an integration plugin to connect your internal APIs.
 
 You get all of Han's intelligent infrastructure:
 
