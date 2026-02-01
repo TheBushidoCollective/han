@@ -29,14 +29,14 @@ The validator checks:
 ### Validation Output
 
 ```
-Validating plugin: jutsu-my-tool
+Validating plugin: biome
 
 Checking required files...
   .claude-plugin/plugin.json ... OK
   han-plugin.yml ... OK
 
 Checking plugin.json...
-  name: jutsu-my-tool ... OK
+  name: biome ... OK
   version: 1.0.0 ... OK
   description: present ... OK
 
@@ -131,12 +131,12 @@ han hook run my-plugin lint --verbose
 ```bash
 # Without config file - hook should skip
 rm -f biome.json
-han hook run jutsu-biome lint --verbose
+han hook run biome lint --verbose
 # Expected: "Skipping: no config file found"
 
 # With config file - hook should run
 echo '{}' > biome.json
-han hook run jutsu-biome lint --verbose
+han hook run biome lint --verbose
 # Expected: Hook executes
 ```
 
@@ -202,11 +202,11 @@ Commands should appear in Claude Code's command list:
 # Claude should execute the command workflow
 ```
 
-## Testing Agents (Do Plugins)
+## Testing Agents (Discipline Plugins)
 
 ### Verify Agent Loading
 
-1. Install your do-* plugin
+1. Install your discipline plugin
 2. Ask Claude about your agent's specialty
 3. Claude should offer to use the agent
 
@@ -219,7 +219,7 @@ User: "Analyze the auth module for code quality issues"
 Expected: Claude invokes your quality-analyzer agent
 ```
 
-## Testing MCP Servers (Hashi Plugins)
+## Testing MCP Servers (Integration Plugins)
 
 ### Verify Server Configuration
 
@@ -235,7 +235,7 @@ npx -y @your-org/mcp-server-your-service --help
 
 ### Test Tool Availability
 
-1. Install your hashi-* plugin
+1. Install your integration plugin
 2. In Claude Code, check available tools
 3. Your MCP server's tools should appear
 
@@ -390,7 +390,7 @@ Before distribution, verify:
 - [ ] Hooks skip when conditions aren't met
 - [ ] Skills have valid frontmatter
 - [ ] Commands execute correctly
-- [ ] MCP servers start (for hashi plugins)
+- [ ] MCP servers start (for integration plugins)
 - [ ] Documentation is complete
 - [ ] CHANGELOG is updated
 
