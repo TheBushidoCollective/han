@@ -493,9 +493,13 @@ The role shifts from "doing the work" to **"defining what work matters and verif
 
 However, humans remain integral. Product owners ensure alignment with business objectives. Developers maintain design quality and handle judgment calls. These roles ensure that automation and human accountability remain balanced.
 
-### Platform Agnostic
+### Tool and Platform Agnostic
 
-AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodology applies regardless of infrastructure choices:
+AI-DLC 2026 is intentionally agnostic to both tooling and infrastructure. The methodology applies regardless of which IDE, AI agent, or cloud provider you choose.
+
+**Technique over tools.** The core of AI-DLC isn't a specific product—it's the logic of how state persists across sessions, how backpressure guides iteration, and how human steering integrates with autonomous execution. These patterns work whether you're using Claude Code, Cursor, Kiro, OpenCode, or a custom agent framework. The principles transfer; the implementation details vary.
+
+**Infrastructure independence.** The methodology applies regardless of deployment choices:
 
 - **Container orchestration:** Kubernetes, ECS, Docker Swarm, Nomad
 - **Serverless:** Lambda, Cloud Functions, Azure Functions, Cloudflare Workers
@@ -503,7 +507,7 @@ AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodolo
 - **Edge:** IoT devices, edge computing platforms
 - **Hybrid:** Any combination of the above
 
-The methodology should be independent of vendor choices. Choose infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
+Choose tools and infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
 
 ---
 
