@@ -57,14 +57,14 @@ This ensures hooks only check files that changed since the relevant checkpoint.
 
 Han plugins define hooks for specific validations:
 
-### Jutsu Plugins (Techniques)
+### Technique Plugins
 
 | Plugin | Hook | Validates |
 |--------|------|-----------|
-| `jutsu-biome` | `lint` | JavaScript/TypeScript linting |
-| `jutsu-typescript` | `typecheck` | Type errors |
-| `jutsu-bun` | `test` | Test failures |
-| `jutsu-markdown` | `lint` | Markdown formatting |
+| `biome` | `lint` | JavaScript/TypeScript linting |
+| `typescript` | `typecheck` | Type errors |
+| `bun` | `test` | Test failures |
+| `markdown` | `lint` | Markdown formatting |
 
 ### Example Hook Configuration
 
@@ -74,15 +74,15 @@ Han plugins define hooks for specific validations:
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-biome lint" },
-          { "type": "command", "command": "han hook run jutsu-typescript typecheck" }
+          { "type": "command", "command": "han hook run biome lint" },
+          { "type": "command", "command": "han hook run typescript typecheck" }
         ]
       }
     ],
     "SubagentStop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-biome lint" }
+          { "type": "command", "command": "han hook run biome lint" }
         ]
       }
     ]
@@ -101,7 +101,7 @@ Execute shell commands:
 ```json
 {
   "type": "command",
-  "command": "han hook run jutsu-biome lint",
+  "command": "han hook run biome lint",
   "timeout": 120
 }
 ```
@@ -160,7 +160,7 @@ For commands that support file arguments, use the `${HAN_FILES}` template to run
 
 ```yaml
 plugins:
-  jutsu-biome:
+  biome:
     hooks:
       lint:
         command: npx biome check --write ${HAN_FILES}
@@ -198,7 +198,7 @@ hooks:
 
 ```yaml
 plugins:
-  jutsu-biome:
+  biome:
     hooks:
       lint:
         enabled: true
@@ -215,7 +215,7 @@ Only run in directories with specific files:
 
 ```yaml
 plugins:
-  jutsu-typescript:
+  typescript:
     hooks:
       typecheck:
         dirs_with:
@@ -226,7 +226,7 @@ Only run when specific patterns changed:
 
 ```yaml
 plugins:
-  jutsu-bun:
+  bun:
     hooks:
       test:
         if_changed:
@@ -249,13 +249,13 @@ While hooks run automatically, you can trigger them manually:
 
 ```bash
 # Run a specific plugin hook
-han hook run jutsu-biome lint
+han hook run biome lint
 
 # Run with options
-han hook run jutsu-typescript typecheck --verbose
+han hook run typescript typecheck --verbose
 
 # Disable caching for this run
-han hook run jutsu-bun test --no-cache
+han hook run bun test --no-cache
 ```
 
 See [CLI Hook Commands](/docs/cli/hooks) for full reference.
@@ -298,7 +298,7 @@ Hook into the lifecycle:
 See what's happening:
 
 ```bash
-han hook run jutsu-biome lint --verbose
+han hook run biome lint --verbose
 ```
 
 ### Check Hook Status
@@ -306,7 +306,7 @@ han hook run jutsu-biome lint --verbose
 View hook configuration:
 
 ```bash
-han hook info jutsu-biome lint
+han hook info biome lint
 ```
 
 ### Force Re-run
@@ -314,7 +314,7 @@ han hook info jutsu-biome lint
 Bypass cache:
 
 ```bash
-han hook run jutsu-biome lint --no-cache
+han hook run biome lint --no-cache
 ```
 
 ## Best Practices

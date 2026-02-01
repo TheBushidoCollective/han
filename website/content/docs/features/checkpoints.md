@@ -108,7 +108,7 @@ For commands that support file arguments, use `${HAN_FILES}` to pass only sessio
 
 ```yaml
 plugins:
-  jutsu-biome:
+  biome:
     hooks:
       lint:
         command: npx biome check --write ${HAN_FILES}
@@ -151,13 +151,13 @@ hooks:
 Or via environment variable:
 
 ```bash
-HAN_NO_CHECKPOINTS=1 han hook run jutsu-biome lint
+HAN_NO_CHECKPOINTS=1 han hook run biome lint
 ```
 
 Or via CLI flag:
 
 ```bash
-han hook run jutsu-biome lint --no-checkpoints
+han hook run biome lint --no-checkpoints
 ```
 
 ### When to Disable
@@ -232,7 +232,7 @@ Hooks automatically use checkpoints when available:
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-biome lint" }
+          { "type": "command", "command": "han hook run biome lint" }
         ]
       }
     ]

@@ -287,14 +287,14 @@ Returns evidence-based answers:
 
 ### Provider Discovery
 
-Team memory integrates with external sources through hashi plugins:
+Team memory integrates with external sources through bridge plugins:
 
 ```bash
 # Add GitHub integration
-han plugin install hashi-github
+han plugin install github
 
 # Add Linear integration
-han plugin install hashi-linear
+han plugin install linear
 ```
 
 Each provider contributes to the team knowledge base. The research engine searches across all configured providers.
