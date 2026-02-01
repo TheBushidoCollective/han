@@ -101,13 +101,14 @@ fi
 For unit-based tasks, check if all units are now complete or if there are more ready units:
 
 ```bash
-# Source the DAG library
+# Source the DAG and integrator libraries
 source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+source "${CLAUDE_PLUGIN_ROOT}/lib/integrator.sh"
 
 # Check if DAG is complete (all units finished)
 if is_dag_complete "$INTENT_DIR"; then
-  echo "All units completed! Task is fully done."
-  # Continue to Step 4 to mark the entire task complete
+  echo "All units completed! Running integrator..."
+  # Continue to Step 3d to run integrator
 else
   # Find next ready units
   READY_UNITS=$(find_ready_units "$INTENT_DIR")
@@ -128,7 +129,7 @@ else
 
     # Output status and continue construction
     echo "Moving to next unit. Run /construct to continue."
-    return  # Do NOT proceed to Step 4 (full task completion)
+    return  # Do NOT proceed to Step 3d or 4
   else
     # Units remain but are blocked
     BLOCKED_UNITS=$(find_blocked_units "$INTENT_DIR")
@@ -142,7 +143,73 @@ fi
 
 **Note:** If there are more units, `/done` does NOT mark the task as complete. Instead, it resets the hat and signals the construct loop to pick up the next unit.
 
-### Step 4: Mark Task Complete (Only When All Units Done)
+### Step 3d: Run Integrator (When All Units Complete)
+
+When all units are complete, invoke the integrator hat based on the workflow configuration:
+
+```bash
+# Source the integrator library
+source "${CLAUDE_PLUGIN_ROOT}/lib/integrator.sh"
+
+# Check if workflow has integrator enabled (default: true)
+WORKFLOW_FILE="${CLAUDE_PLUGIN_ROOT}/workflows.yml"
+WORKFLOW_NAME="${state.workflowName:-default}"
+INTEGRATOR_ENABLED=$(han parse yaml "${WORKFLOW_NAME}.integrator" -r --default true < "$WORKFLOW_FILE" 2>/dev/null)
+
+if [ "$INTEGRATOR_ENABLED" = "true" ]; then
+  echo "Running integrator for intent: $INTENT_SLUG"
+
+  # Get the change strategy for context
+  config=$(get_ai_dlc_config "$INTENT_DIR")
+  strategy=$(echo "$config" | jq -r '.change_strategy')
+
+  echo "Change strategy: $strategy"
+  should_run_integrator "$strategy"
+
+  # Execute integration
+  result=$(integrate "$INTENT_SLUG" "$INTENT_DIR")
+  status=$(echo "$result" | jq -r '.status')
+  message=$(echo "$result" | jq -r '.message')
+
+  echo "$message"
+
+  case "$status" in
+    completed)
+      echo "Integration successful!"
+      # Continue to Step 4 to mark task complete
+      ;;
+    pr_created)
+      echo "PR created. Awaiting human approval."
+      pr_url=$(echo "$result" | jq -r '.prUrl')
+      echo "PR URL: $pr_url"
+      echo ""
+      echo "After PR is approved and merged, run /construct to complete."
+      return  # Wait for PR approval
+      ;;
+    blocked)
+      errors=$(echo "$result" | jq -r '.errors[]' 2>/dev/null)
+      echo "Integration blocked:"
+      echo "$errors"
+      echo ""
+      echo "Resolve the issues and run /construct to retry."
+      return  # Blocked, cannot complete
+      ;;
+    skipped)
+      echo "Integrator skipped: $message"
+      # Continue to Step 4
+      ;;
+  esac
+else
+  echo "Integrator disabled for workflow: $WORKFLOW_NAME"
+fi
+```
+
+**Strategy-Specific Behavior:**
+- **trunk**: Validates that all units were auto-merged to main, runs Stop hooks
+- **intent**: Creates a single PR for the entire intent, waits for approval
+- **unit/bolt**: Verifies all unit PRs were merged (lightweight check)
+
+### Step 4: Mark Task Complete (Only When All Units Done and Integrated)
 
 ```javascript
 state.status = "complete";
@@ -168,6 +235,7 @@ const workflowHats = state.workflow.join(" → ");
 
 **Total iterations:** {iteration count}
 **Workflow:** {workflowName} ({workflowHats})
+**Change Strategy:** {strategy from config}
 
 ### What Was Built
 {Summary from intent}
@@ -175,13 +243,22 @@ const workflowHats = state.workflow.join(" → ");
 ### Criteria Satisfied
 {List of completion criteria}
 
+### Integration Summary
+{Strategy-specific summary from integrator}
+
+### Cleanup
+{List of cleaned up worktrees and branches, if any}
+
 ### Next Steps
 
-1. **Merge changes** - Create a PR from `ai-dlc/{intent-slug}` to `main`
-2. **Clean up worktrees** - Run `git worktree remove /tmp/ai-dlc-{intent-slug}`
-3. **Start new task** - Run `/reset` to clear state, then `/elaborate`
+1. **Start new task** - Run `/reset` to clear state, then `/elaborate`
 
 ---
 
-Worktree location: /tmp/ai-dlc-{intent-slug}/
+**Note:** Integration was handled automatically based on your VCS change strategy:
+- **trunk**: Changes were auto-merged to main after each unit
+- **intent**: A single PR was created and merged
+- **unit/bolt**: Individual unit PRs were created and merged
+
+Worktree location: /tmp/ai-dlc-{intent-slug}/ (may have been cleaned up)
 ```
