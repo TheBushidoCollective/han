@@ -8,17 +8,13 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
-  dispatch:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger release via repository_dispatch
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          echo "Triggering release for ${{ inputs.tag }}"
-          curl -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
-            -d '{"event_type":"release","client_payload":{"tag":"${{ inputs.tag }}"}}'
+  release:
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit

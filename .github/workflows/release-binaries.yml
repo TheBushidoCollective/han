@@ -7,6 +7,12 @@ on:
         description: 'Tag to release (e.g., v1.18.2)'
         required: true
         type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
   repository_dispatch:
     types: [release]
   push:
