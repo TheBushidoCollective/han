@@ -125,6 +125,14 @@ AI-DLC's value compounds over time:
 
 Ad-hoc approaches don't compound—each session starts fresh, each prompt is one-off, no organizational learning occurs. The team with AI-DLC gets better at working with AI; the team with ad-hoc AI starts over every time.
 
+**Beyond Code: The Requirements Silo**
+
+The same ad-hoc pattern exists upstream. Teams use AI to polish requirements documents—reformatting PRDs, summarizing meetings, making user stories "readable." This treats AI as a formatting tool rather than a thinking partner.
+
+The opportunity is different: AI should **steer** the requirements conversation, asking probing questions to extract context humans didn't know they possessed. "What happens if the user cancels mid-checkout?" "How should this behave for EU users under GDPR?" These questions surface assumptions that would otherwise remain implicit until implementation—when they become expensive to address.
+
+AI-DLC addresses this through Mob Elaboration: AI interrogates stakeholders until requirements are complete enough to express as verifiable completion criteria.
+
 ---
 
 ## Core Principles
