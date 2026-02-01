@@ -27,22 +27,34 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Look for previous Claude review comment with commit marker
-          LAST_REVIEW=$(gh pr view ${{ github.event.pull_request.number }} --json comments \
-            --jq '.comments[] | select(.body | contains("<!-- claude-review-commit:")) | .body' \
-            | tail -1)
+          # Get ALL Claude review comments (for concern tracking)
+          ALL_REVIEWS=$(gh pr view ${{ github.event.pull_request.number }} --json comments \
+            --jq '[.comments[] | select(.body | contains("<!-- claude-review-commit:")) | .body]')
+
+          # Get the FIRST review (original concerns)
+          FIRST_REVIEW=$(echo "$ALL_REVIEWS" | jq -r '.[0] // empty')
+
+          # Get the LAST review (most recent)
+          LAST_REVIEW=$(echo "$ALL_REVIEWS" | jq -r '.[-1] // empty')
+
+          # Count total reviews
+          REVIEW_COUNT=$(echo "$ALL_REVIEWS" | jq 'length')
+          echo "review_count=$REVIEW_COUNT" >> $GITHUB_OUTPUT
 
           if [ -n "$LAST_REVIEW" ]; then
             # Extract the commit SHA from the marker
             LAST_COMMIT=$(echo "$LAST_REVIEW" | grep -oP '<!-- claude-review-commit:\K[a-f0-9]+' || echo "")
+            FIRST_COMMIT=$(echo "$FIRST_REVIEW" | grep -oP '<!-- claude-review-commit:\K[a-f0-9]+' || echo "")
+
             if [ -n "$LAST_COMMIT" ]; then
               echo "last_reviewed_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
+              echo "first_reviewed_commit=$FIRST_COMMIT" >> $GITHUB_OUTPUT
               echo "has_previous_review=true" >> $GITHUB_OUTPUT
 
               # Calculate lines changed since last review
               LINES_CHANGED=$(git diff --shortstat "$LAST_COMMIT"..HEAD 2>/dev/null | awk '{sum=$4+$6} END {print sum+0}')
               echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
-              echo "Found previous review at commit $LAST_COMMIT, $LINES_CHANGED lines changed since"
+              echo "Found $REVIEW_COUNT previous reviews, last at commit $LAST_COMMIT, $LINES_CHANGED lines changed since"
             else
               echo "has_previous_review=false" >> $GITHUB_OUTPUT
             fi
@@ -53,9 +65,16 @@ jobs:
       - name: Determine review mode
         id: review-mode
         run: |
+          REVIEW_COUNT="${{ steps.check-review.outputs.review_count }}"
+
           if [ "${{ steps.check-review.outputs.has_previous_review }}" = "true" ]; then
             LINES="${{ steps.check-review.outputs.lines_changed }}"
-            if [ "${LINES:-0}" -lt 50 ]; then
+
+            # Circuit breaker: After 3 reviews, switch to approval-focused mode
+            if [ "${REVIEW_COUNT:-0}" -ge 3 ]; then
+              echo "mode=closure" >> $GITHUB_OUTPUT
+              echo "Closure mode: $REVIEW_COUNT reviews already - focusing on approval"
+            elif [ "${LINES:-0}" -lt 50 ]; then
               echo "mode=verification" >> $GITHUB_OUTPUT
               echo "Verification mode: $LINES lines changed - checking if concerns addressed"
             else
@@ -92,47 +111,94 @@ jobs:
             - Test coverage
 
             Categorize issues by severity: CRITICAL (must fix), MODERATE (should fix), MINOR (consider).
+
+            IMPORTANT: This is your ONE chance to raise all concerns. After this review, you will
+            only be verifying if these concerns were addressed - you should NOT raise new issues
+            on follow-up reviews unless they are CRITICAL security/data-loss bugs in newly added code.
+
+            Be thorough but reasonable. The goal is to ship good code, not perfect code.
             ' || '' }}
 
             ${{ steps.review-mode.outputs.mode == 'verification' && format('
-            ## VERIFICATION MODE (Follow-up Review)
+            ## VERIFICATION MODE (Follow-up Review #{2})
 
-            You previously reviewed this PR. Only {0} lines have changed since commit {1}.
+            This PR has been reviewed {2} time(s). Only {0} lines changed since commit {1}.
 
-            YOUR TASK: Verify whether your previous concerns were addressed. This is NOT a new review.
+            YOUR ONLY TASK: Check if ORIGINAL concerns from the FIRST review were addressed.
 
-            INSTRUCTIONS:
-            1. First, read your previous review comment on this PR
-            2. Use `git diff {1}..HEAD` to see what changed since your last review
-            3. For each concern you raised previously, determine:
-               - ✅ ADDRESSED: The code change fixes the issue
-               - 💬 DISCUSSED: The author provided reasoning to reconsider (check PR comments)
-               - ⏳ PENDING: Not yet addressed (only mention if blocking)
+            STEP-BY-STEP PROCESS:
+            1. Use `gh pr view {3} --json comments` to read ALL previous review comments
+            2. Extract the concerns from your FIRST review (the original issues raised)
+            3. Check PR comments for author responses/explanations
+            4. Use `git diff {1}..HEAD` to see recent changes
+            5. For EACH original concern, mark it as:
+               - ✅ ADDRESSED via code change
+               - ✅ ADDRESSED via discussion (author explained why its fine)
+               - ⏳ STILL PENDING (only if truly blocking)
 
-            IMPORTANT GUIDELINES:
-            - Do NOT raise new issues unless they are CRITICAL bugs
-            - Do NOT repeat suggestions that were intentionally not implemented
-            - If the author explained why they disagree with feedback, accept reasonable explanations
-            - Lean towards approval - the goal is to ship, not to achieve perfection
-            - A brief "LGTM - concerns addressed" is a valid response
+            STRICT RULES:
+            - Do NOT raise ANY new issues. Your initial review was your chance.
+            - Do NOT re-review code you already approved
+            - If author explains why they disagree, ACCEPT their reasoning unless its dangerous
+            - Stylistic preferences that author declined = ADDRESSED (respect their choice)
+            - The goal is CLOSURE, not perfection
 
-            Your response should be SHORT. No need for a full re-review.
-            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit) || '' }}
+            RESPOND WITH:
+            1. Brief status of each original concern (1 line each)
+            2. Overall verdict: APPROVE or specific blocking items
+
+            Keep it SHORT. If all addressed: "LGTM - all concerns addressed" is ideal.
+            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit, steps.check-review.outputs.review_count, github.event.pull_request.number) || '' }}
 
             ${{ steps.review-mode.outputs.mode == 'incremental' && format('
-            ## INCREMENTAL REVIEW
+            ## INCREMENTAL REVIEW (Follow-up #{2})
 
-            You previously reviewed this PR at commit {1}. {0} lines have changed since then.
+            This PR has been reviewed {2} time(s). {0} lines changed since commit {1}.
 
-            INSTRUCTIONS:
-            1. Use `git diff {1}..HEAD` to see ONLY changes since your last review
-            2. Focus on the NEW changes - do not re-review unchanged code
-            3. Check if previous concerns were addressed
-            4. Only raise new issues if they are in the changed code
-            5. Do NOT repeat feedback from your previous review
+            YOUR TASK: Track original concerns AND review substantial new code.
 
-            If changes look good and previous concerns were addressed, approve with a brief note.
-            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit) || '' }}
+            STEP-BY-STEP PROCESS:
+            1. Use `gh pr view {3} --json comments` to read ALL previous reviews
+            2. List concerns from your FIRST review - these are what you are tracking
+            3. Check which original concerns are now addressed (code or discussion)
+            4. Use `git diff {1}..HEAD` to review NEW changes only
+            5. ONLY raise new issues if they are CRITICAL bugs in the new code
+
+            STRICT RULES:
+            - Track and close ORIGINAL concerns - thats your primary job
+            - New issues ONLY for: security holes, data loss, crashes in NEW code
+            - Do NOT raise style/preference issues on new code
+            - Do NOT re-review unchanged code
+            - If author explained why they wont fix something, mark it ADDRESSED
+            - The goal is CLOSURE and forward progress
+
+            RESPOND WITH:
+            1. Status of original concerns (✅ addressed or ⏳ pending)
+            2. Any CRITICAL issues in new code (rare - only if truly dangerous)
+            3. Overall verdict: APPROVE or specific blockers
+
+            Lean towards approval. Ship good code, not perfect code.
+            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit, steps.check-review.outputs.review_count, github.event.pull_request.number) || '' }}
+
+            ${{ steps.review-mode.outputs.mode == 'closure' && format('
+            ## CLOSURE MODE (Review #{0} - Time to Ship)
+
+            This PR has been reviewed {0} times. It is time to bring this to closure.
+
+            YOUR TASK: Approve unless there is a CRITICAL blocking issue.
+
+            RULES:
+            - APPROVE unless there is a security vulnerability, data loss risk, or crash
+            - All previous stylistic/preference concerns are now MOOT - author had chances to address
+            - Do NOT raise any new issues of any kind
+            - If original blocking concerns exist, list them briefly, otherwise APPROVE
+
+            RESPOND WITH ONE OF:
+            - "LGTM - Approving after {0} review cycles"
+            - "Blocking: [specific critical issue]" (only for security/crash/data-loss)
+
+            The goal is to SHIP. Perfect is the enemy of good.
+            ', steps.check-review.outputs.review_count) || '' }}
 
             Use the repository's CLAUDE.md for guidance on style and conventions.
 
