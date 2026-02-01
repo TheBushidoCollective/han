@@ -93,10 +93,7 @@ jobs:
         working-directory: ./packages/han
 
       - name: Run tests
-        run: |
-          # Disable coverage in CI to avoid EAGAIN errors during output
-          # Coverage is enabled by default in bunfig.toml for local dev
-          bun test --bail --coverage=false
+        run: bun test --bail
         working-directory: ./packages/han
         env:
           SKIP_NATIVE: "true"

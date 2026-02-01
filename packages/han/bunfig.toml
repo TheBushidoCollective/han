@@ -1,7 +1,8 @@
 [test]
 root = "test"
 preload = ["./test/setup.ts"]
-coverage = true
+# Note: coverage disabled by default to avoid EAGAIN errors in CI
+# Use 'bun test --coverage' locally when you want coverage reports
 # coverageThreshold = 0.55
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
