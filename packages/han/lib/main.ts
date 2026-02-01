@@ -433,3 +433,4 @@ if (isMainModule) {
 		program.parse();
 	}
 }
+// npm publishing enabled

@@ -10,6 +10,7 @@ import {
 	isOldPluginName,
 	migratePluginNames,
 	migrateSettingsFile,
+	type MigrationResult,
 } from "../lib/migrate.ts";
 
 // Use a temp directory for tests
@@ -134,9 +135,9 @@ describe("migrateSettingsFile", () => {
 		expect(result.migratedPlugins).toHaveLength(2);
 
 		// Verify file was updated
-		// Note: do-frontend-development maps to disciplines/frontend, so short name is "frontend"
 		const updated = JSON.parse(readFileSync(settingsPath, "utf-8"));
 		expect(updated.permissions.allow).toContain("typescript@han");
+		// do-frontend-development maps to disciplines/frontend, so short name is "frontend"
 		expect(updated.permissions.allow).toContain("frontend@han");
 		expect(updated.permissions.allow).toContain("some-other-tool");
 		expect(updated.permissions.allow).not.toContain("jutsu-typescript@han");
@@ -324,7 +325,7 @@ describe("migration integration", () => {
 		expect(userUpdated.enabledPlugins["typescript@han"]).toBe(true);
 
 		// Verify project settings
-		// Note: do-frontend-development maps to disciplines/frontend, so short name is "frontend"
+		// do-frontend-development maps to disciplines/frontend, so short name is "frontend"
 		const projectUpdated = JSON.parse(readFileSync(projectSettingsPath, "utf-8"));
 		expect(projectUpdated.enabledPlugins["frontend@han"]).toBe(true);
 	});
