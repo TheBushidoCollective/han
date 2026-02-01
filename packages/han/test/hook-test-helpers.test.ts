@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import { makeLiveOutputKey } from "../lib/hooks/index.ts";
+import { makeLiveOutputKey } from "../lib/hook-test.ts";
 
 describe("hook-test.ts helper functions", () => {
 	describe("makeLiveOutputKey", () => {

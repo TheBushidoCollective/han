@@ -112,7 +112,7 @@ describe("JSON Content Block Handling", () => {
 		let allText = "";
 		for (const block of contentBlocks) {
 			if (block.type === "text" && "text" in block) {
-				allText += block.text + " ";
+				allText += `${block.text} `;
 			}
 		}
 

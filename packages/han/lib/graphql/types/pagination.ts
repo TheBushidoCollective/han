@@ -43,6 +43,17 @@ export function decodeCursor(cursor: string): {
 }
 
 /**
+ * Maximum page size to prevent memory exhaustion attacks.
+ * Clients requesting more than this will be capped to this limit.
+ */
+export const MAX_PAGE_SIZE = 100;
+
+/**
+ * Default page size when not specified
+ */
+export const DEFAULT_PAGE_SIZE = 25;
+
+/**
  * Connection arguments for pagination
  */
 export interface ConnectionArgs {
@@ -96,14 +107,27 @@ export function applyConnectionArgs<T>(
 	const totalCount = items.length;
 	let slicedItems = [...items];
 
+	// Enforce MAX_PAGE_SIZE to prevent memory exhaustion attacks
+	const normalizedArgs = {
+		...args,
+		first:
+			args.first !== undefined && args.first !== null
+				? Math.min(args.first, MAX_PAGE_SIZE)
+				: args.first,
+		last:
+			args.last !== undefined && args.last !== null
+				? Math.min(args.last, MAX_PAGE_SIZE)
+				: args.last,
+	};
+
 	// Track cursor positions for hasMore calculations
 	let afterIndex = -1;
 	let beforeIndex = slicedItems.length;
 
 	// Apply cursor-based slicing (after cursor)
-	if (args.after) {
+	if (normalizedArgs.after) {
 		afterIndex = slicedItems.findIndex(
-			(item) => getCursor(item) === args.after,
+			(item) => getCursor(item) === normalizedArgs.after,
 		);
 		if (afterIndex !== -1) {
 			slicedItems = slicedItems.slice(afterIndex + 1);
@@ -111,9 +135,9 @@ export function applyConnectionArgs<T>(
 	}
 
 	// Apply cursor-based slicing (before cursor)
-	if (args.before) {
+	if (normalizedArgs.before) {
 		const idx = slicedItems.findIndex(
-			(item) => getCursor(item) === args.before,
+			(item) => getCursor(item) === normalizedArgs.before,
 		);
 		if (idx !== -1) {
 			beforeIndex = idx;
@@ -125,19 +149,27 @@ export function applyConnectionArgs<T>(
 	let trimmedFromStart = false;
 	let trimmedFromEnd = false;
 
-	// Apply first limit (forward pagination)
-	if (args.first !== undefined && args.first !== null && args.first >= 0) {
-		if (slicedItems.length > args.first) {
+	// Apply first limit (forward pagination) - capped at MAX_PAGE_SIZE
+	if (
+		normalizedArgs.first !== undefined &&
+		normalizedArgs.first !== null &&
+		normalizedArgs.first >= 0
+	) {
+		if (slicedItems.length > normalizedArgs.first) {
 			trimmedFromEnd = true;
-			slicedItems = slicedItems.slice(0, args.first);
+			slicedItems = slicedItems.slice(0, normalizedArgs.first);
 		}
 	}
 
-	// Apply last limit (backward pagination)
-	if (args.last !== undefined && args.last !== null && args.last >= 0) {
-		if (slicedItems.length > args.last) {
+	// Apply last limit (backward pagination) - capped at MAX_PAGE_SIZE
+	if (
+		normalizedArgs.last !== undefined &&
+		normalizedArgs.last !== null &&
+		normalizedArgs.last >= 0
+	) {
+		if (slicedItems.length > normalizedArgs.last) {
 			trimmedFromStart = true;
-			slicedItems = slicedItems.slice(-args.last);
+			slicedItems = slicedItems.slice(-normalizedArgs.last);
 		}
 	}
 
@@ -151,11 +183,13 @@ export function applyConnectionArgs<T>(
 	// hasPreviousPage: true if there are items before the current slice
 	// hasNextPage: true if there are items after the current slice
 	const hasPreviousPage =
-		(args.after !== null && args.after !== undefined && afterIndex >= 0) ||
+		(normalizedArgs.after !== null &&
+			normalizedArgs.after !== undefined &&
+			afterIndex >= 0) ||
 		trimmedFromStart;
 	const hasNextPage =
-		(args.before !== null &&
-			args.before !== undefined &&
+		(normalizedArgs.before !== null &&
+			normalizedArgs.before !== undefined &&
 			beforeIndex < items.length) ||
 		trimmedFromEnd;
 

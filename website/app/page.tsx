@@ -443,9 +443,7 @@ function CategoryCard({
 					<h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200">
 						{title}
 					</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400">
-						{subtitle}
-					</p>
+					<p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
 				</div>
 			</div>
 			<p className="text-gray-600 dark:text-gray-300">{description}</p>

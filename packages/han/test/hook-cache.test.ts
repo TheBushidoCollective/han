@@ -1,11 +1,24 @@
 /**
  * Unit tests for hook-cache.ts
  * Tests file caching, manifest operations, and directory scanning
+ *
+ * NOTE: These tests require the native module for git operations.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Check if native module is available
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const nativeModulePath = join(__dirname, "..", "native", "han-native.node");
+const NATIVE_AVAILABLE = existsSync(nativeModulePath);
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true" || !NATIVE_AVAILABLE;
+
+// Skip tests when native module is not available
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 
 import {
 	buildManifest,
@@ -53,7 +66,7 @@ function teardown(): void {
 	}
 }
 
-describe("hook-cache.ts", () => {
+describeWithNative("hook-cache.ts", () => {
 	beforeEach(() => {
 		setup();
 	});

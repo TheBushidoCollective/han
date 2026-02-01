@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "han-team.fullname" . }}
+  labels:
+    {{- include "han-team.labels" . | nindent 4 }}
+data:
+  PORT: "3000"
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  AUTO_MIGRATE: {{ .Values.config.autoMigrate | quote }}
+  FREE_RETENTION_DAYS: {{ .Values.config.freeRetentionDays | quote }}
+  PRO_RETENTION_DAYS: {{ .Values.config.proRetentionDays | quote }}
+  NODE_ENV: "production"

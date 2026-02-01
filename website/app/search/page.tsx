@@ -119,7 +119,17 @@ export default function SearchPage() {
 						Categories
 					</h2>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-						{["core", "languages", "frameworks", "validation", "tools", "services", "disciplines", "patterns", "specialized"].map((category) => {
+						{[
+							"core",
+							"languages",
+							"frameworks",
+							"validation",
+							"tools",
+							"services",
+							"disciplines",
+							"patterns",
+							"specialized",
+						].map((category) => {
 							const count = plugins.filter(
 								(p) => p.category === category,
 							).length;

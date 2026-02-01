@@ -5,10 +5,17 @@
  *
  * @example
  * import { testHooks, loadPluginConfig, checkForChanges } from './hooks';
+ *
+ * NOTE: UI components (HookExplainUI, HookTestUI) that use ink are NOT exported here
+ * because ink can hang during import in non-TTY environments.
+ * Import these directly from their respective files when needed:
+ * - HookExplainUI: import from '../hook-explain-ui.tsx'
+ * - HookTestUI: import from './hook-test-ui.tsx'
  */
 
-// UI Components
-export { HookExplainUI, type HookSource } from "../hook-explain-ui.tsx";
+// HookSource type is exported separately (type-only, no runtime impact)
+export type { HookSource } from "../hook-explain-ui.tsx";
+
 // Hash cycle detection for recursion
 export {
 	type CycleDetectionResult,
@@ -70,14 +77,9 @@ export {
 	withGlobalSlot,
 	withSlot,
 } from "./hook-lock.ts";
-// Testing
-export {
-	type LiveOutputState,
-	makeLiveOutputKey,
-	type TestHooksOptions,
-	testHooks,
-} from "./hook-test.ts";
-export { HookTestUI } from "./hook-test-ui.tsx";
+// Testing - NOTE: testHooks, HookTestUI use ink and are NOT exported here
+// because ink can hang during import in non-TTY environments.
+// Import these directly from './hook-test.ts' or './hook-test-ui.tsx' when needed.
 // Transcript filtering
 export {
 	buildCommandWithFiles,

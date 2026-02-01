@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runDiagnostics } from "../lib/commands/doctor.ts";
 
+// Skip tests that require native module when SKIP_NATIVE is set
+// runDiagnostics() calls checkNativeModule() which requires the native module
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
+
 describe("doctor command", () => {
 	let testDir: string;
 	let originalArgv: string[];
@@ -31,7 +36,7 @@ describe("doctor command", () => {
 	});
 
 	describe("runDiagnostics", () => {
-		test(
+		testWithNative(
 			"returns array of diagnostic results",
 			() => {
 				const results = runDiagnostics();
@@ -42,7 +47,7 @@ describe("doctor command", () => {
 			{ timeout: 30000 },
 		);
 
-		test("each result has required properties", () => {
+		testWithNative("each result has required properties", () => {
 			const results = runDiagnostics();
 
 			for (const result of results) {
@@ -53,7 +58,7 @@ describe("doctor command", () => {
 			}
 		});
 
-		test("includes Binary check", () => {
+		testWithNative("includes Binary check", () => {
 			const results = runDiagnostics();
 			const binaryCheck = results.find((r) => r.name === "Binary");
 
@@ -61,7 +66,7 @@ describe("doctor command", () => {
 			expect(binaryCheck?.status).toBe("ok");
 		});
 
-		test("includes hanBinary Override check", () => {
+		testWithNative("includes hanBinary Override check", () => {
 			const results = runDiagnostics();
 			const overrideCheck = results.find(
 				(r) => r.name === "hanBinary Override",
@@ -70,35 +75,35 @@ describe("doctor command", () => {
 			expect(overrideCheck).toBeDefined();
 		});
 
-		test("includes Config Files check", () => {
+		testWithNative("includes Config Files check", () => {
 			const results = runDiagnostics();
 			const configCheck = results.find((r) => r.name === "Config Files");
 
 			expect(configCheck).toBeDefined();
 		});
 
-		test("includes Enabled Plugins check", () => {
+		testWithNative("includes Enabled Plugins check", () => {
 			const results = runDiagnostics();
 			const pluginsCheck = results.find((r) => r.name === "Enabled Plugins");
 
 			expect(pluginsCheck).toBeDefined();
 		});
 
-		test("includes Native Module check", () => {
+		testWithNative("includes Native Module check", () => {
 			const results = runDiagnostics();
 			const nativeCheck = results.find((r) => r.name === "Native Module");
 
 			expect(nativeCheck).toBeDefined();
 		});
 
-		test("includes Dispatch Hooks check", () => {
+		testWithNative("includes Dispatch Hooks check", () => {
 			const results = runDiagnostics();
 			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
 			expect(hooksCheck).toBeDefined();
 		});
 
-		test("includes Memory System check", () => {
+		testWithNative("includes Memory System check", () => {
 			const results = runDiagnostics();
 			const memoryCheck = results.find((r) => r.name === "Memory System");
 
@@ -107,7 +112,7 @@ describe("doctor command", () => {
 	});
 
 	describe("hanBinary Override check", () => {
-		test("reports hanBinary status", () => {
+		testWithNative("reports hanBinary status", () => {
 			const results = runDiagnostics();
 			const overrideCheck = results.find(
 				(r) => r.name === "hanBinary Override",
@@ -118,7 +123,7 @@ describe("doctor command", () => {
 			expect(overrideCheck?.message).toBeDefined();
 		});
 
-		test("reports active when HAN_REEXEC is set and hanBinary configured", () => {
+		testWithNative("reports active when HAN_REEXEC is set and hanBinary configured", () => {
 			mkdirSync(join(testDir, ".claude"), { recursive: true });
 			writeFileSync(
 				join(testDir, ".claude", "han.yml"),
@@ -137,7 +142,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Config Files check", () => {
-		test("reports found when config file exists in project", () => {
+		testWithNative("reports found when config file exists in project", () => {
 			mkdirSync(join(testDir, ".claude"), { recursive: true });
 			writeFileSync(
 				join(testDir, ".claude", "han.yml"),
@@ -153,7 +158,7 @@ describe("doctor command", () => {
 			).toBe(true);
 		});
 
-		test("config check always runs", () => {
+		testWithNative("config check always runs", () => {
 			const results = runDiagnostics();
 			const configCheck = results.find((r) => r.name === "Config Files");
 
@@ -161,7 +166,7 @@ describe("doctor command", () => {
 			expect(configCheck).toBeDefined();
 		});
 
-		test("detects han.local.yml", () => {
+		testWithNative("detects han.local.yml", () => {
 			mkdirSync(join(testDir, ".claude"), { recursive: true });
 			writeFileSync(
 				join(testDir, ".claude", "han.local.yml"),
@@ -179,7 +184,7 @@ describe("doctor command", () => {
 			).toBe(true);
 		});
 
-		test("detects root han.yml", () => {
+		testWithNative("detects root han.yml", () => {
 			writeFileSync(join(testDir, "han.yml"), "plugins: {}\n");
 
 			const results = runDiagnostics();
@@ -193,7 +198,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Enabled Plugins check", () => {
-		test("reports count of installed plugins", () => {
+		testWithNative("reports count of installed plugins", () => {
 			const results = runDiagnostics();
 			const pluginsCheck = results.find((r) => r.name === "Enabled Plugins");
 
@@ -201,7 +206,7 @@ describe("doctor command", () => {
 			expect(pluginsCheck?.message).toMatch(/\d+ plugins/);
 		});
 
-		test("lists installed plugin types", () => {
+		testWithNative("lists installed plugin types", () => {
 			// Create mock plugin structure
 			const _pluginsDir = join(
 				originalEnv.HOME || "",
@@ -220,7 +225,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Native Module check", () => {
-		test("reports availability status", () => {
+		testWithNative("reports availability status", () => {
 			const results = runDiagnostics();
 			const nativeCheck = results.find((r) => r.name === "Native Module");
 
@@ -231,7 +236,7 @@ describe("doctor command", () => {
 			);
 		});
 
-		test("provides details when unavailable", () => {
+		testWithNative("provides details when unavailable", () => {
 			const results = runDiagnostics();
 			const nativeCheck = results.find((r) => r.name === "Native Module");
 
@@ -243,7 +248,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Dispatch Hooks check", () => {
-		test("checks for SessionStart and UserPromptSubmit hooks", () => {
+		testWithNative("checks for SessionStart and UserPromptSubmit hooks", () => {
 			const results = runDiagnostics();
 			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
@@ -257,7 +262,7 @@ describe("doctor command", () => {
 			).toBe(true);
 		});
 
-		test("reports configured count", () => {
+		testWithNative("reports configured count", () => {
 			const results = runDiagnostics();
 			const hooksCheck = results.find((r) => r.name === "Dispatch Hooks");
 
@@ -266,7 +271,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Memory System check", () => {
-		test("reports initialization status", () => {
+		testWithNative("reports initialization status", () => {
 			const results = runDiagnostics();
 			const memoryCheck = results.find((r) => r.name === "Memory System");
 
@@ -277,7 +282,7 @@ describe("doctor command", () => {
 			);
 		});
 
-		test("provides memory details", () => {
+		testWithNative("provides memory details", () => {
 			const results = runDiagnostics();
 			const memoryCheck = results.find((r) => r.name === "Memory System");
 
@@ -292,7 +297,7 @@ describe("doctor command", () => {
 	});
 
 	describe("Binary check", () => {
-		test("reports binary path", () => {
+		testWithNative("reports binary path", () => {
 			const results = runDiagnostics();
 			const binaryCheck = results.find((r) => r.name === "Binary");
 
@@ -301,7 +306,7 @@ describe("doctor command", () => {
 			expect(typeof binaryCheck?.message).toBe("string");
 		});
 
-		test("includes re-exec details when HAN_REEXEC is set", () => {
+		testWithNative("includes re-exec details when HAN_REEXEC is set", () => {
 			process.env.HAN_REEXEC = "1";
 
 			const results = runDiagnostics();

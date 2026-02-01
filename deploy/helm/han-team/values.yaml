@@ -1,0 +1,229 @@
+# Han Team Platform - Helm Values
+# Default configuration for Kubernetes deployment
+
+# -- Number of replicas
+replicaCount: 2
+
+image:
+  # -- Image repository
+  repository: ghcr.io/thebushidocollective/han-team
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag (defaults to Chart appVersion)
+  tag: ""
+
+# -- Image pull secrets
+imagePullSecrets: []
+
+# -- Override name
+nameOverride: ""
+
+# -- Override full name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Annotations for service account
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# -- Container security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 3000
+
+ingress:
+  # -- Enable ingress
+  enabled: false
+  # -- Ingress class name
+  className: "nginx"
+  # -- Ingress annotations
+  annotations: {}
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # -- Ingress hosts
+  hosts:
+    - host: han-team.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS
+  tls: []
+  #  - secretName: han-team-tls
+  #    hosts:
+  #      - han-team.example.com
+
+# -- Resource requests and limits
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  # -- Enable HPA
+  enabled: true
+  # -- Minimum replicas
+  minReplicas: 2
+  # -- Maximum replicas
+  maxReplicas: 10
+  # -- Target CPU utilization
+  targetCPUUtilizationPercentage: 80
+  # -- Target memory utilization
+  targetMemoryUtilizationPercentage: 80
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity
+affinity: {}
+
+# Application configuration
+config:
+  # -- Log level
+  logLevel: info
+  # -- Enable auto-migration on startup
+  autoMigrate: true
+  # -- Free tier retention days
+  freeRetentionDays: 30
+  # -- Pro tier retention days
+  proRetentionDays: 365
+
+# Secrets configuration
+secrets:
+  # -- Use existing secret
+  existingSecret: ""
+  # -- JWT secret (required if not using existingSecret)
+  jwtSecret: ""
+  # -- Session secret (required if not using existingSecret)
+  sessionSecret: ""
+  # -- GitHub OAuth client ID
+  githubClientId: ""
+  # -- GitHub OAuth client secret
+  githubClientSecret: ""
+
+# PostgreSQL subchart configuration
+postgresql:
+  # -- Enable PostgreSQL subchart
+  enabled: true
+  auth:
+    # -- PostgreSQL database name
+    database: han_team
+    # -- PostgreSQL username
+    username: han
+    # -- PostgreSQL password (use existingSecret in production)
+    password: ""
+    # -- Use existing secret for PostgreSQL
+    existingSecret: ""
+  primary:
+    persistence:
+      # -- Enable persistence
+      enabled: true
+      # -- Storage size
+      size: 10Gi
+
+# Redis subchart configuration
+redis:
+  # -- Enable Redis subchart
+  enabled: true
+  architecture: standalone
+  auth:
+    # -- Disable Redis authentication for simplicity
+    enabled: false
+  master:
+    persistence:
+      # -- Enable persistence
+      enabled: true
+      # -- Storage size
+      size: 1Gi
+
+# External database configuration (when postgresql.enabled=false)
+externalDatabase:
+  # -- External database host
+  host: ""
+  # -- External database port
+  port: 5432
+  # -- External database name
+  database: han_team
+  # -- External database username
+  username: han
+  # -- External database password
+  password: ""
+  # -- Use existing secret
+  existingSecret: ""
+  # -- Secret key for password
+  existingSecretPasswordKey: password
+
+# External Redis configuration (when redis.enabled=false)
+externalRedis:
+  # -- External Redis host
+  host: ""
+  # -- External Redis port
+  port: 6379
+  # -- External Redis password
+  password: ""
+  # -- Use existing secret
+  existingSecret: ""
+  # -- Secret key for password
+  existingSecretPasswordKey: password
+
+# Network policy
+networkPolicy:
+  # -- Enable network policy
+  enabled: true
+
+# Pod disruption budget
+podDisruptionBudget:
+  # -- Enable PDB
+  enabled: true
+  # -- Minimum available pods
+  minAvailable: 1
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Database migration job
+migration:
+  # -- Run migration as init container (alternative to AUTO_MIGRATE)
+  enabled: false
+  # -- Migration job annotations
+  annotations: {}

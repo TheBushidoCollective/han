@@ -20,12 +20,14 @@ export const SessionListPageQuery = graphql`
     $first: Int
     $projectId: String
     $worktreeName: String
+    $userId: String
   ) {
     ...SessionsContent_query
       @arguments(
         first: $first
         projectId: $projectId
         worktreeName: $worktreeName
+        userId: $userId
       )
   }
 `;

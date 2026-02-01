@@ -1,0 +1,34 @@
+# Han Team Platform - Docker Compose Development Overrides
+# Local development configuration
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/api/Dockerfile
+    volumes:
+      # Mount source for live reload in development
+      - ../../packages/han-team-server/lib:/app/lib:ro
+    environment:
+      LOG_LEVEL: debug
+      NODE_ENV: development
+
+  db:
+    ports:
+      # Expose PostgreSQL for local debugging
+      - "5432:5432"
+
+  redis:
+    ports:
+      # Expose Redis for local debugging
+      - "6379:6379"
+
+  # Adminer for database management
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - han-network

@@ -37,8 +37,7 @@ export const CATEGORY_META: Record<
 		icon: "🏗️",
 		title: "Frameworks",
 		subtitle: "Framework Integrations",
-		description:
-			"Framework-specific patterns, components, and best practices.",
+		description: "Framework-specific patterns, components, and best practices.",
 	},
 	validation: {
 		icon: "✅",
@@ -71,8 +70,7 @@ export const CATEGORY_META: Record<
 		icon: "📐",
 		title: "Patterns",
 		subtitle: "Architectural Patterns",
-		description:
-			"Methodologies, workflows, and architectural best practices.",
+		description: "Methodologies, workflows, and architectural best practices.",
 	},
 	specialized: {
 		icon: "🔬",

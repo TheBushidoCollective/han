@@ -14,8 +14,6 @@ import {
 	PLUGIN_ALIASES,
 	resolvePluginName,
 	resolvePluginNames,
-	REVERSE_ALIASES,
-	SHORT_NAME_ALIASES,
 } from "../lib/plugin-aliases.ts";
 
 describe("plugin alias integration", () => {
@@ -151,6 +149,7 @@ describe("plugin alias integration", () => {
 			expect(categories).toContain("frameworks");
 			expect(categories).toContain("tools");
 			expect(categories).toContain("validation");
+			expect(categories).toContain("patterns");
 			expect(categories).toContain("disciplines");
 			expect(categories).toContain("services");
 		});

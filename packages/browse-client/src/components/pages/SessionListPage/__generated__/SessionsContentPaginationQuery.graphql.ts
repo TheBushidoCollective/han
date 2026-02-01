@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8cc24b387e0d51a825184a3cfc943cad>>
+ * @generated SignedSource<<48e28ce8db7e59496306da13581ed497>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,6 +14,7 @@ export type SessionsContentPaginationQuery$variables = {
   after?: string | null | undefined;
   first?: number | null | undefined;
   projectId?: string | null | undefined;
+  userId?: string | null | undefined;
   worktreeName?: string | null | undefined;
 };
 export type SessionsContentPaginationQuery$data = {
@@ -44,6 +45,11 @@ var v0 = [
   {
     "defaultValue": null,
     "kind": "LocalArgument",
+    "name": "userId"
+  },
+  {
+    "defaultValue": null,
+    "kind": "LocalArgument",
     "name": "worktreeName"
   }
 ],
@@ -65,6 +71,11 @@ v1 = [
   },
   {
     "kind": "Variable",
+    "name": "userId",
+    "variableName": "userId"
+  },
+  {
+    "kind": "Variable",
     "name": "worktreeName",
     "variableName": "worktreeName"
   }
@@ -80,10 +91,17 @@ v3 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "status",
+  "name": "name",
   "storageKey": null
 },
 v4 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "status",
+  "storageKey": null
+},
+v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -186,13 +204,7 @@ return {
                     "name": "gitBranch",
                     "storageKey": null
                   },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "name",
-                    "storageKey": null
-                  },
+                  (v3/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -217,6 +229,33 @@ return {
                   {
                     "alias": null,
                     "args": null,
+                    "concreteType": "User",
+                    "kind": "LinkedField",
+                    "name": "owner",
+                    "plural": false,
+                    "selections": [
+                      (v2/*: any*/),
+                      (v3/*: any*/),
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "email",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "avatarUrl",
+                        "storageKey": null
+                      }
+                    ],
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
                     "concreteType": "Todo",
                     "kind": "LinkedField",
                     "name": "currentTodo",
@@ -236,7 +275,7 @@ return {
                         "name": "activeForm",
                         "storageKey": null
                       },
-                      (v3/*: any*/),
+                      (v4/*: any*/),
                       (v2/*: any*/)
                     ],
                     "storageKey": null
@@ -249,7 +288,7 @@ return {
                     "name": "activeTasks",
                     "plural": false,
                     "selections": [
-                      (v4/*: any*/),
+                      (v5/*: any*/),
                       {
                         "alias": null,
                         "args": null,
@@ -288,7 +327,7 @@ return {
                                 "name": "type",
                                 "storageKey": null
                               },
-                              (v3/*: any*/)
+                              (v4/*: any*/)
                             ],
                             "storageKey": null
                           }
@@ -382,7 +421,7 @@ return {
             ],
             "storageKey": null
           },
-          (v4/*: any*/),
+          (v5/*: any*/),
           {
             "kind": "ClientExtension",
             "selections": [
@@ -403,7 +442,8 @@ return {
         "args": (v1/*: any*/),
         "filters": [
           "projectId",
-          "worktreeName"
+          "worktreeName",
+          "userId"
         ],
         "handle": "connection",
         "key": "SessionsContent_sessions",
@@ -413,16 +453,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "72c9460b9f7707b2aa5279860842e2dc",
+    "cacheID": "6f2ea1ec80c5bdc66697cd80f51e3112",
     "id": null,
     "metadata": {},
     "name": "SessionsContentPaginationQuery",
     "operationKind": "query",
-    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $first: Int = 50\n  $projectId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_2ZTWZT\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_2ZTWZT on Query {\n  sessions(first: $first, after: $after, projectId: $projectId, worktreeName: $worktreeName) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
+    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $first: Int = 50\n  $projectId: String\n  $userId: String\n  $worktreeName: String\n) {\n  ...SessionsContent_query_3JqmuJ\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n\nfragment SessionsContent_query_3JqmuJ on Query {\n  sessions(first: $first, after: $after, projectId: $projectId, worktreeName: $worktreeName, userId: $userId) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "ebd12c3104a5b2b59fdd22be4e683259";
+(node as any).hash = "421589093331250115eacff340eb2ee7";
 
 export default node;

@@ -1,0 +1,26 @@
+apiVersion: v2
+name: han-team
+description: Han Team Platform - Multi-tenant Claude Code session analytics
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: The Bushido Collective
+    url: https://han.guru
+keywords:
+  - han
+  - claude-code
+  - analytics
+  - team
+home: https://han.guru
+sources:
+  - https://github.com/TheBushidoCollective/han
+dependencies:
+  - name: postgresql
+    version: "15.5.38"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "19.6.4"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

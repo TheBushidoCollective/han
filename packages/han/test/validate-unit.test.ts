@@ -9,14 +9,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // Import the modules under test
+// Import directly from hook-config.ts to avoid loading hook-cache.ts which uses native module
 import {
 	getHookConfigs,
 	getHookDefinition,
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
-} from "../lib/hooks/index.ts";
+} from "../lib/hooks/hook-config.ts";
 import { getPluginNameFromRoot } from "../lib/shared/index.ts";
+
+// Check if native module is available for tests that require it
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
 
 let testDir: string;
 let pluginDir: string;
@@ -424,7 +429,8 @@ describe("Hook Config", () => {
 			expect(result[0].idleTimeout).toBe(60);
 		});
 
-		test("finds directories with marker files", () => {
+		// This test requires native module for findDirectoriesWithMarkers
+		testWithNative("finds directories with marker files", () => {
 			// Create a nested directory with marker file
 			const nestedDir = join(projectDir, "packages", "core");
 			mkdirSync(nestedDir, { recursive: true });

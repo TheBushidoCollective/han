@@ -23,11 +23,11 @@
  * ```
  */
 
-import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, readFileSync, statSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { join, basename, dirname } from "node:path";
+import { basename, } from "node:path";
 import type { SearchResultWithCitation } from "./multi-strategy-search.ts";
-import { findAllTranscriptFiles, getClaudeProjectsDir } from "./transcript-search.ts";
+import { findAllTranscriptFiles, } from "./transcript-search.ts";
 
 /**
  * Fallback strategies available
@@ -410,7 +410,7 @@ export async function grepTranscripts(
 				const sessionId = basename(filePath, ".jsonl").replace(/-han$/, "");
 
 				// Use streaming to read file line-by-line (avoids OOM on large files)
-				await new Promise<void>((resolve, reject) => {
+				await new Promise<void>((resolve, _reject) => {
 					const stream = createReadStream(filePath, { encoding: "utf-8" });
 					const rl = createInterface({ input: stream, crlfDelay: Infinity });
 					let lineNum = 0;
@@ -442,7 +442,7 @@ export async function grepTranscripts(
 								} else if (Array.isArray(msgContent)) {
 									for (const block of msgContent) {
 										if (block.type === "text" && block.text) {
-											text += block.text + " ";
+											text += `${block.text} `;
 										}
 									}
 								}
@@ -475,7 +475,7 @@ export async function grepTranscripts(
 									browseUrl: `/sessions/${sessionId}#line-${lineNum}`,
 								});
 							}
-						} catch (parseError) {
+						} catch (_parseError) {
 							// Skip unparseable lines - this is expected for malformed JSON
 							if (process.env.HAN_DEBUG) {
 								console.warn(`[grep] Skipping unparseable line ${lineNum} in ${filePath}`);

@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { render } from "ink-testing-library";
-import { HookExplainUI, type HookSource } from "../lib/hooks/index.ts";
+import { HookExplainUI, type HookSource } from "../lib/hook-explain-ui.tsx";
 
 describe("hook-explain-ui.tsx", () => {
 	describe("HookExplainUI - Empty State", () => {

@@ -10,7 +10,6 @@
  */
 
 import type { ProjectGroup } from "../../api/sessions.ts";
-import { projects, repos } from "../../db/index.ts";
 import { getGitRemoteUrl } from "../../native.ts";
 import { builder } from "../builder.ts";
 import { registerNodeLoader } from "../node-registry.ts";
@@ -74,7 +73,7 @@ export const RepoType = RepoRef.implement({
 		projects: t.field({
 			type: [ProjectType],
 			description: "All projects (worktrees) belonging to this repository",
-			resolve: async (repo) => {
+			resolve: async (repo, _args, context) => {
 				// Get the git root path from the repo's main worktree
 				const mainWorktree = repo.worktrees.find((w) => !w.isWorktree);
 				const repoPath = mainWorktree?.path || repo.worktrees[0]?.path;
@@ -90,15 +89,15 @@ export const RepoType = RepoRef.implement({
 					return [];
 				}
 
-				// Look up database repo by remote URL
-				const dbRepo = await repos.getByRemote(remote);
+				// Look up database repo by remote URL using dataSource
+				const dbRepo = await context.dataSource.repos.getByRemote(remote);
 
 				if (!dbRepo || !dbRepo.id) {
 					return [];
 				}
 
-				// Get all projects for this database repo UUID
-				const projectList = await projects.list(dbRepo.id);
+				// Get all projects for this database repo UUID using dataSource
+				const projectList = await context.dataSource.projects.list(dbRepo.id);
 
 				// Convert database Project objects to ProjectGroup format
 				return projectList.map(

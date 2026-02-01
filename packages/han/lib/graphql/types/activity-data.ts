@@ -7,7 +7,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { listSessions, messages } from "../../db/index.ts";
+import type { DataSource } from "../../data/index.ts";
+import { getLocalDataSource } from "../../data/index.ts";
 import { builder } from "../builder.ts";
 import { type DailyActivity, DailyActivityType } from "./daily-activity.ts";
 import {
@@ -316,8 +317,15 @@ function calculateStreak(dailyActivity: DailyActivity[]): number {
 
 /**
  * Query activity data from the database
+ *
+ * @param days - Number of days of activity to include (default 365)
+ * @param dataSource - Optional DataSource for context-based access. Uses LocalDataSource if not provided.
  */
-export async function queryActivityData(days = 365): Promise<ActivityData> {
+export async function queryActivityData(
+	days = 365,
+	dataSource?: DataSource,
+): Promise<ActivityData> {
+	const ds = dataSource ?? getLocalDataSource();
 	const cutoffDate = new Date();
 	cutoffDate.setDate(cutoffDate.getDate() - days);
 	const cutoffStr = cutoffDate.toISOString();
@@ -336,10 +344,10 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
 	}
 
 	try {
-		const allSessions = await listSessions({ limit: 1000 });
+		const allSessions = await ds.sessions.list({ limit: 1000 });
 
 		for (const session of allSessions) {
-			const sessionMessages = await messages.list({
+			const sessionMessages = await ds.messages.list({
 				sessionId: session.id,
 				messageType: "assistant",
 				limit: 10000,

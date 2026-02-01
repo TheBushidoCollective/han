@@ -6,13 +6,32 @@
  * 1. File changes per session (session_file_changes)
  * 2. File validation status per hook (session_file_validations)
  * 3. Stale detection when files are modified by another session
+ *
+ * NOTE: These tests require the native module for database access.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { _resetDbState } from "../lib/db/index.ts";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Check if native module is available
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const nativeModulePath = join(__dirname, "..", "native", "han-native.node");
+const NATIVE_AVAILABLE = existsSync(nativeModulePath);
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true" || !NATIVE_AVAILABLE;
+
+// Skip tests when native module is not available
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
+
+// Lazy import to avoid module load failures
+let _resetDbState: () => void;
+if (!SKIP_NATIVE) {
+	const dbModule = await import("../lib/db/index.ts");
+	_resetDbState = dbModule._resetDbState;
+}
 
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -74,7 +93,7 @@ async function createTestSession(sessionId: string) {
 	});
 }
 
-describe("Session File Validation System", () => {
+describeWithNative("Session File Validation System", () => {
 	describe("sessionFileChanges", () => {
 		test("records file change for a session", async () => {
 			const { sessionFileChanges } = await import("../lib/db/index.ts");

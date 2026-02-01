@@ -42,6 +42,13 @@ export const SessionDetailPageQuery = graphql`
         updatedAt
         gitBranch
         version
+        orgId
+        owner {
+          id
+          name
+          email
+          avatarUrl
+        }
         ...SessionMessages_session
         ...SessionSidebar_session
       }

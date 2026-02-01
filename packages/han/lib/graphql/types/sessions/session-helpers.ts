@@ -52,6 +52,7 @@ export async function getSessionsConnection(
 	args: ConnectionArgs & {
 		projectId?: string | null;
 		worktreeName?: string | null;
+		userId?: string | null;
 	},
 ): Promise<SessionConnectionData> {
 	const startTime = Date.now();
@@ -80,7 +81,23 @@ export async function getSessionsConnection(
 
 	// Filter out sessions with no messages
 	const filterStart = Date.now();
-	const sessions = result.data.filter((s) => s.messageCount > 0);
+	let sessions = result.data.filter((s) => s.messageCount > 0);
+
+	// Filter by userId if provided (team mode - filter by session owner)
+	// This is a client-side filter for now; will be optimized when team backend is ready
+	if (args.userId) {
+		sessions = sessions.filter((s) => {
+			// In hosted mode, sessions will have an owner field
+			// For now, this is a stub - actual filtering will happen when
+			// the team backend populates owner data on sessions
+			if ("owner" in s && s.owner) {
+				const owner = s.owner as { id?: string };
+				return owner.id === args.userId;
+			}
+			return false;
+		});
+	}
+
 	const filterEnd = Date.now();
 	console.log(
 		`[getSessionsConnection] Filtering took ${filterEnd - filterStart}ms, ${sessions.length} sessions with messages`,

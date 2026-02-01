@@ -5,7 +5,8 @@
  * This is distinct from Han's MCP metrics tasks.
  */
 
-import { nativeTasks } from "../../db/index.ts";
+import type { DataSource } from "../../data/index.ts";
+import { getLocalDataSource } from "../../data/index.ts";
 import { builder } from "../builder.ts";
 
 /**
@@ -120,11 +121,16 @@ export const NativeTaskType = NativeTaskRef.implement({
 
 /**
  * Get native tasks for a session
+ *
+ * @param sessionId - The session ID to fetch tasks for
+ * @param dataSource - Optional DataSource for context-based access. Uses LocalDataSource if not provided.
  */
 export async function getNativeTasksForSession(
 	sessionId: string,
+	dataSource?: DataSource,
 ): Promise<NativeTaskData[]> {
-	const tasks = await nativeTasks.getForSession(sessionId);
+	const ds = dataSource ?? getLocalDataSource();
+	const tasks = await ds.nativeTasks.getForSession(sessionId);
 	return tasks.map((t) => ({
 		id: t.id,
 		sessionId: t.sessionId,
