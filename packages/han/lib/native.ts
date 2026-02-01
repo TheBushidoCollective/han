@@ -294,6 +294,35 @@ export function gitWorktreeList(
 }
 
 /**
+ * Add a git worktree at the specified path for a branch
+ */
+export function gitWorktreeAdd(
+	dir: string,
+	path: string,
+	branch: string,
+): void {
+	return getNativeModule().gitWorktreeAdd(dir, path, branch);
+}
+
+/**
+ * Remove a git worktree at the specified path
+ */
+export function gitWorktreeRemove(
+	dir: string,
+	path: string,
+	force?: boolean | null,
+): void {
+	return getNativeModule().gitWorktreeRemove(dir, path, force);
+}
+
+/**
+ * Create a new git branch
+ */
+export function gitCreateBranch(dir: string, branch: string): void {
+	return getNativeModule().gitCreateBranch(dir, branch);
+}
+
+/**
  * Get session file changes
  */
 export function getSessionFileChanges(

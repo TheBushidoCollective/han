@@ -22,11 +22,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import {
-	getGitBranch,
-	getGitRemoteUrl,
-} from "../../../../han-native";
 import { getClaudeConfigDir } from "../../config/claude-settings.ts";
+import { getGitBranch, getGitRemoteUrl } from "../../native.ts";
 
 export type Scope = "global" | "repo" | "branch";
 
