@@ -30,7 +30,7 @@ improving Claude Code plugins.
 - Plugin architecture and structure guidance
 - Agent, skill, and hook development
 - Frontmatter validation and best practices
-- Quality enforcement (claudelint, markdownlint)
+- Quality enforcement (claude plugin validate, markdownlint)
 - Testing and validation workflows
 - Marketplace integration support
 - Documentation standards
@@ -43,7 +43,7 @@ This plugin includes automatic quality enforcement hooks that run before complet
 
 Runs before main agent completion to ensure:
 
-- claudelint validation passes (0 errors, 0 warnings)
+- `claude plugin validate` passes (0 errors, 0 warnings)
 - markdownlint validation passes with auto-fix
 - All quality checks are satisfied before work is marked complete
 
@@ -90,7 +90,19 @@ The agent will guide you through:
 
 All plugins developed with this agent must meet these standards:
 
-### Claudelint Validation
+### Claude Plugin Validation
+
+Run `claude plugin validate <path>` to check:
+
+```bash
+# Validate current directory
+claude plugin validate .
+
+# Validate a specific plugin
+claude plugin validate /path/to/plugin
+```
+
+Checks:
 
 - Valid YAML frontmatter in all agents/skills
 - All required frontmatter fields present
@@ -167,7 +179,7 @@ agent that guides TDD workflow
 1. **Plan**: Define plugin scope, agents, and features
 2. **Create**: Set up structure and write components
 3. **Document**: Write comprehensive README and descriptions
-4. **Validate**: Run claudelint and markdownlint
+4. **Validate**: Run `claude plugin validate` and markdownlint
 5. **Test**: Manually verify all functionality
 6. **Register**: Add to marketplace.json
 7. **Iterate**: Improve based on usage and feedback
@@ -175,7 +187,7 @@ agent that guides TDD workflow
 ## Resources
 
 - Claude Code documentation
-- [claudelint](https://github.com/stbenjam/claudelint) - Plugin structure validation
+- `claude plugin validate` - Built-in plugin structure validation
 - [markdownlint](https://github.com/DavidAnson/markdownlint) - Markdown linting
 - YAML specification for frontmatter
 - Semantic versioning guidelines
