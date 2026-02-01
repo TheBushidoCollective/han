@@ -28,9 +28,9 @@ The server implements MCP protocol version 2024-11-05 and exposes tools in four 
 
 ### 1. Plugin Hook Tools (Dynamic)
 
-Every hook defined in an installed plugin automatically becomes an MCP tool. When you install `jutsu-typescript`, Claude immediately gains access to a `jutsu_typescript_typecheck` tool.
+Every hook defined in an installed plugin automatically becomes an MCP tool. When you install `typescript`, Claude immediately gains access to a `typescript_typecheck` tool.
 
-Example from `jutsu-bun/han-plugin.yml`:
+Example from `bun/han-plugin.yml`:
 
 ```yaml
 hooks:
@@ -44,7 +44,7 @@ This becomes an MCP tool:
 
 ```javascript
 {
-  name: "jutsu_bun_test",
+  name: "bun_test",
   description: "Run Bun tests. Triggers: 'run the tests'...",
   inputSchema: {
     type: "object",
@@ -142,18 +142,18 @@ Track file changes since last hook run for intelligent caching.
 **`checkpoint_list`** - See existing checkpoints
 **`checkpoint_clean`** - Remove stale checkpoints
 
-## External MCP Servers (Hashi Plugins)
+## External MCP Servers (Integration Plugins)
 
-Han's "hashi" (bridge) plugins connect Claude to external services via MCP. Each hashi plugin provides tools for interacting with a specific service, with Han managing how those tools are exposed to Claude Code.
+Integration plugins connect Claude to external services via MCP. Each integration plugin provides tools for interacting with a specific service, with Han managing how those tools are exposed to Claude Code.
 
 ### Dual-Mode Architecture
 
-Han uses a **dual-mode architecture** for hashi plugins that optimizes context usage:
+Han uses a **dual-mode architecture** for integration plugins that optimizes context usage:
 
 | Mode | When Active | Behavior |
 |------|-------------|----------|
-| **Orchestrator** (default) | `orchestrator.enabled: true` | Han manages all tools centrally. Hashi MCP servers return no tools—Han's orchestrator exposes a unified workflow interface. |
-| **Direct** | `orchestrator.enabled: false` | Each hashi plugin proxies directly to its MCP server, exposing all tools individually. |
+| **Orchestrator** (default) | `orchestrator.enabled: true` | Han manages all tools centrally. Integration MCP servers return no tools—Han's orchestrator exposes a unified workflow interface. |
+| **Direct** | `orchestrator.enabled: false` | Each integration plugin proxies directly to its MCP server, exposing all tools individually. |
 
 **Why this matters:**
 
@@ -163,14 +163,14 @@ Han uses a **dual-mode architecture** for hashi plugins that optimizes context u
 
 ### How It Works
 
-When you install a hashi plugin, it registers an MCP server that routes through Han:
+When you install an integration plugin, it registers an MCP server that routes through Han:
 
 ```json
 {
   "mcpServers": {
     "github": {
       "command": "han",
-      "args": ["mcp", "hashi-github", "github"]
+      "args": ["mcp", "github", "github"]
     }
   }
 }
@@ -181,24 +181,24 @@ Han then decides what to expose based on orchestrator configuration:
 - **Orchestrator enabled**: Returns a stub MCP with no tools. Han's main MCP server provides a `han_workflow` tool that can invoke any backend capability.
 - **Orchestrator disabled**: Proxies to the actual MCP server (e.g., GitHub's official MCP), exposing all its tools directly.
 
-### Available Hashi Plugins
+### Available Integration Plugins
 
-- **hashi-github** - GitHub Issues, PRs, Actions, Code Search
-- **hashi-jira** - Jira tickets, sprints, workflows
-- **hashi-playwright-mcp** - Browser automation and testing
-- **hashi-linear** - Linear issues and project management
-- **hashi-sentry** - Error tracking and performance monitoring
-- **hashi-figma** - Design-to-code workflows
-- **hashi-gitlab** - GitLab integration
-- **hashi-blueprints** - Technical documentation management
+- **github** - GitHub Issues, PRs, Actions, Code Search
+- **jira** - Jira tickets, sprints, workflows
+- **playwright-mcp** - Browser automation and testing
+- **linear** - Linear issues and project management
+- **sentry-mcp** - Error tracking and performance monitoring
+- **figma** - Design-to-code workflows
+- **gitlab** - GitLab integration
+- **blueprints** - Technical documentation management
 
 ### Installing External MCP Servers
 
-Install a hashi plugin to add its MCP server:
+Install an integration plugin to add its MCP server:
 
 ```bash
 # Install GitHub integration
-han plugin install hashi-github
+han plugin install github
 ```
 
 This adds the MCP server to your Claude Code configuration, routing through Han:
@@ -208,7 +208,7 @@ This adds the MCP server to your Claude Code configuration, routing through Han:
   "mcpServers": {
     "github": {
       "command": "han",
-      "args": ["mcp", "hashi-github", "github"]
+      "args": ["mcp", "github", "github"]
     }
   }
 }
@@ -246,11 +246,11 @@ Once installed, MCP tools are available to Claude automatically. You can simply 
 "Take a screenshot of the login page"
 ```
 
-Claude will use the appropriate MCP tool (`create_issue`, `list_pull_requests`, `search_code`, `jutsu_bun_test`, `browser_take_screenshot`, etc.) based on your request.
+Claude will use the appropriate MCP tool (`create_issue`, `list_pull_requests`, `search_code`, `bun_test`, `browser_take_screenshot`, etc.) based on your request.
 
 ### Real Example: GitHub Integration
 
-After installing hashi-github, Claude can:
+After installing the github plugin, Claude can:
 
 **Search code across repos:**
 
@@ -314,7 +314,7 @@ Start with GitHub integration:
 export GITHUB_TOKEN=ghp_your_token_here
 
 # Install the plugin
-han plugin install hashi-github
+han plugin install github
 
 # Ask Claude to help with GitHub tasks
 ```
