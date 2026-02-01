@@ -11,19 +11,19 @@ Plugins installed at user scope apply across all your projects:
 
 ```bash
 # User scope is the default
-han plugin install hashi-playwright-mcp
+han plugin install playwright-mcp
 
 # Or be explicit
-han plugin install hashi-playwright-mcp --scope user
+han plugin install playwright-mcp --scope user
 ```
 
 **Configuration location:** `~/.claude/settings.json`
 
 **Best for:**
 
-- MCP server integrations (hashi-github, hashi-gitlab, hashi-playwright-mcp)
+- MCP server integrations (github, gitlab, playwright-mcp)
 - General-purpose tools used across multiple projects
-- Personal productivity plugins (do-* agents)
+- Personal productivity plugins (Discipline plugins)
 - Plugins you want available everywhere
 
 **Advantages:**
@@ -38,14 +38,14 @@ han plugin install hashi-playwright-mcp --scope user
 Plugins installed at project scope are shared with your team:
 
 ```bash
-han plugin install jutsu-typescript --scope project
+han plugin install typescript --scope project
 ```
 
 **Configuration location:** `.claude/settings.json` (committed to version control)
 
 **Best for:**
 
-- Project-specific validation hooks (jutsu-biome, jutsu-typescript, jutsu-markdown)
+- Project-specific validation hooks (biome, typescript, markdown)
 - Language-specific plugins needed by all contributors
 - Enforcing team standards and quality checks
 - Ensuring consistent development environment
@@ -62,7 +62,7 @@ han plugin install jutsu-typescript --scope project
 Plugins installed at local scope are personal and not shared:
 
 ```bash
-han plugin install jutsu-playwright --scope local
+han plugin install playwright --scope local
 ```
 
 **Configuration location:** `.claude/settings.local.json` (gitignored)
@@ -87,10 +87,10 @@ Here's a quick guide for choosing scopes:
 
 | Plugin Type | Recommended Scope | Example |
 |-------------|-------------------|---------|
-| MCP Servers | User | hashi-github, hashi-playwright-mcp |
-| Language Validators | Project | jutsu-biome, jutsu-typescript |
-| Team Standards | Project | jutsu-markdown, jutsu-shellcheck |
-| Personal Tools | User or Local | do-* agents |
+| MCP Servers (Integration) | User | github, playwright-mcp |
+| Validation plugins | Project | biome, typescript |
+| Team Standards | Project | markdown, shellcheck |
+| Discipline agents | User or Local | frontend, backend |
 | Experiments | Local | Any plugin you're testing |
 
 ## How Scopes Interact
@@ -109,10 +109,10 @@ To move a plugin between scopes, reinstall with the desired scope:
 
 ```bash
 # Remove from current scope
-han plugin remove jutsu-biome
+han plugin remove biome
 
 # Install to new scope
-han plugin install jutsu-biome --scope project
+han plugin install biome --scope project
 ```
 
 ## Checking Plugin Scopes

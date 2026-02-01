@@ -52,18 +52,15 @@ metrics:
   enabled: true       # Enable task metrics (default: true)
 
 # Plugin-specific settings
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        enabled: true
-        command: npx biome check --write .
+biome:
+  lint:
+    enabled: true
+    command: npx biome check --write .
 
-  jutsu-typescript:
-    hooks:
-      typecheck:
-        enabled: true
-        command: npx tsc --noEmit
+typescript:
+  typecheck:
+    enabled: true
+    command: npx tsc --noEmit
 ```
 
 **Note:** As of v2.0.0, all settings default to **enabled** (`true`). This means features are active by default unless explicitly disabled.
@@ -104,10 +101,10 @@ Example:
 
 ```bash
 # Disable caching via CLI (overrides han.yml)
-han hook run jutsu-biome lint --cache=false
+han hook run biome lint --cache=false
 
 # Disable via environment variable
-HAN_HOOKS_CACHE=false han hook run jutsu-biome lint
+HAN_HOOKS_CACHE=false han hook run biome lint
 ```
 
 ## Per-Hook Configuration
@@ -115,18 +112,16 @@ HAN_HOOKS_CACHE=false han hook run jutsu-biome lint
 Each plugin can define multiple hooks. You can configure them individually:
 
 ```yaml
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        enabled: true              # Enable/disable this hook
-        command: npx biome check   # Override the default command
-        cache: true                # Enable smart caching for this hook
-        dirs_with:                 # Only run in dirs with these files
-          - biome.json
-        if_changed:                # Only run if these patterns changed
-          - "**/*.ts"
-          - "**/*.tsx"
+biome:
+  lint:
+    enabled: true              # Enable/disable this hook
+    command: npx biome check   # Override the default command
+    cache: true                # Enable smart caching for this hook
+    dirs_with:                 # Only run in dirs with these files
+      - biome.json
+    if_changed:                # Only run if these patterns changed
+      - "**/*.ts"
+      - "**/*.tsx"
 ```
 
 ### Per-Hook Options
@@ -159,11 +154,9 @@ Han uses YAML configuration with snake_case keys:
 hooks:
   enabled: true
 
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        enabled: true
+biome:
+  lint:
+    enabled: true
 ```
 
 ### Full Configuration
@@ -177,39 +170,35 @@ hooks:
   fail_fast: true          # Stop on first failure
   transcript_filter: true  # Multi-session conflict prevention (v2.3.0)
 
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        enabled: true
-        command: npx biome check --write .
-        cache: true
-        dirs_with:
-          - biome.json
-        if_changed:
-          - "**/*.ts"
-          - "**/*.tsx"
-          - "**/*.js"
+biome:
+  lint:
+    enabled: true
+    command: npx biome check --write .
+    cache: true
+    dirs_with:
+      - biome.json
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
 
-  jutsu-typescript:
-    hooks:
-      typecheck:
-        enabled: true
-        command: npx tsc --noEmit
-        cache: true
-        dirs_with:
-          - tsconfig.json
-        if_changed:
-          - "**/*.ts"
-          - "**/*.tsx"
+typescript:
+  typecheck:
+    enabled: true
+    command: npx tsc --noEmit
+    cache: true
+    dirs_with:
+      - tsconfig.json
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
 
-  jutsu-markdown:
-    hooks:
-      lint:
-        enabled: true
-        command: npx markdownlint-cli --fix .
-        if_changed:
-          - "**/*.md"
+markdown:
+  lint:
+    enabled: true
+    command: npx markdownlint-cli --fix .
+    if_changed:
+      - "**/*.md"
 ```
 
 ### Directory-Specific Configuration
@@ -218,11 +207,9 @@ You can create `han.yml` files in subdirectories to override settings:
 
 ```yaml
 # packages/frontend/han.yml
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        command: npx biome check --write --config ../../biome.frontend.json .
+biome:
+  lint:
+    command: npx biome check --write --config ../../biome.frontend.json .
 ```
 
 ## Disabling Hooks
@@ -230,11 +217,9 @@ plugins:
 To temporarily disable a specific hook without removing the plugin:
 
 ```yaml
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        enabled: false
+biome:
+  lint:
+    enabled: false
 ```
 
 Or disable all hooks globally:
@@ -258,7 +243,7 @@ Or via CLI for one-off runs:
 
 ```bash
 # Disable caching for this run
-han hook run jutsu-biome lint --cache=false
+han hook run biome lint --cache=false
 
 # Run all hooks even if some fail
 han hook run --no-fail-fast
@@ -266,7 +251,7 @@ han hook run --no-fail-fast
 
 ## Orchestrator Configuration
 
-The orchestrator controls how hashi plugin tools are exposed to Claude Code.
+The orchestrator controls how MCP service tools are exposed to Claude Code.
 
 ### Orchestrator Options
 
@@ -281,14 +266,14 @@ The orchestrator controls how hashi plugin tools are exposed to Claude Code.
 
 When orchestrator is **enabled** (default):
 
-- Hashi MCP servers return no tools (stub mode)
+- MCP servers return no tools (stub mode)
 - Han exposes a unified `han_workflow` tool
 - Reduces context from 50+ tools to ~5
 - Workflows can invoke any backend capability
 
 When orchestrator is **disabled**:
 
-- Hashi MCP servers proxy to actual backends
+- MCP servers proxy to actual backends
 - All individual MCP tools are exposed
 - Full access to service-specific tools
 - Higher context usage
@@ -318,7 +303,7 @@ Han validates configuration on startup. If you have syntax errors or invalid opt
 ```bash
 han plugin install --auto
 # Error: Invalid configuration in .claude/han.yml
-# - plugins.jutsu-biome.hooks.lint.enabled: must be boolean
+# - biome.lint.enabled: must be boolean
 ```
 
 ## Next Steps

@@ -67,9 +67,9 @@ Or in a subdirectory:
 
 ```
 my-plugins-repo/
-├── jutsu-tool-a/
+├── biome/
 │   └── ...
-├── jutsu-tool-b/
+├── eslint/
 │   └── ...
 └── README.md
 ```
@@ -87,7 +87,7 @@ han plugin install --git https://github.com/user/my-plugin --branch main
 han plugin install --git https://github.com/user/my-plugin --tag v1.0.0
 
 # Subdirectory
-han plugin install --git https://github.com/user/plugins --path jutsu-my-tool
+han plugin install --git https://github.com/user/plugins --path biome
 ```
 
 ### Version Tags
@@ -175,21 +175,35 @@ For maximum visibility, submit to the Han marketplace.
 
 2. **Add your plugin**
 
-   Place in the appropriate directory:
-   - `jutsu/` - Jutsu plugins
-   - `do/` - Do plugins
-   - `hashi/` - Hashi plugins
+   Place in the appropriate category directory:
+
+   | Category | Directory |
+   |----------|-----------|
+   | Language | `languages/` |
+   | Framework | `frameworks/` |
+   | Validation | `validation/` |
+   | Tool | `tools/` |
+   | Integration | `services/` |
+   | Discipline | `disciplines/` |
+   | Pattern | `patterns/` |
+   | Specialized | `specialized/` |
 
 3. **Follow naming conventions**
 
-   - `jutsu-your-tool`
-   - `do-your-discipline`
-   - `hashi-your-service`
+   Use simple, clear names that match the tool or concept:
+   - `typescript` (language)
+   - `react` (framework)
+   - `biome` (validation)
+   - `playwright` (tool)
+   - `github` (integration)
+   - `frontend` (discipline)
+   - `tdd` (pattern)
+   - `android` (specialized)
 
 4. **Submit a pull request**
 
    ```bash
-   gh pr create --title "Add jutsu-your-tool plugin" \
+   gh pr create --title "Add biome validation plugin" \
      --body "Description of your plugin..."
    ```
 
@@ -243,7 +257,7 @@ MAJOR.MINOR.PATCH
 
 ```json
 {
-  "name": "jutsu-my-tool",
+  "name": "biome",
   "version": "1.2.3"
 }
 ```
@@ -283,7 +297,7 @@ How to configure...
 
 How to use...
 
-## Hooks (for jutsu plugins)
+## Hooks (for validation/tool plugins)
 
 | Hook | Description |
 |------|-------------|

@@ -16,7 +16,7 @@ han plugin install
 This launches an interactive UI that lets you:
 
 - Browse all available plugins
-- See descriptions and categories (jutsu, do, hashi)
+- See descriptions and categories (Language, Framework, Validation, Integration, Discipline)
 - Select multiple plugins to install
 - View plugin dependencies
 
@@ -32,9 +32,9 @@ han plugin install --auto
 
 Han analyzes your project and automatically installs relevant plugins:
 
-- **jutsu** plugins based on detected languages and tools (biome.json → jutsu-biome, tsconfig.json → jutsu-typescript)
-- **hashi** plugins for common MCP integrations
-- **do** plugins for specialized workflows
+- **Language** and **Validation** plugins based on detected languages and tools (biome.json -> biome, tsconfig.json -> typescript)
+- **Integration** plugins for common MCP integrations (GitHub, GitLab, Playwright)
+- **Discipline** plugins for specialized workflows
 
 This is perfect for:
 
@@ -48,24 +48,25 @@ You can also install plugins by name:
 
 ```bash
 # Single plugin
-han plugin install jutsu-biome
+han plugin install biome
 
 # Multiple plugins
-han plugin install jutsu-biome jutsu-typescript hashi-github
+han plugin install biome typescript github
 ```
 
-Plugin names follow these patterns:
+Plugin names are descriptive and straightforward:
 
-- **jutsu-{tool}**: Language and tool plugins (jutsu-biome, jutsu-bun, jutsu-typescript)
-- **do-{discipline}**: Specialized agent workflows (do-claude-plugin-development)
-- **hashi-{service}**: MCP server integrations (hashi-github, hashi-playwright-mcp)
+- **Language plugins**: typescript, go, rust, python
+- **Validation plugins**: biome, eslint, shellcheck
+- **Integration plugins**: github, gitlab, playwright-mcp
+- **Discipline plugins**: claude-plugin-development, frontend, backend
 
 ## Within Claude Code
 
 If you're using Claude Code, you can install plugins directly in the application:
 
 ```bash
-/plugin install jutsu-biome@han
+/plugin install biome@han
 ```
 
 The `@han` suffix specifies the marketplace source. This method integrates with Claude Code's plugin management system.
@@ -96,7 +97,7 @@ han plugin install --auto
 Or update specific plugins:
 
 ```bash
-han plugin install jutsu-biome --force
+han plugin install biome --force
 ```
 
 ## Removing Plugins
@@ -104,7 +105,7 @@ han plugin install jutsu-biome --force
 To uninstall a plugin:
 
 ```bash
-han plugin remove jutsu-biome
+han plugin remove biome
 ```
 
 This removes the plugin from your settings and cleans up any associated configuration.

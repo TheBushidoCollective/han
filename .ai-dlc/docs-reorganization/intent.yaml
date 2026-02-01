@@ -1,0 +1,14 @@
+# Testing requirements for documentation update
+# The reviewer hat enforces these requirements
+
+testing:
+  unit_tests: false         # Documentation doesn't require unit tests
+  integration_tests: false  # No integration tests needed
+  coverage_threshold: null  # No coverage requirement
+  e2e_tests: false          # E2E tests optional for docs changes
+
+# Documentation-specific validation
+validation:
+  build_must_pass: true     # Website must build successfully
+  no_broken_links: true     # Internal links must resolve
+  no_old_references: true   # No jutsu/do/hashi references allowed

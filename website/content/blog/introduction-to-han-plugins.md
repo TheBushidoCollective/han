@@ -52,34 +52,34 @@ The `bushido` plugin adds a philosophical layer based on the seven Samurai virtu
 
 This is purely cultural - you get all the technical capabilities from `core` regardless. Install `bushido` only if this philosophical approach resonates with you.
 
-### Jutsu (術) - Technical Skills
+### Language and Validation Plugins
 
-Jutsu plugins are "techniques" - deep knowledge of specific technologies with automatic validation:
+These plugins provide deep knowledge of specific technologies with automatic validation:
 
-- **jutsu-typescript**: TypeScript expertise + type checking hooks
-- **jutsu-playwright**: E2E testing knowledge + test validation
-- **jutsu-nextjs**: Next.js patterns + build verification
-- **jutsu-biome**: Code formatting + automatic linting
+- **typescript**: TypeScript expertise + type checking hooks
+- **playwright**: E2E testing knowledge + test validation
+- **nextjs**: Next.js patterns + build verification
+- **biome**: Code formatting + automatic linting
 
-Each jutsu plugin not only teaches Claude the technology but ensures quality through hooks.
+Each validation plugin not only teaches Claude the technology but ensures quality through hooks.
 
-### Do (道) - Specialized Disciplines
+### Discipline Plugins
 
-Do plugins provide specialized agents for specific workflows:
+Discipline plugins provide specialized agents for specific workflows:
 
-- **do-frontend-development**: UI/UX-focused agent with accessibility expertise
-- **do-technical-documentation**: Documentation agent following best practices
-- **do-accessibility-engineering**: Multiple agents for inclusive design
+- **frontend-development**: UI/UX-focused agent with accessibility expertise
+- **technical-documentation**: Documentation agent following best practices
+- **accessibility-engineering**: Multiple agents for inclusive design
 
 These agents have deep expertise in their domain and can handle complex, multi-phase tasks autonomously.
 
-### Hashi (橋) - External Bridges
+### Integration Plugins
 
-Hashi plugins are MCP servers that connect Claude to external services:
+Integration plugins are MCP servers that connect Claude to external services:
 
-- **hashi-github**: GitHub Issues, PRs, code search, Actions
-- **hashi-playwright-mcp**: Browser automation and testing
-- **hashi-blueprints**: Codebase documentation and knowledge management
+- **github**: GitHub Issues, PRs, code search, Actions
+- **playwright-mcp**: Browser automation and testing
+- **blueprints**: Codebase documentation and knowledge management
 
 These turn Claude into a universal interface for your development tools.
 
@@ -92,15 +92,15 @@ Here's where Han becomes more than the sum of its parts. Let me show you a real 
 **What happens**:
 
 1. **Core** provides the infrastructure and quality enforcement
-2. **jutsu-nextjs** provides deep Next.js knowledge for implementation
-3. **jutsu-typescript** ensures type safety throughout
-4. **do-frontend-development** agent handles the UI components
+2. **nextjs** provides deep Next.js knowledge for implementation
+3. **typescript** ensures type safety throughout
+4. **frontend-development** agent handles the UI components
 5. **Validation hooks** automatically run (via core):
    - TypeScript compilation check
    - Next.js build verification
    - Test suite execution
 6. **Core code review** analyzes the result
-7. **hashi-github** can create a PR with the changes
+7. **github** integration can create a PR with the changes
 
 (If you've installed the optional `bushido` plugin, its seven virtues also guide the overall approach.)
 
@@ -142,23 +142,23 @@ han plugin install bushido
 
 (Not required - `core` provides all the technical capabilities.)
 
-**Day 2**: Add your stack's jutsu plugins
+**Day 2**: Add your stack's validation plugins
 
 ```bash
-han plugin install jutsu-typescript
-han plugin install jutsu-react
+han plugin install typescript
+han plugin install react
 ```
 
 **Day 3**: Add specialized agents as needed
 
 ```bash
-han plugin install do-frontend-development
+han plugin install frontend-development
 ```
 
 **Day 4**: Connect external tools
 
 ```bash
-han plugin install hashi-github
+han plugin install github
 ```
 
 Each addition enhances the system without adding complexity to your workflow.
@@ -169,9 +169,9 @@ I built the Han marketplace website using Han plugins. Here's what that looked l
 
 - Asked Claude to "create a plugin marketplace website"
 - **Core** provided the infrastructure and quality enforcement
-- **jutsu-nextjs** provided App Router expertise
-- **jutsu-typescript** caught type errors immediately
-- **jutsu-biome** kept code formatted
+- **nextjs** provided App Router expertise
+- **typescript** caught type errors immediately
+- **biome** kept code formatted
 - **Validation hooks** ran after every change
 - Result: Production-ready site with 100% type coverage in hours, not days
 

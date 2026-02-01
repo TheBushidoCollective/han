@@ -24,7 +24,7 @@ Han plugins can register hooks that run automatically when specific events occur
 
 ### Real Example: TypeScript Validation
 
-Let's look at how the `jutsu-typescript` plugin uses hooks to enforce type safety:
+Let's look at how the `typescript` plugin uses hooks to enforce type safety:
 
 ```json
 {
@@ -49,7 +49,7 @@ You might think "won't this slow me down?" Actually, no. Han's hook system is de
 2. **Parallel execution**: Multiple hooks run concurrently
 3. **Early termination**: Hooks can fail fast, giving you immediate feedback
 
-Here's what validation looks like in practice with `jutsu-bun`:
+Here's what validation looks like in practice with the `bun` plugin:
 
 ```bash
 # You ask Claude to implement a feature
@@ -71,9 +71,9 @@ The real power comes from combining multiple plugins. With Han's plugin system, 
 ```json
 {
   "enabledPlugins": {
-    "jutsu-typescript@han": true,
-    "jutsu-biome@han": true,
-    "jutsu-bun@han": true,
+    "typescript@han": true,
+    "biome@han": true,
+    "bun@han": true,
     "bushido@han": true
   }
 }
@@ -129,7 +129,7 @@ You can commit and move on with confidence.
 
 Want to add validation hooks to your workflow? Start simple:
 
-1. Install a jutsu plugin for your stack (`jutsu-typescript`, `jutsu-python`, etc.)
+1. Install a validation plugin for your stack (`typescript`, `python`, etc.)
 2. The validation hooks are automatically active
 3. Watch as Claude's work is automatically verified
 
@@ -142,7 +142,7 @@ Manual quality checks are a thing of the past. With Han's validation hooks, qual
 Try it yourself:
 
 ```bash
-han plugin install jutsu-typescript
+han plugin install typescript
 ```
 
 Your future self will thank you.

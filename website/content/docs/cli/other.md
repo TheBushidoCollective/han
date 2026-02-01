@@ -182,19 +182,19 @@ Han Configuration Overview
 ==========================
 
 Installed Plugins (user):
-  - hashi-github (v1.2.3) - GitHub integration
-  - jutsu-bun (v1.0.0) - Bun runtime support
+  - github (v1.2.3) - GitHub integration
+  - bun (v1.0.0) - Bun runtime support
 
 Installed Plugins (project):
-  - jutsu-typescript (v1.1.0) - TypeScript validation
+  - typescript (v1.1.0) - TypeScript validation
 
 Active Hooks:
-  jutsu-bun/test (Stop hook)
-  jutsu-typescript/typecheck (Stop hook)
+  bun/test (Stop hook)
+  typescript/typecheck (Stop hook)
 
 MCP Servers:
   - han (built-in)
-  - github (hashi-github)
+  - github (github plugin)
 
 Configuration:
   User: ~/.claude/han.yml
@@ -238,13 +238,13 @@ Over the past month, Han has:
 - Improved calibration accuracy from 0.68 to 0.79
 
 Top performing hooks:
-  1. jutsu-bun/test (100% success)
-  2. jutsu-typescript/typecheck (96% success)
-  3. jutsu-biome/lint (92% success)
+  1. bun/test (100% success)
+  2. typescript/typecheck (96% success)
+  3. biome/lint (92% success)
 
 Recommendations:
-- Consider adding jutsu-playwright for browser testing
-- Hook failure rate for jutsu-biome/lint suggests review of lint rules
+- Consider adding playwright-mcp for browser testing
+- Hook failure rate for biome/lint suggests review of lint rules
 ```
 
 ## `han gaps`
@@ -272,24 +272,24 @@ $ han gaps
 Analyzing repository for improvement opportunities...
 
 Detected Technologies:
-  - TypeScript (✓ jutsu-typescript installed)
-  - Bun (✓ jutsu-bun installed)
+  - TypeScript (✓ typescript installed)
+  - Bun (✓ bun installed)
   - React (missing plugin)
   - PostgreSQL (missing integration)
 
 Recommended Plugins:
 
-  jutsu-react - React development patterns and hooks
+  react - React development patterns and hooks
     Why: 23 React components detected without validation
 
-  hashi-postgresql - PostgreSQL database integration
+  postgresql - PostgreSQL database integration
     Why: Database queries found without schema validation
 
-  do-code-reviewer - Multi-agent code review system
+  code-reviewer - Multi-agent code review system
     Why: No automated code review process detected
 
 Install with:
-  han plugin install jutsu-react hashi-postgresql do-code-reviewer
+  han plugin install react postgresql code-reviewer
 ```
 
 ## `han checkpoint`

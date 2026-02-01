@@ -1,9 +1,9 @@
 ---
 title: "Plugin Categories"
-description: "Han plugins are organized into four categories: Core, Jutsu, Do, and Hashi. Each serves a specific purpose in the quality enforcement ecosystem."
+description: "Han plugins are organized into nine categories: Core, Language, Framework, Validation, Tool, Integration, Discipline, Pattern, and Specialized. Each serves a specific purpose in the quality enforcement ecosystem."
 ---
 
-Han plugins follow Japanese martial arts naming conventions, organizing by purpose. Each category serves a specific role in the quality enforcement ecosystem.
+Han plugins are organized into nine categories, each serving a specific role in the development workflow. This structure makes it easy to find the right plugins for your stack.
 
 ## Core - Foundation
 
@@ -20,7 +20,7 @@ The essential infrastructure that powers Han. Always required.
 
 **Key plugins:**
 
-- **core** (`han-core`) - The technical foundation. Provides hooks, metrics, and all core infrastructure
+- **core** - The technical foundation. Provides hooks, metrics, and all core infrastructure
 - **bushido** - Optional philosophical layer based on seven Samurai virtues (義 Righteousness, 勇 Courage, 仁 Compassion, 礼 Respect, 誠 Honesty, 名誉 Honor, 忠義 Loyalty)
 
 **When to install:**
@@ -36,80 +36,163 @@ han plugin install core
 han plugin install bushido
 ```
 
-## Jutsu (術) - Technical Skills
+## Language - Programming Language Support
 
-Jutsu plugins are "techniques"—deep knowledge of specific technologies paired with automatic validation.
+Language plugins provide deep knowledge of specific programming languages, including idioms, best practices, and type systems.
 
 **What's included:**
 
-- Technology-specific expertise (skills, commands)
-- Validation hooks that run automatically
-- Best practices and patterns
-- Error detection and remediation guidance
+- Language-specific expertise and patterns
+- Type system knowledge
+- Concurrency and async patterns
+- Memory management (for systems languages)
+- Idiomatic code guidance
 
 **Examples:**
 
-- **jutsu-typescript** - TypeScript expertise + type checking hooks
-- **jutsu-playwright** - E2E testing knowledge + test validation
-- **jutsu-nextjs** - Next.js patterns + build verification
-- **jutsu-biome** - Code formatting + automatic linting
-- **jutsu-python** - Python skills + validation
-- **jutsu-rust** - Rust patterns + compilation checks
+- **typescript** - TypeScript type system mastery
+- **python** - Type hints, async patterns, data modeling
+- **rust** - Ownership, error handling, async programming
+- **go** - Concurrency, interfaces, error handling
+- **java** - Streams, concurrency, generics
+- **ruby** - Metaprogramming, blocks, gems
+- **elixir** - OTP, pattern matching, Ecto
+- **swift** - Protocol-oriented programming, concurrency
 
 **When to install:**
 
-Install jutsu plugins for every technology in your stack. They ensure Claude not only knows the technology but validates its work automatically.
+Install language plugins for every programming language in your project. They ensure Claude understands language-specific patterns and best practices.
 
 **Installation:**
 
 ```bash
-# Auto-detect and install all relevant jutsu plugins
+# Auto-detect languages in your project
 han plugin install --auto
 
-# Or install specific technologies
-han plugin install jutsu-typescript
-han plugin install jutsu-react
-han plugin install jutsu-python
+# Or install specific languages
+han plugin install typescript
+han plugin install python
+han plugin install rust
 ```
 
-## Dō (道) - Specialized Agents
+## Framework - Framework Integrations
 
-Do plugins provide specialized agents for complex, multi-phase workflows. Think of them as expert consultants with deep domain knowledge.
+Framework plugins provide expertise for specific web, mobile, and backend frameworks.
 
 **What's included:**
 
-- Autonomous agents for specific disciplines
-- Multi-step workflows
-- Domain-specific best practices
-- Quality checklists and verification
+- Framework-specific architecture patterns
+- Component and module organization
+- Data fetching and state management
+- Routing and navigation patterns
+- Performance optimization techniques
 
 **Examples:**
 
-- **do-frontend-development** - UI/UX-focused agent with accessibility expertise
-- **do-technical-documentation** - Documentation agent following best practices
-- **do-accessibility-engineering** - Multiple agents for inclusive design
-- **do-code-review** - Comprehensive code review with confidence-based filtering
-- **do-debugging** - Systematic debugging workflows
-- **do-architecture-design** - System architecture and planning
+- **react** - Hooks, context, performance optimization
+- **nextjs** - App Router, Server Components, data fetching
+- **django** - ORM, class-based views, REST framework
+- **rails** - MVC patterns, Active Record, Hotwire
+- **phoenix** - LiveView, channels, Ecto integration
+- **vue** - Composition API, components, reactivity
+- **fastapi** - Dependency injection, async patterns
+- **expo** - React Native with config, router, updates
 
 **When to install:**
 
-Install do plugins for specialized tasks you perform regularly. Each agent brings deep expertise and handles complexity autonomously.
+Install framework plugins for every framework your project uses. They ensure Claude follows framework conventions and best practices.
 
 **Installation:**
 
 ```bash
-# Browse available agents
-han plugin search do-
+# Auto-detect frameworks
+han plugin install --auto
 
-# Install specific agents
-han plugin install do-frontend-development
-han plugin install do-code-review
+# Or install specific frameworks
+han plugin install react
+han plugin install nextjs
+han plugin install django
 ```
 
-## Hashi (橋) - External Bridges
+## Validation - Code Quality Enforcement
 
-Hashi plugins are bridges that connect Claude to external services and tools. They turn Claude into a universal interface for your development workflow.
+Validation plugins handle linting, formatting, type checking, and static analysis. They run automatically via Stop hooks.
+
+**What's included:**
+
+- Automatic validation on conversation end
+- Configuration and rule customization
+- Editor integration guidance
+- CI/CD integration patterns
+
+**Examples:**
+
+- **biome** - Fast JavaScript/TypeScript linting and formatting
+- **eslint** - JavaScript/TypeScript linting with custom rules
+- **prettier** - Code formatting for multiple languages
+- **rubocop** - Ruby linting and style enforcement
+- **pylint** - Python linting and code quality
+- **clippy** - Rust linting and code quality
+- **checkstyle** - Java code quality and style
+- **shellcheck** - Shell script validation
+
+**When to install:**
+
+Install validation plugins for every linter and formatter your project uses. They ensure code quality is enforced automatically.
+
+**Installation:**
+
+```bash
+# Auto-detect linters in your project
+han plugin install --auto
+
+# Or install specific validators
+han plugin install biome
+han plugin install eslint
+han plugin install rubocop
+```
+
+## Tool - Development Tools
+
+Tool plugins cover build systems, testing frameworks, package managers, and other development utilities.
+
+**What's included:**
+
+- Build and bundler configuration
+- Testing framework expertise
+- Package management best practices
+- CI/CD and automation patterns
+
+**Examples:**
+
+- **playwright** - End-to-end testing and automation
+- **jest** - JavaScript testing framework
+- **pytest** - Python testing framework
+- **webpack** - Build and bundling configuration
+- **docker-compose** - Container orchestration
+- **kubernetes** - Cloud-native deployment
+- **terraform** - Infrastructure as code
+- **graphql** - Schema design and queries
+
+**When to install:**
+
+Install tool plugins for every build tool, test framework, and utility your project depends on.
+
+**Installation:**
+
+```bash
+# Auto-detect tools
+han plugin install --auto
+
+# Or install specific tools
+han plugin install playwright
+han plugin install jest
+han plugin install webpack
+```
+
+## Integration - External Services
+
+Integration plugins connect Claude to external services via MCP (Model Context Protocol). They enable Claude to interact with APIs, issue trackers, and other platforms.
 
 **What's included:**
 
@@ -120,15 +203,18 @@ Hashi plugins are bridges that connect Claude to external services and tools. Th
 
 **Examples:**
 
-- **hashi-github** - GitHub Issues, PRs, code search, Actions
-- **hashi-playwright-mcp** - Browser automation and testing
-- **hashi-blueprints** - Codebase documentation and knowledge management
-- **hashi-jira** - Issue tracking and project management
-- **hashi-sentry** - Error tracking and monitoring
+- **github** - Issues, PRs, Actions, code search
+- **gitlab** - Issues, merge requests, CI/CD
+- **jira** - Ticket management, JQL search
+- **linear** - Issue management, project tracking
+- **figma** - Design-to-code workflows
+- **sentry** - Error tracking and monitoring
+- **playwright-mcp** - Browser automation via MCP
+- **blueprints** - Technical documentation management
 
 **Dual-Mode Operation:**
 
-Hashi plugins support two operation modes:
+Integration plugins support two operation modes:
 
 | Mode | Tools Visible | Use Case |
 |------|---------------|----------|
@@ -139,17 +225,17 @@ In orchestrator mode, Han exposes a single `han_workflow` tool that can invoke a
 
 **When to install:**
 
-Install hashi plugins for external services you use in your workflow. They enable Claude to interact with these services naturally through conversation.
+Install integration plugins for external services you use in your workflow. They enable Claude to interact with these services naturally through conversation.
 
 **Installation:**
 
 ```bash
 # Install to user settings (recommended for MCP servers)
-han plugin install hashi-github
-han plugin install hashi-playwright-mcp
+han plugin install github
+han plugin install playwright-mcp
 
 # Or specify scope explicitly
-han plugin install hashi-blueprints --scope user
+han plugin install blueprints --scope user
 ```
 
 **Switching modes:**
@@ -160,6 +246,116 @@ orchestrator:
   enabled: false
 ```
 
+## Discipline - Specialized AI Agents
+
+Discipline plugins provide specialized agents for complex, multi-phase workflows. Think of them as expert consultants with deep domain knowledge.
+
+**What's included:**
+
+- Autonomous agents for specific disciplines
+- Multi-step workflows
+- Domain-specific best practices
+- Quality checklists and verification
+
+**Examples:**
+
+- **frontend** - UI/UX development with accessibility expertise
+- **backend** - API design, system architecture
+- **accessibility** - WCAG, ARIA, inclusive design
+- **security** - Secure architecture, vulnerability assessment
+- **documentation** - Technical writing and knowledge management
+- **quality** - Testing strategies and QA
+- **architecture** - System design and patterns
+- **data-engineering** - ETL pipelines, streaming, warehousing
+
+**When to install:**
+
+Install discipline plugins for specialized tasks you perform regularly. Each agent brings deep expertise and handles complexity autonomously.
+
+**Installation:**
+
+```bash
+# Browse available agents
+han plugin search discipline
+
+# Install specific agents
+han plugin install frontend
+han plugin install security
+han plugin install documentation
+```
+
+## Pattern - Methodologies and Workflows
+
+Pattern plugins encode development methodologies, design patterns, and workflow practices.
+
+**What's included:**
+
+- Methodology guidance and enforcement
+- Workflow patterns and best practices
+- Design system principles
+- Quality process enforcement
+
+**Examples:**
+
+- **ai-dlc** - AI-driven development lifecycle methodology
+- **tdd** - Test-Driven Development with red-green-refactor
+- **bdd** - Behavior-Driven Development collaboration patterns
+- **atomic-design** - Component-based design system (atoms, molecules, organisms)
+- **monorepo** - Monorepo architecture and tooling
+- **functional-programming** - FP principles and patterns
+- **oop** - Object-oriented design patterns
+- **git-storytelling** - Meaningful commit history practices
+
+**When to install:**
+
+Install pattern plugins to enforce development methodologies your team follows.
+
+**Installation:**
+
+```bash
+# Install methodology patterns
+han plugin install ai-dlc
+han plugin install tdd
+han plugin install atomic-design
+```
+
+## Specialized - Niche and Platform-Specific
+
+Specialized plugins cover niche technologies, platform-specific tools, and domain-specific utilities.
+
+**What's included:**
+
+- Platform-specific validation (iOS, Android)
+- Domain-specific tools (ML, VoIP)
+- Project-specific utilities
+- Niche technology support
+
+**Examples:**
+
+- **android** - Android development with Gradle validation
+- **ios** - iOS development with Xcode validation
+- **tensorflow** - Machine learning framework skills
+- **fnox** - Secrets management validation
+- **claude-agent-sdk** - Claude Agent SDK projects
+- **han-plugins** - Han plugin development
+- **sentry** - Error monitoring patterns
+- **sip** - VoIP and real-time communications
+
+**When to install:**
+
+Install specialized plugins when working with niche technologies or platform-specific features.
+
+**Installation:**
+
+```bash
+# Install platform-specific plugins
+han plugin install android
+han plugin install ios
+
+# Install domain-specific plugins
+han plugin install tensorflow
+```
+
 ## How They Work Together
 
 Han plugins compose into a complete quality system. Here's a real example:
@@ -168,16 +364,16 @@ Han plugins compose into a complete quality system. Here's a real example:
 
 **What happens:**
 
-1. **Core** provides infrastructure and quality enforcement
-2. **jutsu-nextjs** provides Next.js implementation knowledge
-3. **jutsu-typescript** ensures type safety throughout
-4. **do-frontend-development** handles UI components
+1. **core** provides infrastructure and quality enforcement
+2. **nextjs** (Framework) provides Next.js implementation knowledge
+3. **typescript** (Language) ensures type safety throughout
+4. **frontend** (Discipline) handles UI components
 5. **Validation hooks** run automatically (via core):
+   - Biome linting check
    - TypeScript compilation check
    - Next.js build verification
    - Test suite execution
-6. **Core code review** analyzes the result
-7. **hashi-github** can create a PR with changes
+6. **github** (Integration) can create a PR with changes
 
 All of this happens automatically from one request. No manual intervention needed.
 
@@ -191,8 +387,8 @@ Plugins can be installed to different scopes:
 
 **Recommendations:**
 
-- **user scope**: MCP servers (hashi-*), core plugins, general agents (do-*)
-- **project scope**: Technology validation (jutsu-* with hooks)
+- **user scope**: MCP servers (Integration plugins), core plugins, Discipline plugins
+- **project scope**: Language, Framework, Validation plugins with hooks
 - **local scope**: Personal preferences not shared with team
 
 ## Next Steps

@@ -13,15 +13,15 @@ Model Context Protocol (MCP) is the secret sauce that makes Han plugins so power
 
 Model Context Protocol is an open standard for connecting AI assistants to external data sources and tools. Think of it as APIs for AI - a standardized way for Claude to interact with the world beyond its training data.
 
-## Han's "Hashi" (Bridge) Plugins
+## Han's Integration Plugins
 
-In Han's architecture, plugins starting with `hashi-` are "bridges" - MCP servers that connect Claude to external services:
+In Han's architecture, integration plugins are MCP servers that connect Claude to external services:
 
-- `hashi-github`: GitHub Issues, PRs, Actions, Code Search
-- `hashi-jira`: Jira tickets, sprints, workflows
-- `hashi-playwright-mcp`: Browser automation and testing
-- `hashi-linear`: Linear issues and project management
-- `hashi-sentry`: Error tracking and performance monitoring
+- `github`: GitHub Issues, PRs, Actions, Code Search
+- `jira`: Jira tickets, sprints, workflows
+- `playwright-mcp`: Browser automation and testing
+- `linear`: Linear issues and project management
+- `sentry`: Error tracking and performance monitoring
 
 ## Real Example: GitHub Integration
 
@@ -30,7 +30,7 @@ Let's see how the GitHub MCP server works in practice.
 ### Installation
 
 ```bash
-han plugin install hashi-github
+han plugin install github
 ```
 
 This adds an MCP server to your Claude Code configuration:
@@ -129,12 +129,12 @@ await mcp.tools.add_review_comment({
 
 ## Building Custom MCP Servers
 
-Want to connect Claude to your internal tools? Create a custom hashi plugin.
+Want to connect Claude to your internal tools? Create a custom integration plugin.
 
 ### Example: Slack MCP Server
 
 ```typescript
-// hashi-slack/server/tools.ts
+// slack/server/tools.ts
 import { McpServer } from '@modelcontextprotocol/sdk'
 
 export const slackServer = new McpServer({
@@ -173,7 +173,7 @@ slackServer.tool('search_messages', {
 
 ```json
 {
-  "name": "hashi-slack",
+  "name": "slack",
   "mcpServers": {
     "slack": {
       "command": "npx",
@@ -301,12 +301,12 @@ The server implements the MCP protocol (version 2024-11-05) and exposes tools in
 
 ### Plugin Hook Tools (Dynamic)
 
-This is Han's key innovation: every hook defined in an installed plugin automatically becomes an MCP tool. When you install `jutsu-typescript`, Claude immediately gains access to a `jutsu_typescript_typecheck` tool.
+This is Han's key innovation: every hook defined in an installed plugin automatically becomes an MCP tool. When you install the `typescript` plugin, Claude immediately gains access to a `typescript_typecheck` tool.
 
 The MCP server discovers these at runtime by scanning installed plugins:
 
 ```javascript
-// From jutsu-bun/han-plugin.yml
+// From bun/han-plugin.yml
 hooks:
   test:
     command: bun test --only-failures
@@ -315,7 +315,7 @@ hooks:
 
 // Becomes MCP tool:
 {
-  name: "jutsu_bun_test",
+  name: "bun_test",
   description: "Run Bun tests. Triggers: 'run the tests', 'run bun tests',
     'check if tests pass'. Runs in directories containing: bun.lock,
     bun.lockb. Command: bun test --only-failures",
@@ -343,7 +343,7 @@ When Claude says "run the tests", it can now call this tool directly:
 
 ```javascript
 // Claude calls:
-await mcp.tools.jutsu_bun_test({ cache: true })
+await mcp.tools.bun_test({ cache: true })
 
 // Returns:
 {
@@ -509,9 +509,9 @@ All Han MCP tools include MCP annotations for better AI behavior:
 }
 ```
 
-### Blueprint Tools (via hashi-blueprints)
+### Blueprint Tools (via blueprints plugin)
 
-When the hashi-blueprints plugin is installed, additional MCP tools become available:
+When the blueprints integration plugin is installed, additional MCP tools become available:
 
 ```javascript
 search_blueprints({ keyword: "api" })
@@ -541,27 +541,27 @@ Set timeouts via environment variable:
 export HAN_MCP_TIMEOUT=600000  # 10 minutes (default)
 ```
 
-## Available Hashi Plugins
+## Available Integration Plugins
 
-Current MCP bridges in Han marketplace:
+Current MCP integrations in the Han marketplace:
 
-- **hashi-github**: GitHub platform integration
-- **hashi-jira**: Atlassian Jira integration
-- **hashi-linear**: Linear project management
-- **hashi-playwright-mcp**: Browser automation
-- **hashi-sentry**: Error tracking and monitoring
-- **hashi-figma**: Design-to-code workflows
-- **hashi-gitlab**: GitLab integration
-- **hashi-blueprints**: Technical documentation management
+- **github**: GitHub platform integration
+- **jira**: Atlassian Jira integration
+- **linear**: Linear project management
+- **playwright-mcp**: Browser automation
+- **sentry**: Error tracking and monitoring
+- **figma**: Design-to-code workflows
+- **gitlab**: GitLab integration
+- **blueprints**: Technical documentation management
 
 ## What's Next?
 
 We're working on:
 
-- **hashi-aws**: AWS resource management
-- **hashi-vercel**: Deployment and preview URLs
-- **hashi-stripe**: Payment and billing integration
-- **hashi-notion**: Documentation and knowledge base
+- **aws**: AWS resource management
+- **vercel**: Deployment and preview URLs
+- **stripe**: Payment and billing integration
+- **notion**: Documentation and knowledge base
 
 ## Try It
 
@@ -572,7 +572,7 @@ Start with GitHub integration:
 export GITHUB_TOKEN=ghp_your_token_here
 
 # Install the plugin
-han plugin install hashi-github
+han plugin install github
 
 # Ask Claude to help with GitHub tasks
 claude
@@ -589,8 +589,8 @@ Claude handles the API calls, authentication, and data formatting. You just desc
 
 ## Conclusion
 
-MCP is the bridge between AI and the real world. Han's hashi plugins make that bridge easy to cross, turning Claude Code into a universal interface for your entire development workflow.
+MCP is the bridge between AI and the real world. Han's integration plugins make that bridge easy to cross, turning Claude Code into a universal interface for your entire development workflow.
 
 ---
 
-*Want to build your own MCP server? Check out the [MCP Documentation](/docs#mcp-server) or explore existing [hashi plugins](/plugins?category=hashi).*
+*Want to build your own MCP server? Check out the [MCP Documentation](/docs#mcp-server) or explore existing [integration plugins](/plugins?category=integration).*

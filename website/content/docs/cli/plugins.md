@@ -42,24 +42,24 @@ By default, plugins install to user settings (`~/.claude/settings.json`) which a
 
 | Scope | Location | Use Case |
 |-------|----------|----------|
-| `user` | `~/.claude/settings.json` | MCP servers, general-purpose plugins (hashi-*, do-*) |
-| `project` | `.claude/settings.json` | Project-specific validation hooks (jutsu-* with hooks) |
+| `user` | `~/.claude/settings.json` | MCP servers, general-purpose plugins |
+| `project` | `.claude/settings.json` | Project-specific validation hooks |
 | `local` | `.claude/settings.local.json` | Personal preferences not shared with team |
 
 ### Examples
 
 ```bash
 # Install GitHub integration globally
-han plugin install hashi-github
+han plugin install github
 
 # Install TypeScript validation for this project
-han plugin install jutsu-typescript --scope project
+han plugin install typescript --scope project
 
 # Auto-detect and install recommended plugins
 han plugin install --auto
 
 # Install multiple plugins at once
-han plugin install jutsu-bun jutsu-biome hashi-playwright-mcp
+han plugin install bun biome playwright-mcp
 ```
 
 ### Auto-Detection
@@ -69,7 +69,7 @@ When using `--auto`, Han analyzes your repository and suggests relevant plugins:
 - Detects package managers (npm, bun, pnpm)
 - Identifies languages (TypeScript, Python, Go, etc.)
 - Recognizes frameworks (Next.js, React, etc.)
-- Suggests appropriate jutsu and hashi plugins
+- Suggests appropriate plugins for your stack
 
 ## `han plugin list`
 
@@ -103,13 +103,13 @@ han plugin list --verbose
 ```
 Installed Han Plugins (user scope):
 
-  hashi-github (v1.2.3)
+  github (v1.2.3)
     GitHub integration for Claude Code
     MCP Server: github
     Commands: /create-pr, /review-pr
     Skills: github-workflow-patterns
 
-  jutsu-bun (v1.0.0)
+  bun (v1.0.0)
     Bun runtime and testing support
     Hooks: test, build
 ```
@@ -124,7 +124,7 @@ han plugin list
 han plugin list --scope project
 
 # Get JSON output for scripting
-han plugin list --json | jq '.[] | select(.name | startswith("jutsu-"))'
+han plugin list --json | jq '.[] | select(.type == "technique")'
 ```
 
 ## `han plugin uninstall`
@@ -155,13 +155,13 @@ han plugin uninstall <plugin-name> --scope project
 
 ```bash
 # Uninstall GitHub integration
-han plugin uninstall hashi-github
+han plugin uninstall github
 
 # Uninstall TypeScript plugin from project scope
-han plugin uninstall jutsu-typescript --scope project
+han plugin uninstall typescript --scope project
 
 # Uninstall from all scopes
-han plugin uninstall jutsu-bun --all-scopes
+han plugin uninstall bun --all-scopes
 ```
 
 ## `han plugin search`
@@ -178,15 +178,15 @@ han plugin search
 han plugin search <query>
 
 # Filter by category
-han plugin search --category jutsu
-han plugin search --category hashi
+han plugin search --category technique
+han plugin search --category bridge
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--category <category>` | Filter by category: `jutsu`, `hashi`, `do`, `core` |
+| `--category <category>` | Filter by category: `technique`, `bridge`, `discipline`, `core` |
 | `--json` | Output as JSON for scripting |
 
 ### Examples
@@ -195,11 +195,11 @@ han plugin search --category hashi
 # Search for TypeScript-related plugins
 han plugin search typescript
 
-# List all hashi (MCP bridge) plugins
-han plugin search --category hashi
+# List all bridge (MCP) plugins
+han plugin search --category bridge
 
 # Get JSON output
-han plugin search --json | jq '.[] | select(.category == "jutsu")'
+han plugin search --json | jq '.[] | select(.category == "technique")'
 ```
 
 ## `han plugin update-marketplace`
