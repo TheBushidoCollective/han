@@ -45,6 +45,8 @@ const configDir = join(testDir, "config");
 const projectDir = join(testDir, "project");
 
 beforeAll(() => {
+	// Skip setup when native module not available
+	if (SKIP_NATIVE) return;
 	// Reset database state to pick up new CLAUDE_CONFIG_DIR
 	_resetDbState();
 	// Create test directories
@@ -55,6 +57,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+	// Skip cleanup when native module not available
+	if (SKIP_NATIVE) return;
 	// Reset database state before restoring environment
 	_resetDbState();
 	// Restore original environment

@@ -9,9 +9,15 @@
  * - Layer 5: Team Memory (git history) - Commits, PRs, decisions
  *
  * Plus multi-layer racing, auto-promotion, and integration tests.
+ *
+ * NOTE: Many tests require the native module for database access.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 import {
 	existsSync,
 	mkdirSync,
@@ -488,7 +494,7 @@ describe("Layer 3: Observations (raw tool usage)", () => {
 // LAYER 4: TRANSCRIPTS TESTS
 // ========================================
 
-describe("Layer 4: Transcripts (conversation history)", () => {
+describeWithNative("Layer 4: Transcripts (conversation history)", () => {
 	beforeEach(setupTestEnvironment);
 	afterEach(teardownTestEnvironment);
 

@@ -3,12 +3,23 @@
  *
  * Tests the database layer (hookAttempts, deferredHooks), MCP tools
  * (hook_wait, increase_max_attempts), and coordinator background processing.
+ *
+ * NOTE: These tests require the native module for database access.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { _resetDbState } from "../lib/db/index.ts";
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+
+// Lazy import to avoid module load failures
+let _resetDbState: () => void;
+if (!SKIP_NATIVE) {
+	const dbModule = await import("../lib/db/index.ts");
+	_resetDbState = dbModule._resetDbState;
+}
 
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -21,6 +32,8 @@ const testDir = join(
 const configDir = join(testDir, "config");
 
 beforeAll(() => {
+	// Skip setup when native module not available
+	if (SKIP_NATIVE) return;
 	// Reset database state to pick up new CLAUDE_CONFIG_DIR
 	_resetDbState();
 	// Create test directories
@@ -30,6 +43,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+	// Skip cleanup when native module not available
+	if (SKIP_NATIVE) return;
 	// Reset database state before restoring environment
 	_resetDbState();
 	// Restore original environment
@@ -45,6 +60,9 @@ afterAll(() => {
 		// Ignore cleanup errors
 	}
 });
+
+// Skip describe blocks when native module not available
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 
 // Helper to create a test session
 async function createTestSession(sessionId: string) {
@@ -94,7 +112,7 @@ async function createHookExecution(
 	});
 }
 
-describe("Deferred Hook Execution System", () => {
+describeWithNative("Deferred Hook Execution System", () => {
 	describe("hookAttempts namespace", () => {
 		test("getOrCreate returns default values for new hook", async () => {
 			const { hookAttempts, initDb } = await import("../lib/db/index.ts");
@@ -542,7 +560,7 @@ describe("Deferred Hook Execution System", () => {
 	});
 });
 
-describe("Edge Cases", () => {
+describeWithNative("Edge Cases", () => {
 	test("handles empty session gracefully", async () => {
 		const { deferredHooks, initDb } = await import("../lib/db/index.ts");
 		await initDb();

@@ -1,11 +1,17 @@
 /**
  * Integration tests for validate.ts
  * Tests the exported functions with mocked dependencies
+ *
+ * NOTE: Many tests require the native module for findFilesWithGlob
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 
 // Store original environment
 const originalEnv = { ...process.env };
@@ -46,7 +52,7 @@ function _createPluginConfig(
 	writeFileSync(join(dir, "han-plugin.yml"), YAML.stringify({ hooks }));
 }
 
-describe("validate.ts helper functions", () => {
+describeWithNative("validate.ts helper functions", () => {
 	beforeEach(() => {
 		setup();
 	});

@@ -1,6 +1,8 @@
 /**
  * Tests for validate.ts
  * Full coverage tests for validation functions
+ *
+ * NOTE: These tests require the native module for findFilesWithGlob
  */
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -9,7 +11,11 @@ import { join } from "node:path";
 
 import { validate } from "../lib/validation/index.ts";
 
-describe("validate.ts", () => {
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
+
+describeWithNative("validate.ts", () => {
 	let testDir: string;
 	let consoleLogSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
