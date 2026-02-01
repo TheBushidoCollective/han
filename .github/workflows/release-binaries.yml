@@ -276,3 +276,87 @@ jobs:
           git add Formula/han.rb
           git commit -m "Update han to ${TAG}"
           git push
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - artifact: han-linux-x64
+            npm_platform: linux-x64
+          - artifact: han-linux-arm64
+            npm_platform: linux-arm64
+          - artifact: han-darwin-x64
+            npm_platform: darwin-x64
+          - artifact: han-darwin-arm64
+            npm_platform: darwin-arm64
+          - artifact: han-windows-x64
+            npm_platform: win32-x64
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifact
+
+      - name: Create npm package
+        env:
+          VERSION: ${{ inputs.tag || github.ref_name }}
+          PLATFORM: ${{ matrix.npm_platform }}
+        run: |
+          VERSION="${VERSION#v}"
+          mkdir -p package
+
+          # Copy binary (handle .exe for Windows)
+          if [ -f "artifact/${{ matrix.artifact }}.exe" ]; then
+            cp "artifact/${{ matrix.artifact }}.exe" package/han.exe
+          else
+            cp "artifact/${{ matrix.artifact }}" package/han
+            chmod +x package/han
+          fi
+
+          # Copy native module if present (for environments that need it separately)
+          # The binary has it embedded, but some advanced use cases may need it
+
+          cat > package/package.json << EOF
+          {
+            "name": "@thebushidocollective/han-${PLATFORM}",
+            "version": "${VERSION}",
+            "description": "Han CLI binary for ${PLATFORM}",
+            "homepage": "https://han.guru",
+            "license": "MIT",
+            "repository": {
+              "type": "git",
+              "url": "https://github.com/TheBushidoCollective/han"
+            },
+            "os": ["${PLATFORM%-*}"],
+            "cpu": ["${PLATFORM#*-}"]
+          }
+          EOF
+
+          cat > package/README.md << EOF
+          # Han CLI - ${PLATFORM}
+
+          Platform-specific binary for [Han](https://han.guru), a Claude Code plugin marketplace.
+
+          This package is automatically installed as a fallback when GitHub releases are unavailable.
+          EOF
+
+          echo "Package contents:"
+          ls -la package/
+
+      - name: Publish to npm
+        working-directory: package
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
