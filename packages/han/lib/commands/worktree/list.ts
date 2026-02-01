@@ -8,11 +8,8 @@
  */
 
 import type { Command } from "commander";
-import { gitWorktreeList } from "../../../../han-native";
 import {
 	discoverAiDlcWorktrees,
-	findIntents,
-	findUnits,
 	type AiDlcWorktree,
 } from "./discovery.ts";
 
@@ -28,20 +25,6 @@ function formatStatus(wt: AiDlcWorktree): string {
 	if (wt.isStale) statuses.push("stale");
 
 	return statuses.length > 0 ? `[${statuses.join(", ")}]` : "";
-}
-
-/**
- * Format worktree type for display
- */
-function formatType(wt: AiDlcWorktree): string {
-	switch (wt.type) {
-		case "intent":
-			return `intent: ${wt.intentSlug}`;
-		case "unit":
-			return `unit: ${wt.intentSlug}/${wt.unitSlug}`;
-		default:
-			return "";
-	}
 }
 
 /**

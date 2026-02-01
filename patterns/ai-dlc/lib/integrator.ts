@@ -16,12 +16,7 @@ import {
 	findRepoRoot,
 	getMergedSettings,
 } from "./config.ts";
-import {
-	autoMerge,
-	createPR,
-	getCurrentBranch,
-	parseBranchName,
-} from "./strategies.ts";
+import { createPR } from "./strategies.ts";
 
 /**
  * Integrator result status

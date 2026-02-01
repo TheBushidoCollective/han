@@ -8,7 +8,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { getMergedSettings, findRepoRoot, type VcsConfig } from "./config.ts";
+import { findRepoRoot, type VcsConfig } from "./config.ts";
 
 /**
  * Unit metadata from frontmatter
