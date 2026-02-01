@@ -17,7 +17,7 @@ description: Resume work on an existing AI-DLC intent when ephemeral state is lo
 **User-facing command** - Resume work on an intent when ephemeral state (iteration.json) is lost but `.ai-dlc/` artifacts exist.
 
 This happens when:
-- Session context was cleared without proper `/advance` or `/done`
+- Session context was cleared unexpectedly
 - Starting fresh session after previous work
 - Branch state lost but artifacts preserved
 
