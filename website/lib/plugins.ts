@@ -104,7 +104,9 @@ export interface PluginDetails {
 	mcpServers: MCPServerMetadata[];
 }
 
-function getCategoryFromMarketplace(marketplaceCategory: string): PluginCategory {
+function getCategoryFromMarketplace(
+	marketplaceCategory: string,
+): PluginCategory {
 	// Map marketplace category names to URL-friendly slugs
 	const categoryMap: Record<string, PluginCategory> = {
 		Core: "core",
@@ -125,7 +127,12 @@ function getCategoryFromMarketplace(marketplaceCategory: string): PluginCategory
 }
 
 // Re-export from constants for convenience
-export { getCategoryIcon, type PluginCategory, CATEGORY_ORDER, CATEGORY_META } from "./constants";
+export {
+	getCategoryIcon,
+	type PluginCategory,
+	CATEGORY_ORDER,
+	CATEGORY_META,
+} from "./constants";
 
 /**
  * Titleize a string by capitalizing words and replacing hyphens with spaces

@@ -80,7 +80,9 @@ test("parseQuery handles complex mixed query", () => {
 });
 
 test("parseQuery is case-insensitive for filter prefixes", () => {
-	const result = parseQuery("TAG:typescript COMPONENT:skill CATEGORY:languages");
+	const result = parseQuery(
+		"TAG:typescript COMPONENT:skill CATEGORY:languages",
+	);
 	deepStrictEqual(result.tagFilters, ["typescript"]);
 	deepStrictEqual(result.componentFilters, ["skill"]);
 	deepStrictEqual(result.categoryFilters, ["languages"]);
