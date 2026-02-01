@@ -195,20 +195,43 @@ export function loadIntentOverrides(
 }
 
 /**
- * Resolve the default branch name
- * If 'auto', detect from origin/HEAD or fall back to 'main'
- * @param configValue - The configured value ('auto' or explicit name)
+ * Resolve the default branch name for jj using trunk() revset
+ * @param directory - Directory to run jj commands in
+ * @returns Branch name or null if not found
+ */
+function resolveJjDefaultBranch(directory?: string): string | null {
+	const cwd = directory || process.cwd();
+
+	try {
+		// Use jj's trunk() revset to find the default branch
+		// trunk() returns the revision that trunk points to
+		const result = execSync(
+			'jj log -r "trunk()" --no-graph -T "branches" --ignore-working-copy',
+			{
+				cwd,
+				stdio: "pipe",
+			},
+		)
+			.toString()
+			.trim();
+
+		// Result may contain multiple branches separated by space, take the first
+		if (result) {
+			const branches = result.split(/\s+/);
+			return branches[0] || null;
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Resolve the default branch name for git
  * @param directory - Directory to run git commands in
  * @returns Resolved branch name
  */
-export function resolveDefaultBranch(
-	configValue: string,
-	directory?: string,
-): string {
-	if (configValue !== "auto") {
-		return configValue;
-	}
-
+function resolveGitDefaultBranch(directory?: string): string {
 	const cwd = directory || process.cwd();
 
 	try {
@@ -224,20 +247,53 @@ export function resolveDefaultBranch(
 		const parts = result.split("/");
 		return parts[parts.length - 1];
 	} catch {
-		// Fallback: check if main or master exists
-		try {
-			execSync("git rev-parse --verify main", { cwd, stdio: "pipe" });
-			return "main";
-		} catch {
+		// Fallback: check common branch names in priority order
+		const fallbackBranches = ["main", "master", "trunk", "develop"];
+
+		for (const branch of fallbackBranches) {
 			try {
-				execSync("git rev-parse --verify master", { cwd, stdio: "pipe" });
-				return "master";
+				execSync(`git rev-parse --verify ${branch}`, { cwd, stdio: "pipe" });
+				return branch;
 			} catch {
-				// Ultimate fallback
-				return "main";
+				// Branch doesn't exist, try next
 			}
 		}
+
+		// Ultimate fallback
+		return "main";
 	}
+}
+
+/**
+ * Resolve the default branch name
+ * If 'auto', detect from origin/HEAD or fall back to common branch names
+ * @param configValue - The configured value ('auto' or explicit name)
+ * @param directory - Directory to run commands in
+ * @param vcs - VCS type ('git' or 'jj'), auto-detected if not provided
+ * @returns Resolved branch name
+ */
+export function resolveDefaultBranch(
+	configValue: string,
+	directory?: string,
+	vcs?: "git" | "jj",
+): string {
+	if (configValue !== "auto") {
+		return configValue;
+	}
+
+	const cwd = directory || process.cwd();
+	const detectedVcs = vcs || detectVcs(cwd);
+
+	if (detectedVcs === "jj") {
+		const jjBranch = resolveJjDefaultBranch(cwd);
+		if (jjBranch) {
+			return jjBranch;
+		}
+		// If jj trunk() doesn't work, fall back to git detection
+		// (jj repos often colocate with git)
+	}
+
+	return resolveGitDefaultBranch(cwd);
 }
 
 /**
@@ -274,7 +330,7 @@ export function getMergedSettings(options?: {
 
 	// Resolve 'auto' default_branch to actual value
 	if (merged.default_branch === "auto") {
-		merged.default_branch = resolveDefaultBranch("auto", repoRoot || undefined);
+		merged.default_branch = resolveDefaultBranch("auto", repoRoot || undefined, vcs);
 	}
 
 	return merged;
