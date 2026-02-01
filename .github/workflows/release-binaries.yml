@@ -1,4 +1,5 @@
 name: Release Binaries
+# Workflow triggers: tag push or manual dispatch
 
 on:
   push:
