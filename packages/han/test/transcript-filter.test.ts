@@ -3,6 +3,10 @@
  * Tests transcript-based session filtering for stop hooks
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
 import {
 	existsSync,
 	mkdirSync,
@@ -179,7 +183,8 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toEqual([]);
 		});
 
-		test("extracts write operations from transcript", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("extracts write operations from transcript", async () => {
 			createMockTranscript(projectDir, "test-session-1", [
 				{ path: "src/main.ts", operation: "write" },
 				{ path: "src/utils.ts", operation: "write" },
@@ -197,7 +202,8 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified.length).toBe(2);
 		});
 
-		test("extracts edit operations from transcript", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("extracts edit operations from transcript", async () => {
 			createMockTranscript(projectDir, "test-session-2", [
 				{ path: "src/config.ts", operation: "edit" },
 			]);
@@ -213,7 +219,8 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified.length).toBe(1);
 		});
 
-		test("ignores read operations", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("ignores read operations", async () => {
 			createMockTranscript(projectDir, "test-session-3", [
 				{ path: "src/read-only.ts", operation: "read" },
 				{ path: "src/modified.ts", operation: "edit" },
@@ -230,7 +237,8 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toContain("src/modified.ts");
 		});
 
-		test("combines write and edit operations in allModified", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("combines write and edit operations in allModified", async () => {
 			createMockTranscript(projectDir, "test-session-4", [
 				{ path: "src/new-file.ts", operation: "write" },
 				{ path: "src/existing.ts", operation: "edit" },
@@ -248,7 +256,8 @@ describe("transcript-filter.ts", () => {
 			expect(result.allModified).toContain("src/existing.ts");
 		});
 
-		test("caches results for same session", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("caches results for same session", async () => {
 			createMockTranscript(projectDir, "test-session-cache", [
 				{ path: "src/cached.ts", operation: "write" },
 			]);
@@ -267,7 +276,8 @@ describe("transcript-filter.ts", () => {
 			expect(result1).toBe(result2); // Same object reference (cached)
 		});
 
-		test("handles agent type transcripts", async () => {
+		// This test requires native extractFileOperations
+		testWithNative("handles agent type transcripts", async () => {
 			// Create agent transcript with agent- prefix
 			const projectsDir = getProjectsBaseDir();
 			const projectSlug = pathToSlug(projectDir);
