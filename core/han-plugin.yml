@@ -19,7 +19,7 @@ mcp_servers:
   memory-dal:
     name: memory-dal
     description: Han internal memory database with FTS and vector search
-    command: "${CLAUDE_PLUGIN_ROOT}/hooks/han-wrapper.sh"
+    command: "${CLAUDE_PLUGIN_ROOT}/han"
     args: ["mcp", "memory"]
 
 # Core hooks - all hooks go through orchestrator

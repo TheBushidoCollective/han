@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#
+# Han wrapper with auto-install for ephemeral environments
+#
+# MCP servers and hooks use this as their entry point. If the han binary
+# isn't installed, it downloads from GitHub releases automatically.
+#
+
+set -e
+
+HAN_BIN="${HAN_BIN:-$HOME/.local/bin/han-bin}"
+
+# Auto-install if binary doesn't exist
+if [ ! -x "$HAN_BIN" ]; then
+    BIN_DIR="$(dirname "$HAN_BIN")"
+    mkdir -p "$BIN_DIR"
+
+    # Detect platform
+    os="$(uname -s)"
+    arch="$(uname -m)"
+    case "$os" in
+        Darwin)
+            case "$arch" in
+                arm64|aarch64) PLATFORM="darwin-arm64" ;;
+                x86_64|amd64) PLATFORM="darwin-x64" ;;
+                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+            esac
+            ;;
+        Linux)
+            case "$arch" in
+                arm64|aarch64) PLATFORM="linux-arm64" ;;
+                x86_64|amd64) PLATFORM="linux-x64" ;;
+                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+            esac
+            ;;
+        MINGW*|MSYS*|CYGWIN*) PLATFORM="win32-x64" ;;
+        *) echo "Unsupported OS: $os" >&2; exit 1 ;;
+    esac
+
+    # Get latest version and download
+    VERSION=$(curl -fsSL "https://api.github.com/repos/TheBushidoCollective/han/releases/latest" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"v?([^"]+)".*/\1/')
+    if [ -z "$VERSION" ]; then
+        echo "Failed to get latest han version" >&2
+        exit 1
+    fi
+
+    TEMP_BIN="${HAN_BIN}.tmp.$$"
+    trap 'rm -f "$TEMP_BIN"' EXIT
+    curl -fsSL "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-${PLATFORM}" -o "$TEMP_BIN"
+    chmod +x "$TEMP_BIN"
+    mv -f "$TEMP_BIN" "$HAN_BIN"
+    echo "Installed han v${VERSION}" >&2
+fi
+
+export HAN_BIN
+exec "$HAN_BIN" "$@"
