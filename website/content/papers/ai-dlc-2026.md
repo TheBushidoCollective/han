@@ -58,7 +58,7 @@ The evolution of software engineering has been a continuous quest to enable deve
 
 The integration of Large Language Models marked a revolutionary shift, introducing conversational natural language interactions for tasks like code generation, bug detection, and test creation. This was the **AI-Assisted era**—AI enhancing fine-grained, specific tasks while humans retained full control of workflow and decisions.
 
-We have now entered the **AI-Autonomous era**. Models capable of multi-hour sustained reasoning, combined with tools for autonomous development loops, enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
+We have now entered the **AI-Autonomous era**. The emergence of state-persistent orchestration and task-handoff techniques allows AI to maintain context and intent across multi-hour, multi-session workflows. Combined with tools for autonomous development loops, these techniques enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
 
 ### The Problem with Traditional Methods
 
