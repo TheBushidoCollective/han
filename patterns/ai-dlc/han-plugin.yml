@@ -12,20 +12,13 @@ hooks:
     event: SessionStart
     description: Inject AI-DLC iteration context (hat, intent, criteria, scratchpad)
 
-  # PreToolUse hook - inject AI-DLC context into Task and Skill tool prompts
-  pretooluse-inject:
-    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse-inject.sh"
-    event: PreToolUse
-    tool_filter:
-      - Task
-      - Skill
-    description: Inject AI-DLC context into subagent and skill prompts
-
-  # SubagentPrompt hook - inject condensed AI-DLC context into subagents
+  # SubagentPrompt hook - provides AI-DLC context for subagent injection
+  # Context is gathered by core's PreToolUse hook (han hook inject-subagent-context)
+  # and injected into Task and Skill tool prompts automatically
   subagent-context:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-context.sh"
     event: SubagentPrompt
-    description: Inject AI-DLC intent and hat context to subagents
+    description: Provide AI-DLC intent, hat, and workflow context for subagent injection
 
   iterate:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/enforce-iteration.sh"

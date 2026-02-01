@@ -116,10 +116,10 @@ function gatherSubagentContext(projectDir: string): string {
 }
 
 /**
- * Inject subagent context into Task tool prompts.
+ * Inject subagent context into Task and Skill tool prompts.
  *
- * This is a PreToolUse hook that intercepts Task tool calls and prepends
- * context gathered from SubagentPrompt hooks to the prompt parameter.
+ * This is a PreToolUse hook that intercepts Task and Skill tool calls and prepends
+ * context gathered from SubagentPrompt hooks to the prompt/arguments parameter.
  *
  * The output uses `updatedInput` to modify the tool parameters without
  * blocking the tool execution (no permissionDecision is set).
@@ -134,30 +134,34 @@ async function injectSubagentContext(): Promise<void> {
 		process.exit(0);
 	}
 
-	// Only process Task tool calls
-	if (payload.tool_name !== "Task") {
+	// Process Task and Skill tool calls
+	const toolName = payload.tool_name;
+	if (toolName !== "Task" && toolName !== "Skill") {
 		if (isDebugMode()) {
 			console.error(
-				`[inject-subagent-context] Not a Task tool (got: ${payload.tool_name}), exiting`,
+				`[inject-subagent-context] Not a Task or Skill tool (got: ${toolName}), exiting`,
 			);
 		}
 		process.exit(0);
 	}
 
 	const toolInput = payload.tool_input;
-	const originalPrompt = toolInput?.prompt || "";
 
-	// Skip if no prompt
-	if (!originalPrompt) {
+	// For Task tool, check prompt; for Skill tool, check arguments
+	const targetField = toolName === "Task" ? "prompt" : "arguments";
+	const originalValue = (toolInput?.[targetField] as string) || "";
+
+	// Skip if no value to inject into
+	if (!originalValue && toolName === "Task") {
 		if (isDebugMode()) {
-			console.error("[inject-subagent-context] No prompt in tool_input, exiting");
+			console.error(`[inject-subagent-context] No ${targetField} in tool_input, exiting`);
 		}
 		process.exit(0);
 	}
 
 	// Skip if already has our injected context
 	// Check for the opening tag with newline to avoid false positives
-	if (originalPrompt.includes("<subagent-context>\n")) {
+	if (originalValue.includes("<subagent-context>\n")) {
 		if (isDebugMode()) {
 			console.error(
 				"[inject-subagent-context] Already has context injected, exiting",
@@ -180,13 +184,13 @@ async function injectSubagentContext(): Promise<void> {
 		process.exit(0);
 	}
 
-	// Wrap gathered context in tags and prepend to prompt
+	// Wrap gathered context in tags and prepend to value
 	const wrappedContext = `<subagent-context>\n${contextOutput}\n</subagent-context>\n\n`;
-	const modifiedPrompt = wrappedContext + originalPrompt;
+	const modifiedValue = wrappedContext + originalValue;
 
-	// Build updated input with modified prompt
+	// Build updated input with modified field
 	const updatedInput: Record<string, unknown> = { ...toolInput };
-	updatedInput.prompt = modifiedPrompt;
+	updatedInput[targetField] = modifiedValue;
 
 	// Output JSON with updatedInput
 	// IMPORTANT: Do NOT set permissionDecision - it breaks updatedInput for Task tool
@@ -201,7 +205,7 @@ async function injectSubagentContext(): Promise<void> {
 
 	if (isDebugMode()) {
 		console.error(
-			`[inject-subagent-context] Injected ${contextOutput.length} bytes of context`,
+			`[inject-subagent-context] Injected ${contextOutput.length} bytes of context into ${toolName}.${targetField}`,
 		);
 	}
 
@@ -215,10 +219,10 @@ export function registerInjectSubagentContext(hookCommand: Command): void {
 	hookCommand
 		.command("inject-subagent-context")
 		.description(
-			"PreToolUse hook that injects context into Task tool prompts.\n\n" +
-				"Gathers context from SubagentPrompt hooks and prepends it to the\n" +
-				"Task tool's prompt parameter. This ensures subagents receive\n" +
-				"essential policies that would otherwise be lost.\n\n" +
+			"PreToolUse hook that injects context into Task and Skill tool prompts.\n\n" +
+				"Gathers context from SubagentPrompt hooks (defined by plugins like AI-DLC)\n" +
+				"and prepends it to the tool's prompt/arguments parameter. This ensures\n" +
+				"subagents and skills receive essential context from all enabled plugins.\n\n" +
 				"Output format uses updatedInput to modify the tool parameters\n" +
 				"without blocking execution.",
 		)
