@@ -36,14 +36,11 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Validate marketplace
-        run: claude plugin validate .
-
-      - name: Validate all plugins
+      - name: Validate all plugins and marketplaces
         run: |
-          # Find all plugin.json files and validate their parent directories
-          find . -path '*/.claude-plugin/plugin.json' -not -path './node_modules/*' | while read -r plugin_json; do
-            plugin_dir=$(dirname "$(dirname "$plugin_json")")
-            echo "Validating: $plugin_dir"
-            claude plugin validate "$plugin_dir"
+          # Find all plugin.json and marketplace.json files and validate their parent directories
+          find . \( -path '*/.claude-plugin/plugin.json' -o -path '*/.claude-plugin/marketplace.json' \) -not -path './node_modules/*' | while read -r manifest; do
+            dir=$(dirname "$(dirname "$manifest")")
+            echo "Validating: $dir"
+            claude plugin validate "$dir"
           done
