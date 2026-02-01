@@ -761,3 +761,180 @@ squash_unit_commits() {
       ;;
   esac
 }
+
+# Generate Mermaid DAG visualization
+# Usage: generate_dag_mermaid <intent_dir>
+# Returns Mermaid diagram code
+generate_dag_mermaid() {
+  local intent_dir="$1"
+
+  if [ ! -d "$intent_dir" ]; then
+    echo '```mermaid'
+    echo 'graph LR'
+    echo '    START([Start]) --> END([Complete])'
+    echo '```'
+    return
+  fi
+
+  # Check if any unit files exist
+  local has_units=false
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] && has_units=true && break
+  done
+
+  if [ "$has_units" = "false" ]; then
+    echo '```mermaid'
+    echo 'graph LR'
+    echo '    START([Start]) --> END([Complete])'
+    echo '```'
+    return
+  fi
+
+  echo '```mermaid'
+  echo 'graph TD'
+
+  # Collect all units with status
+  local terminal_units=""
+  local all_unit_names=""
+
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name status deps short_id label class_name
+    name=$(basename "$unit_file" .md)
+    status=$(parse_unit_status "$unit_file")
+    deps=$(parse_unit_deps "$unit_file")
+
+    # Short ID: unit-01-setup -> u01setup
+    short_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+    # Label: unit-01-setup -> 01 setup
+    label=$(echo "$name" | sed 's/unit-//' | sed 's/-/ /g')
+
+    # Determine class based on status
+    case "$status" in
+      completed) class_name="completed" ;;
+      in_progress) class_name="inProgress" ;;
+      blocked) class_name="blocked" ;;
+      *) class_name="pending" ;;
+    esac
+
+    echo "    ${short_id}[${label}]:::${class_name}"
+    all_unit_names="$all_unit_names $name"
+  done
+
+  # Add edges
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name deps target_id
+    name=$(basename "$unit_file" .md)
+    deps=$(parse_unit_deps "$unit_file")
+    target_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+
+    if [ "$deps" = "[]" ] || [ -z "$deps" ] || [ "$deps" = "null" ]; then
+      # No deps - connect from START
+      echo "    START([Start]) --> ${target_id}"
+    else
+      # Parse deps and add edges
+      local dep_list
+      dep_list=$(echo "$deps" | tr -d '[]"' | tr ',' '\n' | tr -d ' ')
+
+      for dep in $dep_list; do
+        [ -z "$dep" ] && continue
+        local source_id
+        source_id=$(echo "$dep" | sed 's/unit-/u/' | tr -d '-')
+        echo "    ${source_id} --> ${target_id}"
+      done
+    fi
+  done
+
+  # Find terminal units (not depended on by anyone)
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name is_terminal=true
+    name=$(basename "$unit_file" .md)
+
+    # Check if any other unit depends on this one
+    for other_file in "$intent_dir"/unit-*.md; do
+      [ -f "$other_file" ] || continue
+      [ "$other_file" = "$unit_file" ] && continue
+
+      local other_deps
+      other_deps=$(parse_unit_deps "$other_file")
+      if echo "$other_deps" | grep -q "\"$name\""; then
+        is_terminal=false
+        break
+      fi
+    done
+
+    if [ "$is_terminal" = "true" ]; then
+      local short_id
+      short_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+      echo "    ${short_id} --> END([Complete])"
+    fi
+  done
+
+  # Add styling
+  echo ''
+  echo '    classDef completed fill:#22c55e,stroke:#16a34a,color:white'
+  echo '    classDef inProgress fill:#3b82f6,stroke:#2563eb,color:white'
+  echo '    classDef pending fill:#94a3b8,stroke:#64748b,color:white'
+  echo '    classDef blocked fill:#ef4444,stroke:#dc2626,color:white'
+  echo '```'
+}
+
+# Generate ASCII DAG visualization
+# Usage: generate_dag_ascii <intent_dir>
+# Returns ASCII art diagram
+generate_dag_ascii() {
+  local intent_dir="$1"
+
+  if [ ! -d "$intent_dir" ]; then
+    echo "No units defined."
+    return
+  fi
+
+  # Check if any unit files exist
+  local has_units=false
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] && has_units=true && break
+  done
+
+  if [ "$has_units" = "false" ]; then
+    echo "No units defined."
+    return
+  fi
+
+  echo "Unit Dependency Graph"
+  echo "====================="
+  echo ""
+  echo "Legend: [ ] pending  [~] in-progress  [x] completed  [!] blocked"
+  echo ""
+
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name status deps icon deps_display
+    name=$(basename "$unit_file" .md)
+    status=$(parse_unit_status "$unit_file")
+    deps=$(parse_unit_deps "$unit_file")
+
+    # Status icon
+    case "$status" in
+      completed) icon="[x]" ;;
+      in_progress) icon="[~]" ;;
+      blocked) icon="[!]" ;;
+      *) icon="[ ]" ;;
+    esac
+
+    # Format dependencies
+    if [ "$deps" = "[]" ] || [ -z "$deps" ] || [ "$deps" = "null" ]; then
+      deps_display=""
+    else
+      deps_display=" <- [$(echo "$deps" | tr -d '[]"' | sed 's/unit-//g' | tr ',' ', ')]"
+    fi
+
+    echo "${icon} $(echo "$name" | sed 's/unit-//')${deps_display}"
+  done
+}
