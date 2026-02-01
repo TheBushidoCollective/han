@@ -517,8 +517,7 @@ describe("Plugin install/uninstall", () => {
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 			expect(settings.extraKnownMarketplaces?.han).toBeDefined();
-			// Migration converts jutsu-typescript to typescript
-			expect(settings.enabledPlugins?.["typescript@han"]).toBe(true);
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
@@ -529,7 +528,6 @@ describe("Plugin install/uninstall", () => {
 			const claudeDir = setupClaudeDir(testDir);
 			const settingsPath = join(claudeDir, "settings.json");
 
-			// Use new short name format (migrated format)
 			writeFileSync(
 				settingsPath,
 				JSON.stringify(
@@ -543,7 +541,7 @@ describe("Plugin install/uninstall", () => {
 							},
 						},
 						enabledPlugins: {
-							"typescript@han": true,
+							"jutsu-typescript@han": true,
 						},
 					},
 					null,
@@ -552,7 +550,7 @@ describe("Plugin install/uninstall", () => {
 			);
 
 			execSync(
-				`${binCommand} plugin uninstall typescript --scope project`,
+				`${binCommand} plugin uninstall jutsu-typescript --scope project`,
 				{
 					cwd: testDir,
 					encoding: "utf8",
@@ -562,7 +560,7 @@ describe("Plugin install/uninstall", () => {
 
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
-			expect(settings.enabledPlugins?.["typescript@han"]).toBeUndefined();
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBeUndefined();
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
@@ -573,7 +571,6 @@ describe("Plugin install/uninstall", () => {
 			const claudeDir = setupClaudeDir(testDir);
 			const settingsPath = join(claudeDir, "settings.json");
 
-			// Use new short name format (migrated format)
 			writeFileSync(
 				settingsPath,
 				JSON.stringify(
@@ -587,7 +584,7 @@ describe("Plugin install/uninstall", () => {
 							},
 						},
 						enabledPlugins: {
-							"typescript@han": true,
+							"jutsu-typescript@han": true,
 						},
 					},
 					null,
@@ -596,7 +593,7 @@ describe("Plugin install/uninstall", () => {
 			);
 
 			const output = execSync(
-				`${binCommand} plugin install typescript --scope project`,
+				`${binCommand} plugin install jutsu-typescript --scope project`,
 				{
 					cwd: testDir,
 					encoding: "utf8",
@@ -608,7 +605,7 @@ describe("Plugin install/uninstall", () => {
 
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 			const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
-				(k) => k.includes("typescript"),
+				(k) => k.includes("jutsu-typescript"),
 			);
 			expect(pluginKeys.length).toBe(1);
 		},
@@ -646,7 +643,7 @@ describe("Plugin install/uninstall", () => {
 			writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
 			execSync(
-				`${binCommand} plugin install typescript react --scope project`,
+				`${binCommand} plugin install jutsu-typescript jutsu-react --scope project`,
 				{
 					cwd: testDir,
 					encoding: "utf8",
@@ -656,9 +653,8 @@ describe("Plugin install/uninstall", () => {
 
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
-			// Migration converts to short names
-			expect(settings.enabledPlugins?.["typescript@han"]).toBe(true);
-			expect(settings.enabledPlugins?.["react@han"]).toBe(true);
+			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
+			expect(settings.enabledPlugins?.["jutsu-react@han"]).toBe(true);
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
