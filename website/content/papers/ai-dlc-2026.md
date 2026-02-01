@@ -145,7 +145,7 @@ We choose to reimagine a development method rather than keeping existing methods
 
 Proper application of AI leads to rapid cycles measured in hours or even minutes. This demands continuous, real-time validation and feedback mechanisms, rendering many traditional rituals less relevant:
 
-**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When an AI can implement a feature in minutes regardless of apparent complexity, human estimation becomes unreliable.
+**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When sub-hour architectural iterations become routine, human estimation becomes unreliable.
 
 **Would velocity metrics be relevant**, or should we replace them with business value delivered? When the constraint shifts from implementation speed to requirement clarity, traditional productivity metrics miss the point.
 
@@ -474,6 +474,8 @@ In traditional development, "design" and "build" are distinct phases requiring d
 **The skill shifts from execution to refinement.** Instead of manually implementing every pixel or line of code, you review what AI produces and guide it toward your vision. Your years of experience in your discipline make you better at recognizing what's good, what's off, and how to improve it.
 
 This is democratization, not elimination. A designer who could previously only create mockups can now ship working code. A backend engineer who avoided frontend can now build full features. Everyone gains capabilities; no one loses their value. **Your expertise makes you a better director of AI—not a victim of it.**
+
+**The Operator Multiplier.** AI is a force multiplier, not an equalizer. A junior with AI produces more work; an experienced operator with AI produces superior systems. The difference lies in steering: recognizing architectural debt before it accumulates, catching edge cases the tests don't cover, knowing when the AI's suggestion is a local optimum. High-quality output still requires experienced judgment—either directly or through Mob Construction patterns where seasoned builders guide the overall direction.
 
 ### Streamline Responsibilities
 
