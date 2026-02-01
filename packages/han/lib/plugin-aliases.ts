@@ -127,9 +127,12 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 	"jutsu-oop": "patterns/oop",
 	"jutsu-tdd": "patterns/tdd",
 
+	// tools (non-service MCP tools)
+	"hashi-blueprints": "tools/blueprints",
+	"blueprints": "tools/blueprints",
+
 	// services
 	"hashi-agent-sop": "services/agent-sop",
-	"hashi-blueprints": "services/blueprints",
 	"hashi-canva": "services/canva",
 	"hashi-clickup": "services/clickup",
 	"hashi-figma": "services/figma",

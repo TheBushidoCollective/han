@@ -7,9 +7,8 @@ mcp_servers:
     expose: true
     name: blueprints
     description: Project blueprint documentation search and retrieval
-    # Use core's wrapper to ensure han binary is available (works in ephemeral environments)
-    command: "${CLAUDE_PLUGIN_ROOT}/../core/hooks/han-wrapper.sh"
-    args: ["mcp", "blueprints"]
+    command: npx
+    args: ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
 
 hooks:
   # Sync blueprints index to .claude/rules at session start
