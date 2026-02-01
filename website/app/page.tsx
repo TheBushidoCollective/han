@@ -234,7 +234,9 @@ export default function Home() {
 										1. Add the Han marketplace:
 									</p>
 									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-										<code>/plugin marketplace add thebushidocollective/han</code>
+										<code>
+											/plugin marketplace add thebushidocollective/han
+										</code>
 									</pre>
 								</div>
 

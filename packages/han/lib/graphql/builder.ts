@@ -11,12 +11,35 @@
 
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
+import type { DataSource, DataSourceMode } from "../data/index.ts";
+import type { PermissionService } from "../permissions/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
 import {
 	decodeGlobalId,
 	encodeGlobalId,
 	resolveNode,
 } from "./node-registry.ts";
+
+/**
+ * User role for access control
+ */
+export type UserRole = "ic" | "manager" | "admin";
+
+/**
+ * User information extracted from request headers or auth
+ */
+export interface UserContext {
+	/** User ID */
+	id: string;
+	/** User display name */
+	displayName?: string;
+	/** User role */
+	role: UserRole;
+	/** Organization ID the user belongs to */
+	orgId?: string;
+	/** Project IDs the user has access to */
+	projectIds?: string[];
+}
 
 /**
  * Context type for GraphQL resolvers
@@ -29,6 +52,14 @@ export interface GraphQLContext {
 	request?: Request;
 	/** DataLoaders for batching database access */
 	loaders: GraphQLLoaders;
+	/** User information for access control */
+	user?: UserContext;
+	/** Data source for database access (local SQLite or hosted PostgreSQL) */
+	dataSource: DataSource;
+	/** Current mode (local or hosted) */
+	mode: DataSourceMode;
+	/** Permission service for access control (only in hosted mode) */
+	permissions?: PermissionService;
 }
 
 /**

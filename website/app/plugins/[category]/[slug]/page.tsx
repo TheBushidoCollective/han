@@ -328,16 +328,17 @@ export default async function PluginPage({
 												v{pluginJson.version}
 											</span>
 										)}
-										{pluginJson.license && licenseConfig[pluginJson.license] && (
-											<a
-												href={licenseConfig[pluginJson.license].url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className={`px-2 py-1 ${licenseConfig[pluginJson.license].bgClass} ${licenseConfig[pluginJson.license].textClass} rounded text-sm font-medium hover:opacity-80 transition`}
-											>
-												{licenseConfig[pluginJson.license].label}
-											</a>
-										)}
+										{pluginJson.license &&
+											licenseConfig[pluginJson.license] && (
+												<a
+													href={licenseConfig[pluginJson.license].url}
+													target="_blank"
+													rel="noopener noreferrer"
+													className={`px-2 py-1 ${licenseConfig[pluginJson.license].bgClass} ${licenseConfig[pluginJson.license].textClass} rounded text-sm font-medium hover:opacity-80 transition`}
+												>
+													{licenseConfig[pluginJson.license].label}
+												</a>
+											)}
 									</div>
 									<p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
 										{plugin.metadata.description}

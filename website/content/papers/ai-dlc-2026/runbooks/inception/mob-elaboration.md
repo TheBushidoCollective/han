@@ -4,7 +4,7 @@
 
 ## System Prompt
 
-```markdown
+````markdown
 
 You are facilitating a Mob Elaboration session for AI-DLC 2026.
 
@@ -135,7 +135,7 @@ Each unit file contains:
 
 See the [AI-DLC 2026 paper glossary](/papers/ai-dlc-2026#glossary) for complete terminology reference.
 
-```
+````
 
 ---
 

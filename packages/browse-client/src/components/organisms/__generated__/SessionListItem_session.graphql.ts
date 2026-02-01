@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8737ad062ab50a12da6f72b841e5db61>>
+ * @generated SignedSource<<c220856f489482ad65b8fcd552f84ac7>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -34,6 +34,12 @@ export type SessionListItem_session$data = {
   readonly id: string;
   readonly messageCount: number | null | undefined;
   readonly name: string | null | undefined;
+  readonly owner: {
+    readonly avatarUrl: string | null | undefined;
+    readonly email: string | null | undefined;
+    readonly id: string | null | undefined;
+    readonly name: string | null | undefined;
+  } | null | undefined;
   readonly projectId: string | null | undefined;
   readonly projectName: string | null | undefined;
   readonly projectSlug: string | null | undefined;
@@ -67,6 +73,13 @@ v1 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "name",
+  "storageKey": null
+},
+v2 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "status",
   "storageKey": null
 };
@@ -84,13 +97,7 @@ return {
       "name": "sessionId",
       "storageKey": null
     },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "name",
-      "storageKey": null
-    },
+    (v1/*: any*/),
     {
       "alias": null,
       "args": null,
@@ -150,6 +157,33 @@ return {
     {
       "alias": null,
       "args": null,
+      "concreteType": "User",
+      "kind": "LinkedField",
+      "name": "owner",
+      "plural": false,
+      "selections": [
+        (v0/*: any*/),
+        (v1/*: any*/),
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "email",
+          "storageKey": null
+        },
+        {
+          "alias": null,
+          "args": null,
+          "kind": "ScalarField",
+          "name": "avatarUrl",
+          "storageKey": null
+        }
+      ],
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
       "concreteType": "Todo",
       "kind": "LinkedField",
       "name": "currentTodo",
@@ -169,7 +203,7 @@ return {
           "name": "activeForm",
           "storageKey": null
         },
-        (v1/*: any*/)
+        (v2/*: any*/)
       ],
       "storageKey": null
     },
@@ -226,7 +260,7 @@ return {
                   "name": "type",
                   "storageKey": null
                 },
-                (v1/*: any*/)
+                (v2/*: any*/)
               ],
               "storageKey": null
             }
@@ -281,6 +315,6 @@ return {
 };
 })();
 
-(node as any).hash = "40ebbd7ccf815f1d12a348b5c421ae56";
+(node as any).hash = "bf2cd6f346e5bc435eb7467f8d49273c";
 
 export default node;

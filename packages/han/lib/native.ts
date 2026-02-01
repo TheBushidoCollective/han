@@ -251,37 +251,47 @@ export function tryGetNativeModule(): NativeModule | null {
 
 /**
  * Get the git remote URL for a directory
+ * Returns null if native module is not available
  */
 export function getGitRemoteUrl(dir: string): string | null {
-	return getNativeModule().getGitRemoteUrl(dir);
+	const module = tryGetNativeModule();
+	return module?.getGitRemoteUrl(dir) ?? null;
 }
 
 /**
  * Get the current git branch for a directory
+ * Returns null if native module is not available
  */
 export function getGitBranch(dir: string): string | null {
-	return getNativeModule().getGitBranch(dir);
+	const module = tryGetNativeModule();
+	return module?.getGitBranch(dir) ?? null;
 }
 
 /**
  * Get the git root directory
+ * Returns null if native module is not available
  */
 export function getGitRoot(dir: string): string | null {
-	return getNativeModule().getGitRoot(dir);
+	const module = tryGetNativeModule();
+	return module?.getGitRoot(dir) ?? null;
 }
 
 /**
  * Get the git common directory (for worktrees)
+ * Returns null if native module is not available
  */
 export function getGitCommonDir(dir: string): string | null {
-	return getNativeModule().getGitCommonDir(dir);
+	const module = tryGetNativeModule();
+	return module?.getGitCommonDir(dir) ?? null;
 }
 
 /**
  * List files tracked by git in a directory
+ * Returns empty array if native module is not available
  */
 export function gitLsFiles(dir: string): string[] {
-	return getNativeModule().gitLsFiles(dir);
+	const module = tryGetNativeModule();
+	return module?.gitLsFiles(dir) ?? [];
 }
 
 /**
@@ -291,6 +301,35 @@ export function gitWorktreeList(
 	dir: string,
 ): ReturnType<NativeModule["gitWorktreeList"]> {
 	return getNativeModule().gitWorktreeList(dir);
+}
+
+/**
+ * Create a new git branch
+ */
+export function gitCreateBranch(repoPath: string, branchName: string): void {
+	return getNativeModule().gitCreateBranch(repoPath, branchName);
+}
+
+/**
+ * Add a git worktree
+ */
+export function gitWorktreeAdd(
+	repoPath: string,
+	path: string,
+	branch: string,
+): void {
+	return getNativeModule().gitWorktreeAdd(repoPath, path, branch);
+}
+
+/**
+ * Remove a git worktree
+ */
+export function gitWorktreeRemove(
+	repoPath: string,
+	path: string,
+	force?: boolean,
+): void {
+	return getNativeModule().gitWorktreeRemove(repoPath, path, force ?? false);
 }
 
 /**

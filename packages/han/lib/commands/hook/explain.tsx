@@ -12,11 +12,11 @@ import {
 } from "../../config/claude-settings.ts";
 import {
 	getHookEvents,
-	HookExplainUI,
 	type HookSource,
 	loadPluginConfig,
 	type PluginHookDefinition,
 } from "../../hooks/index.ts";
+import { HookExplainUI } from "../../hook-explain-ui.tsx";
 
 /**
  * Claude Code plugin hooks.json format

@@ -48,6 +48,8 @@ export type {
 	Message,
 	MessageBatch,
 	MessageInput,
+	// Native tasks (Claude Code's TaskCreate/TaskUpdate)
+	NativeTask,
 	// Pending hook operations
 	PendingHookInput,
 	Project,
