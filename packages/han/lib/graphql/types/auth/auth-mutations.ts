@@ -303,7 +303,7 @@ builder.mutationFields((t) => ({
 		resolve: (_parent, args, context) => {
 			// Get current user from context (would need to be implemented with actual auth)
 			// For now, we'll need the user ID to be passed or extracted from context
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			if (!authContext?.user) {
 				throw new Error("Authentication required");
 			}
@@ -319,7 +319,7 @@ builder.mutationFields((t) => ({
 		type: "Boolean",
 		description: "Revoke all sessions for the current user",
 		resolve: (_parent, _args, context) => {
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			if (!authContext?.user) {
 				throw new Error("Authentication required");
 			}
@@ -347,7 +347,7 @@ builder.mutationFields((t) => ({
 				return { success: false, connection: null, error: "Authentication is not configured" };
 			}
 
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			if (!authContext?.user) {
 				return { success: false, connection: null, error: "Authentication required" };
 			}
@@ -388,7 +388,7 @@ builder.mutationFields((t) => ({
 		},
 		description: "Remove an OAuth provider connection from the current user's account",
 		resolve: (_parent, _args, context) => {
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			if (!authContext?.user) {
 				throw new Error("Authentication required");
 			}

@@ -20,7 +20,7 @@ builder.queryFields((t) => ({
 		nullable: true,
 		description: "The currently authenticated user, or null if not authenticated",
 		resolve: (_parent, _args, context) => {
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			return authContext?.user || null;
 		},
 	}),
@@ -33,7 +33,7 @@ builder.queryFields((t) => ({
 		nullable: true,
 		description: "The current authentication session, or null if not authenticated",
 		resolve: (_parent, _args, context) => {
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			return authContext?.session || null;
 		},
 	}),
@@ -45,7 +45,7 @@ builder.queryFields((t) => ({
 		type: [AuthSessionRef],
 		description: "All active sessions for the current user",
 		resolve: async (_parent, _args, context) => {
-			const authContext = (context as any).auth;
+			const authContext = context.auth;
 			if (!authContext?.user) {
 				return [];
 			}

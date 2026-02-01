@@ -11,6 +11,7 @@
 
 import SchemaBuilder from "@pothos/core";
 import RelayPlugin from "@pothos/plugin-relay";
+import type { AuthContext } from "../auth/types.ts";
 import type { DataSource, DataSourceMode } from "../data/index.ts";
 import type { PermissionService } from "../permissions/index.ts";
 import type { GraphQLLoaders } from "./loaders.ts";
@@ -54,6 +55,8 @@ export interface GraphQLContext {
 	loaders: GraphQLLoaders;
 	/** User information for access control */
 	user?: UserContext;
+	/** Authentication context (user and session from JWT) */
+	auth?: AuthContext;
 	/** Data source for database access (local SQLite or hosted PostgreSQL) */
 	dataSource: DataSource;
 	/** Current mode (local or hosted) */
