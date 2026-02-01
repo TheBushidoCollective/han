@@ -58,7 +58,7 @@ The evolution of software engineering has been a continuous quest to enable deve
 
 The integration of Large Language Models marked a revolutionary shift, introducing conversational natural language interactions for tasks like code generation, bug detection, and test creation. This was the **AI-Assisted era**—AI enhancing fine-grained, specific tasks while humans retained full control of workflow and decisions.
 
-We have now entered the **AI-Autonomous era**. Models capable of multi-hour sustained reasoning, combined with tools for autonomous development loops, enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
+We have now entered the **AI-Autonomous era**. The emergence of state-persistent orchestration and task-handoff techniques allows AI to maintain context and intent across multi-hour, multi-session workflows. Combined with tools for autonomous development loops, these techniques enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
 
 ### The Problem with Traditional Methods
 
@@ -125,6 +125,14 @@ AI-DLC's value compounds over time:
 
 Ad-hoc approaches don't compound—each session starts fresh, each prompt is one-off, no organizational learning occurs. The team with AI-DLC gets better at working with AI; the team with ad-hoc AI starts over every time.
 
+**Beyond Code: The Requirements Silo**
+
+The same ad-hoc pattern exists upstream. Teams use AI to polish requirements documents—reformatting PRDs, summarizing meetings, making user stories "readable." This treats AI as a formatting tool rather than a thinking partner.
+
+The opportunity is different: AI should **steer** the requirements conversation, asking probing questions to extract context humans didn't know they possessed. "What happens if the user cancels mid-checkout?" "How should this behave for EU users under GDPR?" These questions surface assumptions that would otherwise remain implicit until implementation—when they become expensive to address.
+
+AI-DLC addresses this through Mob Elaboration: AI interrogates stakeholders until requirements are complete enough to express as verifiable completion criteria.
+
 ---
 
 ## Core Principles
@@ -137,7 +145,7 @@ We choose to reimagine a development method rather than keeping existing methods
 
 Proper application of AI leads to rapid cycles measured in hours or even minutes. This demands continuous, real-time validation and feedback mechanisms, rendering many traditional rituals less relevant:
 
-**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When an AI can implement a feature in minutes regardless of apparent complexity, human estimation becomes unreliable.
+**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When sub-hour architectural iterations become routine, human estimation becomes unreliable.
 
 **Would velocity metrics be relevant**, or should we replace them with business value delivered? When the constraint shifts from implementation speed to requirement clarity, traditional productivity metrics miss the point.
 
@@ -261,6 +269,8 @@ Let AI determine *how* to satisfy these constraints. This approach offers multip
 - **Reduces prompt complexity** — Success criteria are simpler to specify than step-by-step instructions
 - **Makes success measurable** — Programmatic verification enables autonomous operation
 - **Enables iteration** — Each failure provides signal; each attempt refines the approach
+
+Prescriptive workflows create an intelligence ceiling—like consulting a board of advisors but only permitting yes-or-no answers. Frontier models encode patterns from millions of engineering decisions. Backpressure unlocks this: define the outcome, and AI can propose architectural alternatives, surface constraint conflicts, and apply its training to find paths you hadn't considered.
 
 The philosophy can be summarized as: **"Better to fail predictably than succeed unpredictably."** Each failure is data. Each iteration refines the approach. The skill shifts from directing AI step-by-step to writing criteria and tests that converge toward correct solutions.
 
@@ -465,6 +475,8 @@ In traditional development, "design" and "build" are distinct phases requiring d
 
 This is democratization, not elimination. A designer who could previously only create mockups can now ship working code. A backend engineer who avoided frontend can now build full features. Everyone gains capabilities; no one loses their value. **Your expertise makes you a better director of AI—not a victim of it.**
 
+**The Operator Multiplier.** AI is a force multiplier, not an equalizer. A junior with AI produces more work; an experienced operator with AI produces superior systems. The difference lies in steering: recognizing architectural debt before it accumulates, catching edge cases the tests don't cover, knowing when the AI's suggestion is a local optimum. High-quality output still requires experienced judgment—either directly or through Mob Construction patterns where seasoned builders guide the overall direction.
+
 ### Streamline Responsibilities
 
 AI's ability to perform task decomposition, code generation, testing, documentation, and deployment reduces the need for specialized roles. A single developer supervising AI can accomplish what previously required separate specialists for frontend, backend, infrastructure, testing, and documentation.
@@ -481,9 +493,13 @@ The role shifts from "doing the work" to **"defining what work matters and verif
 
 However, humans remain integral. Product owners ensure alignment with business objectives. Developers maintain design quality and handle judgment calls. These roles ensure that automation and human accountability remain balanced.
 
-### Platform Agnostic
+### Tool and Platform Agnostic
 
-AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodology applies regardless of infrastructure choices:
+AI-DLC 2026 is intentionally agnostic to both tooling and infrastructure. The methodology applies regardless of which IDE, AI agent, or cloud provider you choose.
+
+**Technique over tools.** The core of AI-DLC isn't a specific product—it's the logic of how state persists across sessions, how backpressure guides iteration, and how human steering integrates with autonomous execution. These patterns work whether you're using Claude Code, Cursor, Kiro, OpenCode, or a custom agent framework. The principles transfer; the implementation details vary.
+
+**Infrastructure independence.** The methodology applies regardless of deployment choices:
 
 - **Container orchestration:** Kubernetes, ECS, Docker Swarm, Nomad
 - **Serverless:** Lambda, Cloud Functions, Azure Functions, Cloudflare Workers
@@ -491,7 +507,7 @@ AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodolo
 - **Edge:** IoT devices, edge computing platforms
 - **Hybrid:** Any combination of the above
 
-The methodology should be independent of vendor choices. Choose infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
+Choose tools and infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
 
 ---
 
