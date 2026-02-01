@@ -52,8 +52,8 @@ WORKFLOW_HATS=$(echo "$ITERATION_JSON" | han parse json workflow 2>/dev/null || 
 WORKFLOW_HATS_STR=$(echo "$WORKFLOW_HATS" | tr -d '[]"' | sed 's/,/ → /g')
 [ -z "$WORKFLOW_HATS_STR" ] && WORKFLOW_HATS_STR="elaborator → planner → builder → reviewer"
 
-# Helper function to load intent-level state
-load_intent_state() {
+# Get intent-slug from han keep (pointer only, not content)
+load_keep_value() {
   local key="$1"
   if [ -n "$INTENT_BRANCH" ]; then
     han keep load --branch "$INTENT_BRANCH" "$key" --quiet 2>/dev/null || echo ""
@@ -62,12 +62,23 @@ load_intent_state() {
   fi
 }
 
-# Load intent first - only inject context if there's an active unit
-INTENT=$(load_intent_state intent.md)
-if [ -z "$INTENT" ]; then
-  # No active intent/unit - nothing to inject
+INTENT_SLUG=$(load_keep_value intent-slug)
+if [ -z "$INTENT_SLUG" ]; then
+  # No active intent - nothing to inject
   exit 0
 fi
+
+# Read content from filesystem (source of truth)
+INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+INTENT_FILE="${INTENT_DIR}/intent.md"
+
+if [ ! -f "$INTENT_FILE" ]; then
+  # Intent file doesn't exist on disk - nothing to inject
+  exit 0
+fi
+
+# Read intent from filesystem
+INTENT=$(cat "$INTENT_FILE")
 
 echo "## AI-DLC Subagent Context"
 echo ""
@@ -80,17 +91,18 @@ echo ""
 echo "$INTENT"
 echo ""
 
-# Load completion criteria (intent-level state from intent branch)
-CRITERIA=$(load_intent_state completion-criteria.md)
-if [ -n "$CRITERIA" ]; then
+# Read completion criteria from filesystem (extracted from intent.md Success Criteria section)
+# Or from a separate file if it exists
+if [ -f "${INTENT_DIR}/completion-criteria.md" ]; then
+  CRITERIA=$(cat "${INTENT_DIR}/completion-criteria.md")
   echo "### Completion Criteria"
   echo ""
   echo "$CRITERIA"
   echo ""
 fi
 
-# Load current plan (intent-level state from intent branch)
-PLAN=$(load_intent_state current-plan.md)
+# Current plan is ephemeral state - keep in han keep
+PLAN=$(load_keep_value current-plan.md)
 if [ -n "$PLAN" ]; then
   echo "### Current Plan"
   echo ""
@@ -98,81 +110,75 @@ if [ -n "$PLAN" ]; then
   echo ""
 fi
 
-# Load Unit/Bolt context (intent slug is intent-level state from intent branch)
-INTENT_SLUG=$(load_intent_state intent-slug)
-if [ -n "$INTENT_SLUG" ]; then
-  INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
-
-  # Display testing requirements if configured
-  if [ -f "$INTENT_DIR/intent.yaml" ]; then
-    TESTING_JSON=$(han parse yaml testing --json < "$INTENT_DIR/intent.yaml" 2>/dev/null || echo "")
-    if [ -n "$TESTING_JSON" ] && [ "$TESTING_JSON" != "null" ] && [ "$TESTING_JSON" != "{}" ]; then
-      echo "### Testing Requirements"
-      echo ""
-
-      # Parse individual fields
-      UNIT_TESTS=$(echo "$TESTING_JSON" | han parse json unit_tests -r --default "" 2>/dev/null || echo "")
-      INTEGRATION_TESTS=$(echo "$TESTING_JSON" | han parse json integration_tests -r --default "" 2>/dev/null || echo "")
-      COVERAGE=$(echo "$TESTING_JSON" | han parse json coverage_threshold -r --default "" 2>/dev/null || echo "")
-      E2E_TESTS=$(echo "$TESTING_JSON" | han parse json e2e_tests -r --default "" 2>/dev/null || echo "")
-
-      echo "| Requirement | Status |"
-      echo "|-------------|--------|"
-      [ "$UNIT_TESTS" = "true" ] && echo "| Unit Tests | Required |"
-      [ "$UNIT_TESTS" = "false" ] && echo "| Unit Tests | Optional |"
-      [ "$INTEGRATION_TESTS" = "true" ] && echo "| Integration Tests | Required |"
-      [ "$INTEGRATION_TESTS" = "false" ] && echo "| Integration Tests | Optional |"
-      if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "null" ]; then
-        echo "| Coverage Threshold | ${COVERAGE}% |"
-      else
-        echo "| Coverage Threshold | None |"
-      fi
-      [ "$E2E_TESTS" = "true" ] && echo "| E2E Tests | Required |"
-      [ "$E2E_TESTS" = "false" ] && echo "| E2E Tests | Optional |"
-      echo ""
-    fi
-  fi
-
-  # Source DAG library if available
-  DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
-  if [ -f "$DAG_LIB" ]; then
-    # shellcheck source=/dev/null
-    source "$DAG_LIB"
-  fi
-
-  if [ -d "$INTENT_DIR" ] && ls "$INTENT_DIR"/unit-*.md 1>/dev/null 2>&1; then
-    echo "### Unit Status"
+# Display testing requirements if configured
+if [ -f "$INTENT_DIR/intent.yaml" ]; then
+  TESTING_JSON=$(han parse yaml testing --json < "$INTENT_DIR/intent.yaml" 2>/dev/null || echo "")
+  if [ -n "$TESTING_JSON" ] && [ "$TESTING_JSON" != "null" ] && [ "$TESTING_JSON" != "{}" ]; then
+    echo "### Testing Requirements"
     echo ""
 
-    # Use DAG functions if available
-    if type get_dag_status_table &>/dev/null; then
-      get_dag_status_table "$INTENT_DIR"
-      echo ""
+    # Parse individual fields
+    UNIT_TESTS=$(echo "$TESTING_JSON" | han parse json unit_tests -r --default "" 2>/dev/null || echo "")
+    INTEGRATION_TESTS=$(echo "$TESTING_JSON" | han parse json integration_tests -r --default "" 2>/dev/null || echo "")
+    COVERAGE=$(echo "$TESTING_JSON" | han parse json coverage_threshold -r --default "" 2>/dev/null || echo "")
+    E2E_TESTS=$(echo "$TESTING_JSON" | han parse json e2e_tests -r --default "" 2>/dev/null || echo "")
 
-      # Show ready and in-progress units
-      if type find_ready_units &>/dev/null; then
-        READY_UNITS=$(find_ready_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
-        [ -n "$READY_UNITS" ] && echo "**Ready:** $READY_UNITS"
-      fi
-
-      if type find_in_progress_units &>/dev/null; then
-        IN_PROGRESS=$(find_in_progress_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
-        [ -n "$IN_PROGRESS" ] && echo "**In Progress:** $IN_PROGRESS"
-      fi
-      echo ""
+    echo "| Requirement | Status |"
+    echo "|-------------|--------|"
+    [ "$UNIT_TESTS" = "true" ] && echo "| Unit Tests | Required |"
+    [ "$UNIT_TESTS" = "false" ] && echo "| Unit Tests | Optional |"
+    [ "$INTEGRATION_TESTS" = "true" ] && echo "| Integration Tests | Required |"
+    [ "$INTEGRATION_TESTS" = "false" ] && echo "| Integration Tests | Optional |"
+    if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "null" ]; then
+      echo "| Coverage Threshold | ${COVERAGE}% |"
     else
-      # Fallback: simple unit list with discipline
-      echo "| Unit | Status | Discipline |"
-      echo "|------|--------|------------|"
-      for unit_file in "$INTENT_DIR"/unit-*.md; do
-        [ -f "$unit_file" ] || continue
-        NAME=$(basename "$unit_file" .md)
-        UNIT_STATUS=$(han parse yaml status -r --default pending < "$unit_file" 2>/dev/null || echo "pending")
-        DISCIPLINE=$(han parse yaml discipline -r --default "-" < "$unit_file" 2>/dev/null || echo "-")
-        echo "| $NAME | $UNIT_STATUS | $DISCIPLINE |"
-      done
-      echo ""
+      echo "| Coverage Threshold | None |"
     fi
+    [ "$E2E_TESTS" = "true" ] && echo "| E2E Tests | Required |"
+    [ "$E2E_TESTS" = "false" ] && echo "| E2E Tests | Optional |"
+    echo ""
+  fi
+fi
+
+# Source DAG library if available
+DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+if [ -f "$DAG_LIB" ]; then
+  # shellcheck source=/dev/null
+  source "$DAG_LIB"
+fi
+
+if [ -d "$INTENT_DIR" ] && ls "$INTENT_DIR"/unit-*.md 1>/dev/null 2>&1; then
+  echo "### Unit Status"
+  echo ""
+
+  # Use DAG functions if available
+  if type get_dag_status_table &>/dev/null; then
+    get_dag_status_table "$INTENT_DIR"
+    echo ""
+
+    # Show ready and in-progress units
+    if type find_ready_units &>/dev/null; then
+      READY_UNITS=$(find_ready_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
+      [ -n "$READY_UNITS" ] && echo "**Ready:** $READY_UNITS"
+    fi
+
+    if type find_in_progress_units &>/dev/null; then
+      IN_PROGRESS=$(find_in_progress_units "$INTENT_DIR" | tr '\n' ' ' | sed 's/ $//')
+      [ -n "$IN_PROGRESS" ] && echo "**In Progress:** $IN_PROGRESS"
+    fi
+    echo ""
+  else
+    # Fallback: simple unit list with discipline
+    echo "| Unit | Status | Discipline |"
+    echo "|------|--------|------------|"
+    for unit_file in "$INTENT_DIR"/unit-*.md; do
+      [ -f "$unit_file" ] || continue
+      NAME=$(basename "$unit_file" .md)
+      UNIT_STATUS=$(han parse yaml status -r --default pending < "$unit_file" 2>/dev/null || echo "pending")
+      DISCIPLINE=$(han parse yaml discipline -r --default "-" < "$unit_file" 2>/dev/null || echo "-")
+      echo "| $NAME | $UNIT_STATUS | $DISCIPLINE |"
+    done
+    echo ""
   fi
 fi
 
