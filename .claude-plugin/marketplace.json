@@ -556,9 +556,7 @@
         "wcag",
         "inclusive-design",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "accessibility"
+      ]
     },
     {
       "name": "do-api",
@@ -570,9 +568,7 @@
         "rest",
         "graphql",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "api"
+      ]
     },
     {
       "name": "do-architecture",
@@ -583,9 +579,7 @@
         "architecture",
         "design",
         "patterns"
-      ],
-      "deprecated": true,
-      "alias_for": "architecture"
+      ]
     },
     {
       "name": "do-backend",
@@ -599,9 +593,7 @@
         "data",
         "server",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "backend"
+      ]
     },
     {
       "name": "do-blockchain",
@@ -613,9 +605,7 @@
         "web3",
         "smart-contracts",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "blockchain"
+      ]
     },
     {
       "name": "do-compilers",
@@ -627,9 +617,7 @@
         "language-design",
         "parsing",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "compilers"
+      ]
     },
     {
       "name": "do-content",
@@ -643,9 +631,7 @@
         "storytelling",
         "engagement",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "content"
+      ]
     },
     {
       "name": "do-data-engineering",
@@ -657,9 +643,7 @@
         "etl",
         "streaming",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "data-engineering"
+      ]
     },
     {
       "name": "do-databases",
@@ -671,9 +655,7 @@
         "sql",
         "query-optimization",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "databases"
+      ]
     },
     {
       "name": "do-documentation",
@@ -685,9 +667,7 @@
         "technical-writing",
         "knowledge",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "documentation"
+      ]
     },
     {
       "name": "do-embedded",
@@ -699,9 +679,7 @@
         "firmware",
         "iot",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "embedded"
+      ]
     },
     {
       "name": "do-frontend",
@@ -715,9 +693,7 @@
         "design",
         "presentation",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "frontend"
+      ]
     },
     {
       "name": "do-games",
@@ -729,9 +705,7 @@
         "game-engine",
         "gameplay",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "games"
+      ]
     },
     {
       "name": "do-graphics",
@@ -743,9 +717,7 @@
         "gpu",
         "shaders",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "graphics"
+      ]
     },
     {
       "name": "do-infrastructure",
@@ -757,9 +729,7 @@
         "sre",
         "deployment",
         "operations"
-      ],
-      "deprecated": true,
-      "alias_for": "infrastructure"
+      ]
     },
     {
       "name": "do-machine-learning",
@@ -771,9 +741,7 @@
         "mlops",
         "inference",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "machine-learning"
+      ]
     },
     {
       "name": "do-mobile",
@@ -786,9 +754,7 @@
         "android",
         "development",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "mobile"
+      ]
     },
     {
       "name": "do-networking",
@@ -800,9 +766,7 @@
         "protocols",
         "distributed-systems",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "networking"
+      ]
     },
     {
       "name": "do-observability",
@@ -814,9 +778,7 @@
         "monitoring",
         "tracing",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "observability"
+      ]
     },
     {
       "name": "do-performance",
@@ -828,9 +790,7 @@
         "optimization",
         "scalability",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "performance"
+      ]
     },
     {
       "name": "do-platform",
@@ -842,9 +802,7 @@
         "infrastructure",
         "devex",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "platform"
+      ]
     },
     {
       "name": "do-plugin-development",
@@ -857,9 +815,7 @@
         "claude-code",
         "quality",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "plugin-development"
+      ]
     },
     {
       "name": "do-product",
@@ -872,9 +828,7 @@
         "vision",
         "planning",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "product"
+      ]
     },
     {
       "name": "do-project-management",
@@ -885,9 +839,7 @@
         "project-management",
         "coordination",
         "workflow"
-      ],
-      "deprecated": true,
-      "alias_for": "project-management"
+      ]
     },
     {
       "name": "do-prompts",
@@ -899,9 +851,7 @@
         "ai",
         "llm",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "prompts"
+      ]
     },
     {
       "name": "do-quality",
@@ -914,9 +864,7 @@
         "qa",
         "reliability",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "quality"
+      ]
     },
     {
       "name": "do-security",
@@ -929,9 +877,7 @@
         "vulnerability",
         "threat",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "security"
+      ]
     },
     {
       "name": "do-sre",
@@ -945,9 +891,7 @@
         "incidents",
         "devops",
         "agent"
-      ],
-      "deprecated": true,
-      "alias_for": "sre"
+      ]
     },
     {
       "name": "do-voip",
@@ -960,9 +904,7 @@
         "sip",
         "rtp",
         "engineering"
-      ],
-      "deprecated": true,
-      "alias_for": "voip"
+      ]
     },
     {
       "name": "docker-compose",
@@ -1340,9 +1282,7 @@
         "agent-workflows",
         "templates",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "agent-sop"
+      ]
     },
     {
       "name": "hashi-blueprints",
@@ -1355,9 +1295,7 @@
         "technical-docs",
         "implementation-docs",
         "architecture"
-      ],
-      "deprecated": true,
-      "alias_for": "blueprints"
+      ]
     },
     {
       "name": "hashi-canva",
@@ -1373,9 +1311,7 @@
         "pdf",
         "export",
         "mcp"
-      ],
-      "deprecated": true,
-      "alias_for": "canva"
+      ]
     },
     {
       "name": "hashi-clickup",
@@ -1390,9 +1326,7 @@
         "acceptance-criteria",
         "validation",
         "productivity"
-      ],
-      "deprecated": true,
-      "alias_for": "clickup"
+      ]
     },
     {
       "name": "hashi-figma",
@@ -1408,9 +1342,7 @@
         "code-generation",
         "ui",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "figma"
+      ]
     },
     {
       "name": "hashi-github",
@@ -1427,9 +1359,7 @@
         "actions",
         "code-search",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "github"
+      ]
     },
     {
       "name": "hashi-gitlab",
@@ -1445,9 +1375,7 @@
         "ci-cd",
         "devops",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "gitlab"
+      ]
     },
     {
       "name": "hashi-jira",
@@ -1462,9 +1390,7 @@
         "tickets",
         "acceptance-criteria",
         "validation"
-      ],
-      "deprecated": true,
-      "alias_for": "jira"
+      ]
     },
     {
       "name": "hashi-linear",
@@ -1479,9 +1405,7 @@
         "acceptance-criteria",
         "validation",
         "workflow"
-      ],
-      "deprecated": true,
-      "alias_for": "linear"
+      ]
     },
     {
       "name": "hashi-notion",
@@ -1498,9 +1422,7 @@
         "documentation",
         "productivity",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "notion"
+      ]
     },
     {
       "name": "hashi-playwright-mcp",
@@ -1513,9 +1435,7 @@
         "testing",
         "automation",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "playwright-mcp"
+      ]
     },
     {
       "name": "hashi-reddit",
@@ -1531,9 +1451,7 @@
         "comments",
         "subreddits",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "reddit"
+      ]
     },
     {
       "name": "hashi-sentry-mcp",
@@ -1550,9 +1468,7 @@
         "incidents",
         "seer-ai",
         "server"
-      ],
-      "deprecated": true,
-      "alias_for": "sentry-mcp"
+      ]
     },
     {
       "name": "helm",
@@ -1670,9 +1586,7 @@
         "elixir",
         "api",
         "subscriptions"
-      ],
-      "deprecated": true,
-      "alias_for": "absinthe-graphql"
+      ]
     },
     {
       "name": "jutsu-act",
@@ -1687,9 +1601,7 @@
         "validation",
         "local-testing",
         "docker"
-      ],
-      "deprecated": true,
-      "alias_for": "act"
+      ]
     },
     {
       "name": "jutsu-ai-dlc",
@@ -1704,9 +1616,7 @@
         "completion-criteria",
         "hat-switching",
         "human-ai-collaboration"
-      ],
-      "deprecated": true,
-      "alias_for": "ai-dlc"
+      ]
     },
     {
       "name": "jutsu-ameba",
@@ -1718,9 +1628,7 @@
         "linting",
         "style",
         "analysis"
-      ],
-      "deprecated": true,
-      "alias_for": "ameba"
+      ]
     },
     {
       "name": "jutsu-android",
@@ -1734,9 +1642,7 @@
         "java",
         "build",
         "validation"
-      ],
-      "deprecated": true,
-      "alias_for": "android"
+      ]
     },
     {
       "name": "jutsu-angular",
@@ -1748,9 +1654,7 @@
         "rxjs",
         "signals",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "angular"
+      ]
     },
     {
       "name": "jutsu-ansible",
@@ -1762,9 +1666,7 @@
         "configuration-management",
         "devops",
         "automation"
-      ],
-      "deprecated": true,
-      "alias_for": "ansible"
+      ]
     },
     {
       "name": "jutsu-apollo-graphql",
@@ -1777,9 +1679,7 @@
         "client",
         "server",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "apollo-graphql"
+      ]
     },
     {
       "name": "jutsu-atomic-design",
@@ -1799,9 +1699,7 @@
         "react",
         "vue",
         "angular"
-      ],
-      "deprecated": true,
-      "alias_for": "atomic-design"
+      ]
     },
     {
       "name": "jutsu-bdd",
@@ -1814,9 +1712,7 @@
         "testing",
         "collaboration",
         "agile"
-      ],
-      "deprecated": true,
-      "alias_for": "bdd"
+      ]
     },
     {
       "name": "jutsu-biome",
@@ -1830,9 +1726,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "biome"
+      ]
     },
     {
       "name": "jutsu-bun",
@@ -1846,9 +1740,7 @@
         "runtime",
         "testing",
         "bundler"
-      ],
-      "deprecated": true,
-      "alias_for": "bun"
+      ]
     },
     {
       "name": "jutsu-c",
@@ -1860,9 +1752,7 @@
         "systems-programming",
         "memory-management",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "c"
+      ]
     },
     {
       "name": "jutsu-checkstyle",
@@ -1874,9 +1764,7 @@
         "linting",
         "java",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "checkstyle"
+      ]
     },
     {
       "name": "jutsu-claude-agent-sdk",
@@ -1891,9 +1779,7 @@
         "quality",
         "enforcement",
         "ai-agents"
-      ],
-      "deprecated": true,
-      "alias_for": "claude-agent-sdk"
+      ]
     },
     {
       "name": "jutsu-clippy",
@@ -1905,9 +1791,7 @@
         "linting",
         "rust",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "clippy"
+      ]
     },
     {
       "name": "jutsu-cocoapods",
@@ -1924,9 +1808,7 @@
         "objective-c",
         "quality",
         "enforcement"
-      ],
-      "deprecated": true,
-      "alias_for": "cocoapods"
+      ]
     },
     {
       "name": "jutsu-cpp",
@@ -1939,9 +1821,7 @@
         "modern-cpp",
         "templates",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "cpp"
+      ]
     },
     {
       "name": "jutsu-credo",
@@ -1953,9 +1833,7 @@
         "linting",
         "style",
         "analysis"
-      ],
-      "deprecated": true,
-      "alias_for": "credo"
+      ]
     },
     {
       "name": "jutsu-crystal",
@@ -1966,9 +1844,7 @@
         "crystal",
         "language",
         "performance"
-      ],
-      "deprecated": true,
-      "alias_for": "crystal"
+      ]
     },
     {
       "name": "jutsu-csharp",
@@ -1982,9 +1858,7 @@
         "async",
         "linq",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "csharp"
+      ]
     },
     {
       "name": "jutsu-cucumber",
@@ -1997,9 +1871,7 @@
         "gherkin",
         "testing",
         "behavior-driven-development"
-      ],
-      "deprecated": true,
-      "alias_for": "cucumber"
+      ]
     },
     {
       "name": "jutsu-cypress",
@@ -2012,9 +1884,7 @@
         "e2e",
         "javascript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "cypress"
+      ]
     },
     {
       "name": "jutsu-dialyzer",
@@ -2026,9 +1896,7 @@
         "erlang",
         "static-analysis",
         "types"
-      ],
-      "deprecated": true,
-      "alias_for": "dialyzer"
+      ]
     },
     {
       "name": "jutsu-django",
@@ -2040,9 +1908,7 @@
         "python",
         "orm",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "django"
+      ]
     },
     {
       "name": "jutsu-docker-compose",
@@ -2054,9 +1920,7 @@
         "docker-compose",
         "containers",
         "devops"
-      ],
-      "deprecated": true,
-      "alias_for": "docker-compose"
+      ]
     },
     {
       "name": "jutsu-ecto",
@@ -2068,9 +1932,7 @@
         "database",
         "orm",
         "ecto"
-      ],
-      "deprecated": true,
-      "alias_for": "ecto"
+      ]
     },
     {
       "name": "jutsu-effect",
@@ -2083,9 +1945,7 @@
         "functional-programming",
         "type-safety",
         "dependency-injection"
-      ],
-      "deprecated": true,
-      "alias_for": "effect"
+      ]
     },
     {
       "name": "jutsu-elixir",
@@ -2097,9 +1957,7 @@
         "otp",
         "ecto",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "elixir"
+      ]
     },
     {
       "name": "jutsu-erlang",
@@ -2113,9 +1971,7 @@
         "distributed",
         "concurrent",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "erlang"
+      ]
     },
     {
       "name": "jutsu-esbuild",
@@ -2128,9 +1984,7 @@
         "build",
         "javascript",
         "typescript"
-      ],
-      "deprecated": true,
-      "alias_for": "esbuild"
+      ]
     },
     {
       "name": "jutsu-eslint",
@@ -2143,9 +1997,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "eslint"
+      ]
     },
     {
       "name": "jutsu-expo",
@@ -2158,9 +2010,7 @@
         "mobile",
         "ios",
         "android"
-      ],
-      "deprecated": true,
-      "alias_for": "expo"
+      ]
     },
     {
       "name": "jutsu-fastapi",
@@ -2172,9 +2022,7 @@
         "python",
         "async",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "fastapi"
+      ]
     },
     {
       "name": "jutsu-fnox",
@@ -2190,9 +2038,7 @@
         "configuration",
         "quality",
         "enforcement"
-      ],
-      "deprecated": true,
-      "alias_for": "fnox"
+      ]
     },
     {
       "name": "jutsu-functional-programming",
@@ -2204,9 +2050,7 @@
         "fp",
         "immutability",
         "pure-functions"
-      ],
-      "deprecated": true,
-      "alias_for": "functional-programming"
+      ]
     },
     {
       "name": "jutsu-git-storytelling",
@@ -2219,9 +2063,7 @@
         "commit",
         "version-control",
         "workflow"
-      ],
-      "deprecated": true,
-      "alias_for": "git-storytelling"
+      ]
     },
     {
       "name": "jutsu-gitlab-ci",
@@ -2235,9 +2077,7 @@
         "pipelines",
         "devops",
         "validation"
-      ],
-      "deprecated": true,
-      "alias_for": "gitlab-ci"
+      ]
     },
     {
       "name": "jutsu-gleam",
@@ -2250,9 +2090,7 @@
         "functional",
         "erlang",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "gleam"
+      ]
     },
     {
       "name": "jutsu-gluestack",
@@ -2269,9 +2107,7 @@
         "ui-components",
         "accessibility",
         "mcp"
-      ],
-      "deprecated": true,
-      "alias_for": "gluestack"
+      ]
     },
     {
       "name": "jutsu-go",
@@ -2283,9 +2119,7 @@
         "golang",
         "concurrency",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "go"
+      ]
     },
     {
       "name": "jutsu-graphql",
@@ -2296,9 +2130,7 @@
         "graphql",
         "api",
         "queries"
-      ],
-      "deprecated": true,
-      "alias_for": "graphql"
+      ]
     },
     {
       "name": "jutsu-graphql-inspector",
@@ -2313,9 +2145,7 @@
         "breaking-changes",
         "diff",
         "operations"
-      ],
-      "deprecated": true,
-      "alias_for": "graphql-inspector"
+      ]
     },
     {
       "name": "jutsu-han-plugins",
@@ -2327,9 +2157,7 @@
         "plugins",
         "validation",
         "configuration"
-      ],
-      "deprecated": true,
-      "alias_for": "han-plugins"
+      ]
     },
     {
       "name": "jutsu-helm",
@@ -2342,9 +2170,7 @@
         "k8s",
         "charts",
         "devops"
-      ],
-      "deprecated": true,
-      "alias_for": "helm"
+      ]
     },
     {
       "name": "jutsu-ink",
@@ -2358,9 +2184,7 @@
         "react",
         "ui",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "ink"
+      ]
     },
     {
       "name": "jutsu-ios",
@@ -2374,9 +2198,7 @@
         "build",
         "validation",
         "apple"
-      ],
-      "deprecated": true,
-      "alias_for": "ios"
+      ]
     },
     {
       "name": "jutsu-java",
@@ -2388,9 +2210,7 @@
         "streams",
         "concurrency",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "java"
+      ]
     },
     {
       "name": "jutsu-jest",
@@ -2403,9 +2223,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "jest"
+      ]
     },
     {
       "name": "jutsu-junit",
@@ -2417,9 +2235,7 @@
         "testing",
         "java",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "junit"
+      ]
     },
     {
       "name": "jutsu-kotlin",
@@ -2432,9 +2248,7 @@
         "android",
         "jvm",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "kotlin"
+      ]
     },
     {
       "name": "jutsu-kubernetes",
@@ -2446,9 +2260,7 @@
         "k8s",
         "devops",
         "infrastructure"
-      ],
-      "deprecated": true,
-      "alias_for": "kubernetes"
+      ]
     },
     {
       "name": "jutsu-kustomize",
@@ -2460,9 +2272,7 @@
         "kubernetes",
         "k8s",
         "devops"
-      ],
-      "deprecated": true,
-      "alias_for": "kustomize"
+      ]
     },
     {
       "name": "jutsu-lerna",
@@ -2475,9 +2285,7 @@
         "packages",
         "workspaces",
         "node"
-      ],
-      "deprecated": true,
-      "alias_for": "lerna"
+      ]
     },
     {
       "name": "jutsu-lua",
@@ -2490,9 +2298,7 @@
         "embedded",
         "gaming",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "lua"
+      ]
     },
     {
       "name": "jutsu-markdown",
@@ -2505,9 +2311,7 @@
         "documentation",
         "linting",
         "formatting"
-      ],
-      "deprecated": true,
-      "alias_for": "markdown"
+      ]
     },
     {
       "name": "jutsu-maven",
@@ -2521,9 +2325,7 @@
         "dependency-management",
         "pom",
         "validation"
-      ],
-      "deprecated": true,
-      "alias_for": "maven"
+      ]
     },
     {
       "name": "jutsu-mise",
@@ -2538,9 +2340,7 @@
         "quality",
         "enforcement",
         "dev-tools"
-      ],
-      "deprecated": true,
-      "alias_for": "mise"
+      ]
     },
     {
       "name": "jutsu-mocha",
@@ -2553,9 +2353,7 @@
         "javascript",
         "nodejs",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "mocha"
+      ]
     },
     {
       "name": "jutsu-monorepo",
@@ -2569,9 +2367,7 @@
         "nx",
         "lerna",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "monorepo"
+      ]
     },
     {
       "name": "jutsu-nestjs",
@@ -2583,9 +2379,7 @@
         "typescript",
         "nodejs",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "nestjs"
+      ]
     },
     {
       "name": "jutsu-nextjs",
@@ -2597,9 +2391,7 @@
         "react",
         "ssr",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "nextjs"
+      ]
     },
     {
       "name": "jutsu-nim",
@@ -2611,9 +2403,7 @@
         "systems-programming",
         "metaprogramming",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "nim"
+      ]
     },
     {
       "name": "jutsu-notetaker",
@@ -2630,9 +2420,7 @@
         "ai-notes",
         "developer-notes",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "notetaker"
+      ]
     },
     {
       "name": "jutsu-npm",
@@ -2644,9 +2432,7 @@
         "package-manager",
         "dependencies",
         "node"
-      ],
-      "deprecated": true,
-      "alias_for": "npm"
+      ]
     },
     {
       "name": "jutsu-objective-c",
@@ -2660,9 +2446,7 @@
         "macos",
         "arc",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "objective-c"
+      ]
     },
     {
       "name": "jutsu-oop",
@@ -2674,9 +2458,7 @@
         "object-oriented",
         "design-patterns",
         "encapsulation"
-      ],
-      "deprecated": true,
-      "alias_for": "oop"
+      ]
     },
     {
       "name": "jutsu-phoenix",
@@ -2688,9 +2470,7 @@
         "phoenix",
         "web",
         "framework"
-      ],
-      "deprecated": true,
-      "alias_for": "phoenix"
+      ]
     },
     {
       "name": "jutsu-php",
@@ -2703,9 +2483,7 @@
         "security",
         "web",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "php"
+      ]
     },
     {
       "name": "jutsu-playwright",
@@ -2718,9 +2496,7 @@
         "e2e",
         "automation",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "playwright"
+      ]
     },
     {
       "name": "jutsu-playwright-bdd",
@@ -2735,9 +2511,7 @@
         "testing",
         "playwright",
         "validation"
-      ],
-      "deprecated": true,
-      "alias_for": "playwright-bdd"
+      ]
     },
     {
       "name": "jutsu-prettier",
@@ -2750,9 +2524,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "prettier"
+      ]
     },
     {
       "name": "jutsu-pulumi",
@@ -2764,9 +2536,7 @@
         "infrastructure",
         "iac",
         "devops"
-      ],
-      "deprecated": true,
-      "alias_for": "pulumi"
+      ]
     },
     {
       "name": "jutsu-pylint",
@@ -2778,9 +2548,7 @@
         "linting",
         "python",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "pylint"
+      ]
     },
     {
       "name": "jutsu-pytest",
@@ -2792,9 +2560,7 @@
         "testing",
         "python",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "pytest"
+      ]
     },
     {
       "name": "jutsu-python",
@@ -2806,9 +2572,7 @@
         "types",
         "async",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "python"
+      ]
     },
     {
       "name": "jutsu-rails",
@@ -2822,9 +2586,7 @@
         "active-record",
         "hotwire",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "rails"
+      ]
     },
     {
       "name": "jutsu-react",
@@ -2836,9 +2598,7 @@
         "hooks",
         "performance",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "react"
+      ]
     },
     {
       "name": "jutsu-react-native",
@@ -2851,9 +2611,7 @@
         "ios",
         "android",
         "native"
-      ],
-      "deprecated": true,
-      "alias_for": "react-native"
+      ]
     },
     {
       "name": "jutsu-react-native-web",
@@ -2867,9 +2625,7 @@
         "web",
         "typescript",
         "cross-platform"
-      ],
-      "deprecated": true,
-      "alias_for": "react-native-web"
+      ]
     },
     {
       "name": "jutsu-relay",
@@ -2882,9 +2638,7 @@
         "react",
         "fragments",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "relay"
+      ]
     },
     {
       "name": "jutsu-rollup",
@@ -2897,9 +2651,7 @@
         "build",
         "javascript",
         "typescript"
-      ],
-      "deprecated": true,
-      "alias_for": "rollup"
+      ]
     },
     {
       "name": "jutsu-rspec",
@@ -2912,9 +2664,7 @@
         "ruby",
         "bdd",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "rspec"
+      ]
     },
     {
       "name": "jutsu-rubocop",
@@ -2926,9 +2676,7 @@
         "linting",
         "ruby",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "rubocop"
+      ]
     },
     {
       "name": "jutsu-ruby",
@@ -2942,9 +2690,7 @@
         "gems",
         "oop",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "ruby"
+      ]
     },
     {
       "name": "jutsu-runbooks",
@@ -2960,9 +2706,7 @@
         "maintenance",
         "on-call",
         "operational-procedures"
-      ],
-      "deprecated": true,
-      "alias_for": "runbooks"
+      ]
     },
     {
       "name": "jutsu-rust",
@@ -2974,9 +2718,7 @@
         "ownership",
         "async",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "rust"
+      ]
     },
     {
       "name": "jutsu-scala",
@@ -2989,9 +2731,7 @@
         "jvm",
         "type-system",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "scala"
+      ]
     },
     {
       "name": "jutsu-scratch",
@@ -3004,9 +2744,7 @@
         "gitignore",
         "temporary",
         "workflow"
-      ],
-      "deprecated": true,
-      "alias_for": "scratch"
+      ]
     },
     {
       "name": "jutsu-sentry",
@@ -3019,9 +2757,7 @@
         "observability",
         "performance",
         "tracing"
-      ],
-      "deprecated": true,
-      "alias_for": "sentry"
+      ]
     },
     {
       "name": "jutsu-shellcheck",
@@ -3035,9 +2771,7 @@
         "scripting",
         "validation",
         "posix"
-      ],
-      "deprecated": true,
-      "alias_for": "shellcheck"
+      ]
     },
     {
       "name": "jutsu-shfmt",
@@ -3051,9 +2785,7 @@
         "formatter",
         "validation",
         "posix"
-      ],
-      "deprecated": true,
-      "alias_for": "shfmt"
+      ]
     },
     {
       "name": "jutsu-sip",
@@ -3065,9 +2797,7 @@
         "voip",
         "telecommunications",
         "real-time"
-      ],
-      "deprecated": true,
-      "alias_for": "sip"
+      ]
     },
     {
       "name": "jutsu-storybook",
@@ -3083,9 +2813,7 @@
         "enforcement",
         "stories",
         "documentation"
-      ],
-      "deprecated": true,
-      "alias_for": "storybook"
+      ]
     },
     {
       "name": "jutsu-swift",
@@ -3098,9 +2826,7 @@
         "protocol-oriented",
         "concurrency",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "swift"
+      ]
     },
     {
       "name": "jutsu-syncpack",
@@ -3116,9 +2842,7 @@
         "yarn",
         "pnpm",
         "workspaces"
-      ],
-      "deprecated": true,
-      "alias_for": "syncpack"
+      ]
     },
     {
       "name": "jutsu-tailwind",
@@ -3133,9 +2857,7 @@
         "styling",
         "validation",
         "quality"
-      ],
-      "deprecated": true,
-      "alias_for": "tailwind"
+      ]
     },
     {
       "name": "jutsu-tdd",
@@ -3148,9 +2870,7 @@
         "testing",
         "red-green-refactor",
         "quality"
-      ],
-      "deprecated": true,
-      "alias_for": "tdd"
+      ]
     },
     {
       "name": "jutsu-tensorflow",
@@ -3162,9 +2882,7 @@
         "machine-learning",
         "deep-learning",
         "neural-networks"
-      ],
-      "deprecated": true,
-      "alias_for": "tensorflow"
+      ]
     },
     {
       "name": "jutsu-terraform",
@@ -3177,9 +2895,7 @@
         "iac",
         "devops",
         "hashicorp"
-      ],
-      "deprecated": true,
-      "alias_for": "terraform"
+      ]
     },
     {
       "name": "jutsu-testng",
@@ -3193,9 +2909,7 @@
         "data-providers",
         "parallel",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "testng"
+      ]
     },
     {
       "name": "jutsu-typescript",
@@ -3206,9 +2920,7 @@
         "typescript",
         "types",
         "language"
-      ],
-      "deprecated": true,
-      "alias_for": "typescript"
+      ]
     },
     {
       "name": "jutsu-vite",
@@ -3223,9 +2935,7 @@
         "typescript",
         "vue",
         "svelte"
-      ],
-      "deprecated": true,
-      "alias_for": "vite"
+      ]
     },
     {
       "name": "jutsu-vitest",
@@ -3239,9 +2949,7 @@
         "javascript",
         "typescript",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "vitest"
+      ]
     },
     {
       "name": "jutsu-vue",
@@ -3253,9 +2961,7 @@
         "composition-api",
         "reactivity",
         "skill"
-      ],
-      "deprecated": true,
-      "alias_for": "vue"
+      ]
     },
     {
       "name": "jutsu-webpack",
@@ -3268,9 +2974,7 @@
         "build",
         "javascript",
         "typescript"
-      ],
-      "deprecated": true,
-      "alias_for": "webpack"
+      ]
     },
     {
       "name": "jutsu-yarn",
@@ -3282,9 +2986,7 @@
         "package-manager",
         "dependencies",
         "node"
-      ],
-      "deprecated": true,
-      "alias_for": "yarn"
+      ]
     },
     {
       "name": "jutsu-zustand",
@@ -3298,9 +3000,7 @@
         "typescript",
         "store",
         "hooks"
-      ],
-      "deprecated": true,
-      "alias_for": "zustand"
+      ]
     },
     {
       "name": "kotlin",

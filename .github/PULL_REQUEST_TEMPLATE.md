@@ -8,39 +8,42 @@
 
 -
 
-## How It Embodies Bushido
-
-<!-- Which of the seven virtues does this change honor? -->
-
-- [ ] **Righteousness (義)** - Does the right thing
-- [ ] **Courage (勇)** - Makes a bold improvement
-- [ ] **Compassion (仁)** - Helps users or contributors
-- [ ] **Respect (礼)** - Honors existing conventions
-- [ ] **Honesty (誠)** - Transparent about trade-offs
-- [ ] **Honor (名誉)** - Maintains quality standards
-- [ ] **Loyalty (忠義)** - Long-term maintainability
-
 ## Type of Change
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that changes existing behavior)
-- [ ] Documentation update
-- [ ] New plugin (jutsu, do, or hashi)
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation
+- [ ] New plugin
+
+## Plugin Changes
+
+<!-- If adding/modifying a plugin, complete this section -->
+
+**Plugin category:**
+- [ ] Tool - Development tools and utilities
+- [ ] Framework - Framework-specific skills
+- [ ] Language - Language-specific skills
+- [ ] Validation - Linting and validation hooks
+- [ ] Discipline - Specialized agents with domain expertise
+- [ ] Integration - MCP servers for external services
+- [ ] Pattern - Methodologies and workflows
+- [ ] Core - Han CLI or core infrastructure
+- [ ] N/A - Not a plugin change
+
+**Validation:**
+- [ ] `claude plugin validate .` passes
+- [ ] Hooks tested in Claude Code session (if applicable)
 
 ## Testing
 
-<!-- Describe how you tested these changes -->
-
-- [ ] Tests pass locally
+- [ ] Tests pass (`cd packages/han && bun test`)
 - [ ] Linting passes
-- [ ] Hooks work correctly (for plugin changes)
 - [ ] Manual testing performed
 
 ## Checklist
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have added tests that prove my fix/feature works
-- [ ] I have updated documentation as needed
-- [ ] My changes generate no new warnings
+- [ ] Code follows existing patterns
+- [ ] Self-review completed
+- [ ] Documentation updated (if needed)
+- [ ] No new warnings
