@@ -14,20 +14,26 @@ The fastest way to create a new plugin is with the `han create plugin` command:
 han create plugin
 
 # Non-interactive mode
-han create plugin --type jutsu --name my-linter --description "My custom linter" --author "Your Name"
+han create plugin --category validation --name biome --description "Biome linting and formatting" --author "Your Name"
 ```
 
 This scaffolds a complete plugin structure with all required files.
 
-## Plugin Types
+## Plugin Categories
 
-Han supports three plugin types, each serving a different purpose:
+Han plugins are organized into nine categories based on their technical layer:
 
-| Type | Prefix | Purpose | Examples |
-|------|--------|---------|----------|
-| **Jutsu** | `jutsu-` | Language/tool skills with validation hooks | jutsu-biome, jutsu-typescript |
-| **Do** | `do-` | Specialized agents for complex workflows | do-architecture, do-security-engineering |
-| **Hashi** | `hashi-` | MCP servers bridging external services | hashi-github, hashi-reddit |
+| Category | Directory | Purpose | Examples |
+|----------|-----------|---------|----------|
+| **Core** | `core/` | Essential infrastructure | core, bushido |
+| **Language** | `languages/` | Programming language support | typescript, python, rust |
+| **Framework** | `frameworks/` | Framework integrations | react, nextjs, django |
+| **Validation** | `validation/` | Linting, formatting | biome, eslint, prettier |
+| **Tool** | `tools/` | Build tools, testing | playwright, jest, docker |
+| **Integration** | `services/` | MCP servers for external services | github, gitlab, linear |
+| **Discipline** | `disciplines/` | Specialized AI agents | frontend, backend, security |
+| **Pattern** | `patterns/` | Methodologies, workflows | ai-dlc, tdd, atomic-design |
+| **Specialized** | `specialized/` | Niche tools | android, ios, tensorflow |
 
 ## Plugin Structure
 
@@ -43,9 +49,9 @@ your-plugin/
 │       └── SKILL.md
 ├── commands/            # Slash commands (optional)
 │   └── command-name.md
-├── agents/              # Agents for do-* plugins (optional)
+├── agents/              # Agents for discipline plugins (optional)
 │   └── agent-name.md
-├── .mcp.json            # MCP server config for hashi-* plugins
+├── .mcp.json            # MCP server config for integration plugins
 ├── README.md            # Documentation
 └── CHANGELOG.md         # Version history
 ```
@@ -58,7 +64,7 @@ Every plugin must have a `.claude-plugin/plugin.json` file:
 
 ```json
 {
-  "name": "jutsu-my-tool",
+  "name": "biome",
   "version": "1.0.0",
   "description": "Brief description of what your plugin does",
   "author": {
@@ -74,7 +80,7 @@ Every plugin must have a `.claude-plugin/plugin.json` file:
 
 **Required fields:**
 
-- `name`: Unique plugin name with appropriate prefix (jutsu-, do-, or hashi-)
+- `name`: Unique plugin name (use category-appropriate naming)
 - `version`: Semantic version (semver)
 - `description`: Brief description shown in marketplace
 
@@ -88,7 +94,7 @@ Every plugin must have a `.claude-plugin/plugin.json` file:
 
 ## Next Steps
 
-- [Plugin Types](/docs/plugin-development/types) - Detailed guide for each plugin type
+- [Plugin Types](/docs/plugin-development/types) - Detailed guide for each plugin category
 - [Hook Configuration](/docs/plugin-development/hooks) - Writing validation hooks
 - [Skills and Commands](/docs/plugin-development/skills) - Creating skills and commands
 - [Testing Plugins](/docs/plugin-development/testing) - Local testing workflow

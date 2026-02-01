@@ -3,7 +3,7 @@ title: "Hook Configuration"
 description: "Complete reference for configuring validation hooks in han-plugin.yml, including commands, conditions, and caching."
 ---
 
-Hooks are the heart of jutsu plugins, enabling automatic validation at key points during Claude Code sessions. This guide covers everything you need to know about configuring hooks.
+Hooks are the heart of validation and tool plugins, enabling automatic validation at key points during Claude Code sessions. This guide covers everything you need to know about configuring hooks.
 
 ## Hook Configuration File
 
@@ -145,7 +145,7 @@ Hooks run at specific points during Claude Code sessions:
 | `PreToolUse` | Before tool execution | Input validation |
 | `PostToolUse` | After tool execution | Result processing |
 
-By default, jutsu plugin hooks run at `Stop` and `SubagentStop`. The core plugin orchestrates this - you just define what to run.
+By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. The core plugin orchestrates this - you just define what to run.
 
 ## Smart Behaviors
 

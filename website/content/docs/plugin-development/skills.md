@@ -255,15 +255,15 @@ Add to `package.json`:
 Sets up Biome with auto-detected configuration.
 ```
 
-## Agent Files (Do Plugins)
+## Agent Files (Discipline Plugins)
 
-For `do-*` plugins, agents are defined in the `agents/` directory:
+For discipline plugins, agents are defined in the `agents/` directory:
 
 ```
-do-your-discipline/
+disciplines/frontend/
 ├── agents/
-│   ├── specialist.md
-│   └── reviewer.md
+│   ├── ui-developer.md
+│   └── accessibility-auditor.md
 ```
 
 ### Agent File Format
