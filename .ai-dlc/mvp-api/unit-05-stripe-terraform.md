@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: []
 branch: ai-dlc/mvp-api/05-stripe-terraform
 discipline: devops

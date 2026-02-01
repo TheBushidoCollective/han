@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on:
   - unit-01-auth-middleware
 branch: ai-dlc/mvp-api/04-teams-api
