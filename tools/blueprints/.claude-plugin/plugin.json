@@ -20,8 +20,8 @@
   ],
   "mcpServers": {
     "blueprints": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/han",
-      "args": ["mcp", "blueprints"]
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
     }
   }
 }

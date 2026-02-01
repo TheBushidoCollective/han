@@ -7,8 +7,8 @@ mcp_servers:
     expose: true
     name: blueprints
     description: Project blueprint documentation search and retrieval
-    command: "${CLAUDE_PLUGIN_ROOT}/han"
-    args: ["mcp", "blueprints"]
+    command: npx
+    args: ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
 
 hooks:
   # Sync blueprints index to .claude/rules at session start

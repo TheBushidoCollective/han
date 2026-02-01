@@ -25,8 +25,10 @@
   ],
   "mcpServers": {
     "han": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/han",
+      "command": "npx",
       "args": [
+        "-y",
+        "@thebushidocollective/han",
         "mcp"
       ]
     }
