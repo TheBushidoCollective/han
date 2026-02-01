@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "blueprints": {
-      "command": "han",
+      "command": "${CLAUDE_PLUGIN_ROOT}/han",
       "args": ["mcp", "blueprints"]
     }
   }
