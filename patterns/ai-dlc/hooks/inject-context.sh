@@ -282,8 +282,8 @@ echo ""
 echo "**Iteration:** $ITERATION | **Hat:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
-# Helper function to load intent-level state
-load_intent_state() {
+# Helper function to load ephemeral state from han keep
+load_keep_value() {
   local key="$1"
   if [ -n "$INTENT_BRANCH" ]; then
     han keep load --branch "$INTENT_BRANCH" "$key" --quiet 2>/dev/null || echo ""
@@ -292,26 +292,31 @@ load_intent_state() {
   fi
 }
 
-# Load and display intent (intent-level state from intent branch)
-INTENT=$(load_intent_state intent.md)
-if [ -n "$INTENT" ]; then
+# Get intent-slug from han keep (pointer only)
+INTENT_SLUG=$(load_keep_value intent-slug)
+INTENT_DIR=""
+if [ -n "$INTENT_SLUG" ]; then
+  INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+fi
+
+# Load and display intent from filesystem (source of truth)
+if [ -n "$INTENT_DIR" ] && [ -f "${INTENT_DIR}/intent.md" ]; then
   echo "### Intent"
   echo ""
-  echo "$INTENT"
+  cat "${INTENT_DIR}/intent.md"
   echo ""
 fi
 
-# Load and display completion criteria (intent-level state from intent branch)
-CRITERIA=$(load_intent_state completion-criteria.md)
-if [ -n "$CRITERIA" ]; then
+# Load completion criteria from filesystem if exists
+if [ -n "$INTENT_DIR" ] && [ -f "${INTENT_DIR}/completion-criteria.md" ]; then
   echo "### Completion Criteria"
   echo ""
-  echo "$CRITERIA"
+  cat "${INTENT_DIR}/completion-criteria.md"
   echo ""
 fi
 
-# Load and display current plan (intent-level state from intent branch)
-PLAN=$(load_intent_state current-plan.md)
+# Load and display current plan (ephemeral - from han keep)
+PLAN=$(load_keep_value current-plan.md)
 if [ -n "$PLAN" ]; then
   echo "### Current Plan"
   echo ""
@@ -347,12 +352,8 @@ if [ -n "$NEXT_PROMPT" ]; then
 fi
 
 # Load and display DAG status (if units exist)
-# Intent slug is intent-level state from intent branch
-INTENT_SLUG=$(load_intent_state intent-slug)
-if [ -n "$INTENT_SLUG" ]; then
-  INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
-
-  if [ -d "$INTENT_DIR" ] && ls "$INTENT_DIR"/unit-*.md 1>/dev/null 2>&1; then
+# INTENT_SLUG and INTENT_DIR already set above
+if [ -n "$INTENT_DIR" ] && [ -d "$INTENT_DIR" ] && ls "$INTENT_DIR"/unit-*.md 1>/dev/null 2>&1; then
     echo "### Unit Status"
     echo ""
 
@@ -404,7 +405,6 @@ if [ -n "$INTENT_SLUG" ]; then
       done
       echo ""
     fi
-  fi
 fi
 
 # Load hat instructions from markdown files
