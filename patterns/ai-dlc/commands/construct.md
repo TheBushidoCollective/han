@@ -95,6 +95,72 @@ fi
 
 **Important:** The orchestrator runs in `/tmp/ai-dlc-{intent-slug}/`, NOT the original repo directory. This keeps main clean and enables parallel intents.
 
+### Step 0.5: Check for Plan MR Approval (if elaboration_review is enabled)
+
+**Before construction can begin, verify the plan MR is merged (if review was required):**
+
+```bash
+# Source configuration system
+source "${CLAUDE_PLUGIN_ROOT}/lib/config.sh"
+
+# Get configuration
+INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR" "$(git rev-parse --show-toplevel)")
+ELABORATION_REVIEW=$(echo "$CONFIG" | jq -r '.elaboration_review')
+
+if [ "$ELABORATION_REVIEW" = "true" ]; then
+  # Check if plan MR exists and is merged
+  PLAN_BRANCH="ai-dlc/${INTENT_SLUG}/plan"
+
+  # Check for open PR on plan branch
+  OPEN_PRS=$(gh pr list --head "$PLAN_BRANCH" --state open --json number 2>/dev/null || echo "[]")
+
+  if [ "$(echo "$OPEN_PRS" | jq 'length')" -gt 0 ]; then
+    # There's an open PR - not ready for construction
+    PR_URL=$(gh pr list --head "$PLAN_BRANCH" --state open --json url --jq '.[0].url' 2>/dev/null)
+    echo ""
+    echo "⏸️  Plan Review Required"
+    echo ""
+    echo "The plan MR must be reviewed and merged before construction can begin."
+    echo ""
+    echo "Plan MR: $PR_URL"
+    echo ""
+    echo "Once the plan is approved and merged, run /construct again."
+    exit 0
+  fi
+
+  # Check if there's a merged PR (plan was approved)
+  MERGED_PRS=$(gh pr list --head "$PLAN_BRANCH" --state merged --json number 2>/dev/null || echo "[]")
+
+  if [ "$(echo "$MERGED_PRS" | jq 'length')" -eq 0 ]; then
+    # No merged PR - check if plan branch exists
+    if git rev-parse --verify "origin/$PLAN_BRANCH" >/dev/null 2>&1; then
+      # Branch exists but no PR - warn user
+      echo ""
+      echo "⚠️  Plan Branch Exists Without MR"
+      echo ""
+      echo "Branch: $PLAN_BRANCH"
+      echo ""
+      echo "The plan branch exists but no MR was created. Either:"
+      echo "1. Create a plan MR: gh pr create --head $PLAN_BRANCH"
+      echo "2. Or disable elaboration_review in .ai-dlc/settings.yml"
+      echo ""
+      exit 0
+    fi
+    # No branch, no PR - elaboration hasn't been done yet or review is not required
+  fi
+
+  # Plan MR is merged - construction can proceed
+  echo "✓ Plan MR merged - proceeding with construction"
+fi
+```
+
+**The check ensures:**
+- If `elaboration_review: true` and an open plan MR exists → Block construction until merged
+- If `elaboration_review: true` and plan MR is merged → Proceed with construction
+- If `elaboration_review: false` → Skip the check entirely
+- If no plan branch/MR exists → Allow construction (legacy behavior or first run)
+
 ### Step 1: Load State
 
 ```javascript
