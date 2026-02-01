@@ -32,7 +32,36 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
+      - name: Check for concurrent auto-fix runs
+        id: check_concurrent
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get all running workflow runs for auto-fix
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'auto-fix-ci.yml',
+              status: 'in_progress'
+            });
+
+            // Filter to runs for the same branch (excluding this run)
+            const currentRunId = context.runId;
+            const targetBranch = '${{ github.event.workflow_run.head_branch }}';
+            const concurrentRuns = runs.data.workflow_runs.filter(
+              run => run.id !== currentRunId &&
+                     run.head_branch === targetBranch
+            );
+
+            if (concurrentRuns.length > 0) {
+              console.log(`Found ${concurrentRuns.length} concurrent auto-fix run(s) for branch ${targetBranch}. Skipping.`);
+              return { skip: true };
+            }
+
+            return { skip: false };
+
       - name: Get CI failure details
+        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
         id: failure_details
         uses: actions/github-script@v7
         with:
@@ -81,6 +110,7 @@ jobs:
             };
 
       - name: Fix CI failures with Claude
+        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -99,6 +129,32 @@ jobs:
             Instructions:
             1. Analyze the error logs to understand what failed
             2. Make the minimal changes needed to fix the issue
-            3. Commit your changes with a descriptive message
-            4. Push to the current branch
+            3. Do NOT commit or push - the workflow will handle that after you make changes
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Commit and push fixes
+        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
+        run: |
+          # Check if there are any changes to commit
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          # Stage all changes
+          git add -A
+
+          # Get the workflow name for the commit message
+          WORKFLOW_NAME="${{ fromJSON(steps.failure_details.outputs.result).workflowName }}"
+
+          # Commit with a descriptive message
+          git commit -m "fix(ci): auto-fix ${WORKFLOW_NAME} failures
+
+          Auto-fixed by Claude Code action.
+
+          Original failure: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          # Push the changes
+          git push origin ${{ github.event.workflow_run.head_branch }}
