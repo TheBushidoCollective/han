@@ -1,6 +1,9 @@
 /**
  * Unit tests for hash-cycle-detector.ts
  * Tests hash cycle detection for hook recursion prevention
+ *
+ * Note: These tests require the native module for findFilesWithGlob.
+ * They are skipped in CI when SKIP_NATIVE=true.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -11,6 +14,10 @@ import {
 	type CycleDetectionResult,
 	HashCycleDetector,
 } from "../lib/hooks/index.ts";
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
 
 let testDir: string;
 let projectDir: string;
@@ -42,7 +49,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("recordHashes - basic functionality", () => {
-		test("records initial hashes without detecting cycles", () => {
+		testWithNative("records initial hashes without detecting cycles", () => {
 			writeFileSync(join(projectDir, "file.ts"), "content");
 
 			const detector = new HashCycleDetector();
@@ -52,7 +59,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles).toEqual([]);
 		});
 
-		test("tracks multiple files independently", () => {
+		testWithNative("tracks multiple files independently", () => {
 			writeFileSync(join(projectDir, "a.ts"), "content a");
 			writeFileSync(join(projectDir, "b.ts"), "content b");
 
@@ -70,7 +77,7 @@ describe("HashCycleDetector", () => {
 			expect(historyB.length).toBe(1);
 		});
 
-		test("records hook info for each hash transition", () => {
+		testWithNative("records hook info for each hash transition", () => {
 			writeFileSync(join(projectDir, "file.ts"), "original");
 
 			const detector = new HashCycleDetector();
@@ -94,7 +101,7 @@ describe("HashCycleDetector", () => {
 			expect(history[1].hook).toBe("jutsu-biome/lint");
 		});
 
-		test("does not record duplicate consecutive hashes", () => {
+		testWithNative("does not record duplicate consecutive hashes", () => {
 			writeFileSync(join(projectDir, "file.ts"), "content");
 
 			const detector = new HashCycleDetector();
@@ -121,7 +128,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("recordHashes - cycle detection", () => {
-		test("detects cycle when file returns to previous hash", () => {
+		testWithNative("detects cycle when file returns to previous hash", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -151,7 +158,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles[0].previouslySeenAt).toBe(0); // First hash was at index 0
 		});
 
-		test("detects cycle in A->B->C->A pattern", () => {
+		testWithNative("detects cycle in A->B->C->A pattern", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -187,7 +194,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles[0].previouslySeenAt).toBe(0);
 		});
 
-		test("detects cycle in A->B->A->B pattern (immediate cycle)", () => {
+		testWithNative("detects cycle in A->B->A->B pattern (immediate cycle)", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -224,7 +231,7 @@ describe("HashCycleDetector", () => {
 			expect(result2.hasCycle).toBe(true);
 		});
 
-		test("no cycle when file changes to new state", () => {
+		testWithNative("no cycle when file changes to new state", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -251,7 +258,7 @@ describe("HashCycleDetector", () => {
 			expect(result.hasCycle).toBe(false);
 		});
 
-		test("detects cycles in multiple files simultaneously", () => {
+		testWithNative("detects cycles in multiple files simultaneously", () => {
 			writeFileSync(join(projectDir, "a.ts"), "file A state 1");
 			writeFileSync(join(projectDir, "b.ts"), "file B state 1");
 
@@ -282,7 +289,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles.length).toBe(2);
 		});
 
-		test("detects cycle in only one of multiple files", () => {
+		testWithNative("detects cycle in only one of multiple files", () => {
 			writeFileSync(join(projectDir, "cycling.ts"), "state A");
 			writeFileSync(join(projectDir, "normal.ts"), "content 1");
 
@@ -316,7 +323,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("getModificationHistory", () => {
-		test("returns empty array for unknown file", () => {
+		testWithNative("returns empty array for unknown file", () => {
 			const detector = new HashCycleDetector();
 
 			const history = detector.getModificationHistory("nonexistent/file.ts");
@@ -324,7 +331,7 @@ describe("HashCycleDetector", () => {
 			expect(history).toEqual([]);
 		});
 
-		test("returns full modification history with truncated hashes", () => {
+		testWithNative("returns full modification history with truncated hashes", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state 1");
 
 			const detector = new HashCycleDetector();
@@ -366,7 +373,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("formatCycleReport", () => {
-		test("returns empty string when no cycles", () => {
+		testWithNative("returns empty string when no cycles", () => {
 			const detector = new HashCycleDetector();
 
 			const result: CycleDetectionResult = {
@@ -377,7 +384,7 @@ describe("HashCycleDetector", () => {
 			expect(detector.formatCycleReport(result)).toBe("");
 		});
 
-		test("formats cycle report with modification history", () => {
+		testWithNative("formats cycle report with modification history", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -413,7 +420,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("reset", () => {
-		test("clears all tracked history", () => {
+		testWithNative("clears all tracked history", () => {
 			writeFileSync(join(projectDir, "file.ts"), "content");
 
 			const detector = new HashCycleDetector();
@@ -430,7 +437,7 @@ describe("HashCycleDetector", () => {
 			expect(history.length).toBe(0);
 		});
 
-		test("allows fresh tracking after reset", () => {
+		testWithNative("allows fresh tracking after reset", () => {
 			writeFileSync(join(projectDir, "file.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -457,7 +464,7 @@ describe("HashCycleDetector", () => {
 	});
 
 	describe("edge cases", () => {
-		test("handles empty directory", () => {
+		testWithNative("handles empty directory", () => {
 			const detector = new HashCycleDetector();
 			const result = detector.recordHashes(projectDir, ["**/*.ts"], null);
 
@@ -465,7 +472,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles).toEqual([]);
 		});
 
-		test("handles nested directories", () => {
+		testWithNative("handles nested directories", () => {
 			mkdirSync(join(projectDir, "src", "utils"), { recursive: true });
 			writeFileSync(join(projectDir, "src", "index.ts"), "state A");
 			writeFileSync(join(projectDir, "src", "utils", "helper.ts"), "helper A");
@@ -496,7 +503,7 @@ describe("HashCycleDetector", () => {
 			expect(result.cycles[0].filePath).toContain("helper.ts");
 		});
 
-		test("handles files with special characters", () => {
+		testWithNative("handles files with special characters", () => {
 			writeFileSync(join(projectDir, "my-file.test.ts"), "state A");
 
 			const detector = new HashCycleDetector();
@@ -520,7 +527,7 @@ describe("HashCycleDetector", () => {
 			expect(result.hasCycle).toBe(true);
 		});
 
-		test("handles very long file content changes", () => {
+		testWithNative("handles very long file content changes", () => {
 			const longContent1 = "a".repeat(10000);
 			const longContent2 = "b".repeat(10000);
 
@@ -547,7 +554,7 @@ describe("HashCycleDetector", () => {
 			expect(result.hasCycle).toBe(true);
 		});
 
-		test("handles multiple glob patterns", () => {
+		testWithNative("handles multiple glob patterns", () => {
 			writeFileSync(join(projectDir, "app.ts"), "ts state A");
 			writeFileSync(join(projectDir, "style.css"), "css state A");
 

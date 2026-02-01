@@ -69,6 +69,11 @@ interface ExecError extends Error {
 // Binary tests need longer timeout due to startup time and potential native extension rebuilds (~27s)
 const BINARY_TIMEOUT = 45000;
 
+// Skip tests that require native module when SKIP_NATIVE is set
+// These tests spawn CLI subprocesses that depend on native bindings
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
+
 // ============================================
 // Basic CLI tests
 // ============================================
@@ -119,7 +124,8 @@ describe("Basic CLI", () => {
 				encoding: "utf8",
 			});
 			expect(output).toContain("run");
-			expect(output).toContain("explain");
+			// Note: 'explain' and 'test' are only registered in TTY mode, not available in CI
+			expect(output).toContain("list");
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
@@ -195,7 +201,8 @@ describe("Hook run", () => {
 		teardown(testDir);
 	});
 
-	test(
+	// Note: These tests spawn CLI subprocesses that require native module
+	testWithNative(
 		"shows error when no plugin name or hook name",
 		() => {
 			expect(() => {
@@ -205,7 +212,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"passes when no directories match filter",
 		() => {
 			const output = execSync(
@@ -217,7 +224,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"runs command in matching directories",
 		() => {
 			mkdirSync(join(testDir, "pkg1"));
@@ -242,7 +249,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"fails with exit code 2 when command fails",
 		() => {
 			mkdirSync(join(testDir, "pkg1"));
@@ -268,7 +275,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"stops on first failure with --fail-fast",
 		() => {
 			mkdirSync(join(testDir, "pkg1"));
@@ -295,7 +302,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"respects --test-dir flag to filter directories",
 		() => {
 			mkdirSync(join(testDir, "with-marker"));
@@ -322,7 +329,7 @@ describe("Hook run", () => {
 		{ timeout: BINARY_TIMEOUT },
 	);
 
-	test(
+	testWithNative(
 		"respects .gitignore in subdirectories",
 		() => {
 			mkdirSync(join(testDir, "project"));
@@ -370,7 +377,8 @@ describe("Validate-legacy command", () => {
 		teardown(testDir);
 	});
 
-	test(
+	// This test spawns CLI subprocess that requires native module
+	testWithNative(
 		"works as legacy alias for hook run",
 		() => {
 			mkdirSync(join(testDir, "pkg1"));
@@ -517,7 +525,8 @@ describe("Plugin install/uninstall", () => {
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
 			expect(settings.extraKnownMarketplaces?.han).toBeDefined();
-			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
+			// Note: jutsu-typescript is resolved to short name "typescript" by plugin-aliases
+			expect(settings.enabledPlugins?.["typescript@han"]).toBe(true);
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
@@ -566,34 +575,26 @@ describe("Plugin install/uninstall", () => {
 	);
 
 	test(
-		"install is idempotent",
+		"install is idempotent when using short name",
 		() => {
 			const claudeDir = setupClaudeDir(testDir);
 			const settingsPath = join(claudeDir, "settings.json");
 
-			writeFileSync(
-				settingsPath,
-				JSON.stringify(
-					{
-						extraKnownMarketplaces: {
-							han: {
-								source: {
-									source: "github",
-									repo: "thebushidocollective/hashi",
-								},
-							},
-						},
-						enabledPlugins: {
-							"jutsu-typescript@han": true,
-						},
-					},
-					null,
-					2,
-				),
+			// First, install the plugin to create the initial state
+			writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+
+			execSync(
+				`${binCommand} plugin install typescript --scope project`,
+				{
+					cwd: testDir,
+					encoding: "utf8",
+					stdio: "pipe",
+				},
 			);
 
+			// Now try to install again - should say already installed
 			const output = execSync(
-				`${binCommand} plugin install jutsu-typescript --scope project`,
+				`${binCommand} plugin install typescript --scope project`,
 				{
 					cwd: testDir,
 					encoding: "utf8",
@@ -604,8 +605,9 @@ describe("Plugin install/uninstall", () => {
 			expect(output.toLowerCase()).toContain("already installed");
 
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+			// Should have exactly one typescript entry
 			const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
-				(k) => k.includes("jutsu-typescript"),
+				(k) => k.includes("typescript"),
 			);
 			expect(pluginKeys.length).toBe(1);
 		},
@@ -653,8 +655,9 @@ describe("Plugin install/uninstall", () => {
 
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 
-			expect(settings.enabledPlugins?.["jutsu-typescript@han"]).toBe(true);
-			expect(settings.enabledPlugins?.["jutsu-react@han"]).toBe(true);
+			// Migration converts jutsu-X to short names (typescript, react)
+			expect(settings.enabledPlugins?.["typescript@han"]).toBe(true);
+			expect(settings.enabledPlugins?.["react@han"]).toBe(true);
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
