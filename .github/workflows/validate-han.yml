@@ -94,24 +94,9 @@ jobs:
 
       - name: Run tests
         run: |
-          # Run with timeout wrapper to prevent hung stdout from blocking
-          timeout 300 bun test --bail 2>&1 || {
-            exit_code=$?
-            # Exit code 124 = timeout, which shouldn't happen normally
-            # Exit code 1 = test failure
-            # Other codes might be EAGAIN issues
-            if [ $exit_code -eq 124 ]; then
-              echo "Tests timed out"
-              exit 1
-            elif [ $exit_code -eq 1 ]; then
-              echo "Tests failed"
-              exit 1
-            else
-              echo "Tests completed with warnings (exit code: $exit_code)"
-              # Non-critical exit codes are likely EAGAIN during output
-              exit 0
-            fi
-          }
+          # Disable coverage in CI to avoid EAGAIN errors during output
+          # Coverage is enabled by default in bunfig.toml for local dev
+          bun test --bail --coverage=false
         working-directory: ./packages/han
         env:
           SKIP_NATIVE: "true"
