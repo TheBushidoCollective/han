@@ -12,6 +12,8 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=config.sh
 source "$SCRIPT_DIR/config.sh"
+# shellcheck source=jj.sh
+source "$SCRIPT_DIR/jj.sh"
 
 # Parse unit status from frontmatter
 # Usage: parse_unit_status <unit_file>
@@ -508,4 +510,254 @@ validate_dag() {
   fi
 
   return 0
+}
+
+# =============================================================================
+# VCS-Agnostic Workspace/Worktree Management
+# =============================================================================
+
+# Create a workspace/worktree for parallel unit execution
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: create_unit_workspace <intent_slug> <unit_slug> <path>
+# Returns: 0 on success, 1 on failure
+create_unit_workspace() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local path="$3"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      # Warn about colocation behavior
+      jj_warn_if_colocated "$repo_root"
+
+      # Create jj workspace
+      jj_create_workspace "$workspace_name" "$path" "$repo_root"
+      ;;
+    git)
+      # Create git worktree with branch
+      local branch="ai-dlc/${intent_slug}/${unit_slug}"
+      git -C "$repo_root" worktree add -b "$branch" "$path" 2>&1
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Remove a workspace/worktree for a unit
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: remove_unit_workspace <intent_slug> <unit_slug>
+# Returns: 0 on success, 1 on failure
+remove_unit_workspace() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      jj_remove_workspace "$workspace_name" "$repo_root"
+      ;;
+    git)
+      # Find and remove git worktree
+      local worktree_path
+      worktree_path=$(git -C "$repo_root" worktree list --porcelain | grep -A1 "worktree" | grep "/$workspace_name$" | head -1)
+      if [ -n "$worktree_path" ]; then
+        git -C "$repo_root" worktree remove "$worktree_path" 2>&1
+      else
+        echo "Warning: worktree not found for $workspace_name" >&2
+      fi
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# List active workspaces/worktrees for an intent
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: list_intent_workspaces <intent_slug>
+# Returns: JSON array of workspace/worktree paths
+list_intent_workspaces() {
+  local intent_slug="$1"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "[]"
+    return
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local prefix="ai-dlc-${intent_slug}-"
+
+  case "$vcs" in
+    jj)
+      jj_find_ai_dlc_workspaces "$intent_slug" "$repo_root"
+      ;;
+    git)
+      # Parse git worktree list for matching branches
+      local json="["
+      local first=true
+      while IFS= read -r line; do
+        if [[ "$line" =~ ^worktree\ (.+) ]]; then
+          local path="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^branch\ refs/heads/ai-dlc/${intent_slug}/(.+) ]]; then
+          local unit_slug="${BASH_REMATCH[1]}"
+          local name="${prefix}${unit_slug}"
+          if [ "$first" = "true" ]; then
+            first=false
+          else
+            json="$json,"
+          fi
+          json="$json{\"name\":\"$name\",\"path\":\"$path\"}"
+        fi
+      done < <(git -C "$repo_root" worktree list --porcelain 2>/dev/null)
+      echo "${json}]"
+      ;;
+    *)
+      echo "[]"
+      ;;
+  esac
+}
+
+# Get workspace/worktree path for a specific unit
+# Usage: get_unit_workspace_path <intent_slug> <unit_slug>
+# Returns: Path to workspace or empty string if not found
+get_unit_workspace_path() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  local workspaces
+  workspaces=$(list_intent_workspaces "$intent_slug")
+
+  # Extract path for matching workspace
+  echo "$workspaces" | jq -r ".[] | select(.name == \"$workspace_name\") | .path" 2>/dev/null
+}
+
+# Create bookmark/branch for unit tracking
+# Automatically uses jj bookmark or git branch based on detected VCS
+# Usage: create_unit_bookmark <intent_slug> <unit_slug>
+create_unit_bookmark() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local bookmark_name="ai-dlc/${intent_slug}/${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      jj_create_bookmark "$bookmark_name" "@" "$repo_root"
+      ;;
+    git)
+      git -C "$repo_root" branch "$bookmark_name" 2>&1 || true
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Push unit changes to remote for PR creation
+# For jj: uses jj git push (git interop)
+# For git: uses git push
+# Usage: push_unit_for_pr <intent_slug> <unit_slug> [remote]
+push_unit_for_pr() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local remote="${3:-origin}"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local bookmark_name="ai-dlc/${intent_slug}/${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      # Ensure bookmark exists at current revision
+      jj_move_bookmark "$bookmark_name" "@" "$repo_root" 2>/dev/null || \
+        jj_create_bookmark "$bookmark_name" "@" "$repo_root"
+      # Push via git interop
+      jj_git_push "$bookmark_name" "$remote" "$repo_root"
+      ;;
+    git)
+      git -C "$repo_root" push -u "$remote" "$bookmark_name" 2>&1
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Squash commits for a unit (used when auto_squash is enabled)
+# Usage: squash_unit_commits <intent_slug> <unit_slug>
+squash_unit_commits() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+
+  case "$vcs" in
+    jj)
+      # jj squash is straightforward - squash current into parent
+      jj_squash "@" "$repo_root"
+      ;;
+    git)
+      # git requires interactive rebase or merge --squash
+      # This is typically done during the merge process
+      echo "Note: git squashing is handled during merge with --squash flag" >&2
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
 }
