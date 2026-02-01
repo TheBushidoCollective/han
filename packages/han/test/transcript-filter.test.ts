@@ -351,7 +351,7 @@ describe("transcript-filter.ts", () => {
 			expect(result).toBe(true);
 		});
 
-		test("returns true when modified files match pattern files", () => {
+		testWithNative("returns true when modified files match pattern files", () => {
 			// Create actual files in the project directory
 			mkdirSync(join(projectDir, "src"), { recursive: true });
 			writeFileSync(join(projectDir, "src/main.ts"), "// main");
@@ -372,7 +372,7 @@ describe("transcript-filter.ts", () => {
 			expect(result).toBe(true);
 		});
 
-		test("returns false when modified files do not match pattern", () => {
+		testWithNative("returns false when modified files do not match pattern", () => {
 			// Create actual files in the project directory
 			mkdirSync(join(projectDir, "src"), { recursive: true });
 			mkdirSync(join(projectDir, "docs"), { recursive: true });
@@ -456,7 +456,7 @@ describe("transcript-filter.ts", () => {
 			expect(result).toContain("src/other.ts");
 		});
 
-		test("returns intersection of modified files and pattern files", () => {
+		testWithNative("returns intersection of modified files and pattern files", () => {
 			// Create actual files in the project directory
 			mkdirSync(join(projectDir, "src"), { recursive: true });
 			writeFileSync(join(projectDir, "src/main.ts"), "// main");
