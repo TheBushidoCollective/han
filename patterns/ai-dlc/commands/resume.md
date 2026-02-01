@@ -34,7 +34,9 @@ User: /construct
 
 ### Step 1: Find Resumable Intents
 
-If no slug provided, scan `.ai-dlc/*/intent.md` for active intents:
+If no slug provided, scan multiple sources for active intents:
+
+**A: Check filesystem first (highest priority - source of truth):**
 
 ```bash
 for intent_file in .ai-dlc/*/intent.md; do
@@ -43,6 +45,22 @@ for intent_file in .ai-dlc/*/intent.md; do
   slug=$(basename "$dir")
   status=$(han parse yaml status -r --default active < "$intent_file")
   [ "$status" = "active" ] && echo "$slug"
+done
+```
+
+**B: Check git branches using `discover_branch_intents`:**
+
+```bash
+# Source DAG library
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Discover from branches (include remote for resume command)
+branch_intents=$(discover_branch_intents true)
+
+# Parse results: slug|workflow|source|branch
+echo "$branch_intents" | while IFS='|' read -r slug workflow source branch; do
+  [ -z "$slug" ] && continue
+  echo "$slug ($source: $branch)"
 done
 ```
 
@@ -79,23 +97,100 @@ starting_hat=$(get_recommended_hat ".ai-dlc/${slug}" "${workflow}")
 - Any units in_progress or ready → `builder` (continue work)
 - All units blocked → `planner` (resolve dependencies)
 
-### Step 4: Switch to Intent Worktree
+### Step 4: Find Intent Source and Create Worktree
 
-**CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
+The intent may exist in three locations. Check in priority order:
 
+**A: Intent in Filesystem (highest priority)**
 ```bash
-# Create or switch to intent worktree
-INTENT_BRANCH="ai-dlc/${slug}"
-INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
+INTENT_DIR=".ai-dlc/${slug}"
+if [ -d "$INTENT_DIR" ]; then
+  # Intent exists locally, use standard worktree creation
+  INTENT_BRANCH="ai-dlc/${slug}"
+  INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
 
-# Create worktree if it doesn't exist
-if [ ! -d "$INTENT_WORKTREE" ]; then
-  git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
+  if [ ! -d "$INTENT_WORKTREE" ]; then
+    git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
+  fi
+  cd "$INTENT_WORKTREE"
+fi
+```
+
+**B: Intent on Local Branch (no worktree)**
+```bash
+INTENT_BRANCH="ai-dlc/${slug}"
+if git rev-parse --verify "$INTENT_BRANCH" &>/dev/null; then
+  INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
+
+  # Create worktree from existing branch
+  if [ ! -d "$INTENT_WORKTREE" ]; then
+    git worktree add "$INTENT_WORKTREE" "$INTENT_BRANCH"
+  fi
+  cd "$INTENT_WORKTREE"
+fi
+```
+
+**C: Intent on Remote Branch Only**
+```bash
+REMOTE_BRANCH="origin/ai-dlc/${slug}"
+if git rev-parse --verify "$REMOTE_BRANCH" &>/dev/null; then
+  INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
+  LOCAL_BRANCH="ai-dlc/${slug}"
+
+  # Fetch and create local tracking branch
+  git fetch origin "ai-dlc/${slug}:ai-dlc/${slug}" 2>/dev/null || true
+
+  # Create worktree from the now-local branch
+  if [ ! -d "$INTENT_WORKTREE" ]; then
+    git worktree add "$INTENT_WORKTREE" "$LOCAL_BRANCH"
+  fi
+  cd "$INTENT_WORKTREE"
+fi
+```
+
+**Combined Discovery Logic:**
+```bash
+# Source DAG library for branch discovery
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Find intent source
+INTENT_SOURCE=""
+INTENT_BRANCH=""
+
+# Check filesystem first
+if [ -d ".ai-dlc/${slug}" ]; then
+  INTENT_SOURCE="filesystem"
+  INTENT_BRANCH="ai-dlc/${slug}"
+# Check local branch
+elif git rev-parse --verify "ai-dlc/${slug}" &>/dev/null; then
+  INTENT_SOURCE="local"
+  INTENT_BRANCH="ai-dlc/${slug}"
+# Check remote branch
+elif git rev-parse --verify "origin/ai-dlc/${slug}" &>/dev/null; then
+  INTENT_SOURCE="remote"
+  INTENT_BRANCH="ai-dlc/${slug}"
+  # Fetch to create local branch
+  git fetch origin "ai-dlc/${slug}:ai-dlc/${slug}" 2>/dev/null
 fi
 
-# Switch to the intent worktree
+if [ -z "$INTENT_SOURCE" ]; then
+  echo "Error: Intent '${slug}' not found in filesystem, local branches, or remote"
+  exit 1
+fi
+
+# Create/switch to worktree
+INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
+if [ ! -d "$INTENT_WORKTREE" ]; then
+  if [ "$INTENT_SOURCE" = "filesystem" ]; then
+    git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
+  else
+    git worktree add "$INTENT_WORKTREE" "$INTENT_BRANCH"
+  fi
+fi
 cd "$INTENT_WORKTREE"
 ```
+
+**CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
 
 This ensures:
 - Main working directory stays on `main`, unaffected
