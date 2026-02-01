@@ -20,9 +20,8 @@
   ],
   "mcpServers": {
     "blueprints": {
-      "command": "han",
-      "args": ["mcp", "blueprints"],
-      "env": {}
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
     }
   }
 }

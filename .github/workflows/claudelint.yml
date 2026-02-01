@@ -1,4 +1,4 @@
-name: Claude Plugin Lint
+name: Claude Plugin Validate
 
 on:
   pull_request:
@@ -22,24 +22,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
+          node-version: '22'
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
 
-      - name: Show claudelint configuration
+      - name: Validate all plugins and marketplaces
         run: |
-          echo "Using configuration from .claudelint.yaml"
-          cat .claudelint.yaml
-
-      - name: Run claudelint
-        run: uvx claudelint .
+          # Find all plugin.json and marketplace.json files and validate their parent directories
+          find . \( -path '*/.claude-plugin/plugin.json' -o -path '*/.claude-plugin/marketplace.json' \) -not -path './node_modules/*' | while read -r manifest; do
+            dir=$(dirname "$(dirname "$manifest")")
+            echo "Validating: $dir"
+            claude plugin validate "$dir"
+          done

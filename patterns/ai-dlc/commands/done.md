@@ -94,7 +94,7 @@ if [ -n "$CURRENT_UNIT" ] && [ -f "$INTENT_DIR/${CURRENT_UNIT}.md" ]; then
 fi
 ```
 
-**Note:** This happens in the intent worktree (main branch), not the unit worktree. The orchestrator is responsible for tracking unit progress.
+**Note:** This happens in the intent worktree (`/tmp/ai-dlc-{intent-slug}/`), not the unit worktree. The orchestrator is responsible for tracking unit progress.
 
 ### Step 3c: Check for More Units (Unit-Based Workflows)
 
@@ -175,7 +175,13 @@ const workflowHats = state.workflow.join(" → ");
 ### Criteria Satisfied
 {List of completion criteria}
 
+### Next Steps
+
+1. **Merge changes** - Create a PR from `ai-dlc/{intent-slug}` to `main`
+2. **Clean up worktrees** - Run `git worktree remove /tmp/ai-dlc-{intent-slug}`
+3. **Start new task** - Run `/reset` to clear state, then `/elaborate`
+
 ---
 
-Run `/reset` to clear AI-DLC state and start a new task.
+Worktree location: /tmp/ai-dlc-{intent-slug}/
 ```

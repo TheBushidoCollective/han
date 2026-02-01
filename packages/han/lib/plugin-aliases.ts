@@ -28,7 +28,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 	"do-backend-development": "disciplines/backend",
 	"do-blockchain": "disciplines/blockchain",
 	"do-blockchain-development": "disciplines/blockchain",
-	"do-claude-plugin-development": "disciplines/plugin-development",
+	"do-claude-plugin-development": "disciplines/claude-plugin-development",
 	"do-compiler-development": "disciplines/compilers",
 	"do-compilers": "disciplines/compilers",
 	"do-content": "disciplines/content",
@@ -58,7 +58,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 	"do-performance-engineering": "disciplines/performance",
 	"do-platform": "disciplines/platform",
 	"do-platform-engineering": "disciplines/platform",
-	"do-plugin-development": "disciplines/plugin-development",
+	"do-plugin-development": "disciplines/claude-plugin-development",
 	"do-product": "disciplines/product",
 	"do-product-management": "disciplines/product",
 	"do-project-management": "disciplines/project-management",
@@ -127,9 +127,12 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 	"jutsu-oop": "patterns/oop",
 	"jutsu-tdd": "patterns/tdd",
 
+	// tools (non-service MCP tools)
+	"hashi-blueprints": "tools/blueprints",
+	"blueprints": "tools/blueprints",
+
 	// services
 	"hashi-agent-sop": "services/agent-sop",
-	"hashi-blueprints": "services/blueprints",
 	"hashi-canva": "services/canva",
 	"hashi-clickup": "services/clickup",
 	"hashi-figma": "services/figma",

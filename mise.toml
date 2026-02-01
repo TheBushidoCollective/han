@@ -12,7 +12,6 @@ CLAUDE_ENV_FILE = "{{config_root}}/.claude/env.sh"
 
 [tools]
 markdownlint-cli2 = "latest"
-"pipx:claudelint" = "latest"
 "uv" = "latest"
 biome = "2.3.6"
 node = "lts"

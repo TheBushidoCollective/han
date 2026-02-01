@@ -182,15 +182,19 @@ Before starting:
 
 ## Quality Standards
 
-### Claudelint Validation
+### Claude Plugin Validation
 
-All plugins MUST pass claudelint validation:
+All plugins MUST pass Claude's built-in validation:
 
 ```bash
-uvx --from 'git+https://github.com/stbenjam/claudelint' claudelint .
+# Validate a plugin or marketplace (pass the path to the directory)
+claude plugin validate /path/to/plugin
+
+# Validate current directory
+claude plugin validate .
 ```
 
-Common claudelint checks:
+Validation checks:
 
 - Valid YAML frontmatter in all agents/skills
 - Required frontmatter fields present
@@ -226,7 +230,7 @@ Common rules:
 
 ALWAYS run both validators before completing work:
 
-1. Run claudelint and fix any errors
+1. Run `claude plugin validate` and fix any errors
 2. Run markdownlint with --fix
 3. Verify 0 errors, 0 warnings
 4. Show validation output as proof
@@ -246,7 +250,7 @@ ALWAYS run both validators before completing work:
 Before releasing a plugin:
 
 - [ ] All frontmatter valid and complete
-- [ ] claudelint passes with 0 errors
+- [ ] `claude plugin validate` passes with 0 errors
 - [ ] markdownlint passes with 0 errors
 - [ ] README includes all required sections
 - [ ] Examples are clear and tested
@@ -339,7 +343,7 @@ README.md should include:
 - **Monolithic Agents**: Don't create one agent that does everything
 - **Unclear Scope**: Vague descriptions lead to misuse
 - **Missing Validation**: Always validate plugin structure
-- **Ignoring Standards**: Follow claudelint and markdownlint rules
+- **Ignoring Standards**: Follow `claude plugin validate` and markdownlint rules
 - **Poor Documentation**: README is not optional
 - **Tight Coupling**: Agents shouldn't depend on specific project structure
 - **Silent Failures**: Always report errors clearly
@@ -354,7 +358,7 @@ README.md should include:
 4. **Create agents/skills**: Develop core functionality
 5. **Add hooks**: Implement quality checks
 6. **Write README**: Document everything
-7. **Validate**: Run claudelint and markdownlint
+7. **Validate**: Run `claude plugin validate` and markdownlint
 8. **Test manually**: Verify all components work
 9. **Register**: Add to marketplace.json
 10. **Iterate**: Improve based on usage
@@ -387,7 +391,7 @@ This plugin includes quality enforcement hooks that run automatically:
 
 These hooks ensure:
 
-1. claudelint validation passes
+1. `claude plugin validate` passes
 2. markdownlint validation passes
 3. All errors are fixed before completion
 4. Proof of validation is shown
@@ -397,7 +401,7 @@ These hooks ensure:
 ## Resources and References
 
 - Claude Code documentation
-- claudelint: <https://github.com/stbenjam/claudelint>
+- `claude plugin validate` - Built-in plugin validation
 - markdownlint: <https://github.com/DavidAnson/markdownlint>
 - YAML specification: <https://yaml.org/>
 - Semantic versioning: <https://semver.org/>
@@ -409,7 +413,7 @@ As the plugin developer agent, you:
 - Create well-structured plugins following best practices
 - Write clear, focused agents and skills
 - Implement quality enforcement hooks
-- Validate all work with claudelint and markdownlint
+- Validate all work with `claude plugin validate` and markdownlint
 - Document thoroughly and accurately
 - Follow established patterns and conventions
 - Test comprehensively before release

@@ -95,7 +95,19 @@ Version bumps happen automatically via GitHub Actions:
 
 - **auto-tag-release.yml** - Bumps version and creates tags on changes to `packages/han/`
 - **publish-npm.yml** - Publishes to npm using trusted publishers (OIDC, no token needed)
-- **claudelint.yml** - Validates plugin structure with claudelint
+- **claudelint.yml** - Validates plugin structure (uses claudelint in CI)
+
+## Plugin Validation
+
+Use `claude plugin validate` locally to validate plugins:
+
+```bash
+# Validate a plugin or marketplace
+claude plugin validate .
+
+# Validate a specific path
+claude plugin validate /path/to/plugin
+```
 
 ## Conventions
 

@@ -79,20 +79,29 @@ starting_hat=$(get_recommended_hat ".ai-dlc/${slug}" "${workflow}")
 - Any units in_progress or ready → `builder` (continue work)
 - All units blocked → `planner` (resolve dependencies)
 
-### Step 4: Switch to Intent Branch
+### Step 4: Switch to Intent Worktree
 
-**CRITICAL: The orchestrator MUST run on the intent branch.**
+**CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
 
 ```bash
-# Switch to intent branch (create if doesn't exist)
+# Create or switch to intent worktree
 INTENT_BRANCH="ai-dlc/${slug}"
-git checkout "$INTENT_BRANCH" 2>/dev/null || git checkout -B "$INTENT_BRANCH"
+INTENT_WORKTREE="/tmp/ai-dlc-${slug}"
+
+# Create worktree if it doesn't exist
+if [ ! -d "$INTENT_WORKTREE" ]; then
+  git worktree add -B "$INTENT_BRANCH" "$INTENT_WORKTREE"
+fi
+
+# Switch to the intent worktree
+cd "$INTENT_WORKTREE"
 ```
 
 This ensures:
+- Main working directory stays on `main`, unaffected
 - All subsequent `han keep` operations use the intent branch's storage
 - State is properly scoped to this intent
-- Multiple intents can run in parallel on different branches
+- Multiple intents can run in parallel in separate worktrees
 
 ### Step 5: Get Workflow Hats Array
 
@@ -153,6 +162,7 @@ if (fileExists(criteriaFile)) {
 **Slug:** {slug}
 **Workflow:** {workflow}
 **Starting Hat:** {startingHat}
+**Worktree:** /tmp/ai-dlc-{slug}/
 
 ### Unit Status
 {get_dag_status_table output}
@@ -160,6 +170,8 @@ if (fileExists(criteriaFile)) {
 **Summary:** {completed}/{total} units completed
 
 **Next:** Run `/construct` to continue the construction loop.
+
+Note: All AI-DLC work happens in the worktree at /tmp/ai-dlc-{slug}/
 ```
 
 ## Examples
@@ -176,6 +188,7 @@ AI: Found 1 resumable intent: han-team-platform
 **Slug:** han-team-platform
 **Workflow:** default
 **Starting Hat:** builder
+**Worktree:** /tmp/ai-dlc-han-team-platform/
 
 ### Unit Status
 | Unit | Status | Blocked By |
