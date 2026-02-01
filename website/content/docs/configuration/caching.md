@@ -61,14 +61,12 @@ This ensures:
 Han tracks which files affect each hook using the `if_changed` patterns:
 
 ```yaml
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        if_changed:
-          - "**/*.ts"
-          - "**/*.tsx"
-          - "**/*.js"
+biome:
+  lint:
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
 ```
 
 The cache is invalidated when:
@@ -83,14 +81,12 @@ The cache is invalidated when:
 Hooks can be scoped to directories containing specific files:
 
 ```yaml
-plugins:
-  jutsu-typescript:
-    hooks:
-      typecheck:
-        dirs_with:
-          - tsconfig.json
-        if_changed:
-          - "**/*.ts"
+typescript:
+  typecheck:
+    dirs_with:
+      - tsconfig.json
+    if_changed:
+      - "**/*.ts"
 ```
 
 This creates separate cache entries for each matching directory, allowing parallel caching across monorepo packages.
@@ -107,19 +103,19 @@ Example workflow:
 
 ```bash
 # First run - all hooks execute
-han hook run jutsu-biome lint
+han hook run biome lint
 # → Running lint... (5s)
 
 # No changes - cache hit
-han hook run jutsu-biome lint
+han hook run biome lint
 # → Cached ✓ (8ms)
 
 # Edit a TypeScript file - only TypeScript hooks run
-han hook run jutsu-typescript typecheck
+han hook run typescript typecheck
 # → Running typecheck... (3s)
 
 # Biome still cached (no relevant changes)
-han hook run jutsu-biome lint
+han hook run biome lint
 # → Cached ✓ (7ms)
 ```
 
@@ -132,17 +128,17 @@ han hook run jutsu-biome lint
 ```bash
 # Disable cache for all commands in this shell
 export HAN_NO_CACHE=1
-han hook run jutsu-biome lint
+han hook run biome lint
 
 # Or for a single command
-HAN_NO_CACHE=1 han hook run jutsu-biome lint
+HAN_NO_CACHE=1 han hook run biome lint
 ```
 
 ### 2. CLI Flag
 
 ```bash
 # Disable cache for a single run
-han hook run jutsu-biome lint --no-cache
+han hook run biome lint --no-cache
 ```
 
 ### 3. Configuration File (Lowest Priority)
@@ -153,11 +149,9 @@ hooks:
   cache: false
 
 # Or per-plugin
-plugins:
-  jutsu-biome:
-    hooks:
-      lint:
-        cache: false  # Disable caching for this specific hook
+biome:
+  lint:
+    cache: false  # Disable caching for this specific hook
 ```
 
 **Priority chain:**
@@ -190,7 +184,7 @@ To see cache behavior:
 
 ```bash
 # Run with verbose output
-han hook run jutsu-biome lint --verbose
+han hook run biome lint --verbose
 
 # Output shows:
 # - Cache key computation
@@ -201,7 +195,7 @@ han hook run jutsu-biome lint --verbose
 Example output:
 
 ```
-Computing cache key for jutsu-biome:lint
+Computing cache key for biome:lint
   Files: 42 matches for **/*.{ts,tsx,js}
   Command: npx biome check --write .
   Cache key: a1b2c3d4...
@@ -278,11 +272,9 @@ Common scenarios that invalidate cache:
 5. **Document cache requirements** - if a hook needs cache disabled, explain why in comments:
 
    ```yaml
-   plugins:
-     custom-hook:
-       hooks:
-         validate:
-           cache: false  # Disabled because this hook checks external state
+   custom-validator:
+     validate:
+       cache: false  # Disabled because this hook checks external state
    ```
 
 ## Troubleshooting
@@ -303,7 +295,7 @@ find . -name "*.ts" -type f
 Run with `--verbose` to see what's causing invalidation:
 
 ```bash
-han hook run jutsu-biome lint --verbose --no-cache
+han hook run biome lint --verbose --no-cache
 ```
 
 ### Cache taking too much space
