@@ -2,7 +2,7 @@ name: Auto Fix CI Failures
 
 on:
   workflow_run:
-    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website"]
+    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website", "Claude Plugin Validate"]
     types:
       - completed
 
@@ -12,6 +12,12 @@ permissions:
   actions: read
   issues: write
   id-token: write
+
+# Use concurrency to prevent multiple auto-fix runs on the same branch
+# cancel-in-progress: false means queue them (latest wins after current completes)
+concurrency:
+  group: auto-fix-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
 
 jobs:
   auto-fix:
@@ -32,36 +38,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: Check for concurrent auto-fix runs
-        id: check_concurrent
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Get all running workflow runs for auto-fix
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'auto-fix-ci.yml',
-              status: 'in_progress'
-            });
-
-            // Filter to runs for the same branch (excluding this run)
-            const currentRunId = context.runId;
-            const targetBranch = '${{ github.event.workflow_run.head_branch }}';
-            const concurrentRuns = runs.data.workflow_runs.filter(
-              run => run.id !== currentRunId &&
-                     run.head_branch === targetBranch
-            );
-
-            if (concurrentRuns.length > 0) {
-              console.log(`Found ${concurrentRuns.length} concurrent auto-fix run(s) for branch ${targetBranch}. Skipping.`);
-              return { skip: true };
-            }
-
-            return { skip: false };
-
       - name: Get CI failure details
-        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
         id: failure_details
         uses: actions/github-script@v7
         with:
@@ -110,7 +87,6 @@ jobs:
             };
 
       - name: Fix CI failures with Claude
-        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -133,8 +109,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       - name: Commit and push fixes
-        if: fromJSON(steps.check_concurrent.outputs.result).skip != true
         run: |
+          # Pull latest changes first to avoid conflicts
+          git pull --rebase origin ${{ github.event.workflow_run.head_branch }} || true
+
           # Check if there are any changes to commit
           if git diff --quiet && git diff --cached --quiet; then
             echo "No changes to commit"

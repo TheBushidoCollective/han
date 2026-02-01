@@ -807,7 +807,7 @@
     {
       "name": "do-plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./disciplines/plugin-development",
+      "source": "./disciplines/claude-plugin-development",
       "category": "Discipline",
       "keywords": [
         "plugin",
@@ -3399,7 +3399,7 @@
     {
       "name": "plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./disciplines/plugin-development",
+      "source": "./disciplines/claude-plugin-development",
       "category": "Discipline",
       "keywords": [
         "plugin",
