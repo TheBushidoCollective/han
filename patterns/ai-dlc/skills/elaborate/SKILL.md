@@ -1,6 +1,6 @@
 ---
-name: elaborate
 description: Start AI-DLC mob elaboration to collaboratively define intent, success criteria, and decompose into units. Use when starting a new feature, project, or complex task.
+disable-model-invocation: true
 allowed-tools:
   - Read
   - Write
