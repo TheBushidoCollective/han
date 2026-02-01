@@ -163,9 +163,50 @@ export default async function SkillPage({
 							<h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
 								📖 {skill.name}
 							</h1>
-							<p className="text-lg text-gray-600 dark:text-gray-400">
+							<p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
 								{skill.description}
 							</p>
+
+							{/* Skill Metadata Badges */}
+							<div className="flex flex-wrap gap-2 mb-4">
+								{skill.disableModelInvocation && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+										👤 User Only
+									</span>
+								)}
+								{skill.userInvocable === false && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+										🤖 Agent Only
+									</span>
+								)}
+								{skill.context === "fork" && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+										🔀 Subagent {skill.agent && `(${skill.agent})`}
+									</span>
+								)}
+								{skill.argumentHint && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+										📝 {skill.argumentHint}
+									</span>
+								)}
+								{skill.model && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+										🧠 {skill.model}
+									</span>
+								)}
+							</div>
+
+							{/* Allowed Tools */}
+							{skill.allowedTools && skill.allowedTools.length > 0 && (
+								<div className="mb-4">
+									<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+										Allowed Tools:{" "}
+									</span>
+									<span className="text-sm text-gray-600 dark:text-gray-400">
+										{skill.allowedTools.join(", ")}
+									</span>
+								</div>
+							)}
 						</div>
 
 						<hr />

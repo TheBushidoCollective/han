@@ -28,6 +28,13 @@ export interface SkillMetadata {
 	description: string;
 	allowedTools?: string[];
 	content: string;
+	// New Claude Code skill frontmatter fields
+	disableModelInvocation?: boolean; // User-only command (Claude can't auto-invoke)
+	userInvocable?: boolean; // If false, hidden from user menu (agent-only)
+	argumentHint?: string; // Hint shown during autocomplete
+	context?: "fork"; // Run in forked subagent context
+	agent?: string; // Subagent type when context: fork
+	model?: string; // Model override for this skill
 }
 
 export interface HookCommand {
@@ -60,6 +67,10 @@ export interface CommandMetadata {
 	description: string;
 	content: string;
 	internal?: boolean;
+	// New Claude Code skill frontmatter fields (commands support same fields)
+	disableModelInvocation?: boolean; // User-only command
+	userInvocable?: boolean; // If false, agent-only
+	argumentHint?: string; // Hint shown during autocomplete
 }
 
 export interface MCPCapability {
@@ -343,6 +354,13 @@ function getPluginSkills(pluginPath: string): SkillMetadata[] {
 				description: data.description || "",
 				allowedTools: data["allowed-tools"],
 				content,
+				// New Claude Code skill frontmatter fields
+				disableModelInvocation: data["disable-model-invocation"],
+				userInvocable: data["user-invocable"],
+				argumentHint: data["argument-hint"],
+				context: data.context,
+				agent: data.agent,
+				model: data.model,
 			});
 		}
 	} catch (error) {
@@ -698,6 +716,10 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 				description,
 				content: fileContent,
 				internal: isInternal || undefined,
+				// New Claude Code skill frontmatter fields
+				disableModelInvocation: data["disable-model-invocation"],
+				userInvocable: data["user-invocable"],
+				argumentHint: data["argument-hint"],
 			});
 		}
 	} catch (error) {

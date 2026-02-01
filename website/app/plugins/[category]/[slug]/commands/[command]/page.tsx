@@ -163,9 +163,33 @@ export default async function CommandPage({
 							<h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
 								⌘ /{command.name}
 							</h1>
-							<p className="text-lg text-gray-600 dark:text-gray-400">
+							<p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
 								{command.description}
 							</p>
+
+							{/* Command Metadata Badges */}
+							<div className="flex flex-wrap gap-2">
+								{command.internal && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+										⚙️ Internal
+									</span>
+								)}
+								{command.disableModelInvocation && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+										👤 User Only
+									</span>
+								)}
+								{command.userInvocable === false && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+										🤖 Agent Only
+									</span>
+								)}
+								{command.argumentHint && (
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+										📝 {command.argumentHint}
+									</span>
+								)}
+							</div>
 						</div>
 
 						{/* Usage Card */}
