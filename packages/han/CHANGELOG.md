@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-02-01
+
+### Added
+
+- reorganize plugins from branded to tech layer categories (#45) ([23a8c08a](../../commit/23a8c08a))
+- add fallback mechanisms for empty search results ([28c35c40](../../commit/28c35c40))
+- add multi-strategy search with RRF fusion ([a8e91537](../../commit/a8e91537))
+- export session completion and summary modules ([5b05cfb5](../../commit/5b05cfb5))
+- add backfill-summaries CLI command ([364e4832](../../commit/364e4832))
+- add summaries layer to DAL search ([e027235b](../../commit/e027235b))
+- add LLM summary generator using Haiku ([2a179b9e](../../commit/2a179b9e))
+- add session completion detection ([0b680273](../../commit/0b680273))
+- add query expansion for FTS semantic bridging ([dce20c86](../../commit/dce20c86))
+
+### Fixed
+
+- remove migration from install flow, use canonical names ([5435a20b](../../commit/5435a20b))
+- update han.test.ts for new migrated plugin names ([ca85f0eb](../../commit/ca85f0eb))
+- update plugin alias tests for new path structure ([6a66b876](../../commit/6a66b876))
+- enable npm publishing for han CLI ([535031db](../../commit/535031db))
+- embed install script instead of fetching from han.guru (#47) ([41dcde14](../../commit/41dcde14))
+- sync plugin-aliases.ts with marketplace paths ([fa6ebb40](../../commit/fa6ebb40))
+- fix type inference for LIMITS constants ([546d3f95](../../commit/546d3f95))
+- address PR review feedback ([9ab3a8a7](../../commit/9ab3a8a7))
+- update alias tests to match current implementation ([357da7f2](../../commit/357da7f2))
+- add JS fallbacks for native module functions ([4f97cd39](../../commit/4f97cd39))
+- restore readFileSync import for scanRecentSessions ([e8bd05e5](../../commit/e8bd05e5))
+- address high priority code review feedback ([18ed10c4](../../commit/18ed10c4))
+- increase timeout for slow doctor diagnostic test ([bca229ac](../../commit/bca229ac))
+- resolve pre-existing CI failures ([8402ff65](../../commit/8402ff65))
+- resolve CI validation failures ([933b13ae](../../commit/933b13ae))
+
+### Changed
+
+- rename plugin-development to claude-plugin-development ([abf402c4](../../commit/abf402c4))
+- remove redundant LLM summary generation ([43ee8f8b](../../commit/43ee8f8b))
+
+### Other
+
+- Revert "fix: add JS fallbacks for native module functions" ([47627249](../../commit/47627249))
+- Merge branch 'ai-dlc/memory-system-improvements/03-multi-strategy-search' into ai-dlc/memory-system-improvements/05-fallback-mechanisms ([464b4822](../../commit/464b4822))
+
 ## [3.3.1] - 2026-01-29
 
 ### Added
