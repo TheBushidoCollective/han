@@ -1,0 +1,20 @@
+# Test workflow to verify triggers work
+name: Release Test
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [manual-release]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test
+        run: echo "Triggers work for tag ${{ github.ref_name }}"
