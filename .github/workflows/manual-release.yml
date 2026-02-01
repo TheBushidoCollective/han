@@ -3,11 +3,13 @@ name: Manual Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
-  get-tag:
+  trigger-release:
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.get_tag.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,11 +27,14 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Found tag: $TAG"
 
-  release:
-    needs: get-tag
-    uses: ./.github/workflows/release-binaries.yml
-    with:
-      tag: ${{ needs.get-tag.outputs.tag }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Display instructions
+        run: |
+          echo "============================================"
+          echo "Manual release trigger for ${{ steps.get_tag.outputs.tag }}"
+          echo ""
+          echo "To trigger the release, run locally:"
+          echo "  git tag -d ${{ steps.get_tag.outputs.tag }}"
+          echo "  git push origin :refs/tags/${{ steps.get_tag.outputs.tag }}"
+          echo "  git tag -a ${{ steps.get_tag.outputs.tag }} -m 'Release ${{ steps.get_tag.outputs.tag }}'"
+          echo "  git push origin ${{ steps.get_tag.outputs.tag }}"
+          echo "============================================"
