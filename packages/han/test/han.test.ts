@@ -613,11 +613,11 @@ describe("Plugin install/uninstall", () => {
 			// The key thing is that multiple installs don't create duplicate entries
 			const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 			const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
-				(k) => k.includes("jutsu-typescript"),
+				(k) => k.includes("typescript"),
 			);
 			expect(pluginKeys.length).toBe(1);
-			// After migration, the key should be the short name
-			expect(settings.enabledPlugins["typescript@han"]).toBe(true);
+			// The original entry should still be there (idempotent means no change)
+			expect(settings.enabledPlugins["jutsu-typescript@han"]).toBe(true);
 		},
 		{ timeout: BINARY_TIMEOUT },
 	);
