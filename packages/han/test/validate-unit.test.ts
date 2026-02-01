@@ -9,13 +9,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // Import the modules under test
+// Import directly from hook-config.ts to avoid loading hook-cache.ts which uses native module
 import {
 	getHookConfigs,
 	getHookDefinition,
 	listAvailableHooks,
 	loadPluginConfig,
 	loadUserConfig,
-} from "../lib/hooks/index.ts";
+} from "../lib/hooks/hook-config.ts";
 import { getPluginNameFromRoot } from "../lib/shared/index.ts";
 
 let testDir: string;

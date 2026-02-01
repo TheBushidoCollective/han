@@ -148,3 +148,75 @@ export {
 	createLanceVectorStore,
 	getVectorStore,
 } from "./vector-store.ts";
+
+// Team Memory (permission-aware cross-session memory)
+export type {
+	MemoryScope as TeamMemoryScope,
+	UserPermissionContext,
+	PermissionCheckResult,
+	PermittedSessionsResult,
+} from "./permission-filter.ts";
+export {
+	checkSessionPermission,
+	filterSessionsByPermission,
+	applySessionIdPreFilter,
+	validateSearchResults,
+} from "./permission-filter.ts";
+
+export type {
+	TeamMemoryQueryParams,
+	TeamCitation,
+	TeamMemoryResult,
+} from "./team-memory-query.ts";
+export {
+	queryTeamMemory,
+	searchTeamMemory,
+	getPermittedSessionIds,
+	getTeamMemoryLayers,
+} from "./team-memory-query.ts";
+
+export type {
+	TeamMemoryAgentParams,
+	TeamMemoryAgentResponse,
+} from "./team-memory-agent.ts";
+export {
+	queryTeamMemoryWithAgent,
+	formatTeamMemoryAgentResult,
+} from "./team-memory-agent.ts";
+
+export type { OrgLearning, OrgLearningsResult } from "./org-learnings.ts";
+export {
+	getOrgLearnings,
+	getOrgConventions,
+	getOrgLearningDomains,
+} from "./org-learnings.ts";
+
+export type {
+	TeamMemoryCacheEntry,
+	OrgLearningsCacheEntry,
+} from "./team-memory-cache.ts";
+export {
+	getCachedPermittedSessions,
+	cachePermittedSessions,
+	invalidatePermittedSessions,
+	getCachedQueryResult,
+	cacheQueryResult,
+	getCachedOrgLearnings,
+	cacheOrgLearnings,
+	invalidateOrgLearnings,
+	getCacheStats,
+	clearAllCaches,
+	destroyCaches,
+	CACHE_TTL,
+} from "./team-memory-cache.ts";
+
+export type { RateLimitConfig, RateLimitResult } from "./rate-limiter.ts";
+export {
+	checkRateLimit,
+	getRateLimitStatus,
+	resetRateLimit,
+	enforceRateLimit,
+	destroyRateLimiter,
+	RateLimitExceededError,
+	DEFAULT_RATE_LIMITS,
+} from "./rate-limiter.ts";

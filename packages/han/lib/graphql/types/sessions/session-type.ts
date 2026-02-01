@@ -2,6 +2,7 @@
  * GraphQL Session type
  *
  * Represents a Claude Code session with messages.
+ * Includes owner field for team session viewing (nullable in local mode).
  */
 
 import {
@@ -17,6 +18,7 @@ import type {
 } from "../../../db/index.ts";
 import { sessionFileChanges } from "../../../db/index.ts";
 import { builder } from "../../builder.ts";
+import { UserRef, type UserData } from "../team/index.ts";
 import { registerNodeLoader } from "../../node-registry.ts";
 import {
 	ImageBlockType,
@@ -315,6 +317,33 @@ export const SessionType = SessionRef.implement({
 			nullable: true,
 			description: "Worktree name if part of multi-worktree project",
 			resolve: (s) => s.worktreeName ?? null,
+		}),
+		// Team platform fields
+		owner: t.field({
+			type: UserRef,
+			nullable: true,
+			description:
+				"User who ran this session (only populated in hosted team mode)",
+			resolve: (s): UserData | null => {
+				// In local mode, owner is not available
+				// In hosted mode, this would be populated from the session data
+				// For now, return null - will be extended when team backend is ready
+				if ("owner" in s && s.owner) {
+					return s.owner as UserData;
+				}
+				return null;
+			},
+		}),
+		orgId: t.string({
+			nullable: true,
+			description:
+				"Organization ID this session belongs to (only in hosted team mode)",
+			resolve: (s) => {
+				if ("orgId" in s && typeof s.orgId === "string") {
+					return s.orgId;
+				}
+				return null;
+			},
 		}),
 		summary: t.string({
 			nullable: true,

@@ -11,6 +11,8 @@ import { useMemo } from 'react';
 import { graphql, useFragment, useSubscription } from 'react-relay';
 import { Link } from 'react-router-dom';
 import type { GraphQLSubscriptionConfig } from 'relay-runtime';
+import { useMode } from '@/contexts';
+import { SessionOwner } from '@/components/molecules';
 import { Badge, HStack, Text, theme, VStack } from '../atoms/index.ts';
 import type { SessionListItem_session$key } from './__generated__/SessionListItem_session.graphql.ts';
 import type { SessionListItemSubscription } from './__generated__/SessionListItemSubscription.graphql.ts';
@@ -32,6 +34,12 @@ export const SessionListItemFragment = graphql`
     messageCount
     startedAt
     updatedAt
+    owner {
+      id
+      name
+      email
+      avatarUrl
+    }
     currentTodo {
       content
       activeForm
@@ -117,6 +125,7 @@ export function SessionListItem({
   style,
 }: SessionListItemProps) {
   const session = useFragment(SessionListItemFragment, sessionRef);
+  const { isHosted } = useMode();
 
   // Subscribe to session updates and move to front of connection when updated
   const subscriptionConfig = useMemo<
@@ -261,6 +270,18 @@ export function SessionListItem({
               <Badge variant={todoProgress === 100 ? 'success' : 'default'}>
                 {todoProgress}% ({completed}/{total})
               </Badge>
+            )}
+            {/* Show session owner in team mode */}
+            {isHosted && session.owner && session.owner.id && session.owner.email && session.owner.name && (
+              <SessionOwner
+                owner={{
+                  id: session.owner.id,
+                  email: session.owner.email,
+                  name: session.owner.name,
+                  avatarUrl: session.owner.avatarUrl ?? undefined,
+                }}
+                size="sm"
+              />
             )}
           </HStack>
         </VStack>

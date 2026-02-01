@@ -12,6 +12,7 @@ import {
 } from "./index.ts";
 
 export interface JutsuTemplateFiles {
+	[key: string]: string;
 	".claude-plugin/plugin.json": string;
 	"han-plugin.yml": string;
 	"skills/getting-started/SKILL.md": string;

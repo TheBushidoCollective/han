@@ -315,12 +315,14 @@ description: |
 ### Be Specific
 
 Bad:
+
 ```markdown
 ## Configuration
 Configure the tool as needed for your project.
 ```
 
 Good:
+
 ```markdown
 ## Configuration
 
@@ -338,11 +340,13 @@ module.exports = {
 ### Include Real Commands
 
 Bad:
+
 ```markdown
 Run the linter to check your code.
 ```
 
 Good:
+
 ```markdown
 \`\`\`bash
 # Check without fixing

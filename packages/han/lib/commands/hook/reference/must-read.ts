@@ -46,7 +46,7 @@ export function createReferenceCommand(): Command {
 						true,
 						Date.now() - startTime,
 					);
-					return;
+					process.exit(0);
 				}
 
 				if (options.mustReadFirst) {
@@ -78,6 +78,8 @@ export function createReferenceCommand(): Command {
 						Date.now() - startTime,
 					);
 				}
+				// Explicitly exit to avoid hanging on open handles
+				process.exit(0);
 			},
 		);
 

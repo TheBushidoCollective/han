@@ -12,6 +12,7 @@ import {
 } from "./index.ts";
 
 export interface HashiTemplateFiles {
+	[key: string]: string;
 	".claude-plugin/plugin.json": string;
 	".mcp.json": string;
 	"han-plugin.yml": string;
