@@ -19,8 +19,9 @@ HAN_BIN="${HAN_BIN:-$HOME/.local/bin/han-bin}"
 
 # Install if binary doesn't exist
 if [ ! -x "$HAN_BIN" ]; then
-    # Tell install.sh to install as han-bin (not han, which is this wrapper)
-    HAN_INSTALL_TARGET=han-bin curl -fsSL https://han.guru/install.sh | bash >/dev/null 2>&1
+    # Use embedded install script (downloads from GitHub, which is usually allowed)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    HAN_INSTALL_TARGET=han-bin bash "$SCRIPT_DIR/install-han.sh" 2>/dev/null
 fi
 
 # Export so child han commands inherit it
