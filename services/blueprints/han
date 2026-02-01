@@ -9,47 +9,107 @@
 set -e
 
 HAN_BIN="${HAN_BIN:-$HOME/.local/bin/han-bin}"
+HAN_REPO="${HAN_REPO:-TheBushidoCollective/han}"
 
 # Auto-install if binary doesn't exist
 if [ ! -x "$HAN_BIN" ]; then
     BIN_DIR="$(dirname "$HAN_BIN")"
     mkdir -p "$BIN_DIR"
+    LOCK_FILE="${BIN_DIR}/.han-install.lock"
 
-    # Detect platform
-    os="$(uname -s)"
-    arch="$(uname -m)"
-    case "$os" in
-        Darwin)
-            case "$arch" in
-                arm64|aarch64) PLATFORM="darwin-arm64" ;;
-                x86_64|amd64) PLATFORM="darwin-x64" ;;
-                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-            esac
-            ;;
-        Linux)
-            case "$arch" in
-                arm64|aarch64) PLATFORM="linux-arm64" ;;
-                x86_64|amd64) PLATFORM="linux-x64" ;;
-                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-            esac
-            ;;
-        MINGW*|MSYS*|CYGWIN*) PLATFORM="win32-x64" ;;
-        *) echo "Unsupported OS: $os" >&2; exit 1 ;;
-    esac
+    # Use flock to prevent race conditions during parallel installs
+    (
+        flock -n 200 || {
+            # Another process is installing, wait for it
+            flock 200
+            # Installation done by other process, check if successful
+            if [ -x "$HAN_BIN" ]; then
+                exit 0
+            fi
+            echo "Installation by another process failed" >&2
+            exit 1
+        }
 
-    # Get latest version and download
-    VERSION=$(curl -fsSL "https://api.github.com/repos/TheBushidoCollective/han/releases/latest" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"v?([^"]+)".*/\1/')
-    if [ -z "$VERSION" ]; then
-        echo "Failed to get latest han version" >&2
-        exit 1
-    fi
+        # Double-check after acquiring lock (another process may have installed)
+        if [ -x "$HAN_BIN" ]; then
+            exit 0
+        fi
 
-    TEMP_BIN="${HAN_BIN}.tmp.$$"
-    trap 'rm -f "$TEMP_BIN"' EXIT
-    curl -fsSL "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-${PLATFORM}" -o "$TEMP_BIN"
-    chmod +x "$TEMP_BIN"
-    mv -f "$TEMP_BIN" "$HAN_BIN"
-    echo "Installed han v${VERSION}" >&2
+        # Detect platform
+        os="$(uname -s)"
+        arch="$(uname -m)"
+        case "$os" in
+            Darwin)
+                case "$arch" in
+                    arm64|aarch64) PLATFORM="darwin-arm64" ;;
+                    x86_64|amd64) PLATFORM="darwin-x64" ;;
+                    *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+                esac
+                ;;
+            Linux)
+                case "$arch" in
+                    arm64|aarch64) PLATFORM="linux-arm64" ;;
+                    x86_64|amd64) PLATFORM="linux-x64" ;;
+                    *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+                esac
+                ;;
+            MINGW*|MSYS*|CYGWIN*) PLATFORM="win32-x64" ;;
+            *) echo "Unsupported OS: $os" >&2; exit 1 ;;
+        esac
+
+        # Get latest version with proper error handling
+        echo "Fetching latest han version..." >&2
+        API_RESPONSE=$(curl -fsSL "https://api.github.com/repos/${HAN_REPO}/releases/latest" 2>&1) || {
+            echo "Failed to fetch release info from GitHub API" >&2
+            exit 1
+        }
+
+        VERSION=$(echo "$API_RESPONSE" | grep '"tag_name":' | sed -E 's/.*"v?([^"]+)".*/\1/')
+        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Failed to parse version from GitHub API response" >&2
+            echo "Response: $API_RESPONSE" >&2
+            exit 1
+        fi
+
+        DOWNLOAD_URL="https://github.com/${HAN_REPO}/releases/download/v${VERSION}/han-${PLATFORM}"
+        CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
+
+        # Download to temp file
+        TEMP_BIN="${HAN_BIN}.tmp.$$"
+        TEMP_CHECKSUM="${HAN_BIN}.sha256.tmp.$$"
+        cleanup() { rm -f "$TEMP_BIN" "$TEMP_CHECKSUM"; }
+        trap cleanup EXIT
+
+        echo "Downloading han v${VERSION} for ${PLATFORM}..." >&2
+        if ! curl -fSL --progress-bar "$DOWNLOAD_URL" -o "$TEMP_BIN"; then
+            echo "Failed to download han binary" >&2
+            exit 1
+        fi
+
+        # Verify checksum if available
+        if curl -fsSL "$CHECKSUM_URL" -o "$TEMP_CHECKSUM" 2>/dev/null; then
+            EXPECTED=$(awk '{print $1}' "$TEMP_CHECKSUM")
+            if [ -n "$EXPECTED" ]; then
+                if command -v sha256sum >/dev/null 2>&1; then
+                    ACTUAL=$(sha256sum "$TEMP_BIN" | awk '{print $1}')
+                elif command -v shasum >/dev/null 2>&1; then
+                    ACTUAL=$(shasum -a 256 "$TEMP_BIN" | awk '{print $1}')
+                fi
+                if [ -n "$ACTUAL" ] && [ "$EXPECTED" != "$ACTUAL" ]; then
+                    echo "Checksum verification failed!" >&2
+                    echo "Expected: $EXPECTED" >&2
+                    echo "Actual:   $ACTUAL" >&2
+                    exit 1
+                fi
+                echo "Checksum verified" >&2
+            fi
+        fi
+
+        chmod +x "$TEMP_BIN"
+        mv -f "$TEMP_BIN" "$HAN_BIN"
+        echo "Installed han v${VERSION}" >&2
+
+    ) 200>"$LOCK_FILE"
 fi
 
 export HAN_BIN
