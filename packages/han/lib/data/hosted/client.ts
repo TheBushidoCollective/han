@@ -102,11 +102,24 @@ export function getPostgresClient(): PostgresClient {
 	if (!_sql) {
 		const config = getPostgresConfig();
 		// SSL configuration - always validate certificates in production
-		// Set POSTGRES_SSL_REJECT_UNAUTHORIZED=false only for development with self-signed certs
+		// POSTGRES_SSL_REJECT_UNAUTHORIZED=false is ONLY allowed in non-production environments
+		const isProduction = process.env.NODE_ENV === "production";
+		const disableValidation =
+			!isProduction &&
+			process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === "false";
+
+		if (disableValidation) {
+			console.warn(
+				"[postgres] WARNING: SSL certificate validation disabled. " +
+					"This is acceptable for development with self-signed certificates, " +
+					"but should NEVER be used in production.",
+			);
+		}
+
 		const sslConfig = config.ssl
 			? {
-					rejectUnauthorized:
-						process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED !== "false",
+					// In production, ALWAYS validate certificates regardless of env var
+					rejectUnauthorized: isProduction ? true : !disableValidation,
 				}
 			: false;
 
@@ -179,20 +192,16 @@ const tenantStorage = new AsyncLocalStorage<TenantContext>();
 
 /**
  * Set the current tenant context
- * Call this at the start of each request after authentication
  *
- * @deprecated Use withTenantContext() instead for proper async isolation
+ * @deprecated REMOVED - Use withTenantContext() instead for proper async isolation.
+ * This method now throws an error to prevent accidental misuse.
  */
-export function setTenantContext(context: TenantContext): void {
-	// For backwards compatibility, we store in AsyncLocalStorage
-	// but this only works if called within an async context
-	const store = tenantStorage.getStore();
-	if (store) {
-		// If we're already in a context, update it (this shouldn't normally happen)
-		Object.assign(store, context);
-	}
-	// Note: Without an async context, this is a no-op.
-	// Use withTenantContext() for proper request handling.
+export function setTenantContext(_context: TenantContext): void {
+	throw new Error(
+		"setTenantContext() is deprecated and has been removed. " +
+			"Use withTenantContext(context, async () => { ... }) instead to ensure " +
+			"proper tenant isolation in concurrent request scenarios.",
+	);
 }
 
 /**
@@ -211,13 +220,17 @@ export function getTenantContext(): TenantContext {
 
 /**
  * Clear the current tenant context
- * Call this at the end of each request
  *
- * @deprecated Use withTenantContext() instead - it automatically clears on exit
+ * @deprecated REMOVED - Use withTenantContext() instead.
+ * AsyncLocalStorage automatically clears context when the async scope exits.
+ * This method now throws an error to prevent accidental misuse.
  */
 export function clearTenantContext(): void {
-	// No-op with AsyncLocalStorage - context is automatically scoped
-	// to the async execution context and cleaned up when it exits
+	throw new Error(
+		"clearTenantContext() is deprecated and has been removed. " +
+			"Use withTenantContext(context, async () => { ... }) instead. " +
+			"The context is automatically cleaned up when the async scope exits.",
+	);
 }
 
 /**
