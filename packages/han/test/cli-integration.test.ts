@@ -7,11 +7,19 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NATIVE_AVAILABLE } from "./setup.ts";
 
 // Get the package root directory (one level up from test/)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, "..");
+
+// Base environment for subprocess tests - includes SKIP_NATIVE when native module isn't available
+const baseEnv = {
+	...process.env,
+	// Propagate SKIP_NATIVE to subprocesses when native module isn't available
+	...(NATIVE_AVAILABLE ? {} : { SKIP_NATIVE: "true" }),
+};
 
 describe("CLI integration tests", () => {
 	const testDir = `/tmp/test-cli-${Date.now()}`;
@@ -69,49 +77,59 @@ describe("CLI integration tests", () => {
 			expect(result.status).toBe(0);
 			expect(result.stdout).toContain("dispatch");
 			expect(result.stdout).toContain("run");
-			expect(result.stdout).toContain("explain");
+			// Note: "explain" is only registered in TTY environments (uses ink)
+			// so we don't check for it here
 		});
 	});
 
 	describe("han hook dispatch", () => {
-		test("exits cleanly when no plugins installed", () => {
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
-				{
-					encoding: "utf-8",
-					timeout: 30000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_CONFIG_DIR: join(testDir, "config"),
-						HOME: testDir,
+		test(
+			"exits cleanly when no plugins installed",
+			() => {
+				const result = spawnSync(
+					"bun",
+					["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
+					{
+						encoding: "utf-8",
+						timeout: 30000,
+						cwd: packageRoot,
+						input: "", // Prevent stdin blocking
+						env: {
+							...baseEnv,
+							CLAUDE_CONFIG_DIR: join(testDir, "config"),
+							HOME: testDir,
+						},
 					},
-				},
-			);
+				);
 
-			// Should exit cleanly with no output when no plugins have hooks
-			expect(result.status).toBe(0);
-		});
+				// Should exit cleanly with no output when no plugins have hooks
+				expect(result.status).toBe(0);
+			},
+			{ timeout: 35000 },
+		);
 
-		test("respects HAN_DISABLE_HOOKS=true", () => {
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
-				{
-					encoding: "utf-8",
-					timeout: 10000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						HAN_DISABLE_HOOKS: "true",
+		test(
+			"respects HAN_DISABLE_HOOKS=true",
+			() => {
+				const result = spawnSync(
+					"bun",
+					["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
+					{
+						encoding: "utf-8",
+						timeout: 10000,
+						cwd: packageRoot,
+						env: {
+							...baseEnv,
+							HAN_DISABLE_HOOKS: "true",
+						},
 					},
-				},
-			);
+				);
 
-			expect(result.status).toBe(0);
-			expect(result.stdout.trim()).toBe("");
-		});
+				expect(result.status).toBe(0);
+				expect(result.stdout.trim()).toBe("");
+			},
+			{ timeout: 15000 },
+		);
 
 		test("respects HAN_DISABLE_HOOKS=1", () => {
 			const result = spawnSync(
@@ -122,7 +140,7 @@ describe("CLI integration tests", () => {
 					timeout: 10000,
 					cwd: packageRoot,
 					env: {
-						...process.env,
+						...baseEnv,
 						HAN_DISABLE_HOOKS: "1",
 					},
 				},
@@ -140,7 +158,7 @@ describe("CLI integration tests", () => {
 				timeout: 10000,
 				cwd: packageRoot,
 				env: {
-					...process.env,
+					...baseEnv,
 					CLAUDE_CONFIG_DIR: join(testDir, "config"),
 				},
 			});
@@ -158,7 +176,7 @@ describe("CLI integration tests", () => {
 					timeout: 10000,
 					cwd: packageRoot,
 					env: {
-						...process.env,
+						...baseEnv,
 						HAN_DISABLE_HOOKS: "true",
 					},
 				},
@@ -224,62 +242,72 @@ describe("CLI integration tests", () => {
 			expect(result.status).toBe(0);
 		});
 
-		test("reference outputs file path", () => {
-			// The reference command outputs a file path (not content)
-			const testFile = "hooks/test-hook.md";
+		test(
+			"reference outputs file path",
+			() => {
+				// The reference command outputs a file path (not content)
+				const testFile = "hooks/test-hook.md";
 
-			const result = spawnSync(
-				"bun",
-				["run", "lib/main.ts", "hook", "reference", testFile],
-				{
-					encoding: "utf-8",
-					timeout: 10000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_PLUGIN_ROOT: "/plugin/root",
+				const result = spawnSync(
+					"bun",
+					["run", "lib/main.ts", "hook", "reference", testFile],
+					{
+						encoding: "utf-8",
+						timeout: 10000,
+						cwd: packageRoot,
+						input: "", // Prevent stdin blocking
+						env: {
+							...baseEnv,
+							CLAUDE_PLUGIN_ROOT: "/plugin/root",
+						},
 					},
-				},
-			);
+				);
 
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("/plugin/root/hooks/test-hook.md");
-		});
+				expect(result.status).toBe(0);
+				expect(result.stdout).toContain("/plugin/root/hooks/test-hook.md");
+			},
+			{ timeout: 15000 },
+		);
 
-		test("reference with --must-read-first outputs XML tag", () => {
-			const testFile = "hooks/test-hook.md";
+		test(
+			"reference with --must-read-first outputs XML tag",
+			() => {
+				const testFile = "hooks/test-hook.md";
 
-			const result = spawnSync(
-				"bun",
-				[
-					"run",
-					"lib/main.ts",
-					"hook",
-					"reference",
-					testFile,
-					"--must-read-first",
-					"Required reading",
-				],
-				{
-					encoding: "utf-8",
-					timeout: 10000,
-					cwd: packageRoot,
-					env: {
-						...process.env,
-						CLAUDE_PLUGIN_ROOT: "/plugin/root",
-						// Isolate from user's global config to prevent re-exec
-						HOME: testDir,
-						CLAUDE_CONFIG_DIR: undefined,
-						CLAUDE_PROJECT_DIR: undefined,
+				const result = spawnSync(
+					"bun",
+					[
+						"run",
+						"lib/main.ts",
+						"hook",
+						"reference",
+						testFile,
+						"--must-read-first",
+						"Required reading",
+					],
+					{
+						encoding: "utf-8",
+						timeout: 10000,
+						cwd: packageRoot,
+						input: "", // Prevent stdin blocking
+						env: {
+							...baseEnv,
+							CLAUDE_PLUGIN_ROOT: "/plugin/root",
+							// Isolate from user's global config to prevent re-exec
+							HOME: testDir,
+							CLAUDE_CONFIG_DIR: undefined,
+							CLAUDE_PROJECT_DIR: undefined,
+						},
 					},
-				},
-			);
+				);
 
-			expect(result.status).toBe(0);
-			expect(result.stdout).toContain("<must-read-first");
-			expect(result.stdout).toContain('reason="Required reading"');
-			expect(result.stdout).toContain("/plugin/root/hooks/test-hook.md");
-		});
+				expect(result.status).toBe(0);
+				expect(result.stdout).toContain("<must-read-first");
+				expect(result.stdout).toContain('reason="Required reading"');
+				expect(result.stdout).toContain("/plugin/root/hooks/test-hook.md");
+			},
+			{ timeout: 15000 },
+		);
 	});
 
 	describe("han validate", () => {
@@ -300,7 +328,7 @@ describe("CLI integration tests", () => {
 					timeout: 30000,
 					cwd: packageRoot,
 					env: {
-						...process.env,
+						...baseEnv,
 						CLAUDE_CONFIG_DIR: join(testDir, "config"),
 					},
 				},
@@ -340,7 +368,7 @@ describe("CLI environment variable handling", () => {
 					timeout: 10000,
 					cwd: packageRoot,
 					env: {
-						...process.env,
+						...baseEnv,
 						HAN_DISABLE_HOOKS: "false",
 						CLAUDE_CONFIG_DIR: `/tmp/test-cli-env-${Date.now()}`,
 					},
@@ -366,7 +394,7 @@ describe("CLI environment variable handling", () => {
 						timeout: 10000,
 						cwd: packageRoot,
 						env: {
-							...process.env,
+							...baseEnv,
 							HAN_HOOK_RUN_VERBOSE: "1",
 							CLAUDE_CONFIG_DIR: tempDir,
 						},

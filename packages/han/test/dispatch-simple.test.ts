@@ -46,61 +46,71 @@ describe.serial("dispatch simple coverage", () => {
 		expect(result.status).toBe(0);
 	});
 
-	test("dispatch with empty settings executes without error", () => {
-		writeFileSync(
-			join(configDir, "settings.json"),
-			JSON.stringify({ mcpServers: {}, plugins: {} }),
-		);
+	test(
+		"dispatch with empty settings executes without error",
+		() => {
+			writeFileSync(
+				join(configDir, "settings.json"),
+				JSON.stringify({ mcpServers: {}, plugins: {} }),
+			);
 
-		const result = spawnSync(
-			"bun",
-			["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
-			{
-				encoding: "utf-8",
-				timeout: 10000,
-				cwd: packageRoot,
-				env: {
-					...process.env,
-					CLAUDE_CONFIG_DIR: configDir,
-					HOME: testDir,
-				},
-			},
-		);
-
-		expect([0, 1, undefined]).toContain(result.status ?? undefined);
-	});
-
-	test("dispatch with settings hook and --all executes hook", () => {
-		const settings = {
-			hooks: {
-				SessionStart: [
-					{
-						hooks: [{ type: "command", command: "echo 'test output'" }],
+			const result = spawnSync(
+				"bun",
+				["run", "lib/main.ts", "hook", "dispatch", "SessionStart"],
+				{
+					encoding: "utf-8",
+					timeout: 10000,
+					cwd: packageRoot,
+					input: "", // Prevent stdin blocking
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
 					},
-				],
-			},
-		};
-
-		writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
-
-		const result = spawnSync(
-			"bun",
-			["run", "lib/main.ts", "hook", "dispatch", "SessionStart", "--all"],
-			{
-				encoding: "utf-8",
-				timeout: 10000,
-				cwd: packageRoot,
-				env: {
-					...process.env,
-					CLAUDE_CONFIG_DIR: configDir,
-					HOME: testDir,
 				},
-			},
-		);
+			);
 
-		// Verify execution completed
-		expect([0, 1, undefined]).toContain(result.status ?? undefined);
-	});
+			expect([0, 1, undefined]).toContain(result.status ?? undefined);
+		},
+		{ timeout: 15000 },
+	);
+
+	test(
+		"dispatch with settings hook and --all executes hook",
+		() => {
+			const settings = {
+				hooks: {
+					SessionStart: [
+						{
+							hooks: [{ type: "command", command: "echo 'test output'" }],
+						},
+					],
+				},
+			};
+
+			writeFileSync(join(configDir, "settings.json"), JSON.stringify(settings));
+
+			const result = spawnSync(
+				"bun",
+				["run", "lib/main.ts", "hook", "dispatch", "SessionStart", "--all"],
+				{
+					encoding: "utf-8",
+					timeout: 10000,
+					cwd: packageRoot,
+					input: "", // Prevent stdin blocking
+					env: {
+						...process.env,
+						CLAUDE_CONFIG_DIR: configDir,
+						HOME: testDir,
+					},
+				},
+			);
+
+			// Verify execution completed
+			expect([0, 1, undefined]).toContain(result.status ?? undefined);
+		},
+		{ timeout: 15000 },
+	);
 
 	test(
 		"dispatch with --no-cache flag",
@@ -132,6 +142,7 @@ describe.serial("dispatch simple coverage", () => {
 					encoding: "utf-8",
 					timeout: 10000,
 					cwd: packageRoot,
+					input: "", // Prevent stdin blocking
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: configDir,
@@ -142,7 +153,7 @@ describe.serial("dispatch simple coverage", () => {
 
 			expect([0, 1, undefined]).toContain(result.status ?? undefined);
 		},
-		{ timeout: 10000 },
+		{ timeout: 15000 },
 	);
 
 	test(
@@ -175,6 +186,7 @@ describe.serial("dispatch simple coverage", () => {
 					encoding: "utf-8",
 					timeout: 10000,
 					cwd: packageRoot,
+					input: "", // Prevent stdin blocking
 					env: {
 						...process.env,
 						CLAUDE_CONFIG_DIR: configDir,
