@@ -270,6 +270,8 @@ Let AI determine *how* to satisfy these constraints. This approach offers multip
 - **Makes success measurable** — Programmatic verification enables autonomous operation
 - **Enables iteration** — Each failure provides signal; each attempt refines the approach
 
+Prescriptive workflows create an intelligence ceiling—like consulting a board of advisors but only permitting yes-or-no answers. Frontier models encode patterns from millions of engineering decisions. Backpressure unlocks this: define the outcome, and AI can propose architectural alternatives, surface constraint conflicts, and apply its training to find paths you hadn't considered.
+
 The philosophy can be summarized as: **"Better to fail predictably than succeed unpredictably."** Each failure is data. Each iteration refines the approach. The skill shifts from directing AI step-by-step to writing criteria and tests that converge toward correct solutions.
 
 ### Embrace the Collapsing SDLC
