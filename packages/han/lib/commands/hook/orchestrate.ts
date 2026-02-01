@@ -532,6 +532,7 @@ function discoverHookTasks(
 	eventType: string,
 	payload: HookPayload | null,
 	projectRoot: string,
+	toolName?: string,
 ): HookTask[] {
 	const tasks: HookTask[] = [];
 	const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
@@ -551,14 +552,26 @@ function discoverHookTasks(
 				continue;
 			}
 
-			// For PreToolUse/PostToolUse, check tool filter
+			// For PreToolUse/PostToolUse, check tool filter from payload
 			if (
 				(eventType === "PreToolUse" || eventType === "PostToolUse") &&
 				hookDef.toolFilter &&
 				hookDef.toolFilter.length > 0
 			) {
-				const toolName = payload?.tool_name;
-				if (!toolName || !hookDef.toolFilter.includes(toolName)) {
+				const payloadToolName = payload?.tool_name;
+				if (!payloadToolName || !hookDef.toolFilter.includes(payloadToolName)) {
+					continue;
+				}
+			}
+
+			// For SubagentPrompt, check tool filter if toolName is provided
+			if (
+				eventType === "SubagentPrompt" &&
+				hookDef.toolFilter &&
+				hookDef.toolFilter.length > 0 &&
+				toolName
+			) {
+				if (!hookDef.toolFilter.includes(toolName)) {
 					continue;
 				}
 			}
@@ -1903,6 +1916,7 @@ export async function orchestrate(
 		check: boolean;
 		orchestrationId?: string;
 		skipIfQuestioning?: boolean;
+		toolName?: string;
 	},
 ): Promise<void> {
 	// Signal handlers: Ensure clean exit when Claude Code terminates this process
@@ -2066,7 +2080,7 @@ export async function orchestrate(
 		}
 	} else {
 		// Discover all hook tasks for this event
-		tasks = discoverHookTasks(eventType, payload, projectRoot);
+		tasks = discoverHookTasks(eventType, payload, projectRoot, options.toolName);
 	}
 
 	if (tasks.length === 0) {
@@ -2666,6 +2680,10 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 			"--skip-if-questioning",
 			"Skip hook check if the last user or agent message contains a question (Q&A exchange, not work)",
 		)
+		.option(
+			"--tool-name <name>",
+			"Filter SubagentPrompt hooks by tool name (Task or Skill)",
+		)
 		.action(
 			async (
 				eventType: string,
@@ -2677,6 +2695,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					check?: boolean;
 					orchestrationId?: string;
 					skipIfQuestioning?: boolean;
+					toolName?: string;
 				},
 			) => {
 				await orchestrate(eventType, {
@@ -2687,6 +2706,7 @@ export function registerHookOrchestrate(hookCommand: Command): void {
 					wait: opts.wait ?? false,
 					orchestrationId: opts.orchestrationId,
 					skipIfQuestioning: opts.skipIfQuestioning ?? false,
+					toolName: opts.toolName,
 				});
 			},
 		);

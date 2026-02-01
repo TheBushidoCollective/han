@@ -69,12 +69,15 @@ function readStdinPayload(): PreToolUsePayload | null {
 /**
  * Gather context from SubagentPrompt hooks via han hook orchestrate.
  * Returns the combined output from all SubagentPrompt hooks.
+ *
+ * @param projectDir - The project directory to run orchestration in
+ * @param toolName - The tool being invoked (Task or Skill) for hook filtering
  */
-function gatherSubagentContext(projectDir: string): string {
+function gatherSubagentContext(projectDir: string, toolName: string): string {
 	try {
 		// Use configured han binary (respects han.yml hanBinary setting for dev)
 		const hanBinary = getHanBinary() || "han";
-		const command = `${hanBinary} hook orchestrate SubagentPrompt`;
+		const command = `${hanBinary} hook orchestrate SubagentPrompt --tool-name ${toolName}`;
 
 		if (isDebugMode()) {
 			console.error(
@@ -173,7 +176,7 @@ async function injectSubagentContext(): Promise<void> {
 	// Gather context from SubagentPrompt hooks
 	const projectDir =
 		process.env.CLAUDE_PROJECT_DIR || process.env.PWD || process.cwd();
-	const contextOutput = gatherSubagentContext(projectDir);
+	const contextOutput = gatherSubagentContext(projectDir, toolName);
 
 	if (!contextOutput) {
 		if (isDebugMode()) {
