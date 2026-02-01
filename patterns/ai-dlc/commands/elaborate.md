@@ -260,6 +260,41 @@ Store the testing configuration for the reviewer hat to enforce.
 
 ---
 
+## Phase 5.6: Configure Announcements
+
+Ask the user what announcement formats they want generated when the intent is complete:
+
+```json
+{
+  "questions": [
+    {
+      "question": "What announcements should be generated when this intent is complete?",
+      "header": "Announcement Formats",
+      "options": [
+        {"label": "CHANGELOG", "description": "Conventional changelog entry (Added/Changed/Fixed)"},
+        {"label": "Release notes", "description": "User-facing summary of changes"},
+        {"label": "Social posts", "description": "Short-form posts for Twitter/LinkedIn"},
+        {"label": "Blog draft", "description": "Long-form announcement for company blog"},
+        {"label": "None", "description": "No announcements needed"}
+      ],
+      "multiSelect": true
+    }
+  ]
+}
+```
+
+**Note:** Multiple formats can be selected. Store the selection in `intent.md` frontmatter as:
+
+```yaml
+announcements: [changelog, release-notes, social-posts, blog-draft]
+```
+
+Valid values: `changelog`, `release-notes`, `social-posts`, `blog-draft`
+
+If "None" is selected, store an empty array: `announcements: []`
+
+---
+
 ## Phase 6: Write AI-DLC Artifacts
 
 Create the `.ai-dlc/{intent-slug}/` directory and write files:
@@ -270,6 +305,7 @@ Create the `.ai-dlc/{intent-slug}/` directory and write files:
 workflow: {workflow-name}
 created: {ISO date}
 status: active
+announcements: [{selected-formats}]
 ---
 
 # {Intent Title}
@@ -288,6 +324,8 @@ status: active
 ## Context
 {Relevant background, constraints, decisions}
 ```
+
+**Note:** The `announcements` field contains the formats selected in Phase 5.6. Valid values: `changelog`, `release-notes`, `social-posts`, `blog-draft`. Example: `announcements: [changelog, release-notes]`
 
 ### 2. Write `intent.yaml` (testing configuration):
 ```yaml

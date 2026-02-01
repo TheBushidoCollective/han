@@ -154,6 +154,49 @@ han_keep_save({
 });
 ```
 
+### Step 4b: Generate Announcements
+
+After marking the task complete, generate any configured announcements:
+
+```bash
+# Source the announcements library
+source "${CLAUDE_PLUGIN_ROOT}/lib/announcements.sh"
+
+# Check if announcements are configured
+if has_announcements "$INTENT_DIR"; then
+  echo "Generating announcements..."
+
+  # Generate all configured announcement formats
+  written_files=$(generate_announcements "$INTENT_DIR")
+
+  if [ -n "$written_files" ]; then
+    echo ""
+    echo "## Announcements Generated"
+    echo ""
+    echo "The following announcement files were created in \`$INTENT_DIR/announcements/\`:"
+    echo ""
+    echo "$written_files" | while read -r file; do
+      [ -n "$file" ] && echo "- \`$(basename "$file")\`"
+    done
+    echo ""
+    echo "Review and edit these files before publishing."
+  fi
+else
+  echo "No announcements configured for this intent."
+fi
+```
+
+**Announcement formats available:**
+- `changelog` - Conventional changelog entry (Keep a Changelog format)
+- `release-notes` - User-facing summary of changes
+- `social-posts` - Short-form posts for Twitter/LinkedIn
+- `blog-draft` - Long-form announcement for company blog
+
+Announcements are configured during elaboration (Phase 5.6) and stored in `intent.md` frontmatter:
+```yaml
+announcements: [changelog, release-notes]
+```
+
 ### Step 5: Summary
 
 Output a completion summary:
@@ -175,11 +218,16 @@ const workflowHats = state.workflow.join(" → ");
 ### Criteria Satisfied
 {List of completion criteria}
 
+### Announcements Generated
+{List of generated announcement files, if any were configured}
+
 ### Next Steps
 
-1. **Merge changes** - Create a PR from `ai-dlc/{intent-slug}` to `main`
-2. **Clean up worktrees** - Run `git worktree remove /tmp/ai-dlc-{intent-slug}`
-3. **Start new task** - Run `/reset` to clear state, then `/elaborate`
+1. **Review announcements** - Check `.ai-dlc/{intent-slug}/announcements/` for generated content
+2. **Merge changes** - Create a PR from `ai-dlc/{intent-slug}` to `main`
+3. **Publish announcements** - Post social updates, update changelog, publish blog
+4. **Clean up worktrees** - Run `git worktree remove /tmp/ai-dlc-{intent-slug}`
+5. **Start new task** - Run `/reset` to clear state, then `/elaborate`
 
 ---
 
