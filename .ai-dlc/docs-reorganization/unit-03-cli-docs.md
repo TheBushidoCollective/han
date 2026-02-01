@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: completed
 depends_on: []
 branch: ai-dlc/docs-reorganization/03-cli-docs
 discipline: documentation
@@ -24,10 +24,10 @@ documentation - This unit will be executed by `do-technical-documentation` speci
 
 ## Success Criteria
 
-- [ ] All CLI examples use new plugin names
-- [ ] Hook command examples updated
-- [ ] Plugin list/install examples use new names
-- [ ] No remaining jutsu/do/hashi references
+- [x] All CLI examples use new plugin names
+- [x] Hook command examples updated
+- [x] Plugin list/install examples use new names
+- [x] No remaining jutsu/do/hashi references
 
 ## Notes
 

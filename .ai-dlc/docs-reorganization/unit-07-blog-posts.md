@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: completed
 depends_on: []
 branch: ai-dlc/docs-reorganization/07-blog-posts
 discipline: documentation
@@ -27,11 +27,11 @@ documentation - This unit will be executed by `do-technical-documentation` speci
 
 ## Success Criteria
 
-- [ ] All plugin name references updated
-- [ ] Category terminology updated throughout
-- [ ] Narrative flow preserved (don't break storytelling)
-- [ ] Code examples updated
-- [ ] No remaining jutsu/do/hashi references
+- [x] All plugin name references updated
+- [x] Category terminology updated throughout
+- [x] Narrative flow preserved (don't break storytelling)
+- [x] Code examples updated
+- [x] No remaining jutsu/do/hashi references
 
 ## Notes
 

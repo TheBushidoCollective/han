@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: completed
 depends_on: []
 branch: ai-dlc/docs-reorganization/06-plugin-dev-docs
 discipline: documentation
@@ -26,14 +26,14 @@ documentation - This unit will be executed by `do-technical-documentation` speci
 
 ## Success Criteria
 
-- [ ] types.md rewritten to explain new category structure:
+- [x] types.md rewritten to explain new category structure:
   - No more jutsu/do/hashi terminology
   - Explain 9 tech layer categories
   - Update directory structure examples
-- [ ] All example plugin names updated
-- [ ] Hook development examples use new names
-- [ ] Distribution guide uses new marketplace categories
-- [ ] No remaining jutsu/do/hashi references
+- [x] All example plugin names updated
+- [x] Hook development examples use new names
+- [x] Distribution guide uses new marketplace categories
+- [x] No remaining jutsu/do/hashi references
 
 ## Notes
 

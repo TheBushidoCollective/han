@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: completed
 depends_on: []
 branch: ai-dlc/docs-reorganization/04-config-docs
 discipline: documentation
@@ -22,9 +22,9 @@ documentation - This unit will be executed by `do-technical-documentation` speci
 
 ## Success Criteria
 
-- [ ] han.yml examples use new plugin names
-- [ ] Configuration examples updated
-- [ ] No remaining jutsu/do/hashi references
+- [x] han.yml examples use new plugin names
+- [x] Configuration examples updated
+- [x] No remaining jutsu/do/hashi references
 
 ## Notes
 

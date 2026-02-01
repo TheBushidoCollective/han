@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: completed
 depends_on: []
 branch: ai-dlc/docs-reorganization/05-features-docs
 discipline: documentation
@@ -23,10 +23,10 @@ documentation - This unit will be executed by `do-technical-documentation` speci
 
 ## Success Criteria
 
-- [ ] Hook examples use new plugin names
-- [ ] Checkpoint examples updated
-- [ ] Memory system references updated
-- [ ] No remaining jutsu/do/hashi references
+- [x] Hook examples use new plugin names
+- [x] Checkpoint examples updated
+- [x] Memory system references updated
+- [x] No remaining jutsu/do/hashi references
 
 ## Notes
 
