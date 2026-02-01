@@ -60,7 +60,56 @@ If truly blocked (cannot proceed without user input):
 
 ## Implementation
 
-### Step 0: Ensure Intent Worktree
+### Step 0a: Worktree Discovery (When on Default Branch)
+
+**CRITICAL: Before starting work, check for existing AI-DLC worktrees.**
+
+When `/construct` is called from the default branch (main/master), run discovery first:
+
+```bash
+# Check if on default branch
+CURRENT_BRANCH=$(git branch --show-current)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+  # Discover existing AI-DLC worktrees
+  DISCOVERY=$(han worktree discover --json)
+  HAS_EXISTING=$(echo "$DISCOVERY" | han parse yaml hasExisting -r)
+
+  if [ "$HAS_EXISTING" = "true" ]; then
+    # Extract active intents
+    ACTIVE_INTENTS=$(echo "$DISCOVERY" | han parse yaml activeIntents --json)
+
+    # Show resume prompt with options
+    echo ""
+    echo "## Existing AI-DLC Worktrees Found"
+    echo ""
+    echo "Active intents with worktrees:"
+    echo "$ACTIVE_INTENTS" | tr -d '[]"' | tr ',' '\n' | while read -r slug; do
+      [ -n "$slug" ] && echo "  - $slug"
+    done
+    echo ""
+    echo "### Options:"
+    echo ""
+    echo "1. **Resume existing work**: \`/resume <intent-slug>\`"
+    echo "2. **Start fresh**: \`/elaborate\` (creates new intent)"
+    echo "3. **List details**: \`han worktree list --ai-dlc\`"
+    echo ""
+    echo "To clean up orphaned worktrees, run: \`han worktree prune\`"
+
+    # Stop here - user must choose an action
+    exit 0
+  fi
+fi
+```
+
+**Why discovery matters:**
+- Prevents accidentally starting new work when existing work is in progress
+- Shows resume options when worktrees exist
+- Helps maintain a single active intent per session
+- Alerts user to orphaned/stale worktrees that should be cleaned up
+
+### Step 0b: Ensure Intent Worktree
 
 **CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
 
