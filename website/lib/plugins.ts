@@ -59,6 +59,7 @@ export interface CommandMetadata {
 	name: string;
 	description: string;
 	content: string;
+	internal?: boolean;
 }
 
 export interface MCPCapability {
@@ -74,6 +75,14 @@ export interface MCPServerMetadata {
 	args: string[];
 	env?: Record<string, string>;
 	capabilities?: MCPCapability[];
+}
+
+export interface LspServerMetadata {
+	name: string;
+	command: string;
+	args: string[];
+	languages: string[];
+	extensions: string[];
 }
 
 interface Hook {
@@ -102,9 +111,12 @@ export interface PluginDetails {
 	hooks: HookSection[];
 	commands: CommandMetadata[];
 	mcpServers: MCPServerMetadata[];
+	lspServers: LspServerMetadata[];
 }
 
-function getCategoryFromMarketplace(marketplaceCategory: string): PluginCategory {
+function getCategoryFromMarketplace(
+	marketplaceCategory: string,
+): PluginCategory {
 	// Map marketplace category names to URL-friendly slugs
 	const categoryMap: Record<string, PluginCategory> = {
 		Core: "core",
@@ -125,7 +137,12 @@ function getCategoryFromMarketplace(marketplaceCategory: string): PluginCategory
 }
 
 // Re-export from constants for convenience
-export { getCategoryIcon, type PluginCategory, CATEGORY_ORDER, CATEGORY_META } from "./constants";
+export {
+	getCategoryIcon,
+	type PluginCategory,
+	CATEGORY_ORDER,
+	CATEGORY_META,
+} from "./constants";
 
 /**
  * Titleize a string by capitalizing words and replacing hyphens with spaces
@@ -655,10 +672,8 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 			const fileContent = fs.readFileSync(filePath, "utf-8");
 			const { data, content } = matter(fileContent);
 
-			// Skip internal commands (not meant for public documentation)
-			if (data.internal === true) {
-				continue;
-			}
+			// Track internal commands (still include them, but mark as internal)
+			const isInternal = data.internal === true;
 
 			// Extract description from frontmatter or first paragraph after heading
 			let description = data.description || "";
@@ -682,6 +697,7 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 				name: path.basename(file, ".md"),
 				description,
 				content: fileContent,
+				internal: isInternal || undefined,
 			});
 		}
 	} catch (error) {
@@ -762,6 +778,63 @@ function getPluginMCPServers(pluginPath: string): MCPServerMetadata[] {
 	return mcpServers.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Parse LSP servers from plugin.json
+function getPluginLSPServers(pluginPath: string): LspServerMetadata[] {
+	const lspServers: LspServerMetadata[] = [];
+
+	try {
+		const pluginJsonPath = path.join(
+			pluginPath,
+			".claude-plugin",
+			"plugin.json",
+		);
+
+		if (!fs.existsSync(pluginJsonPath)) {
+			return lspServers;
+		}
+
+		const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
+
+		if (pluginJson.lspServers && typeof pluginJson.lspServers === "object") {
+			for (const [name, config] of Object.entries(pluginJson.lspServers)) {
+				const serverConfig = config as {
+					command: string;
+					args?: string[];
+					extensionToLanguage?: Record<string, string>;
+				};
+
+				// Extract extensions and languages from extensionToLanguage mapping
+				const extensions: string[] = [];
+				const languages: string[] = [];
+				if (serverConfig.extensionToLanguage) {
+					for (const [ext, lang] of Object.entries(
+						serverConfig.extensionToLanguage,
+					)) {
+						if (!extensions.includes(ext)) {
+							extensions.push(ext);
+						}
+						if (!languages.includes(lang)) {
+							languages.push(lang);
+						}
+					}
+				}
+
+				lspServers.push({
+					name,
+					command: serverConfig.command,
+					args: serverConfig.args || [],
+					languages,
+					extensions,
+				});
+			}
+		}
+	} catch (error) {
+		console.error(`Error reading LSP servers from ${pluginPath}:`, error);
+	}
+
+	return lspServers.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Read README.md from plugin directory
 function getPluginReadme(pluginPath: string): string | null {
 	try {
@@ -815,6 +888,7 @@ export function getPluginContent(
 		const hooks = getPluginHooks(pluginPath);
 		const commands = getPluginCommands(pluginPath);
 		const mcpServers = getPluginMCPServers(pluginPath);
+		const lspServers = getPluginLSPServers(pluginPath);
 
 		return {
 			metadata,
@@ -825,6 +899,7 @@ export function getPluginContent(
 			hooks,
 			commands,
 			mcpServers,
+			lspServers,
 		};
 	} catch (error) {
 		console.error(

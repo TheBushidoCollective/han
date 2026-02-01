@@ -21,25 +21,25 @@ describe("plugin-aliases", () => {
 			expect(PLUGIN_ALIASES["jutsu-typescript"]).toBe("languages/typescript");
 			expect(PLUGIN_ALIASES["jutsu-python"]).toBe("languages/python");
 			expect(PLUGIN_ALIASES["jutsu-react"]).toBe("frameworks/react");
-			expect(PLUGIN_ALIASES["jutsu-eslint"]).toBe("tools/eslint");
+			expect(PLUGIN_ALIASES["jutsu-eslint"]).toBe("validation/eslint");
 		});
 
 		test("contains expected do plugins", () => {
 			expect(PLUGIN_ALIASES["do-frontend-development"]).toBe(
-				"disciplines/frontend-development",
+				"disciplines/frontend",
 			);
 			expect(PLUGIN_ALIASES["do-backend-development"]).toBe(
-				"disciplines/backend-development",
+				"disciplines/backend",
 			);
 			expect(PLUGIN_ALIASES["do-security-engineering"]).toBe(
-				"disciplines/security-engineering",
+				"disciplines/security",
 			);
 		});
 
 		test("contains expected hashi plugins", () => {
-			expect(PLUGIN_ALIASES["hashi-github"]).toBe("integrations/github");
-			expect(PLUGIN_ALIASES["hashi-gitlab"]).toBe("integrations/gitlab");
-			expect(PLUGIN_ALIASES["hashi-jira"]).toBe("integrations/jira");
+			expect(PLUGIN_ALIASES["hashi-github"]).toBe("services/github");
+			expect(PLUGIN_ALIASES["hashi-gitlab"]).toBe("services/gitlab");
+			expect(PLUGIN_ALIASES["hashi-jira"]).toBe("services/jira");
 		});
 
 		test("has at least 130 plugin mappings", () => {
@@ -58,21 +58,25 @@ describe("plugin-aliases", () => {
 		test("maps new paths back to old names", () => {
 			expect(REVERSE_ALIASES["languages/typescript"]).toBe("jutsu-typescript");
 			expect(REVERSE_ALIASES["frameworks/react"]).toBe("jutsu-react");
-			expect(REVERSE_ALIASES["disciplines/frontend-development"]).toBe(
+			expect(REVERSE_ALIASES["disciplines/frontend"]).toBe(
 				"do-frontend-development",
 			);
-			expect(REVERSE_ALIASES["integrations/github"]).toBe("hashi-github");
+			expect(REVERSE_ALIASES["services/github"]).toBe("hashi-github");
 		});
 
-		test("has same count as PLUGIN_ALIASES", () => {
-			expect(Object.keys(REVERSE_ALIASES).length).toBe(
-				Object.keys(PLUGIN_ALIASES).length,
-			);
+		test("has entries for all unique paths in PLUGIN_ALIASES", () => {
+			// REVERSE_ALIASES has fewer entries because multiple old names can map to the same path
+			// e.g., do-accessibility and do-accessibility-engineering both map to disciplines/accessibility
+			const uniquePaths = new Set(Object.values(PLUGIN_ALIASES));
+			expect(Object.keys(REVERSE_ALIASES).length).toBe(uniquePaths.size);
 		});
 
-		test("is consistent with PLUGIN_ALIASES", () => {
-			for (const [oldName, newPath] of Object.entries(PLUGIN_ALIASES)) {
-				expect(REVERSE_ALIASES[newPath]).toBe(oldName);
+		test("all reverse mappings point to valid PLUGIN_ALIASES entries", () => {
+			for (const [newPath, oldName] of Object.entries(REVERSE_ALIASES)) {
+				// The old name should exist in PLUGIN_ALIASES
+				expect(PLUGIN_ALIASES[oldName]).toBeDefined();
+				// And it should map to this new path
+				expect(PLUGIN_ALIASES[oldName]).toBe(newPath);
 			}
 		});
 	});
@@ -85,9 +89,8 @@ describe("plugin-aliases", () => {
 		});
 
 		test("maps do short names correctly", () => {
-			expect(SHORT_NAME_ALIASES["frontend-development"]).toBe(
-				"do-frontend-development",
-			);
+			// Short names map to the first matching plugin processed
+			expect(SHORT_NAME_ALIASES["frontend"]).toBe("do-frontend");
 		});
 
 		test("maps hashi short names correctly", () => {
@@ -152,14 +155,14 @@ describe("plugin-aliases", () => {
 				expect(resolvePluginName("frameworks/react")).toBe("jutsu-react");
 			});
 
-			test("resolves disciplines/frontend-development", () => {
-				expect(resolvePluginName("disciplines/frontend-development")).toBe(
+			test("resolves disciplines/frontend", () => {
+				expect(resolvePluginName("disciplines/frontend")).toBe(
 					"do-frontend-development",
 				);
 			});
 
-			test("resolves integrations/github to hashi-github", () => {
-				expect(resolvePluginName("integrations/github")).toBe("hashi-github");
+			test("resolves services/github to hashi-github", () => {
+				expect(resolvePluginName("services/github")).toBe("hashi-github");
 			});
 		});
 
@@ -230,12 +233,12 @@ describe("plugin-aliases", () => {
 
 		test("returns new path for do plugins", () => {
 			expect(getNewPluginPath("do-frontend-development")).toBe(
-				"disciplines/frontend-development",
+				"disciplines/frontend",
 			);
 		});
 
 		test("returns new path for hashi plugins", () => {
-			expect(getNewPluginPath("hashi-github")).toBe("integrations/github");
+			expect(getNewPluginPath("hashi-github")).toBe("services/github");
 		});
 
 		test("returns undefined for unknown plugins", () => {
@@ -254,13 +257,13 @@ describe("plugin-aliases", () => {
 		});
 
 		test("returns old name for disciplines", () => {
-			expect(getOldPluginName("disciplines/frontend-development")).toBe(
+			expect(getOldPluginName("disciplines/frontend")).toBe(
 				"do-frontend-development",
 			);
 		});
 
-		test("returns old name for integrations", () => {
-			expect(getOldPluginName("integrations/github")).toBe("hashi-github");
+		test("returns old name for services", () => {
+			expect(getOldPluginName("services/github")).toBe("hashi-github");
 		});
 
 		test("returns undefined for unknown paths", () => {
@@ -315,9 +318,9 @@ describe("plugin-aliases", () => {
 			expect(categories).toContain("languages");
 			expect(categories).toContain("frameworks");
 			expect(categories).toContain("tools");
-			expect(categories).toContain("testing");
+			expect(categories).toContain("validation");
 			expect(categories).toContain("disciplines");
-			expect(categories).toContain("integrations");
+			expect(categories).toContain("services");
 		});
 
 		test("returns sorted categories", () => {
@@ -351,12 +354,12 @@ describe("plugin-aliases", () => {
 
 		test("returns plugins in disciplines category", () => {
 			const plugins = getPluginsInCategory("disciplines");
-			expect(plugins).toContain("do-frontend-development");
-			expect(plugins).toContain("do-backend-development");
+			expect(plugins).toContain("do-frontend");
+			expect(plugins).toContain("do-backend");
 		});
 
-		test("returns plugins in integrations category", () => {
-			const plugins = getPluginsInCategory("integrations");
+		test("returns plugins in services category", () => {
+			const plugins = getPluginsInCategory("services");
 			expect(plugins).toContain("hashi-github");
 			expect(plugins).toContain("hashi-gitlab");
 		});
@@ -410,7 +413,7 @@ describe("plugin-aliases", () => {
 			const result = resolvePluginNames([
 				"jutsu-typescript",
 				"react",
-				"integrations/github",
+				"services/github",
 			]);
 			expect(result).toEqual([
 				"jutsu-typescript",

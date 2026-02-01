@@ -113,8 +113,11 @@ if [ -z "$ITERATION_JSON" ] && [[ "$CURRENT_BRANCH" == ai-dlc/*/* ]]; then
 fi
 
 if [ -z "$ITERATION_JSON" ]; then
-  # Check for resumable intents in .ai-dlc/*/intent.md
-  RESUMABLE_INTENTS=""
+  # Discover resumable intents from filesystem and git branches
+  declare -A FILESYSTEM_INTENTS
+  declare -A BRANCH_INTENTS
+
+  # 1. Check filesystem first (highest priority - source of truth)
   for intent_file in .ai-dlc/*/intent.md; do
     [ -f "$intent_file" ] || continue
     dir=$(dirname "$intent_file")
@@ -128,28 +131,75 @@ if [ -z "$ITERATION_JSON" ]; then
     if type get_dag_summary &>/dev/null && [ -d "$dir" ]; then
       summary=$(get_dag_summary "$dir")
     fi
-    RESUMABLE_INTENTS="${RESUMABLE_INTENTS}${slug}|${workflow}|${summary}"$'\n'
+    FILESYSTEM_INTENTS[$slug]="$workflow|$summary"
   done
 
-  if [ -n "$RESUMABLE_INTENTS" ]; then
-    # Show resumable intents
+  # 2. Discover intents on git branches (local only for performance)
+  if type discover_branch_intents &>/dev/null; then
+    while IFS='|' read -r slug workflow source branch; do
+      [ -z "$slug" ] && continue
+      # Skip if already found in filesystem
+      [ -n "${FILESYSTEM_INTENTS[$slug]}" ] && continue
+      BRANCH_INTENTS[$slug]="$workflow|$source|$branch"
+    done < <(discover_branch_intents false)
+  fi
+
+  # Build output if any intents found
+  if [ ${#FILESYSTEM_INTENTS[@]} -gt 0 ] || [ ${#BRANCH_INTENTS[@]} -gt 0 ]; then
     echo "## AI-DLC: Resumable Intents Found"
     echo ""
-    echo "Found intent(s) that can be resumed:"
-    echo ""
-    echo "$RESUMABLE_INTENTS" | while IFS='|' read -r slug workflow summary; do
-      [ -z "$slug" ] && continue
-      echo "- **$slug** (workflow: $workflow)"
-      # Parse summary for unit counts if available
-      if [ -n "$summary" ]; then
-        completed=$(echo "$summary" | sed -n 's/.*completed:\([0-9]*\).*/\1/p')
-        pending=$(echo "$summary" | sed -n 's/.*pending:\([0-9]*\).*/\1/p')
-        in_prog=$(echo "$summary" | sed -n 's/.*in_progress:\([0-9]*\).*/\1/p')
-        total=$((completed + pending + in_prog))
-        [ "$total" -gt 0 ] && echo "  Units: $completed/$total completed"
-      fi
+
+    # Show filesystem intents first
+    if [ ${#FILESYSTEM_INTENTS[@]} -gt 0 ]; then
+      echo "### In Current Directory"
+      echo ""
+      for slug in "${!FILESYSTEM_INTENTS[@]}"; do
+        IFS='|' read -r workflow summary <<< "${FILESYSTEM_INTENTS[$slug]}"
+        echo "- **$slug** (workflow: $workflow)"
+        if [ -n "$summary" ]; then
+          completed=$(echo "$summary" | sed -n 's/.*completed:\([0-9]*\).*/\1/p')
+          pending=$(echo "$summary" | sed -n 's/.*pending:\([0-9]*\).*/\1/p')
+          in_prog=$(echo "$summary" | sed -n 's/.*in_progress:\([0-9]*\).*/\1/p')
+          total=$((completed + pending + in_prog))
+          [ "$total" -gt 0 ] && echo "  - Units: $completed/$total completed"
+        fi
+      done
+      echo ""
+    fi
+
+    # Show branch intents grouped by source
+    declare -A LOCAL_BRANCH_INTENTS
+    declare -A REMOTE_BRANCH_INTENTS
+    for slug in "${!BRANCH_INTENTS[@]}"; do
+      IFS='|' read -r workflow source branch <<< "${BRANCH_INTENTS[$slug]}"
+      case "$source" in
+        worktree|local)
+          LOCAL_BRANCH_INTENTS[$slug]="$workflow|$branch"
+          ;;
+        remote)
+          REMOTE_BRANCH_INTENTS[$slug]="$workflow|$branch"
+          ;;
+      esac
     done
-    echo ""
+
+    if [ ${#LOCAL_BRANCH_INTENTS[@]} -gt 0 ]; then
+      echo "### On Local Branches (no worktree)"
+      echo ""
+      for slug in "${!LOCAL_BRANCH_INTENTS[@]}"; do
+        IFS='|' read -r workflow branch <<< "${LOCAL_BRANCH_INTENTS[$slug]}"
+        echo "- **$slug** (workflow: $workflow)"
+        echo "  - *Branch: \`$branch\`*"
+      done
+      echo ""
+    fi
+
+    # Note: Remote intents not scanned by default for performance
+    # Show hint instead
+    if type discover_branch_intents &>/dev/null; then
+      echo "*Run \`git fetch\` for remote intents (not scanned at startup for performance)*"
+      echo ""
+    fi
+
     echo "**To resume:** \`/resume <slug>\` or \`/resume\` if only one"
     echo ""
   else
@@ -436,8 +486,8 @@ echo "1. **Commit working changes**: \`git add -A && git commit\`"
 echo "2. **Save scratchpad**: \`han keep save scratchpad.md \"...\"\`"
 echo "3. **Write next prompt**: \`han keep save next-prompt.md \"...\"\`"
 echo ""
-echo "The next-prompt.md should contain what to continue with after \`/clear\`."
-echo "Without this, progress is lost on context reset."
+echo "The next-prompt.md should contain what to continue with in the next iteration."
+echo "Without this, progress may be lost if the session ends."
 echo ""
 echo "### Never Stop Arbitrarily"
 echo ""
@@ -465,4 +515,4 @@ echo ""
 echo "**Commands:** \`/construct\` (continue loop) | \`/reset\` (abandon task)"
 echo ""
 echo "> **No file changes?** If this hat's work is complete but no files were modified,"
-echo "> save findings to scratchpad and run \`/advance\` then \`/clear\`."
+echo "> save findings to scratchpad and run \`/advance\` to continue."

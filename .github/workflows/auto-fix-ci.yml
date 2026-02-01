@@ -2,7 +2,7 @@ name: Auto Fix CI Failures
 
 on:
   workflow_run:
-    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website"]
+    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website", "Claude Plugin Validate"]
     types:
       - completed
 
@@ -12,6 +12,12 @@ permissions:
   actions: read
   issues: write
   id-token: write
+
+# Use concurrency to prevent multiple auto-fix runs on the same branch
+# cancel-in-progress: false means queue them (latest wins after current completes)
+concurrency:
+  group: auto-fix-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
 
 jobs:
   auto-fix:
@@ -99,6 +105,34 @@ jobs:
             Instructions:
             1. Analyze the error logs to understand what failed
             2. Make the minimal changes needed to fix the issue
-            3. Commit your changes with a descriptive message
-            4. Push to the current branch
+            3. Do NOT commit or push - the workflow will handle that after you make changes
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Commit and push fixes
+        run: |
+          # Pull latest changes first to avoid conflicts
+          git pull --rebase origin ${{ github.event.workflow_run.head_branch }} || true
+
+          # Check if there are any changes to commit
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          # Stage all changes
+          git add -A
+
+          # Get the workflow name for the commit message
+          WORKFLOW_NAME="${{ fromJSON(steps.failure_details.outputs.result).workflowName }}"
+
+          # Commit with a descriptive message
+          git commit -m "fix(ci): auto-fix ${WORKFLOW_NAME} failures
+
+          Auto-fixed by Claude Code action.
+
+          Original failure: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          # Push the changes
+          git push origin ${{ github.event.workflow_run.head_branch }}

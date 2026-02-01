@@ -17,25 +17,25 @@ description: Continue the AI-DLC construction loop - autonomous build/review cyc
 **User-facing command** - Continue the AI-DLC autonomous construction loop.
 
 This command resumes work from the current hat and runs until:
-- Task is complete (`/done` called internally)
-- User intervention needed (blockers, questions)
-- Session ends (Stop hook prompts for `/clear`)
+- All units complete (`/advance` completes the intent automatically)
+- User intervention needed (all units blocked)
+- Session exhausted (Stop hook instructs agent to call `/construct`)
 
 **User Flow:**
 ```
 User: /elaborate           # Once - define intent, criteria, and workflow
 User: /construct           # Kicks off autonomous loop
-...AI works autonomously...
-Stop hook: "Run /clear"
-User: /clear
-User: /construct           # Continue the loop
-...repeat until done...
+...AI works autonomously across all units...
+...session exhausts, Stop hook fires...
+Agent: /construct          # Agent continues (subagents have clean context)
+...repeat until all units complete...
+AI: Intent complete! [summary]
 ```
 
 **Important:**
-- Run after `/clear` - This is how you continue the loop
-- Autonomous operation - AI manages hat transitions internally
-- User intervention - You can skip `/construct` to intervene manually
+- Fully autonomous - Agent continues across units without stopping
+- Subagents have clean context - No `/clear` needed between iterations
+- User intervention - Only required when ALL units are blocked
 - State preserved - Progress saved in han keep between sessions
 
 **CRITICAL: No Questions During Construction**
@@ -54,9 +54,9 @@ If you encounter ambiguity:
 3. Let the reviewer hat catch issues on the next pass
 
 If truly blocked (cannot proceed without user input):
-1. Document the blocker clearly
+1. Document the blocker clearly in `han keep save blockers.md`
 2. Stop the loop naturally (don't call /advance)
-3. The Stop hook will prompt the user to `/clear` and intervene
+3. The Stop hook will alert the user that human intervention is required
 
 ## Implementation
 
@@ -151,7 +151,7 @@ source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
 update_unit_status "$UNIT_FILE" "in_progress"
 ```
 
-**Track current unit in iteration state** so `/done` knows which unit to mark completed:
+**Track current unit in iteration state** so `/advance` knows which unit to mark completed:
 
 ```javascript
 state.currentUnit = UNIT_NAME;  // e.g., "unit-01-core-backend"
@@ -225,10 +225,14 @@ The subagent automatically receives AI-DLC context (hat instructions, intent, wo
 ### Step 4: Handle Subagent Result
 
 Based on the subagent's response:
-- **Success/Complete**: Call `/advance` to move to next role
+- **Success/Complete**: Call `/advance` to move to next role (or complete intent if all done)
 - **Issues found** (reviewer): Call `/fail` to return to builder
 - **Blocked**: Document and stop loop for user intervention
-- **All criteria met** (from reviewer): Call `/done`
+
+**`/advance` handles all transitions automatically:**
+- Not at last hat → Advance to next hat
+- At last hat + more units ready → Loop back to builder for next unit
+- At last hat + all units complete → Complete the intent (set status=complete)
 
 #### Workflow-Specific Examples
 
@@ -305,24 +309,24 @@ When units complete, merge branches back to main or create PRs.
 
 The AI calls these internally (user does not call directly):
 
-- **`/advance`** - Move to next hat in workflow
+- **`/advance`** - Move to next hat, or complete intent if all units done
 - **`/fail`** - Return to previous hat (issues found)
-- **`/done`** - Mark task complete (only from last hat)
+
+Note: There is no separate `/done` command. `/advance` handles completion automatically when called from the last hat with all units complete.
 
 ### Step 6: Loop Behavior
 
-The construction loop continues within a session until:
-1. **Blocked** - Need user input or hit a blocker
-2. **Session limit** - Stop hook fires, prompts for `/clear`
-3. **Complete** - All criteria met, `/done` called
-4. **All units blocked** - No forward progress possible, alert user
+The construction loop is **fully autonomous**. It continues until:
+1. **Complete** - All units done, `/advance` marks intent complete
+2. **All units blocked** - No forward progress possible, human must intervene
+3. **Session exhausted** - Stop hook fires, instructs agent to call `/construct`
 
-After `/clear`, user runs `/construct` again to continue.
+**CRITICAL:** The agent MUST auto-continue between units. Do NOT stop after each unit - the loop continues until blocked or complete. When a session exhausts, the Stop hook tells the agent to call `/construct` to continue (subagents have clean context, no `/clear` needed).
 
 ## Example Session
 
 ```
-[Session 1]
+[User starts]
 User: /elaborate
 ...collaborative discussion (elaborator agent)...
 AI: Intent and criteria saved. Units created:
@@ -338,15 +342,6 @@ AI: Plan saved. /advance → builder role
 AI: Spawning backend agent for unit-01...
 [Builder subagent runs on ai-dlc/my-feature/01-api-endpoints branch]
 ...builds...
-Stop hook: "Run /clear to continue"
-
-[Session 2]
-User: /clear
-User: /construct
-AI: Loading state... builder role, unit-01-api-endpoints
-AI: Ensuring branch: ai-dlc/my-feature/01-api-endpoints ✓
-AI: Spawning backend agent...
-[Builder subagent continues work, commits to unit branch]
 AI: Builder complete. /advance → reviewer role
 
 AI: Spawning review agent...
@@ -354,24 +349,31 @@ AI: Spawning review agent...
 AI: Issue found - missing test. /fail → builder role
 AI: Spawning backend agent...
 [Builder subagent fixes issue on unit branch]
-Stop hook: "Run /clear to continue"
-
-[Session 3]
-User: /clear
-User: /construct
-AI: Loading state... builder role, unit-01-api-endpoints
-AI: Ensuring branch: ai-dlc/my-feature/01-api-endpoints ✓
-AI: Spawning backend agent...
-[Builder subagent adds test, commits]
 AI: Builder complete. /advance → reviewer role
 
 AI: Spawning review agent...
 [Reviewer subagent verifies all criteria]
 AI: All criteria satisfied! Unit-01 complete.
-AI: Merging ai-dlc/my-feature/01-api-endpoints → main
+AI: /advance → more units ready, loop back to builder
 AI: Moving to next unit: unit-02-dashboard-ui
 AI: Switching to branch: ai-dlc/my-feature/02-dashboard-ui
-...continues with next unit...
+AI: Spawning frontend agent for unit-02...
+[Builder subagent works on unit-02]
+...session exhausts...
+Stop hook: "Call /construct to continue"
+
+[Agent continues - clean context]
+Agent: /construct
+AI: Loading state... builder role, unit-02-dashboard-ui
+AI: Spawning frontend agent...
+[Builder subagent continues, commits]
+AI: Builder complete. /advance → reviewer role
+AI: Spawning review agent...
+AI: All criteria satisfied! Unit-02 complete.
+AI: /advance → all units complete!
+
+## Intent Complete!
+All units finished. See summary...
 ```
 
 ## State Scoping
