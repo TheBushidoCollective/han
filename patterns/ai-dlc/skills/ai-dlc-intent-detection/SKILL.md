@@ -74,7 +74,7 @@ Use `AskUserQuestion`:
 
 Based on their choice:
 
-- **Yes, elaborate**: Invoke the `/elaborate` skill
+- **Yes, elaborate**: Use the `ai-dlc:elaborate` skill (or run `/elaborate` command)
 - **Quick implementation**: Proceed with normal implementation
 - **Tell me more**: Briefly explain AI-DLC benefits:
   - Structured success criteria
