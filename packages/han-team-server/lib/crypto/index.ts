@@ -10,3 +10,5 @@
 export * from "./types.ts";
 export * from "./kek.ts";
 export * from "./encryption-service.ts";
+export * from "./aes-gcm.ts";
+export * from "./key-derivation.ts";
