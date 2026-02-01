@@ -145,7 +145,7 @@ export async function filterSessionsByAccess<
 				repoRemote: session.repoRemote,
 				projectPath: session.projectPath,
 			});
-			return { session, allowed: result.allowed };
+			return { session, allowed: result?.allowed ?? false };
 		}),
 	);
 

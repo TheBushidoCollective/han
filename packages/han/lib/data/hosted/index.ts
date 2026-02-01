@@ -304,6 +304,8 @@ function toInterfaceMembership(
  * Also implements HostedDataSourceWriteOps for multi-tenant CRUD operations.
  */
 export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
+	private readonly db: DrizzleDb;
+	private readonly tenant: TenantContext;
 
 	constructor(db?: DrizzleDb, tenant?: TenantContext) {
 		this.db = db ?? getDb();
