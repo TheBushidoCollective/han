@@ -1,3 +1,4 @@
+# Release workflow - builds binaries and publishes to npm
 name: Release Binaries
 
 on:
@@ -6,7 +7,7 @@ on:
     types: [manual-release]
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
