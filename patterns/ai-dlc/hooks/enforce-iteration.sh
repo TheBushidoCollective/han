@@ -60,6 +60,31 @@ fi
 CURRENT_ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
 HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 
+# Get iteration limit (0 or null = unlimited)
+MAX_ITERATIONS=$(echo "$ITERATION_JSON" | han parse json maxIterations -r --default 0 2>/dev/null || echo "0")
+
+# Check if iteration limit exceeded
+if [ "$MAX_ITERATIONS" -gt 0 ] && [ "$CURRENT_ITERATION" -ge "$MAX_ITERATIONS" ]; then
+  echo ""
+  echo "---"
+  echo ""
+  echo "## AI-DLC: ITERATION LIMIT REACHED"
+  echo ""
+  echo "**Iteration:** $CURRENT_ITERATION / $MAX_ITERATIONS (max)"
+  echo "**Hat:** $HAT"
+  echo ""
+  echo "The maximum iteration limit has been reached. This is a safety mechanism"
+  echo "to prevent infinite loops."
+  echo ""
+  echo "**Options:**"
+  echo "1. Review progress and decide if work is complete"
+  echo "2. Increase limit: \`han keep save iteration.json '{...\"maxIterations\": 100}'\`"
+  echo "3. Reset iteration count: \`/reset\` and start fresh"
+  echo ""
+  echo "Progress preserved in han keep storage."
+  exit 0
+fi
+
 # Get intent slug and check DAG status
 INTENT_SLUG=$(han keep load intent-slug --quiet 2>/dev/null || echo "")
 INTENT_DIR=""
