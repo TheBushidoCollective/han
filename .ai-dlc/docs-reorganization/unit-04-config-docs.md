@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in_progress
 depends_on: []
 branch: ai-dlc/docs-reorganization/04-config-docs
 discipline: documentation

@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in_progress
 depends_on: []
 branch: ai-dlc/docs-reorganization/06-plugin-dev-docs
 discipline: documentation
