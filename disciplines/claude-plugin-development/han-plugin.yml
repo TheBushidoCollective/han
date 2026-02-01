@@ -1,7 +1,7 @@
 hooks:
   lint:
     command: '"${CLAUDE_PLUGIN_ROOT}/hooks/lint.sh"'
-    dir_test: "test -f .claude-plugin/marketplace.json || test -f .claude-plugin/plugin.json"
+    dirs_with: ".claude-plugin/"
     if_changed:
       - "**/*.md"
       - ".claude-plugin/**"
