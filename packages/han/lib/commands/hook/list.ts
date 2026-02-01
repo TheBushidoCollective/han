@@ -246,7 +246,7 @@ export function registerHookList(hookCommand: Command): void {
 
 				if (opts.plugin) {
 					filteredHooks = filteredHooks.filter((h) =>
-						h.plugin.toLowerCase().includes(opts.plugin!.toLowerCase()),
+						h.plugin.toLowerCase().includes(opts.plugin?.toLowerCase()),
 					);
 				}
 

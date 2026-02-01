@@ -10,7 +10,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { PLUGIN_ALIASES, resolvePluginName } from "./plugin-aliases.ts";
+import { PLUGIN_ALIASES, } from "./plugin-aliases.ts";
 
 /**
  * Get the old plugin name prefix that should be replaced with short form.

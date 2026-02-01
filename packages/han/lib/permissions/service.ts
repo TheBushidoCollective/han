@@ -10,9 +10,7 @@ import { permissionCache } from "./cache.ts";
 import { getProvider } from "./git-provider.ts";
 import { normalizeRepoId, parseRemoteUrl } from "./repo-ownership.ts";
 import type {
-	AccessLevel,
 	AuthenticatedUser,
-	DEFAULT_ORG_VISIBILITY,
 	OrgRole,
 	OrgVisibilitySettings,
 	PermissionResult,

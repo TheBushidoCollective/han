@@ -203,7 +203,7 @@ function resolveConfig(config?: SyncConfig | HanSyncConfig | null): SyncConfig {
  * Check sync eligibility for a session/repo combination
  */
 export function checkSyncEligibility(
-	session: Session,
+	_session: Session,
 	repo: Repo | null,
 	config?: SyncConfig | HanSyncConfig | null,
 	_userId?: string,

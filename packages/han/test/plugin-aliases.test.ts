@@ -48,7 +48,7 @@ describe("plugin-aliases", () => {
 		});
 
 		test("all values are in category/name format", () => {
-			for (const [key, value] of Object.entries(PLUGIN_ALIASES)) {
+			for (const [_key, value] of Object.entries(PLUGIN_ALIASES)) {
 				expect(value).toMatch(/^[a-z-]+\/[a-z0-9-]+$/);
 			}
 		});
@@ -79,9 +79,9 @@ describe("plugin-aliases", () => {
 
 	describe("SHORT_NAME_ALIASES constant", () => {
 		test("maps short names to full names", () => {
-			expect(SHORT_NAME_ALIASES["typescript"]).toBe("jutsu-typescript");
-			expect(SHORT_NAME_ALIASES["python"]).toBe("jutsu-python");
-			expect(SHORT_NAME_ALIASES["react"]).toBe("jutsu-react");
+			expect(SHORT_NAME_ALIASES.typescript).toBe("jutsu-typescript");
+			expect(SHORT_NAME_ALIASES.python).toBe("jutsu-python");
+			expect(SHORT_NAME_ALIASES.react).toBe("jutsu-react");
 		});
 
 		test("maps do short names correctly", () => {
@@ -91,13 +91,13 @@ describe("plugin-aliases", () => {
 		});
 
 		test("maps hashi short names correctly", () => {
-			expect(SHORT_NAME_ALIASES["github"]).toBe("hashi-github");
+			expect(SHORT_NAME_ALIASES.github).toBe("hashi-github");
 		});
 
 		test("handles potential conflicts (first wins)", () => {
 			// "sentry" could be jutsu-sentry or hashi-sentry
 			// Whichever is processed first wins
-			const sentry = SHORT_NAME_ALIASES["sentry"];
+			const sentry = SHORT_NAME_ALIASES.sentry;
 			expect(sentry).toMatch(/^(jutsu|hashi)-sentry$/);
 		});
 	});

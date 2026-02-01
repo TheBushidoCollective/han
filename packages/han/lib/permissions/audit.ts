@@ -47,7 +47,7 @@ export function writeAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp">): v
 
 	try {
 		const logPath = getAuditLogPath();
-		appendFileSync(logPath, JSON.stringify(fullEntry) + "\n");
+		appendFileSync(logPath, `${JSON.stringify(fullEntry)}\n`);
 	} catch (error) {
 		// Log to console if file write fails - don't throw
 		console.error("[Audit] Failed to write audit log:", error);

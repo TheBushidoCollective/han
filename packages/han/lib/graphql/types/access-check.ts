@@ -140,7 +140,7 @@ export async function filterSessionsByAccess<
 
 	const results = await Promise.all(
 		sessions.map(async (session) => {
-			const result = await context.permissions!.canViewSession({
+			const result = await context.permissions?.canViewSession({
 				sessionId: session.sessionId,
 				repoRemote: session.repoRemote,
 				projectPath: session.projectPath,

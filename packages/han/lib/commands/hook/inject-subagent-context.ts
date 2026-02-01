@@ -32,7 +32,7 @@ interface PreToolUseOutput {
 /**
  * Check if stdin has data available.
  */
-function hasStdinData(): boolean {
+function _hasStdinData(): boolean {
 	try {
 		if (process.stdin.isTTY) {
 			return false;

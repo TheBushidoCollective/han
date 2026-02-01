@@ -176,7 +176,7 @@ export async function processSyncPayload(
 			}
 
 			// Upsert session
-			const sessionResult = await store.upsertSession(
+			const _sessionResult = await store.upsertSession(
 				payload.userId,
 				teamId,
 				session,
@@ -350,7 +350,7 @@ export const createMockDataStore = (): SyncDataStore => ({
 	},
 
 	async upsertSession(
-		userId: string,
+		_userId: string,
 		teamId: string,
 		session: SyncSession,
 	): Promise<{ id: string; isNew: boolean }> {

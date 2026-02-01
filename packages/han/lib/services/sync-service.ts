@@ -28,7 +28,6 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { getValidAccessToken } from "./auth-service.ts";
 import {
-  loadCredentials,
   getServerUrl,
 } from "./credentials.ts";
 
@@ -494,8 +493,8 @@ export function watchAndSync(
   let watcher: ReturnType<typeof watch> | null = null;
 
   if (existsSync(sessionsDir)) {
-    watcher = watch(sessionsDir, { recursive: true }, (eventType, filename) => {
-      if (filename && filename.endsWith("transcript.jsonl")) {
+    watcher = watch(sessionsDir, { recursive: true }, (_eventType, filename) => {
+      if (filename?.endsWith("transcript.jsonl")) {
         // Extract session ID from path
         const parts = filename.split("/");
         if (parts.length >= 2) {

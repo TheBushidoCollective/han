@@ -28,7 +28,7 @@ import {
  */
 export function buildSyncPayload(
 	delta: Awaited<ReturnType<typeof calculateDelta>>,
-	config: SyncConfig,
+	_config: SyncConfig,
 	userId: string,
 ): SyncPayload {
 	const queueManager = getQueueManager();
@@ -122,7 +122,7 @@ async function sendSyncRequest(
 	}
 
 	const bytesTransferred = useCompression
-		? compressedBody!.length
+		? compressedBody?.length
 		: Buffer.from(jsonBody!, "utf-8").length;
 
 	return {
@@ -392,7 +392,7 @@ export async function enqueuePendingSessions(): Promise<number> {
 		...configFromSettings,
 	};
 
-	const status = await getSyncStatus(config);
+	const _status = await getSyncStatus(config);
 	const queueManager = getQueueManager();
 
 	// Calculate delta to find sessions with pending data

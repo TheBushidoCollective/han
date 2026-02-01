@@ -6,15 +6,13 @@
  */
 
 import type { GraphQLContext } from "../graphql/builder.ts";
-import { verifyAccessToken, extractSessionId } from "./jwt.ts";
+import { verifyAccessToken, } from "./jwt.ts";
 import {
 	getSession,
 	isSessionValid,
-	parseDeviceInfo,
 } from "./session-manager.ts";
 import {
 	checkRateLimit,
-	recordAttempt,
 	RATE_LIMIT_CONFIGS,
 	RATE_LIMIT_KEYS,
 	getClientIP,
@@ -112,7 +110,7 @@ export async function createAuthContext(
  */
 export function createContextFactory(config: AuthConfig) {
 	return async (request: Request): Promise<Partial<GraphQLContext>> => {
-		const auth = await createAuthContext(request, config);
+		const _auth = await createAuthContext(request, config);
 
 		return {
 			request,

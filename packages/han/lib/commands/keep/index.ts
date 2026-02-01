@@ -74,7 +74,7 @@ export function registerKeepCommands(program: Command): void {
 			if (options.file) {
 				try {
 					content = readFileSync(options.file, "utf-8");
-				} catch (err) {
+				} catch (_err) {
 					console.error(`Error reading file: ${options.file}`);
 					process.exit(1);
 				}

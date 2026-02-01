@@ -30,7 +30,6 @@ import {
 } from "../../memory/index.ts";
 import {
 	type MultiStrategySearchResult,
-	type MultiStrategySearchWithFallbacksResult,
 	type SearchStrategy,
 	multiStrategySearch,
 	multiStrategySearchWithFallbacks,

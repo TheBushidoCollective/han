@@ -200,7 +200,7 @@ export function recordAttempt(
 		consecutiveBlocks.set(key, blocks);
 
 		const blockDuration = Math.min(
-			config.blockDurationMs * Math.pow(2, blocks - 1),
+			config.blockDurationMs * 2 ** (blocks - 1),
 			config.maxBlockDurationMs,
 		);
 

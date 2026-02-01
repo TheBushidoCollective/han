@@ -4,7 +4,7 @@
  * Organizations are the top-level tenant entity. All data is scoped to an organization.
  */
 
-import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 /**
  * Organizations table

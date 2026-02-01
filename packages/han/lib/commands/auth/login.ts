@@ -13,7 +13,7 @@
 
 import type { Command } from "commander";
 import { login, getAuthStatus } from "../../services/index.ts";
-import { getServerUrl, DEFAULT_SERVER_URL, validateServerUrlScheme } from "../../services/credentials.ts";
+import { getServerUrl, validateServerUrlScheme } from "../../services/credentials.ts";
 
 export function registerLoginCommand(authCommand: Command): void {
   authCommand

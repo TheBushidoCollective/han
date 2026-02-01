@@ -51,7 +51,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 
 	// Handle type selection
 	useInput(
-		(input, key) => {
+		(_input, key) => {
 			if (key.upArrow) {
 				setSelectedTypeIndex(Math.max(0, selectedTypeIndex - 1));
 			} else if (key.downArrow) {
@@ -71,7 +71,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 
 	// Handle confirmation
 	useInput(
-		(input, key) => {
+		(_input, key) => {
 			if (key.leftArrow || key.rightArrow) {
 				setConfirmIndex(confirmIndex === 0 ? 1 : 0);
 			} else if (key.return) {

@@ -15,7 +15,6 @@ import {
 	GraphQLString,
 } from "graphql";
 import type { ProjectGroup } from "../api/sessions.ts";
-import { getLocalDataSource } from "../data/index.ts";
 import { indexer } from "../db/index.ts";
 import { startMemoryQuerySession } from "../memory/streaming.ts";
 import { builder } from "./builder.ts";

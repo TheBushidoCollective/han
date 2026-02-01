@@ -41,7 +41,7 @@ import { initTelemetry, shutdownTelemetry } from "./telemetry/index.ts";
 let _registerPluginCommands: typeof import("./commands/plugin/index.ts").registerPluginCommands | null = null;
 let _registerCreateCommands: typeof import("./commands/create/index.ts").registerCreateCommands | null = null;
 
-async function getPluginCommands() {
+async function _getPluginCommands() {
 	if (!_registerPluginCommands) {
 		const mod = await import("./commands/plugin/index.ts");
 		_registerPluginCommands = mod.registerPluginCommands;
@@ -49,7 +49,7 @@ async function getPluginCommands() {
 	return _registerPluginCommands;
 }
 
-async function getCreateCommands() {
+async function _getCreateCommands() {
 	if (!_registerCreateCommands) {
 		const mod = await import("./commands/create/index.ts");
 		_registerCreateCommands = mod.registerCreateCommands;

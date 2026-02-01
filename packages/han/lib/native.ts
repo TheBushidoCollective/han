@@ -307,7 +307,7 @@ export function gitWorktreeList(
  * Create a new git branch
  */
 export function gitCreateBranch(repoPath: string, branchName: string): void {
-	return getNativeModule().gitCreateBranch(repoPath, branchName);
+	getNativeModule().gitCreateBranch(repoPath, branchName);
 }
 
 /**
@@ -318,7 +318,7 @@ export function gitWorktreeAdd(
 	path: string,
 	branch: string,
 ): void {
-	return getNativeModule().gitWorktreeAdd(repoPath, path, branch);
+	getNativeModule().gitWorktreeAdd(repoPath, path, branch);
 }
 
 /**
@@ -329,7 +329,7 @@ export function gitWorktreeRemove(
 	path: string,
 	force?: boolean,
 ): void {
-	return getNativeModule().gitWorktreeRemove(repoPath, path, force ?? false);
+	getNativeModule().gitWorktreeRemove(repoPath, path, force ?? false);
 }
 
 /**

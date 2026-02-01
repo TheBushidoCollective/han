@@ -5,8 +5,7 @@
  */
 
 import { builder } from "../../builder.ts";
-import { OAuthProviderEnum, AuthUserRef } from "./auth-user.ts";
-import { AuthSessionRef } from "./auth-session.ts";
+import { OAuthProviderEnum, } from "./auth-user.ts";
 import {
 	AuthResultType,
 	MagicLinkResultType,
@@ -164,7 +163,7 @@ builder.mutationFields((t) => ({
 			email: t.arg.string({ required: true }),
 		},
 		description: "Request a magic link to be sent to the specified email",
-		resolve: async (_parent, args, context) => {
+		resolve: async (_parent, args, _context) => {
 			const config = getAuthConfigSafe();
 			if (!config) {
 				return { success: false, message: "Authentication is not configured" };
@@ -267,7 +266,7 @@ builder.mutationFields((t) => ({
 			refreshToken: t.arg.string({ required: true }),
 		},
 		description: "Refresh an existing session using a refresh token",
-		resolve: async (_parent, args, context) => {
+		resolve: async (_parent, args, _context) => {
 			const config = getAuthConfigSafe();
 			if (!config) {
 				return { success: false, user: null, tokens: null, error: "Authentication is not configured" };
@@ -355,7 +354,7 @@ builder.mutationFields((t) => ({
 
 			try {
 				const provider = args.provider as OAuthProvider;
-				const oauthResult = await completeOAuth(
+				const _oauthResult = await completeOAuth(
 					provider,
 					args.code,
 					args.codeVerifier,
@@ -388,7 +387,7 @@ builder.mutationFields((t) => ({
 			connectionId: t.arg.id({ required: true }),
 		},
 		description: "Remove an OAuth provider connection from the current user's account",
-		resolve: (_parent, args, context) => {
+		resolve: (_parent, _args, context) => {
 			const authContext = (context as any).auth;
 			if (!authContext?.user) {
 				throw new Error("Authentication required");

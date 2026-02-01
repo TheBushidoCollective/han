@@ -10,7 +10,6 @@ import {
 	isOldPluginName,
 	migratePluginNames,
 	migrateSettingsFile,
-	type MigrationResult,
 } from "../lib/migrate.ts";
 
 // Use a temp directory for tests

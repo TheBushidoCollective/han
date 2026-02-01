@@ -14,7 +14,6 @@ import {
   DEFAULT_SERVER_URL,
   loadCredentials,
   getCredentialsPath,
-  validateServerUrlScheme,
 } from "../../services/credentials.ts";
 import { existsSync } from "node:fs";
 

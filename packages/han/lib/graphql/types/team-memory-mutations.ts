@@ -16,8 +16,6 @@ import {
 import {
 	exportTeamKnowledge,
 	importTeamKnowledge,
-	type ExportResult,
-	type ImportResult,
 	type TeamKnowledgeExport,
 } from "../../memory/export-import.ts";
 import {

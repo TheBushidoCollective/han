@@ -104,7 +104,7 @@ export async function createSession(
 	if (!sessionsByUser.has(user.id)) {
 		sessionsByUser.set(user.id, new Set());
 	}
-	sessionsByUser.get(user.id)!.add(sessionId);
+	sessionsByUser.get(user.id)?.add(sessionId);
 
 	// Index by token hash
 	sessionsByTokenHash.set(session.tokenHash, sessionId);

@@ -14,8 +14,6 @@ import {
 	PLUGIN_ALIASES,
 	resolvePluginName,
 	resolvePluginNames,
-	REVERSE_ALIASES,
-	SHORT_NAME_ALIASES,
 } from "../lib/plugin-aliases.ts";
 
 describe("plugin alias integration", () => {

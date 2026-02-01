@@ -12,7 +12,7 @@ import type {
 	RepoOwnershipResult,
 } from "../git-provider.ts";
 import { registerProvider } from "../git-provider.ts";
-import type { AccessLevel, OrgRole, RepoOwnership } from "../types.ts";
+import type { AccessLevel, OrgRole, } from "../types.ts";
 
 /**
  * GitHub API base URL

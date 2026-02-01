@@ -145,7 +145,7 @@ function createDefaultCursor(): SyncCursor {
 export function calculateBackoff(attempts: number): number {
 	// 2^attempts * base, capped at max
 	const delay = Math.min(
-		BACKOFF_BASE_MS * Math.pow(2, attempts),
+		BACKOFF_BASE_MS * 2 ** attempts,
 		MAX_BACKOFF_MS,
 	);
 
