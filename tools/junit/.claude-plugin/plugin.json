@@ -1,0 +1,13 @@
+{
+  "name": "junit",
+  "version": "1.10.0",
+  "description": "Comprehensive JUnit testing framework skills for Java projects with annotations, assertions, and extensions.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["junit", "testing", "java"]
+}

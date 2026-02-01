@@ -1,0 +1,25 @@
+{
+  "name": "java",
+  "version": "1.2.0",
+  "description": "Advanced Java skills for streams, concurrency, and generics.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["java", "streams", "concurrency"],
+  "lspServers": {
+    "jdtls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".java": "java"
+      },
+      "startupTimeout": 120000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+  }
+}

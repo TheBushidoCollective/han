@@ -1,0 +1,13 @@
+{
+  "name": "testng",
+  "version": "1.8.0",
+  "description": "Comprehensive TestNG testing framework skills for Java projects with annotations, data providers, and parallel execution.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["testng", "testing", "java", "data-providers", "parallel"]
+}

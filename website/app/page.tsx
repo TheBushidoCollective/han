@@ -59,7 +59,7 @@ export default function Home() {
 					</p>
 					<div className="flex flex-col sm:flex-row gap-4 justify-center">
 						<Link
-							href="/plugins/jutsu/jutsu-ai-dlc"
+							href="/plugins/patterns/ai-dlc"
 							className="inline-flex items-center px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition"
 						>
 							Get the Plugin
@@ -132,41 +132,72 @@ export default function Home() {
 						What&apos;s Inside
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-16 max-w-2xl mx-auto">
-						139 plugins across four categories, all working together.
+						139+ plugins across nine categories, all working together.
 					</p>
 
-					<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 						<CategoryCard
 							href="/plugins/core"
 							icon="⛩️"
 							title="Core"
-							subtitle="Foundation"
-							count="2"
-							description="Essential infrastructure. Auto-installs han binary, provides metrics, MCP servers, and quality principles."
+							subtitle="Essential Infrastructure"
+							description="Auto-installs han binary, provides metrics, MCP servers, and quality principles."
 						/>
 						<CategoryCard
-							href="/plugins/do"
-							icon="🛤️"
-							title="Dō"
-							subtitle="Agents"
-							count="25+"
-							description="Specialized AI agents for code review, debugging, architecture, and security."
+							href="/plugins/languages"
+							icon="💬"
+							title="Languages"
+							subtitle="Programming Support"
+							description="Language-specific tooling, LSP integration, and syntax support."
 						/>
 						<CategoryCard
-							href="/plugins/jutsu"
-							icon="🎯"
-							title="Jutsu"
-							subtitle="Tools"
-							count="100+"
-							description="Validation plugins for your stack. TypeScript, Biome, Pytest, ShellCheck, and more."
+							href="/plugins/frameworks"
+							icon="🏗️"
+							title="Frameworks"
+							subtitle="Framework Integrations"
+							description="Framework-specific patterns, components, and best practices."
 						/>
 						<CategoryCard
-							href="/plugins/hashi"
-							icon="🌉"
-							title="Hashi"
-							subtitle="Integrations"
-							count="10+"
-							description="MCP servers connecting Claude to GitHub, Jira, Sentry, and other tools."
+							href="/plugins/validation"
+							icon="✅"
+							title="Validation"
+							subtitle="Code Quality"
+							description="Linting, formatting, type checking, and quality enforcement."
+						/>
+						<CategoryCard
+							href="/plugins/tools"
+							icon="🔧"
+							title="Tools"
+							subtitle="Development Tools"
+							description="Build tools, package managers, testing frameworks, and utilities."
+						/>
+						<CategoryCard
+							href="/plugins/services"
+							icon="🌐"
+							title="Services"
+							subtitle="External Integrations"
+							description="MCP servers for GitHub, Jira, Sentry, and other external APIs."
+						/>
+						<CategoryCard
+							href="/plugins/disciplines"
+							icon="🎓"
+							title="Disciplines"
+							subtitle="Specializations"
+							description="Specialized agents for frontend, backend, security, and more."
+						/>
+						<CategoryCard
+							href="/plugins/patterns"
+							icon="📐"
+							title="Patterns"
+							subtitle="Methodologies"
+							description="Workflows, architectural patterns, and best practices."
+						/>
+						<CategoryCard
+							href="/plugins/specialized"
+							icon="🔬"
+							title="Specialized"
+							subtitle="Niche Tools"
+							description="Domain-specific and specialized development tools."
 						/>
 					</div>
 
@@ -256,12 +287,12 @@ export default function Home() {
 									<pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
 										<code>
 											{`# TypeScript projects
-/plugin install jutsu-typescript@thebushidocollective-han
-/plugin install jutsu-biome@thebushidocollective-han
+/plugin install typescript@thebushidocollective-han
+/plugin install biome@thebushidocollective-han
 
 # Python projects
-/plugin install jutsu-ruff@thebushidocollective-han
-/plugin install jutsu-pytest@thebushidocollective-han`}
+/plugin install ruff@thebushidocollective-han
+/plugin install pytest@thebushidocollective-han`}
 										</code>
 									</pre>
 								</div>
@@ -393,14 +424,12 @@ function CategoryCard({
 	icon,
 	title,
 	subtitle,
-	count,
 	description,
 }: {
 	href: string;
 	icon: string;
 	title: string;
 	subtitle: string;
-	count: string;
 	description: string;
 }) {
 	return (
@@ -415,7 +444,7 @@ function CategoryCard({
 						{title}
 					</h3>
 					<p className="text-sm text-gray-500 dark:text-gray-400">
-						{subtitle} · {count}
+						{subtitle}
 					</p>
 				</div>
 			</div>

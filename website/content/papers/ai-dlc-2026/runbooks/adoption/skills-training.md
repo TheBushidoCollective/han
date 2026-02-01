@@ -182,14 +182,16 @@ flowchart TB
 | 3 | Backpressure design | Create feedback loops for common failures |
 | 4 | Standards evolution | Update quality standards for AI context |
 
-### For Designers → Experience Curators
+### For Designers → Experience Builders
 
 | Week | Focus | Exercises |
 |------|-------|-----------|
-| 1 | Experience criteria | Define "feel" in measurable terms |
-| 2 | Design iteration | Direct AI-generated variations |
-| 3 | Component criteria | Specify component behavior precisely |
-| 4 | Aesthetic judgment | Practice curation over creation |
+| 1 | Direct building | Have AI build a component from your description, refine it live |
+| 2 | Visual vocabulary | Learn to articulate spacing, hierarchy, rhythm in prompts |
+| 3 | Interactive refinement | Build a full page, adjust until it feels right |
+| 4 | Ship something | Deploy a real feature you built with AI—your design, your code |
+
+**The insight:** Your eye for what's "off" is your superpower. Developers often can't see that the spacing is wrong or the hierarchy is unclear—but you can. Use that skill to guide AI toward excellence.
 
 ## Learning Through Practice
 

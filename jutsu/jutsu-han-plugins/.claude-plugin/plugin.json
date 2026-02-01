@@ -1,9 +1,0 @@
-{
-  "name": "jutsu-han-plugins",
-  "version": "1.1.0",
-  "description": "Validates Han plugin structure and configuration files",
-  "author": {
-    "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
-  }
-}

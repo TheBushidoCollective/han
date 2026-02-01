@@ -19,17 +19,11 @@ mcp_servers:
   memory-dal:
     name: memory-dal
     description: Han internal memory database with FTS and vector search
-    command: han
+    command: "${CLAUDE_PLUGIN_ROOT}/hooks/han-wrapper.sh"
     args: ["mcp", "memory"]
 
 # Core hooks - all hooks go through orchestrator
 hooks:
-  # Setup hook - runs on plugin installation
-  setup:
-    event: Setup
-    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/setup.sh"
-    description: Ensure han binary is installed and available
-
   # SessionStart hooks - run at session start
   coordinator:
     event: SessionStart
@@ -56,16 +50,6 @@ hooks:
     event: UserPromptSubmit
     command: han hook reference hooks/no-excuses.md --must-read-first "no excuses for pre-existing issues"
     description: Reference no-excuses policy
-
-  memory-learning-ref:
-    event: UserPromptSubmit
-    command: han hook reference hooks/memory-learning.md --must-read-first "autonomous self-learning rules"
-    description: Reference memory learning guidelines
-
-  memory-confidence-ref:
-    event: UserPromptSubmit
-    command: han hook reference hooks/memory-confidence.md --must-read-first "memory-augmented answers"
-    description: Reference memory confidence guidelines
 
   # SubagentPrompt hooks - Han virtual hook for gathering subagent context
   # These are dispatched by the PreToolUse:Task hook to gather content for injection

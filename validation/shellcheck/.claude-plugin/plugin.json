@@ -1,0 +1,21 @@
+{
+  "name": "shellcheck",
+  "version": "1.4.0",
+  "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "bash",
+    "shell",
+    "shellcheck",
+    "validation",
+    "linting",
+    "quality",
+    "enforcement"
+  ]
+}

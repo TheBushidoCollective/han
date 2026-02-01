@@ -1,45 +1,43 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllPlugins, getCategoryIcon } from "../../../lib/plugins";
+import {
+	getAllPlugins,
+	getCategoryIcon,
+	type PluginCategory,
+	CATEGORY_ORDER,
+	CATEGORY_META,
+} from "../../../lib/plugins";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
 
 export async function generateStaticParams() {
-	return [
-		{ category: "core" },
-		{ category: "jutsu" },
-		{ category: "do" },
-		{ category: "hashi" },
-	];
+	return CATEGORY_ORDER.map((category) => ({ category }));
 }
 
-const categoryData = {
-	core: {
-		title: "Core",
-		subtitle: "⚙️ - Essential Infrastructure",
-		description:
-			"Essential infrastructure for the Han marketplace including skills, commands, MCP servers, and quality enforcement hooks. Both han-core (infrastructure) and bushido (philosophy) are available.",
-	},
-	jutsu: {
-		title: "Jutsu",
-		subtitle: "術 - Techniques",
-		description:
-			"Language and tool skills with validation hooks for maintaining quality. Each Jutsu plugin provides specialized knowledge for a specific programming language, framework, or development tool.",
-	},
-	do: {
-		title: "Dō",
-		subtitle: "道 - The Way",
-		description:
-			"Specialized discipline agents for focused expertise areas. Each Dō plugin contains agents that embody specific engineering disciplines and methodologies.",
-	},
-	hashi: {
-		title: "Hashi",
-		subtitle: "橋 - Bridge",
-		description:
-			"MCP servers that extend Claude Code's capabilities. These plugins integrate external services and tools to enhance Claude's abilities.",
-	},
-} as const;
+// Build plugins by category for sidebar
+function getPluginsByCategory() {
+	const result: Record<PluginCategory, { name: string; title: string }[]> = {
+		core: [],
+		languages: [],
+		frameworks: [],
+		validation: [],
+		tools: [],
+		services: [],
+		disciplines: [],
+		patterns: [],
+		specialized: [],
+	};
+
+	for (const category of CATEGORY_ORDER) {
+		result[category] = getAllPlugins(category).map((p) => ({
+			name: p.name,
+			title: p.title,
+		}));
+	}
+
+	return result;
+}
 
 export async function generateMetadata({
 	params,
@@ -47,17 +45,17 @@ export async function generateMetadata({
 	params: Promise<{ category: string }>;
 }): Promise<Metadata> {
 	const { category } = await params;
-	const data = categoryData[category as keyof typeof categoryData];
+	const meta = CATEGORY_META[category as PluginCategory];
 
-	if (!data) {
+	if (!meta) {
 		return {
 			title: "Category Not Found - Han",
 		};
 	}
 
 	return {
-		title: `${data.title} Plugins - Han`,
-		description: data.description,
+		title: `${meta.title} Plugins - Han`,
+		description: meta.description,
 	};
 }
 
@@ -68,28 +66,15 @@ export default async function CategoryPage({
 }) {
 	const { category } = await params;
 
-	if (!["core", "jutsu", "do", "hashi"].includes(category)) {
+	if (!CATEGORY_ORDER.includes(category as PluginCategory)) {
 		notFound();
 	}
 
-	const categoryKey = category as keyof typeof categoryData;
-	const categoryInfo = categoryData[categoryKey];
+	const categoryKey = category as PluginCategory;
+	const categoryInfo = CATEGORY_META[categoryKey];
 	const categoryIcon = getCategoryIcon(categoryKey);
 	const plugins = getAllPlugins(categoryKey);
-
-	// Get plugins for sidebar
-	const jutsuPlugins = getAllPlugins("jutsu").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
-	const doPlugins = getAllPlugins("do").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
-	const hashiPlugins = getAllPlugins("hashi").map((p) => ({
-		name: p.name,
-		title: p.title,
-	}));
+	const pluginsByCategory = getPluginsByCategory();
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -114,11 +99,7 @@ export default async function CategoryPage({
 			{/* Main Content with Sidebar */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
 				<div className="flex gap-12">
-					<Sidebar
-						jutsuPlugins={jutsuPlugins}
-						doPlugins={doPlugins}
-						hashiPlugins={hashiPlugins}
-					/>
+					<Sidebar pluginsByCategory={pluginsByCategory} />
 					<main className="flex-1 min-w-0">
 						<div className="mb-12">
 							<div className="flex items-center space-x-4 mb-4">

@@ -1,3 +1,5 @@
+import { logMigrationResults, migratePluginNames } from "./migrate.ts";
+import { resolvePluginNames } from "./plugin-aliases.ts";
 import { showPluginSelector } from "./plugin-selector-wrapper.tsx";
 import {
 	ensureClaudeDirectory,
@@ -66,8 +68,11 @@ export async function installPlugins(
 		process.exit(1);
 	}
 
+	// Resolve aliases (short names, new paths, old names all resolve to canonical names)
+	const resolvedNames = resolvePluginNames(pluginNames);
+
 	// Always include bushido plugin as a dependency
-	const pluginsToInstall = new Set(pluginNames);
+	const pluginsToInstall = new Set(resolvedNames);
 	pluginsToInstall.add("bushido");
 
 	ensureClaudeDirectory(scope);
@@ -198,6 +203,10 @@ export async function installPlugins(
 	// Ensure dispatch hooks are configured in global settings
 	// This is a workaround for Claude Code bug #12151
 	ensureDispatchHooks();
+
+	// Migrate any old plugin names in settings files
+	const migrationResults = migratePluginNames(process.cwd());
+	logMigrationResults(migrationResults);
 
 	if (installed.length > 0) {
 		console.log("\n⚠️  Please restart Claude Code to load the new plugin(s)");

@@ -59,7 +59,7 @@ flowchart TB
 
 **Key skill shift:** From *specification writing* to *intent articulation* and *criteria definition*.
 
-### Designer → Experience Curator
+### Designer → Experience Builder
 
 ```mermaid
 flowchart TB
@@ -68,14 +68,15 @@ flowchart TB
         D1[Create Mockups]
         D2[Build Design System]
         D3[Handoff to Devs]
+        D4[Wait for Implementation]
     end
 
-    subgraph New["AI-DLC Experience Curator"]
+    subgraph New["AI-DLC Experience Builder"]
         direction TB
-        EC1[Define Experience Intent]
-        EC2[Curate AI-Generated Options]
-        EC3[Set Visual Criteria]
-        EC4[Validate Feel & Polish]
+        EC1[Direct AI to Build UI]
+        EC2[Refine Until It Feels Right]
+        EC3[Ship Working Code]
+        EC4[No Handoff Required]
     end
 
     Old -->|"Becomes"| New
@@ -86,12 +87,14 @@ flowchart TB
 
 | Before | After | Why |
 |--------|-------|-----|
-| Create every mockup | Generate and curate options | AI produces variations faster |
-| Build components manually | Define component criteria | AI builds to specification |
-| Handoff design specs | Continuous collaboration | Mob Elaboration includes design |
-| Review dev implementation | Validate experience quality | Focus on what matters: user feel |
+| Create mockups, wait for dev | **Build directly** with AI assistance | No handoff delay or lost-in-translation |
+| Describe what you want | **See it immediately**, refine interactively | Your visual intuition guides the AI |
+| Review dev's interpretation | **Your vision, your code** | The gap between design and reality closes |
+| Limited to design tools | **Ship working features** | Design skills become building skills |
 
-**Key skill shift:** From *pixel-pushing* to *experience definition* and *aesthetic judgment*.
+**The superpower:** A designer's visual intuition, UX sensibility, and aesthetic judgment make them *better* at directing AI toward beautiful, usable interfaces. You're not curating options—you're **building directly** using skills developers don't have.
+
+**Key skill shift:** From *handing off specs* to *manifesting your vision directly*. Your expertise in color, typography, spacing, hierarchy, and user flow becomes your competitive advantage in the AI era.
 
 ### Developer → Solution Architect
 

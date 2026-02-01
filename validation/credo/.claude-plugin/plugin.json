@@ -1,0 +1,9 @@
+{
+  "name": "credo",
+  "version": "1.10.0",
+  "description": "Advanced Credo skills for code analysis and style checking in Elixir",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  }
+}

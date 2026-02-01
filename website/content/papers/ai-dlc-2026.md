@@ -58,7 +58,7 @@ The evolution of software engineering has been a continuous quest to enable deve
 
 The integration of Large Language Models marked a revolutionary shift, introducing conversational natural language interactions for tasks like code generation, bug detection, and test creation. This was the **AI-Assisted era**—AI enhancing fine-grained, specific tasks while humans retained full control of workflow and decisions.
 
-We have now entered the **AI-Autonomous era**. Models capable of multi-hour sustained reasoning, combined with tools for autonomous development loops, enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
+We have now entered the **AI-Autonomous era**. The emergence of state-persistent orchestration and task-handoff techniques allows AI to maintain context and intent across multi-hour, multi-session workflows. Combined with tools for autonomous development loops, these techniques enable workflows where humans define destinations and guardrails, then step back while AI iterates toward success. Independent evaluations estimate that frontier models can now complete tasks that take humans four to five hours. Anthropic's Claude Code lead reported writing 40,000 lines of production code *using Claude Code itself* in a single month.
 
 ### The Problem with Traditional Methods
 
@@ -125,6 +125,14 @@ AI-DLC's value compounds over time:
 
 Ad-hoc approaches don't compound—each session starts fresh, each prompt is one-off, no organizational learning occurs. The team with AI-DLC gets better at working with AI; the team with ad-hoc AI starts over every time.
 
+**Beyond Code: The Requirements Silo**
+
+The same ad-hoc pattern exists upstream. Teams use AI to polish requirements documents—reformatting PRDs, summarizing meetings, making user stories "readable." This treats AI as a formatting tool rather than a thinking partner.
+
+The opportunity is different: AI should **steer** the requirements conversation, asking probing questions to extract context humans didn't know they possessed. "What happens if the user cancels mid-checkout?" "How should this behave for EU users under GDPR?" These questions surface assumptions that would otherwise remain implicit until implementation—when they become expensive to address.
+
+AI-DLC addresses this through Mob Elaboration: AI interrogates stakeholders until requirements are complete enough to express as verifiable completion criteria.
+
 ---
 
 ## Core Principles
@@ -137,7 +145,7 @@ We choose to reimagine a development method rather than keeping existing methods
 
 Proper application of AI leads to rapid cycles measured in hours or even minutes. This demands continuous, real-time validation and feedback mechanisms, rendering many traditional rituals less relevant:
 
-**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When an AI can implement a feature in minutes regardless of apparent complexity, human estimation becomes unreliable.
+**Would effort estimation (story points) be as critical** if AI diminishes the boundaries between simple, medium, and hard tasks? When sub-hour architectural iterations become routine, human estimation becomes unreliable.
 
 **Would velocity metrics be relevant**, or should we replace them with business value delivered? When the constraint shifts from implementation speed to requirement clarity, traditional productivity metrics miss the point.
 
@@ -261,6 +269,8 @@ Let AI determine *how* to satisfy these constraints. This approach offers multip
 - **Reduces prompt complexity** — Success criteria are simpler to specify than step-by-step instructions
 - **Makes success measurable** — Programmatic verification enables autonomous operation
 - **Enables iteration** — Each failure provides signal; each attempt refines the approach
+
+Prescriptive workflows create an intelligence ceiling—like consulting a board of advisors but only permitting yes-or-no answers. Frontier models encode patterns from millions of engineering decisions. Backpressure unlocks this: define the outcome, and AI can propose architectural alternatives, surface constraint conflicts, and apply its training to find paths you hadn't considered.
 
 The philosophy can be summarized as: **"Better to fail predictably than succeed unpredictably."** Each failure is data. Each iteration refines the approach. The skill shifts from directing AI step-by-step to writing criteria and tests that converge toward correct solutions.
 
@@ -436,6 +446,37 @@ AI can apply design patterns during execution without requiring explicit design 
 
 **The test suite, not the architecture document, becomes the source of truth.** If the tests pass and the code meets non-functional requirements, the implementation is valid regardless of whether it matches a pre-specified design.
 
+### Everyone Becomes a Builder
+
+In traditional development, "design" and "build" are distinct phases requiring different specialists:
+
+- Designer creates mockups (Figma, wireframes)
+- Developer implements the specs
+- Handoff is a document or image—and often a source of friction
+
+**AI collapses this gap.** When AI generates a React component, it simultaneously designs and implements. There's no mockup-to-code handoff. The artifact IS the design.
+
+**This doesn't eliminate designers—it empowers everyone to build.**
+
+| Traditional | AI-DLC 2026 |
+|-------------|-------------|
+| Designer creates mockup, waits for developer | Designer directs AI, sees result immediately |
+| Developer interprets spec, may misunderstand | Developer directs AI with technical precision |
+| Handoffs lose context | No handoffs—same person refines until done |
+
+**Your discipline is your superpower.** Everyone uses the same workflow (builder → reviewer), but discipline provides context that makes you better at directing AI:
+
+- **Designer as builder:** Visual intuition, UX sensibility, and aesthetic judgment guide the AI toward beautiful, usable interfaces. Designers can now manifest their vision directly—no waiting for developer availability.
+- **Backend engineer as builder:** System design knowledge, performance intuition, and architectural patterns guide the AI toward robust, scalable services.
+- **Product manager as builder:** User empathy, business context, and prioritization skills guide the AI toward features that matter.
+- **Technical writer as builder:** Communication clarity, audience awareness, and information architecture guide the AI toward documentation people actually read.
+
+**The skill shifts from execution to refinement.** Instead of manually implementing every pixel or line of code, you review what AI produces and guide it toward your vision. Your years of experience in your discipline make you better at recognizing what's good, what's off, and how to improve it.
+
+This is democratization, not elimination. A designer who could previously only create mockups can now ship working code. A backend engineer who avoided frontend can now build full features. Everyone gains capabilities; no one loses their value. **Your expertise makes you a better director of AI—not a victim of it.**
+
+**The Operator Multiplier.** AI is a force multiplier, not an equalizer. A junior with AI produces more work; an experienced operator with AI produces superior systems. The difference lies in steering: recognizing architectural debt before it accumulates, catching edge cases the tests don't cover, knowing when the AI's suggestion is a local optimum. High-quality output still requires experienced judgment—either directly or through Mob Construction patterns where seasoned builders guide the overall direction.
+
 ### Streamline Responsibilities
 
 AI's ability to perform task decomposition, code generation, testing, documentation, and deployment reduces the need for specialized roles. A single developer supervising AI can accomplish what previously required separate specialists for frontend, backend, infrastructure, testing, and documentation.
@@ -452,9 +493,13 @@ The role shifts from "doing the work" to **"defining what work matters and verif
 
 However, humans remain integral. Product owners ensure alignment with business objectives. Developers maintain design quality and handle judgment calls. These roles ensure that automation and human accountability remain balanced.
 
-### Platform Agnostic
+### Tool and Platform Agnostic
 
-AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodology applies regardless of infrastructure choices:
+AI-DLC 2026 is intentionally agnostic to both tooling and infrastructure. The methodology applies regardless of which IDE, AI agent, or cloud provider you choose.
+
+**Technique over tools.** The core of AI-DLC isn't a specific product—it's the logic of how state persists across sessions, how backpressure guides iteration, and how human steering integrates with autonomous execution. These patterns work whether you're using Claude Code, Cursor, Kiro, OpenCode, or a custom agent framework. The principles transfer; the implementation details vary.
+
+**Infrastructure independence.** The methodology applies regardless of deployment choices:
 
 - **Container orchestration:** Kubernetes, ECS, Docker Swarm, Nomad
 - **Serverless:** Lambda, Cloud Functions, Azure Functions, Cloudflare Workers
@@ -462,7 +507,7 @@ AI-DLC 2026 is intentionally cloud-agnostic and platform-agnostic. The methodolo
 - **Edge:** IoT devices, edge computing platforms
 - **Hybrid:** Any combination of the above
 
-The methodology should be independent of vendor choices. Choose infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
+Choose tools and infrastructure based on requirements, cost constraints, and team expertise—not methodology constraints.
 
 ---
 
@@ -531,6 +576,27 @@ A **Unit** represents a cohesive, self-contained work element derived from an In
 - **Independently deployable:** Can go to production without other Units
 - **Clear boundaries:** Ownership and scope are unambiguous
 - **Explicit dependencies:** Upstream Units are declared in frontmatter
+- **Single discipline:** Each Unit focuses on one discipline (frontend, backend, api, documentation)
+
+**Single-Discipline Units and Vertical Slices:**
+
+When implementing a vertical feature that spans multiple layers, decompose into discipline-specific units:
+
+```
+"User Profile" intent:
+├── unit-01-user-profile-api (discipline: api)
+├── unit-02-user-profile-backend (discipline: backend)
+│       depends_on: [unit-01]
+└── unit-03-user-profile-ui (discipline: frontend)
+        depends_on: [unit-02]
+```
+
+This decomposition provides:
+
+- **Focused context:** Each unit gets discipline-appropriate context (design system for frontend, API specs for backend)
+- **Clear ownership:** No ambiguity about what each unit delivers
+- **Parallel potential:** Independent units can work simultaneously
+- **Appropriate tooling:** Discipline-specific agents and validation hooks
 
 Each Unit encompasses:
 
@@ -706,6 +772,32 @@ Completion Criteria can include:
 - Security scan results
 - Documentation requirements
 - Integration validation
+
+#### Completion Announcements
+
+When an Intent completes, the work isn't done—it needs to be communicated. AI-DLC 2026 includes **Completion Announcements** as a first-class artifact.
+
+During Mob Elaboration, teams specify announcement formats:
+
+```yaml
+# intent.md frontmatter
+announcements:
+  - changelog      # Conventional changelog entry
+  - release-notes  # User-facing summary
+  - social-posts   # Twitter/LinkedIn ready
+  - blog-draft     # Long-form announcement
+```
+
+On completion, AI generates each configured format:
+
+| Format | Purpose | Audience |
+|--------|---------|----------|
+| **CHANGELOG** | Technical record of changes | Developers |
+| **Release Notes** | User-facing feature summary | End users |
+| **Social Posts** | Platform-optimized snippets | Community |
+| **Blog Draft** | Detailed announcement | Marketing |
+
+**Why this matters:** Shipping features without communication is incomplete work. The announcement artifacts ensure every completed Intent has the materials needed for proper release communication, reducing the gap between "code complete" and "users know about it."
 
 #### Deployment Unit
 
@@ -1306,6 +1398,7 @@ For detailed runbooks with system prompts, entry/exit criteria, and failure mode
 | **Context Budget** | Available attention capacity in AI context window; quality degrades when overloaded |
 | **HITL** | Human-in-the-Loop: human validates each significant step before AI proceeds; used for novel, high-risk, or foundational work |
 | **AHOTL** | Autonomous Human-on-the-Loop: human defines criteria and reviews output; AI operates autonomously within boundaries; used for well-defined, programmatically verifiable work |
+| **Integrator** | Final validation hat that runs conditionally based on VCS strategy; validates auto-merged state (trunk) or creates single PR (intent); skipped for unit/bolt strategies |
 | **Intent** | High-level statement of purpose with completion criteria that serves as starting point for decomposition |
 | **Memory Provider** | Source of persistent context (files, git, tickets, ADRs, runbooks) accessible to AI agents |
 | **Mob Elaboration** | Collaborative ritual where humans and AI decompose Intent into Units with Completion Criteria |

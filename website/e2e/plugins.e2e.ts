@@ -12,7 +12,7 @@ test.describe("Plugins Page", () => {
 			page.getByRole("link", { name: /core/i }).first(),
 		).toBeVisible();
 		await expect(
-			page.getByRole("link", { name: /jutsu/i }).first(),
+			page.getByRole("link", { name: /languages/i }).first(),
 		).toBeVisible();
 	});
 
@@ -30,8 +30,8 @@ test.describe("Category Page", () => {
 	});
 
 	test("should display plugins in category", async ({ page }) => {
-		await page.goto("/plugins/jutsu");
-		const pluginCards = page.locator('a[href^="/plugins/jutsu/"]');
+		await page.goto("/plugins/tools");
+		const pluginCards = page.locator('a[href^="/plugins/tools/"]');
 		const count = await pluginCards.count();
 		expect(count).toBeGreaterThan(0);
 	});

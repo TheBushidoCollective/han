@@ -1,6 +1,6 @@
 {
 	"name": "@thebushidocollective/han",
-	"version": "3.3.1",
+	"version": "3.4.0",
 	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
@@ -107,6 +107,7 @@
 		"yaml": "^2.8.1"
 	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^0.72.1",
 		"@graphql-yoga/plugin-defer-stream": "^3.18.0",
 		"@pothos/plugin-directives": "^4.2.5",
 		"@tanstack/react-virtual": "^3.13.13",

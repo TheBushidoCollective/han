@@ -4,19 +4,21 @@ on:
   pull_request:
     paths:
       - "packages/han/**"
+      - "packages/han-native/**"
       - ".github/workflows/validate-han.yml"
   push:
     branches:
       - main
     paths:
       - "packages/han/**"
+      - "packages/han-native/**"
       - ".github/workflows/validate-han.yml"
   workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -26,6 +28,38 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.2"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            packages/han-native/target/
+          key: ${{ runner.os }}-cargo-validate-${{ hashFiles('packages/han-native/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-validate-
+
+      - name: Install han-native dependencies
+        working-directory: ./packages/han-native
+        run: npm ci
+
+      - name: Build native module
+        working-directory: ./packages/han-native
+        run: |
+          cargo build --release
+          # Copy for NAPI-RS loader (packages/han-native/)
+          cp target/release/libhan_native.so han-native.linux-x64-gnu.node
+          # Copy for direct loader (packages/han/native/)
+          mkdir -p ../han/native
+          cp target/release/libhan_native.so ../han/native/han-native.node
+          echo "Built native module:"
+          ls -la han-native.linux-x64-gnu.node ../han/native/han-native.node
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -40,14 +74,19 @@ jobs:
         run: biome lint --files-ignore-unknown=true .
         working-directory: ./packages/han
 
-      - name: Generate build-info stub for type checking
+      - name: Generate build-info stub
+        working-directory: ./packages/han
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
-          // Stub file for CI type checking. Actual values are generated during build.
-          export const HAN_VERSION: string = "0.0.0-ci";
-          export const DETECT_PLUGINS_PROMPT: string | undefined = undefined;
+          // Auto-generated stub for CI
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
           EOF
-        working-directory: ./packages/han
 
       - name: TypeScript type check
         run: bun run tsc --noEmit

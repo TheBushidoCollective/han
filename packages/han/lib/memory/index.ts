@@ -23,8 +23,57 @@
 
 // Context Injection (for SessionStart hook)
 export { injectSessionContext } from "./context-injection.ts";
+// Query Expansion (for FTS semantic bridging)
+export type {
+	ExpandedQuery,
+	ExpandQueryOptions,
+	ExpansionLevel,
+} from "./query-expansion.ts";
+export {
+	ACRONYMS,
+	expandQuery,
+	getExpansions,
+	hasExpansion,
+	SYNONYMS,
+} from "./query-expansion.ts";
 // Indexer (FTS + Vector hybrid search)
 export type { FtsResult, IndexDocument, IndexLayer } from "./indexer.ts";
+// Multi-Strategy Search
+export type {
+	MemoryLayer,
+	MultiStrategySearchOptions,
+	MultiStrategySearchResult,
+	MultiStrategySearchWithFallbacksOptions,
+	MultiStrategySearchWithFallbacksResult,
+	SearchResultWithCitation,
+	SearchStrategy,
+	StrategyResult,
+} from "./multi-strategy-search.ts";
+export {
+	calculateConfidence,
+	executeStrategy,
+	fuseResults,
+	multiStrategySearch,
+	multiStrategySearchWithFallbacks,
+} from "./multi-strategy-search.ts";
+// Fallback Search
+export type {
+	FallbackResult,
+	FallbackStrategy,
+	SearchWithFallbacksOptions,
+	SearchWithFallbacksResult,
+} from "./fallback-search.ts";
+export {
+	calculateKeywordScore,
+	calculateTemporalScore,
+	detectTemporalQuery,
+	executeFallbacks,
+	getRecentSessions,
+	grepTranscripts,
+	isVagueQuery,
+	needsClarification,
+	scanRecentSessions,
+} from "./fallback-search.ts";
 export {
 	getTableName,
 	hybridSearch,
@@ -110,7 +159,17 @@ export {
 	queryMemoryWithStreaming,
 	startMemoryQuerySession,
 } from "./streaming.ts";
-// Summarization (for Stop hook)
+// Session Completion Detection
+export type {
+	CompletionDetectionOptions,
+	SessionCompletionStatus,
+} from "./session-completion.ts";
+export {
+	detectCompletedSessions,
+	getSessionsReadyForSummary,
+	isSessionComplete,
+} from "./session-completion.ts";
+// Summarization (heuristic-based, no LLM - for local analysis only)
 export type { SummarizeOptions } from "./summarize.ts";
 export { summarizeSession } from "./summarize.ts";
 // Native Summaries (Layer 2 - Claude's context window compression)

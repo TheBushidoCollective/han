@@ -1,12 +1,12 @@
 # Override hooks for Next.js website
-jutsu-bun:
+bun:
   build:
     command: bun run build
   test:
     # Website uses Playwright, which has its own CI workflow
     enabled: false
 
-jutsu-typescript:
+typescript:
   typecheck:
     # Next.js handles type checking during build; .next/types/ files
     # are generated at build time and don't exist before first build

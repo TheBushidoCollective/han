@@ -117,7 +117,6 @@ describe("aliases", () => {
 			const validateCmd = program.commands.find(
 				(cmd) => cmd.name() === "validate",
 			);
-			// New validate command runs all Stop hooks with phase ordering
 			expect(validateCmd?.description()).toContain("Stop hooks");
 		});
 
@@ -155,7 +154,9 @@ describe("aliases", () => {
 			expect(validateCmd).toBeDefined();
 
 			const options = validateCmd?.options || [];
-			const verboseOption = options.find((opt) => opt.long === "--verbose");
+			const verboseOption = options.find(
+				(opt) => opt.long === "--verbose",
+			);
 			expect(verboseOption).toBeDefined();
 		});
 
@@ -175,6 +176,44 @@ describe("aliases", () => {
 			const options = validateCmd?.options || [];
 			const checkOption = options.find((opt) => opt.long === "--check");
 			expect(checkOption).toBeDefined();
+		});
+
+		test("validate-legacy command has --dirs-with option", async () => {
+			const { registerAliasCommands } = await import(
+				"../lib/commands/aliases.ts"
+			);
+
+			const program = new Command();
+			registerAliasCommands(program);
+
+			const validateLegacyCmd = program.commands.find(
+				(cmd) => cmd.name() === "validate-legacy",
+			);
+			expect(validateLegacyCmd).toBeDefined();
+
+			const options = validateLegacyCmd?.options || [];
+			const dirsWithOption = options.find((opt) => opt.long === "--dirs-with");
+			expect(dirsWithOption).toBeDefined();
+		});
+
+		test("validate-legacy command allows unknown options", async () => {
+			const { registerAliasCommands } = await import(
+				"../lib/commands/aliases.ts"
+			);
+
+			const program = new Command();
+			registerAliasCommands(program);
+
+			const validateLegacyCmd = program.commands.find(
+				(cmd) => cmd.name() === "validate-legacy",
+			);
+			expect(validateLegacyCmd).toBeDefined();
+
+			// Commander stores this as _allowUnknownOption
+			expect(
+				(validateLegacyCmd as Command & { _allowUnknownOption?: boolean })
+					?._allowUnknownOption,
+			).toBe(true);
 		});
 	});
 

@@ -1,0 +1,27 @@
+{
+  "name": "jira",
+  "version": "1.3.0",
+  "description": "Official Atlassian MCP server for Jira and Confluence integration with OAuth authentication. Provides ticket management, JQL search, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "jira",
+    "atlassian",
+    "project-management",
+    "tickets",
+    "acceptance-criteria",
+    "validation"
+  ],
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"]
+    }
+  }
+}

@@ -18,13 +18,28 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import {
+	type ExpansionLevel,
 	type FtsResult,
+	expandQuery,
 	getGitRemote,
 	getTableName,
 	hybridSearch,
 	searchFts,
+	searchNativeSummaries,
 	searchVector,
 } from "../../memory/index.ts";
+import {
+	type MultiStrategySearchResult,
+	type MultiStrategySearchWithFallbacksResult,
+	type SearchStrategy,
+	multiStrategySearch,
+	multiStrategySearchWithFallbacks,
+} from "../../memory/multi-strategy-search.ts";
+import {
+	grepTranscripts,
+	scanRecentSessions,
+	detectTemporalQuery,
+} from "../../memory/fallback-search.ts";
 import { tryGetNativeModule } from "../../native.ts";
 
 interface JsonRpcRequest {
@@ -67,7 +82,7 @@ interface McpTool {
 /**
  * Memory layer names for searching
  */
-type MemoryLayer = "rules" | "transcripts" | "team" | "all";
+type MemoryLayer = "rules" | "transcripts" | "team" | "summaries" | "all";
 
 /**
  * Search result with citations
@@ -132,10 +147,15 @@ function enrichResults(
 /**
  * Search transcripts using the native module
  * The native module stores indexed messages in ~/.claude/han/han.db
+ *
+ * @param query - Search query (will be expanded if expansion != "none")
+ * @param limit - Maximum results to return
+ * @param expansion - Query expansion level (default: "minimal")
  */
 async function searchTranscriptsNative(
 	query: string,
 	limit: number,
+	expansion: ExpansionLevel = "minimal",
 ): Promise<SearchResultWithCitation[]> {
 	const nativeModule = tryGetNativeModule();
 	if (!nativeModule) {
@@ -144,7 +164,11 @@ async function searchTranscriptsNative(
 
 	try {
 		const dbPath = join(homedir(), ".claude", "han", "han.db");
-		const messages = nativeModule.searchMessages(dbPath, query, null, limit);
+
+		// Expand query before search
+		const { expanded } = expandQuery(query, { level: expansion });
+
+		const messages = nativeModule.searchMessages(dbPath, expanded, null, limit);
 
 		return messages.map((msg) => ({
 			id: `transcript:${msg.sessionId}:${msg.id}`,
@@ -169,22 +193,80 @@ async function searchTranscriptsNative(
 }
 
 /**
+ * Search generated session summaries using the native module
+ * Returns semantic summaries with topics for "which session discussed X" queries
+ */
+async function searchSummariesNative(
+	query: string,
+	limit: number,
+): Promise<SearchResultWithCitation[]> {
+	const nativeModule = tryGetNativeModule();
+	if (!nativeModule) {
+		return [];
+	}
+
+	try {
+		const dbPath = join(homedir(), ".claude", "han", "han.db");
+		const summaries = nativeModule.searchGeneratedSummaries(dbPath, query, limit);
+
+		return summaries.map((s) => ({
+			id: `summary:${s.sessionId}`,
+			content: `${s.summaryText}\n\nTopics: ${s.topics.join(", ")}`,
+			score: 0.8, // Generated summaries get higher score than raw transcripts
+			layer: "summaries",
+			metadata: {
+				sessionId: s.sessionId,
+				topics: s.topics,
+				outcome: s.outcome,
+				filesModified: s.filesModified,
+				toolsUsed: s.toolsUsed,
+				messageCount: s.messageCount,
+			},
+			browseUrl: `/sessions/${s.sessionId}`,
+		}));
+	} catch (error) {
+		console.error("[DAL] Summary search error:", error);
+		return [];
+	}
+}
+
+/**
  * Search across memory layers using FTS
+ *
+ * @param query - Search query
+ * @param layer - Memory layer to search
+ * @param limit - Maximum results to return
+ * @param expansion - Query expansion level (default: "minimal")
  */
 async function searchMemoryFts(
 	query: string,
 	layer: MemoryLayer,
 	limit: number,
+	expansion: ExpansionLevel = "minimal",
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
 
+	// Expand query once for non-native searches
+	const { expanded } = expandQuery(query, { level: expansion });
+
+	// Handle summaries layer - semantic session summaries
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
+
 	// Handle transcripts specially - use native module
 	if (layer === "all" || layer === "transcripts") {
-		const transcriptResults = await searchTranscriptsNative(query, limit);
+		// Pass original query and expansion level - native handler does its own expansion
+		const transcriptResults = await searchTranscriptsNative(
+			query,
+			limit,
+			expansion,
+		);
 		allResults.push(...transcriptResults);
 	}
 
-	// Handle other layers via indexer
+	// Handle other layers via indexer (use expanded query)
 	const tables = getLayerTableName(layer);
 	for (const table of tables) {
 		// Skip transcripts - handled above via native module
@@ -192,7 +274,7 @@ async function searchMemoryFts(
 
 		try {
 			const layerName = table.includes("team") ? "team" : "rules";
-			const results = await searchFts(table, query, limit);
+			const results = await searchFts(table, expanded, limit);
 			allResults.push(...enrichResults(results, layerName));
 		} catch {
 			// Layer not available - continue
@@ -205,22 +287,40 @@ async function searchMemoryFts(
 
 /**
  * Search across memory layers using vector similarity
- * Note: For transcripts, falls back to FTS since native module only has FTS
+ * Note: For transcripts/summaries, falls back to FTS since native module only has FTS
+ *
+ * @param query - Search query
+ * @param layer - Memory layer to search
+ * @param limit - Maximum results to return
+ * @param expansion - Query expansion level for transcript FTS fallback (default: "minimal")
  */
 async function searchMemoryVector(
 	query: string,
 	layer: MemoryLayer,
 	limit: number,
+	expansion: ExpansionLevel = "minimal",
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
 
+	// Handle summaries layer - semantic session summaries (FTS for now)
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
+
 	// Handle transcripts specially - use native module (FTS only for now)
+	// Note: Vector search naturally handles semantics, but FTS fallback benefits from expansion
 	if (layer === "all" || layer === "transcripts") {
-		const transcriptResults = await searchTranscriptsNative(query, limit);
+		const transcriptResults = await searchTranscriptsNative(
+			query,
+			limit,
+			expansion,
+		);
 		allResults.push(...transcriptResults);
 	}
 
 	// Handle other layers via indexer
+	// Note: Vector search uses embeddings, so expansion is not needed for these
 	const tables = getLayerTableName(layer);
 	for (const table of tables) {
 		// Skip transcripts - handled above via native module
@@ -241,21 +341,41 @@ async function searchMemoryVector(
 
 /**
  * Search across memory layers using hybrid (FTS + Vector with RRF)
+ *
+ * @param query - Search query
+ * @param layer - Memory layer to search
+ * @param limit - Maximum results to return
+ * @param expansion - Query expansion level (default: "minimal")
  */
 async function searchMemoryHybrid(
 	query: string,
 	layer: MemoryLayer,
 	limit: number,
+	expansion: ExpansionLevel = "minimal",
 ): Promise<SearchResultWithCitation[]> {
 	const allResults: SearchResultWithCitation[] = [];
 
+	// Expand query for hybrid FTS component
+	const { expanded } = expandQuery(query, { level: expansion });
+
+	// Handle summaries layer - semantic session summaries (FTS for now)
+	if (layer === "all" || layer === "summaries") {
+		const summaryResults = await searchSummariesNative(query, limit);
+		allResults.push(...summaryResults);
+	}
+
 	// Handle transcripts specially - use native module
 	if (layer === "all" || layer === "transcripts") {
-		const transcriptResults = await searchTranscriptsNative(query, limit);
+		const transcriptResults = await searchTranscriptsNative(
+			query,
+			limit,
+			expansion,
+		);
 		allResults.push(...transcriptResults);
 	}
 
 	// Handle other layers via indexer
+	// hybridSearch uses both FTS (benefits from expansion) and vector (semantic)
 	const tables = getLayerTableName(layer);
 	for (const table of tables) {
 		// Skip transcripts - handled above via native module
@@ -263,7 +383,8 @@ async function searchMemoryHybrid(
 
 		try {
 			const layerName = table.includes("team") ? "team" : "rules";
-			const results = await hybridSearch(table, query, limit);
+			// Pass expanded query - hybridSearch will use it for FTS component
+			const results = await hybridSearch(table, expanded, limit);
 			allResults.push(...enrichResults(results, layerName));
 		} catch {
 			// Layer not available - continue
@@ -275,13 +396,68 @@ async function searchMemoryHybrid(
 }
 
 /**
+ * Search native summaries and return SearchResultWithCitation format
+ *
+ * Wrapper around searchNativeSummaries that normalizes the return type.
+ */
+async function searchSummariesForMultiStrategy(
+	query: string,
+	limit: number,
+): Promise<SearchResultWithCitation[]> {
+	const results = await searchNativeSummaries(query, { limit });
+	return results.map((r) => ({
+		id: `summary:${r.sessionId}`,
+		content: r.content,
+		score: r.score,
+		layer: "summaries",
+		metadata: {
+			sessionId: r.sessionId,
+			projectSlug: r.projectSlug,
+			timestamp: r.timestamp,
+		},
+		browseUrl: `/sessions/${r.sessionId}`,
+	}));
+}
+
+/**
+ * Execute multi-strategy search
+ *
+ * Runs all strategies (direct FTS, expanded FTS, semantic, summaries) in parallel
+ * and fuses results using Reciprocal Rank Fusion.
+ */
+async function executeMultiStrategySearch(
+	query: string,
+	layer: MemoryLayer,
+	limit: number,
+	expansion: ExpansionLevel,
+	timeout: number,
+	strategies?: SearchStrategy[],
+): Promise<MultiStrategySearchResult> {
+	return multiStrategySearch(
+		{
+			query,
+			layer,
+			limit,
+			expansion,
+			timeout,
+			strategies,
+		},
+		{
+			searchMemoryFts,
+			searchMemoryVector,
+			searchSummariesNative: searchSummariesForMultiStrategy,
+		},
+	);
+}
+
+/**
  * DAL tools - all read-only
  */
 const DAL_TOOLS: McpTool[] = [
 	{
 		name: "memory_search_fts",
 		description:
-			"Search memory layers using full-text search (BM25). Returns results ranked by keyword relevance. Best for exact phrase matches and specific terms.",
+			"Search memory layers using full-text search (BM25). Returns results ranked by keyword relevance. Best for exact phrase matches and specific terms. Supports query expansion to bridge semantic gaps (e.g., 'vcs' matches 'version control').",
 		annotations: {
 			title: "FTS Search",
 			readOnlyHint: true,
@@ -298,13 +474,19 @@ const DAL_TOOLS: McpTool[] = [
 				},
 				layer: {
 					type: "string",
-					enum: ["rules", "transcripts", "team", "all"],
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
 					description:
-						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
 				},
 				limit: {
 					type: "number",
 					description: "Maximum results to return (default: 10)",
+				},
+				expansion: {
+					type: "string",
+					enum: ["none", "minimal", "full"],
+					description:
+						"Query expansion level. 'none' = exact match only, 'minimal' = expand acronyms (PR->pull request, CI->continuous integration), 'full' = acronyms + synonyms (refactor->refactoring). Default: minimal",
 				},
 			},
 			required: ["query"],
@@ -313,7 +495,7 @@ const DAL_TOOLS: McpTool[] = [
 	{
 		name: "memory_search_vector",
 		description:
-			"Search memory layers using semantic/vector similarity. Returns results based on meaning, not just keywords. Best for conceptual queries and finding related content.",
+			"Search memory layers using semantic/vector similarity. Returns results based on meaning, not just keywords. Best for conceptual queries and finding related content. Note: Vector search uses embeddings for semantic matching; expansion only affects FTS fallback for transcripts.",
 		annotations: {
 			title: "Vector Search",
 			readOnlyHint: true,
@@ -330,13 +512,19 @@ const DAL_TOOLS: McpTool[] = [
 				},
 				layer: {
 					type: "string",
-					enum: ["rules", "transcripts", "team", "all"],
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
 					description:
-						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
 				},
 				limit: {
 					type: "number",
 					description: "Maximum results to return (default: 10)",
+				},
+				expansion: {
+					type: "string",
+					enum: ["none", "minimal", "full"],
+					description:
+						"Query expansion level for transcript FTS fallback. 'none' = exact match, 'minimal' = acronyms, 'full' = acronyms + synonyms. Default: minimal",
 				},
 			},
 			required: ["query"],
@@ -345,9 +533,64 @@ const DAL_TOOLS: McpTool[] = [
 	{
 		name: "memory_search_hybrid",
 		description:
-			"Search memory layers using hybrid search (FTS + Vector with Reciprocal Rank Fusion). Combines keyword matching with semantic similarity for best overall results. RECOMMENDED for most queries.",
+			"Search memory layers using hybrid search (FTS + Vector with Reciprocal Rank Fusion). Combines keyword matching with semantic similarity for best overall results. RECOMMENDED for most queries. Supports query expansion for the FTS component.",
 		annotations: {
 			title: "Hybrid Search",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "The search query (can be keywords or natural language)",
+				},
+				layer: {
+					type: "string",
+					enum: ["rules", "transcripts", "summaries", "team", "all"],
+					description:
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'summaries' = session summaries with topics, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				expansion: {
+					type: "string",
+					enum: ["none", "minimal", "full"],
+					description:
+						"Query expansion level for FTS component. 'none' = exact match, 'minimal' = acronyms (PR->pull request), 'full' = acronyms + synonyms. Default: minimal",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "memory_list_layers",
+		description:
+			"List available memory layers and their status. Returns which layers have data and are searchable.",
+		annotations: {
+			title: "List Memory Layers",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {},
+			required: [],
+		},
+	},
+	{
+		name: "memory_search_multi_strategy",
+		description:
+			"RECOMMENDED: Search memory using multiple strategies in parallel (direct FTS, expanded FTS, semantic, summaries). Fuses results using Reciprocal Rank Fusion and provides confidence scores based on strategy coverage. Returns higher confidence when multiple strategies return overlapping results.",
+		annotations: {
+			title: "Multi-Strategy Search",
 			readOnlyHint: true,
 			destructiveHint: false,
 			idempotentHint: true,
@@ -370,16 +613,41 @@ const DAL_TOOLS: McpTool[] = [
 					type: "number",
 					description: "Maximum results to return (default: 10)",
 				},
+				expansion: {
+					type: "string",
+					enum: ["none", "minimal", "full"],
+					description:
+						"Query expansion level for FTS strategies. 'none' = exact match, 'minimal' = acronyms (PR->pull request), 'full' = acronyms + synonyms. Default: minimal",
+				},
+				timeout: {
+					type: "number",
+					description:
+						"Per-strategy timeout in milliseconds (default: 5000). Strategies exceeding timeout return empty results.",
+				},
+				strategies: {
+					type: "array",
+					items: {
+						type: "string",
+						enum: ["direct_fts", "expanded_fts", "semantic", "summaries"],
+					},
+					description:
+						"Specific strategies to run (default: all). 'direct_fts' = exact FTS, 'expanded_fts' = FTS with query expansion, 'semantic' = vector similarity, 'summaries' = session summaries.",
+				},
 			},
 			required: ["query"],
 		},
 	},
 	{
-		name: "memory_list_layers",
+		name: "memory_search_with_fallbacks",
 		description:
-			"List available memory layers and their status. Returns which layers have data and are searchable.",
+			"BEST FOR COMPREHENSIVE SEARCH: Multi-strategy search with automatic fallbacks. " +
+			"Runs all strategies in parallel, then applies fallbacks if no results: " +
+			"1) Recent sessions scan (for 'what was I working on' queries), " +
+			"2) Raw JSONL grep (slow but thorough), " +
+			"3) Returns clarification prompt if query is ambiguous. " +
+			"Use this when you need guaranteed coverage and are willing to wait longer.",
 		annotations: {
-			title: "List Memory Layers",
+			title: "Search with Fallbacks",
 			readOnlyHint: true,
 			destructiveHint: false,
 			idempotentHint: true,
@@ -387,7 +655,92 @@ const DAL_TOOLS: McpTool[] = [
 		},
 		inputSchema: {
 			type: "object",
-			properties: {},
+			properties: {
+				query: {
+					type: "string",
+					description: "The search query (can be keywords or natural language)",
+				},
+				layer: {
+					type: "string",
+					enum: ["rules", "transcripts", "team", "all"],
+					description:
+						"Memory layer to search. 'rules' = project conventions, 'transcripts' = past sessions, 'team' = git commits/PRs, 'all' = search everywhere (default)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				enableGrep: {
+					type: "boolean",
+					description:
+						"Whether to enable raw grep fallback (slower but thorough). Default: true",
+				},
+				grepTimeout: {
+					type: "number",
+					description: "Timeout for grep fallback in milliseconds (default: 5000)",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "memory_grep_transcripts",
+		description:
+			"Raw grep search through transcript JSONL files. Use as a LAST RESORT " +
+			"when FTS and other strategies return nothing. Slower but guaranteed to find " +
+			"exact matches. Searches most recent files first.",
+		annotations: {
+			title: "Grep Transcripts",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "Search query (keywords to match)",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum results to return (default: 10)",
+				},
+				timeout: {
+					type: "number",
+					description: "Search timeout in milliseconds (default: 5000)",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "memory_scan_recent_sessions",
+		description:
+			"Scan the most recently modified sessions. Best for temporal queries like " +
+			"'what was I working on yesterday' or 'recent activity'. " +
+			"Returns sessions sorted by modification time with relevance scoring.",
+		annotations: {
+			title: "Scan Recent Sessions",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		},
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description:
+						"Optional search query to filter results. If empty, returns most recent sessions.",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum sessions to return (default: 10)",
+				},
+			},
 			required: [],
 		},
 	},
@@ -424,12 +777,13 @@ async function handleToolsCall(params: {
 				const query = typeof args.query === "string" ? args.query : "";
 				const layer = (args.layer as MemoryLayer) || "all";
 				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const expansion = (args.expansion as ExpansionLevel) || "minimal";
 
 				if (!query) {
 					throw new Error("Query is required");
 				}
 
-				const results = await searchMemoryFts(query, layer, limit);
+				const results = await searchMemoryFts(query, layer, limit, expansion);
 				return {
 					content: [
 						{
@@ -438,6 +792,7 @@ async function handleToolsCall(params: {
 								{
 									searchType: "fts",
 									layer,
+									expansion,
 									resultCount: results.length,
 									results,
 								},
@@ -453,12 +808,18 @@ async function handleToolsCall(params: {
 				const query = typeof args.query === "string" ? args.query : "";
 				const layer = (args.layer as MemoryLayer) || "all";
 				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const expansion = (args.expansion as ExpansionLevel) || "minimal";
 
 				if (!query) {
 					throw new Error("Query is required");
 				}
 
-				const results = await searchMemoryVector(query, layer, limit);
+				const results = await searchMemoryVector(
+					query,
+					layer,
+					limit,
+					expansion,
+				);
 				return {
 					content: [
 						{
@@ -467,6 +828,7 @@ async function handleToolsCall(params: {
 								{
 									searchType: "vector",
 									layer,
+									expansion,
 									resultCount: results.length,
 									results,
 								},
@@ -482,12 +844,18 @@ async function handleToolsCall(params: {
 				const query = typeof args.query === "string" ? args.query : "";
 				const layer = (args.layer as MemoryLayer) || "all";
 				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const expansion = (args.expansion as ExpansionLevel) || "minimal";
 
 				if (!query) {
 					throw new Error("Query is required");
 				}
 
-				const results = await searchMemoryHybrid(query, layer, limit);
+				const results = await searchMemoryHybrid(
+					query,
+					layer,
+					limit,
+					expansion,
+				);
 				return {
 					content: [
 						{
@@ -496,6 +864,7 @@ async function handleToolsCall(params: {
 								{
 									searchType: "hybrid",
 									layer,
+									expansion,
 									resultCount: results.length,
 									results,
 								},
@@ -517,7 +886,12 @@ async function handleToolsCall(params: {
 					},
 					{
 						name: "transcripts",
-						description: "Past Claude Code sessions",
+						description: "Past Claude Code sessions (raw messages)",
+						available: true,
+					},
+					{
+						name: "summaries",
+						description: "Session summaries with topics (for 'which session discussed X' queries)",
 						available: true,
 					},
 					{
@@ -533,6 +907,186 @@ async function handleToolsCall(params: {
 						{
 							type: "text",
 							text: JSON.stringify({ layers }, null, 2),
+						},
+					],
+				};
+			}
+
+			case "memory_search_multi_strategy": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const layer = (args.layer as MemoryLayer) || "all";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const expansion = (args.expansion as ExpansionLevel) || "minimal";
+				const timeout = typeof args.timeout === "number" ? args.timeout : 5000;
+				const strategies = Array.isArray(args.strategies)
+					? (args.strategies as SearchStrategy[])
+					: undefined;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await executeMultiStrategySearch(
+					query,
+					layer,
+					limit,
+					expansion,
+					timeout,
+					strategies,
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "multi_strategy",
+									layer,
+									expansion,
+									confidence: result.confidence,
+									strategiesAttempted: result.strategiesAttempted,
+									strategiesSucceeded: result.strategiesSucceeded,
+									resultCount: result.results.length,
+									results: result.results,
+									strategyResults: result.strategyResults.map((sr) => ({
+										strategy: sr.strategy,
+										resultCount: sr.results.length,
+										duration: sr.duration,
+										success: sr.success,
+										error: sr.error,
+									})),
+									searchStats: result.searchStats,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_search_with_fallbacks": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const layer = (args.layer as MemoryLayer) || "all";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const enableGrep = args.enableGrep !== false; // Default true
+				const grepTimeout =
+					typeof args.grepTimeout === "number" ? args.grepTimeout : 5000;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await multiStrategySearchWithFallbacks(
+					{
+						query,
+						layer,
+						limit,
+						enableFallbacks: true,
+						enableGrep,
+						grepTimeout,
+					},
+					{
+						searchMemoryFts,
+						searchMemoryVector,
+						searchSummariesNative: searchSummariesForMultiStrategy,
+					},
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "multi_strategy_with_fallbacks",
+									layer,
+									confidence: result.confidence,
+									strategiesAttempted: result.strategiesAttempted,
+									strategiesSucceeded: result.strategiesSucceeded,
+									fallbacksUsed: result.fallbacksUsed,
+									fallbacksAttempted: result.fallbacksAttempted,
+									clarificationPrompt: result.clarificationPrompt,
+									resultCount: result.results.length,
+									results: result.results,
+									strategyResults: result.strategyResults.map((sr) => ({
+										strategy: sr.strategy,
+										resultCount: sr.results.length,
+										duration: sr.duration,
+										success: sr.success,
+										error: sr.error,
+									})),
+									searchStats: result.searchStats,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_grep_transcripts": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+				const timeout = typeof args.timeout === "number" ? args.timeout : 5000;
+
+				if (!query) {
+					throw new Error("Query is required");
+				}
+
+				const result = await grepTranscripts(query, { limit, timeout });
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "grep",
+									success: result.success,
+									duration: result.duration,
+									error: result.error,
+									resultCount: result.results.length,
+									results: result.results,
+								},
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+
+			case "memory_scan_recent_sessions": {
+				const query = typeof args.query === "string" ? args.query : "";
+				const limit = typeof args.limit === "number" ? args.limit : 10;
+
+				const result = await scanRecentSessions(query || "recent activity", {
+					limit,
+				});
+
+				// Check if this is a temporal query for additional context
+				const isTemporal = query ? detectTemporalQuery(query) : true;
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{
+									searchType: "recent_sessions",
+									isTemporalQuery: isTemporal,
+									success: result.success,
+									duration: result.duration,
+									error: result.error,
+									resultCount: result.results.length,
+									results: result.results,
+								},
+								null,
+								2,
+							),
 						},
 					],
 				};

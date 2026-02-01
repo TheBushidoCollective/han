@@ -3,12 +3,6 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
 
 jobs:
   claude-review:
@@ -26,7 +20,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0 # Full history for diff analysis
+
+      - name: Check for previous review
+        id: check-review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Look for previous Claude review comment with commit marker
+          LAST_REVIEW=$(gh pr view ${{ github.event.pull_request.number }} --json comments \
+            --jq '.comments[] | select(.body | contains("<!-- claude-review-commit:")) | .body' \
+            | tail -1)
+
+          if [ -n "$LAST_REVIEW" ]; then
+            # Extract the commit SHA from the marker
+            LAST_COMMIT=$(echo "$LAST_REVIEW" | grep -oP '<!-- claude-review-commit:\K[a-f0-9]+' || echo "")
+            if [ -n "$LAST_COMMIT" ]; then
+              echo "last_reviewed_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
+              echo "has_previous_review=true" >> $GITHUB_OUTPUT
+
+              # Calculate lines changed since last review
+              LINES_CHANGED=$(git diff --shortstat "$LAST_COMMIT"..HEAD 2>/dev/null | awk '{sum=$4+$6} END {print sum+0}')
+              echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+              echo "Found previous review at commit $LAST_COMMIT, $LINES_CHANGED lines changed since"
+            else
+              echo "has_previous_review=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_previous_review=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine review mode
+        id: review-mode
+        run: |
+          if [ "${{ steps.check-review.outputs.has_previous_review }}" = "true" ]; then
+            LINES="${{ steps.check-review.outputs.lines_changed }}"
+            if [ "${LINES:-0}" -lt 50 ]; then
+              echo "mode=verification" >> $GITHUB_OUTPUT
+              echo "Verification mode: $LINES lines changed - checking if concerns addressed"
+            else
+              echo "mode=incremental" >> $GITHUB_OUTPUT
+              echo "Incremental mode: $LINES lines changed - reviewing new changes"
+            fi
+          else
+            echo "mode=initial" >> $GITHUB_OUTPUT
+            echo "Initial review mode"
+          fi
 
       - name: Run Claude Code Review
         id: claude-review
@@ -37,19 +76,70 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
+            CURRENT_COMMIT: ${{ github.sha }}
+            REVIEW_MODE: ${{ steps.review-mode.outputs.mode }}
+            LAST_REVIEWED_COMMIT: ${{ steps.check-review.outputs.last_reviewed_commit }}
+            LINES_CHANGED: ${{ steps.check-review.outputs.lines_changed }}
 
-            Please review this pull request and provide feedback on:
+            ${{ steps.review-mode.outputs.mode == 'initial' && '
+            ## INITIAL REVIEW
+
+            This is the first review of this PR. Please provide comprehensive feedback on:
             - Code quality and best practices
             - Potential bugs or issues
             - Performance considerations
             - Security concerns
             - Test coverage
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            Categorize issues by severity: CRITICAL (must fix), MODERATE (should fix), MINOR (consider).
+            ' || '' }}
+
+            ${{ steps.review-mode.outputs.mode == 'verification' && format('
+            ## VERIFICATION MODE (Follow-up Review)
+
+            You previously reviewed this PR. Only {0} lines have changed since commit {1}.
+
+            YOUR TASK: Verify whether your previous concerns were addressed. This is NOT a new review.
+
+            INSTRUCTIONS:
+            1. First, read your previous review comment on this PR
+            2. Use `git diff {1}..HEAD` to see what changed since your last review
+            3. For each concern you raised previously, determine:
+               - ✅ ADDRESSED: The code change fixes the issue
+               - 💬 DISCUSSED: The author provided reasoning to reconsider (check PR comments)
+               - ⏳ PENDING: Not yet addressed (only mention if blocking)
+
+            IMPORTANT GUIDELINES:
+            - Do NOT raise new issues unless they are CRITICAL bugs
+            - Do NOT repeat suggestions that were intentionally not implemented
+            - If the author explained why they disagree with feedback, accept reasonable explanations
+            - Lean towards approval - the goal is to ship, not to achieve perfection
+            - A brief "LGTM - concerns addressed" is a valid response
+
+            Your response should be SHORT. No need for a full re-review.
+            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit) || '' }}
+
+            ${{ steps.review-mode.outputs.mode == 'incremental' && format('
+            ## INCREMENTAL REVIEW
+
+            You previously reviewed this PR at commit {1}. {0} lines have changed since then.
+
+            INSTRUCTIONS:
+            1. Use `git diff {1}..HEAD` to see ONLY changes since your last review
+            2. Focus on the NEW changes - do not re-review unchanged code
+            3. Check if previous concerns were addressed
+            4. Only raise new issues if they are in the changed code
+            5. Do NOT repeat feedback from your previous review
+
+            If changes look good and previous concerns were addressed, approve with a brief note.
+            ', steps.check-review.outputs.lines_changed, steps.check-review.outputs.last_reviewed_commit) || '' }}
+
+            Use the repository's CLAUDE.md for guidance on style and conventions.
+
+            IMPORTANT: End your comment with this exact marker (for tracking):
+            <!-- claude-review-commit:${{ github.sha }} -->
 
             Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
 
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git diff:*),Bash(git log:*)"'
 

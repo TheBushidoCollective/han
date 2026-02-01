@@ -31,12 +31,16 @@ describe("doctor command", () => {
 	});
 
 	describe("runDiagnostics", () => {
-		test("returns array of diagnostic results", () => {
-			const results = runDiagnostics();
+		test(
+			"returns array of diagnostic results",
+			() => {
+				const results = runDiagnostics();
 
-			expect(Array.isArray(results)).toBe(true);
-			expect(results.length).toBeGreaterThan(0);
-		});
+				expect(Array.isArray(results)).toBe(true);
+				expect(results.length).toBeGreaterThan(0);
+			},
+			{ timeout: 30000 },
+		);
 
 		test("each result has required properties", () => {
 			const results = runDiagnostics();

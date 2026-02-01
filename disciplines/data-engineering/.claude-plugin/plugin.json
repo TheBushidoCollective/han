@@ -1,0 +1,13 @@
+{
+  "name": "data-engineering",
+  "version": "1.1.2",
+  "description": "Data engineering agents providing expertise in ETL pipelines, streaming, and data warehousing",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["data-engineering", "etl", "streaming"]
+}

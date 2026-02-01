@@ -1,321 +1,171 @@
 ---
-title: "Build Your Own Han Plugins: The Ecosystem Is Now Open"
-description: "Han now supports third-party plugins. Create custom validation hooks, specialized agents, or MCP integrations and share them with your team or the world."
+title: "Why Han Plugins? The Difference Is Night and Day"
+description: "Standard Claude Code plugins work. Han plugins work intelligently. Here's why that distinction matters for your AI-assisted development workflow."
 date: "2026-01-30"
 author: "The Bushido Collective"
-tags: ["han", "plugins", "third-party", "plugin-development", "claude-code"]
+tags: ["han", "plugins", "claude-code", "developer-experience"]
 category: "Announcements"
 ---
 
-Until now, Han plugins lived exclusively in the main repository. If you wanted custom validation hooks for your proprietary linter or an MCP integration for your internal API, you had two options: submit a PR to the public marketplace or go without.
+Claude Code has a plugin system. It works. You can add skills, commands, MCP servers, and hooks.
 
-That changes today. Han now fully supports third-party plugins. You can build, test, and distribute your own plugins without touching the main repository.
+So why Han?
 
-## What This Unlocks
+Because there's a difference between "works" and "works well." Standard plugins are fire-and-forget. Han plugins are intelligent infrastructure. Here's what that means in practice.
 
-The third-party plugin system opens up possibilities that were previously impractical:
+## The Resource Problem
 
-**Private Tooling**: Build plugins for internal tools, proprietary APIs, or company-specific workflows. Install them from local paths or private Git repos.
+Standard Claude Code hooks run on every Stop event. Every. Single. Time.
 
-**Custom Validation**: Create hooks that enforce your team's coding standards, run proprietary linters, or integrate with your CI pipeline.
-
-**Specialized Agents**: Define AI agents tuned for your domain - whether that's your specific tech stack, compliance requirements, or industry terminology.
-
-**External Integrations**: Connect Claude to any service via MCP, from internal databases to third-party APIs that don't have public Han plugins.
-
-## The `han create plugin` Command
-
-Creating a new plugin is now a single command:
-
-```bash
-han create plugin
+```yaml
+# Standard plugin hook
+hooks:
+  Stop:
+    - command: "eslint ."      # All files. Every time.
+    - command: "tsc --noEmit"  # Full typecheck. Every time.
+    - command: "jest"          # All tests. Every time.
 ```
 
-This launches an interactive wizard that walks you through the setup:
+Change one line? Wait two minutes while your entire codebase gets linted, typechecked, and tested.
 
-```
-? Plugin type (use arrow keys)
-❯ jutsu - Skills and validation hooks for languages/tools
-  do - Specialized agents for specific disciplines
-  hashi - MCP servers bridging external services
+Han hooks understand context:
 
-? Plugin name (without prefix): my-linter
-? Description: Custom linting rules for our codebase
-? Author name: Your Name
-? Author URL (optional): https://your-site.com
-```
-
-The scaffolder generates a complete plugin structure with all required files, ready for customization.
-
-For automation and CI environments, use non-interactive mode:
-
-```bash
-han create plugin \
-  --type jutsu \
-  --name my-linter \
-  --description "Custom linting rules for our codebase" \
-  --author "Your Name"
+```yaml
+# Han plugin hook
+hooks:
+  lint:
+    command: "eslint ${HAN_FILES}"
+    if_changed: ["**/*.ts"]
+    dirs_with: ["eslint.config.js"]
 ```
 
-## Three Plugin Types
+**`${HAN_FILES}`** passes only changed files. **`if_changed`** skips the hook entirely if no TypeScript changed. **`dirs_with`** skips if there's no ESLint config in the directory.
 
-Each plugin type serves a distinct purpose:
+Same change, same codebase. Seven seconds instead of two minutes.
 
-### Jutsu: Skills with Validation Hooks
+And if you run it again with no new changes? Zero seconds. Han caches results and skips hooks when file hashes haven't changed.
 
-Jutsu plugins combine knowledge about a tool with automatic quality checks. They're the backbone of Han's validation system.
+## Hook Dependencies That Actually Work
 
-A jutsu plugin might include:
+Standard hooks run in definition order. If your formatter and linter both fire, you might lint unformatted code. If your tests depend on a build step, you hope they're defined in the right order.
 
-- Skills that teach Claude about your linter's configuration options
-- A Stop hook that runs your linter after every change
-- Commands for common operations like `--fix` mode
-
-Example `han-plugin.yml`:
+Han has explicit dependency resolution:
 
 ```yaml
 hooks:
+  format:
+    command: "biome format --write ${HAN_FILES}"
+
   lint:
-    command: "npx my-linter check ${HAN_FILES}"
-    dirs_with:
-      - "my-linter.config.js"
-    if_changed:
-      - "**/*.{js,jsx,ts,tsx}"
-    description: "Run custom linting rules"
+    command: "biome check ${HAN_FILES}"
+    depends_on:
+      - plugin: jutsu-biome
+        hook: format  # Always runs AFTER formatting
+
+  test:
+    command: "bun test --findRelatedTests ${HAN_FILES}"
+    depends_on:
+      - plugin: "*"
+        hook: "*"  # Runs after ALL other hooks
 ```
 
-### Do: Specialized Agents
+Phase-based ordering means formatters run before linters, linters before typecheckers, typecheckers before tests. Automatically.
 
-Do plugins define AI agents with focused expertise. They're useful for complex workflows that benefit from specialized context.
+Optional dependencies mean your hook won't fail if a plugin isn't installed:
 
-An agent definition is a markdown file with frontmatter:
-
-```markdown
----
-name: code-quality-analyzer
-description: |
-  Use this agent for analyzing code quality, identifying technical debt,
-  and recommending improvements.
-model: inherit
-color: purple
----
-
-# Code Quality Analyzer
-
-You are a Code Quality Analyzer specializing in identifying
-technical debt, code smells, and improvement opportunities.
-
-## Core Responsibilities
-
-1. **Complexity Analysis**: Identify overly complex functions
-2. **Maintainability Review**: Assess code readability
-3. **Pattern Detection**: Find anti-patterns and suggest alternatives
+```yaml
+depends_on:
+  - plugin: jutsu-prettier
+    hook: format
+    optional: true  # Skip gracefully if Prettier not installed
 ```
 
-### Hashi: MCP Integrations
+## Subagent Context Injection
 
-Hashi plugins connect Claude to external services via MCP servers. They can use HTTP transport (preferred) or stdio.
+This one is Han-only. There's no equivalent in standard Claude Code.
 
-Example `.mcp.json` for HTTP transport:
+When Claude spawns a subagent via the Task tool, that subagent starts fresh. It doesn't know your project rules, your current workflow state, or what it's supposed to do when it finishes. You have to repeat everything in the prompt.
 
-```json
-{
-  "mcpServers": {
-    "my-api": {
-      "type": "http",
-      "url": "https://mcp.my-api.com/mcp"
-    }
-  }
-}
+Han intercepts Task tool calls and automatically injects context:
+
+```xml
+<subagent-context>
+## AI-DLC Subagent Context
+
+**Iteration:** 2 | **Role:** builder | **Workflow:** default
+
+### Intent
+Build the authentication system...
+
+### Current Plan
+1. Create JWT middleware
+2. Add login endpoint
+3. Write integration tests
+
+### Workflow Rules
+- **Worktree:** /tmp/ai-dlc-auth-system/
+- **Branch:** ai-dlc/auth/02-jwt-middleware
+- Before stopping: commit changes, save scratchpad
+</subagent-context>
 ```
 
-Or for npx-based servers:
+Every subagent automatically knows:
 
-```json
-{
-  "mcpServers": {
-    "my-api": {
-      "command": "npx",
-      "args": ["-y", "@my-org/mcp-server-my-api"]
-    }
-  }
-}
-```
+- What it's building and why
+- What branch to work on
+- What to do before stopping
+- How to communicate status
 
-## Plugin Structure
+This is how Han's autonomous construction loop works. Subagents don't lose context between spawns because context is injected at the infrastructure level.
 
-All Han plugins follow the same base structure:
+## Validation Without Exhaustion
 
-```
-your-plugin/
-├── .claude-plugin/
-│   └── plugin.json      # Required: metadata
-├── han-plugin.yml       # Hook configuration (optional)
-├── skills/              # Skills (optional)
-│   └── skill-name/
-│       └── SKILL.md
-├── commands/            # Slash commands (optional)
-│   └── command-name.md
-├── agents/              # Agents for do-* plugins
-│   └── agent-name.md
-├── .mcp.json            # MCP config for hashi-* plugins
-├── README.md
-└── CHANGELOG.md
-```
+Standard plugins treat validation as an afterthought. Run everything, hope it's fast enough.
 
-The `.claude-plugin/plugin.json` file is required:
+Han treats validation as a first-class concern:
 
-```json
-{
-  "name": "jutsu-my-linter",
-  "version": "1.0.0",
-  "description": "Custom linting rules for our codebase",
-  "author": {
-    "name": "Your Name",
-    "url": "https://your-site.com"
-  },
-  "license": "MIT",
-  "keywords": ["linting", "code-quality"]
-}
-```
+**Checkpoint filtering**: Only validate files changed since the last checkpoint, not the entire session history.
 
-## See All Your Hooks
+**Smart caching**: Store validation results keyed by file content hash. Same file, same result, zero compute.
 
-The new `han hook list` command shows every hook from every installed plugin:
+**Fail-fast by default**: First hook failure stops the cascade. Don't waste time running tests if linting failed.
 
-```bash
-han hook list
-```
+**Parallel execution**: Independent hooks run concurrently. Dependent hooks wait their turn.
 
-Output:
+The result: continuous validation that doesn't make Claude unusable. You get quality gates without the wait.
 
-```
-Available Hooks:
+## Plugins That Coordinate
 
-  jutsu-bun:
-    test - Run Bun tests
-    build - Build the Bun project
+Standard plugins are islands. Each one does its thing, unaware of the others.
 
-  jutsu-typescript:
-    typecheck - Type-check TypeScript code for type errors
+Han plugins are an ecosystem:
 
-  jutsu-my-linter:
-    lint - Run custom linting rules
-```
+**Semantic categories** tell Claude what each plugin does:
 
-Filter by plugin or get JSON output for scripting:
+- **Jutsu** (techniques): Skills and validation for languages/tools
+- **Do** (disciplines): Specialized agents for domains
+- **Hashi** (bridges): MCP integrations to external services
 
-```bash
-han hook list --plugin jutsu-my-linter
-han hook list --json
-```
+**Cross-plugin dependencies** let hooks reference each other by name, not hoping they're in the right order.
 
-## Distribution Options
+**Shared memory** means learnings from one session inform the next. Plugins can query what's been learned, what's been tried, what works.
 
-You have multiple ways to distribute plugins:
+## The Ecosystem Is Now Open
 
-### Local Path (Development and Private Plugins)
+Today, we're opening Han to third-party plugins.
 
-```bash
-han plugin install --path ./my-plugin
-han plugin install --path /absolute/path/to/plugin
-```
+Build your own jutsu for your internal linter. Create a do agent for your compliance workflow. Ship a hashi bridge to your internal APIs.
 
-### Git Repository (Team Sharing)
+You get all of Han's intelligent infrastructure:
 
-```bash
-han plugin install --git https://github.com/org/my-plugin
-han plugin install --git git@github.com:org/private-plugin.git --tag v1.0.0
-```
+- Resource-efficient hooks with `if_changed` and caching
+- Dependency resolution and phase ordering
+- Subagent context injection
+- Cross-plugin coordination
+- Shared memory
 
-### URL Archive (Quick Sharing)
-
-```bash
-han plugin install --url https://example.com/plugins/my-plugin-1.0.0.tar.gz
-```
-
-### Han Marketplace (Public Distribution)
-
-Submit a PR to the Han repository to list your plugin in the public marketplace:
-
-```bash
-han plugin install my-plugin  # After marketplace acceptance
-```
-
-## Validation
-
-Before distributing, validate your plugin structure:
-
-```bash
-cd my-plugin
-han plugin validate .
-```
-
-This checks:
-
-- Required files are present
-- `plugin.json` schema is valid
-- Hook configurations are correct
-- Skill frontmatter is valid
-
-## Quick Start
-
-Here's the fastest path to a working plugin:
-
-```bash
-# 1. Create the plugin
-han create plugin --type jutsu --name my-tool \
-  --description "My custom validation" \
-  --author "Your Name"
-
-# 2. Navigate to the plugin
-cd jutsu-my-tool
-
-# 3. Customize the generated files
-# Edit han-plugin.yml, add skills, etc.
-
-# 4. Validate
-han plugin validate .
-
-# 5. Install locally to test
-han plugin install --path . --scope project
-
-# 6. Test it
-han hook run jutsu-my-tool lint --verbose
-```
-
-## Reference Implementation
-
-The `examples/example-jutsu-plugin/` directory in the Han repository contains a complete reference implementation. It demonstrates:
-
-- Proper directory structure
-- Valid `plugin.json` configuration
-- Hook definitions in `han-plugin.yml`
-- Skill files with correct frontmatter
-- Command files for slash commands
-- Working hook scripts
-
-Clone it as a starting point:
-
-```bash
-cp -r examples/example-jutsu-plugin my-plugin
-# Update plugin.json with your plugin name
-# Customize as needed
-```
-
-## What This Means for the Ecosystem
-
-Opening Han to third-party plugins is about more than just code. It's about enabling a community of Claude Code users to share their best practices, integrate their tools, and build on each other's work.
-
-We expect to see:
-
-- **Industry-specific plugins** for compliance, domain knowledge, and specialized workflows
-- **Team-internal plugins** that codify organizational standards
-- **Integration plugins** for tools and services not yet in the marketplace
-- **Experimental plugins** that push the boundaries of what Claude Code can do
-
-The [Plugin Development Guide](/docs/plugin-development) has everything you need to get started. We're looking forward to seeing what you build.
+Your plugins work alongside the marketplace plugins. Same orchestration. Same efficiency. Same quality gates.
 
 ---
 
-*Ready to create your first plugin? Run `han create plugin` and follow the prompts. Have questions? Join the discussion on [GitHub](https://github.com/thebushidocollective/han/discussions).*
+*Ready to build? Check the [Plugin Development Guide](/docs/plugin-development) or run `han create plugin` to scaffold your first plugin.*
