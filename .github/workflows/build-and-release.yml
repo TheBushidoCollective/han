@@ -2,11 +2,6 @@ name: Release Binaries
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to release (e.g., v1.18.2)'
-        required: true
-        type: string
   push:
     tags:
       - 'v*'
@@ -51,7 +46,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -195,16 +190,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           files: release/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(inputs.tag || github.ref, '-') }}
+          prerelease: ${{ contains(github.ref, '-') }}
 
   update-homebrew:
     needs: release
     runs-on: ubuntu-latest
-    if: ${{ !contains(inputs.tag || github.ref, '-') }}
+    if: ${{ !contains(github.ref, '-') }}
     steps:
       - name: Checkout homebrew-tap
         uses: actions/checkout@v4
@@ -215,7 +210,7 @@ jobs:
 
       - name: Update formula
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.ref_name }}
         run: |
           VERSION="${VERSION#v}"
           REPO="TheBushidoCollective/han"
@@ -269,7 +264,7 @@ jobs:
       - name: Commit and push
         working-directory: homebrew-tap
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -311,7 +306,7 @@ jobs:
 
       - name: Create npm package
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.ref_name }}
           PLATFORM: ${{ matrix.npm_platform }}
         run: |
           VERSION="${VERSION#v}"
@@ -376,7 +371,7 @@ jobs:
 
       - name: Create wrapper package
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.ref_name }}
         run: |
           VERSION="${VERSION#v}"
           mkdir -p package
