@@ -62,19 +62,23 @@ load_intent_state() {
   fi
 }
 
+# Load intent first - only inject context if there's an active unit
+INTENT=$(load_intent_state intent.md)
+if [ -z "$INTENT" ]; then
+  # No active intent/unit - nothing to inject
+  exit 0
+fi
+
 echo "## AI-DLC Subagent Context"
 echo ""
 echo "**Iteration:** $ITERATION | **Role:** $HAT | **Workflow:** $WORKFLOW_NAME ($WORKFLOW_HATS_STR)"
 echo ""
 
-# Load intent (intent-level state from intent branch)
-INTENT=$(load_intent_state intent.md)
-if [ -n "$INTENT" ]; then
-  echo "### Intent"
-  echo ""
-  echo "$INTENT"
-  echo ""
-fi
+# Output intent
+echo "### Intent"
+echo ""
+echo "$INTENT"
+echo ""
 
 # Load completion criteria (intent-level state from intent branch)
 CRITERIA=$(load_intent_state completion-criteria.md)
