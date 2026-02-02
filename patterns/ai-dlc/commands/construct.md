@@ -60,7 +60,56 @@ If truly blocked (cannot proceed without user input):
 
 ## Implementation
 
-### Step 0: Ensure Intent Worktree
+### Step 0a: Worktree Discovery (When on Default Branch)
+
+**CRITICAL: Before starting work, check for existing AI-DLC worktrees.**
+
+When `/construct` is called from the default branch (main/master), run discovery first:
+
+```bash
+# Check if on default branch
+CURRENT_BRANCH=$(git branch --show-current)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+  # Discover existing AI-DLC worktrees
+  DISCOVERY=$(han worktree discover --json)
+  HAS_EXISTING=$(echo "$DISCOVERY" | han parse yaml hasExisting -r)
+
+  if [ "$HAS_EXISTING" = "true" ]; then
+    # Extract active intents
+    ACTIVE_INTENTS=$(echo "$DISCOVERY" | han parse yaml activeIntents --json)
+
+    # Show resume prompt with options
+    echo ""
+    echo "## Existing AI-DLC Worktrees Found"
+    echo ""
+    echo "Active intents with worktrees:"
+    echo "$ACTIVE_INTENTS" | tr -d '[]"' | tr ',' '\n' | while read -r slug; do
+      [ -n "$slug" ] && echo "  - $slug"
+    done
+    echo ""
+    echo "### Options:"
+    echo ""
+    echo "1. **Resume existing work**: \`/resume <intent-slug>\`"
+    echo "2. **Start fresh**: \`/elaborate\` (creates new intent)"
+    echo "3. **List details**: \`han worktree list --ai-dlc\`"
+    echo ""
+    echo "To clean up orphaned worktrees, run: \`han worktree prune\`"
+
+    # Stop here - user must choose an action
+    exit 0
+  fi
+fi
+```
+
+**Why discovery matters:**
+- Prevents accidentally starting new work when existing work is in progress
+- Shows resume options when worktrees exist
+- Helps maintain a single active intent per session
+- Alerts user to orphaned/stale worktrees that should be cleaned up
+
+### Step 0b: Ensure Intent Worktree
 
 **CRITICAL: The orchestrator MUST run in the intent worktree, not the main working directory.**
 
@@ -95,6 +144,72 @@ fi
 
 **Important:** The orchestrator runs in `/tmp/ai-dlc-{intent-slug}/`, NOT the original repo directory. This keeps main clean and enables parallel intents.
 
+### Step 0.5: Check for Plan MR Approval (if elaboration_review is enabled)
+
+**Before construction can begin, verify the plan MR is merged (if review was required):**
+
+```bash
+# Source configuration system
+source "${CLAUDE_PLUGIN_ROOT}/lib/config.sh"
+
+# Get configuration
+INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR" "$(git rev-parse --show-toplevel)")
+ELABORATION_REVIEW=$(echo "$CONFIG" | jq -r '.elaboration_review')
+
+if [ "$ELABORATION_REVIEW" = "true" ]; then
+  # Check if plan MR exists and is merged
+  PLAN_BRANCH="ai-dlc/${INTENT_SLUG}/plan"
+
+  # Check for open PR on plan branch
+  OPEN_PRS=$(gh pr list --head "$PLAN_BRANCH" --state open --json number 2>/dev/null || echo "[]")
+
+  if [ "$(echo "$OPEN_PRS" | jq 'length')" -gt 0 ]; then
+    # There's an open PR - not ready for construction
+    PR_URL=$(gh pr list --head "$PLAN_BRANCH" --state open --json url --jq '.[0].url' 2>/dev/null)
+    echo ""
+    echo "⏸️  Plan Review Required"
+    echo ""
+    echo "The plan MR must be reviewed and merged before construction can begin."
+    echo ""
+    echo "Plan MR: $PR_URL"
+    echo ""
+    echo "Once the plan is approved and merged, run /construct again."
+    exit 0
+  fi
+
+  # Check if there's a merged PR (plan was approved)
+  MERGED_PRS=$(gh pr list --head "$PLAN_BRANCH" --state merged --json number 2>/dev/null || echo "[]")
+
+  if [ "$(echo "$MERGED_PRS" | jq 'length')" -eq 0 ]; then
+    # No merged PR - check if plan branch exists
+    if git rev-parse --verify "origin/$PLAN_BRANCH" >/dev/null 2>&1; then
+      # Branch exists but no PR - warn user
+      echo ""
+      echo "⚠️  Plan Branch Exists Without MR"
+      echo ""
+      echo "Branch: $PLAN_BRANCH"
+      echo ""
+      echo "The plan branch exists but no MR was created. Either:"
+      echo "1. Create a plan MR: gh pr create --head $PLAN_BRANCH"
+      echo "2. Or disable elaboration_review in .ai-dlc/settings.yml"
+      echo ""
+      exit 0
+    fi
+    # No branch, no PR - elaboration hasn't been done yet or review is not required
+  fi
+
+  # Plan MR is merged - construction can proceed
+  echo "✓ Plan MR merged - proceeding with construction"
+fi
+```
+
+**The check ensures:**
+- If `elaboration_review: true` and an open plan MR exists → Block construction until merged
+- If `elaboration_review: true` and plan MR is merged → Proceed with construction
+- If `elaboration_review: false` → Skip the check entirely
+- If no plan branch/MR exists → Allow construction (legacy behavior or first run)
+
 ### Step 1: Load State
 
 ```javascript
@@ -123,11 +238,24 @@ Task already complete! Run /reset to start a new task.
 This prevents conflicts with the parent session and enables true isolation.
 
 ```bash
+# Source the strategies library for proper branch naming
+source "${CLAUDE_PLUGIN_ROOT}/lib/strategies.sh"
+source "${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+
+# Get the configured change strategy
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR")
+STRATEGY=$(echo "$CONFIG" | jq -r '.change_strategy')
+
 # Determine current unit from state or find next ready unit
 UNIT_FILE=$(find_ready_unit "$INTENT_DIR")
 UNIT_NAME=$(basename "$UNIT_FILE" .md)  # e.g., unit-01-core-backend
 UNIT_SLUG="${UNIT_NAME#unit-}"  # e.g., 01-core-backend
-UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT_SLUG}"
+
+# Get branch name based on strategy
+# - trunk/unit: ai-dlc/{intent}/{unit}
+# - bolt: ai-dlc/{intent}/{unit}/{bolt}
+# - intent: ai-dlc/{intent}
+UNIT_BRANCH=$(get_branch_name "$STRATEGY" "$intentSlug" "$UNIT_SLUG")
 WORKTREE_PATH="/tmp/ai-dlc-${intentSlug}-${UNIT_SLUG}"
 
 # Create worktree if it doesn't exist
@@ -135,6 +263,14 @@ if [ ! -d "$WORKTREE_PATH" ]; then
   git worktree add -B "$UNIT_BRANCH" "$WORKTREE_PATH"
 fi
 ```
+
+**Branch naming by strategy:**
+| Strategy | Branch Pattern | Example |
+|----------|---------------|---------|
+| trunk | `ai-dlc/{intent}/{unit}` | `ai-dlc/auth-feature/01-backend` |
+| unit | `ai-dlc/{intent}/{unit}` | `ai-dlc/auth-feature/01-backend` |
+| bolt | `ai-dlc/{intent}/{unit}/{bolt}` | `ai-dlc/auth-feature/01-backend/add-tests` |
+| intent | `ai-dlc/{intent}` | `ai-dlc/auth-feature` |
 
 ### Step 2b: Update Unit Status and Track Current Unit
 
@@ -272,9 +408,17 @@ A unit is **ready** when:
 **Parallel (multiple ready units):** Create worktrees with dedicated branches:
 
 ```bash
+# Source strategies for proper branch naming
+source "${CLAUDE_PLUGIN_ROOT}/lib/strategies.sh"
+
+# Get configured strategy
+CONFIG=$(get_ai_dlc_config "$INTENT_DIR")
+STRATEGY=$(echo "$CONFIG" | jq -r '.change_strategy')
+
 # For each ready unit, create a worktree with its branch
 for UNIT in $READY_UNITS; do
-  UNIT_BRANCH="ai-dlc/${intentSlug}/${UNIT#unit-}"
+  UNIT_SLUG="${UNIT#unit-}"
+  UNIT_BRANCH=$(get_branch_name "$STRATEGY" "$intentSlug" "$UNIT_SLUG")
   WORKTREE_PATH="/tmp/ai-dlc-worktree-${UNIT}"
 
   # Create worktree (also creates branch if needed)
@@ -418,8 +562,9 @@ han_keep_save({ scope: "branch", key: "scratchpad.md", content: "..." })
 
 ## Worktree Architecture
 
-The AI-DLC workflow uses worktrees for complete isolation:
+The AI-DLC workflow uses worktrees for complete isolation. Branch naming varies by strategy:
 
+**Unit Strategy (default):**
 ```
 /path/to/repo (main branch)         <-- User's main working directory, stays clean
   │
@@ -433,6 +578,32 @@ The AI-DLC workflow uses worktrees for complete isolation:
         │
         └── /tmp/ai-dlc-{intent}-02-unit/      <-- Unit worktree (subagent)
               branch: ai-dlc/{intent-slug}/02-unit
+```
+
+**Intent Strategy (single branch):**
+```
+/path/to/repo (main branch)
+  │
+  └── git worktrees:
+        │
+        └── /tmp/ai-dlc-{intent}/              <-- All work happens here
+              branch: ai-dlc/{intent-slug}      (single branch for all units)
+```
+
+**Trunk Strategy (ephemeral branches, auto-merge):**
+Same as unit strategy, but branches are automatically merged to main and deleted after each unit passes validation.
+
+**Bolt Strategy (finest granularity):**
+```
+/path/to/repo (main branch)
+  │
+  └── git worktrees:
+        │
+        ├── /tmp/ai-dlc-{intent}-01-unit-add-tests/
+        │     branch: ai-dlc/{intent-slug}/01-unit/add-tests
+        │
+        └── /tmp/ai-dlc-{intent}-01-unit-impl/
+              branch: ai-dlc/{intent-slug}/01-unit/implementation
 ```
 
 1. **Main repo**: User's working directory stays on `main`, unaffected by AI-DLC work.

@@ -333,6 +333,24 @@ export function getSessionFileChanges(
 }
 
 // ============================================================================
+// Type re-exports from native module
+// ============================================================================
+
+/** Git worktree information */
+export interface GitWorktree {
+	/** Absolute path to the worktree */
+	path: string;
+	/** Name of the worktree (basename of path for main, or worktree name) */
+	name: string;
+	/** Current branch or commit */
+	head?: string;
+	/** Whether this is the main worktree */
+	isMain: boolean;
+	/** Whether the worktree is locked */
+	isLocked: boolean;
+}
+
+// ============================================================================
 // FTS/Vector search functions
 // ============================================================================
 

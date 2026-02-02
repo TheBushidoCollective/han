@@ -59,17 +59,30 @@ find_repo_root() {
   esac
 }
 
-# Resolve 'auto' default branch to actual branch name
-# Usage: resolve_default_branch <config_value> [directory]
-# Returns: resolved branch name
-resolve_default_branch() {
-  local config_value="$1"
-  local dir="${2:-.}"
+# Resolve default branch for jj using trunk() revset
+# Usage: resolve_jj_default_branch [directory]
+# Returns: branch name or empty string
+resolve_jj_default_branch() {
+  local dir="${1:-.}"
 
-  if [ "$config_value" != "auto" ]; then
-    echo "$config_value"
+  # Use jj's trunk() revset to find the default branch
+  local result
+  result=$(jj log -r "trunk()" --no-graph -T "branches" --ignore-working-copy -R "$dir" 2>/dev/null)
+
+  if [ -n "$result" ]; then
+    # Result may contain multiple branches separated by space, take the first
+    echo "$result" | awk '{print $1}'
     return
   fi
+
+  echo ""
+}
+
+# Resolve default branch for git
+# Usage: resolve_git_default_branch [directory]
+# Returns: resolved branch name
+resolve_git_default_branch() {
+  local dir="${1:-.}"
 
   # Try to get from origin/HEAD
   local head_ref
@@ -80,20 +93,49 @@ resolve_default_branch() {
     return
   fi
 
-  # Fallback: check if main exists
-  if git -C "$dir" rev-parse --verify main >/dev/null 2>&1; then
-    echo "main"
-    return
-  fi
-
-  # Fallback: check if master exists
-  if git -C "$dir" rev-parse --verify master >/dev/null 2>&1; then
-    echo "master"
-    return
-  fi
+  # Fallback: check common branch names in priority order
+  local branch
+  for branch in main master trunk develop; do
+    if git -C "$dir" rev-parse --verify "$branch" >/dev/null 2>&1; then
+      echo "$branch"
+      return
+    fi
+  done
 
   # Ultimate fallback
   echo "main"
+}
+
+# Resolve 'auto' default branch to actual branch name
+# Usage: resolve_default_branch <config_value> [directory] [vcs]
+# Returns: resolved branch name
+resolve_default_branch() {
+  local config_value="$1"
+  local dir="${2:-.}"
+  local vcs="${3:-}"
+
+  if [ "$config_value" != "auto" ]; then
+    echo "$config_value"
+    return
+  fi
+
+  # Auto-detect VCS if not provided
+  if [ -z "$vcs" ]; then
+    vcs=$(detect_vcs "$dir")
+  fi
+
+  if [ "$vcs" = "jj" ]; then
+    local jj_branch
+    jj_branch=$(resolve_jj_default_branch "$dir")
+    if [ -n "$jj_branch" ]; then
+      echo "$jj_branch"
+      return
+    fi
+    # If jj trunk() doesn't work, fall back to git detection
+    # (jj repos often colocate with git)
+  fi
+
+  resolve_git_default_branch "$dir"
 }
 
 # Load repo settings from .ai-dlc/settings.yml
@@ -189,7 +231,7 @@ EOF
   default_branch=$(echo "$config" | jq -r '.default_branch')
   if [ "$default_branch" = "auto" ]; then
     local resolved_branch
-    resolved_branch=$(resolve_default_branch "auto" "$repo_root")
+    resolved_branch=$(resolve_default_branch "auto" "$repo_root" "$vcs")
     config=$(echo "$config" | jq --arg branch "$resolved_branch" '.default_branch = $branch')
   fi
 

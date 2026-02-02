@@ -12,6 +12,8 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=config.sh
 source "$SCRIPT_DIR/config.sh"
+# shellcheck source=jj.sh
+source "$SCRIPT_DIR/jj.sh"
 
 # Parse unit status from frontmatter
 # Usage: parse_unit_status <unit_file>
@@ -510,75 +512,429 @@ validate_dag() {
   return 0
 }
 
-# Discover intents on git branches (worktrees, local branches, remote branches)
-# Usage: discover_branch_intents [include_remote]
-# Returns: "slug|workflow|source|branch" per line
-#   source: "worktree" | "local" | "remote"
-discover_branch_intents() {
-  local include_remote="${1:-false}"
-  local seen_slugs=""
+# =============================================================================
+# VCS-Agnostic Workspace/Worktree Management
+# =============================================================================
 
-  # 1. Check existing worktrees (highest priority)
-  # Parse git worktree list --porcelain to find ai-dlc/* branches
-  while IFS= read -r line; do
-    if [[ "$line" == "branch refs/heads/ai-dlc/"* ]]; then
-      local branch="${line#branch refs/heads/}"
-      # Only intent-level branches (ai-dlc/slug, not ai-dlc/slug/unit)
-      if [[ "$branch" =~ ^ai-dlc/[^/]+$ ]]; then
-        local slug="${branch#ai-dlc/}"
-        # Read intent.md from the branch
-        local intent_content
-        intent_content=$(git show "$branch:.ai-dlc/$slug/intent.md" 2>/dev/null) || continue
-        local status
-        status=$(echo "$intent_content" | han parse yaml status -r --default active 2>/dev/null || echo "active")
-        [ "$status" != "active" ] && continue
-        local workflow
-        workflow=$(echo "$intent_content" | han parse yaml workflow -r --default default 2>/dev/null || echo "default")
-        echo "$slug|$workflow|worktree|$branch"
-        seen_slugs="$seen_slugs $slug"
-      fi
-    fi
-  done < <(git worktree list --porcelain 2>/dev/null)
+# Create a workspace/worktree for parallel unit execution
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: create_unit_workspace <intent_slug> <unit_slug> <path>
+# Returns: 0 on success, 1 on failure
+create_unit_workspace() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local path="$3"
+  local repo_root
+  repo_root=$(find_repo_root)
 
-  # 2. Check local ai-dlc/* branches (no worktree)
-  while IFS= read -r branch; do
-    [ -z "$branch" ] && continue
-    # Only intent-level branches (ai-dlc/slug, not ai-dlc/slug/unit)
-    [[ "$branch" =~ ^ai-dlc/[^/]+$ ]] || continue
-    local slug="${branch#ai-dlc/}"
-    # Skip if already seen in worktree
-    [[ "$seen_slugs" == *" $slug"* ]] && continue
-    # Read intent.md from the branch
-    local intent_content
-    intent_content=$(git show "$branch:.ai-dlc/$slug/intent.md" 2>/dev/null) || continue
-    local status
-    status=$(echo "$intent_content" | han parse yaml status -r --default active 2>/dev/null || echo "active")
-    [ "$status" != "active" ] && continue
-    local workflow
-    workflow=$(echo "$intent_content" | han parse yaml workflow -r --default default 2>/dev/null || echo "default")
-    echo "$slug|$workflow|local|$branch"
-    seen_slugs="$seen_slugs $slug"
-  done < <(git for-each-ref --format='%(refname:short)' 'refs/heads/ai-dlc/*' 2>/dev/null)
-
-  # 3. Check remote branches (only if include_remote=true)
-  if [ "$include_remote" = "true" ]; then
-    while IFS= read -r branch; do
-      [ -z "$branch" ] && continue
-      # Only intent-level branches
-      [[ "$branch" =~ ^origin/ai-dlc/[^/]+$ ]] || continue
-      local slug="${branch#origin/ai-dlc/}"
-      # Skip if already seen
-      [[ "$seen_slugs" == *" $slug"* ]] && continue
-      # Read intent.md from the remote branch
-      local intent_content
-      intent_content=$(git show "$branch:.ai-dlc/$slug/intent.md" 2>/dev/null) || continue
-      local status
-      status=$(echo "$intent_content" | han parse yaml status -r --default active 2>/dev/null || echo "active")
-      [ "$status" != "active" ] && continue
-      local workflow
-      workflow=$(echo "$intent_content" | han parse yaml workflow -r --default default 2>/dev/null || echo "default")
-      echo "$slug|$workflow|remote|$branch"
-      seen_slugs="$seen_slugs $slug"
-    done < <(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/ai-dlc/*' 2>/dev/null)
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
   fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      # Warn about colocation behavior
+      jj_warn_if_colocated "$repo_root"
+
+      # Create jj workspace
+      jj_create_workspace "$workspace_name" "$path" "$repo_root"
+      ;;
+    git)
+      # Create git worktree with branch
+      local branch="ai-dlc/${intent_slug}/${unit_slug}"
+      git -C "$repo_root" worktree add -b "$branch" "$path" 2>&1
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Remove a workspace/worktree for a unit
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: remove_unit_workspace <intent_slug> <unit_slug>
+# Returns: 0 on success, 1 on failure
+remove_unit_workspace() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      jj_remove_workspace "$workspace_name" "$repo_root"
+      ;;
+    git)
+      # Find and remove git worktree
+      local worktree_path
+      worktree_path=$(git -C "$repo_root" worktree list --porcelain | grep -A1 "worktree" | grep "/$workspace_name$" | head -1)
+      if [ -n "$worktree_path" ]; then
+        git -C "$repo_root" worktree remove "$worktree_path" 2>&1
+      else
+        echo "Warning: worktree not found for $workspace_name" >&2
+      fi
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# List active workspaces/worktrees for an intent
+# Automatically uses jj workspace or git worktree based on detected VCS
+# Usage: list_intent_workspaces <intent_slug>
+# Returns: JSON array of workspace/worktree paths
+list_intent_workspaces() {
+  local intent_slug="$1"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "[]"
+    return
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local prefix="ai-dlc-${intent_slug}-"
+
+  case "$vcs" in
+    jj)
+      jj_find_ai_dlc_workspaces "$intent_slug" "$repo_root"
+      ;;
+    git)
+      # Parse git worktree list for matching branches
+      local json="["
+      local first=true
+      while IFS= read -r line; do
+        if [[ "$line" =~ ^worktree\ (.+) ]]; then
+          local path="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^branch\ refs/heads/ai-dlc/${intent_slug}/(.+) ]]; then
+          local unit_slug="${BASH_REMATCH[1]}"
+          local name="${prefix}${unit_slug}"
+          if [ "$first" = "true" ]; then
+            first=false
+          else
+            json="$json,"
+          fi
+          json="$json{\"name\":\"$name\",\"path\":\"$path\"}"
+        fi
+      done < <(git -C "$repo_root" worktree list --porcelain 2>/dev/null)
+      echo "${json}]"
+      ;;
+    *)
+      echo "[]"
+      ;;
+  esac
+}
+
+# Get workspace/worktree path for a specific unit
+# Usage: get_unit_workspace_path <intent_slug> <unit_slug>
+# Returns: Path to workspace or empty string if not found
+get_unit_workspace_path() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local workspace_name="ai-dlc-${intent_slug}-${unit_slug}"
+
+  local workspaces
+  workspaces=$(list_intent_workspaces "$intent_slug")
+
+  # Extract path for matching workspace
+  echo "$workspaces" | jq -r ".[] | select(.name == \"$workspace_name\") | .path" 2>/dev/null
+}
+
+# Create bookmark/branch for unit tracking
+# Automatically uses jj bookmark or git branch based on detected VCS
+# Usage: create_unit_bookmark <intent_slug> <unit_slug>
+create_unit_bookmark() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local bookmark_name="ai-dlc/${intent_slug}/${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      jj_create_bookmark "$bookmark_name" "@" "$repo_root"
+      ;;
+    git)
+      git -C "$repo_root" branch "$bookmark_name" 2>&1 || true
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Push unit changes to remote for PR creation
+# For jj: uses jj git push (git interop)
+# For git: uses git push
+# Usage: push_unit_for_pr <intent_slug> <unit_slug> [remote]
+push_unit_for_pr() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local remote="${3:-origin}"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+  local bookmark_name="ai-dlc/${intent_slug}/${unit_slug}"
+
+  case "$vcs" in
+    jj)
+      # Ensure bookmark exists at current revision
+      jj_move_bookmark "$bookmark_name" "@" "$repo_root" 2>/dev/null || \
+        jj_create_bookmark "$bookmark_name" "@" "$repo_root"
+      # Push via git interop
+      jj_git_push "$bookmark_name" "$remote" "$repo_root"
+      ;;
+    git)
+      git -C "$repo_root" push -u "$remote" "$bookmark_name" 2>&1
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Squash commits for a unit (used when auto_squash is enabled)
+# Usage: squash_unit_commits <intent_slug> <unit_slug>
+squash_unit_commits() {
+  local intent_slug="$1"
+  local unit_slug="$2"
+  local repo_root
+  repo_root=$(find_repo_root)
+
+  if [ -z "$repo_root" ]; then
+    echo "Error: not in a VCS repository" >&2
+    return 1
+  fi
+
+  local vcs
+  vcs=$(detect_vcs "$repo_root")
+
+  case "$vcs" in
+    jj)
+      # jj squash is straightforward - squash current into parent
+      jj_squash "@" "$repo_root"
+      ;;
+    git)
+      # git requires interactive rebase or merge --squash
+      # This is typically done during the merge process
+      echo "Note: git squashing is handled during merge with --squash flag" >&2
+      ;;
+    *)
+      echo "Error: unsupported VCS type: $vcs" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Generate Mermaid DAG visualization
+# Usage: generate_dag_mermaid <intent_dir>
+# Returns Mermaid diagram code
+generate_dag_mermaid() {
+  local intent_dir="$1"
+
+  if [ ! -d "$intent_dir" ]; then
+    echo '```mermaid'
+    echo 'graph LR'
+    echo '    START([Start]) --> END([Complete])'
+    echo '```'
+    return
+  fi
+
+  # Check if any unit files exist
+  local has_units=false
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] && has_units=true && break
+  done
+
+  if [ "$has_units" = "false" ]; then
+    echo '```mermaid'
+    echo 'graph LR'
+    echo '    START([Start]) --> END([Complete])'
+    echo '```'
+    return
+  fi
+
+  echo '```mermaid'
+  echo 'graph TD'
+
+  # Collect all units with status
+  local terminal_units=""
+  local all_unit_names=""
+
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name status deps short_id label class_name
+    name=$(basename "$unit_file" .md)
+    status=$(parse_unit_status "$unit_file")
+    deps=$(parse_unit_deps "$unit_file")
+
+    # Short ID: unit-01-setup -> u01setup
+    short_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+    # Label: unit-01-setup -> 01 setup
+    label=$(echo "$name" | sed 's/unit-//' | sed 's/-/ /g')
+
+    # Determine class based on status
+    case "$status" in
+      completed) class_name="completed" ;;
+      in_progress) class_name="inProgress" ;;
+      blocked) class_name="blocked" ;;
+      *) class_name="pending" ;;
+    esac
+
+    echo "    ${short_id}[${label}]:::${class_name}"
+    all_unit_names="$all_unit_names $name"
+  done
+
+  # Add edges
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name deps target_id
+    name=$(basename "$unit_file" .md)
+    deps=$(parse_unit_deps "$unit_file")
+    target_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+
+    if [ "$deps" = "[]" ] || [ -z "$deps" ] || [ "$deps" = "null" ]; then
+      # No deps - connect from START
+      echo "    START([Start]) --> ${target_id}"
+    else
+      # Parse deps and add edges
+      local dep_list
+      dep_list=$(echo "$deps" | tr -d '[]"' | tr ',' '\n' | tr -d ' ')
+
+      for dep in $dep_list; do
+        [ -z "$dep" ] && continue
+        local source_id
+        source_id=$(echo "$dep" | sed 's/unit-/u/' | tr -d '-')
+        echo "    ${source_id} --> ${target_id}"
+      done
+    fi
+  done
+
+  # Find terminal units (not depended on by anyone)
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name is_terminal=true
+    name=$(basename "$unit_file" .md)
+
+    # Check if any other unit depends on this one
+    for other_file in "$intent_dir"/unit-*.md; do
+      [ -f "$other_file" ] || continue
+      [ "$other_file" = "$unit_file" ] && continue
+
+      local other_deps
+      other_deps=$(parse_unit_deps "$other_file")
+      if echo "$other_deps" | grep -q "\"$name\""; then
+        is_terminal=false
+        break
+      fi
+    done
+
+    if [ "$is_terminal" = "true" ]; then
+      local short_id
+      short_id=$(echo "$name" | sed 's/unit-/u/' | tr -d '-')
+      echo "    ${short_id} --> END([Complete])"
+    fi
+  done
+
+  # Add styling
+  echo ''
+  echo '    classDef completed fill:#22c55e,stroke:#16a34a,color:white'
+  echo '    classDef inProgress fill:#3b82f6,stroke:#2563eb,color:white'
+  echo '    classDef pending fill:#94a3b8,stroke:#64748b,color:white'
+  echo '    classDef blocked fill:#ef4444,stroke:#dc2626,color:white'
+  echo '```'
+}
+
+# Generate ASCII DAG visualization
+# Usage: generate_dag_ascii <intent_dir>
+# Returns ASCII art diagram
+generate_dag_ascii() {
+  local intent_dir="$1"
+
+  if [ ! -d "$intent_dir" ]; then
+    echo "No units defined."
+    return
+  fi
+
+  # Check if any unit files exist
+  local has_units=false
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] && has_units=true && break
+  done
+
+  if [ "$has_units" = "false" ]; then
+    echo "No units defined."
+    return
+  fi
+
+  echo "Unit Dependency Graph"
+  echo "====================="
+  echo ""
+  echo "Legend: [ ] pending  [~] in-progress  [x] completed  [!] blocked"
+  echo ""
+
+  for unit_file in "$intent_dir"/unit-*.md; do
+    [ -f "$unit_file" ] || continue
+
+    local name status deps icon deps_display
+    name=$(basename "$unit_file" .md)
+    status=$(parse_unit_status "$unit_file")
+    deps=$(parse_unit_deps "$unit_file")
+
+    # Status icon
+    case "$status" in
+      completed) icon="[x]" ;;
+      in_progress) icon="[~]" ;;
+      blocked) icon="[!]" ;;
+      *) icon="[ ]" ;;
+    esac
+
+    # Format dependencies
+    if [ "$deps" = "[]" ] || [ -z "$deps" ] || [ "$deps" = "null" ]; then
+      deps_display=""
+    else
+      deps_display=" <- [$(echo "$deps" | tr -d '[]"' | sed 's/unit-//g' | tr ',' ', ')]"
+    fi
+
+    echo "${icon} $(echo "$name" | sed 's/unit-//')${deps_display}"
+  done
 }
