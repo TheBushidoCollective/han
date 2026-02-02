@@ -54,4 +54,5 @@ jobs:
 
       - name: Run tests
         working-directory: ./packages/han-native
-        run: cargo test --all-features
+        # Run tests sequentially to avoid flaky failures from shared database state
+        run: cargo test --all-features -- --test-threads=1
