@@ -475,6 +475,13 @@ export const SessionType = SessionRef.implement({
 			description: "Claude Code version",
 			resolve: (s) => s.version ?? null,
 		}),
+		sourceConfigDir: t.string({
+			nullable: true,
+			description:
+				"Which CLAUDE_CONFIG_DIR this session originated from (for multi-environment support)",
+			resolve: (s) =>
+				"sourceConfigDir" in s ? (s.sourceConfigDir ?? null) : null,
+		}),
 		hookExecutions: t.field({
 			type: HookExecutionConnectionType,
 			args: {

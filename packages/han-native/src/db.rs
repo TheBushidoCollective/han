@@ -367,6 +367,68 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         }
     }
 
+    // Migration: Add source_config_dir to sessions table (multi-environment support)
+    let sessions_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='sessions'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if sessions_exists {
+        let has_source_config_dir: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('sessions') WHERE name = 'source_config_dir'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_source_config_dir {
+            conn.execute(
+                "ALTER TABLE sessions ADD COLUMN source_config_dir TEXT",
+                [],
+            )?;
+            // Create index for the new column
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sessions_source ON sessions(source_config_dir)",
+                [],
+            )?;
+        }
+    }
+
+    // Migration: Add source_config_dir to projects table (multi-environment support)
+    let projects_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='projects'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if projects_exists {
+        let has_source_config_dir: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('projects') WHERE name = 'source_config_dir'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_source_config_dir {
+            conn.execute(
+                "ALTER TABLE projects ADD COLUMN source_config_dir TEXT",
+                [],
+            )?;
+            // Create index for the new column
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_projects_source ON projects(source_config_dir)",
+                [],
+            )?;
+        }
+    }
+
     Ok(())
 }
 

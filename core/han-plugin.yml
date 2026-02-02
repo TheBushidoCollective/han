@@ -30,6 +30,11 @@ hooks:
     command: han coordinator ensure --background
     description: Start coordinator daemon for indexing and hook caching (non-blocking)
 
+  register-config-dir:
+    event: SessionStart
+    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/register-config-dir.sh"
+    description: Register non-default config directories for multi-environment indexing
+
   context:
     event: SessionStart
     command: han hook context
@@ -63,19 +68,11 @@ hooks:
     command: han hook reference hooks/professional-honesty.md --must-read-first "professional honesty policy"
     description: Inject professional honesty policy to subagents
 
-  # PreToolUse safety hooks - prevent dangerous operations
-  safe-operations:
-    event: PreToolUse
-    tool_filter: [Write, Edit, Bash]
-    command: python3 "${CLAUDE_PLUGIN_ROOT}/hooks/safe-operations.py"
-    description: Block dangerous file operations and bash commands outside project directory
-
-  # PreToolUse validation hook - run validation before git commits
-  pre-commit-validation:
-    event: PreToolUse
-    tool_filter: [Bash]
-    command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-validation.sh"
-    description: Run validation hooks before git commit to block bad commits
+  # NOTE: PreToolUse hooks that return structured JSON (hookSpecificOutput with permissionDecision)
+  # are registered directly in hooks/hooks.json, NOT here. The han orchestrator doesn't forward
+  # structured JSON responses to Claude Code. Direct registration includes:
+  #   - safe-operations.py (deny dangerous Write/Edit/Bash operations)
+  #   - pre-commit-validation.sh (modify git commit commands if validation fails)
 
 # Memory provider config - defines which tools the Memory Agent can use
 memory:

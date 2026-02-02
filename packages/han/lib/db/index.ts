@@ -31,6 +31,9 @@ import { getNativeModule } from "../native.ts";
 // ============================================================================
 
 export type {
+	// Config dirs registry (multi-environment support)
+	ConfigDir,
+	ConfigDirInput,
 	// Coordinator
 	CoordinatorStatus,
 	// Frustration tracking
@@ -1636,6 +1639,35 @@ export const watcher = {
 		const native = getNativeModule();
 		native.clearIndexCallback();
 	},
+
+	/**
+	 * Add an additional watch path for multi-environment support
+	 * @param configDir The config directory path (e.g., /work/.claude)
+	 * @param projectsPath Optional explicit projects path (default: {configDir}/projects)
+	 * @returns true if the path was added, false if already watching or watcher not running
+	 */
+	addWatchPath(configDir: string, projectsPath?: string): boolean {
+		const native = getNativeModule();
+		return native.addWatchPath(configDir, projectsPath ?? null);
+	},
+
+	/**
+	 * Remove a watch path
+	 * @param configDir The config directory to stop watching
+	 * @returns true if the path was removed, false if not watching
+	 */
+	removeWatchPath(configDir: string): boolean {
+		const native = getNativeModule();
+		return native.removeWatchPath(configDir);
+	},
+
+	/**
+	 * Get all currently watched paths
+	 */
+	getWatchedPaths(): string[] {
+		const native = getNativeModule();
+		return native.getWatchedPaths();
+	},
 };
 
 // ============================================================================
@@ -1710,6 +1742,49 @@ export async function listSessions(options?: {
 	limit?: number;
 }): Promise<import("../../../han-native").Session[]> {
 	return sessions.list(options);
+}
+
+// Config Dir Registry operations (Multi-Environment Support)
+export async function registerConfigDir(
+	input: import("../../../han-native").ConfigDirInput,
+): Promise<import("../../../han-native").ConfigDir> {
+	await initDb();
+	const native = getNativeModule();
+	return native.registerConfigDir(getDbPath(), input);
+}
+
+export async function getConfigDirByPath(
+	path: string,
+): Promise<import("../../../han-native").ConfigDir | null> {
+	await initDb();
+	const native = getNativeModule();
+	return native.getConfigDirByPath(getDbPath(), path);
+}
+
+export async function listConfigDirs(): Promise<
+	import("../../../han-native").ConfigDir[]
+> {
+	await initDb();
+	const native = getNativeModule();
+	return native.listConfigDirs(getDbPath());
+}
+
+export async function updateConfigDirLastIndexed(path: string): Promise<boolean> {
+	await initDb();
+	const native = getNativeModule();
+	return native.updateConfigDirLastIndexed(getDbPath(), path);
+}
+
+export async function unregisterConfigDir(path: string): Promise<boolean> {
+	await initDb();
+	const native = getNativeModule();
+	return native.unregisterConfigDir(getDbPath(), path);
+}
+
+export async function getDefaultConfigDir(): Promise<import("../../../han-native").ConfigDir | null> {
+	await initDb();
+	const native = getNativeModule();
+	return native.getDefaultConfigDir(getDbPath());
 }
 
 /**

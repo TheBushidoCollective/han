@@ -132,16 +132,17 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
 
     // Use RETURNING to get the inserted/updated row in one query (avoids re-entrancy deadlock)
     let mut stmt = conn.prepare(
-        "INSERT INTO projects (id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+        "INSERT INTO projects (id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
          ON CONFLICT(slug) DO UPDATE SET
              repo_id = excluded.repo_id,
              path = excluded.path,
              relative_path = excluded.relative_path,
              name = excluded.name,
              is_worktree = excluded.is_worktree,
+             source_config_dir = COALESCE(excluded.source_config_dir, projects.source_config_dir),
              updated_at = excluded.updated_at
-         RETURNING id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at"
+         RETURNING id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
@@ -153,6 +154,7 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
             input.relative_path,
             input.name,
             is_worktree,
+            input.source_config_dir,
             now
         ],
         |row| {
@@ -164,8 +166,9 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
                 relative_path: row.get(4)?,
                 name: row.get(5)?,
                 is_worktree: row.get::<_, i32>(6)? != 0,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                source_config_dir: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         },
     )
@@ -179,7 +182,7 @@ pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
          FROM projects WHERE slug = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -192,8 +195,9 @@ pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     });
 
@@ -214,7 +218,7 @@ pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
          FROM projects WHERE path = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -227,8 +231,9 @@ pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     });
 
@@ -258,14 +263,15 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     }
 
     if let Some(ref rid) = repo_id {
         let mut stmt = conn.prepare(
-            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
              FROM projects WHERE repo_id = ?1 ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -277,7 +283,7 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
         Ok(rows)
     } else {
         let mut stmt = conn.prepare(
-            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
              FROM projects ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -306,14 +312,15 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
     // No timestamps stored - derived from messages
     let mut stmt = conn
         .prepare(
-            "INSERT INTO sessions (id, project_id, status, transcript_path, slug)
-         VALUES (?1, ?2, ?3, ?4, ?5)
+            "INSERT INTO sessions (id, project_id, status, transcript_path, slug, source_config_dir)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(id) DO UPDATE SET
              project_id = COALESCE(excluded.project_id, sessions.project_id),
              status = excluded.status,
              transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path),
-             slug = COALESCE(excluded.slug, sessions.slug)
-         RETURNING id, project_id, status, transcript_path, slug, last_indexed_line",
+             slug = COALESCE(excluded.slug, sessions.slug),
+             source_config_dir = COALESCE(excluded.source_config_dir, sessions.source_config_dir)
+         RETURNING id, project_id, status, transcript_path, slug, source_config_dir, last_indexed_line",
         )
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
@@ -323,7 +330,8 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
             input.project_id,
             status,
             input.transcript_path,
-            input.slug
+            input.slug,
+            input.source_config_dir
         ],
         |row| {
             Ok(Session {
@@ -332,7 +340,8 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
                 status: row.get(2)?,
                 transcript_path: row.get(3)?,
                 slug: row.get(4)?,
-                last_indexed_line: row.get(5)?,
+                source_config_dir: row.get(5)?,
+                last_indexed_line: row.get(6)?,
             })
         },
     )
@@ -365,7 +374,7 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
     // id IS the session UUID - query by id directly
     let mut stmt = conn
         .prepare(
-            "SELECT id, project_id, status, transcript_path, slug, last_indexed_line
+            "SELECT id, project_id, status, transcript_path, slug, source_config_dir, last_indexed_line
          FROM sessions WHERE id = ?1 LIMIT 1",
         )
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
@@ -377,7 +386,8 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
             status: row.get(2)?,
             transcript_path: row.get(3)?,
             slug: row.get(4)?,
-            last_indexed_line: row.get(5)?,
+            source_config_dir: row.get(5)?,
+            last_indexed_line: row.get(6)?,
         })
     });
 
@@ -420,7 +430,7 @@ pub fn list_sessions(
     // Sessions are ordered by most recent message timestamp (descending)
     let sql = match (&project_id, &status) {
         (Some(_), Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -429,7 +439,7 @@ pub fn list_sessions(
              LIMIT ?3"
         }
         (Some(_), None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -438,7 +448,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -447,7 +457,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -467,7 +477,8 @@ pub fn list_sessions(
             status: row.get(2)?,
             transcript_path: row.get(3)?,
             slug: row.get(4)?,
-            last_indexed_line: row.get(5)?,
+            source_config_dir: row.get(5)?,
+            last_indexed_line: row.get(6)?,
         })
     };
 
@@ -527,6 +538,193 @@ pub fn reset_all_sessions_for_reindex() -> napi::Result<u32> {
         .map_err(|e| napi::Error::from_reason(format!("Failed to reset sessions: {}", e)))?;
 
     Ok(count as u32)
+}
+
+// ============================================================================
+// Config Dir Registry Operations (Multi-Environment Support)
+// ============================================================================
+
+/// Register a new config directory for multi-environment indexing
+#[napi]
+pub fn register_config_dir(input: ConfigDirInput) -> napi::Result<ConfigDir> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let is_default = input.is_default.unwrap_or(false);
+
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO config_dirs (id, path, name, registered_at, is_default)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(path) DO UPDATE SET
+                 name = COALESCE(excluded.name, config_dirs.name),
+                 is_default = excluded.is_default
+             RETURNING id, path, name, registered_at, last_indexed_at, session_count, is_default",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
+
+    stmt.query_row(params![id, input.path, input.name, now, is_default], |row| {
+        Ok(ConfigDir {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            name: row.get(2)?,
+            registered_at: row.get(3)?,
+            last_indexed_at: row.get(4)?,
+            session_count: row.get(5)?,
+            is_default: row.get(6)?,
+        })
+    })
+    .map_err(|e| napi::Error::from_reason(format!("Failed to register config dir: {}", e)))
+}
+
+/// Get a config directory by path
+#[napi]
+pub fn get_config_dir_by_path(path: String) -> napi::Result<Option<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs WHERE path = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![path], |row| {
+        Ok(ConfigDir {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            name: row.get(2)?,
+            registered_at: row.get(3)?,
+            last_indexed_at: row.get(4)?,
+            session_count: row.get(5)?,
+            is_default: row.get(6)?,
+        })
+    });
+
+    match result {
+        Ok(config_dir) => Ok(Some(config_dir)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get config dir: {}",
+            e
+        ))),
+    }
+}
+
+/// List all registered config directories
+#[napi]
+pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs ORDER BY is_default DESC, registered_at ASC",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(ConfigDir {
+                id: row.get(0)?,
+                path: row.get(1)?,
+                name: row.get(2)?,
+                registered_at: row.get(3)?,
+                last_indexed_at: row.get(4)?,
+                session_count: row.get(5)?,
+                is_default: row.get(6)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to list config dirs: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Update the last indexed timestamp for a config directory
+#[napi]
+pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Also update session count
+    conn.execute(
+        "UPDATE config_dirs SET
+            last_indexed_at = ?1,
+            session_count = (SELECT COUNT(*) FROM sessions WHERE source_config_dir = config_dirs.path)
+         WHERE path = ?2",
+        params![now, path],
+    )
+    .map_err(|e| {
+        napi::Error::from_reason(format!("Failed to update config dir last indexed: {}", e))
+    })?;
+
+    Ok(true)
+}
+
+/// Remove a config directory from the registry
+#[napi]
+pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let count = conn
+        .execute("DELETE FROM config_dirs WHERE path = ?1", params![path])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to unregister config dir: {}", e)))?;
+
+    Ok(count > 0)
+}
+
+/// Get the default config directory
+#[napi]
+pub fn get_default_config_dir() -> napi::Result<Option<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs WHERE is_default = 1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row([], |row| {
+        Ok(ConfigDir {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            name: row.get(2)?,
+            registered_at: row.get(3)?,
+            last_indexed_at: row.get(4)?,
+            session_count: row.get(5)?,
+            is_default: row.get(6)?,
+        })
+    });
+
+    match result {
+        Ok(config_dir) => Ok(Some(config_dir)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get default config dir: {}",
+            e
+        ))),
+    }
 }
 
 // ============================================================================

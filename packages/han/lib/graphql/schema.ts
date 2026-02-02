@@ -39,6 +39,10 @@ import {
 import { ActivityDataType, queryActivityData } from "./types/activity-data.ts";
 import { CacheEntryType, getAllCacheEntries } from "./types/cache-entry.ts";
 import { CacheStatsType, queryCacheStats } from "./types/cache-stats.ts";
+import {
+	ConfigDirMutationResultType,
+	ConfigDirType,
+} from "./types/config-dir.ts";
 import { PluginScopeEnum } from "./types/enums/plugin-scope.ts";
 import { HookExecutionType } from "./types/hook-execution.ts";
 import { HookStatsType } from "./types/hook-stats.ts";
@@ -195,6 +199,21 @@ builder.queryField("repo", (t) =>
 		description: "Get a repo by its repoId (git remote-based ID)",
 		resolve: (_parent, args) => {
 			return getRepoById(args.id);
+		},
+	}),
+);
+
+/**
+ * Query for all registered config directories (multi-environment support)
+ */
+builder.queryField("configDirs", (t) =>
+	t.field({
+		type: [ConfigDirType],
+		description:
+			"All registered config directories for multi-environment indexing",
+		resolve: async () => {
+			const { listConfigDirs } = await import("../db/index.ts");
+			return listConfigDirs();
 		},
 	}),
 );
@@ -1403,11 +1422,83 @@ builder.mutationType({
 			description: "Release a previously acquired slot",
 			resolve: (_parent, args) => releaseSlot(args.slotId, args.pid),
 		}),
+		// ================== Config Dir Registry (Multi-Environment) ==================
+		registerConfigDir: t.field({
+			type: ConfigDirMutationResultType,
+			args: {
+				path: t.arg.string({
+					required: true,
+					description: "Absolute path to the config directory",
+				}),
+				name: t.arg.string({
+					required: false,
+					description: "Human-friendly name (e.g., 'Work', 'Personal')",
+				}),
+				isDefault: t.arg.boolean({
+					required: false,
+					description: "Whether this is the default config directory",
+				}),
+			},
+			description:
+				"Register a config directory for multi-environment session indexing",
+			resolve: async (_parent, args) => {
+				try {
+					const { registerConfigDir } = await import("../db/index.ts");
+					const configDir = await registerConfigDir({
+						path: args.path,
+						name: args.name ?? undefined,
+						isDefault: args.isDefault ?? undefined,
+					});
+					return {
+						success: true,
+						message: `Registered config directory: ${args.path}`,
+						configDir,
+					};
+				} catch (error) {
+					return {
+						success: false,
+						message: error instanceof Error ? error.message : String(error),
+						configDir: null,
+					};
+				}
+			},
+		}),
+		unregisterConfigDir: t.field({
+			type: ConfigDirMutationResultType,
+			args: {
+				path: t.arg.string({
+					required: true,
+					description: "Path of the config directory to unregister",
+				}),
+			},
+			description: "Unregister a config directory",
+			resolve: async (_parent, args) => {
+				try {
+					const { unregisterConfigDir } = await import("../db/index.ts");
+					const success = await unregisterConfigDir(args.path);
+					return {
+						success,
+						message: success
+							? `Unregistered config directory: ${args.path}`
+							: `Config directory not found: ${args.path}`,
+						configDir: null,
+					};
+				} catch (error) {
+					return {
+						success: false,
+						message: error instanceof Error ? error.message : String(error),
+						configDir: null,
+					};
+				}
+			},
+		}),
 	}),
 });
 
 // Export unused imports to prevent tree shaking
 export {
+	ConfigDirType,
+	ConfigDirMutationResultType,
 	RuleType,
 	TaskType,
 	MemorySearchResultType,

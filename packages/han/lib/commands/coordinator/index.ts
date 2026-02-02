@@ -274,6 +274,78 @@ export function registerCoordinatorCommands(program: Command): void {
 			});
 		});
 
+	// coordinator register - Register a config directory for multi-environment indexing
+	coordinator
+		.command("register")
+		.description("Register a config directory for multi-environment indexing")
+		.option(
+			"--config-dir <path>",
+			"Config directory path to register (default: CLAUDE_CONFIG_DIR)",
+		)
+		.option("--name <name>", "Human-friendly name for this environment")
+		.action(
+			async (options: { configDir?: string; name?: string }) => {
+				try {
+					const { registerConfigDir, getConfigDirByPath } = await import(
+						"../../db/index.ts"
+					);
+
+					// Determine config dir to register
+					const configDir =
+						options.configDir ||
+						process.env.CLAUDE_CONFIG_DIR ||
+						`${process.env.HOME}/.claude`;
+
+					// Get the default config dir
+					const defaultConfigDir = `${process.env.HOME}/.claude`;
+
+					// Check if this is the default config dir (no need to register)
+					if (configDir === defaultConfigDir) {
+						console.log(
+							"Default config directory detected - no registration needed",
+						);
+						return;
+					}
+
+					// Check if already registered
+					const existing = await getConfigDirByPath(configDir);
+					if (existing) {
+						console.log(
+							`Config directory already registered: ${configDir}${existing.name ? ` (${existing.name})` : ""}`,
+						);
+						return;
+					}
+
+					// Register the config directory
+					const result = await registerConfigDir({
+						path: configDir,
+						name: options.name,
+						isDefault: false,
+					});
+
+					console.log(
+						`Registered config directory: ${result.path}${result.name ? ` (${result.name})` : ""}`,
+					);
+
+					// If watcher is running, add the watch path
+					const { watcher } = await import("../../db/index.ts");
+					if (watcher.isRunning()) {
+						const projectsPath = `${configDir}/projects`;
+						const added = watcher.addWatchPath(configDir, projectsPath);
+						if (added) {
+							console.log(`Added watch path: ${projectsPath}`);
+						}
+					}
+				} catch (error: unknown) {
+					console.error(
+						"Error registering config directory:",
+						error instanceof Error ? error.message : error,
+					);
+					process.exit(1);
+				}
+			},
+		);
+
 	// launchd subcommand group (macOS only)
 	const launchd = coordinator
 		.command("launchd")

@@ -128,6 +128,8 @@ export interface SessionListItem {
 	projectId?: string;
 	/** Worktree name if this is part of a multi-worktree project */
 	worktreeName?: string;
+	/** Which CLAUDE_CONFIG_DIR this session originated from (for multi-environment support) */
+	sourceConfigDir?: string;
 	summary?: string;
 	messageCount: number;
 	startedAt?: string;
@@ -152,6 +154,8 @@ export interface SessionDetail {
 	projectId?: string;
 	/** Worktree name if this is part of a multi-worktree project */
 	worktreeName?: string;
+	/** Which CLAUDE_CONFIG_DIR this session originated from (for multi-environment support) */
+	sourceConfigDir?: string;
 	startedAt?: string;
 	endedAt?: string;
 	gitBranch?: string;
@@ -1329,6 +1333,7 @@ export async function listSessionsAsync(
 			projectPath,
 			projectDir,
 			projectId,
+			sourceConfigDir: session.sourceConfigDir ?? undefined,
 			summary: undefined, // TODO: Store summary in database
 			messageCount,
 			startedAt: sessionTimestamps?.startedAt,
@@ -1540,6 +1545,7 @@ export async function getSessionAsync(
 		projectDir,
 		projectId,
 		worktreeName,
+		sourceConfigDir: dbSession.sourceConfigDir ?? undefined,
 		startedAt: firstMsg?.timestamp, // Derived from first message
 		endedAt: lastMsg?.timestamp, // Derived from last message
 		gitBranch: firstMsg?.gitBranch,

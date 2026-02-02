@@ -28,6 +28,9 @@ pub use db::{FtsDocument, FtsSearchResult, VectorSearchResult};
 
 // Re-export schema types for unified data store
 pub use schema::{
+    // Config dirs registry (multi-environment support)
+    ConfigDir,
+    ConfigDirInput,
     // File validation status (for stale detection)
     FileValidationStatus,
     // Frustration tracking
@@ -706,6 +709,46 @@ pub fn reset_all_sessions_for_reindex(_db_path: String) -> napi::Result<u32> {
 }
 
 // ============================================================================
+// Config Dir Registry Operations (Multi-Environment Support)
+// ============================================================================
+
+/// Register a config directory for multi-environment indexing
+#[napi]
+pub fn register_config_dir(_db_path: String, input: ConfigDirInput) -> napi::Result<ConfigDir> {
+    crud::register_config_dir(input)
+}
+
+/// Get a config directory by path
+#[napi]
+pub fn get_config_dir_by_path(_db_path: String, path: String) -> napi::Result<Option<ConfigDir>> {
+    crud::get_config_dir_by_path(path)
+}
+
+/// List all registered config directories
+#[napi]
+pub fn list_config_dirs(_db_path: String) -> napi::Result<Vec<ConfigDir>> {
+    crud::list_config_dirs()
+}
+
+/// Update the last indexed timestamp for a config directory
+#[napi]
+pub fn update_config_dir_last_indexed(_db_path: String, path: String) -> napi::Result<bool> {
+    crud::update_config_dir_last_indexed(path)
+}
+
+/// Remove a config directory from the registry
+#[napi]
+pub fn unregister_config_dir(_db_path: String, path: String) -> napi::Result<bool> {
+    crud::unregister_config_dir(path)
+}
+
+/// Get the default config directory
+#[napi]
+pub fn get_default_config_dir(_db_path: String) -> napi::Result<Option<ConfigDir>> {
+    crud::get_default_config_dir()
+}
+
+// ============================================================================
 // Message Operations
 // ============================================================================
 
@@ -1218,8 +1261,9 @@ pub fn get_stale_lock_timeout() -> u32 {
 
 // Re-export watcher types and functions (they have #[napi] in watcher.rs)
 pub use watcher::{
-    clear_index_callback, get_default_watch_path, is_watcher_running, poll_index_results,
-    set_index_callback, start_file_watcher, stop_file_watcher, FileEvent, FileEventType,
+    add_watch_path, clear_index_callback, get_default_watch_path, get_watched_paths,
+    is_watcher_running, poll_index_results, remove_watch_path, set_index_callback,
+    start_file_watcher, stop_file_watcher, FileEvent, FileEventType,
 };
 
 // ============================================================================

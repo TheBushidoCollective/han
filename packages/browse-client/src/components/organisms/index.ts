@@ -71,7 +71,6 @@ export {
 export { SessionMessages } from '@/components/pages/SessionDetailPage/SessionMessages.tsx';
 export { SessionSidebar } from '@/components/pages/SessionDetailPage/SessionSidebar.tsx';
 export { TaskCard } from '@/components/pages/SessionDetailPage/TaskCard.tsx';
-export { EnvironmentSwitcher } from './EnvironmentSwitcher.tsx';
 export type { MarkdownContentProps } from './MarkdownContent.tsx';
 export {
   containsAnsi,

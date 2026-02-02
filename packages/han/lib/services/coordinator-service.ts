@@ -15,6 +15,7 @@ import {
 	type IndexResult,
 	indexer,
 	initDb,
+	listConfigDirs,
 	messages,
 	sessionTodos,
 	watcher,
@@ -410,13 +411,38 @@ async function startCoordinating(): Promise<void> {
 		}
 	})();
 
-	// Start the file watcher
+	// Start the file watcher with the default path
 	console.log("[coordinator] Starting file watcher...");
 	const watchPath = watcher.getDefaultPath();
 	const watchStarted = await watcher.start(watchPath);
 
 	if (watchStarted) {
 		console.log(`[coordinator] Watching ${watchPath} for changes`);
+
+		// Add additional watch paths for registered config directories (multi-environment support)
+		try {
+			const configDirs = await listConfigDirs();
+			for (const configDir of configDirs) {
+				// Skip if this is the default path (already watching)
+				if (configDir.isDefault) {
+					continue;
+				}
+
+				const projectsPath = `${configDir.path}/projects`;
+				const added = watcher.addWatchPath(configDir.path, projectsPath);
+				if (added) {
+					console.log(
+						`[coordinator] Added watch path: ${projectsPath} (${configDir.name || configDir.path})`,
+					);
+				}
+			}
+		} catch (error) {
+			console.error(
+				"[coordinator] Failed to load additional config dirs:",
+				error,
+			);
+		}
+
 		// Set up periodic check for new files (the native watcher handles events)
 		setupFileChangePolling();
 		// Set up periodic full scan to catch any missed sessions (macOS FSEvents can miss some events)

@@ -49,6 +49,7 @@ pub struct Project {
     pub relative_path: Option<String>,
     pub name: String,
     pub is_worktree: bool,
+    pub source_config_dir: Option<String>, // Which CLAUDE_CONFIG_DIR this project was discovered from
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -62,6 +63,7 @@ pub struct ProjectInput {
     pub relative_path: Option<String>,
     pub name: String,
     pub is_worktree: Option<bool>,
+    pub source_config_dir: Option<String>,
 }
 
 // ============================================================================
@@ -77,6 +79,7 @@ pub struct Session {
     pub status: String,
     pub transcript_path: Option<String>,
     pub slug: Option<String>, // Human-readable session name (e.g., "snug-dreaming-knuth")
+    pub source_config_dir: Option<String>, // Which CLAUDE_CONFIG_DIR this session originated from
     pub last_indexed_line: Option<i32>,
 }
 
@@ -88,6 +91,7 @@ pub struct SessionInput {
     pub status: Option<String>,
     pub transcript_path: Option<String>,
     pub slug: Option<String>, // Human-readable session name (e.g., "snug-dreaming-knuth")
+    pub source_config_dir: Option<String>,
 }
 
 // ============================================================================
@@ -705,4 +709,31 @@ pub struct GeneratedSessionSummaryInput {
     pub outcome: Option<String>,
     pub message_count: Option<i32>,
     pub duration_seconds: Option<i32>,
+}
+
+// ============================================================================
+// Data Structures - Config Dirs Registry (Multi-Environment Support)
+// ============================================================================
+
+/// A registered config directory for multi-environment support
+/// The central coordinator tracks all CLAUDE_CONFIG_DIR locations to index
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ConfigDir {
+    pub id: String,
+    pub path: String,                      // Absolute path (e.g., ~/.claude, /work/.claude)
+    pub name: Option<String>,              // Human-friendly name (e.g., "Work", "Personal")
+    pub registered_at: String,
+    pub last_indexed_at: Option<String>,   // Last time we scanned this config dir
+    pub session_count: Option<i32>,        // Cached count of sessions from this config dir
+    pub is_default: bool,                  // Whether this is the default ~/.claude location
+}
+
+/// Input for registering a new config directory
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ConfigDirInput {
+    pub path: String,
+    pub name: Option<String>,
+    pub is_default: Option<bool>,
 }
