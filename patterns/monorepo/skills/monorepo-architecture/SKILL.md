@@ -1,7 +1,13 @@
 ---
 name: monorepo-architecture
 description: Use when designing monorepo structure, organizing packages, or migrating to monorepo architecture with architectural patterns for managing dependencies and scalable workspace configurations.
-allowed-tools: Read,Write,Edit,Bash,Glob,Grep
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 ---
 
 # Monorepo Architecture Skill

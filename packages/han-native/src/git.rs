@@ -644,6 +644,13 @@ mod tests {
                 .output()
                 .expect("Failed to configure git name");
 
+            // Disable commit signing for tests (CI may have signing configured)
+            Command::new("git")
+                .args(["config", "commit.gpgsign", "false"])
+                .current_dir(dir.path())
+                .output()
+                .expect("Failed to disable commit signing");
+
             TestRepo { dir }
         }
 

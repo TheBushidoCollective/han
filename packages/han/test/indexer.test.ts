@@ -136,8 +136,7 @@ describe("memory indexer", () => {
 		});
 	});
 
-	// Skip: initTable hangs in CI waiting for native module initialization
-	describe.skip("indexDocuments function", () => {
+	describe("indexDocuments function", () => {
 		test(
 			"indexes documents when native module available",
 			async () => {
@@ -171,8 +170,7 @@ describe("memory indexer", () => {
 			expect(Array.isArray(results)).toBe(true);
 		});
 
-		// Skip: initTable hangs in CI waiting for native module initialization
-		test.skip(
+		test(
 			"searches indexed documents when native available",
 			async () => {
 				const { indexDocuments, searchFts, initTable } = await import(
@@ -232,8 +230,7 @@ describe("memory indexer", () => {
 		});
 	});
 
-	// Skip: runIndex may hang in CI waiting for native module initialization
-	describe.skip("runIndex function", () => {
+	describe("runIndex function", () => {
 		test(
 			"returns index results structure",
 			async () => {
@@ -276,8 +273,7 @@ describe("memory indexer", () => {
 		);
 	});
 
-	// Skip: searchAll may hang in CI waiting for native module initialization
-	describe.skip("searchAll function", () => {
+	describe("searchAll function", () => {
 		test("returns array of results", async () => {
 			const { searchAll } = await import("../lib/memory/indexer.ts");
 
