@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
 - add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.2] - 2026-02-02
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
 - show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
 
 ### Fixed
