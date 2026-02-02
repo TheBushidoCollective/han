@@ -10,6 +10,21 @@ coverage:
       default:
         target: auto
         threshold: 1%
+      han-cli:
+        flags:
+          - han-cli
+        target: auto
+        threshold: 1%
+      han-native:
+        flags:
+          - han-native
+        target: auto
+        threshold: 1%
+      website:
+        flags:
+          - website
+        target: auto
+        threshold: 1%
     patch:
       default:
         target: auto
@@ -20,12 +35,48 @@ flags:
     paths:
       - packages/han/
     carryforward: true
+  han-native:
+    paths:
+      - packages/han-native/
+    carryforward: true
   website:
     paths:
       - website/
     carryforward: true
+  browse-client:
+    paths:
+      - packages/browse-client/
+    carryforward: true
+
+# Test Analytics configuration
+test_analytics:
+  enabled: true
 
 comment:
   layout: "reach,diff,flags,files"
   behavior: default
   require_changes: false
+
+# Component management for monorepo
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+  individual_components:
+    - component_id: han-cli
+      name: Han CLI
+      paths:
+        - packages/han/**
+    - component_id: han-native
+      name: Han Native (Rust)
+      paths:
+        - packages/han-native/**
+    - component_id: website
+      name: Website
+      paths:
+        - website/**
+    - component_id: browse-client
+      name: Browse Client
+      paths:
+        - packages/browse-client/**
