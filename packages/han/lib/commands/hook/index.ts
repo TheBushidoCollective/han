@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { registerHookAutoDetect } from "./auto-detect.ts";
 import { registerHookContext } from "./context.ts";
 import { registerHookDispatch } from "./dispatch.ts";
 import { registerHookExplain } from "./explain.tsx";
@@ -16,6 +17,7 @@ import { registerHookWait } from "./wait.ts";
 export function registerHookCommands(program: Command): void {
 	const hookCommand = program.command("hook").description("Hook utilities");
 
+	registerHookAutoDetect(hookCommand);
 	registerHookContext(hookCommand);
 	registerHookDispatch(hookCommand);
 	registerHookExplain(hookCommand);

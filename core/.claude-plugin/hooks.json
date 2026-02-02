@@ -68,6 +68,16 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook auto-detect",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
         "hooks": [
           {
             "type": "command",
