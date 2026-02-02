@@ -276,7 +276,7 @@ export function getAllRunbookSlugs(
  */
 export function formatPhaseName(
 	category: string,
-	paperSlug = "ai-dlc-2026",
+	paperSlug?: string,
 ): string {
 	// Try to get from config first
 	const config = loadRunbooksConfig(paperSlug);
@@ -301,7 +301,7 @@ export function formatPhaseName(
  */
 export function getPhaseIcon(
 	category: string,
-	paperSlug = "ai-dlc-2026",
+	paperSlug?: string,
 ): string {
 	// Try to get from config first
 	const config = loadRunbooksConfig(paperSlug);

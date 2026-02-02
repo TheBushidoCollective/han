@@ -274,13 +274,7 @@ export default function Header() {
 						>
 							Blog
 						</Link>
-						<Link
-							href="/papers/ai-dlc-2026"
-							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
-						>
-							AI-DLC 2026
-						</Link>
-						<Link
+							<Link
 							href="/docs"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>
@@ -424,13 +418,6 @@ export default function Header() {
 								onClick={() => setMobileMenuOpen(false)}
 							>
 								Blog
-							</Link>
-							<Link
-								href="/papers/ai-dlc-2026"
-								className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition py-2"
-								onClick={() => setMobileMenuOpen(false)}
-							>
-								AI-DLC 2026
 							</Link>
 							<Link
 								href="/docs"

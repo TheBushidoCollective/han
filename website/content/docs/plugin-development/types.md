@@ -55,7 +55,7 @@ han/
 │   ├── backend/
 │   └── security/
 ├── patterns/                # Methodologies
-│   ├── ai-dlc/
+│   ├── ai-dlc/             # External: github:thebushidocollective/ai-dlc
 │   ├── tdd/
 │   └── atomic-design/
 └── specialized/             # Niche tools
