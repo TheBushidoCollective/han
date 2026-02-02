@@ -32,7 +32,7 @@ Han plugins are organized into nine categories based on their technical layer:
 | **Tool** | `tools/` | Build tools, testing | playwright, jest, docker |
 | **Integration** | `services/` | MCP servers for external services | github, gitlab, linear |
 | **Discipline** | `disciplines/` | Specialized AI agents | frontend, backend, security |
-| **Pattern** | `patterns/` | Methodologies, workflows | ai-dlc, tdd, atomic-design |
+| **Pattern** | `patterns/` | Methodologies, workflows | [ai-dlc](https://ai-dlc.dev), tdd, atomic-design |
 | **Specialized** | `specialized/` | Niche tools | android, ios, tensorflow |
 
 ## Plugin Structure

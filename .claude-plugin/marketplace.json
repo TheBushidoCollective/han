@@ -69,8 +69,8 @@
     },
     {
       "name": "ai-dlc",
-      "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation.",
-      "source": "./patterns/ai-dlc",
+      "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation. See https://ai-dlc.dev for full documentation.",
+      "source": "github:thebushidocollective/ai-dlc",
       "category": "Pattern",
       "keywords": [
         "ai-dlc",
@@ -1605,8 +1605,8 @@
     },
     {
       "name": "jutsu-ai-dlc",
-      "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation.",
-      "source": "./patterns/ai-dlc",
+      "description": "AI-DLC 2026 methodology - iterative AI-driven development with hat-based workflows, completion criteria, and context preservation. See https://ai-dlc.dev for full documentation.",
+      "source": "github:thebushidocollective/ai-dlc",
       "category": "Pattern",
       "keywords": [
         "ai-dlc",
