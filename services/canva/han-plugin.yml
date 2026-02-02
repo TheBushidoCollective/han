@@ -1,8 +1,0 @@
-# Canva MCP Server Integration
-# Official Canva MCP server for design automation
-
-mcp:
-  name: canva
-  description: Create, search, and export Canva designs (templates, autofill, export as PDF/images)
-  type: http
-  url: https://mcp.canva.com/mcp
