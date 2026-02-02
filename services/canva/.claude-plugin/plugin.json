@@ -1,18 +1,19 @@
 {
-	"name": "canva",
-	"description": "Canva design platform integration for creating, editing, and exporting designs",
-	"version": "1.0.0",
-	"author": {
-		"name": "The Bushido Collective",
-		"url": "https://thebushido.co"
-	},
-	"icon": "🎨",
-	"license": "Apache-2.0",
-	"keywords": ["canva", "design", "graphics", "templates", "images", "pdf", "export"],
-	"mcpServers": {
-		"canva": {
-			"type": "http",
-			"url": "https://mcp.canva.com/mcp"
-		}
-	}
+  "name": "canva",
+  "version": "1.0.0",
+  "description": "Canva design platform integration for creating, editing, and exporting designs via Canva's hosted MCP server",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["canva", "design", "graphics", "templates", "images", "pdf", "export"],
+  "mcpServers": {
+    "canva": {
+      "type": "http",
+      "url": "https://mcp.canva.com/mcp"
+    }
+  }
 }
