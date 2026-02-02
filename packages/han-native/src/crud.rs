@@ -3826,6 +3826,7 @@ mod tests {
         conn.execute_batch("PRAGMA journal_mode=WAL;").unwrap();
         conn.execute_batch("PRAGMA synchronous=NORMAL;").unwrap();
         conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
+        conn.execute_batch("PRAGMA busy_timeout=5000;").unwrap();
         conn.execute_batch(include_str!("schema.sql")).unwrap();
 
         (temp_dir, conn)

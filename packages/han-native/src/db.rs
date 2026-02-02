@@ -78,6 +78,7 @@ fn open_database(path: &str) -> Result<Mutex<Connection>, rusqlite::Error> {
     conn.execute_batch("PRAGMA synchronous=NORMAL;")?;
     conn.execute_batch("PRAGMA cache_size=-64000;")?; // 64MB cache
     conn.execute_batch("PRAGMA foreign_keys=ON;")?;
+    conn.execute_batch("PRAGMA busy_timeout=5000;")?; // Wait up to 5s for locks
 
     // Run migrations FIRST for existing databases
     // This ensures columns exist before schema.sql tries to create indexes on them
@@ -733,6 +734,7 @@ mod tests {
         conn.execute_batch("PRAGMA synchronous=NORMAL;")?;
         conn.execute_batch("PRAGMA cache_size=-64000;")?;
         conn.execute_batch("PRAGMA foreign_keys=ON;")?;
+        conn.execute_batch("PRAGMA busy_timeout=5000;")?;
         run_migrations(&conn)?;
         conn.execute_batch(include_str!("schema.sql"))?;
         Ok(conn)
