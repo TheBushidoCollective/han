@@ -1,9 +1,13 @@
-# hashi-notion plugin configuration
+# notion plugin configuration
 # This plugin provides Notion integration via Notion's hosted MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://(?:www\\.)?notion\\.so/[^\\s]+"
 
 # Memory provider for team memory extraction
 memory:

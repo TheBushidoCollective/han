@@ -1,9 +1,14 @@
-# hashi-gitlab plugin configuration
+# gitlab plugin configuration
 # This plugin provides GitLab integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://gitlab\\.com/[^\\s]+"
+  - "https?://[^\\s]*gitlab[^\\s]*/[^\\s]+"
 
 # Memory provider for team memory extraction from GitLab
 # Convention: provider name = plugin name, script = memory-provider.ts

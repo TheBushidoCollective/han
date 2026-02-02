@@ -67,60 +67,12 @@ interface UserPromptSubmitPayload {
 const FILE_MODIFYING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 
 /**
- * Service URL patterns for learn wildcards.
- * These regex patterns match URLs or identifiers in user prompts
- * and map to the corresponding plugin to install.
- *
- * Format: { pattern: RegExp, plugin: string, description: string }
+ * Compiled learn pattern with plugin reference
  */
-const SERVICE_LEARN_PATTERNS: Array<{
-	pattern: RegExp;
-	plugin: string;
-	description: string;
-}> = [
-	// Jira - URLs and issue keys (e.g., PROJ-123)
-	{
-		pattern: /https?:\/\/[^\s]*\.atlassian\.net\/|https?:\/\/jira\.[^\s]+|[A-Z]{2,10}-\d+/i,
-		plugin: "jira",
-		description: "Jira issue tracking",
-	},
-	// ClickUp - URLs
-	{
-		pattern: /https?:\/\/app\.clickup\.com\/[^\s]+/i,
-		plugin: "clickup",
-		description: "ClickUp project management",
-	},
-	// Linear - URLs and issue keys (e.g., ENG-123)
-	{
-		pattern: /https?:\/\/linear\.app\/[^\s]+/i,
-		plugin: "linear",
-		description: "Linear issue tracking",
-	},
-	// Notion - URLs
-	{
-		pattern: /https?:\/\/(?:www\.)?notion\.so\/[^\s]+/i,
-		plugin: "notion",
-		description: "Notion workspace",
-	},
-	// Figma - URLs
-	{
-		pattern: /https?:\/\/(?:www\.)?figma\.com\/[^\s]+/i,
-		plugin: "figma",
-		description: "Figma design",
-	},
-	// Sentry - URLs and DSN
-	{
-		pattern: /https?:\/\/[^\s]*\.sentry\.io\/[^\s]+|https?:\/\/[^\s]*@[^\s]*\.ingest\.sentry\.io/i,
-		plugin: "sentry",
-		description: "Sentry error tracking",
-	},
-	// Playwright - mentions of playwright test URLs or config
-	{
-		pattern: /playwright\s+test|@playwright\/test|playwright\.config/i,
-		plugin: "playwright",
-		description: "Playwright testing",
-	},
-];
+interface CompiledLearnPattern {
+	regex: RegExp;
+	plugin: PluginWithDetection;
+}
 
 /**
  * VCS host to plugin mapping
@@ -565,32 +517,63 @@ export async function autoDetect(): Promise<void> {
 }
 
 /**
+ * Compile learn patterns from plugins into regex objects
+ */
+function compileLearnPatterns(
+	plugins: PluginWithDetection[],
+): CompiledLearnPattern[] {
+	const compiled: CompiledLearnPattern[] = [];
+
+	for (const plugin of plugins) {
+		const patterns = plugin.detection?.learnPatterns;
+		if (!patterns || patterns.length === 0) {
+			continue;
+		}
+
+		for (const patternStr of patterns) {
+			try {
+				// Compile the regex pattern (case insensitive)
+				const regex = new RegExp(patternStr, "i");
+				compiled.push({ regex, plugin });
+			} catch (error) {
+				if (isDebugMode()) {
+					console.error(
+						`${colors.dim}[auto-detect-prompt]${colors.reset} Invalid regex in ${plugin.name}: ${patternStr}`,
+					);
+				}
+			}
+		}
+	}
+
+	return compiled;
+}
+
+/**
  * Detect plugins from user prompt based on learn wildcards (URL patterns)
  */
 function detectPluginsFromPrompt(
 	prompt: string,
+	compiledPatterns: CompiledLearnPattern[],
 	installedPlugins: Set<string>,
-): Array<{ plugin: string; description: string; matchedPattern: string }> {
+): Array<{ plugin: PluginWithDetection; matchedPattern: string }> {
 	const matches: Array<{
-		plugin: string;
-		description: string;
+		plugin: PluginWithDetection;
 		matchedPattern: string;
 	}> = [];
 
-	for (const { pattern, plugin, description } of SERVICE_LEARN_PATTERNS) {
+	for (const { regex, plugin } of compiledPatterns) {
 		// Skip already installed plugins
-		if (installedPlugins.has(plugin)) {
+		if (installedPlugins.has(plugin.name)) {
 			continue;
 		}
 
 		// Check if pattern matches the prompt
-		const match = prompt.match(pattern);
+		const match = prompt.match(regex);
 		if (match) {
 			// Avoid duplicate matches for the same plugin
-			if (!matches.some((m) => m.plugin === plugin)) {
+			if (!matches.some((m) => m.plugin.name === plugin.name)) {
 				matches.push({
 					plugin,
-					description,
 					matchedPattern: match[0],
 				});
 			}
@@ -652,6 +635,35 @@ export async function autoDetectPrompt(): Promise<void> {
 		);
 	}
 
+	// Get marketplace plugins with detection criteria
+	let marketplacePlugins;
+	try {
+		const result = await getMarketplacePlugins(false);
+		marketplacePlugins = result.plugins;
+	} catch (error) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} Failed to get marketplace: ${error}`,
+			);
+		}
+		return;
+	}
+
+	// Load detection criteria from cached han-plugin.yml files
+	const pluginsWithDetection = loadPluginDetection(marketplacePlugins);
+
+	// Compile learn patterns from all plugins
+	const compiledPatterns = compileLearnPatterns(pluginsWithDetection);
+
+	if (compiledPatterns.length === 0) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} No plugins with learn patterns found`,
+			);
+		}
+		return;
+	}
+
 	// Get currently installed plugins (from all scopes)
 	const userPlugins = getInstalledPlugins("user");
 	const projectPlugins = getInstalledPlugins("project");
@@ -663,7 +675,11 @@ export async function autoDetectPrompt(): Promise<void> {
 	]);
 
 	// Detect plugins from prompt patterns
-	const matches = detectPluginsFromPrompt(prompt, installedPlugins);
+	const matches = detectPluginsFromPrompt(
+		prompt,
+		compiledPatterns,
+		installedPlugins,
+	);
 
 	if (matches.length === 0) {
 		if (isDebugMode()) {
@@ -676,7 +692,7 @@ export async function autoDetectPrompt(): Promise<void> {
 
 	// Filter out plugins we've already suggested this session
 	const newMatches = matches.filter(
-		(m) => !suggestedPluginsThisSession.has(m.plugin),
+		(m) => !suggestedPluginsThisSession.has(m.plugin.name),
 	);
 
 	if (newMatches.length === 0) {
@@ -692,13 +708,13 @@ export async function autoDetectPrompt(): Promise<void> {
 	if (learnMode === "ask") {
 		// In "ask" mode, just suggest the plugins without installing
 		const suggested: string[] = [];
-		for (const { plugin, description, matchedPattern } of newMatches) {
-			suggestedPluginsThisSession.add(plugin);
-			suggested.push(plugin);
+		for (const { plugin, matchedPattern } of newMatches) {
+			suggestedPluginsThisSession.add(plugin.name);
+			suggested.push(plugin.name);
 
 			if (isDebugMode()) {
 				console.error(
-					`${colors.dim}[auto-detect-prompt]${colors.reset} Suggesting: ${colors.magenta}${plugin}${colors.reset} (matched: "${matchedPattern}") - ${description}`,
+					`${colors.dim}[auto-detect-prompt]${colors.reset} Suggesting: ${colors.magenta}${plugin.name}${colors.reset} (matched: "${matchedPattern}") - ${plugin.description || ""}`,
 				);
 			}
 		}
@@ -720,17 +736,17 @@ export async function autoDetectPrompt(): Promise<void> {
 	} else {
 		// In "auto" mode, install the matched plugins
 		const installed: string[] = [];
-		for (const { plugin, description, matchedPattern } of newMatches) {
-			suggestedPluginsThisSession.add(plugin);
+		for (const { plugin, matchedPattern } of newMatches) {
+			suggestedPluginsThisSession.add(plugin.name);
 
 			if (isDebugMode()) {
 				console.error(
-					`${colors.dim}[auto-detect-prompt]${colors.reset} Installing: ${colors.magenta}${plugin}${colors.reset} (matched: "${matchedPattern}") - ${description}`,
+					`${colors.dim}[auto-detect-prompt]${colors.reset} Installing: ${colors.magenta}${plugin.name}${colors.reset} (matched: "${matchedPattern}") - ${plugin.description || ""}`,
 				);
 			}
 
-			if (installPlugin(plugin)) {
-				installed.push(plugin);
+			if (installPlugin(plugin.name)) {
+				installed.push(plugin.name);
 			}
 		}
 

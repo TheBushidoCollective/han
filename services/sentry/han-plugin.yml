@@ -1,9 +1,15 @@
-# hashi-sentry plugin configuration
+# sentry plugin configuration
 # This plugin provides Sentry integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+# Matches Sentry URLs and DSN patterns
+learn_patterns:
+  - "https?://[^\\s]*\\.sentry\\.io/[^\\s]+"
+  - "https?://[^\\s]*@[^\\s]*\\.ingest\\.sentry\\.io"
 
 # Memory provider for team memory extraction from Sentry
 # Convention: provider name = plugin name, script = memory-provider.ts

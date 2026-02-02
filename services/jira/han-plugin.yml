@@ -1,9 +1,16 @@
-# hashi-jira plugin configuration
+# jira plugin configuration
 # This plugin provides Jira integration via Atlassian MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+# These patterns detect Jira URLs and issue keys (e.g., PROJ-123, ABC-1)
+learn_patterns:
+  - "https?://[^\\s]*\\.atlassian\\.net"
+  - "https?://jira\\.[^\\s]+"
+  - "[A-Z]{2,10}-\\d+"
 
 # Memory provider for team memory extraction from Jira
 # Convention: provider name = plugin name, script = memory-provider.ts

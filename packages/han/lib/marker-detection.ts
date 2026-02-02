@@ -22,6 +22,7 @@ interface YamlPluginHook {
 
 interface YamlPluginConfig {
 	hooks?: Record<string, YamlPluginHook>;
+	learn_patterns?: string[];
 }
 
 /**
@@ -80,41 +81,62 @@ function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 }
 
 /**
+ * Detection patterns extracted from a plugin config file
+ */
+interface DetectionPatterns {
+	dirsWith: string[];
+	dirTest: string[];
+	learnPatterns: string[];
+}
+
+/**
  * Extract detection patterns from a plugin config file (YAML)
  */
-function extractDetectionPatterns(
-	configPath: string,
-): { dirsWith: string[]; dirTest: string[] } | null {
+function extractDetectionPatterns(configPath: string): DetectionPatterns | null {
 	try {
 		const content = readFileSync(configPath, "utf-8");
 
 		// Collect unique dirsWith patterns from all hooks
 		const dirsWithSet = new Set<string>();
 		const dirTestSet = new Set<string>();
+		const learnPatternsSet = new Set<string>();
 
 		const config = YAML.parse(content) as YamlPluginConfig;
-		if (!config.hooks) {
-			return null;
-		}
 
-		for (const hook of Object.values(config.hooks)) {
-			if (hook.dirs_with) {
-				for (const pattern of hook.dirs_with) {
-					dirsWithSet.add(pattern);
+		// Extract hook-based patterns
+		if (config.hooks) {
+			for (const hook of Object.values(config.hooks)) {
+				if (hook.dirs_with) {
+					for (const pattern of hook.dirs_with) {
+						dirsWithSet.add(pattern);
+					}
+				}
+				if (hook.dir_test) {
+					dirTestSet.add(hook.dir_test);
 				}
 			}
-			if (hook.dir_test) {
-				dirTestSet.add(hook.dir_test);
+		}
+
+		// Extract learn patterns (for prompt-based detection)
+		if (config.learn_patterns) {
+			for (const pattern of config.learn_patterns) {
+				learnPatternsSet.add(pattern);
 			}
 		}
 
-		if (dirsWithSet.size === 0 && dirTestSet.size === 0) {
+		// Return null only if no patterns found at all
+		if (
+			dirsWithSet.size === 0 &&
+			dirTestSet.size === 0 &&
+			learnPatternsSet.size === 0
+		) {
 			return null;
 		}
 
 		return {
 			dirsWith: Array.from(dirsWithSet),
 			dirTest: Array.from(dirTestSet),
+			learnPatterns: Array.from(learnPatternsSet),
 		};
 	} catch {
 		return null;
@@ -157,6 +179,7 @@ export interface PluginWithDetection extends MarketplacePlugin {
 	detection?: {
 		dirsWith?: string[];
 		dirTest?: string[];
+		learnPatterns?: string[];
 	};
 }
 

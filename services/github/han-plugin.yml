@@ -1,9 +1,14 @@
-# hashi-github plugin configuration
+# github plugin configuration
 # This plugin provides GitHub integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://github\\.com/[^\\s]+"
+  - "https?://[^\\s]*\\.github\\.com/[^\\s]+"
 
 # Memory provider - uses main agent's GitHub MCP server (already OAuth authenticated)
 memory:

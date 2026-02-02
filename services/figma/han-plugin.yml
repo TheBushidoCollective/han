@@ -1,9 +1,13 @@
-# hashi-figma plugin configuration
+# figma plugin configuration
 # This plugin provides Figma integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://(?:www\\.)?figma\\.com/[^\\s]+"
 
 # Memory provider for team memory extraction from Figma
 # Convention: provider name = plugin name, script = memory-provider.ts

@@ -1,9 +1,13 @@
-# hashi-linear plugin configuration
+# linear plugin configuration
 # This plugin provides Linear integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://linear\\.app/[^\\s]+"
 
 # Memory provider for team memory extraction from Linear
 # Convention: provider name = plugin name, script = memory-provider.ts
