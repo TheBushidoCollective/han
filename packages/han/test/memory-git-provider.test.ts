@@ -23,6 +23,8 @@ function setupTestRepo(): void {
 	execSync("git init", { cwd: testRepoDir });
 	execSync('git config user.email "test@example.com"', { cwd: testRepoDir });
 	execSync('git config user.name "Test User"', { cwd: testRepoDir });
+	// Disable commit signing for test repo (CI/environment may have signing configured)
+	execSync("git config commit.gpgsign false", { cwd: testRepoDir });
 
 	// Create initial commit
 	writeFileSync(join(testRepoDir, "README.md"), "# Test Repository\n");
