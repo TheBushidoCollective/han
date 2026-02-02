@@ -39,8 +39,31 @@ jobs:
       - name: Validate all plugins and marketplaces
         run: |
           # Find all plugin.json and marketplace.json files and validate their parent directories
-          find . \( -path '*/.claude-plugin/plugin.json' -o -path '*/.claude-plugin/marketplace.json' \) -not -path './node_modules/*' | while read -r manifest; do
+          failed=0
+          failed_dirs=""
+
+          while IFS= read -r manifest; do
             dir=$(dirname "$(dirname "$manifest")")
-            echo "Validating: $dir"
-            claude plugin validate "$dir"
-          done
+            echo "::group::Validating: $dir"
+
+            # Run validation with timeout to prevent hangs
+            if timeout 60 claude plugin validate "$dir"; then
+              echo "✓ $dir passed"
+            else
+              exit_code=$?
+              echo "✗ $dir failed (exit code: $exit_code)"
+              failed=$((failed + 1))
+              failed_dirs="$failed_dirs\n  - $dir"
+            fi
+
+            echo "::endgroup::"
+          done < <(find . \( -path '*/.claude-plugin/plugin.json' -o -path '*/.claude-plugin/marketplace.json' \) -not -path './node_modules/*' -not -path './website/*')
+
+          if [ $failed -gt 0 ]; then
+            echo ""
+            echo "::error::$failed plugin(s) failed validation:$failed_dirs"
+            exit 1
+          fi
+
+          echo ""
+          echo "All plugins validated successfully!"
