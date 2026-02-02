@@ -220,8 +220,17 @@ export function getAllPluginsAcrossCategories(): Array<
 		);
 
 		const plugins: Array<PluginMetadata & { source: string }> = [];
+		// Track seen sources to deduplicate old prefixed entries (e.g., jutsu-typescript)
+		// from new non-prefixed entries (e.g., typescript) that point to the same source
+		const seenSources = new Set<string>();
 
 		for (const plugin of marketplaceData.plugins) {
+			// Skip if we've already seen this source (keeps first occurrence)
+			if (seenSources.has(plugin.source)) {
+				continue;
+			}
+			seenSources.add(plugin.source);
+
 			const pluginCategory = getCategoryFromMarketplace(plugin.category);
 			const pluginName = plugin.source.split("/").pop() || plugin.name;
 			const pluginPath = path.join(
@@ -259,11 +268,19 @@ export function getAllPlugins(category: PluginCategory): PluginMetadata[] {
 		);
 
 		const plugins: PluginMetadata[] = [];
+		// Track seen sources to deduplicate old prefixed entries from new entries
+		const seenSources = new Set<string>();
 
 		for (const plugin of marketplaceData.plugins) {
 			const pluginCategory = getCategoryFromMarketplace(plugin.category);
 
 			if (pluginCategory === category) {
+				// Skip if we've already seen this source (keeps first occurrence)
+				if (seenSources.has(plugin.source)) {
+					continue;
+				}
+				seenSources.add(plugin.source);
+
 				const pluginName = plugin.source.split("/").pop() || plugin.name;
 				const pluginPath = path.join(
 					PLUGINS_DIR,
