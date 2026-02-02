@@ -1,36 +1,8 @@
 # Canva MCP Server Integration
 # Official Canva MCP server for design automation
 
-mcp_servers:
-  canva:
-    name: canva
-    # HTTP transport with OAuth (handled by Claude Code)
-    type: http
-    url: https://mcp.canva.com/mcp
-    description: |
-      Create, search, and export Canva designs. Supports:
-      - Creating new designs from templates
-      - Auto-filling templates with content
-      - Searching existing designs
-      - Exporting designs as PDF or images
-    capabilities:
-      - category: Design Creation
-        summary: Create new designs from templates or scratch
-        examples:
-          - "Create a social media post for announcing our new product"
-          - "Make an Instagram story with this text"
-      - category: Template Autofill
-        summary: Auto-fill Canva templates with your content
-        examples:
-          - "Fill this template with our company branding"
-          - "Update the text in my presentation template"
-      - category: Design Search
-        summary: Search your existing Canva designs
-        examples:
-          - "Find my recent social media designs"
-          - "Search for designs with our logo"
-      - category: Export
-        summary: Export designs as PDF or images
-        examples:
-          - "Export this design as a PNG"
-          - "Download this presentation as a PDF"
+mcp:
+  name: canva
+  description: Create, search, and export Canva designs (templates, autofill, export as PDF/images)
+  type: http
+  url: https://mcp.canva.com/mcp
