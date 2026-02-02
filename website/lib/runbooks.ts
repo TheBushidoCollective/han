@@ -279,7 +279,7 @@ export function formatPhaseName(
 	paperSlug?: string,
 ): string {
 	// Try to get from config first
-	const config = loadRunbooksConfig(paperSlug);
+	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
 		const group = config.groups.find((g) => g.id === category);
 		if (group) {
@@ -304,7 +304,7 @@ export function getPhaseIcon(
 	paperSlug?: string,
 ): string {
 	// Try to get from config first
-	const config = loadRunbooksConfig(paperSlug);
+	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
 		const group = config.groups.find((g) => g.id === category);
 		if (group) {

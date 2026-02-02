@@ -176,6 +176,13 @@ function stripPrefix(name: string, category: string): string {
 	return name;
 }
 
+/**
+ * Check if a plugin source is external (hosted on GitHub, not local)
+ */
+function isExternalSource(source: string): boolean {
+	return source.startsWith("github:");
+}
+
 function getPluginMetadata(
 	pluginPath: string,
 	pluginName: string,
@@ -216,6 +223,26 @@ function getPluginMetadata(
 	}
 }
 
+/**
+ * Get plugin metadata from marketplace.json entry directly (for external plugins)
+ */
+function getPluginMetadataFromMarketplace(
+	plugin: { name: string; description?: string; source: string },
+	category: PluginCategory,
+): PluginMetadata {
+	const pluginName = plugin.source.split("/").pop() || plugin.name;
+	const strippedName = stripPrefix(pluginName, category);
+	const displayTitle = titleize(strippedName);
+
+	return {
+		name: pluginName,
+		title: displayTitle,
+		description: plugin.description || "",
+		icon: getCategoryIcon(category),
+		category,
+	};
+}
+
 // Get all plugins across all categories from marketplace.json
 export function getAllPluginsAcrossCategories(): Array<
 	PluginMetadata & { source: string }
@@ -244,15 +271,20 @@ export function getAllPluginsAcrossCategories(): Array<
 
 			const pluginCategory = getCategoryFromMarketplace(plugin.category);
 			const pluginName = plugin.source.split("/").pop() || plugin.name;
-			const pluginPath = path.join(
-				PLUGINS_DIR,
-				plugin.source.replace("./", ""),
-			);
-			const metadata = getPluginMetadata(
-				pluginPath,
-				pluginName,
-				pluginCategory,
-			);
+
+			// For external plugins (github:owner/repo), use marketplace metadata directly
+			// since we can't read from local filesystem
+			let metadata: PluginMetadata;
+			if (isExternalSource(plugin.source)) {
+				metadata = getPluginMetadataFromMarketplace(plugin, pluginCategory);
+			} else {
+				const pluginPath = path.join(
+					PLUGINS_DIR,
+					plugin.source.replace("./", ""),
+				);
+				metadata = getPluginMetadata(pluginPath, pluginName, pluginCategory);
+			}
+
 			plugins.push({
 				...metadata,
 				source: plugin.source,
@@ -293,11 +325,17 @@ export function getAllPlugins(category: PluginCategory): PluginMetadata[] {
 				seenSources.add(plugin.source);
 
 				const pluginName = plugin.source.split("/").pop() || plugin.name;
-				const pluginPath = path.join(
-					PLUGINS_DIR,
-					plugin.source.replace("./", ""),
-				);
-				plugins.push(getPluginMetadata(pluginPath, pluginName, category));
+
+				// For external plugins (github:owner/repo), use marketplace metadata directly
+				if (isExternalSource(plugin.source)) {
+					plugins.push(getPluginMetadataFromMarketplace(plugin, category));
+				} else {
+					const pluginPath = path.join(
+						PLUGINS_DIR,
+						plugin.source.replace("./", ""),
+					);
+					plugins.push(getPluginMetadata(pluginPath, pluginName, category));
+				}
 			}
 		}
 
@@ -917,8 +955,30 @@ export function getPluginContent(
 			return null;
 		}
 
-		const pluginPath = path.join(PLUGINS_DIR, plugin.source.replace("./", ""));
 		const pluginName = plugin.source.split("/").pop() || slug;
+
+		// External plugins (github:owner/repo) can't be read from local filesystem
+		// Return minimal metadata with a link to the external source
+		if (isExternalSource(plugin.source)) {
+			const metadata = getPluginMetadataFromMarketplace(plugin, category);
+			// Extract GitHub URL from source (e.g., "github:owner/repo" -> "https://github.com/owner/repo")
+			const githubPath = plugin.source.replace("github:", "");
+			const externalReadme = `This plugin is hosted externally.\n\nView the full documentation at: https://github.com/${githubPath}`;
+
+			return {
+				metadata,
+				source: plugin.source,
+				readme: externalReadme,
+				agents: [],
+				skills: [],
+				hooks: [],
+				commands: [],
+				mcpServers: [],
+				lspServers: [],
+			};
+		}
+
+		const pluginPath = path.join(PLUGINS_DIR, plugin.source.replace("./", ""));
 
 		const metadata = getPluginMetadata(pluginPath, pluginName, category);
 		const readme = getPluginReadme(pluginPath);

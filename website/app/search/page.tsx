@@ -13,37 +13,71 @@ export default function SearchPage() {
 	const plugins = getAllPluginsAcrossCategories();
 
 	// Build search index
-	const searchIndex = plugins.map((plugin) => {
-		const fs = require("node:fs");
-		const path = require("node:path");
+	const fs = require("node:fs");
+	const path = require("node:path");
 
-		const pluginJson = JSON.parse(
-			fs.readFileSync(
-				path.join(
+	// Helper to check if source is external (github:owner/repo)
+	const isExternalSource = (source: string) => source.startsWith("github:");
+
+	// Helper to get keywords for a plugin
+	const getPluginKeywords = (source: string): string[] => {
+		// For external plugins, read keywords from marketplace.json
+		if (isExternalSource(source)) {
+			try {
+				const marketplacePath = path.join(
 					process.cwd(),
 					"..",
-					plugin.source,
-					".claude-plugin/plugin.json",
+					".claude-plugin",
+					"marketplace.json",
+				);
+				const marketplaceData = JSON.parse(
+					fs.readFileSync(marketplacePath, "utf-8"),
+				);
+				const marketPlugin = marketplaceData.plugins.find(
+					(p: { source: string }) => p.source === source,
+				);
+				return marketPlugin?.keywords || [];
+			} catch {
+				return [];
+			}
+		}
+
+		// For local plugins, read from plugin.json
+		try {
+			const pluginJson = JSON.parse(
+				fs.readFileSync(
+					path.join(process.cwd(), "..", source, ".claude-plugin/plugin.json"),
+					"utf-8",
 				),
-				"utf-8",
-			),
-		);
+			);
+			return pluginJson.keywords || [];
+		} catch {
+			return [];
+		}
+	};
+
+	const searchIndex = plugins.map((plugin) => {
+		const tags = getPluginKeywords(plugin.source);
 
 		// Detect components by checking plugin structure
+		// For external plugins, we can't detect components
 		const components: string[] = [];
-		const pluginPath = path.join(process.cwd(), "..", plugin.source);
 
-		if (fs.existsSync(path.join(pluginPath, "skills"))) {
-			components.push("skill");
-		}
-		if (fs.existsSync(path.join(pluginPath, "agents"))) {
-			components.push("agent");
-		}
-		if (fs.existsSync(path.join(pluginPath, "commands"))) {
-			components.push("command");
-		}
-		if (fs.existsSync(path.join(pluginPath, "hooks"))) {
-			components.push("hook");
+		if (!isExternalSource(plugin.source)) {
+			const pluginPath = path.join(process.cwd(), "..", plugin.source);
+
+			if (fs.existsSync(path.join(pluginPath, "skills"))) {
+				components.push("skill");
+			}
+			if (fs.existsSync(path.join(pluginPath, "agents"))) {
+				components.push("agent");
+			}
+			if (fs.existsSync(path.join(pluginPath, "commands"))) {
+				components.push("command");
+			}
+			if (fs.existsSync(path.join(pluginPath, "hooks"))) {
+				components.push("hook");
+			}
 		}
 
 		return {
@@ -51,7 +85,7 @@ export default function SearchPage() {
 			name: plugin.name,
 			description: plugin.description,
 			category: plugin.category,
-			tags: pluginJson.keywords || [],
+			tags,
 			path: `/plugins/${plugin.category}/${plugin.name}`,
 			components,
 		};
