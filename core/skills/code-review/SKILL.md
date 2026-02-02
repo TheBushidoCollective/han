@@ -1,5 +1,12 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*)
+allowed-tools:
+  - "Bash(gh issue view:*)"
+  - "Bash(gh search:*)"
+  - "Bash(gh issue list:*)"
+  - "Bash(gh pr comment:*)"
+  - "Bash(gh pr diff:*)"
+  - "Bash(gh pr view:*)"
+  - "Bash(gh pr list:*)"
 description: Code review a pull request
 disable-model-invocation: false
 ---

@@ -1,7 +1,13 @@
 ---
 name: monorepo-workflows
 description: Use when setting up CI/CD, implementing versioning, optimizing workflows, or managing releases with monorepo development workflows including version management, publishing, and team collaboration practices.
-allowed-tools: Read,Write,Edit,Bash,Glob,Grep
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 ---
 
 # Monorepo Workflows Skill
