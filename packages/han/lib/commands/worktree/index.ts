@@ -16,7 +16,7 @@ import {
 	gitCreateBranch,
 	gitWorktreeAdd,
 	gitWorktreeRemove,
-} from "../../../../han-native";
+} from "../../native.ts";
 import { registerListCommand } from "./list.ts";
 import { registerPruneCommand } from "./prune.ts";
 import {

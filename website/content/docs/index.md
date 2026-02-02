@@ -9,7 +9,7 @@ Welcome to the Han documentation. Han brings automatic quality gates to Claude C
 
 - [What is Han?](/docs/getting-started) - Learn how Han works and what makes it unique
 - [Installation](/docs/installation) - Get started with Han in minutes
-- [Plugin Categories](/docs/plugin-categories) - Explore the four types of Han plugins
+- [Plugin Categories](/docs/plugin-categories) - Explore the nine categories of Han plugins
 - [Configuration](/docs/configuration) - Customize Han for your workflow
 - [Plugin Development](/docs/plugin-development) - Create your own Han plugins
 - [CLI Reference](/docs/cli) - Complete command-line interface guide
@@ -26,12 +26,17 @@ Han is more than just a collection of prompts or skills. It's a complete plugin 
 
 ## Plugin Marketplace
 
-Browse over 139 plugins across four categories at [han.guru/plugins](https://han.guru/plugins/):
+Browse over 139 plugins across nine categories at [han.guru/plugins](https://han.guru/plugins/):
 
 - **Core** - Essential infrastructure (always required)
-- **Jutsu** - Technology-specific validation hooks
-- **Do** - Specialized AI agents for complex workflows
-- **Hashi** - MCP servers bridging to external services
+- **Language** - Programming language support (typescript, python, rust, go, java, ruby)
+- **Framework** - Framework integrations (react, nextjs, django, rails, phoenix, vue)
+- **Validation** - Linting, formatting, type checking (biome, eslint, prettier, rubocop, pylint)
+- **Tool** - Build tools, testing frameworks, dev tools (playwright, jest, webpack, docker-compose)
+- **Integration** - MCP servers for external services (github, jira, figma, sentry, linear)
+- **Discipline** - Specialized AI agents (frontend, backend, accessibility, security)
+- **Pattern** - Methodologies and workflows (ai-dlc, tdd, bdd, atomic-design, monorepo)
+- **Specialized** - Niche or platform-specific tools (android, ios, tensorflow, fnox)
 
 ## Get Help
 

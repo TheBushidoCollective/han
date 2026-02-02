@@ -2,15 +2,12 @@ name: Release Binaries
 # Workflow triggers - tag push or manual dispatch
 
 on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [manual-release]
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to release (e.g., v1.18.2)'
-        required: true
-        type: string
+      - "v*"
 
 permissions:
   contents: write
@@ -52,7 +49,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.event.client_payload.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -145,14 +142,10 @@ jobs:
           bun install
           mkdir -p native
           cp ../han-native/${{ matrix.native_file }} native/han-native.node
-
           echo "Prepared native module for embedding:"
           ls -la native/
-
-          # Build bun binary with embedded native module
           mkdir -p dist/binaries
           bun scripts/build-bundle.js ${{ matrix.bun_target }}
-
           echo "Built binary:"
           ls -la dist/binaries/
 
@@ -196,16 +189,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
+          tag_name: ${{ github.event.client_payload.tag || github.ref_name }}
           files: release/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(inputs.tag || github.ref, '-') }}
+          prerelease: ${{ contains(github.event.client_payload.tag || github.ref, '-') }}
 
   update-homebrew:
     needs: release
     runs-on: ubuntu-latest
-    if: ${{ !contains(inputs.tag || github.ref, '-') }}
+    if: ${{ !contains(github.event.client_payload.tag || github.ref, '-') }}
     steps:
       - name: Checkout homebrew-tap
         uses: actions/checkout@v4
@@ -214,63 +207,22 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
 
+      - name: Checkout han repo for scripts
+        uses: actions/checkout@v4
+        with:
+          path: han
+
       - name: Update formula
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.event.client_payload.tag || github.ref_name }}
         run: |
-          VERSION="${VERSION#v}"
-          REPO="TheBushidoCollective/han"
-          BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
-
-          DARWIN_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-arm64.sha256" | awk '{print $1}')
-          DARWIN_X64_SHA=$(curl -fsSL "${BASE_URL}/han-darwin-x64.sha256" | awk '{print $1}')
-          LINUX_ARM64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-arm64.sha256" | awk '{print $1}')
-          LINUX_X64_SHA=$(curl -fsSL "${BASE_URL}/han-linux-x64.sha256" | awk '{print $1}')
-
-          cat > homebrew-tap/Formula/han.rb << EOF
-          # typed: false
-          # frozen_string_literal: true
-
-          class Han < Formula
-            desc "Sophisticated Claude Code Plugins with Superior Accuracy"
-            homepage "https://han.guru"
-            version "${VERSION}"
-            license "MIT"
-
-            on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-arm64"
-                sha256 "${DARWIN_ARM64_SHA}"
-              else
-                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-darwin-x64"
-                sha256 "${DARWIN_X64_SHA}"
-              end
-            end
-
-            on_linux do
-              if Hardware::CPU.arm?
-                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-arm64"
-                sha256 "${LINUX_ARM64_SHA}"
-              else
-                url "https://github.com/TheBushidoCollective/han/releases/download/v${VERSION}/han-linux-x64"
-                sha256 "${LINUX_X64_SHA}"
-              end
-            end
-
-            def install
-              bin.install Dir["han-*"].first => "han"
-            end
-
-            test do
-              assert_match version.to_s, shell_output("#{bin}/han --version")
-            end
-          end
-          EOF
+          chmod +x han/.github/scripts/generate-homebrew-formula.sh
+          han/.github/scripts/generate-homebrew-formula.sh "${VERSION}" > homebrew-tap/Formula/han.rb
 
       - name: Commit and push
         working-directory: homebrew-tap
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ github.event.client_payload.tag || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -298,6 +250,9 @@ jobs:
           - artifact: han-windows-x64
             npm_platform: win32-x64
     steps:
+      - name: Checkout for scripts
+        uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -312,49 +267,11 @@ jobs:
 
       - name: Create npm package
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.event.client_payload.tag || github.ref_name }}
           PLATFORM: ${{ matrix.npm_platform }}
         run: |
-          VERSION="${VERSION#v}"
-          mkdir -p package
-
-          # Copy binary (handle .exe for Windows)
-          if [ -f "artifact/${{ matrix.artifact }}.exe" ]; then
-            cp "artifact/${{ matrix.artifact }}.exe" package/han.exe
-          else
-            cp "artifact/${{ matrix.artifact }}" package/han
-            chmod +x package/han
-          fi
-
-          # Copy native module if present (for environments that need it separately)
-          # The binary has it embedded, but some advanced use cases may need it
-
-          cat > package/package.json << EOF
-          {
-            "name": "@thebushidocollective/han-${PLATFORM}",
-            "version": "${VERSION}",
-            "description": "Han CLI binary for ${PLATFORM}",
-            "homepage": "https://han.guru",
-            "license": "MIT",
-            "repository": {
-              "type": "git",
-              "url": "https://github.com/TheBushidoCollective/han"
-            },
-            "os": ["${PLATFORM%-*}"],
-            "cpu": ["${PLATFORM#*-}"]
-          }
-          EOF
-
-          cat > package/README.md << EOF
-          # Han CLI - ${PLATFORM}
-
-          Platform-specific binary for [Han](https://han.guru), a Claude Code plugin marketplace.
-
-          This package is automatically installed as a fallback when GitHub releases are unavailable.
-          EOF
-
-          echo "Package contents:"
-          ls -la package/
+          chmod +x .github/scripts/create-npm-platform-package.sh
+          .github/scripts/create-npm-platform-package.sh "${VERSION}" "${PLATFORM}" "${{ matrix.artifact }}"
 
       - name: Publish to npm
         working-directory: package
@@ -369,6 +286,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Checkout for scripts
+        uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -377,147 +297,10 @@ jobs:
 
       - name: Create wrapper package
         env:
-          VERSION: ${{ inputs.tag || github.ref_name }}
+          VERSION: ${{ github.event.client_payload.tag || github.ref_name }}
         run: |
-          VERSION="${VERSION#v}"
-          mkdir -p package
-
-          # Create the wrapper bin script
-          cat > package/bin.js << 'BINEOF'
-#!/usr/bin/env node
-const { execFileSync } = require('child_process');
-const { existsSync } = require('fs');
-const { join } = require('path');
-
-const platform = process.platform;
-const arch = process.arch;
-
-// Map Node.js platform/arch to our package names
-const platformMap = {
-  'darwin-arm64': 'darwin-arm64',
-  'darwin-x64': 'darwin-x64',
-  'linux-arm64': 'linux-arm64',
-  'linux-x64': 'linux-x64',
-  'win32-x64': 'win32-x64',
-};
-
-const key = `${platform}-${arch}`;
-const pkgName = platformMap[key];
-
-if (!pkgName) {
-  console.error(`Unsupported platform: ${platform}-${arch}`);
-  process.exit(1);
-}
-
-// Try to find the binary in node_modules
-const binName = platform === 'win32' ? 'han.exe' : 'han';
-const paths = [
-  // Installed as dependency
-  join(__dirname, '..', '@thebushidocollective', `han-${pkgName}`, binName),
-  // npx cache location
-  join(__dirname, 'node_modules', '@thebushidocollective', `han-${pkgName}`, binName),
-];
-
-let binPath = paths.find(p => existsSync(p));
-
-if (!binPath) {
-  // Try to install the platform package on-demand
-  try {
-    const pkg = `@thebushidocollective/han-${pkgName}`;
-    console.error(`Installing ${pkg}...`);
-    execFileSync('npm', ['install', '--no-save', pkg], {
-      stdio: 'inherit',
-      cwd: __dirname
-    });
-    binPath = join(__dirname, 'node_modules', '@thebushidocollective', `han-${pkgName}`, binName);
-  } catch (e) {
-    console.error(`Failed to install platform package: ${e.message}`);
-    process.exit(1);
-  }
-}
-
-if (!existsSync(binPath)) {
-  console.error(`Binary not found at ${binPath}`);
-  process.exit(1);
-}
-
-// Execute the binary with all arguments
-try {
-  execFileSync(binPath, process.argv.slice(2), { stdio: 'inherit' });
-} catch (e) {
-  process.exit(e.status || 1);
-}
-BINEOF
-
-          chmod +x package/bin.js
-
-          cat > package/package.json << EOF
-{
-  "name": "@thebushidocollective/han",
-  "version": "${VERSION}",
-  "description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace",
-  "homepage": "https://han.guru",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/TheBushidoCollective/han"
-  },
-  "bin": {
-    "han": "bin.js"
-  },
-  "optionalDependencies": {
-    "@thebushidocollective/han-darwin-arm64": "${VERSION}",
-    "@thebushidocollective/han-darwin-x64": "${VERSION}",
-    "@thebushidocollective/han-linux-arm64": "${VERSION}",
-    "@thebushidocollective/han-linux-x64": "${VERSION}",
-    "@thebushidocollective/han-win32-x64": "${VERSION}"
-  },
-  "keywords": [
-    "claude",
-    "claude-code",
-    "plugins",
-    "mcp",
-    "han",
-    "bushido"
-  ]
-}
-EOF
-
-          cat > package/README.md << 'EOF'
-# Han CLI
-
-CLI for installing and managing curated Claude Code plugins from the [Han marketplace](https://han.guru).
-
-## Usage
-
-```bash
-# Run directly via npx
-npx @thebushidocollective/han plugin install --auto
-
-# Or install globally
-npm install -g @thebushidocollective/han
-han plugin list
-```
-
-## MCP Server Usage
-
-Configure in your Claude Code plugin:
-
-```json
-{
-  "mcpServers": {
-    "han": {
-      "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp"]
-    }
-  }
-}
-```
-EOF
-
-          echo "Wrapper package contents:"
-          ls -la package/
-          cat package/package.json
+          chmod +x .github/scripts/create-npm-wrapper-package.sh
+          .github/scripts/create-npm-wrapper-package.sh "${VERSION}"
 
       - name: Publish wrapper to npm
         working-directory: package

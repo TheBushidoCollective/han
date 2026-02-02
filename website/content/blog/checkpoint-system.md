@@ -9,7 +9,7 @@ category: "Technical Deep Dive"
 
 Early Han was aggressive. Maybe too aggressive.
 
-When you installed a jutsu plugin with validation hooks, Han went scorched earth. It found every lint error, every type issue, every test failure across your entire codebase. On the first session. Before you'd written a single line of code.
+When you installed a validation plugin with hooks, Han went scorched earth. It found every lint error, every type issue, every test failure across your entire codebase. On the first session. Before you'd written a single line of code.
 
 For maintainers of pristine codebases, this was fine. For everyone else - which is most of us - it was overwhelming. You'd install a plugin hoping for helpful validation, and immediately face hundreds of issues you didn't create and weren't ready to fix.
 

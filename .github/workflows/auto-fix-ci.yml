@@ -2,7 +2,12 @@ name: Auto Fix CI Failures
 
 on:
   workflow_run:
-    workflows: ["Auto Tag Release", "Publish to NPM", "Test Website", "Validate Han Website"]
+    workflows:
+      - "Auto Tag Release"
+      - "Publish to NPM"
+      - "Test Website"
+      - "Validate Han Website"
+      - "Claude Plugin Validate"
     types:
       - completed
 
@@ -13,11 +18,70 @@ permissions:
   issues: write
   id-token: write
 
+# Use concurrency to prevent multiple auto-fix runs on the same branch
+concurrency:
+  group: auto-fix-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
 jobs:
+  # Check if we should attempt auto-fix
+  should-fix:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      attempt_count: ${{ steps.check.outputs.attempt_count }}
+    steps:
+      - name: Check if auto-fix should run
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = '${{ github.event.workflow_run.head_branch }}';
+            const workflowName = '${{ github.event.workflow_run.name }}';
+            const runId = ${{ github.event.workflow_run.id }};
+
+            // Skip if triggered by bot to prevent loops
+            if ('${{ github.event.workflow_run.actor.login }}' === 'github-actions[bot]') {
+              console.log('Skipping: triggered by github-actions[bot]');
+              core.setOutput('should_run', 'false');
+              core.setOutput('attempt_count', '0');
+              return;
+            }
+
+            // Get recent commits to count auto-fix attempts
+            const commits = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: branch,
+              per_page: 10
+            });
+
+            // Count consecutive auto-fix commits
+            let attemptCount = 0;
+            for (const commit of commits.data) {
+              if (commit.commit.message.includes('[auto-fix]')) {
+                attemptCount++;
+              } else {
+                break;
+              }
+            }
+
+            // Max 3 auto-fix attempts per failure chain
+            if (attemptCount >= 3) {
+              console.log(`Skipping: already ${attemptCount} auto-fix attempts`);
+              core.setOutput('should_run', 'false');
+              core.setOutput('attempt_count', attemptCount.toString());
+              return;
+            }
+
+            console.log(`Proceeding with auto-fix attempt ${attemptCount + 1}`);
+            core.setOutput('should_run', 'true');
+            core.setOutput('attempt_count', attemptCount.toString());
+
   auto-fix:
-    if: |
-      github.event.workflow_run.conclusion == 'failure' &&
-      !startsWith(github.event.workflow_run.head_branch, 'claude-auto-fix-')
+    needs: should-fix
+    if: needs.should-fix.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -51,7 +115,10 @@ jobs:
 
             const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
 
+            // Categorize failure type
+            let failureType = 'unknown';
             let errorLogs = [];
+
             for (const job of failedJobs) {
               try {
                 const logs = await github.rest.actions.downloadJobLogsForWorkflowRun({
@@ -59,16 +126,37 @@ jobs:
                   repo: context.repo.repo,
                   job_id: job.id
                 });
-                // Truncate logs to last 5000 chars to avoid token limits
-                const truncatedLogs = logs.data.slice(-5000);
+
+                // Get more context - last 15000 chars
+                const truncatedLogs = logs.data.slice(-15000);
                 errorLogs.push({
                   jobName: job.name,
                   logs: truncatedLogs
                 });
+
+                // Detect failure type from logs
+                const logLower = truncatedLogs.toLowerCase();
+                if (logLower.includes('biome') || logLower.includes('format')) {
+                  failureType = 'formatting';
+                } else if (logLower.includes('lint') || logLower.includes('eslint')) {
+                  failureType = 'linting';
+                } else if (logLower.includes('type') && logLower.includes('error')) {
+                  failureType = 'typescript';
+                } else if (logLower.includes('test') || logLower.includes('expect')) {
+                  failureType = 'test';
+                } else if (logLower.includes('markdownlint')) {
+                  failureType = 'markdown';
+                } else if (logLower.includes('plugin validate') || logLower.includes('claudelint')) {
+                  failureType = 'plugin-validation';
+                } else if (logLower.includes('network') || logLower.includes('timeout') || logLower.includes('econnrefused')) {
+                  failureType = 'network';
+                } else if (logLower.includes('build')) {
+                  failureType = 'build';
+                }
               } catch (e) {
                 errorLogs.push({
                   jobName: job.name,
-                  logs: 'Could not fetch logs'
+                  logs: 'Could not fetch logs: ' + e.message
                 });
               }
             }
@@ -77,28 +165,201 @@ jobs:
               runUrl: run.data.html_url,
               failedJobs: failedJobs.map(j => j.name),
               errorLogs: errorLogs,
-              workflowName: run.data.name
+              workflowName: run.data.name,
+              failureType: failureType
             };
 
+      - name: Skip unfixable failures
+        id: skip_check
+        run: |
+          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
+          if [ "$FAILURE_TYPE" = "network" ]; then
+            echo "Skipping: network failure is not fixable by code changes"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup tools for validation
+        if: steps.skip_check.outputs.skip != 'true'
+        run: |
+          # Install Biome for formatting validation
+          npm install -g @biomejs/biome
+
       - name: Fix CI failures with Claude
+        if: steps.skip_check.outputs.skip != 'true'
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           prompt: |
             A CI workflow has failed. Please analyze the error and fix it.
 
-            Workflow: ${{ fromJSON(steps.failure_details.outputs.result).workflowName }}
-            Failed CI Run: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
-            Failed Jobs: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
-            Branch: ${{ github.event.workflow_run.head_branch }}
-            Repository: ${{ github.repository }}
+            ## Failure Information
+            - **Workflow**: ${{ fromJSON(steps.failure_details.outputs.result).workflowName }}
+            - **Failed Jobs**: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
+            - **Failure Type**: ${{ fromJSON(steps.failure_details.outputs.result).failureType }}
+            - **Branch**: ${{ github.event.workflow_run.head_branch }}
+            - **Auto-fix Attempt**: ${{ needs.should-fix.outputs.attempt_count }} (max 3)
+            - **Run URL**: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
 
-            Error logs:
+            ## Error Logs
             ${{ toJSON(fromJSON(steps.failure_details.outputs.result).errorLogs) }}
 
-            Instructions:
-            1. Analyze the error logs to understand what failed
-            2. Make the minimal changes needed to fix the issue
-            3. Commit your changes with a descriptive message
-            4. Push to the current branch
+            ## Fix Instructions by Failure Type
+
+            **For formatting failures:**
+            - Run: `biome format --write .` in the affected directory (website/, packages/han/, etc.)
+            - The project uses Biome with line-width: 80, single quotes, ES5 trailing commas
+
+            **For linting failures:**
+            - Run: `biome lint --write .` for auto-fixable issues
+            - For other lint errors, fix the specific code issues mentioned in the logs
+
+            **For TypeScript errors:**
+            - Fix type errors in the specific files mentioned
+            - Common issues: missing types, incorrect generics, null checks
+
+            **For test failures:**
+            - Read the failing test file and the code it tests
+            - Fix the code or update the test as appropriate
+
+            **For markdown lint failures:**
+            - Fix the markdown issues in the specific files mentioned
+            - Common issues: line length, heading levels, trailing whitespace
+
+            **For plugin validation failures:**
+            - Check plugin.json, hooks.json structure
+            - Ensure command frontmatter has required fields (description)
+            - Validate paths exist
+
+            **For build failures:**
+            - Check for import errors, missing dependencies
+            - Fix syntax errors in the mentioned files
+
+            ## Critical Rules
+            1. Make MINIMAL changes to fix the issue
+            2. Do NOT commit or push - the workflow handles that
+            3. After making changes, validate by running the relevant command:
+               - Formatting: `biome format --files-ignore-unknown=true <directory>`
+               - Lint: `biome lint --files-ignore-unknown=true <directory>`
+            4. If you can't determine the fix, don't make random changes
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 15
+
+      - name: Validate fixes
+        if: steps.skip_check.outputs.skip != 'true'
+        id: validate
+        run: |
+          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
+          VALID="true"
+
+          # Run validation based on failure type
+          case "$FAILURE_TYPE" in
+            formatting)
+              echo "Validating formatting..."
+              biome format --files-ignore-unknown=true . || VALID="false"
+              ;;
+            linting)
+              echo "Validating linting..."
+              biome lint --files-ignore-unknown=true . || VALID="false"
+              ;;
+            *)
+              echo "No pre-commit validation for failure type: $FAILURE_TYPE"
+              ;;
+          esac
+
+          echo "valid=$VALID" >> $GITHUB_OUTPUT
+
+      - name: Commit and push fixes
+        if: steps.skip_check.outputs.skip != 'true'
+        run: |
+          # Pull latest changes first to avoid conflicts
+          git pull --rebase origin ${{ github.event.workflow_run.head_branch }} || true
+
+          # Check if there are any changes to commit
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          # Stage all changes
+          git add -A
+
+          # Get the workflow name for the commit message
+          WORKFLOW_NAME="${{ fromJSON(steps.failure_details.outputs.result).workflowName }}"
+          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
+          ATTEMPT="${{ needs.should-fix.outputs.attempt_count }}"
+          NEXT_ATTEMPT=$((ATTEMPT + 1))
+
+          # Commit with markers for loop detection
+          git commit -m "fix(ci): auto-fix ${WORKFLOW_NAME} ${FAILURE_TYPE} failures [auto-fix]
+
+          Auto-fixed by Claude Code action (attempt ${NEXT_ATTEMPT}/3).
+          Failure type: ${FAILURE_TYPE}
+
+          Original failure: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          # Push the changes
+          git push origin ${{ github.event.workflow_run.head_branch }}
+
+  # Notify when max attempts reached
+  notify-max-attempts:
+    needs: should-fix
+    if: |
+      needs.should-fix.outputs.should_run == 'false' &&
+      needs.should-fix.outputs.attempt_count >= '3'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue for manual intervention
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = '${{ github.event.workflow_run.head_branch }}';
+            const workflow = '${{ github.event.workflow_run.name }}';
+            const runUrl = '${{ github.event.workflow_run.html_url }}';
+
+            // Check if issue already exists
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ci-auto-fix-failed'
+            });
+
+            const title = `CI Auto-Fix Failed: ${workflow} on ${branch}`;
+            const existingIssue = existingIssues.data.find(i => i.title === title);
+
+            if (existingIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `Auto-fix attempted again but still failing.\n\nLatest failure: ${runUrl}`
+              });
+            } else {
+              const body = [
+                '## CI Auto-Fix Exhausted',
+                '',
+                'The automatic CI fix system has attempted **3 fixes** without success.',
+                '',
+                `**Workflow:** ${workflow}`,
+                `**Branch:** ${branch}`,
+                `**Latest Run:** ${runUrl}`,
+                '',
+                '### Manual intervention required',
+                '',
+                'Please review the failing workflow and fix the issue manually.',
+                '',
+                'After fixing, close this issue.'
+              ].join('\n');
+
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                labels: ['ci-auto-fix-failed', 'needs-manual-fix'],
+                body: body
+              });
+            }

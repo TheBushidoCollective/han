@@ -462,7 +462,7 @@ describe("Session File Validation System", () => {
 			expect(result.files).not.toContain(filePath);
 		});
 
-		test.skip("skips already validated files", async () => {
+		test("skips already validated files", async () => {
 			const { sessionFileValidations, sessionFileChanges } = await import(
 				"../lib/db/index.ts"
 			);

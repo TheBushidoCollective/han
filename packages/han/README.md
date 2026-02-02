@@ -1,5 +1,7 @@
 # Han CLI
 
+[![codecov](https://codecov.io/gh/thebushidocollective/han/graph/badge.svg?flag=han-cli)](https://codecov.io/gh/thebushidocollective/han)
+
 Automatic quality gates for Claude Code. Linting, formatting, type-checking, and tests run automatically at the end of every conversation.
 
 ## Installation

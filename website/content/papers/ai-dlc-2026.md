@@ -1331,7 +1331,7 @@ Teams can customize hat behavior through configuration files, defining custom ha
 
 **→ See the [Autonomous Bolt Runbook](./ai-dlc-2026/runbooks/construction/autonomous-bolt) for implementation templates, safety configuration, and the Many Hats orchestration pattern.**
 
-**→ See the [Han Runbook](./ai-dlc-2026/runbooks/tooling/han) for Claude Code-native implementation with `jutsu-ai-dlc`.**
+**→ See the [Han Runbook](./ai-dlc-2026/runbooks/tooling/han) for Claude Code-native implementation with the `ai-dlc` plugin.**
 
 ---
 

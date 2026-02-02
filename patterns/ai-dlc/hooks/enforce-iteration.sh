@@ -1,8 +1,16 @@
 #!/bin/bash
 # enforce-iteration.sh - Stop hook for AI-DLC
 #
-# At the end of each session, marks state for advancement and prompts for /clear.
-# The actual iteration increment happens at SessionStart to ensure it always fires.
+# PURPOSE: Rescue mechanism when the construction loop exits unexpectedly.
+#
+# This hook fires when a session ends. It determines the appropriate action:
+# 1. **Work remains** (units ready or in progress):
+#    - Instruct agent to call `/construct` to continue
+#    - Subagents have CLEAN CONTEXT - no need for /clear
+# 2. **All complete** (no pending units):
+#    - Intent is done, no action needed
+# 3. **Truly blocked** (no ready units, human MUST intervene):
+#    - This is the only "real stop" - alert the user
 
 set -e
 
@@ -48,28 +56,99 @@ if [ "$STATUS" = "complete" ]; then
   exit 0
 fi
 
-# Get current iteration
+# Get current iteration and hat
 CURRENT_ITERATION=$(echo "$ITERATION_JSON" | han parse json iteration -r --default 1)
 HAT=$(echo "$ITERATION_JSON" | han parse json hat -r --default builder)
 
-# Mark for advancement (SessionStart will increment)
-UPDATED_JSON=$(echo "$ITERATION_JSON" | han parse json-set needsAdvance true 2>/dev/null)
-if [ -n "$UPDATED_JSON" ]; then
-  # Intent-level state saved to intent branch (or current branch if on intent branch)
-  if [ -n "$INTENT_BRANCH" ]; then
-    han keep save --branch "$INTENT_BRANCH" iteration.json "$UPDATED_JSON" 2>/dev/null || true
-  else
-    han keep save iteration.json "$UPDATED_JSON" 2>/dev/null || true
+# Get iteration limit (0 or null = unlimited)
+MAX_ITERATIONS=$(echo "$ITERATION_JSON" | han parse json maxIterations -r --default 0 2>/dev/null || echo "0")
+
+# Check if iteration limit exceeded
+if [ "$MAX_ITERATIONS" -gt 0 ] && [ "$CURRENT_ITERATION" -ge "$MAX_ITERATIONS" ]; then
+  echo ""
+  echo "---"
+  echo ""
+  echo "## AI-DLC: ITERATION LIMIT REACHED"
+  echo ""
+  echo "**Iteration:** $CURRENT_ITERATION / $MAX_ITERATIONS (max)"
+  echo "**Hat:** $HAT"
+  echo ""
+  echo "The maximum iteration limit has been reached. This is a safety mechanism"
+  echo "to prevent infinite loops."
+  echo ""
+  echo "**Options:**"
+  echo "1. Review progress and decide if work is complete"
+  echo "2. Increase limit: \`han keep save iteration.json '{...\"maxIterations\": 100}'\`"
+  echo "3. Reset iteration count: \`/reset\` and start fresh"
+  echo ""
+  echo "Progress preserved in han keep storage."
+  exit 0
+fi
+
+# Get intent slug and check DAG status
+INTENT_SLUG=$(han keep load intent-slug --quiet 2>/dev/null || echo "")
+INTENT_DIR=""
+READY_COUNT=0
+IN_PROGRESS_COUNT=0
+ALL_COMPLETE="false"
+
+if [ -n "$INTENT_SLUG" ]; then
+  INTENT_DIR=".ai-dlc/${INTENT_SLUG}"
+
+  # Check if DAG library is available and intent dir exists
+  DAG_LIB="${CLAUDE_PLUGIN_ROOT}/lib/dag.sh"
+  if [ -f "$DAG_LIB" ] && [ -d "$INTENT_DIR" ]; then
+    # shellcheck source=/dev/null
+    source "$DAG_LIB"
+
+    # Get DAG status
+    if type get_dag_summary &>/dev/null; then
+      DAG_SUMMARY=$(get_dag_summary "$INTENT_DIR" 2>/dev/null || echo "{}")
+      READY_COUNT=$(echo "$DAG_SUMMARY" | han parse json readyCount -r --default 0 2>/dev/null || echo "0")
+      IN_PROGRESS_COUNT=$(echo "$DAG_SUMMARY" | han parse json inProgressCount -r --default 0 2>/dev/null || echo "0")
+      ALL_COMPLETE=$(echo "$DAG_SUMMARY" | han parse json allComplete -r --default false 2>/dev/null || echo "false")
+    fi
   fi
 fi
 
 echo ""
 echo "---"
 echo ""
-echo "## AI-DLC: Iteration $CURRENT_ITERATION Complete"
-echo ""
-echo "**Current hat:** $HAT"
-echo ""
-echo "Run \`/clear\` to start iteration $((CURRENT_ITERATION + 1)) with fresh context."
-echo ""
-echo "Your progress has been preserved in han keep storage."
+
+# Determine action based on DAG state
+if [ "$ALL_COMPLETE" = "true" ]; then
+  # All done - intent should be marked complete
+  echo "## AI-DLC: All Units Complete"
+  echo ""
+  echo "All units have been completed. If the intent isn't marked complete,"
+  echo "call \`/advance\` to finalize."
+  echo ""
+elif [ "$READY_COUNT" -gt 0 ] || [ "$IN_PROGRESS_COUNT" -gt 0 ]; then
+  # Work remains - instruct agent to continue
+  echo "## AI-DLC: Session Exhausted - Continue Construction"
+  echo ""
+  echo "**Iteration:** $CURRENT_ITERATION | **Hat:** $HAT"
+  echo "**Ready units:** $READY_COUNT | **In progress:** $IN_PROGRESS_COUNT"
+  echo ""
+  echo "### ACTION REQUIRED"
+  echo ""
+  echo "Call \`/construct\` to continue the autonomous loop."
+  echo ""
+  echo "**Note:** Subagents have clean context. No \`/clear\` needed."
+  echo ""
+else
+  # Truly blocked - human must intervene
+  echo "## AI-DLC: BLOCKED - Human Intervention Required"
+  echo ""
+  echo "**Iteration:** $CURRENT_ITERATION | **Hat:** $HAT"
+  echo ""
+  echo "No units are ready to work on. All remaining units are blocked."
+  echo ""
+  echo "**User action required:**"
+  echo "1. Review blockers: \`han keep load blockers.md\`"
+  echo "2. Unblock units or resolve dependencies"
+  echo "3. Run \`/construct\` to resume"
+  echo ""
+fi
+
+echo "Progress preserved in han keep storage."

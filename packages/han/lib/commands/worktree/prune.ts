@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import { gitWorktreeRemove } from "../../../../han-native";
+import { gitWorktreeRemove } from "../../native.ts";
 import { findOrphanedWorktrees, type AiDlcWorktree } from "./discovery.ts";
 
 /**

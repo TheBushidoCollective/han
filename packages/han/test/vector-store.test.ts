@@ -103,8 +103,7 @@ describe("vector store", () => {
 		});
 	});
 
-	// Skip: createNativeVectorStore hangs in CI waiting for model download
-	describe.skip("createNativeVectorStore", () => {
+	describe("createNativeVectorStore", () => {
 		test("creates native vector store", async () => {
 			const { tryGetNativeModule } = await import("../lib/native.ts");
 			const nativeModule = tryGetNativeModule();
@@ -175,8 +174,7 @@ describe("vector store", () => {
 		});
 	});
 
-	// Skip: createNativeVectorStore hangs in CI waiting for model download
-	describe.skip("native vector store functionality", () => {
+	describe("native vector store functionality", () => {
 		test(
 			"native store can generate embeddings when available",
 			async () => {

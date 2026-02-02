@@ -1,0 +1,31 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag and trigger release
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "No tags found!"
+            exit 1
+          fi
+          echo "Found tag: $TAG"
+          echo ""
+          echo "To trigger the full release workflow, delete and recreate the tag:"
+          echo ""
+          echo "  git tag -d $TAG"
+          echo "  git push origin :refs/tags/$TAG"
+          echo "  git tag -a $TAG -m 'Release $TAG'"
+          echo "  git push origin $TAG"
+          echo ""
+          echo "This will trigger the release-binaries workflow via push:tags trigger."

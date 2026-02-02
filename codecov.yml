@@ -1,0 +1,77 @@
+codecov:
+  require_ci_to_pass: false
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+      han-cli:
+        flags:
+          - han-cli
+        target: auto
+        threshold: 1%
+      han-native:
+        flags:
+          - han-native
+        target: auto
+        threshold: 1%
+      website:
+        flags:
+          - website
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+flags:
+  han-cli:
+    paths:
+      - packages/han/
+    carryforward: true
+  han-native:
+    paths:
+      - packages/han-native/
+    carryforward: true
+  website:
+    paths:
+      - website/
+    carryforward: true
+  browse-client:
+    paths:
+      - packages/browse-client/
+    carryforward: true
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+  individual_components:
+    - component_id: han-cli
+      name: Han CLI
+      paths:
+        - packages/han/**
+    - component_id: han-native
+      name: Han Native (Rust)
+      paths:
+        - packages/han-native/**
+    - component_id: website
+      name: Website
+      paths:
+        - website/**
+    - component_id: browse-client
+      name: Browse Client
+      paths:
+        - packages/browse-client/**

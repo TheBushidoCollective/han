@@ -1,5 +1,7 @@
 # Han Marketing Website
 
+[![codecov](https://codecov.io/gh/thebushidocollective/han/graph/badge.svg?flag=website)](https://codecov.io/gh/thebushidocollective/han)
+
 This is the marketing website for Han. It's built with Next.js and deployed to GitHub Pages at [https://han.guru](https://han.guru).
 
 ## Features

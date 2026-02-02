@@ -294,6 +294,35 @@ export function gitWorktreeList(
 }
 
 /**
+ * Add a git worktree at the specified path for a branch
+ */
+export function gitWorktreeAdd(
+	dir: string,
+	path: string,
+	branch: string,
+): void {
+	getNativeModule().gitWorktreeAdd(dir, path, branch);
+}
+
+/**
+ * Remove a git worktree at the specified path
+ */
+export function gitWorktreeRemove(
+	dir: string,
+	path: string,
+	force?: boolean | null,
+): void {
+	getNativeModule().gitWorktreeRemove(dir, path, force);
+}
+
+/**
+ * Create a new git branch
+ */
+export function gitCreateBranch(dir: string, branch: string): void {
+	getNativeModule().gitCreateBranch(dir, branch);
+}
+
+/**
  * Get session file changes
  */
 export function getSessionFileChanges(
@@ -301,6 +330,24 @@ export function getSessionFileChanges(
 	sessionId: string,
 ): ReturnType<NativeModule["getSessionFileChanges"]> {
 	return getNativeModule().getSessionFileChanges(dbPath, sessionId);
+}
+
+// ============================================================================
+// Type re-exports from native module
+// ============================================================================
+
+/** Git worktree information */
+export interface GitWorktree {
+	/** Absolute path to the worktree */
+	path: string;
+	/** Name of the worktree (basename of path for main, or worktree name) */
+	name: string;
+	/** Current branch or commit */
+	head?: string;
+	/** Whether this is the main worktree */
+	isMain: boolean;
+	/** Whether the worktree is locked */
+	isLocked: boolean;
 }
 
 // ============================================================================

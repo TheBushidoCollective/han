@@ -12,11 +12,19 @@ hooks:
     event: SessionStart
     description: Inject AI-DLC iteration context (hat, intent, criteria, scratchpad)
 
-  # SubagentPrompt hook - inject condensed AI-DLC context into subagents
+  # SubagentPrompt hook - provides AI-DLC context for subagent injection
+  # Context is gathered by core's PreToolUse hook (han hook inject-subagent-context)
+  # and injected into Task and Skill tool prompts automatically.
+  #
+  # Optional: Use tool_filter to limit which tools receive this context:
+  #   tool_filter: [Task]        # Only inject for Task tool (subagents)
+  #   tool_filter: [Skill]       # Only inject for Skill tool
+  #   tool_filter: [Task, Skill] # Both (default behavior if omitted)
   subagent-context:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-context.sh"
     event: SubagentPrompt
-    description: Inject AI-DLC intent and hat context to subagents
+    description: Provide AI-DLC intent, hat, and workflow context for subagent injection
+    # No tool_filter = applies to both Task and Skill
 
   iterate:
     command: bash "${CLAUDE_PLUGIN_ROOT}/hooks/enforce-iteration.sh"

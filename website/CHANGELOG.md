@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.0] - 2026-02-01
+
+### Added
+
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+- refine methodology for technical accuracy and scope (#46) ([58cb4014](../../commit/58cb4014))
+
 ## [1.36.0] - 2026-02-01
 
 ### Added

@@ -61,19 +61,19 @@ Checkpoints are session-scoped by default, meaning they're cleared when the Clau
 
 ```bash
 # Run Bun tests (caching enabled by default)
-han hook run jutsu-bun test
+han hook run bun test
 
 # Run without caching
-han hook run jutsu-bun test --no-cache
+han hook run bun test --no-cache
 
 # Run TypeScript type checking verbosely
-han hook run jutsu-typescript typecheck --verbose
+han hook run typescript typecheck --verbose
 
 # Run Biome lint in specific directory
-han hook run jutsu-biome lint --directory packages/core
+han hook run biome lint --directory packages/core
 
 # Continue on failures instead of stopping
-han hook run jutsu-playwright test --no-fail-fast
+han hook run playwright-mcp test --no-fail-fast
 
 # Legacy: Run npm test in directories with package.json
 han hook run --dirs-with package.json -- npm test
@@ -92,7 +92,7 @@ hooks:
     if_changed: ["**/*.ts", "**/*.test.ts"]
 ```
 
-When you run `han hook run jutsu-bun test`, Han:
+When you run `han hook run bun test`, Han:
 
 1. Finds directories containing `bun.lock` or `bun.lockb`
 2. Checks if files matching `**/*.ts` or `**/*.test.ts` have changed (caching is enabled by default)
@@ -111,7 +111,7 @@ List available hooks from installed plugins.
 han hook list
 
 # Filter by plugin
-han hook list --plugin jutsu-bun
+han hook list --plugin bun
 
 # Show detailed information
 han hook list --verbose
@@ -130,14 +130,14 @@ han hook list --verbose
 ```
 Available Hooks:
 
-  jutsu-bun:
+  bun:
     test - Run Bun tests
     build - Build the Bun project
 
-  jutsu-typescript:
+  typescript:
     typecheck - Type-check TypeScript code for type errors
 
-  jutsu-biome:
+  biome:
     lint - Lint Biome code for issues and style violations
 ```
 
@@ -148,10 +148,10 @@ Available Hooks:
 han hook list
 
 # List only Bun hooks
-han hook list --plugin jutsu-bun
+han hook list --plugin bun
 
 # Get JSON output for scripting
-han hook list --json | jq '.[] | select(.plugin == "jutsu-bun")'
+han hook list --json | jq '.[] | select(.plugin == "bun")'
 ```
 
 ## `han hook explain`
@@ -168,13 +168,13 @@ han hook explain <plugin-name> <hook-name>
 ### Example
 
 ```bash
-han hook run jutsu-bun test
+han hook explain bun test
 ```
 
 Output:
 
 ```
-Hook: jutsu-bun/test
+Hook: bun/test
 
 Description: Run Bun tests
 
@@ -191,9 +191,9 @@ File Patterns: Triggers when these files change:
 Cache: Enabled by default (use --no-cache to disable)
 
 Usage:
-  han hook run jutsu-bun test
-  han hook run jutsu-bun test --no-cache
-  han hook run jutsu-bun test --verbose --directory packages/core
+  han hook run bun test
+  han hook run bun test --no-cache
+  han hook run bun test --verbose --directory packages/core
 ```
 
 ## `han hook verify`
@@ -207,7 +207,7 @@ Verify hook configuration for all installed plugins.
 han hook verify
 
 # Verify specific plugin
-han hook verify --plugin jutsu-bun
+han hook verify --plugin bun
 ```
 
 ### Options
@@ -259,11 +259,11 @@ Hook execution respects these environment variables:
 ```bash
 # Disable all hooks temporarily
 export HAN_DISABLE_HOOKS=1
-han hook run jutsu-bun test  # Exits immediately without running
+han hook run bun test  # Exits immediately without running
 
 # Enable verbose output globally
 export HAN_HOOK_RUN_VERBOSE=1
-han hook run jutsu-bun test  # Always shows full output
+han hook run bun test  # Always shows full output
 ```
 
 ## Integration with Claude Code
@@ -276,14 +276,14 @@ Hooks run automatically at lifecycle events when configured in plugin `hooks.jso
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-bun test" }
+          { "type": "command", "command": "han hook run bun test" }
         ]
       }
     ],
     "SubagentStop": [
       {
         "hooks": [
-          { "type": "command", "command": "han hook run jutsu-typescript typecheck" }
+          { "type": "command", "command": "han hook run typescript typecheck" }
         ]
       }
     ]

@@ -393,6 +393,14 @@ export default async function PluginPage({
 										mcp
 									</Link>
 								)}
+								{plugin.lspServers.length > 0 && (
+									<Link
+										href={`/search?q=${encodeURIComponent("component:lsp")}`}
+										className="px-3 py-1 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded-lg hover:bg-teal-200 dark:hover:bg-teal-800 transition text-sm"
+									>
+										lsp
+									</Link>
+								)}
 
 								{/* Tag badges */}
 								{tags.length > 0 &&
@@ -437,6 +445,15 @@ export default async function PluginPage({
 									>
 										<span>🔌</span>
 										<span>MCP Servers</span>
+									</a>
+								)}
+								{plugin.lspServers.length > 0 && (
+									<a
+										href="#lsp-servers"
+										className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+									>
+										<span>🧠</span>
+										<span>LSP Servers</span>
 									</a>
 								)}
 								{plugin.agents.length > 0 && (
@@ -633,6 +650,82 @@ export default async function PluginPage({
 							</section>
 						)}
 
+						{/* LSP Servers Section */}
+						{plugin.lspServers.length > 0 && (
+							<section id="lsp-servers" className="scroll-mt-32 mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+									LSP Servers
+								</h2>
+								<div className="space-y-4">
+									{plugin.lspServers.map((server) => (
+										<div
+											key={server.name}
+											className="block bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+										>
+											<div className="flex items-start space-x-3">
+												<div className="text-2xl">🧠</div>
+												<div className="flex-1">
+													<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+														{server.name}
+													</h3>
+
+													{/* Languages */}
+													{server.languages.length > 0 && (
+														<div className="mb-4">
+															<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+																Languages:
+															</h4>
+															<div className="flex flex-wrap gap-2">
+																{server.languages.map((lang) => (
+																	<span
+																		key={lang}
+																		className="px-2 py-1 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded text-sm"
+																	>
+																		{lang}
+																	</span>
+																))}
+															</div>
+														</div>
+													)}
+
+													{/* Extensions */}
+													{server.extensions.length > 0 && (
+														<div className="mb-4">
+															<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+																File Extensions:
+															</h4>
+															<div className="flex flex-wrap gap-2">
+																{server.extensions.map((ext) => (
+																	<span
+																		key={ext}
+																		className="px-2 py-1 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded text-sm font-mono"
+																	>
+																		{ext}
+																	</span>
+																))}
+															</div>
+														</div>
+													)}
+
+													{/* Command */}
+													<div>
+														<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+															Command:
+														</h4>
+														<div className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded overflow-x-auto text-sm scrollbar-custom">
+															<code>
+																{server.command} {server.args.join(" ")}
+															</code>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</section>
+						)}
+
 						{/* Agents Section */}
 						{plugin.agents.length > 0 && (
 							<section id="agents" className="scroll-mt-32 mb-12">
@@ -679,9 +772,16 @@ export default async function PluginPage({
 											<div className="flex items-center space-x-3">
 												<div className="text-2xl">⌘</div>
 												<div className="flex-1">
-													<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-														/{command.name}
-													</h3>
+													<div className="flex items-center gap-2 mb-2">
+														<h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+															/{command.name}
+														</h3>
+														{command.internal && (
+															<span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-xs font-medium">
+																Internal
+															</span>
+														)}
+													</div>
 													<p className="text-gray-600 dark:text-gray-300">
 														{command.description}
 													</p>

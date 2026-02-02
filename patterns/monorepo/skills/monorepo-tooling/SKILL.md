@@ -1,7 +1,13 @@
 ---
 name: monorepo-tooling
 description: Use when setting up monorepo tooling, optimizing builds, or migrating between tools with Turborepo, Nx, Bazel, Lerna for efficient task running, caching, and code generation.
-allowed-tools: Read,Write,Edit,Bash,Glob,Grep
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 ---
 
 # Monorepo Tooling Skill

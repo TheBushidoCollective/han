@@ -13,7 +13,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
-import { gitWorktreeList, type GitWorktree } from "../../../../han-native";
+import { gitWorktreeList, type GitWorktree } from "../../native.ts";
 
 /**
  * Detect which VCS is being used
