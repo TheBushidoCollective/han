@@ -13,12 +13,17 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Command } from "commander";
-import { getClaudeConfigDir } from "../../config/claude-settings.ts";
+import {
+	getClaudeConfigDir,
+	getLearnMode,
+	type LearnMode,
+} from "../../config/han-settings.ts";
 import {
 	loadPluginDetection,
 	type PluginWithDetection,
 } from "../../marker-detection.ts";
 import { getMarketplacePlugins } from "../../marketplace-cache.ts";
+import { getGitRemoteUrl } from "../../native.ts";
 import { getInstalledPlugins, isDebugMode } from "../../shared.ts";
 
 /**
@@ -52,6 +57,65 @@ interface PostToolUsePayload {
  * File-modifying tools that trigger auto-detection
  */
 const FILE_MODIFYING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
+
+/**
+ * VCS host to plugin mapping
+ */
+const VCS_PLUGIN_MAP: Record<string, string> = {
+	"github.com": "hashi-github",
+	"gitlab.com": "hashi-gitlab",
+	// Add more VCS providers as hashi plugins are created
+	// "bitbucket.org": "hashi-bitbucket",
+	// "codeberg.org": "hashi-codeberg",
+};
+
+/**
+ * Detect VCS provider from git remote URL and return matching plugin
+ */
+function detectVcsPlugin(): string | null {
+	try {
+		const remoteUrl = getGitRemoteUrl(process.cwd());
+		if (!remoteUrl) {
+			return null;
+		}
+
+		// Parse the remote URL to extract host
+		// Handles both SSH (git@github.com:user/repo.git) and HTTPS (https://github.com/user/repo.git)
+		let host: string | null = null;
+
+		if (remoteUrl.startsWith("git@")) {
+			// SSH format: git@github.com:user/repo.git
+			const match = remoteUrl.match(/^git@([^:]+):/);
+			if (match) {
+				host = match[1];
+			}
+		} else if (remoteUrl.startsWith("https://") || remoteUrl.startsWith("http://")) {
+			// HTTPS format: https://github.com/user/repo.git
+			try {
+				const url = new URL(remoteUrl);
+				host = url.hostname;
+			} catch {
+				// Invalid URL
+			}
+		}
+
+		if (host) {
+			// Check for exact match first
+			if (VCS_PLUGIN_MAP[host]) {
+				return VCS_PLUGIN_MAP[host];
+			}
+			// Check for subdomain match (e.g., gitlab.company.com -> gitlab)
+			for (const [vcsHost, plugin] of Object.entries(VCS_PLUGIN_MAP)) {
+				if (host.includes(vcsHost.split(".")[0])) {
+					return plugin;
+				}
+			}
+		}
+	} catch {
+		// Git not available or not a git repo
+	}
+	return null;
+}
 
 /**
  * Check if a pattern exists in a directory
@@ -223,6 +287,17 @@ function readStdinPayload(): PostToolUsePayload | null {
  * Main auto-detect function
  */
 export async function autoDetect(): Promise<void> {
+	// Check learn mode first
+	const learnMode = getLearnMode();
+	if (learnMode === "none") {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect]${colors.reset} Learn mode is "none", skipping`,
+			);
+		}
+		return;
+	}
+
 	// Read payload from stdin
 	const payload = readStdinPayload();
 
@@ -303,6 +378,33 @@ export async function autoDetect(): Promise<void> {
 		installedPlugins,
 	);
 
+	// Also check for VCS plugin
+	const vcsPlugin = detectVcsPlugin();
+	if (
+		vcsPlugin &&
+		!installedPlugins.has(vcsPlugin) &&
+		!suggestedPluginsThisSession.has(vcsPlugin)
+	) {
+		// Find the plugin in marketplace for consistent display
+		const vcsPluginInfo = pluginsWithDetection.find((p) => p.name === vcsPlugin);
+		if (vcsPluginInfo) {
+			matches.push({
+				plugin: vcsPluginInfo,
+				matchedDir: process.cwd(),
+			});
+		} else {
+			// Plugin exists but not in marketplace cache - still add it
+			matches.push({
+				plugin: {
+					name: vcsPlugin,
+					description: `VCS integration for ${vcsPlugin.replace("hashi-", "")}`,
+					detection: { dirsWith: [".git"] },
+				},
+				matchedDir: process.cwd(),
+			});
+		}
+	}
+
 	if (matches.length === 0) {
 		if (isDebugMode()) {
 			console.error(
@@ -326,37 +428,70 @@ export async function autoDetect(): Promise<void> {
 		return;
 	}
 
-	// Auto-install the matched plugins
-	const installed: string[] = [];
-	for (const { plugin, matchedDir } of newMatches) {
-		// Mark as suggested regardless of install success
-		suggestedPluginsThisSession.add(plugin.name);
+	// Handle based on learn mode
+	if (learnMode === "ask") {
+		// In "ask" mode, just suggest the plugins without installing
+		const suggested: string[] = [];
+		for (const { plugin, matchedDir } of newMatches) {
+			// Mark as suggested to avoid repeating
+			suggestedPluginsThisSession.add(plugin.name);
+			suggested.push(plugin.name);
 
-		if (isDebugMode()) {
-			console.error(
-				`${colors.dim}[auto-detect]${colors.reset} Match: ${colors.magenta}${plugin.name}${colors.reset} (${plugin.detection?.dirsWith?.join(", ")}) in ${matchedDir}`,
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[auto-detect]${colors.reset} Suggesting: ${colors.magenta}${plugin.name}${colors.reset} (${plugin.detection?.dirsWith?.join(", ")}) in ${matchedDir}`,
+				);
+			}
+		}
+
+		// Save suggested plugins for this session
+		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
+
+		// Output suggestion message for the agent
+		if (suggested.length > 0) {
+			console.log(
+				`\n${colors.cyan}Han detected plugin(s) that may be useful:${colors.reset} ${suggested.join(", ")}`,
+			);
+			console.log(
+				`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
+			);
+			console.log(
+				`${colors.yellow}To install, run: claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project${colors.reset}\n`,
 			);
 		}
+	} else {
+		// In "auto" mode, install the matched plugins
+		const installed: string[] = [];
+		for (const { plugin, matchedDir } of newMatches) {
+			// Mark as suggested regardless of install success
+			suggestedPluginsThisSession.add(plugin.name);
 
-		if (installPlugin(plugin.name)) {
-			installed.push(plugin.name);
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[auto-detect]${colors.reset} Match: ${colors.magenta}${plugin.name}${colors.reset} (${plugin.detection?.dirsWith?.join(", ")}) in ${matchedDir}`,
+				);
+			}
+
+			if (installPlugin(plugin.name)) {
+				installed.push(plugin.name);
+			}
 		}
-	}
 
-	// Save suggested plugins for this session
-	saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
+		// Save suggested plugins for this session
+		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
-	// Output message for the agent
-	if (installed.length > 0) {
-		console.log(
-			`\n${colors.green}✓ Auto-installed Han plugin(s):${colors.reset} ${installed.join(", ")}`,
-		);
-		console.log(
-			`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
-		);
-		console.log(
-			`${colors.yellow}Note: Restart Claude Code to load the new plugins, or continue - they'll be active next session.${colors.reset}\n`,
-		);
+		// Output message for the agent
+		if (installed.length > 0) {
+			console.log(
+				`\n${colors.green}✓ Auto-installed Han plugin(s):${colors.reset} ${installed.join(", ")}`,
+			);
+			console.log(
+				`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
+			);
+			console.log(
+				`${colors.yellow}Note: Restart Claude Code to load the new plugins, or continue - they'll be active next session.${colors.reset}\n`,
+			);
+		}
 	}
 }
 

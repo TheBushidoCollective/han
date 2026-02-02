@@ -96,6 +96,33 @@ Han Learns is smart enough to not spam you with repeated suggestions. Once a plu
 
 This means you can freely edit files without seeing the same suggestion repeatedly.
 
+## Configuring Learn Mode
+
+Not everyone wants fully automatic plugin installation. You can control this behavior in your `han.yml`:
+
+```yaml
+# han.yml (project root) or .claude/han.yml
+
+learn:
+  mode: auto  # "auto" | "ask" | "none"
+```
+
+**Available modes:**
+
+- **`auto`** (default): Automatically install detected plugins
+- **`ask`**: Suggest plugins but don't install - shows what would be installed with the command to run
+- **`none`**: Disable auto-detection entirely
+
+Example with "ask" mode:
+
+```
+Han detected plugin(s) that may be useful: jutsu-biome, jutsu-typescript
+These plugins were detected based on files in your project.
+To install, run: claude plugin install jutsu-biome@han jutsu-typescript@han --scope project
+```
+
+This gives you full control over what gets installed while still benefiting from Han's detection capabilities.
+
 ## Project Scope by Default
 
 Auto-detected plugins install to **project scope** (`.claude/settings.json`), not user scope. This means:
@@ -104,6 +131,30 @@ Auto-detected plugins install to **project scope** (`.claude/settings.json`), no
 - Team members get them when they clone your repo
 - Different projects can have different plugin sets
 - Your global settings stay clean
+
+## VCS Integration Detection
+
+Han Learns also detects your version control system and automatically installs the appropriate integration plugin:
+
+- **GitHub** remote → `hashi-github` (Issues, PRs, Actions, code search)
+- **GitLab** remote → `hashi-gitlab` (Issues, MRs, CI/CD)
+
+This happens automatically when Han detects your git remote URL:
+
+```
+You push to: git@github.com:myorg/myproject.git
+
+Han detects:
+  - Remote host github.com matches hashi-github
+
+Han runs:
+  claude plugin install hashi-github@han --scope project
+
+You see:
+  ✓ Auto-installed Han plugin(s): hashi-github
+```
+
+This means your Claude session automatically gets access to your repo's issues, PRs, and other VCS features - no configuration needed.
 
 ## Real-World Example
 

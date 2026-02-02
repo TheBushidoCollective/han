@@ -36,6 +36,14 @@ export interface PortConfig {
 }
 
 /**
+ * Learn mode for auto-detecting and installing plugins
+ * - "auto": Automatically install detected plugins (default)
+ * - "ask": Output what would be installed but don't install (user must confirm)
+ * - "none": Disable auto-detection entirely
+ */
+export type LearnMode = "auto" | "ask" | "none";
+
+/**
  * Han configuration structure
  */
 export interface HanConfig {
@@ -58,6 +66,20 @@ export interface HanConfig {
 		checkpoints?: boolean; // Enable checkpoints for session-scoped filtering (default: true)
 		cache?: boolean; // Enable caching (default: true)
 		fail_fast?: boolean; // Stop on first failure (default: true)
+	};
+	/**
+	 * Learn mode configuration for auto-detecting plugins.
+	 * Controls whether Han automatically installs plugins when it
+	 * detects marker files (like tsconfig.json, biome.json, etc.)
+	 */
+	learn?: {
+		/**
+		 * Learn mode:
+		 * - "auto": Automatically install detected plugins (default)
+		 * - "ask": Suggest plugins but require manual installation
+		 * - "none": Disable auto-detection entirely
+		 */
+		mode?: LearnMode;
 	};
 	memory?: {
 		enabled?: boolean; // Enable memory system (default: true)
@@ -242,6 +264,14 @@ export function getMergedHanConfig(): HanConfig {
 				};
 			}
 
+			// Merge learn section
+			if (config.learn) {
+				merged.learn = {
+					...merged.learn,
+					...config.learn,
+				};
+			}
+
 			// Merge memory section
 			if (config.memory) {
 				merged.memory = {
@@ -296,6 +326,14 @@ export function getMergedHanConfigForDirectory(directory: string): HanConfig {
 				merged.hooks = {
 					...merged.hooks,
 					...config.hooks,
+				};
+			}
+
+			// Merge learn section
+			if (config.learn) {
+				merged.learn = {
+					...merged.learn,
+					...config.learn,
 				};
 			}
 
@@ -412,6 +450,22 @@ export function isFailFastEnabled(): boolean {
 	}
 
 	return config.hooks?.fail_fast !== false;
+}
+
+/**
+ * Get the learn mode for auto-detecting plugins.
+ * @returns "auto" (default), "ask", or "none"
+ *
+ * @example
+ * // In han.yml:
+ * // learn:
+ * //   mode: ask
+ *
+ * const mode = getLearnMode(); // "ask"
+ */
+export function getLearnMode(): LearnMode {
+	const config = getMergedHanConfig();
+	return config.learn?.mode || "auto";
 }
 
 /**
