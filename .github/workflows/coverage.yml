@@ -187,13 +187,10 @@ jobs:
       # ========================================
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: |
-            test-results/han-native-junit.xml,
-            test-results/han-junit.xml,
-            test-results/website-junit.xml,
-            test-results/browse-client-junit.xml
+          files: test-results/han-native-junit.xml,test-results/han-junit.xml,test-results/website-junit.xml,test-results/browse-client-junit.xml
+          report_type: test_results
           fail_ci_if_error: false
           verbose: true
