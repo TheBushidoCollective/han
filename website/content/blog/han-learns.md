@@ -151,6 +151,37 @@ Hooks from these plugins are now active. MCP servers require a restart.
 
 You can keep working - the validation hooks are already running. The biome linting will trigger on your next Stop event.
 
+## Service URL Detection (Learn Wildcards)
+
+Han Learns can detect when you mention service URLs in your prompts and automatically install the appropriate integration plugins. This uses "learn wildcards" - regex patterns that match URLs and identifiers.
+
+**Supported services:**
+
+| Pattern | Plugin | Description |
+|---------|--------|-------------|
+| `*.atlassian.net`, `PROJ-123` | `jira` | Jira issue tracking |
+| `app.clickup.com/*` | `clickup` | ClickUp project management |
+| `linear.app/*` | `linear` | Linear issue tracking |
+| `notion.so/*` | `notion` | Notion workspace |
+| `figma.com/*` | `figma` | Figma design |
+| `*.sentry.io/*` | `sentry` | Sentry error tracking |
+
+**Example:**
+```
+User: Can you look at PROJ-123 and fix the bug?
+
+Han detects:
+  - "PROJ-123" matches Jira issue key pattern
+
+Han runs:
+  claude plugin install jira@han --scope project
+
+You see:
+  {"hanLearns":{"action":"installed","plugins":["jira"],...}}
+```
+
+This means when you paste a Jira URL or mention an issue key, Han automatically gives Claude access to your Jira instance.
+
 ## VCS Integration Detection
 
 Han Learns also detects your version control system and automatically installs the appropriate integration plugin:

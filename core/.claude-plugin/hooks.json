@@ -39,6 +39,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "han hook auto-detect-prompt",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "han hook orchestrate UserPromptSubmit",
             "timeout": 30000
           }

@@ -39,7 +39,7 @@ const colors = {
 };
 
 /**
- * Hook payload structure from Claude Code stdin
+ * Hook payload structure from Claude Code stdin (PostToolUse)
  */
 interface PostToolUsePayload {
 	session_id?: string;
@@ -54,9 +54,73 @@ interface PostToolUsePayload {
 }
 
 /**
+ * Hook payload structure from Claude Code stdin (UserPromptSubmit)
+ */
+interface UserPromptSubmitPayload {
+	session_id?: string;
+	prompt?: string;
+}
+
+/**
  * File-modifying tools that trigger auto-detection
  */
 const FILE_MODIFYING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
+
+/**
+ * Service URL patterns for learn wildcards.
+ * These regex patterns match URLs or identifiers in user prompts
+ * and map to the corresponding plugin to install.
+ *
+ * Format: { pattern: RegExp, plugin: string, description: string }
+ */
+const SERVICE_LEARN_PATTERNS: Array<{
+	pattern: RegExp;
+	plugin: string;
+	description: string;
+}> = [
+	// Jira - URLs and issue keys (e.g., PROJ-123)
+	{
+		pattern: /https?:\/\/[^\s]*\.atlassian\.net\/|https?:\/\/jira\.[^\s]+|[A-Z]{2,10}-\d+/i,
+		plugin: "jira",
+		description: "Jira issue tracking",
+	},
+	// ClickUp - URLs
+	{
+		pattern: /https?:\/\/app\.clickup\.com\/[^\s]+/i,
+		plugin: "clickup",
+		description: "ClickUp project management",
+	},
+	// Linear - URLs and issue keys (e.g., ENG-123)
+	{
+		pattern: /https?:\/\/linear\.app\/[^\s]+/i,
+		plugin: "linear",
+		description: "Linear issue tracking",
+	},
+	// Notion - URLs
+	{
+		pattern: /https?:\/\/(?:www\.)?notion\.so\/[^\s]+/i,
+		plugin: "notion",
+		description: "Notion workspace",
+	},
+	// Figma - URLs
+	{
+		pattern: /https?:\/\/(?:www\.)?figma\.com\/[^\s]+/i,
+		plugin: "figma",
+		description: "Figma design",
+	},
+	// Sentry - URLs and DSN
+	{
+		pattern: /https?:\/\/[^\s]*\.sentry\.io\/[^\s]+|https?:\/\/[^\s]*@[^\s]*\.ingest\.sentry\.io/i,
+		plugin: "sentry",
+		description: "Sentry error tracking",
+	},
+	// Playwright - mentions of playwright test URLs or config
+	{
+		pattern: /playwright\s+test|@playwright\/test|playwright\.config/i,
+		plugin: "playwright",
+		description: "Playwright testing",
+	},
+];
 
 /**
  * VCS host to plugin mapping
@@ -501,7 +565,196 @@ export async function autoDetect(): Promise<void> {
 }
 
 /**
- * Register the auto-detect command
+ * Detect plugins from user prompt based on learn wildcards (URL patterns)
+ */
+function detectPluginsFromPrompt(
+	prompt: string,
+	installedPlugins: Set<string>,
+): Array<{ plugin: string; description: string; matchedPattern: string }> {
+	const matches: Array<{
+		plugin: string;
+		description: string;
+		matchedPattern: string;
+	}> = [];
+
+	for (const { pattern, plugin, description } of SERVICE_LEARN_PATTERNS) {
+		// Skip already installed plugins
+		if (installedPlugins.has(plugin)) {
+			continue;
+		}
+
+		// Check if pattern matches the prompt
+		const match = prompt.match(pattern);
+		if (match) {
+			// Avoid duplicate matches for the same plugin
+			if (!matches.some((m) => m.plugin === plugin)) {
+				matches.push({
+					plugin,
+					description,
+					matchedPattern: match[0],
+				});
+			}
+		}
+	}
+
+	return matches;
+}
+
+/**
+ * Auto-detect plugins from user prompt (UserPromptSubmit hook)
+ */
+export async function autoDetectPrompt(): Promise<void> {
+	// Check learn mode first
+	const learnMode = getLearnMode();
+	if (learnMode === "none") {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} Learn mode is "none", skipping`,
+			);
+		}
+		return;
+	}
+
+	// Read payload from stdin
+	let payload: UserPromptSubmitPayload | null = null;
+	try {
+		if (!process.stdin.isTTY) {
+			const stdin = readFileSync(0, "utf-8");
+			if (stdin.trim()) {
+				payload = JSON.parse(stdin) as UserPromptSubmitPayload;
+			}
+		}
+	} catch {
+		// stdin not available or empty
+	}
+
+	if (!payload?.prompt) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} No prompt in payload`,
+			);
+		}
+		return;
+	}
+
+	const sessionId = payload.session_id || "unknown";
+	const prompt = payload.prompt;
+
+	// Load previously suggested plugins for this session
+	const previouslySuggested = loadSuggestedPlugins(sessionId);
+	for (const plugin of previouslySuggested) {
+		suggestedPluginsThisSession.add(plugin);
+	}
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[auto-detect-prompt]${colors.reset} Checking prompt for service URLs...`,
+		);
+	}
+
+	// Get currently installed plugins (from all scopes)
+	const userPlugins = getInstalledPlugins("user");
+	const projectPlugins = getInstalledPlugins("project");
+	const localPlugins = getInstalledPlugins("local");
+	const installedPlugins = new Set([
+		...userPlugins,
+		...projectPlugins,
+		...localPlugins,
+	]);
+
+	// Detect plugins from prompt patterns
+	const matches = detectPluginsFromPrompt(prompt, installedPlugins);
+
+	if (matches.length === 0) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} No service patterns matched`,
+			);
+		}
+		return;
+	}
+
+	// Filter out plugins we've already suggested this session
+	const newMatches = matches.filter(
+		(m) => !suggestedPluginsThisSession.has(m.plugin),
+	);
+
+	if (newMatches.length === 0) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[auto-detect-prompt]${colors.reset} All matching plugins already suggested this session`,
+			);
+		}
+		return;
+	}
+
+	// Handle based on learn mode
+	if (learnMode === "ask") {
+		// In "ask" mode, just suggest the plugins without installing
+		const suggested: string[] = [];
+		for (const { plugin, description, matchedPattern } of newMatches) {
+			suggestedPluginsThisSession.add(plugin);
+			suggested.push(plugin);
+
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[auto-detect-prompt]${colors.reset} Suggesting: ${colors.magenta}${plugin}${colors.reset} (matched: "${matchedPattern}") - ${description}`,
+				);
+			}
+		}
+
+		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
+
+		if (suggested.length > 0) {
+			const output = {
+				hanLearns: {
+					action: "suggested",
+					plugins: suggested,
+					message: `Han detected service(s) in your prompt: ${suggested.join(", ")}`,
+					installCommand: `claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
+					note: "These plugins provide integrations for services mentioned in your message.",
+				},
+			};
+			console.log(JSON.stringify(output));
+		}
+	} else {
+		// In "auto" mode, install the matched plugins
+		const installed: string[] = [];
+		for (const { plugin, description, matchedPattern } of newMatches) {
+			suggestedPluginsThisSession.add(plugin);
+
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[auto-detect-prompt]${colors.reset} Installing: ${colors.magenta}${plugin}${colors.reset} (matched: "${matchedPattern}") - ${description}`,
+				);
+			}
+
+			if (installPlugin(plugin)) {
+				installed.push(plugin);
+			}
+		}
+
+		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
+
+		if (installed.length > 0) {
+			const output = {
+				hanLearns: {
+					action: "installed",
+					plugins: installed,
+					message: `Han detected services in your prompt and installed: ${installed.join(", ")}`,
+					hooksActive: true,
+					hooksNote: "Validation hooks from these plugins are now active.",
+					requiresRestart: ["skills", "mcp_servers"],
+					restartNote: "To use MCP servers from these plugins (for API access), restart Claude Code.",
+				},
+			};
+			console.log(JSON.stringify(output));
+		}
+	}
+}
+
+/**
+ * Register the auto-detect commands
  */
 export function registerHookAutoDetect(hookCommand: Command): void {
 	hookCommand
@@ -515,5 +768,17 @@ export function registerHookAutoDetect(hookCommand: Command): void {
 		)
 		.action(async () => {
 			await autoDetect();
+		});
+
+	hookCommand
+		.command("auto-detect-prompt")
+		.description(
+			"Auto-detect and install Han plugins based on URLs/patterns in user prompts.\n\n" +
+				"This hook runs on UserPromptSubmit and checks for service URLs like\n" +
+				"Jira, ClickUp, Linear, Notion, Figma, etc. If a pattern matches,\n" +
+				"the corresponding plugin is automatically installed.",
+		)
+		.action(async () => {
+			await autoDetectPrompt();
 		});
 }
