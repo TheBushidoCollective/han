@@ -489,7 +489,7 @@ export async function autoDetect(): Promise<void> {
 				`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
 			);
 			console.log(
-				`${colors.yellow}Note: Restart Claude Code to load the new plugins, or continue - they'll be active next session.${colors.reset}\n`,
+				`${colors.dim}Validation hooks are now active. Skills and MCP servers require a restart.${colors.reset}\n`,
 			);
 		}
 	}

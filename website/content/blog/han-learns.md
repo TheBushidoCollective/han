@@ -132,6 +132,25 @@ Auto-detected plugins install to **project scope** (`.claude/settings.json`), no
 - Different projects can have different plugin sets
 - Your global settings stay clean
 
+## Hooks Work Immediately
+
+Here's the magic: because Han's core plugin orchestrates all hooks dynamically, newly installed plugin hooks work **immediately in the same session**.
+
+When Han installs a plugin like `jutsu-typescript`:
+- **Hooks** (like typecheck on Stop) are active immediately - Han's orchestrator dynamically discovers and runs them
+
+What requires a restart:
+- **MCP servers** - connections are established at Claude Code startup
+- **Skills/Commands** - may require restart depending on how Claude Code caches plugin content
+
+So when you see:
+```
+✓ Auto-installed Han plugin(s): jutsu-biome
+Hooks from these plugins are now active. MCP servers require a restart.
+```
+
+You can keep working - the validation hooks are already running. The biome linting will trigger on your next Stop event.
+
 ## VCS Integration Detection
 
 Han Learns also detects your version control system and automatically installs the appropriate integration plugin:
