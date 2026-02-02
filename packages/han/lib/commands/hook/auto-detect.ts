@@ -60,13 +60,14 @@ const FILE_MODIFYING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 
 /**
  * VCS host to plugin mapping
+ * Note: Plugin names use the new short format (e.g., "github" not "hashi-github")
  */
 const VCS_PLUGIN_MAP: Record<string, string> = {
-	"github.com": "hashi-github",
-	"gitlab.com": "hashi-gitlab",
-	// Add more VCS providers as hashi plugins are created
-	// "bitbucket.org": "hashi-bitbucket",
-	// "codeberg.org": "hashi-codeberg",
+	"github.com": "github",
+	"gitlab.com": "gitlab",
+	// Add more VCS providers as plugins are created
+	// "bitbucket.org": "bitbucket",
+	// "codeberg.org": "codeberg",
 };
 
 /**

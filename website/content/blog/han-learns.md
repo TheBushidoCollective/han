@@ -36,13 +36,13 @@ Han Learns uses a `PostToolUse` hook that triggers whenever Claude writes or edi
 You write: packages/web/biome.json
 
 Han detects:
-  - packages/web/biome.json matches jutsu-biome (dirs_with: ["biome.json"])
+  - packages/web/biome.json matches biome (dirs_with: ["biome.json"])
 
 Han runs:
-  claude plugin install jutsu-biome@han --scope project
+  claude plugin install biome@han --scope project
 
 You see:
-  ✓ Auto-installed Han plugin(s): jutsu-biome
+  ✓ Auto-installed Han plugin(s): biome
   These plugins were detected based on files in your project.
 ```
 
@@ -53,7 +53,7 @@ No AI involved - just fast, deterministic pattern matching against known plugin 
 Every Han plugin can define marker files that indicate it should be used:
 
 ```yaml
-# jutsu-typescript/han-plugin.yml
+# typescript/han-plugin.yml
 hooks:
   typecheck:
     command: "npx -y --package typescript tsc --noEmit"
@@ -64,7 +64,7 @@ hooks:
 ```
 
 ```yaml
-# jutsu-biome/han-plugin.yml
+# biome/han-plugin.yml
 hooks:
   lint:
     command: "npx -y @biomejs/biome check --write"
@@ -75,7 +75,7 @@ hooks:
 ```
 
 ```yaml
-# jutsu-relay/han-plugin.yml
+# relay/han-plugin.yml
 hooks:
   codegen:
     command: "npx relay-compiler"
@@ -116,9 +116,9 @@ learn:
 Example with "ask" mode:
 
 ```
-Han detected plugin(s) that may be useful: jutsu-biome, jutsu-typescript
+Han detected plugin(s) that may be useful: biome, typescript
 These plugins were detected based on files in your project.
-To install, run: claude plugin install jutsu-biome@han jutsu-typescript@han --scope project
+To install, run: claude plugin install biome@han typescript@han --scope project
 ```
 
 This gives you full control over what gets installed while still benefiting from Han's detection capabilities.
@@ -136,7 +136,7 @@ Auto-detected plugins install to **project scope** (`.claude/settings.json`), no
 
 Here's the magic: because Han's core plugin orchestrates all hooks dynamically, newly installed plugin hooks work **immediately in the same session**.
 
-When Han installs a plugin like `jutsu-typescript`:
+When Han installs a plugin like `typescript`:
 - **Hooks** (like typecheck on Stop) are active immediately - Han's orchestrator dynamically discovers and runs them
 
 What requires a restart:
@@ -145,7 +145,7 @@ What requires a restart:
 
 So when you see:
 ```
-✓ Auto-installed Han plugin(s): jutsu-biome
+✓ Auto-installed Han plugin(s): biome
 Hooks from these plugins are now active. MCP servers require a restart.
 ```
 
@@ -155,8 +155,8 @@ You can keep working - the validation hooks are already running. The biome linti
 
 Han Learns also detects your version control system and automatically installs the appropriate integration plugin:
 
-- **GitHub** remote → `hashi-github` (Issues, PRs, Actions, code search)
-- **GitLab** remote → `hashi-gitlab` (Issues, MRs, CI/CD)
+- **GitHub** remote → `github` (Issues, PRs, Actions, code search)
+- **GitLab** remote → `gitlab` (Issues, MRs, CI/CD)
 
 This happens automatically when Han detects your git remote URL:
 
@@ -164,13 +164,13 @@ This happens automatically when Han detects your git remote URL:
 You push to: git@github.com:myorg/myproject.git
 
 Han detects:
-  - Remote host github.com matches hashi-github
+  - Remote host github.com matches github plugin
 
 Han runs:
-  claude plugin install hashi-github@han --scope project
+  claude plugin install github@han --scope project
 
 You see:
-  ✓ Auto-installed Han plugin(s): hashi-github
+  ✓ Auto-installed Han plugin(s): github
 ```
 
 This means your Claude session automatically gets access to your repo's issues, PRs, and other VCS features - no configuration needed.
@@ -181,22 +181,22 @@ Let's say you're starting a new Next.js project:
 
 **Day 1**: You create `package.json` and `tsconfig.json`
 ```
-✓ Auto-installed Han plugin(s): jutsu-typescript
+✓ Auto-installed Han plugin(s): typescript
 ```
 
 **Day 2**: You add `biome.json` for linting
 ```
-✓ Auto-installed Han plugin(s): jutsu-biome
+✓ Auto-installed Han plugin(s): biome
 ```
 
 **Day 3**: You create `playwright.config.ts` for E2E tests
 ```
-✓ Auto-installed Han plugin(s): jutsu-playwright
+✓ Auto-installed Han plugin(s): playwright
 ```
 
 **Day 4**: You add `relay.config.json` for GraphQL
 ```
-✓ Auto-installed Han plugin(s): jutsu-relay
+✓ Auto-installed Han plugin(s): relay
 ```
 
 Each time you add a technology to your project, Han learns about it and installs the appropriate validation hooks. No manual intervention required.
@@ -243,10 +243,10 @@ Create a new config file in your project and watch Han learn:
 ```bash
 # In a new directory
 echo '{}' > tsconfig.json
-# Han will detect and install jutsu-typescript
+# Han will detect and install typescript
 
 echo '{}' > biome.json
-# Han will detect and install jutsu-biome
+# Han will detect and install biome
 ```
 
 Or just start building - Han will figure out the rest.
