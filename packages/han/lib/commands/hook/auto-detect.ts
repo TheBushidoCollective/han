@@ -447,17 +447,18 @@ export async function autoDetect(): Promise<void> {
 		// Save suggested plugins for this session
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
-		// Output suggestion message for the agent
+		// Output structured JSON for the agent with suggestion info
 		if (suggested.length > 0) {
-			console.log(
-				`\n${colors.cyan}Han detected plugin(s) that may be useful:${colors.reset} ${suggested.join(", ")}`,
-			);
-			console.log(
-				`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
-			);
-			console.log(
-				`${colors.yellow}To install, run: claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project${colors.reset}\n`,
-			);
+			const output = {
+				hanLearns: {
+					action: "suggested",
+					plugins: suggested,
+					message: `Han detected plugin(s) that may be useful: ${suggested.join(", ")}`,
+					installCommand: `claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
+					note: "These plugins were detected based on files in your project.",
+				},
+			};
+			console.log(JSON.stringify(output));
 		}
 	} else {
 		// In "auto" mode, install the matched plugins
@@ -480,17 +481,20 @@ export async function autoDetect(): Promise<void> {
 		// Save suggested plugins for this session
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
-		// Output message for the agent
+		// Output structured JSON for the agent with installation info
 		if (installed.length > 0) {
-			console.log(
-				`\n${colors.green}✓ Auto-installed Han plugin(s):${colors.reset} ${installed.join(", ")}`,
-			);
-			console.log(
-				`${colors.dim}These plugins were detected based on files in your project.${colors.reset}`,
-			);
-			console.log(
-				`${colors.dim}Validation hooks are now active. Skills and MCP servers require a restart.${colors.reset}\n`,
-			);
+			const output = {
+				hanLearns: {
+					action: "installed",
+					plugins: installed,
+					message: `Han has learned new skills! Auto-installed plugin(s): ${installed.join(", ")}`,
+					hooksActive: true,
+					hooksNote: "Validation hooks from these plugins are now active and will run on your next Stop event.",
+					requiresRestart: ["skills", "mcp_servers"],
+					restartNote: "To use skills and MCP servers from these plugins, restart Claude Code.",
+				},
+			};
+			console.log(JSON.stringify(output));
 		}
 	}
 }
