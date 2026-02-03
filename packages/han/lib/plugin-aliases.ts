@@ -258,7 +258,128 @@ export const SHORT_NAME_ALIASES: Record<string, string> = Object.keys(
 );
 
 /**
- * Resolve a plugin name to its canonical form.
+ * Check if a plugin name uses deprecated old naming (jutsu-*, hashi-*, do-*).
+ *
+ * @param input - The plugin name to check
+ * @returns True if the input uses deprecated naming
+ */
+export function isDeprecatedPluginName(input: string): boolean {
+  const normalized = input.trim().toLowerCase();
+  return (
+    normalized.startsWith('jutsu-') ||
+    normalized.startsWith('hashi-') ||
+    normalized.startsWith('do-')
+  );
+}
+
+/**
+ * Get the short name from any plugin input format.
+ *
+ * Accepts:
+ * - Short names: "typescript" -> "typescript"
+ * - New paths: "languages/typescript" -> "typescript"
+ * - Old names: "jutsu-typescript" -> "typescript" (extracts short name)
+ *
+ * @param input - The plugin name in any format
+ * @returns The short name (e.g., "typescript")
+ */
+export function getShortPluginName(input: string): string {
+  const trimmed = input.trim();
+  const normalized = trimmed.toLowerCase();
+
+  // Handle empty input
+  if (normalized === '') {
+    return trimmed;
+  }
+
+  // Special case: core plugins
+  if (normalized === 'core' || normalized === 'bushido') {
+    return normalized;
+  }
+
+  // If it's a path format (category/name), extract the name
+  if (normalized.includes('/')) {
+    const parts = normalized.split('/');
+    return parts[parts.length - 1];
+  }
+
+  // If it's an old name, extract the short name
+  if (normalized.startsWith('jutsu-')) {
+    return normalized.slice(6);
+  }
+  if (normalized.startsWith('hashi-')) {
+    return normalized.slice(6);
+  }
+  if (normalized.startsWith('do-')) {
+    return normalized.slice(3);
+  }
+
+  // Already a short name
+  return normalized;
+}
+
+/**
+ * Resolve a plugin name to its canonical short form.
+ *
+ * Accepts:
+ * - Short names: "typescript" -> "typescript"
+ * - New paths: "languages/typescript" -> "typescript"
+ *
+ * REJECTS (returns null):
+ * - Old full names: "jutsu-typescript" -> null (deprecated)
+ *
+ * @param input - The plugin name to resolve
+ * @returns The canonical short name, or null if using deprecated naming
+ */
+export function resolvePluginNameStrict(
+  input: string
+): { name: string; path: string } | null {
+  const trimmed = input.trim();
+  const normalized = trimmed.toLowerCase();
+
+  // Handle empty input
+  if (normalized === '') {
+    return null;
+  }
+
+  // REJECT deprecated old naming
+  if (isDeprecatedPluginName(normalized)) {
+    return null;
+  }
+
+  // Special case: core plugins
+  if (normalized === 'core') {
+    return { name: 'core', path: 'core/core' };
+  }
+  if (normalized === 'bushido') {
+    return { name: 'bushido', path: 'core/bushido' };
+  }
+
+  // Check if it's a path format (category/name)
+  if (normalized.includes('/')) {
+    // Validate it's a known path
+    if (REVERSE_ALIASES[normalized]) {
+      const shortName = normalized.split('/').pop() || normalized;
+      return { name: shortName, path: normalized };
+    }
+    // Unknown path - might be valid new plugin
+    const shortName = normalized.split('/').pop() || normalized;
+    return { name: shortName, path: normalized };
+  }
+
+  // Check if it's a known short name
+  if (SHORT_NAME_ALIASES[normalized]) {
+    const oldName = SHORT_NAME_ALIASES[normalized];
+    const path = PLUGIN_ALIASES[oldName];
+    return { name: normalized, path };
+  }
+
+  // Unknown short name - might be valid new plugin
+  return { name: normalized, path: normalized };
+}
+
+/**
+ * Resolve a plugin name to its canonical form (LEGACY - for backwards compatibility).
  *
  * Accepts:
  * - Old full names: "jutsu-typescript" -> "jutsu-typescript" (current canonical)
@@ -267,6 +388,7 @@ export const SHORT_NAME_ALIASES: Record<string, string> = Object.keys(
  *
  * Returns the old (currently canonical) plugin name for marketplace validation.
  *
+ * @deprecated Use resolvePluginNameStrict for new code
  * @param input - The plugin name to resolve (any supported format)
  * @returns The canonical plugin name (old format like "jutsu-typescript")
  */
@@ -377,4 +499,38 @@ export function getPluginsInCategory(category: string): string[] {
  */
 export function resolvePluginNames(inputs: string[]): string[] {
   return inputs.map(resolvePluginName);
+}
+
+/**
+ * Result of strict plugin name resolution.
+ */
+export interface StrictResolveResult {
+  /** Successfully resolved plugins with their short names and paths */
+  resolved: Array<{ input: string; name: string; path: string }>;
+  /** Inputs that used deprecated naming (jutsu-*, hashi-*, do-*) */
+  deprecated: string[];
+}
+
+/**
+ * Resolve multiple plugin names strictly, rejecting deprecated naming.
+ *
+ * @param inputs - Array of plugin names
+ * @returns Object with resolved plugins and list of deprecated inputs
+ */
+export function resolvePluginNamesStrict(inputs: string[]): StrictResolveResult {
+  const resolved: Array<{ input: string; name: string; path: string }> = [];
+  const deprecated: string[] = [];
+
+  for (const input of inputs) {
+    if (isDeprecatedPluginName(input)) {
+      deprecated.push(input);
+    } else {
+      const result = resolvePluginNameStrict(input);
+      if (result) {
+        resolved.push({ input, ...result });
+      }
+    }
+  }
+
+  return { resolved, deprecated };
 }

@@ -505,20 +505,17 @@ describe('Plugin install/uninstall', () => {
 
       writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
-      execSync(
-        `${binCommand} plugin install jutsu-typescript --scope project`,
-        {
-          cwd: testDir,
-          encoding: 'utf8',
-          stdio: 'pipe',
-          env: { ...process.env, HAN_SKIP_CLAUDE_CLI: '1' },
-        }
-      );
+      execSync(`${binCommand} plugin install typescript --scope project`, {
+        cwd: testDir,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: { ...process.env, HAN_SKIP_CLAUDE_CLI: '1' },
+      });
 
       const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
 
       expect(settings.extraKnownMarketplaces?.han).toBeDefined();
-      expect(settings.enabledPlugins?.['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins?.['typescript@han']).toBe(true);
     },
     { timeout: BINARY_TIMEOUT }
   );
@@ -655,8 +652,8 @@ describe('Plugin install/uninstall', () => {
 
       const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
 
-      expect(settings.enabledPlugins?.['jutsu-typescript@han']).toBe(true);
-      expect(settings.enabledPlugins?.['jutsu-biome@han']).toBe(true);
+      expect(settings.enabledPlugins?.['typescript@han']).toBe(true);
+      expect(settings.enabledPlugins?.['biome@han']).toBe(true);
     },
     { timeout: BINARY_TIMEOUT }
   );

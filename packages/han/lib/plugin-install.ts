@@ -1,5 +1,9 @@
 import { execSync } from 'node:child_process';
-import { resolvePluginNames } from './plugin-aliases.ts';
+import {
+  getShortPluginName,
+  isDeprecatedPluginName,
+  resolvePluginNamesStrict,
+} from './plugin-aliases.ts';
 import { showPluginSelector } from './plugin-selector-wrapper.tsx';
 import {
   ensureClaudeDirectory,
@@ -170,8 +174,24 @@ export async function installPlugins(
     process.exit(1);
   }
 
-  // Resolve aliases (short names, new paths, old names all resolve to canonical names)
-  const resolvedNames = resolvePluginNames(pluginNames);
+  // Check for deprecated naming (jutsu-*, hashi-*, do-*)
+  const deprecatedInputs = pluginNames.filter(isDeprecatedPluginName);
+  if (deprecatedInputs.length > 0) {
+    console.error('Error: Deprecated plugin naming detected.\n');
+    console.error(
+      'The following plugin names use deprecated prefixes (jutsu-*, hashi-*, do-*):'
+    );
+    for (const name of deprecatedInputs) {
+      const shortName = getShortPluginName(name);
+      console.error(`  ${name} → use "${shortName}" instead`);
+    }
+    console.error('\nPlease use the short plugin names without prefixes.');
+    process.exit(1);
+  }
+
+  // Resolve to short names (strict mode - no old naming)
+  const { resolved } = resolvePluginNamesStrict(pluginNames);
+  const resolvedNames = resolved.map((r) => r.name);
 
   // Always include bushido and core plugins as dependencies
   const pluginsToInstall = new Set(['core', 'bushido', ...resolvedNames]);
