@@ -721,12 +721,12 @@ pub struct GeneratedSessionSummaryInput {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConfigDir {
     pub id: String,
-    pub path: String,                      // Absolute path (e.g., ~/.claude, /work/.claude)
-    pub name: Option<String>,              // Human-friendly name (e.g., "Work", "Personal")
+    pub path: String,         // Absolute path (e.g., ~/.claude, /work/.claude)
+    pub name: Option<String>, // Human-friendly name (e.g., "Work", "Personal")
     pub registered_at: String,
-    pub last_indexed_at: Option<String>,   // Last time we scanned this config dir
-    pub session_count: Option<i32>,        // Cached count of sessions from this config dir
-    pub is_default: bool,                  // Whether this is the default ~/.claude location
+    pub last_indexed_at: Option<String>, // Last time we scanned this config dir
+    pub session_count: Option<i32>,      // Cached count of sessions from this config dir
+    pub is_default: bool,                // Whether this is the default ~/.claude location
 }
 
 /// Input for registering a new config directory

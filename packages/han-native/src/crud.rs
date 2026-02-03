@@ -567,17 +567,20 @@ pub fn register_config_dir(input: ConfigDirInput) -> napi::Result<ConfigDir> {
         )
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
-    stmt.query_row(params![id, input.path, input.name, now, is_default], |row| {
-        Ok(ConfigDir {
-            id: row.get(0)?,
-            path: row.get(1)?,
-            name: row.get(2)?,
-            registered_at: row.get(3)?,
-            last_indexed_at: row.get(4)?,
-            session_count: row.get(5)?,
-            is_default: row.get(6)?,
-        })
-    })
+    stmt.query_row(
+        params![id, input.path, input.name, now, is_default],
+        |row| {
+            Ok(ConfigDir {
+                id: row.get(0)?,
+                path: row.get(1)?,
+                name: row.get(2)?,
+                registered_at: row.get(3)?,
+                last_indexed_at: row.get(4)?,
+                session_count: row.get(5)?,
+                is_default: row.get(6)?,
+            })
+        },
+    )
     .map_err(|e| napi::Error::from_reason(format!("Failed to register config dir: {}", e)))
 }
 
