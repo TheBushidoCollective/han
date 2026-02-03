@@ -3573,6 +3573,25 @@
       ]
     },
     {
+      "name": "reactflow",
+      "description": "Build node-based editors, interactive diagrams, and workflow builders with React Flow.",
+      "source": "./frameworks/reactflow",
+      "category": "Framework",
+      "keywords": [
+        "reactflow",
+        "react-flow",
+        "node-based",
+        "diagram",
+        "flowchart",
+        "workflow",
+        "graph",
+        "editor",
+        "react",
+        "typescript",
+        "interactive"
+      ]
+    },
+    {
       "name": "reddit",
       "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
       "source": "./services/reddit",
