@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.1] - 2026-02-03
+
+### Added
+
+- multi-environment dashboard with central coordinator ([6246aec3](../../commit/6246aec3))
+- add configurable VCS strategy with jj support (#49) ([4cba29e8](../../commit/4cba29e8))
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- route all native imports through centralized loader ([0d673732](../../commit/0d673732))
+
+### Other
+
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
 ## [3.7.0] - 2026-02-02
 
 ### Added
