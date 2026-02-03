@@ -25,7 +25,91 @@ You'd have to remember to re-run the detection, or manually install plugins as y
 
 ## How Han Learns Works
 
-Han Learns uses a `PostToolUse` hook that triggers whenever Claude writes or edits a file. Here's what happens:
+Han Learns operates through two detection paths that run at different points in your workflow:
+
+```mermaid
+flowchart TB
+    subgraph HanLearns["Han Learns"]
+        direction TB
+        A[Claude Code Event] --> B{Event Type?}
+
+        B -->|PostToolUse| C[File-Based Detection]
+        B -->|UserPromptSubmit| D[Prompt-Based Detection]
+
+        C --> E[Check dirs_with patterns]
+        C --> F[Check VCS remote URL]
+
+        D --> G[Check learn_patterns regex]
+
+        E --> H{Match Found?}
+        F --> H
+        G --> H
+
+        H -->|Yes| I[Filter Already Installed]
+        H -->|No| J[No Action]
+
+        I --> K{New Plugin?}
+        K -->|Yes| L[claude plugin install X@han --scope project]
+        K -->|No| J
+
+        L --> M[Output JSON for Claude Context]
+    end
+
+    style HanLearns fill:#1a1a2e,stroke:#16213e,color:#eee
+    style C fill:#0f3460,stroke:#16213e,color:#eee
+    style D fill:#0f3460,stroke:#16213e,color:#eee
+    style L fill:#e94560,stroke:#16213e,color:#fff
+```
+
+### File-Based Detection Flow
+
+When Claude writes or edits a file, the PostToolUse hook triggers:
+
+```mermaid
+flowchart TD
+    subgraph FileDetection["File-Based Detection (PostToolUse)"]
+        A[Claude writes/edits file] --> B[PostToolUse Hook Triggered]
+        B --> C[Extract file_path from tool_input]
+        C --> D["Example: /project/packages/web/biome.json"]
+
+        D --> E[Start at file's directory]
+        E --> F[Walk up directory tree]
+
+        F --> G{For each directory}
+        G --> H[Load marketplace plugins]
+        H --> I[Check dirs_with patterns]
+
+        I --> J{"exists(dir + pattern)?"}
+        J -->|Yes| K[Add to matches]
+        J -->|No| L[Continue to parent]
+
+        L --> G
+        K --> M[Also check git remote URL]
+
+        M --> N{Remote matches VCS?}
+        N -->|github.com| O[Add github plugin]
+        N -->|gitlab.com| P[Add gitlab plugin]
+        N -->|No match| Q[Skip VCS]
+
+        O --> R[Filter matches]
+        P --> R
+        Q --> R
+
+        R --> S{Already installed?}
+        S -->|Yes| T[Skip]
+        S -->|No| U{Already suggested this session?}
+
+        U -->|Yes| T
+        U -->|No| V[Install plugin]
+
+        V --> W["claude plugin install X@han --scope project"]
+        W --> X[Output structured JSON]
+    end
+
+    style FileDetection fill:#1a1a2e,stroke:#16213e,color:#eee
+    style V fill:#e94560,stroke:#16213e,color:#fff
+    style W fill:#e94560,stroke:#16213e,color:#fff
+```
 
 1. **File change detected**: You write a `tsconfig.json` or add a `biome.json`
 2. **Directory scan**: Han walks up the directory tree from the modified file
@@ -155,6 +239,80 @@ You can keep working - the validation hooks are already running. The biome linti
 
 Han Learns can detect when you mention service URLs in your prompts and automatically install the appropriate integration plugins. This uses "learn wildcards" - regex patterns that match URLs and identifiers.
 
+### Prompt-Based Detection Flow
+
+```mermaid
+flowchart TD
+    subgraph PromptDetection["Prompt-Based Detection (UserPromptSubmit)"]
+        A[User sends message] --> B[UserPromptSubmit Hook Triggered]
+        B --> C[Extract prompt text]
+
+        C --> D[Load marketplace plugins]
+        D --> E[Compile learn_patterns from plugins]
+
+        E --> F["Each plugin defines patterns in han-plugin.yml"]
+        F --> G["Example: jira has patterns for *.atlassian.net, PROJ-123"]
+
+        G --> H{For each compiled pattern}
+        H --> I["regex.match(prompt)"]
+
+        I --> J{Pattern matches?}
+        J -->|Yes| K[Add plugin to matches]
+        J -->|No| L[Try next pattern]
+
+        L --> H
+        K --> M[Filter matches]
+
+        M --> N{Already installed?}
+        N -->|Yes| O[Skip]
+        N -->|No| P{Already suggested this session?}
+
+        P -->|Yes| O
+        P -->|No| Q{Learn mode?}
+
+        Q -->|auto| R[Install plugin]
+        Q -->|ask| S[Suggest plugin]
+        Q -->|none| O
+
+        R --> T["claude plugin install X@han --scope project"]
+        T --> U[Output JSON with action: installed]
+
+        S --> V[Output JSON with action: suggested]
+    end
+
+    style PromptDetection fill:#1a1a2e,stroke:#16213e,color:#eee
+    style R fill:#e94560,stroke:#16213e,color:#fff
+    style T fill:#e94560,stroke:#16213e,color:#fff
+```
+
+### Example: Jira Detection
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Claude Code
+    participant Han Hook
+    participant Plugin Registry
+    participant Claude CLI
+
+    User->>Claude Code: "Can you look at PROJ-123 and fix the bug?"
+    Claude Code->>Han Hook: UserPromptSubmit event
+    Han Hook->>Plugin Registry: Load plugins with learn_patterns
+    Plugin Registry-->>Han Hook: jira has pattern [A-Z]{2,10}-\d+
+
+    Han Hook->>Han Hook: Match "PROJ-123" against patterns
+    Note over Han Hook: Pattern matches! jira plugin detected
+
+    Han Hook->>Han Hook: Check if jira already installed
+    Note over Han Hook: Not installed, not suggested yet
+
+    Han Hook->>Claude CLI: claude plugin install jira@han --scope project
+    Claude CLI-->>Han Hook: Success
+
+    Han Hook-->>Claude Code: {"hanLearns":{"action":"installed","plugins":["jira"]}}
+    Note over Claude Code: Jira MCP server available after restart
+```
+
 **Supported services:**
 
 | Pattern | Plugin | Description |
@@ -240,6 +398,76 @@ The implementation is straightforward:
 2. **Directory walking** starts from the modified file's parent
 3. **Pattern matching** checks each directory against marketplace plugins
 4. **Claude CLI installation** ensures proper marketplace cloning
+
+### Plugin Pattern Sources
+
+```mermaid
+flowchart LR
+    subgraph Plugins["Plugin han-plugin.yml Files"]
+        A["typescript/han-plugin.yml"]
+        B["biome/han-plugin.yml"]
+        C["jira/han-plugin.yml"]
+    end
+
+    subgraph FilePatterns["dirs_with (File Detection)"]
+        D["tsconfig.json"]
+        E["biome.json"]
+        F["—"]
+    end
+
+    subgraph PromptPatterns["learn_patterns (Prompt Detection)"]
+        G["—"]
+        H["—"]
+        I["*.atlassian.net<br/>PROJ-123"]
+    end
+
+    A --> D
+    A --> G
+    B --> E
+    B --> H
+    C --> F
+    C --> I
+
+    style Plugins fill:#1a1a2e,stroke:#16213e,color:#eee
+    style FilePatterns fill:#0f3460,stroke:#16213e,color:#eee
+    style PromptPatterns fill:#533483,stroke:#16213e,color:#eee
+```
+
+### Complete Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: Claude Code Session Starts
+
+    Idle --> FileDetection: Claude writes/edits file
+    Idle --> PromptDetection: User sends message
+
+    FileDetection --> CheckDirsWidth: PostToolUse hook
+    CheckDirsWidth --> MatchFound: Pattern exists in directory
+    CheckDirsWidth --> Idle: No match
+
+    PromptDetection --> CheckLearnPatterns: UserPromptSubmit hook
+    CheckLearnPatterns --> MatchFound: Regex matches prompt
+    CheckLearnPatterns --> Idle: No match
+
+    MatchFound --> CheckInstalled: Plugin identified
+    CheckInstalled --> CheckSuggested: Not installed
+    CheckInstalled --> Idle: Already installed
+
+    CheckSuggested --> CheckLearnMode: Not suggested this session
+    CheckSuggested --> Idle: Already suggested
+
+    CheckLearnMode --> AutoInstall: mode = auto
+    CheckLearnMode --> Suggest: mode = ask
+    CheckLearnMode --> Idle: mode = none
+
+    AutoInstall --> InstallPlugin: claude plugin install
+    InstallPlugin --> OutputJSON: Installation complete
+    OutputJSON --> HooksActive: Hooks work immediately
+    HooksActive --> Idle: Continue session
+
+    Suggest --> OutputJSON: Show suggestion
+```
 
 ```typescript
 // Walk up directory tree
