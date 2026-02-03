@@ -464,15 +464,18 @@ export async function autoDetect(): Promise<void> {
 		// Save suggested plugins for this session
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
-		// Output structured JSON for the agent with suggestion info
+		// Output structured JSON for Claude Code with suggestion info
 		if (suggested.length > 0) {
+			const contextMessage = [
+				`Han detected plugin(s) that may be useful: ${suggested.join(", ")}`,
+				"These plugins were detected based on files in your project.",
+				`To install, run: claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
+			].join("\n");
+
 			const output = {
-				hanLearns: {
-					action: "suggested",
-					plugins: suggested,
-					message: `Han detected plugin(s) that may be useful: ${suggested.join(", ")}`,
-					installCommand: `claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
-					note: "These plugins were detected based on files in your project.",
+				hookSpecificOutput: {
+					hookEventName: "PostToolUse",
+					additionalContext: contextMessage,
 				},
 			};
 			console.log(JSON.stringify(output));
@@ -498,17 +501,18 @@ export async function autoDetect(): Promise<void> {
 		// Save suggested plugins for this session
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
-		// Output structured JSON for the agent with installation info
+		// Output structured JSON for Claude Code with installation info
 		if (installed.length > 0) {
+			const contextMessage = [
+				`Han has learned new skills! Auto-installed plugin(s): ${installed.join(", ")}`,
+				"Validation hooks from these plugins are now active and will run on your next Stop event.",
+				"To use skills and MCP servers from these plugins, restart Claude Code.",
+			].join("\n");
+
 			const output = {
-				hanLearns: {
-					action: "installed",
-					plugins: installed,
-					message: `Han has learned new skills! Auto-installed plugin(s): ${installed.join(", ")}`,
-					hooksActive: true,
-					hooksNote: "Validation hooks from these plugins are now active and will run on your next Stop event.",
-					requiresRestart: ["skills", "mcp_servers"],
-					restartNote: "To use skills and MCP servers from these plugins, restart Claude Code.",
+				hookSpecificOutput: {
+					hookEventName: "PostToolUse",
+					additionalContext: contextMessage,
 				},
 			};
 			console.log(JSON.stringify(output));
@@ -721,14 +725,18 @@ export async function autoDetectPrompt(): Promise<void> {
 
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
+		// Output structured JSON for Claude Code with suggestion info
 		if (suggested.length > 0) {
+			const contextMessage = [
+				`Han detected service(s) in your prompt: ${suggested.join(", ")}`,
+				"These plugins provide integrations for services mentioned in your message.",
+				`To install, run: claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
+			].join("\n");
+
 			const output = {
-				hanLearns: {
-					action: "suggested",
-					plugins: suggested,
-					message: `Han detected service(s) in your prompt: ${suggested.join(", ")}`,
-					installCommand: `claude plugin install ${suggested.map((p) => `${p}@han`).join(" ")} --scope project`,
-					note: "These plugins provide integrations for services mentioned in your message.",
+				hookSpecificOutput: {
+					hookEventName: "UserPromptSubmit",
+					additionalContext: contextMessage,
 				},
 			};
 			console.log(JSON.stringify(output));
@@ -752,16 +760,18 @@ export async function autoDetectPrompt(): Promise<void> {
 
 		saveSuggestedPlugins(sessionId, suggestedPluginsThisSession);
 
+		// Output structured JSON for Claude Code with installation info
 		if (installed.length > 0) {
+			const contextMessage = [
+				`Han detected services in your prompt and installed: ${installed.join(", ")}`,
+				"Validation hooks from these plugins are now active.",
+				"To use MCP servers from these plugins (for API access), restart Claude Code.",
+			].join("\n");
+
 			const output = {
-				hanLearns: {
-					action: "installed",
-					plugins: installed,
-					message: `Han detected services in your prompt and installed: ${installed.join(", ")}`,
-					hooksActive: true,
-					hooksNote: "Validation hooks from these plugins are now active.",
-					requiresRestart: ["skills", "mcp_servers"],
-					restartNote: "To use MCP servers from these plugins (for API access), restart Claude Code.",
+				hookSpecificOutput: {
+					hookEventName: "UserPromptSubmit",
+					additionalContext: contextMessage,
 				},
 			};
 			console.log(JSON.stringify(output));
