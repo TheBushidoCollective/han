@@ -1,8 +1,23 @@
 hooks:
+  # Full project validation at Stop (checkpoint)
   lint:
     command: "npx -y eslint . --max-warnings 0"
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"eslint\":' package.json"
     if_changed:
+      - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
+
+  # Single-file async validation on PostToolUse
+  lint-async:
+    event: PostToolUse
+    command: "npx -y eslint ${HAN_FILES} --max-warnings 0"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"eslint\":' package.json"
+    tool_filter:
+      - Edit
+      - Write
+      - NotebookEdit
+    file_filter:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs}"

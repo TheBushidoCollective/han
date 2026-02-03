@@ -115,6 +115,19 @@ export interface PluginHookDefinition {
 	 * Example: ["Edit", "Write", "Bash"]
 	 */
 	toolFilter?: string[];
+	/**
+	 * For PostToolUse async hooks: glob patterns to filter files by path.
+	 * The hook will only be queued if the changed file matches one of these patterns.
+	 * @example ["*.ts", "*.tsx", "*.js", "*.jsx"]
+	 */
+	fileFilter?: string[];
+	/**
+	 * For PostToolUse async hooks: bash command to test file content.
+	 * The command receives HAN_FILE as the file path env var.
+	 * Returns exit code 0 if the file should be processed.
+	 * @example grep -qE "(describe|it|test)" "$HAN_FILE"
+	 */
+	fileTest?: string;
 	dirsWith?: string[];
 	dirTest?: string;
 	command: string;
@@ -177,6 +190,8 @@ interface YamlHookDependency {
 interface YamlPluginHookDefinition {
 	event?: HookEventType | HookEventType[];
 	tool_filter?: string[];
+	file_filter?: string[];
+	file_test?: string;
 	dirs_with?: string[];
 	dir_test?: string;
 	command: string;
@@ -249,6 +264,8 @@ function convertYamlHook(
 		command: yamlHook.command,
 		...(yamlHook.event && { event: yamlHook.event }),
 		...(yamlHook.tool_filter && { toolFilter: yamlHook.tool_filter }),
+		...(yamlHook.file_filter && { fileFilter: yamlHook.file_filter }),
+		...(yamlHook.file_test && { fileTest: yamlHook.file_test }),
 		...(yamlHook.dirs_with && { dirsWith: yamlHook.dirs_with }),
 		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),
 		...(yamlHook.description && { description: yamlHook.description }),

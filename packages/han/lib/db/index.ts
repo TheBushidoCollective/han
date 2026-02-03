@@ -31,6 +31,9 @@ import { getNativeModule } from "../native.ts";
 // ============================================================================
 
 export type {
+	// Async hook queue
+	AsyncHookQueueEntry,
+	AsyncHookQueueInputNative,
 	// Config dirs registry (multi-environment support)
 	ConfigDir,
 	ConfigDirInput,
@@ -840,6 +843,125 @@ export const orchestrations = {
 	): import("../../../han-native").HookExecution[] {
 		const native = getNativeModule();
 		return native.getOrchestrationHooks(orchestrationId);
+	},
+};
+
+// ============================================================================
+// Async Hook Queue (for PostToolUse async hook execution)
+// ============================================================================
+
+export const asyncHookQueue = {
+	/**
+	 * Enqueue a hook for async execution
+	 * Returns the new queue entry ID
+	 */
+	async enqueue(input: {
+		sessionId: string;
+		cwd: string;
+		plugin: string;
+		hookName: string;
+		filePaths: string[];
+		command: string;
+	}): Promise<string> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.enqueueAsyncHook(dbPath, {
+			sessionId: input.sessionId,
+			cwd: input.cwd,
+			plugin: input.plugin,
+			hookName: input.hookName,
+			filePaths: input.filePaths,
+			command: input.command,
+		});
+	},
+
+	/**
+	 * Get pending hooks for a session
+	 */
+	async listPending(sessionId: string): Promise<
+		Array<{
+			id: string;
+			sessionId: string;
+			cwd: string;
+			plugin: string;
+			hookName: string;
+			filePaths: string[];
+			command: string;
+			status: string;
+			createdAt: string;
+		}>
+	> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.listPendingAsyncHooks(dbPath, sessionId);
+	},
+
+	/**
+	 * Check if queue is empty for a session (no pending or running hooks)
+	 */
+	async isEmpty(sessionId: string): Promise<boolean> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.isAsyncHookQueueEmpty(dbPath, sessionId);
+	},
+
+	/**
+	 * Drain the queue - get all pending hooks and mark as running
+	 * Used at checkpoint (Stop, PreToolUse for git commit/push)
+	 */
+	async drain(sessionId: string): Promise<
+		Array<{
+			id: string;
+			sessionId: string;
+			cwd: string;
+			plugin: string;
+			hookName: string;
+			filePaths: string[];
+			command: string;
+		}>
+	> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.drainAsyncHookQueue(dbPath, sessionId);
+	},
+
+	/**
+	 * Cancel pending hooks that match the deduplication key
+	 * Used when a new hook for the same session/cwd/plugin/hook is enqueued
+	 * Returns the merged file paths from cancelled entries
+	 */
+	async cancelPending(
+		sessionId: string,
+		cwd: string,
+		plugin: string,
+		hookName: string,
+	): Promise<string[]> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		return native.cancelPendingAsyncHooks(dbPath, sessionId, cwd, plugin, hookName);
+	},
+
+	/**
+	 * Update hook status after execution
+	 */
+	async complete(
+		id: string,
+		success: boolean,
+		result?: string,
+		error?: string,
+	): Promise<void> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		native.completeAsyncHook(dbPath, id, success, result ?? null, error ?? null);
+	},
+
+	/**
+	 * Cancel a specific hook by ID
+	 */
+	async cancel(id: string): Promise<void> {
+		const dbPath = await ensureInitialized();
+		const native = getNativeModule();
+		native.cancelAsyncHook(dbPath, id);
 	},
 };
 

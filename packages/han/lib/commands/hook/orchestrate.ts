@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { join, relative } from "node:path";
 import type { Command } from "commander";
+import { minimatch } from "minimatch";
 import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
@@ -21,6 +22,7 @@ import {
 	getPluginHookSettings,
 } from "../../config/han-settings.ts";
 import {
+	asyncHookQueue,
 	getSessionModifiedFiles,
 	hookAttempts,
 	messages,
@@ -616,6 +618,263 @@ function discoverHookTasks(
 	}
 
 	return tasks;
+}
+
+/**
+ * Extract file path from PostToolUse payload based on tool type.
+ * Supports Edit, Write, NotebookEdit tools.
+ */
+function extractFilePathFromPayload(payload: HookPayload): string | null {
+	const toolName = payload.tool_name;
+	if (!toolName) return null;
+
+	// Get tool input from payload (if available)
+	// The tool_input is the input parameters passed to the tool
+	const toolInput = (payload as Record<string, unknown>).tool_input as
+		| Record<string, unknown>
+		| undefined;
+	if (!toolInput) return null;
+
+	switch (toolName) {
+		case "Edit":
+		case "Write":
+		case "Read":
+			return (toolInput.file_path as string) || null;
+		case "NotebookEdit":
+			return (toolInput.notebook_path as string) || null;
+		default:
+			return null;
+	}
+}
+
+/**
+ * Check if a file matches the file_filter glob patterns.
+ * Returns true if no filter is defined or if file matches any pattern.
+ */
+function matchesFileFilter(
+	filePath: string,
+	fileFilter: string[] | undefined,
+	cwd: string,
+): boolean {
+	if (!fileFilter || fileFilter.length === 0) {
+		return true; // No filter means match all
+	}
+
+	// Make path relative to cwd for matching
+	const relativePath = filePath.startsWith(cwd)
+		? filePath.slice(cwd.length + 1)
+		: filePath;
+
+	for (const pattern of fileFilter) {
+		if (minimatch(relativePath, pattern, { dot: true })) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Run file_test command to check if file content should be processed.
+ * Returns true if no test is defined or if test exits 0.
+ */
+function passesFileTest(
+	filePath: string,
+	fileTest: string | undefined,
+	cwd: string,
+): boolean {
+	if (!fileTest) {
+		return true; // No test means pass
+	}
+
+	try {
+		execSync(fileTest, {
+			cwd,
+			stdio: ["ignore", "ignore", "ignore"],
+			encoding: "utf8",
+			shell: "/bin/bash",
+			env: {
+				...process.env,
+				HAN_FILE: filePath,
+			},
+			timeout: 5000, // 5 second timeout for content inspection
+		});
+		return true; // Exit 0 = pass
+	} catch {
+		return false; // Non-zero exit = fail
+	}
+}
+
+/**
+ * Handle PostToolUse async hooks.
+ * Queues matching hooks to the async_hook_queue for non-blocking execution.
+ * Returns true if any hooks were queued, false otherwise.
+ */
+async function handlePostToolUseAsync(
+	tasks: HookTask[],
+	payload: HookPayload,
+	projectRoot: string,
+	sessionId: string,
+): Promise<{ queued: boolean; hookCount: number }> {
+	// Extract file path from tool payload
+	const filePath = extractFilePathFromPayload(payload);
+	if (!filePath) {
+		// No file path - nothing to queue
+		return { queued: false, hookCount: 0 };
+	}
+
+	let queuedCount = 0;
+
+	for (const task of tasks) {
+		// Skip hooks without fileFilter - they're meant for project-wide validation
+		if (!task.hookDef.fileFilter || task.hookDef.fileFilter.length === 0) {
+			continue;
+		}
+
+		for (const directory of task.directories) {
+			// Check if file matches the filter patterns
+			if (!matchesFileFilter(filePath, task.hookDef.fileFilter, directory)) {
+				continue;
+			}
+
+			// Check if file passes the content test
+			if (!passesFileTest(filePath, task.hookDef.fileTest, directory)) {
+				continue;
+			}
+
+			// Build the command with the file path
+			const command = resolveHanCommand(task.hookDef.command);
+
+			// Queue the hook for async execution
+			try {
+				await asyncHookQueue.enqueue({
+					sessionId,
+					cwd: directory,
+					plugin: task.plugin,
+					hookName: task.hookName,
+					filePaths: [filePath],
+					command,
+				});
+
+				queuedCount++;
+
+				if (isDebugMode()) {
+					console.error(
+						`${colors.dim}[PostToolUse]${colors.reset} Queued ${task.plugin}/${task.hookName} for ${filePath}`,
+					);
+				}
+			} catch (error) {
+				console.error(
+					`${colors.red}[PostToolUse]${colors.reset} Failed to queue ${task.plugin}/${task.hookName}: ${error}`,
+				);
+			}
+		}
+	}
+
+	return { queued: queuedCount > 0, hookCount: queuedCount };
+}
+
+/**
+ * Drain the async hook queue and execute all pending hooks.
+ * Used at checkpoint (Stop, PreToolUse for git commit/push).
+ * Returns results of all executed hooks.
+ */
+async function drainAndExecuteAsyncQueue(
+	sessionId: string,
+	projectRoot: string,
+	options: {
+		verbose: boolean;
+		cliMode: boolean;
+		logPath: string;
+	},
+): Promise<HookResult[]> {
+	const results: HookResult[] = [];
+
+	// Get all pending hooks for this session
+	const pendingHooks = await asyncHookQueue.drain(sessionId);
+
+	if (pendingHooks.length === 0) {
+		return results;
+	}
+
+	if (isDebugMode()) {
+		console.error(
+			`${colors.dim}[drainAsyncQueue]${colors.reset} Draining ${pendingHooks.length} pending async hooks`,
+		);
+	}
+
+	// Execute each pending hook
+	for (const hook of pendingHooks) {
+		const startTime = Date.now();
+		const relativePath =
+			hook.cwd === projectRoot ? "." : hook.cwd.replace(`${projectRoot}/`, "");
+
+		try {
+			// Build command with file paths
+			const fileArgs = hook.filePaths.join(" ");
+			const command = hook.command.includes("${HAN_FILES}")
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This is intentionally a literal string pattern
+				? hook.command.replace("${HAN_FILES}", fileArgs)
+				: `${hook.command} ${fileArgs}`;
+
+			// Execute the hook
+			const output = execSync(command, {
+				cwd: hook.cwd,
+				encoding: "utf-8",
+				timeout: 300000, // 5 minute timeout
+				shell: "/bin/bash",
+				env: {
+					...process.env,
+					HAN_SESSION_ID: sessionId,
+					CLAUDE_PROJECT_DIR: projectRoot,
+				},
+			});
+
+			const duration = Date.now() - startTime;
+
+			// Mark as completed
+			await asyncHookQueue.complete(hook.id, true, output.trim());
+
+			results.push({
+				plugin: hook.plugin,
+				hook: hook.hookName,
+				directory: relativePath,
+				success: true,
+				output: output.trim(),
+				duration,
+			});
+
+			if (options.verbose || isDebugMode()) {
+				console.error(
+					`${colors.green}✓${colors.reset} ${hook.plugin}/${hook.hookName} in ${relativePath} (${formatDuration(duration)})`,
+				);
+			}
+		} catch (error: unknown) {
+			const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
+			const stdout = (error as { stdout?: Buffer })?.stdout?.toString() || "";
+			const exitCode = (error as { status?: number })?.status ?? 1;
+			const duration = Date.now() - startTime;
+
+			// Mark as failed
+			await asyncHookQueue.complete(hook.id, false, stdout.trim(), stderr.trim());
+
+			results.push({
+				plugin: hook.plugin,
+				hook: hook.hookName,
+				directory: relativePath,
+				success: false,
+				output: stdout.trim(),
+				error: stderr.trim(),
+				duration,
+			});
+
+			console.error(
+				`${colors.red}✗${colors.reset} ${hook.plugin}/${hook.hookName} in ${relativePath} (${formatDuration(duration)})`,
+			);
+		}
+	}
+
+	return results;
 }
 
 /**
@@ -2092,6 +2351,98 @@ export async function orchestrate(
 		return;
 	}
 
+	// PreToolUse sync blocking for git commit/push: Ensure queue is empty before allowing
+	// This is a synchronous gate - all async hooks must complete before git operations
+	if (eventType === "PreToolUse" && !options.wait && !options.check) {
+		const toolName = payload.tool_name;
+		const toolInput = (payload as Record<string, unknown>).tool_input as
+			| Record<string, unknown>
+			| undefined;
+
+		// Check if this is a git commit or push operation
+		const isGitCommit =
+			toolName === "Bash" &&
+			typeof toolInput?.command === "string" &&
+			/\bgit\s+(commit|push)\b/.test(toolInput.command);
+
+		if (isGitCommit) {
+			// Check if the async queue has pending hooks
+			const queueEmpty = await asyncHookQueue.isEmpty(sessionId);
+
+			if (!queueEmpty) {
+				// Drain the queue and run all pending hooks synchronously
+				console.error(
+					`${colors.cyan}Pre-commit/push validation:${colors.reset} Draining async hook queue...`,
+				);
+
+				const logPath = getOrchestrationLogPath(`precommit-${randomUUID()}`);
+				const results = await drainAndExecuteAsyncQueue(sessionId, projectRoot, {
+					verbose: options.verbose,
+					cliMode,
+					logPath,
+				});
+
+				// Check for failures
+				const failures = results.filter((r) => !r.success && !r.skipped);
+				if (failures.length > 0) {
+					console.error(`
+${colors.red}Pre-commit/push validation failed:${colors.reset}
+${failures.map((h) => `  - ${h.plugin}/${h.hook} in ${h.directory}`).join("\n")}
+
+${colors.cyan}Fix the issues before committing/pushing.${colors.reset}`);
+					// Return structured JSON to block the operation
+					const output = {
+						hookSpecificOutput: {
+							hookEventName: "PreToolUse",
+							permissionDecision: "deny",
+							permissionDecisionReason: `Validation failed for: ${failures.map((f) => `${f.plugin}/${f.hook}`).join(", ")}`,
+						},
+					};
+					console.log(JSON.stringify(output));
+					process.exit(0); // Exit 0 because we're returning structured output
+				}
+
+				console.error(
+					`${colors.green}✓ Pre-commit/push validation passed${colors.reset}`,
+				);
+			}
+
+			// Queue is empty or all hooks passed - allow the git operation
+			return;
+		}
+	}
+
+	// PostToolUse async handling: Queue hooks for non-blocking execution
+	// This enables immediate feedback on file changes without blocking the agent
+	if (eventType === "PostToolUse" && !options.wait && !options.check) {
+		// Filter tasks to those with fileFilter (async-capable)
+		const asyncTasks = tasks.filter(
+			(t) => t.hookDef.fileFilter && t.hookDef.fileFilter.length > 0,
+		);
+
+		if (asyncTasks.length > 0) {
+			const { queued, hookCount } = await handlePostToolUseAsync(
+				asyncTasks,
+				payload,
+				projectRoot,
+				sessionId,
+			);
+
+			if (queued && isDebugMode()) {
+				console.error(
+					`${colors.dim}[PostToolUse]${colors.reset} Queued ${hookCount} async hook(s)`,
+				);
+			}
+
+			// PostToolUse with fileFilter is purely async - no blocking output
+			// The agent will see results at the next checkpoint (Stop or git commit)
+			return;
+		}
+
+		// If no async tasks matched, fall through to normal (synchronous) handling
+		// This covers hooks without fileFilter that should run immediately
+	}
+
 	// Check mode: Just report what would run and tell agent to execute
 	// Use a safeguard timeout to prevent indefinite hangs (Claude Code timeout is 30s)
 	if (options.check) {
@@ -2406,6 +2757,29 @@ export async function orchestrate(
 
 	// For Stop/SubagentStop hooks: handle deferred execution and attempt tracking
 	if (eventType === "Stop" || eventType === "SubagentStop") {
+		// First, drain the async hook queue (PostToolUse async hooks)
+		// These hooks were queued during file modifications and need to run now
+		const asyncQueueResults = await drainAndExecuteAsyncQueue(
+			sessionId,
+			projectRoot,
+			{
+				verbose: options.verbose,
+				cliMode,
+				logPath,
+			},
+		);
+
+		// Add async queue results to allResults
+		allResults.push(...asyncQueueResults);
+
+		// Check for async queue failures
+		const asyncQueueFailures = asyncQueueResults.filter(
+			(r) => !r.success && !r.skipped,
+		);
+		if (asyncQueueFailures.length > 0) {
+			hasFailures = true;
+		}
+
 		const deferredHooks = allResults.filter((r) => r.deferred);
 		const failedHooks = allResults.filter((r) => !r.success && !r.skipped);
 		const isRetryRun = payload.stop_hook_active === true;

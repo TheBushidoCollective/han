@@ -712,6 +712,56 @@ pub struct GeneratedSessionSummaryInput {
 }
 
 // ============================================================================
+// Data Structures - Async Hook Queue (for PostToolUse async hook execution)
+// ============================================================================
+
+/// An async hook queued for execution after a tool use.
+/// Used by the coordinator to manage non-blocking validation hooks.
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AsyncHookQueue {
+    pub id: String,
+    pub session_id: String,
+    pub cwd: String,              // Working directory for the hook
+    pub plugin: String,           // Plugin name (e.g., "jutsu-biome")
+    pub hook_name: String,        // Hook name (e.g., "lint")
+    pub file_paths: String,       // JSON array of file paths to validate
+    pub command: String,          // The command to execute
+    pub status: String,           // 'pending', 'running', 'completed', 'failed', 'cancelled'
+    pub created_at: String,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub result: Option<String>,   // JSON with exit_code, output, etc.
+    pub error: Option<String>,
+}
+
+/// Input for creating a new async hook queue entry
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AsyncHookQueueInput {
+    pub session_id: String,
+    pub cwd: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub file_paths: Vec<String>,
+    pub command: String,
+}
+
+/// Update for async hook queue entry
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AsyncHookQueueUpdate {
+    pub id: String,
+    pub status: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub result: Option<String>,
+    pub error: Option<String>,
+    /// Merge additional file paths (for deduplication)
+    pub merge_file_paths: Option<Vec<String>>,
+}
+
+// ============================================================================
 // Data Structures - Config Dirs Registry (Multi-Environment Support)
 // ============================================================================
 

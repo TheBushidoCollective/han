@@ -1324,6 +1324,77 @@ pub use git::{
 };
 
 // ============================================================================
+// Async Hook Queue Functions (for PostToolUse async hook execution)
+// ============================================================================
+
+// Re-export async hook queue types
+pub use crud::{AsyncHookQueueEntry, AsyncHookQueueInputNative};
+
+/// Enqueue a hook for async execution
+/// First cancels any pending hooks with the same dedup key and merges file paths
+#[napi]
+pub fn enqueue_async_hook(
+    db_path: String,
+    input: AsyncHookQueueInputNative,
+) -> napi::Result<String> {
+    crud::enqueue_async_hook(db_path, input)
+}
+
+/// List pending async hooks for a session
+#[napi]
+pub fn list_pending_async_hooks(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    crud::list_pending_async_hooks(db_path, session_id)
+}
+
+/// Check if the async hook queue is empty for a session
+#[napi]
+pub fn is_async_hook_queue_empty(db_path: String, session_id: String) -> napi::Result<bool> {
+    crud::is_async_hook_queue_empty(db_path, session_id)
+}
+
+/// Drain the queue - get all pending hooks and mark as running
+#[napi]
+pub fn drain_async_hook_queue(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    crud::drain_async_hook_queue(db_path, session_id)
+}
+
+/// Cancel pending hooks matching dedup key and return merged file paths
+#[napi]
+pub fn cancel_pending_async_hooks(
+    db_path: String,
+    session_id: String,
+    cwd: String,
+    plugin: String,
+    hook_name: String,
+) -> napi::Result<Vec<String>> {
+    crud::cancel_pending_async_hooks(db_path, session_id, cwd, plugin, hook_name)
+}
+
+/// Complete an async hook execution
+#[napi]
+pub fn complete_async_hook(
+    db_path: String,
+    id: String,
+    success: bool,
+    result: Option<String>,
+    error: Option<String>,
+) -> napi::Result<()> {
+    crud::complete_async_hook(db_path, id, success, result, error)
+}
+
+/// Cancel a specific async hook by ID
+#[napi]
+pub fn cancel_async_hook(db_path: String, id: String) -> napi::Result<()> {
+    crud::cancel_async_hook(db_path, id)
+}
+
+// ============================================================================
 // Database Reset Functions
 // ============================================================================
 
