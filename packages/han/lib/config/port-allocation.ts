@@ -16,18 +16,18 @@ export const DEFAULT_BROWSE_PORT = 41956;
  * Port configuration type
  */
 export interface PortConfig {
-	coordinator?: number;
-	browse?: number;
+  coordinator?: number;
+  browse?: number;
 }
 
 /**
  * Get configured ports (always returns defaults)
  */
 export function getConfiguredPorts(): PortConfig {
-	return {
-		coordinator: DEFAULT_COORDINATOR_PORT,
-		browse: DEFAULT_BROWSE_PORT,
-	};
+  return {
+    coordinator: DEFAULT_COORDINATOR_PORT,
+    browse: DEFAULT_BROWSE_PORT,
+  };
 }
 
 /**
@@ -35,10 +35,10 @@ export function getConfiguredPorts(): PortConfig {
  * Kept for backwards compatibility
  */
 export async function getOrAllocatePorts(): Promise<Required<PortConfig>> {
-	return {
-		coordinator: DEFAULT_COORDINATOR_PORT,
-		browse: DEFAULT_BROWSE_PORT,
-	};
+  return {
+    coordinator: DEFAULT_COORDINATOR_PORT,
+    browse: DEFAULT_BROWSE_PORT,
+  };
 }
 
 /**
@@ -46,7 +46,7 @@ export async function getOrAllocatePorts(): Promise<Required<PortConfig>> {
  * Returns the default ports
  */
 export function getAllAllocatedPorts(): Set<number> {
-	return new Set([DEFAULT_COORDINATOR_PORT, DEFAULT_BROWSE_PORT]);
+  return new Set([DEFAULT_COORDINATOR_PORT, DEFAULT_BROWSE_PORT]);
 }
 
 /**
@@ -54,7 +54,7 @@ export function getAllAllocatedPorts(): Set<number> {
  * Kept for backwards compatibility
  */
 export async function isPortAvailable(_port: number): Promise<boolean> {
-	return true;
+  return true;
 }
 
 /**
@@ -62,13 +62,13 @@ export async function isPortAvailable(_port: number): Promise<boolean> {
  * Kept for backwards compatibility
  */
 export async function findAvailablePorts(
-	count: number,
-	_excludePorts: Set<number>,
+  count: number,
+  _excludePorts: Set<number>
 ): Promise<number[]> {
-	if (count >= 2) {
-		return [DEFAULT_COORDINATOR_PORT, DEFAULT_BROWSE_PORT];
-	}
-	return [DEFAULT_COORDINATOR_PORT];
+  if (count >= 2) {
+    return [DEFAULT_COORDINATOR_PORT, DEFAULT_BROWSE_PORT];
+  }
+  return [DEFAULT_COORDINATOR_PORT];
 }
 
 /**
@@ -76,8 +76,8 @@ export async function findAvailablePorts(
  * No-op since ports are now fixed
  */
 export function writePortsToConfig(
-	_configDir: string,
-	_ports: PortConfig,
+  _configDir: string,
+  _ports: PortConfig
 ): void {
-	// No-op - ports are fixed
+  // No-op - ports are fixed
 }

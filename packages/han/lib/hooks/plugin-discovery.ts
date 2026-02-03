@@ -6,13 +6,13 @@
  * files to support flexible directory structures.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
-	getClaudeConfigDir,
-	getProjectDir,
-	type MarketplaceConfig,
-} from "../config/claude-settings.ts";
+  getClaudeConfigDir,
+  getProjectDir,
+  type MarketplaceConfig,
+} from '../config/claude-settings.ts';
 
 /**
  * Cache of plugin name to directory mappings per marketplace root.
@@ -30,54 +30,54 @@ const pluginDirCache = new Map<string, Map<string, string>>();
  * @returns Map of plugin name to plugin directory path
  */
 export function buildPluginDirCache(
-	marketplaceRoot: string,
+  marketplaceRoot: string
 ): Map<string, string> {
-	const cache = new Map<string, string>();
+  const cache = new Map<string, string>();
 
-	const scanDir = (dir: string, depth: number) => {
-		// Depth 3 supports: plugins/category/plugin/han-plugin.yml
-		if (depth > 3) return;
-		try {
-			const entries = readdirSync(dir, { withFileTypes: true });
-			for (const entry of entries) {
-				if (!entry.isDirectory()) continue;
-				if (entry.name.startsWith(".") || entry.name === "node_modules")
-					continue;
+  const scanDir = (dir: string, depth: number) => {
+    // Depth 3 supports: plugins/category/plugin/han-plugin.yml
+    if (depth > 3) return;
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name.startsWith('.') || entry.name === 'node_modules')
+          continue;
 
-				const subdir = join(dir, entry.name);
+        const subdir = join(dir, entry.name);
 
-				// Check if this directory has han-plugin.yml
-				if (existsSync(join(subdir, "han-plugin.yml"))) {
-					// Get plugin name from .claude-plugin/plugin.json if available
-					const pluginJsonPath = join(subdir, ".claude-plugin", "plugin.json");
-					if (existsSync(pluginJsonPath)) {
-						try {
-							const pluginJson = JSON.parse(
-								readFileSync(pluginJsonPath, "utf-8"),
-							);
-							if (pluginJson.name) {
-								cache.set(pluginJson.name, subdir);
-							}
-						} catch {
-							// Invalid plugin.json, fall back to directory name
-							cache.set(entry.name, subdir);
-						}
-					} else {
-						// No plugin.json, use directory name
-						cache.set(entry.name, subdir);
-					}
-				}
+        // Check if this directory has han-plugin.yml
+        if (existsSync(join(subdir, 'han-plugin.yml'))) {
+          // Get plugin name from .claude-plugin/plugin.json if available
+          const pluginJsonPath = join(subdir, '.claude-plugin', 'plugin.json');
+          if (existsSync(pluginJsonPath)) {
+            try {
+              const pluginJson = JSON.parse(
+                readFileSync(pluginJsonPath, 'utf-8')
+              );
+              if (pluginJson.name) {
+                cache.set(pluginJson.name, subdir);
+              }
+            } catch {
+              // Invalid plugin.json, fall back to directory name
+              cache.set(entry.name, subdir);
+            }
+          } else {
+            // No plugin.json, use directory name
+            cache.set(entry.name, subdir);
+          }
+        }
 
-				// Recurse into subdirectories
-				scanDir(subdir, depth + 1);
-			}
-		} catch {
-			// Directory not readable
-		}
-	};
+        // Recurse into subdirectories
+        scanDir(subdir, depth + 1);
+      }
+    } catch {
+      // Directory not readable
+    }
+  };
 
-	scanDir(marketplaceRoot, 0);
-	return cache;
+  scanDir(marketplaceRoot, 0);
+  return cache;
 }
 
 /**
@@ -88,16 +88,16 @@ export function buildPluginDirCache(
  * @returns Absolute path to plugin directory, or null if not found
  */
 export function findPluginInMarketplace(
-	marketplaceRoot: string,
-	pluginName: string,
+  marketplaceRoot: string,
+  pluginName: string
 ): string | null {
-	// Use cached mapping if available
-	if (!pluginDirCache.has(marketplaceRoot)) {
-		pluginDirCache.set(marketplaceRoot, buildPluginDirCache(marketplaceRoot));
-	}
+  // Use cached mapping if available
+  if (!pluginDirCache.has(marketplaceRoot)) {
+    pluginDirCache.set(marketplaceRoot, buildPluginDirCache(marketplaceRoot));
+  }
 
-	const cache = pluginDirCache.get(marketplaceRoot);
-	return cache?.get(pluginName) ?? null;
+  const cache = pluginDirCache.get(marketplaceRoot);
+  return cache?.get(pluginName) ?? null;
 }
 
 /**
@@ -105,34 +105,34 @@ export function findPluginInMarketplace(
  * Useful for testing or when plugins are installed/removed.
  */
 export function clearPluginDirCache(): void {
-	pluginDirCache.clear();
+  pluginDirCache.clear();
 }
 
 /**
  * Source information for a discovered plugin
  */
 export interface PluginSource {
-	type: "github" | "directory" | "git" | "development";
-	path?: string;
-	repo?: string;
+  type: 'github' | 'directory' | 'git' | 'development';
+  path?: string;
+  repo?: string;
 }
 
 /**
  * Result of resolving a plugin directory
  */
 export interface PluginDirResult {
-	path: string | null;
-	source: PluginSource;
+  path: string | null;
+  source: PluginSource;
 }
 
 /**
  * Resolve a path to absolute, relative to a base directory.
  */
 function resolveToAbsolute(path: string, basePath?: string): string {
-	if (path.startsWith("/")) {
-		return path;
-	}
-	return join(basePath ?? process.cwd(), path);
+  if (path.startsWith('/')) {
+    return path;
+  }
+  return join(basePath ?? process.cwd(), path);
 }
 
 /**
@@ -149,85 +149,85 @@ function resolveToAbsolute(path: string, basePath?: string): string {
  * @returns Plugin directory path and source information
  */
 export function getPluginDirWithSource(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
+  pluginName: string,
+  marketplace: string,
+  marketplaceConfig: MarketplaceConfig | undefined
 ): PluginDirResult {
-	const projectDir = getProjectDir();
+  const projectDir = getProjectDir();
 
-	// Check marketplace config for directory source
-	if (marketplaceConfig?.source?.source === "directory") {
-		const directoryPath = marketplaceConfig.source.path;
-		if (directoryPath) {
-			const absolutePath = resolveToAbsolute(directoryPath, projectDir);
-			const found = findPluginInMarketplace(absolutePath, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: { type: "directory", path: absolutePath },
-				};
-			}
-		}
-	}
+  // Check marketplace config for directory source
+  if (marketplaceConfig?.source?.source === 'directory') {
+    const directoryPath = marketplaceConfig.source.path;
+    if (directoryPath) {
+      const absolutePath = resolveToAbsolute(directoryPath, projectDir);
+      const found = findPluginInMarketplace(absolutePath, pluginName);
+      if (found) {
+        return {
+          path: found,
+          source: { type: 'directory', path: absolutePath },
+        };
+      }
+    }
+  }
 
-	// Check for git source
-	if (
-		marketplaceConfig?.source?.source === "git" &&
-		marketplaceConfig.source.url
-	) {
-		const configDir = getClaudeConfigDir();
-		if (configDir) {
-			const marketplaceRoot = join(
-				configDir,
-				"plugins",
-				"marketplaces",
-				marketplace,
-			);
-			const found = findPluginInMarketplace(marketplaceRoot, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: { type: "git", path: marketplaceConfig.source.url },
-				};
-			}
-		}
-	}
+  // Check for git source
+  if (
+    marketplaceConfig?.source?.source === 'git' &&
+    marketplaceConfig.source.url
+  ) {
+    const configDir = getClaudeConfigDir();
+    if (configDir) {
+      const marketplaceRoot = join(
+        configDir,
+        'plugins',
+        'marketplaces',
+        marketplace
+      );
+      const found = findPluginInMarketplace(marketplaceRoot, pluginName);
+      if (found) {
+        return {
+          path: found,
+          source: { type: 'git', path: marketplaceConfig.source.url },
+        };
+      }
+    }
+  }
 
-	// Check if we're in the marketplace repo (development mode)
-	if (existsSync(join(projectDir, ".claude-plugin", "marketplace.json"))) {
-		const found = findPluginInMarketplace(projectDir, pluginName);
-		if (found) {
-			return {
-				path: found,
-				source: { type: "development", path: projectDir },
-			};
-		}
-	}
+  // Check if we're in the marketplace repo (development mode)
+  if (existsSync(join(projectDir, '.claude-plugin', 'marketplace.json'))) {
+    const found = findPluginInMarketplace(projectDir, pluginName);
+    if (found) {
+      return {
+        path: found,
+        source: { type: 'development', path: projectDir },
+      };
+    }
+  }
 
-	// Fall back to default shared config path (GitHub source)
-	const configDir = getClaudeConfigDir();
-	if (configDir) {
-		const marketplaceRoot = join(
-			configDir,
-			"plugins",
-			"marketplaces",
-			marketplace,
-		);
-		if (existsSync(marketplaceRoot)) {
-			const found = findPluginInMarketplace(marketplaceRoot, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: {
-						type: "github",
-						repo: marketplaceConfig?.source?.repo || marketplace,
-					},
-				};
-			}
-		}
-	}
+  // Fall back to default shared config path (GitHub source)
+  const configDir = getClaudeConfigDir();
+  if (configDir) {
+    const marketplaceRoot = join(
+      configDir,
+      'plugins',
+      'marketplaces',
+      marketplace
+    );
+    if (existsSync(marketplaceRoot)) {
+      const found = findPluginInMarketplace(marketplaceRoot, pluginName);
+      if (found) {
+        return {
+          path: found,
+          source: {
+            type: 'github',
+            repo: marketplaceConfig?.source?.repo || marketplace,
+          },
+        };
+      }
+    }
+  }
 
-	return { path: null, source: { type: "github" } };
+  return { path: null, source: { type: 'github' } };
 }
 
 /**
@@ -239,10 +239,10 @@ export function getPluginDirWithSource(
  * @returns Absolute path to plugin directory, or null if not found
  */
 export function getPluginDir(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
+  pluginName: string,
+  marketplace: string,
+  marketplaceConfig: MarketplaceConfig | undefined
 ): string | null {
-	return getPluginDirWithSource(pluginName, marketplace, marketplaceConfig)
-		.path;
+  return getPluginDirWithSource(pluginName, marketplace, marketplaceConfig)
+    .path;
 }

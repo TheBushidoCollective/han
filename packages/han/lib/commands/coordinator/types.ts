@@ -18,30 +18,30 @@ export const BROWSE_PORT = DEFAULT_BROWSE_PORT;
  * Coordinator daemon status
  */
 export interface CoordinatorStatus {
-	running: boolean;
-	pid?: number;
-	port: number;
-	uptime?: number; // seconds
-	startedAt?: string; // ISO timestamp
+  running: boolean;
+  pid?: number;
+  port: number;
+  uptime?: number; // seconds
+  startedAt?: string; // ISO timestamp
 }
 
 /**
  * Coordinator daemon options
  */
 export interface CoordinatorOptions {
-	port?: number;
-	foreground?: boolean; // Run in foreground (don't daemonize)
+  port?: number;
+  foreground?: boolean; // Run in foreground (don't daemonize)
 }
 
 /**
  * PID file location
  */
-export const PID_FILE = ".han-coordinator.pid";
+export const PID_FILE = '.han-coordinator.pid';
 
 /**
  * Log file location (relative to ~/.claude/han/)
  */
-export const LOG_FILE = "han/coordinator.log";
+export const LOG_FILE = 'han/coordinator.log';
 
 /**
  * Get the coordinator port
@@ -51,16 +51,16 @@ export const LOG_FILE = "han/coordinator.log";
  * 2. Default port (41957)
  */
 export function getCoordinatorPort(): number {
-	// Environment variable takes highest priority
-	const envPort = process.env.HAN_COORDINATOR_PORT;
-	if (envPort) {
-		const port = parseInt(envPort, 10);
-		if (!Number.isNaN(port) && port > 0 && port < 65536) {
-			return port;
-		}
-	}
+  // Environment variable takes highest priority
+  const envPort = process.env.HAN_COORDINATOR_PORT;
+  if (envPort) {
+    const port = parseInt(envPort, 10);
+    if (!Number.isNaN(port) && port > 0 && port < 65536) {
+      return port;
+    }
+  }
 
-	return DEFAULT_COORDINATOR_PORT;
+  return DEFAULT_COORDINATOR_PORT;
 }
 
 /**
@@ -71,14 +71,14 @@ export function getCoordinatorPort(): number {
  * 2. Default port (41956)
  */
 export function getBrowsePort(): number {
-	// Environment variable takes highest priority
-	const envPort = process.env.HAN_BROWSE_PORT;
-	if (envPort) {
-		const port = parseInt(envPort, 10);
-		if (!Number.isNaN(port) && port > 0 && port < 65536) {
-			return port;
-		}
-	}
+  // Environment variable takes highest priority
+  const envPort = process.env.HAN_BROWSE_PORT;
+  if (envPort) {
+    const port = parseInt(envPort, 10);
+    if (!Number.isNaN(port) && port > 0 && port < 65536) {
+      return port;
+    }
+  }
 
-	return DEFAULT_BROWSE_PORT;
+  return DEFAULT_BROWSE_PORT;
 }
