@@ -517,7 +517,9 @@ export interface StrictResolveResult {
  * @param inputs - Array of plugin names
  * @returns Object with resolved plugins and list of deprecated inputs
  */
-export function resolvePluginNamesStrict(inputs: string[]): StrictResolveResult {
+export function resolvePluginNamesStrict(
+  inputs: string[]
+): StrictResolveResult {
   const resolved: Array<{ input: string; name: string; path: string }> = [];
   const deprecated: string[] = [];
 
