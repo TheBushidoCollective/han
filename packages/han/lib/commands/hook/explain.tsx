@@ -6,12 +6,12 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	getSettingsPaths,
-	type MarketplaceConfig,
 	readSettingsFile,
 	type SettingsScope,
 } from "../../config/claude-settings.ts";
 import {
 	getHookEvents,
+	getPluginDir,
 	HookExplainUI,
 	type HookSource,
 	loadPluginConfig,
@@ -45,93 +45,6 @@ interface LegacyHookEntry {
 	command?: string;
 	prompt?: string;
 	timeout?: number;
-}
-
-/**
- * Find plugin in a marketplace root directory
- */
-function findPluginInMarketplace(
-	marketplaceRoot: string,
-	pluginName: string,
-): string | null {
-	const potentialPaths = [
-		join(marketplaceRoot, "jutsu", pluginName),
-		join(marketplaceRoot, "do", pluginName),
-		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, pluginName),
-	];
-
-	// Only add core path if we're actually looking for the core plugin
-	if (pluginName === "core") {
-		potentialPaths.push(join(marketplaceRoot, "core"));
-	}
-
-	for (const path of potentialPaths) {
-		if (existsSync(path)) {
-			return path;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Resolve a path to absolute, relative to cwd
- */
-function resolveToAbsolute(path: string): string {
-	if (path.startsWith("/")) {
-		return path;
-	}
-	return join(process.cwd(), path);
-}
-
-/**
- * Get plugin directory based on plugin name, marketplace, and marketplace config
- */
-function getPluginDir(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
-): string | null {
-	// If marketplace config specifies a directory source, use that path
-	if (marketplaceConfig?.source?.source === "directory") {
-		const directoryPath = marketplaceConfig.source.path;
-		if (directoryPath) {
-			const absolutePath = resolveToAbsolute(directoryPath);
-			const found = findPluginInMarketplace(absolutePath, pluginName);
-			if (found) {
-				return found;
-			}
-		}
-	}
-
-	// Check if we're in the marketplace repo itself (for development)
-	const cwd = process.cwd();
-	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
-		const found = findPluginInMarketplace(cwd, pluginName);
-		if (found) {
-			return found;
-		}
-	}
-
-	// Fall back to the default shared config path
-	const configDir = getClaudeConfigDir();
-	if (!configDir) {
-		return null;
-	}
-
-	const marketplaceRoot = join(
-		configDir,
-		"plugins",
-		"marketplaces",
-		marketplace,
-	);
-
-	if (!existsSync(marketplaceRoot)) {
-		return null;
-	}
-
-	return findPluginInMarketplace(marketplaceRoot, pluginName);
 }
 
 /**

@@ -28,7 +28,12 @@ export type HookEventType =
  * Hooks are executed in phase order: format → lint → typecheck → test → advisory.
  * All hooks in phase N must complete before phase N+1 starts.
  */
-export type HookCategory = "format" | "lint" | "typecheck" | "test" | "advisory";
+export type HookCategory =
+	| "format"
+	| "lint"
+	| "typecheck"
+	| "test"
+	| "advisory";
 
 /**
  * Phase execution order for hook categories.
@@ -240,14 +245,16 @@ interface YamlPluginConfig {
 }
 
 /**
- * Convert YAML snake_case hook definition to camelCase
+ * Convert YAML snake_case hook definition to camelCase.
+ * Applies default events (Stop, SubagentStop) when event is not specified.
  */
 function convertYamlHook(
 	yamlHook: YamlPluginHookDefinition,
 ): PluginHookDefinition {
 	return {
 		command: yamlHook.command,
-		...(yamlHook.event && { event: yamlHook.event }),
+		// Apply default events when not specified
+		event: yamlHook.event ?? DEFAULT_HOOK_EVENTS,
 		...(yamlHook.tool_filter && { toolFilter: yamlHook.tool_filter }),
 		...(yamlHook.dirs_with && { dirsWith: yamlHook.dirs_with }),
 		...(yamlHook.dir_test && { dirTest: yamlHook.dir_test }),

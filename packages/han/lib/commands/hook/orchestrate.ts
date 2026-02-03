@@ -14,7 +14,6 @@ import {
 	getClaudeConfigDir,
 	getMergedPluginsAndMarketplaces,
 	getProjectDir,
-	type MarketplaceConfig,
 } from "../../config/claude-settings.ts";
 import {
 	getHanBinary as getConfiguredHanBinary,
@@ -35,6 +34,7 @@ import {
 	buildCommandWithFiles,
 	checkForChangesAsync,
 	findDirectoriesWithMarkers,
+	getPluginDir,
 	type HookCategory,
 	hookMatchesEvent,
 	inferCategoryFromHookName,
@@ -267,6 +267,79 @@ const colors = {
 };
 
 /**
+ * Result of coordinator health verification
+ */
+interface CoordinatorHealthResult {
+	healthy: boolean;
+	degraded: boolean;
+	reason?: string;
+}
+
+/**
+ * Verify coordinator health for cache operations
+ * Returns degraded=true if coordinator is not fully operational
+ */
+async function verifyCoordinatorHealth(
+	_sessionId: string,
+	_projectRoot: string,
+): Promise<CoordinatorHealthResult> {
+	const HEALTH_CHECK_TIMEOUT_MS = 5000;
+
+	try {
+		// Try to check coordinator health via HTTP
+		const { checkHealth } = await import("../coordinator/health.ts");
+		const health = await checkHealth();
+
+		if (health?.status === "ok") {
+			return { healthy: true, degraded: false };
+		}
+
+		// Coordinator not responding - try to start it
+		try {
+			const { ensureCoordinator } = await import("../coordinator/daemon.ts");
+			const startPromise = ensureCoordinator();
+
+			// Wait up to 5s for coordinator to start
+			const timeoutPromise = new Promise<null>((resolve) =>
+				setTimeout(() => resolve(null), HEALTH_CHECK_TIMEOUT_MS),
+			);
+
+			const result = await Promise.race([startPromise, timeoutPromise]);
+
+			if (result?.running) {
+				return { healthy: true, degraded: false };
+			}
+		} catch (startError) {
+			if (isDebugMode()) {
+				console.error(
+					`${colors.dim}[verifyCoordinatorHealth]${colors.reset} Failed to start coordinator:`,
+					startError,
+				);
+			}
+		}
+
+		// Coordinator not available - mark as degraded
+		return {
+			healthy: false,
+			degraded: true,
+			reason: "Coordinator not responding - cache may be stale",
+		};
+	} catch (error) {
+		if (isDebugMode()) {
+			console.error(
+				`${colors.dim}[verifyCoordinatorHealth]${colors.reset} Health check error:`,
+				error,
+			);
+		}
+		return {
+			healthy: false,
+			degraded: true,
+			reason: "Unable to verify coordinator health",
+		};
+	}
+}
+
+/**
  * Format duration in human-readable form
  */
 function formatDuration(ms: number): string {
@@ -452,77 +525,6 @@ function readStdinPayload(): HookPayload | null {
 		// stdin not available or empty
 	}
 	return null;
-}
-
-/**
- * Find plugin directory in a marketplace
- */
-function findPluginInMarketplace(
-	marketplaceRoot: string,
-	pluginName: string,
-): string | null {
-	// Build potential paths - core is a special case since it's not in a subdirectory
-	const potentialPaths = [
-		join(marketplaceRoot, "jutsu", pluginName),
-		join(marketplaceRoot, "do", pluginName),
-		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, pluginName),
-	];
-
-	// Only add core path if we're actually looking for the core plugin
-	if (pluginName === "core") {
-		potentialPaths.push(join(marketplaceRoot, "core"));
-	}
-
-	for (const path of potentialPaths) {
-		if (existsSync(path)) {
-			return path;
-		}
-	}
-	return null;
-}
-
-/**
- * Get plugin directory for a plugin
- */
-function getPluginDir(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
-): string | null {
-	// Check marketplace config for directory source
-	if (marketplaceConfig?.source?.source === "directory") {
-		const directoryPath = marketplaceConfig.source.path;
-		if (directoryPath) {
-			const projectDir = getProjectDir();
-			const absolutePath = directoryPath.startsWith("/")
-				? directoryPath
-				: join(projectDir, directoryPath);
-			const found = findPluginInMarketplace(absolutePath, pluginName);
-			if (found) return found;
-		}
-	}
-
-	// Check if we're in the marketplace repo (development)
-	const projectDir = getProjectDir();
-	if (existsSync(join(projectDir, ".claude-plugin", "marketplace.json"))) {
-		const found = findPluginInMarketplace(projectDir, pluginName);
-		if (found) return found;
-	}
-
-	// Fall back to default shared config path
-	const configDir = getClaudeConfigDir();
-	if (!configDir) return null;
-
-	const marketplaceRoot = join(
-		configDir,
-		"plugins",
-		"marketplaces",
-		marketplace,
-	);
-	if (!existsSync(marketplaceRoot)) return null;
-
-	return findPluginInMarketplace(marketplaceRoot, pluginName);
 }
 
 /**
@@ -1569,6 +1571,8 @@ async function performCheckMode(
 	onlyChanged: boolean,
 	sessionId: string,
 	skipIfQuestioning: boolean,
+	degradedMode: boolean,
+	degradedReason?: string,
 ): Promise<void> {
 	// If flag is set: check if this is a Q&A exchange (user or agent asked a question)
 	// If so, skip hooks - no work is being validated, just conversation
@@ -1895,6 +1899,13 @@ ${colors.cyan}To run validation, execute:${colors.reset}
 
 ${colors.dim}The wait command automatically prevents recursion during execution.${colors.reset}`);
 
+		// Add degraded mode warning if applicable
+		if (degradedMode && degradedReason) {
+			console.error(`
+${colors.yellow}⚠ Note: ${degradedReason}${colors.reset}
+${colors.dim}Cache checks may be unreliable. Consider running with --all-files to skip caching.${colors.reset}`);
+		}
+
 		// Exit with code 2 to indicate action needed (same as validation failures)
 		process.exit(2);
 	}
@@ -2003,6 +2014,23 @@ export async function orchestrate(
 	// Initialize event logger with the correct sessionId
 	initEventLogger(sessionId, {}, projectRoot);
 
+	// Track degraded mode for health issues
+	let degradedMode = false;
+	let degradedReason: string | undefined;
+
+	// Verify coordinator health if we'll be using caching
+	// This prevents stale cache issues when coordinator has problems
+	if (options.onlyChanged && !options.check) {
+		const healthResult = await verifyCoordinatorHealth(sessionId, projectRoot);
+		if (healthResult.degraded) {
+			degradedMode = true;
+			degradedReason = healthResult.reason;
+			console.error(
+				`${colors.yellow}⚠ Running in degraded mode:${colors.reset} ${healthResult.reason}`,
+			);
+		}
+	}
+
 	// Set HAN_STOP_ORCHESTRATING=1 automatically for wait mode on Stop events
 	// This prevents any hooks triggered during execution from recursing
 	if (
@@ -2080,7 +2108,12 @@ export async function orchestrate(
 		}
 	} else {
 		// Discover all hook tasks for this event
-		tasks = discoverHookTasks(eventType, payload, projectRoot, options.toolName);
+		tasks = discoverHookTasks(
+			eventType,
+			payload,
+			projectRoot,
+			options.toolName,
+		);
 	}
 
 	if (tasks.length === 0) {
@@ -2111,6 +2144,8 @@ export async function orchestrate(
 				options.onlyChanged,
 				sessionId,
 				options.skipIfQuestioning ?? false,
+				degradedMode,
+				degradedReason,
 			);
 		} finally {
 			clearTimeout(timeoutId);

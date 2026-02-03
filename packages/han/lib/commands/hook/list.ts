@@ -1,17 +1,15 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import type { Command } from "commander";
-import {
-	getClaudeConfigDir,
-	getMergedPluginsAndMarketplaces,
-	getProjectDir,
-	type MarketplaceConfig,
-} from "../../config/claude-settings.ts";
+import { getMergedPluginsAndMarketplaces } from "../../config/claude-settings.ts";
 import {
 	getHookEvents,
+	type HookEventType,
 	loadPluginConfig,
 	type PluginHookDefinition,
 } from "../../hooks/hook-config.ts";
+import {
+	getPluginDirWithSource,
+	type PluginSource,
+} from "../../hooks/plugin-discovery.ts";
 
 /**
  * ANSI color codes for CLI output
@@ -36,124 +34,7 @@ interface DiscoveredHook {
 	hookDef: PluginHookDefinition;
 	pluginRoot: string;
 	marketplace: string;
-	source: {
-		type: "github" | "directory" | "git" | "development";
-		path?: string;
-		repo?: string;
-	};
-}
-
-/**
- * Find plugin directory in a marketplace
- */
-function findPluginInMarketplace(
-	marketplaceRoot: string,
-	pluginName: string,
-): string | null {
-	const potentialPaths = [
-		join(marketplaceRoot, "jutsu", pluginName),
-		join(marketplaceRoot, "do", pluginName),
-		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, pluginName),
-	];
-
-	if (pluginName === "core") {
-		potentialPaths.push(join(marketplaceRoot, "core"));
-	}
-
-	for (const path of potentialPaths) {
-		if (existsSync(path)) {
-			return path;
-		}
-	}
-	return null;
-}
-
-/**
- * Get plugin directory with source information
- */
-function getPluginDirWithSource(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
-): { path: string | null; source: DiscoveredHook["source"] } {
-	// Check marketplace config for directory source
-	if (marketplaceConfig?.source?.source === "directory") {
-		const directoryPath = marketplaceConfig.source.path;
-		if (directoryPath) {
-			const projectDir = getProjectDir();
-			const absolutePath = directoryPath.startsWith("/")
-				? directoryPath
-				: join(projectDir, directoryPath);
-			const found = findPluginInMarketplace(absolutePath, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: { type: "directory", path: absolutePath },
-				};
-			}
-		}
-	}
-
-	// Check for git source
-	if (
-		marketplaceConfig?.source?.source === "git" &&
-		marketplaceConfig.source.url
-	) {
-		const configDir = getClaudeConfigDir();
-		if (configDir) {
-			const marketplaceRoot = join(
-				configDir,
-				"plugins",
-				"marketplaces",
-				marketplace,
-			);
-			const found = findPluginInMarketplace(marketplaceRoot, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: { type: "git", path: marketplaceConfig.source.url },
-				};
-			}
-		}
-	}
-
-	// Check if we're in the marketplace repo (development)
-	const projectDir = getProjectDir();
-	if (existsSync(join(projectDir, ".claude-plugin", "marketplace.json"))) {
-		const found = findPluginInMarketplace(projectDir, pluginName);
-		if (found) {
-			return {
-				path: found,
-				source: { type: "development", path: projectDir },
-			};
-		}
-	}
-
-	// Fall back to default shared config path (github source)
-	const configDir = getClaudeConfigDir();
-	if (configDir) {
-		const marketplaceRoot = join(
-			configDir,
-			"plugins",
-			"marketplaces",
-			marketplace,
-		);
-		if (existsSync(marketplaceRoot)) {
-			const found = findPluginInMarketplace(marketplaceRoot, pluginName);
-			if (found) {
-				return {
-					path: found,
-					source: {
-						type: "github",
-						repo: marketplaceConfig?.source?.repo || `${marketplace}`,
-					},
-				};
-			}
-		}
-	}
-
-	return { path: null, source: { type: "github" } };
+	source: PluginSource;
 }
 
 /**
@@ -221,7 +102,10 @@ export function registerHookList(hookCommand: Command): void {
 				"  - GitHub repositories (source: github)\n" +
 				"  - Development mode (running in marketplace repo)",
 		)
-		.option("-e, --event <event>", "Filter by event type (e.g., Stop, PreToolUse)")
+		.option(
+			"-e, --event <event>",
+			"Filter by event type (e.g., Stop, PreToolUse)",
+		)
 		.option("-p, --plugin <plugin>", "Filter by plugin name")
 		.option("--json", "Output as JSON for programmatic use")
 		.option("-v, --verbose", "Show additional details including source paths")
@@ -240,7 +124,7 @@ export function registerHookList(hookCommand: Command): void {
 				if (opts.event) {
 					filteredHooks = filteredHooks.filter((h) => {
 						const events = getHookEvents(h.hookDef);
-						return events.includes(opts.event as any);
+						return events.includes(opts.event as HookEventType);
 					});
 				}
 
@@ -305,7 +189,9 @@ export function registerHookList(hookCommand: Command): void {
 
 					if (opts.verbose) {
 						console.log(`  ${formatSource(firstHook.source)}`);
-						console.log(`  ${colors.dim}path: ${firstHook.pluginRoot}${colors.reset}`);
+						console.log(
+							`  ${colors.dim}path: ${firstHook.pluginRoot}${colors.reset}`,
+						);
 					}
 
 					for (const hook of pluginHooks) {

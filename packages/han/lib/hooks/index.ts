@@ -78,6 +78,16 @@ export {
 	testHooks,
 } from "./hook-test.ts";
 export { HookTestUI } from "./hook-test-ui.tsx";
+// Plugin discovery
+export {
+	buildPluginDirCache,
+	clearPluginDirCache,
+	findPluginInMarketplace,
+	getPluginDir,
+	getPluginDirWithSource,
+	type PluginDirResult,
+	type PluginSource,
+} from "./plugin-discovery.ts";
 // Transcript filtering
 export {
 	buildCommandWithFiles,

@@ -9,6 +9,7 @@ import {
 	type MarketplaceConfig,
 } from "../config/claude-settings.ts";
 import { HookTestUI } from "./hook-test-ui.tsx";
+import { getPluginDir } from "./plugin-discovery.ts";
 
 interface HookCommand {
 	plugin: string;
@@ -236,76 +237,6 @@ async function executeHookCommand(
 			});
 		});
 	});
-}
-
-/**
- * Find plugin in a marketplace root directory
- */
-function findPluginInMarketplace(
-	marketplaceRoot: string,
-	pluginName: string,
-): string | null {
-	// Try different plugin directory structures
-	const potentialPaths = [
-		join(marketplaceRoot, "jutsu", pluginName),
-		join(marketplaceRoot, "do", pluginName),
-		join(marketplaceRoot, "hashi", pluginName),
-		join(marketplaceRoot, pluginName),
-	];
-
-	for (const path of potentialPaths) {
-		if (existsSync(path)) {
-			return path;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Get plugin directory based on plugin name, marketplace, and marketplace config
- */
-function getPluginDir(
-	pluginName: string,
-	marketplace: string,
-	marketplaceConfig: MarketplaceConfig | undefined,
-): string | null {
-	// If marketplace config specifies a directory source, use that path
-	if (marketplaceConfig?.source?.source === "directory") {
-		const directoryPath = marketplaceConfig.source.path;
-		if (directoryPath) {
-			const found = findPluginInMarketplace(directoryPath, pluginName);
-			if (found) {
-				return found;
-			}
-		}
-	}
-
-	// Check if we're in the marketplace repo itself (for development)
-	const cwd = process.cwd();
-	if (existsSync(join(cwd, ".claude-plugin", "marketplace.json"))) {
-		// We're in a marketplace repo, look for plugins here
-		const found = findPluginInMarketplace(cwd, pluginName);
-		if (found) {
-			return found;
-		}
-	}
-
-	// Fall back to the default shared config path
-	const configDir = getClaudeConfigDir();
-	const marketplaceRoot = join(
-		configDir,
-		"plugins",
-		"marketplaces",
-		marketplace,
-	);
-
-	// Look in the marketplace directory
-	if (!existsSync(marketplaceRoot)) {
-		return null;
-	}
-
-	return findPluginInMarketplace(marketplaceRoot, pluginName);
 }
 
 /**
