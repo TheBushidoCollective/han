@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "han": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@thebushidocollective/han",
+        "mcp"
+      ]
+    }
+  }
+}

@@ -36,7 +36,7 @@
     "github@han": true,
     "reddit@han": true,
     "act@han": true,
-    "ai-dlc@han": true,
+    "ai-dlc@han": false,
     "atomic-design@han": true,
     "biome@han": true,
     "bun@han": true,

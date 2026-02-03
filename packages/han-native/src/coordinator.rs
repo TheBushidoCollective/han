@@ -274,6 +274,39 @@ pub fn get_stale_lock_timeout() -> u32 {
     LOCK_STALE_TIMEOUT as u32
 }
 
+/// Clean up a stale coordinator lock file
+/// Returns true if a stale lock was cleaned up, false otherwise
+pub fn cleanup_stale_coordinator_lock() -> Result<bool> {
+    let lock_path = get_lock_path();
+
+    // Read existing lock file
+    if let Some(info) = read_lock_file(&lock_path) {
+        // Check if lock is stale (process dead OR heartbeat too old)
+        if is_lock_stale(&info) {
+            // Remove the stale lock file
+            match std::fs::remove_file(&lock_path) {
+                Ok(()) => {
+                    tracing::info!(
+                        "Cleaned up stale coordinator lock from PID {} (heartbeat age: {}s)",
+                        info.pid,
+                        now_secs() - info.heartbeat_at
+                    );
+                    return Ok(true);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to remove stale lock file: {}", e);
+                    return Err(napi::Error::from_reason(format!(
+                        "Failed to remove stale lock file: {}",
+                        e
+                    )));
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

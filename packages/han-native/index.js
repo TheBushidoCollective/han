@@ -310,8 +310,14 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { getOrCreateHookAttempt, incrementHookFailures, resetHookFailures, increaseHookMaxAttempts, createOrchestration, getOrchestration, updateOrchestration, cancelOrchestration, queuePendingHook, getPendingHooks, updateHookStatus, getOrchestrationHooks, getSessionPendingHooks, failHookExecution, completeHookExecution, queueHook, getQueuedHooks, deleteQueuedHooks, cleanupLegacyDatabase, hasLegacyDatabase, getGitBranch, getGitRoot, getGitCommonDir, getGitRemoteUrl, getGitInfo, gitLsFiles, gitWorktreeList, gitLog, gitShowFile, gitCreateBranch, gitWorktreeAdd, gitWorktreeRemove, gitDiffStat, jsonlCountLines, jsonlStats, jsonlReadPage, jsonlReadReverse, jsonlBuildIndex, jsonlSaveIndex, jsonlLoadIndex, jsonlReadIndexed, jsonlStream, jsonlFilter, jsonlFilterTimeRange, extractFileOperations, extractFileOperationsBatch, listSessionFiles, listJsonlFiles, pollIndexResults, FileEventType, startFileWatcher, stopFileWatcher, setIndexCallback, clearIndexCallback, isWatcherRunning, getDefaultWatchPath, computeFileHash, computeFileHashesParallel, findFilesWithGlob, findDirectoriesWithMarkers, buildManifest, hasChanges, checkAndBuildManifest, dbInit, ftsIndex, ftsSearch, ftsDelete, vectorIndex, vectorSearch, embeddingIsAvailable, embeddingEnsureAvailable, generateEmbeddings, generateEmbedding, getEmbeddingDimension, upsertRepo, getRepoByRemote, listRepos, upsertProject, getProjectBySlug, getProjectByPath, listProjects, upsertSession, endSession, getSession, listSessions, resetAllSessionsForReindex, insertMessagesBatch, getMessage, listSessionMessages, getMessageCount, getMessageCountsBatch, getLastIndexedLine, getSessionTimestampsBatch, searchMessages, createTask, completeTask, failTask, getTask, queryTaskMetrics, recordHookExecution, queryHookStats, recordFrustration, queryFrustrationMetrics, recordFileChange, getSessionFileChanges, hasSessionChanges, recordFileValidation, getFileValidation, getSessionValidations, needsValidation, getAllSessionValidations, getFilesForValidation, deleteStaleValidations, upsertSessionSummary, getSessionSummary, upsertSessionCompact, getSessionCompact, upsertSessionTodos, getSessionTodos, upsertGeneratedSummary, getGeneratedSummary, searchGeneratedSummaries, listSessionsWithoutSummaries, getSessionNativeTasks, getNativeTask, tryAcquireCoordinatorLock, releaseCoordinatorLock, updateCoordinatorHeartbeat, getCoordinatorStatus, isCoordinator, getHeartbeatInterval, getStaleLockTimeout, indexSessionFile, indexProjectDirectory, handleFileEvent, fullScanAndIndex, truncateDerivedTables } = nativeBinding
+const { registerConfigDir, getConfigDirByPath, listConfigDirs, updateConfigDirLastIndexed, unregisterConfigDir, getDefaultConfigDir, getOrCreateHookAttempt, incrementHookFailures, resetHookFailures, increaseHookMaxAttempts, createOrchestration, getOrchestration, updateOrchestration, cancelOrchestration, queuePendingHook, getPendingHooks, updateHookStatus, getOrchestrationHooks, getSessionPendingHooks, failHookExecution, completeHookExecution, queueHook, getQueuedHooks, deleteQueuedHooks, cleanupLegacyDatabase, hasLegacyDatabase, getGitBranch, getGitRoot, getGitCommonDir, getGitRemoteUrl, getGitInfo, gitLsFiles, gitWorktreeList, gitLog, gitShowFile, gitCreateBranch, gitWorktreeAdd, gitWorktreeRemove, gitDiffStat, jsonlCountLines, jsonlStats, jsonlReadPage, jsonlReadReverse, jsonlBuildIndex, jsonlSaveIndex, jsonlLoadIndex, jsonlReadIndexed, jsonlStream, jsonlFilter, jsonlFilterTimeRange, extractFileOperations, extractFileOperationsBatch, listSessionFiles, listJsonlFiles, pollIndexResults, FileEventType, startFileWatcher, addWatchPath, removeWatchPath, getWatchedPaths, stopFileWatcher, setIndexCallback, clearIndexCallback, isWatcherRunning, getDefaultWatchPath, computeFileHash, computeFileHashesParallel, findFilesWithGlob, findDirectoriesWithMarkers, buildManifest, hasChanges, checkAndBuildManifest, dbInit, ftsIndex, ftsSearch, ftsDelete, vectorIndex, vectorSearch, embeddingIsAvailable, embeddingEnsureAvailable, generateEmbeddings, generateEmbedding, getEmbeddingDimension, upsertRepo, getRepoByRemote, listRepos, upsertProject, getProjectBySlug, getProjectByPath, listProjects, upsertSession, endSession, getSession, listSessions, resetAllSessionsForReindex, registerConfigDir, getConfigDirByPath, listConfigDirs, updateConfigDirLastIndexed, unregisterConfigDir, getDefaultConfigDir, insertMessagesBatch, getMessage, listSessionMessages, getMessageCount, getMessageCountsBatch, getLastIndexedLine, getSessionTimestampsBatch, searchMessages, createTask, completeTask, failTask, getTask, queryTaskMetrics, recordHookExecution, queryHookStats, recordFrustration, queryFrustrationMetrics, recordFileChange, getSessionFileChanges, hasSessionChanges, recordFileValidation, getFileValidation, getSessionValidations, needsValidation, getAllSessionValidations, getFilesForValidation, deleteStaleValidations, upsertSessionSummary, getSessionSummary, upsertSessionCompact, getSessionCompact, upsertSessionTodos, getSessionTodos, upsertGeneratedSummary, getGeneratedSummary, searchGeneratedSummaries, listSessionsWithoutSummaries, getSessionNativeTasks, getNativeTask, tryAcquireCoordinatorLock, releaseCoordinatorLock, updateCoordinatorHeartbeat, getCoordinatorStatus, isCoordinator, getHeartbeatInterval, getStaleLockTimeout, cleanupStaleCoordinatorLock, indexSessionFile, indexProjectDirectory, handleFileEvent, fullScanAndIndex, truncateDerivedTables } = nativeBinding
 
+module.exports.registerConfigDir = registerConfigDir
+module.exports.getConfigDirByPath = getConfigDirByPath
+module.exports.listConfigDirs = listConfigDirs
+module.exports.updateConfigDirLastIndexed = updateConfigDirLastIndexed
+module.exports.unregisterConfigDir = unregisterConfigDir
+module.exports.getDefaultConfigDir = getDefaultConfigDir
 module.exports.getOrCreateHookAttempt = getOrCreateHookAttempt
 module.exports.incrementHookFailures = incrementHookFailures
 module.exports.resetHookFailures = resetHookFailures
@@ -363,6 +369,9 @@ module.exports.listJsonlFiles = listJsonlFiles
 module.exports.pollIndexResults = pollIndexResults
 module.exports.FileEventType = FileEventType
 module.exports.startFileWatcher = startFileWatcher
+module.exports.addWatchPath = addWatchPath
+module.exports.removeWatchPath = removeWatchPath
+module.exports.getWatchedPaths = getWatchedPaths
 module.exports.stopFileWatcher = stopFileWatcher
 module.exports.setIndexCallback = setIndexCallback
 module.exports.clearIndexCallback = clearIndexCallback
@@ -398,6 +407,12 @@ module.exports.endSession = endSession
 module.exports.getSession = getSession
 module.exports.listSessions = listSessions
 module.exports.resetAllSessionsForReindex = resetAllSessionsForReindex
+module.exports.registerConfigDir = registerConfigDir
+module.exports.getConfigDirByPath = getConfigDirByPath
+module.exports.listConfigDirs = listConfigDirs
+module.exports.updateConfigDirLastIndexed = updateConfigDirLastIndexed
+module.exports.unregisterConfigDir = unregisterConfigDir
+module.exports.getDefaultConfigDir = getDefaultConfigDir
 module.exports.insertMessagesBatch = insertMessagesBatch
 module.exports.getMessage = getMessage
 module.exports.listSessionMessages = listSessionMessages
@@ -444,6 +459,7 @@ module.exports.getCoordinatorStatus = getCoordinatorStatus
 module.exports.isCoordinator = isCoordinator
 module.exports.getHeartbeatInterval = getHeartbeatInterval
 module.exports.getStaleLockTimeout = getStaleLockTimeout
+module.exports.cleanupStaleCoordinatorLock = cleanupStaleCoordinatorLock
 module.exports.indexSessionFile = indexSessionFile
 module.exports.indexProjectDirectory = indexProjectDirectory
 module.exports.handleFileEvent = handleFileEvent

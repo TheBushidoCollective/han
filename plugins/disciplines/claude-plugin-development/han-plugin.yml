@@ -1,7 +1,9 @@
 hooks:
   lint:
+    event: Stop
     command: '"${CLAUDE_PLUGIN_ROOT}/hooks/lint.sh"'
-    dirs_with: ".claude-plugin/"
+    dirs_with:
+      - ".claude-plugin/"
     if_changed:
       - "**/*.md"
       - ".claude-plugin/**"

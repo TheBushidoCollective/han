@@ -13,10 +13,8 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Command } from "commander";
-import {
-	getClaudeConfigDir,
-	getLearnMode,
-} from "../../config/han-settings.ts";
+import { getClaudeConfigDir } from "../../config/claude-settings.ts";
+import { getLearnMode } from "../../config/han-settings.ts";
 import {
 	loadPluginDetection,
 	type PluginWithDetection,
