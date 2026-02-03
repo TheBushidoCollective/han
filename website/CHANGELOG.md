@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.2] - 2026-02-03
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
 ## [1.36.2] - 2026-02-02
 
 ### Added
