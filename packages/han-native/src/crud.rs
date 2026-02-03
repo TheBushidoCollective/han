@@ -4163,6 +4163,7 @@ mod tests {
             relative_path: Some("project".to_string()),
             name: "Test Project".to_string(),
             is_worktree: Some(false),
+            source_config_dir: None,
         };
 
         let result = upsert_project(input).expect("Failed to upsert project");
@@ -4186,6 +4187,7 @@ mod tests {
             relative_path: None,
             name: "Original".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         let proj1 = upsert_project(input1).expect("Failed to insert project");
 
@@ -4197,6 +4199,7 @@ mod tests {
             relative_path: None,
             name: "Updated".to_string(),
             is_worktree: Some(true),
+            source_config_dir: None,
         };
         let proj2 = upsert_project(input2).expect("Failed to update project");
 
@@ -4217,6 +4220,7 @@ mod tests {
             relative_path: None,
             name: "Findable".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         upsert_project(input).expect("Failed to insert project");
 
@@ -4236,6 +4240,7 @@ mod tests {
             relative_path: None,
             name: "PathLookup".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         upsert_project(input).expect("Failed to insert project");
 
@@ -4256,6 +4261,7 @@ mod tests {
                 relative_path: None,
                 name: format!("ListProject{}", i),
                 is_worktree: None,
+                source_config_dir: None,
             };
             upsert_project(input).expect("Failed to insert project");
         }
@@ -4278,6 +4284,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: Some("/path/to/transcript.jsonl".to_string()),
             slug: Some("test-session".to_string()),
+            source_config_dir: None,
         };
 
         let result = upsert_session(input).expect("Failed to upsert session");
@@ -4301,6 +4308,7 @@ mod tests {
             status: None, // Should default to "active"
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
 
         let result = upsert_session(input).expect("Failed to upsert session");
@@ -4317,6 +4325,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4343,6 +4352,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4367,6 +4377,7 @@ mod tests {
                 status: Some("active".to_string()),
                 transcript_path: None,
                 slug: None,
+                source_config_dir: None,
             };
             upsert_session(input).expect("Failed to insert session");
         }
@@ -4386,6 +4397,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input1).expect("Failed to insert session");
 
@@ -4396,6 +4408,7 @@ mod tests {
             status: Some("completed".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input2).expect("Failed to insert session");
 
@@ -4414,6 +4427,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4436,6 +4450,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
         update_last_indexed_line("reindex-session", 100).expect("Failed to update line");
@@ -4464,6 +4479,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4492,6 +4508,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4525,6 +4542,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4554,6 +4572,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4587,6 +4606,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4616,6 +4636,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4648,6 +4669,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4679,6 +4701,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4727,6 +4750,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4773,6 +4797,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4837,6 +4862,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4887,6 +4913,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4952,6 +4979,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5024,6 +5052,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5111,6 +5140,7 @@ mod tests {
                 status: Some("active".to_string()),
                 transcript_path: None,
                 slug: None,
+                source_config_dir: None,
             };
             upsert_session(session_input).expect("Failed to insert session");
 
@@ -5163,6 +5193,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
         update_last_indexed_line("last-indexed-session", 99).expect("Failed to update");
@@ -5182,6 +5213,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5284,6 +5316,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5312,6 +5345,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5350,6 +5384,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5387,6 +5422,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5415,6 +5451,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5456,6 +5493,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5492,6 +5530,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5550,6 +5589,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5582,6 +5622,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5615,6 +5656,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5643,6 +5685,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5674,6 +5717,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5714,6 +5758,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5743,6 +5788,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5781,6 +5827,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -6084,6 +6131,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -6134,6 +6182,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
