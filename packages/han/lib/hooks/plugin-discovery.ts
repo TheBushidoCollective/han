@@ -7,12 +7,36 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, parse } from 'node:path';
 import {
   getClaudeConfigDir,
   getProjectDir,
   type MarketplaceConfig,
 } from '../config/claude-settings.ts';
+
+/**
+ * Find marketplace root by walking up from a directory.
+ * Looks for .claude-plugin/marketplace.json which indicates a marketplace repo.
+ * This handles the case where CWD is a subdirectory of the marketplace.
+ *
+ * @param startDir - Directory to start searching from
+ * @returns Marketplace root directory, or null if not found
+ */
+function findMarketplaceRoot(startDir: string): string | null {
+  let dir = startDir;
+  const { root } = parse(dir);
+
+  while (dir !== root) {
+    if (existsSync(join(dir, '.claude-plugin', 'marketplace.json'))) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return null;
+}
 
 /**
  * Cache of plugin name to directory mappings per marketplace root.
@@ -194,12 +218,14 @@ export function getPluginDirWithSource(
   }
 
   // Check if we're in the marketplace repo (development mode)
-  if (existsSync(join(projectDir, '.claude-plugin', 'marketplace.json'))) {
-    const found = findPluginInMarketplace(projectDir, pluginName);
+  // Walk up from projectDir to find marketplace root (handles subdirectories)
+  const marketplaceDevRoot = findMarketplaceRoot(projectDir);
+  if (marketplaceDevRoot) {
+    const found = findPluginInMarketplace(marketplaceDevRoot, pluginName);
     if (found) {
       return {
         path: found,
-        source: { type: 'development', path: projectDir },
+        source: { type: 'development', path: marketplaceDevRoot },
       };
     }
   }
