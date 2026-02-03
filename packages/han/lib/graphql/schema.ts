@@ -799,14 +799,21 @@ builder.subscriptionType({
       args: {
         sessionId: t.arg.id({
           required: true,
-          description: 'Session ID to watch for new messages',
+          description:
+            'Session ID to watch for new messages, or "*" for all sessions',
         }),
       },
-      description: 'Subscribe to new messages in a session',
+      description:
+        'Subscribe to new messages in a session (use "*" for all sessions)',
       subscribe: (_parent, args) => {
         const iterator = pubsub.asyncIterator<SessionMessageAddedPayload>(
           TOPICS.SESSION_MESSAGE_ADDED
         );
+        // Wildcard: return all messages without filtering
+        if (args.sessionId === '*') {
+          return iterator;
+        }
+        // Filter to specific session
         return {
           [Symbol.asyncIterator]: () => ({
             async next() {
