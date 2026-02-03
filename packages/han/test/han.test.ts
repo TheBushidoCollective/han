@@ -582,7 +582,7 @@ describe('Plugin install/uninstall', () => {
               },
             },
             enabledPlugins: {
-              'jutsu-typescript@han': true,
+              'typescript@han': true,
             },
           },
           null,
@@ -591,11 +591,12 @@ describe('Plugin install/uninstall', () => {
       );
 
       const output = execSync(
-        `${binCommand} plugin install jutsu-typescript --scope project`,
+        `${binCommand} plugin install typescript --scope project`,
         {
           cwd: testDir,
           encoding: 'utf8',
           stdio: 'pipe',
+          env: { ...process.env, HAN_SKIP_CLAUDE_CLI: '1' },
         }
       );
 
@@ -603,7 +604,7 @@ describe('Plugin install/uninstall', () => {
 
       const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
       const pluginKeys = Object.keys(settings.enabledPlugins || {}).filter(
-        (k) => k.includes('jutsu-typescript')
+        (k) => k.includes('typescript')
       );
       expect(pluginKeys.length).toBe(1);
     },

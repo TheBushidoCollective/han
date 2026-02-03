@@ -29,25 +29,25 @@ const mockPlugins = [
     keywords: ['bushido'],
   },
   {
-    name: 'jutsu-typescript',
+    name: 'typescript',
     description: 'TypeScript type checking',
     category: 'Technique',
     keywords: ['typescript', 'types'],
   },
   {
-    name: 'jutsu-react',
+    name: 'react',
     description: 'React patterns',
     category: 'Technique',
     keywords: ['react', 'jsx'],
   },
   {
-    name: 'hashi-github',
+    name: 'github',
     description: 'GitHub integration',
     category: 'Bridge',
     keywords: ['github', 'git'],
   },
   {
-    name: 'do-accessibility',
+    name: 'accessibility',
     description: 'Accessibility testing',
     category: 'Discipline',
     keywords: ['a11y', 'wcag'],
@@ -65,7 +65,7 @@ mock.module('../lib/marketplace-cache.ts', () => ({
 
 // Mock the plugin-selector-wrapper to avoid Ink UI
 mock.module('../lib/plugins/plugin-selector-wrapper.tsx', () => ({
-  showPluginSelector: mock(() => Promise.resolve(['jutsu-typescript'])),
+  showPluginSelector: mock(() => Promise.resolve(['typescript'])),
 }));
 
 // Skip Claude CLI so tests use direct settings modification (respects our test directory)
@@ -149,7 +149,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const settings = JSON.parse(
         readFileSync(
@@ -158,7 +158,7 @@ describe('plugin-install.ts', () => {
         )
       );
       expect(settings.enabledPlugins['bushido@han']).toBe(true);
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
 
     test('installs valid plugins', async () => {
@@ -167,11 +167,11 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const allLogs = logs.join('\n');
       expect(allLogs).toContain('Installed');
-      expect(allLogs).toContain('jutsu-typescript');
+      expect(allLogs).toContain('typescript');
 
       const settings = JSON.parse(
         readFileSync(
@@ -179,7 +179,7 @@ describe('plugin-install.ts', () => {
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
 
     test('adds Han marketplace to settings', async () => {
@@ -188,7 +188,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const settings = JSON.parse(
         readFileSync(
@@ -207,7 +207,7 @@ describe('plugin-install.ts', () => {
         join(testDir, 'project', '.claude', 'settings.json'),
         JSON.stringify({
           enabledPlugins: {
-            'jutsu-typescript@han': true,
+            'typescript@han': true,
             'bushido@han': true,
           },
           extraKnownMarketplaces: {
@@ -218,7 +218,7 @@ describe('plugin-install.ts', () => {
         })
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const allLogs = logs.join('\n');
       expect(allLogs).toContain('Already installed');
@@ -230,7 +230,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript', 'hashi-github'], 'project');
+      await installPlugins(['typescript', 'github'], 'project');
 
       const settings = JSON.parse(
         readFileSync(
@@ -238,8 +238,8 @@ describe('plugin-install.ts', () => {
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
-      expect(settings.enabledPlugins['hashi-github@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['github@han']).toBe(true);
       expect(settings.enabledPlugins['bushido@han']).toBe(true);
     });
 
@@ -249,7 +249,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const allLogs = logs.join('\n');
       expect(allLogs).toContain('restart Claude Code');
@@ -261,7 +261,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'project');
+      await installPlugins(['typescript'], 'project');
 
       const settings = JSON.parse(
         readFileSync(
@@ -269,7 +269,7 @@ describe('plugin-install.ts', () => {
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
 
     test('works with local scope', async () => {
@@ -278,7 +278,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugins(['jutsu-typescript'], 'local');
+      await installPlugins(['typescript'], 'local');
 
       const settings = JSON.parse(
         readFileSync(
@@ -286,7 +286,7 @@ describe('plugin-install.ts', () => {
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
   });
 
@@ -297,7 +297,7 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      await installPlugin('jutsu-typescript', 'project');
+      await installPlugin('typescript', 'project');
 
       const settings = JSON.parse(
         readFileSync(
@@ -305,7 +305,7 @@ describe('plugin-install.ts', () => {
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
   });
 
@@ -338,18 +338,17 @@ describe('plugin-install.ts', () => {
         JSON.stringify({})
       );
 
-      // This should trigger search for "typescript" and find "jutsu-typescript"
-      // via the mocked showPluginSelector
-      await installPlugins(['typescript'], 'project');
+      // This should search for "ts" and the mock returns "typescript"
+      await installPlugins(['ts'], 'project');
 
-      // The mock returns jutsu-typescript, so it should be installed
+      // The mock returns typescript, so it should be installed
       const settings = JSON.parse(
         readFileSync(
           join(testDir, 'project', '.claude', 'settings.json'),
           'utf-8'
         )
       );
-      expect(settings.enabledPlugins['jutsu-typescript@han']).toBe(true);
+      expect(settings.enabledPlugins['typescript@han']).toBe(true);
     });
   });
 });
