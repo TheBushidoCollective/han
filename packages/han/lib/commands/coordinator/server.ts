@@ -102,9 +102,15 @@ async function performSelfHealthCheck(): Promise<boolean> {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-		const response = await fetch(`http://127.0.0.1:${COORDINATOR_PORT}/health`, {
-			signal: controller.signal,
-		});
+		// Use HTTPS with the coordinator FQDN (same as external health checks)
+		const response = await fetch(
+			`https://coordinator.local.han.guru:${COORDINATOR_PORT}/health`,
+			{
+				signal: controller.signal,
+				// @ts-expect-error - Node.js/Bun fetch option for self-signed certs
+				rejectUnauthorized: false,
+			},
+		);
 
 		clearTimeout(timeoutId);
 
