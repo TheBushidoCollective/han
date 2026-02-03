@@ -13,7 +13,7 @@ hooks:
       - "bun.lockb"
       - "bunfig.toml"
   test:
-    command: "bun test --only-failures"
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/test.sh\""
     dirs_with:
       - "bun.lock"
       - "bun.lockb"
