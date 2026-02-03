@@ -40,11 +40,13 @@ export function ActivityIndicator() {
 				if (msg.type === "connection_ack") {
 					setConnected(true);
 					// Subscribe to all messages across sessions
-					ws?.send(JSON.stringify({
-						id: "1",
-						type: "subscribe",
-						payload: { query: ANY_MESSAGE_SUBSCRIPTION }
-					}));
+					ws?.send(
+						JSON.stringify({
+							id: "1",
+							type: "subscribe",
+							payload: { query: ANY_MESSAGE_SUBSCRIPTION },
+						}),
+					);
 				} else if (msg.type === "next") {
 					// New activity - trigger pulse
 					triggerPulse();
@@ -65,7 +67,10 @@ export function ActivityIndicator() {
 		return () => {
 			if (reconnectTimer) clearTimeout(reconnectTimer);
 			if (pulseTimer) clearTimeout(pulseTimer);
-			if (ws) { ws.onclose = null; ws.close(); }
+			if (ws) {
+				ws.onclose = null;
+				ws.close();
+			}
 		};
 	}, []);
 
