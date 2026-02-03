@@ -118,6 +118,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 
 	// Handle name input submission
 	const handleNameSubmit = (value: string) => {
+		if (!pluginType) return;
 		const error = validateName(value);
 		if (error) {
 			setValidationError(error);
@@ -125,7 +126,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 		}
 		setValidationError(null);
 		// Add type prefix if not already present
-		const prefix = getTypePrefix(pluginType!);
+		const prefix = getTypePrefix(pluginType);
 		const finalName = value.startsWith(prefix) ? value : `${prefix}${value}`;
 		setPluginName(finalName);
 		setStep("description");
@@ -173,8 +174,8 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 	}
 
 	// Step: Name Input
-	if (step === "name") {
-		const prefix = getTypePrefix(pluginType!);
+	if (step === "name" && pluginType) {
+		const prefix = getTypePrefix(pluginType);
 		return (
 			<Box flexDirection="column" paddingY={1}>
 				<Box marginBottom={1}>
@@ -307,7 +308,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 	}
 
 	// Step: Confirmation
-	if (step === "confirm") {
+	if (step === "confirm" && pluginType) {
 		return (
 			<Box flexDirection="column" paddingY={1}>
 				<Box marginBottom={1}>
@@ -321,7 +322,7 @@ export const PluginCreator: React.FC<PluginCreatorProps> = ({
 						<Text bold>Name:</Text> {pluginName}
 					</Text>
 					<Text>
-						<Text bold>Type:</Text> {getTypeDisplayName(pluginType!)}
+						<Text bold>Type:</Text> {getTypeDisplayName(pluginType)}
 					</Text>
 					<Text>
 						<Text bold>Description:</Text> {description}
