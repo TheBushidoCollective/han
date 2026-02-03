@@ -7,12 +7,12 @@ import Header from "@/app/components/Header";
 import MarkdownContent from "@/app/components/MarkdownContent";
 import Sidebar from "@/app/components/Sidebar";
 import {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
 	getPluginContent,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "@/lib/plugins";
 
 export async function generateStaticParams() {

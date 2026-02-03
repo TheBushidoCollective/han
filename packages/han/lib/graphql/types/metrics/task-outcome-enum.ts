@@ -4,9 +4,9 @@
  * Outcome of a completed task.
  */
 
-import { builder } from "../../builder.ts";
+import { builder } from '../../builder.ts';
 
-export const TaskOutcomeEnum = builder.enumType("TaskOutcome", {
-	values: ["SUCCESS", "PARTIAL", "FAILURE"] as const,
-	description: "Outcome of a completed task",
+export const TaskOutcomeEnum = builder.enumType('TaskOutcome', {
+  values: ['SUCCESS', 'PARTIAL', 'FAILURE'] as const,
+  description: 'Outcome of a completed task',
 });

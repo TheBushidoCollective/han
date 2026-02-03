@@ -16,7 +16,7 @@ hooks:
       - "Cargo.toml"
       - "Cargo.lock"
   test:
-    command: "cargo test"
+    command: "cargo test --all-features"
     dirs_with:
       - "Cargo.toml"
     if_changed:

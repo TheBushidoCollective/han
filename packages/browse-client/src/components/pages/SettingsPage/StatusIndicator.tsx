@@ -4,19 +4,19 @@
  * Displays found/not found status badge.
  */
 
-import type React from 'react';
-import { Badge } from '@/components/atoms/Badge.tsx';
+import type React from "react";
+import { Badge } from "@/components/atoms/Badge.tsx";
 
 interface StatusIndicatorProps {
-  active: boolean;
+	active: boolean;
 }
 
 export function StatusIndicator({
-  active,
+	active,
 }: StatusIndicatorProps): React.ReactElement {
-  return (
-    <Badge variant={active ? 'success' : 'default'}>
-      {active ? 'Found' : 'Not Found'}
-    </Badge>
-  );
+	return (
+		<Badge variant={active ? "success" : "default"}>
+			{active ? "Found" : "Not Found"}
+		</Badge>
+	);
 }

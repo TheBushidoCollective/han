@@ -1,32 +1,32 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import { cpus, tmpdir } from "node:os";
-import { join } from "node:path";
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { cpus, tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Lock slot data stored in slot files
  */
 interface LockSlot {
-	pid: number;
-	timestamp: number;
-	hookName: string;
-	pluginName?: string;
+  pid: number;
+  timestamp: number;
+  hookName: string;
+  pluginName?: string;
 }
 
 /**
  * Lock manager configuration
  */
 interface LockManager {
-	sessionId: string;
-	parallelism: number;
-	lockDir: string;
+  sessionId: string;
+  parallelism: number;
+  lockDir: string;
 }
 
 /**
@@ -34,15 +34,15 @@ interface LockManager {
  * Reads from HAN_HOOK_PARALLELISM env var, defaults to CPU count / 2 (min 1).
  */
 function getParallelism(): number {
-	const envValue = process.env.HAN_HOOK_PARALLELISM;
-	if (envValue) {
-		const parsed = Number.parseInt(envValue, 10);
-		if (!Number.isNaN(parsed) && parsed > 0) {
-			return parsed;
-		}
-	}
-	// Default: half the CPU count, minimum 1
-	return Math.max(1, Math.floor(cpus().length / 2));
+  const envValue = process.env.HAN_HOOK_PARALLELISM;
+  if (envValue) {
+    const parsed = Number.parseInt(envValue, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  // Default: half the CPU count, minimum 1
+  return Math.max(1, Math.floor(cpus().length / 2));
 }
 
 /**
@@ -50,39 +50,39 @@ function getParallelism(): number {
  * Uses PPID + project directory to create a stable session identifier.
  */
 function getSessionId(): string {
-	// Allow explicit override for testing
-	if (process.env.HAN_SESSION_ID) {
-		return process.env.HAN_SESSION_ID;
-	}
+  // Allow explicit override for testing
+  if (process.env.HAN_SESSION_ID) {
+    return process.env.HAN_SESSION_ID;
+  }
 
-	// Use PPID - the parent of this process should be consistent within a Claude session
-	const ppid = process.ppid;
-	const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  // Use PPID - the parent of this process should be consistent within a Claude session
+  const ppid = process.ppid;
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-	return createHash("md5")
-		.update(`${ppid}:${projectDir}`)
-		.digest("hex")
-		.substring(0, 16);
+  return createHash('md5')
+    .update(`${ppid}:${projectDir}`)
+    .digest('hex')
+    .substring(0, 16);
 }
 
 /**
  * Get the lock directory for a session
  */
 function getLockDir(sessionId: string): string {
-	return join(tmpdir(), "han-hooks", sessionId);
+  return join(tmpdir(), 'han-hooks', sessionId);
 }
 
 /**
  * Check if a process is still alive
  */
 function isPidAlive(pid: number): boolean {
-	try {
-		// Sending signal 0 checks if process exists without actually signaling it
-		process.kill(pid, 0);
-		return true;
-	} catch {
-		return false;
-	}
+  try {
+    // Sending signal 0 checks if process exists without actually signaling it
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -90,14 +90,14 @@ function isPidAlive(pid: number): boolean {
  * Defaults to 15 minutes.
  */
 function getStaleLockTimeout(): number {
-	const envValue = process.env.HAN_HOOK_LOCK_TIMEOUT;
-	if (envValue) {
-		const parsed = Number.parseInt(envValue, 10);
-		if (!Number.isNaN(parsed) && parsed > 0) {
-			return parsed;
-		}
-	}
-	return 15 * 60 * 1000; // 15 minutes
+  const envValue = process.env.HAN_HOOK_LOCK_TIMEOUT;
+  if (envValue) {
+    const parsed = Number.parseInt(envValue, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 15 * 60 * 1000; // 15 minutes
 }
 
 /**
@@ -105,168 +105,168 @@ function getStaleLockTimeout(): number {
  * Defaults to 60 minutes (tasks can run for a long time).
  */
 function getAcquireTimeout(): number {
-	const envValue = process.env.HAN_HOOK_ACQUIRE_TIMEOUT;
-	if (envValue) {
-		const parsed = Number.parseInt(envValue, 10);
-		if (!Number.isNaN(parsed) && parsed > 0) {
-			return parsed;
-		}
-	}
-	return 60 * 60 * 1000; // 60 minutes
+  const envValue = process.env.HAN_HOOK_ACQUIRE_TIMEOUT;
+  if (envValue) {
+    const parsed = Number.parseInt(envValue, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 60 * 60 * 1000; // 60 minutes
 }
 
 /**
  * Check if a lock slot is stale (process dead or too old)
  */
 function isSlotStale(slot: LockSlot): boolean {
-	// Check if PID is dead
-	if (!isPidAlive(slot.pid)) {
-		return true;
-	}
+  // Check if PID is dead
+  if (!isPidAlive(slot.pid)) {
+    return true;
+  }
 
-	// Check if lock is too old (timeout fallback)
-	const age = Date.now() - slot.timestamp;
-	if (age > getStaleLockTimeout()) {
-		return true;
-	}
+  // Check if lock is too old (timeout fallback)
+  const age = Date.now() - slot.timestamp;
+  if (age > getStaleLockTimeout()) {
+    return true;
+  }
 
-	return false;
+  return false;
 }
 
 /**
  * Read a slot file, returns null if doesn't exist or invalid
  */
 function readSlotFile(slotPath: string): LockSlot | null {
-	try {
-		if (!existsSync(slotPath)) {
-			return null;
-		}
-		const content = readFileSync(slotPath, "utf-8");
-		return JSON.parse(content) as LockSlot;
-	} catch {
-		return null;
-	}
+  try {
+    if (!existsSync(slotPath)) {
+      return null;
+    }
+    const content = readFileSync(slotPath, 'utf-8');
+    return JSON.parse(content) as LockSlot;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Write a slot file atomically
  */
 function writeSlotFile(slotPath: string, slot: LockSlot): boolean {
-	try {
-		// Write to temp file first, then rename for atomicity
-		// Use timestamp + pid to avoid collisions with leftover temp files
-		const tempPath = `${slotPath}.${process.pid}.${Date.now()}.tmp`;
-		writeFileSync(tempPath, JSON.stringify(slot));
+  try {
+    // Write to temp file first, then rename for atomicity
+    // Use timestamp + pid to avoid collisions with leftover temp files
+    const tempPath = `${slotPath}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tempPath, JSON.stringify(slot));
 
-		// Check if slot was taken while we were writing
-		if (existsSync(slotPath)) {
-			debugLog(`writeSlotFile: slot already exists at ${slotPath}`);
-			rmSync(tempPath, { force: true });
-			return false;
-		}
+    // Check if slot was taken while we were writing
+    if (existsSync(slotPath)) {
+      debugLog(`writeSlotFile: slot already exists at ${slotPath}`);
+      rmSync(tempPath, { force: true });
+      return false;
+    }
 
-		// Rename temp to final (atomic on most filesystems)
-		try {
-			renameSync(tempPath, slotPath);
-			return true;
-		} catch (e) {
-			debugLog(`writeSlotFile: rename failed: ${(e as Error).message}`);
-			rmSync(tempPath, { force: true });
-			return false;
-		}
-	} catch (e) {
-		debugLog(`writeSlotFile: write failed: ${(e as Error).message}`);
-		return false;
-	}
+    // Rename temp to final (atomic on most filesystems)
+    try {
+      renameSync(tempPath, slotPath);
+      return true;
+    } catch (e) {
+      debugLog(`writeSlotFile: rename failed: ${(e as Error).message}`);
+      rmSync(tempPath, { force: true });
+      return false;
+    }
+  } catch (e) {
+    debugLog(`writeSlotFile: write failed: ${(e as Error).message}`);
+    return false;
+  }
 }
 
 /**
  * Try to acquire an available slot, returns slot index or -1 if none available
  */
 function tryAcquireSlot(
-	manager: LockManager,
-	hookName: string,
-	pluginName?: string,
+  manager: LockManager,
+  hookName: string,
+  pluginName?: string
 ): number {
-	// Ensure lock directory exists
-	mkdirSync(manager.lockDir, { recursive: true });
+  // Ensure lock directory exists
+  mkdirSync(manager.lockDir, { recursive: true });
 
-	for (let i = 0; i < manager.parallelism; i++) {
-		const slotPath = join(manager.lockDir, `slot-${i}.lock`);
-		const existingSlot = readSlotFile(slotPath);
-		debugLog(
-			`tryAcquireSlot: slot-${i} existingSlot=${existingSlot ? JSON.stringify(existingSlot) : "null"}`,
-		);
+  for (let i = 0; i < manager.parallelism; i++) {
+    const slotPath = join(manager.lockDir, `slot-${i}.lock`);
+    const existingSlot = readSlotFile(slotPath);
+    debugLog(
+      `tryAcquireSlot: slot-${i} existingSlot=${existingSlot ? JSON.stringify(existingSlot) : 'null'}`
+    );
 
-		if (existingSlot) {
-			// Check if stale
-			if (isSlotStale(existingSlot)) {
-				debugLog(`tryAcquireSlot: slot-${i} is stale, removing`);
-				// Remove stale lock
-				try {
-					rmSync(slotPath, { force: true });
-				} catch {
-					continue;
-				}
-			} else {
-				// Slot is held by active process
-				debugLog(
-					`tryAcquireSlot: slot-${i} is held by pid ${existingSlot.pid}`,
-				);
-				continue;
-			}
-		}
+    if (existingSlot) {
+      // Check if stale
+      if (isSlotStale(existingSlot)) {
+        debugLog(`tryAcquireSlot: slot-${i} is stale, removing`);
+        // Remove stale lock
+        try {
+          rmSync(slotPath, { force: true });
+        } catch {
+          continue;
+        }
+      } else {
+        // Slot is held by active process
+        debugLog(
+          `tryAcquireSlot: slot-${i} is held by pid ${existingSlot.pid}`
+        );
+        continue;
+      }
+    }
 
-		// Try to acquire this slot
-		const newSlot: LockSlot = {
-			pid: process.pid,
-			timestamp: Date.now(),
-			hookName,
-			pluginName,
-		};
+    // Try to acquire this slot
+    const newSlot: LockSlot = {
+      pid: process.pid,
+      timestamp: Date.now(),
+      hookName,
+      pluginName,
+    };
 
-		if (writeSlotFile(slotPath, newSlot)) {
-			return i;
-		}
-		debugLog(`tryAcquireSlot: slot-${i} write failed`);
-	}
+    if (writeSlotFile(slotPath, newSlot)) {
+      return i;
+    }
+    debugLog(`tryAcquireSlot: slot-${i} write failed`);
+  }
 
-	return -1; // No slots available
+  return -1; // No slots available
 }
 
 /**
  * Sleep for a given number of milliseconds
  */
 function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Check if debug logging is enabled
  */
 function isLockDebug(): boolean {
-	return process.env.HAN_LOCK_DEBUG === "1";
+  return process.env.HAN_LOCK_DEBUG === '1';
 }
 
 /**
  * Log debug message if debug mode is enabled
  */
 function debugLog(message: string): void {
-	if (isLockDebug()) {
-		console.error(`[han-lock] ${message}`);
-	}
+  if (isLockDebug()) {
+    console.error(`[han-lock] ${message}`);
+  }
 }
 
 /**
  * Create a lock manager for the current session
  */
 export function createLockManager(): LockManager {
-	const sessionId = getSessionId();
-	return {
-		sessionId,
-		parallelism: getParallelism(),
-		lockDir: getLockDir(sessionId),
-	};
+  const sessionId = getSessionId();
+  return {
+    sessionId,
+    parallelism: getParallelism(),
+    lockDir: getLockDir(sessionId),
+  };
 }
 
 /**
@@ -275,84 +275,84 @@ export function createLockManager(): LockManager {
  * Throws if acquire timeout is exceeded.
  */
 export async function acquireSlot(
-	manager: LockManager,
-	hookName: string,
-	pluginName?: string,
+  manager: LockManager,
+  hookName: string,
+  pluginName?: string
 ): Promise<number> {
-	const startTime = Date.now();
-	const acquireTimeout = getAcquireTimeout();
-	let attempt = 0;
+  const startTime = Date.now();
+  const acquireTimeout = getAcquireTimeout();
+  let attempt = 0;
 
-	debugLog(
-		`Acquiring slot for ${pluginName || "unknown"}:${hookName} (parallelism=${manager.parallelism})`,
-	);
+  debugLog(
+    `Acquiring slot for ${pluginName || 'unknown'}:${hookName} (parallelism=${manager.parallelism})`
+  );
 
-	while (true) {
-		const slotIndex = tryAcquireSlot(manager, hookName, pluginName);
+  while (true) {
+    const slotIndex = tryAcquireSlot(manager, hookName, pluginName);
 
-		if (slotIndex >= 0) {
-			debugLog(
-				`Acquired slot-${slotIndex} for ${pluginName || "unknown"}:${hookName}`,
-			);
-			return slotIndex;
-		}
+    if (slotIndex >= 0) {
+      debugLog(
+        `Acquired slot-${slotIndex} for ${pluginName || 'unknown'}:${hookName}`
+      );
+      return slotIndex;
+    }
 
-		// Check timeout
-		const elapsed = Date.now() - startTime;
-		if (elapsed > acquireTimeout) {
-			throw new Error(
-				`Timed out waiting for hook slot after ${Math.round(elapsed / 1000)}s. ` +
-					`All ${manager.parallelism} slots are busy. ` +
-					`Set HAN_HOOK_PARALLELISM to increase slots or HAN_HOOK_ACQUIRE_TIMEOUT to wait longer.`,
-			);
-		}
+    // Check timeout
+    const elapsed = Date.now() - startTime;
+    if (elapsed > acquireTimeout) {
+      throw new Error(
+        `Timed out waiting for hook slot after ${Math.round(elapsed / 1000)}s. ` +
+          `All ${manager.parallelism} slots are busy. ` +
+          `Set HAN_HOOK_PARALLELISM to increase slots or HAN_HOOK_ACQUIRE_TIMEOUT to wait longer.`
+      );
+    }
 
-		// Wait with exponential backoff (100ms, 200ms, 400ms, ... up to 2s)
-		const backoff = Math.min(100 * 2 ** attempt, 2000);
-		attempt++;
+    // Wait with exponential backoff (100ms, 200ms, 400ms, ... up to 2s)
+    const backoff = Math.min(100 * 2 ** attempt, 2000);
+    attempt++;
 
-		debugLog(
-			`No slots available, waiting ${backoff}ms (attempt ${attempt}, elapsed ${Math.round(elapsed / 1000)}s)`,
-		);
+    debugLog(
+      `No slots available, waiting ${backoff}ms (attempt ${attempt}, elapsed ${Math.round(elapsed / 1000)}s)`
+    );
 
-		await sleep(backoff);
-	}
+    await sleep(backoff);
+  }
 }
 
 /**
  * Release a slot
  */
 export function releaseSlot(manager: LockManager, slotIndex: number): void {
-	const slotPath = join(manager.lockDir, `slot-${slotIndex}.lock`);
+  const slotPath = join(manager.lockDir, `slot-${slotIndex}.lock`);
 
-	try {
-		// Verify we own this slot before deleting
-		const slot = readSlotFile(slotPath);
-		if (slot && slot.pid === process.pid) {
-			rmSync(slotPath, { force: true });
-			debugLog(`Released slot-${slotIndex}`);
-		}
-	} catch {
-		// Ignore errors during cleanup
-	}
+  try {
+    // Verify we own this slot before deleting
+    const slot = readSlotFile(slotPath);
+    if (slot && slot.pid === process.pid) {
+      rmSync(slotPath, { force: true });
+      debugLog(`Released slot-${slotIndex}`);
+    }
+  } catch {
+    // Ignore errors during cleanup
+  }
 }
 
 /**
  * Cleanup all slots owned by this process (for graceful shutdown)
  */
 export function cleanupOwnedSlots(manager: LockManager): void {
-	try {
-		for (let i = 0; i < manager.parallelism; i++) {
-			const slotPath = join(manager.lockDir, `slot-${i}.lock`);
-			const slot = readSlotFile(slotPath);
-			if (slot && slot.pid === process.pid) {
-				rmSync(slotPath, { force: true });
-				debugLog(`Cleanup: released slot-${i}`);
-			}
-		}
-	} catch {
-		// Ignore errors during cleanup
-	}
+  try {
+    for (let i = 0; i < manager.parallelism; i++) {
+      const slotPath = join(manager.lockDir, `slot-${i}.lock`);
+      const slot = readSlotFile(slotPath);
+      if (slot && slot.pid === process.pid) {
+        rmSync(slotPath, { force: true });
+        debugLog(`Cleanup: released slot-${i}`);
+      }
+    }
+  } catch {
+    // Ignore errors during cleanup
+  }
 }
 
 /**
@@ -360,14 +360,14 @@ export function cleanupOwnedSlots(manager: LockManager): void {
  * Can be disabled via HAN_HOOK_NO_LOCK=1
  */
 export function isLockingEnabled(): boolean {
-	return process.env.HAN_HOOK_NO_LOCK !== "1";
+  return process.env.HAN_HOOK_NO_LOCK !== '1';
 }
 
 /**
  * Get the path to the failure sentinel file for this session.
  */
 function getFailureSentinelPath(manager: LockManager): string {
-	return join(manager.lockDir, "failure.sentinel");
+  return join(manager.lockDir, 'failure.sentinel');
 }
 
 /**
@@ -375,24 +375,24 @@ function getFailureSentinelPath(manager: LockManager): string {
  * Other hooks in the same session can check for this and exit early.
  */
 export function signalFailure(
-	manager: LockManager,
-	info?: { pluginName?: string; hookName?: string; directory?: string },
+  manager: LockManager,
+  info?: { pluginName?: string; hookName?: string; directory?: string }
 ): void {
-	try {
-		mkdirSync(manager.lockDir, { recursive: true });
-		const sentinelPath = getFailureSentinelPath(manager);
-		const content = JSON.stringify({
-			pid: process.pid,
-			timestamp: Date.now(),
-			...info,
-		});
-		writeFileSync(sentinelPath, content);
-		debugLog(
-			`Signaled failure: ${info?.pluginName || "unknown"}/${info?.hookName || "unknown"}`,
-		);
-	} catch (e) {
-		debugLog(`Failed to signal failure: ${(e as Error).message}`);
-	}
+  try {
+    mkdirSync(manager.lockDir, { recursive: true });
+    const sentinelPath = getFailureSentinelPath(manager);
+    const content = JSON.stringify({
+      pid: process.pid,
+      timestamp: Date.now(),
+      ...info,
+    });
+    writeFileSync(sentinelPath, content);
+    debugLog(
+      `Signaled failure: ${info?.pluginName || 'unknown'}/${info?.hookName || 'unknown'}`
+    );
+  } catch (e) {
+    debugLog(`Failed to signal failure: ${(e as Error).message}`);
+  }
 }
 
 /**
@@ -400,57 +400,57 @@ export function signalFailure(
  * Returns failure info if a sentinel exists, null otherwise.
  */
 export function checkFailureSignal(
-	manager: LockManager,
+  manager: LockManager
 ): { pluginName?: string; hookName?: string; directory?: string } | null {
-	try {
-		const sentinelPath = getFailureSentinelPath(manager);
-		if (!existsSync(sentinelPath)) {
-			return null;
-		}
-		const content = readFileSync(sentinelPath, "utf-8");
-		const data = JSON.parse(content);
-		debugLog(`Found failure signal from pid ${data.pid}`);
-		return data;
-	} catch {
-		return null;
-	}
+  try {
+    const sentinelPath = getFailureSentinelPath(manager);
+    if (!existsSync(sentinelPath)) {
+      return null;
+    }
+    const content = readFileSync(sentinelPath, 'utf-8');
+    const data = JSON.parse(content);
+    debugLog(`Found failure signal from pid ${data.pid}`);
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Clear the failure signal (called at session start or cleanup).
  */
 export function clearFailureSignal(manager: LockManager): void {
-	try {
-		const sentinelPath = getFailureSentinelPath(manager);
-		if (existsSync(sentinelPath)) {
-			rmSync(sentinelPath, { force: true });
-			debugLog("Cleared failure signal");
-		}
-	} catch {
-		// Ignore errors during cleanup
-	}
+  try {
+    const sentinelPath = getFailureSentinelPath(manager);
+    if (existsSync(sentinelPath)) {
+      rmSync(sentinelPath, { force: true });
+      debugLog('Cleared failure signal');
+    }
+  } catch {
+    // Ignore errors during cleanup
+  }
 }
 
 /**
  * Helper to run a function with slot acquisition/release
  */
 export async function withSlot<T>(
-	hookName: string,
-	pluginName: string | undefined,
-	fn: () => Promise<T>,
+  hookName: string,
+  pluginName: string | undefined,
+  fn: () => Promise<T>
 ): Promise<T> {
-	if (!isLockingEnabled()) {
-		return fn();
-	}
+  if (!isLockingEnabled()) {
+    return fn();
+  }
 
-	const manager = createLockManager();
-	const slotIndex = await acquireSlot(manager, hookName, pluginName);
+  const manager = createLockManager();
+  const slotIndex = await acquireSlot(manager, hookName, pluginName);
 
-	try {
-		return await fn();
-	} finally {
-		releaseSlot(manager, slotIndex);
-	}
+  try {
+    return await fn();
+  } finally {
+    releaseSlot(manager, slotIndex);
+  }
 }
 
 /**
@@ -462,21 +462,21 @@ export async function withSlot<T>(
  * to prevent multiple sessions from overwhelming the system.
  */
 export async function withGlobalSlot<T>(
-	hookName: string,
-	pluginName: string | undefined,
-	fn: () => Promise<T>,
+  hookName: string,
+  pluginName: string | undefined,
+  fn: () => Promise<T>
 ): Promise<T> {
-	if (!isLockingEnabled()) {
-		return fn();
-	}
+  if (!isLockingEnabled()) {
+    return fn();
+  }
 
-	// Use the slot client which handles coordinator detection and fallback
-	const { withGlobalSlot: clientWithGlobalSlot } = await import(
-		"./hooks/slot-client.ts"
-	);
+  // Use the slot client which handles coordinator detection and fallback
+  const { withGlobalSlot: clientWithGlobalSlot } = await import(
+    './hooks/slot-client.ts'
+  );
 
-	const sessionId = getSessionId();
-	return clientWithGlobalSlot(sessionId, hookName, pluginName, fn);
+  const sessionId = getSessionId();
+  return clientWithGlobalSlot(sessionId, hookName, pluginName, fn);
 }
 
 /**
@@ -485,35 +485,35 @@ export async function withGlobalSlot<T>(
  * we should wait for it rather than spawn another instance.
  */
 export function isHookRunning(
-	manager: LockManager,
-	pluginName: string,
-	hookName: string,
+  manager: LockManager,
+  pluginName: string,
+  hookName: string
 ): boolean {
-	try {
-		if (!existsSync(manager.lockDir)) {
-			return false;
-		}
+  try {
+    if (!existsSync(manager.lockDir)) {
+      return false;
+    }
 
-		for (let i = 0; i < manager.parallelism; i++) {
-			const slotPath = join(manager.lockDir, `slot-${i}.lock`);
-			const slot = readSlotFile(slotPath);
+    for (let i = 0; i < manager.parallelism; i++) {
+      const slotPath = join(manager.lockDir, `slot-${i}.lock`);
+      const slot = readSlotFile(slotPath);
 
-			if (slot && !isSlotStale(slot)) {
-				// Check if this slot matches the plugin:hook we're looking for
-				if (slot.pluginName === pluginName && slot.hookName === hookName) {
-					debugLog(
-						`isHookRunning: found ${pluginName}:${hookName} running in slot-${i} (pid ${slot.pid})`,
-					);
-					return true;
-				}
-			}
-		}
+      if (slot && !isSlotStale(slot)) {
+        // Check if this slot matches the plugin:hook we're looking for
+        if (slot.pluginName === pluginName && slot.hookName === hookName) {
+          debugLog(
+            `isHookRunning: found ${pluginName}:${hookName} running in slot-${i} (pid ${slot.pid})`
+          );
+          return true;
+        }
+      }
+    }
 
-		return false;
-	} catch (e) {
-		debugLog(`isHookRunning error: ${(e as Error).message}`);
-		return false;
-	}
+    return false;
+  } catch (e) {
+    debugLog(`isHookRunning error: ${(e as Error).message}`);
+    return false;
+  }
 }
 
 /**
@@ -527,44 +527,44 @@ export function isHookRunning(
  * @returns true if the hook completed, false if timeout was reached
  */
 export async function waitForHook(
-	manager: LockManager,
-	pluginName: string,
-	hookName: string,
-	timeout = 300000, // 5 minutes default
+  manager: LockManager,
+  pluginName: string,
+  hookName: string,
+  timeout = 300000 // 5 minutes default
 ): Promise<boolean> {
-	const startTime = Date.now();
-	let attempt = 0;
+  const startTime = Date.now();
+  let attempt = 0;
 
-	debugLog(
-		`waitForHook: waiting for ${pluginName}:${hookName} (timeout: ${timeout}ms)`,
-	);
+  debugLog(
+    `waitForHook: waiting for ${pluginName}:${hookName} (timeout: ${timeout}ms)`
+  );
 
-	while (true) {
-		// Check if hook is still running
-		if (!isHookRunning(manager, pluginName, hookName)) {
-			debugLog(`waitForHook: ${pluginName}:${hookName} is no longer running`);
-			return true; // Hook completed
-		}
+  while (true) {
+    // Check if hook is still running
+    if (!isHookRunning(manager, pluginName, hookName)) {
+      debugLog(`waitForHook: ${pluginName}:${hookName} is no longer running`);
+      return true; // Hook completed
+    }
 
-		// Check timeout
-		const elapsed = Date.now() - startTime;
-		if (elapsed > timeout) {
-			debugLog(
-				`waitForHook: timeout waiting for ${pluginName}:${hookName} after ${Math.round(elapsed / 1000)}s`,
-			);
-			return false; // Timeout reached
-		}
+    // Check timeout
+    const elapsed = Date.now() - startTime;
+    if (elapsed > timeout) {
+      debugLog(
+        `waitForHook: timeout waiting for ${pluginName}:${hookName} after ${Math.round(elapsed / 1000)}s`
+      );
+      return false; // Timeout reached
+    }
 
-		// Wait with exponential backoff (100ms, 200ms, 400ms, ... up to 2s)
-		const backoff = Math.min(100 * 2 ** attempt, 2000);
-		attempt++;
+    // Wait with exponential backoff (100ms, 200ms, 400ms, ... up to 2s)
+    const backoff = Math.min(100 * 2 ** attempt, 2000);
+    attempt++;
 
-		debugLog(
-			`waitForHook: ${pluginName}:${hookName} still running, waiting ${backoff}ms (attempt ${attempt})`,
-		);
+    debugLog(
+      `waitForHook: ${pluginName}:${hookName} still running, waiting ${backoff}ms (attempt ${attempt})`
+    );
 
-		await sleep(backoff);
-	}
+    await sleep(backoff);
+  }
 }
 
 /**
@@ -572,5 +572,5 @@ export async function waitForHook(
  * Useful for coordinating between processes.
  */
 export function getSessionIdFromManager(manager: LockManager): string {
-	return manager.sessionId;
+  return manager.sessionId;
 }

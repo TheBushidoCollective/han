@@ -5,4 +5,4 @@
  * @deprecated Import directly from "./memory/index.ts" instead.
  */
 
-export * from "./memory/index.ts";
+export * from './memory/index.ts';

@@ -5,4 +5,4 @@
  * @deprecated Import directly from "./content-blocks/index.ts" instead.
  */
 
-export * from "./content-blocks/index.ts";
+export * from './content-blocks/index.ts';

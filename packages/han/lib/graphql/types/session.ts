@@ -5,4 +5,4 @@
  * @deprecated Import directly from "./sessions/index.ts" instead.
  */
 
-export * from "./sessions/index.ts";
+export * from './sessions/index.ts';

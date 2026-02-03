@@ -39,7 +39,7 @@ export default function Home() {
 				</div>
 			</section>
 
-				{/* How It Works */}
+			{/* How It Works */}
 			<section className="bg-white dark:bg-gray-800 py-24">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">

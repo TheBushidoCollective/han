@@ -19,67 +19,67 @@
  * - Coordinator starts automatically when needed
  */
 
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 // Import directly from claude-settings to avoid circular dependency
 // (config/index.ts -> validation/index.ts -> db/index.ts)
-import { getClaudeConfigDir } from "../config/claude-settings.ts";
-import { getNativeModule } from "../native.ts";
+import { getClaudeConfigDir } from '../config/claude-settings.ts';
+import { getNativeModule } from '../native.ts';
 
 // ============================================================================
 // Type Exports - All types come from native module
 // ============================================================================
 
 export type {
-	// Config dirs registry (multi-environment support)
-	ConfigDir,
-	ConfigDirInput,
-	// Coordinator
-	CoordinatorStatus,
-	// Frustration tracking
-	FrustrationEvent,
-	FrustrationEventInput,
-	FrustrationMetrics,
-	// Search
-	FtsSearchResult,
-	// Hook execution tracking
-	HookAttemptInfo,
-	HookExecution,
-	HookExecutionInput,
-	HookStats,
-	LockInfo,
-	Message,
-	MessageBatch,
-	MessageInput,
-	// Pending hook operations
-	PendingHookInput,
-	Project,
-	ProjectInput,
-	// Core entities
-	Repo,
-	RepoInput,
-	Session,
-	// Session file changes
-	SessionFileChange,
-	SessionFileChangeInput,
-	// Session file validations
-	SessionFileValidation,
-	SessionFileValidationInput,
-	SessionInput,
-	// Session timestamps
-	SessionTimestamps,
-	// Session todos
-	SessionTodos,
-	SessionTodosInput,
-	// Task/Metrics
-	Task,
-	TaskCompletion,
-	TaskFailure,
-	TaskInput,
-	TaskMetrics,
-	TodoItem,
-	VectorSearchResult,
-} from "../../../han-native";
+  // Config dirs registry (multi-environment support)
+  ConfigDir,
+  ConfigDirInput,
+  // Coordinator
+  CoordinatorStatus,
+  // Frustration tracking
+  FrustrationEvent,
+  FrustrationEventInput,
+  FrustrationMetrics,
+  // Search
+  FtsSearchResult,
+  // Hook execution tracking
+  HookAttemptInfo,
+  HookExecution,
+  HookExecutionInput,
+  HookStats,
+  LockInfo,
+  Message,
+  MessageBatch,
+  MessageInput,
+  // Pending hook operations
+  PendingHookInput,
+  Project,
+  ProjectInput,
+  // Core entities
+  Repo,
+  RepoInput,
+  Session,
+  // Session file changes
+  SessionFileChange,
+  SessionFileChangeInput,
+  // Session file validations
+  SessionFileValidation,
+  SessionFileValidationInput,
+  SessionInput,
+  // Session timestamps
+  SessionTimestamps,
+  // Session todos
+  SessionTodos,
+  SessionTodosInput,
+  // Task/Metrics
+  Task,
+  TaskCompletion,
+  TaskFailure,
+  TaskInput,
+  TaskMetrics,
+  TodoItem,
+  VectorSearchResult,
+} from '../../../han-native';
 
 // ============================================================================
 // Database Initialization
@@ -95,9 +95,9 @@ let _initPromise: Promise<void> | null = null;
  * @internal
  */
 export function _resetDbState(): void {
-	_dbPath = null;
-	_initialized = false;
-	_initPromise = null;
+  _dbPath = null;
+  _initialized = false;
+  _initPromise = null;
 }
 
 /**
@@ -105,28 +105,28 @@ export function _resetDbState(): void {
  * Stored in CLAUDE_CONFIG_DIR/han/han.db
  */
 export function getDbPath(): string {
-	if (_dbPath) return _dbPath;
+  if (_dbPath) return _dbPath;
 
-	const configDir = getClaudeConfigDir();
-	if (!configDir) {
-		throw new Error(
-			"Could not determine Claude config directory. Set CLAUDE_CONFIG_DIR or HOME environment variable.",
-		);
-	}
+  const configDir = getClaudeConfigDir();
+  if (!configDir) {
+    throw new Error(
+      'Could not determine Claude config directory. Set CLAUDE_CONFIG_DIR or HOME environment variable.'
+    );
+  }
 
-	const hanDir = join(configDir, "han");
-	// Use try/catch for directory creation - mkdirSync with recursive is idempotent
-	// but can still race with other processes
-	try {
-		mkdirSync(hanDir, { recursive: true });
-	} catch (err) {
-		if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
-			throw err;
-		}
-	}
+  const hanDir = join(configDir, 'han');
+  // Use try/catch for directory creation - mkdirSync with recursive is idempotent
+  // but can still race with other processes
+  try {
+    mkdirSync(hanDir, { recursive: true });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw err;
+    }
+  }
 
-	_dbPath = join(hanDir, "han.db");
-	return _dbPath;
+  _dbPath = join(hanDir, 'han.db');
+  return _dbPath;
 }
 
 /**
@@ -139,42 +139,42 @@ export function getDbPath(): string {
  * coordination.
  */
 export async function initDb(): Promise<void> {
-	// Fast path - already initialized
-	if (_initialized) return;
+  // Fast path - already initialized
+  if (_initialized) return;
 
-	// If initialization is in progress, wait for it
-	if (_initPromise) {
-		await _initPromise;
-		return;
-	}
+  // If initialization is in progress, wait for it
+  if (_initPromise) {
+    await _initPromise;
+    return;
+  }
 
-	// Start initialization
-	_initPromise = (async () => {
-		try {
-			const dbPath = getDbPath();
-			const native = getNativeModule();
+  // Start initialization
+  _initPromise = (async () => {
+    try {
+      const dbPath = getDbPath();
+      const native = getNativeModule();
 
-			// dbInit auto-applies schema on first access
-			// SQLite handles its own locking for cross-process coordination
-			native.dbInit(dbPath);
+      // dbInit auto-applies schema on first access
+      // SQLite handles its own locking for cross-process coordination
+      native.dbInit(dbPath);
 
-			_initialized = true;
-		} catch (err) {
-			// Reset promise on failure so retry is possible
-			_initPromise = null;
-			throw err;
-		}
-	})();
+      _initialized = true;
+    } catch (err) {
+      // Reset promise on failure so retry is possible
+      _initPromise = null;
+      throw err;
+    }
+  })();
 
-	await _initPromise;
+  await _initPromise;
 }
 
 /**
  * Ensure database is initialized before operations
  */
 async function ensureInitialized(): Promise<string> {
-	await initDb();
-	return getDbPath();
+  await initDb();
+  return getDbPath();
 }
 
 // ============================================================================
@@ -189,14 +189,14 @@ let _coordinatorStartPromise: Promise<void> | null = null;
  * Uses health check to verify the coordinator is responsive
  */
 export async function isCoordinatorRunning(): Promise<boolean> {
-	try {
-		// Dynamic import to avoid circular dependencies
-		const { checkHealth } = await import("../commands/coordinator/health.ts");
-		const health = await checkHealth();
-		return health?.status === "ok";
-	} catch {
-		return false;
-	}
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { checkHealth } = await import('../commands/coordinator/health.ts');
+    const health = await checkHealth();
+    return health?.status === 'ok';
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -206,50 +206,50 @@ export async function isCoordinatorRunning(): Promise<boolean> {
  * @param timeout Maximum time to wait for coordinator to start (default: 10000ms)
  */
 export async function startCoordinatorIfNeeded(
-	timeout = 10000,
+  timeout = 10000
 ): Promise<boolean> {
-	// Quick check if already running
-	if (await isCoordinatorRunning()) {
-		return true;
-	}
+  // Quick check if already running
+  if (await isCoordinatorRunning()) {
+    return true;
+  }
 
-	// Prevent multiple concurrent start attempts
-	if (_coordinatorStarting && _coordinatorStartPromise) {
-		await _coordinatorStartPromise;
-		return isCoordinatorRunning();
-	}
+  // Prevent multiple concurrent start attempts
+  if (_coordinatorStarting && _coordinatorStartPromise) {
+    await _coordinatorStartPromise;
+    return isCoordinatorRunning();
+  }
 
-	_coordinatorStarting = true;
-	_coordinatorStartPromise = (async () => {
-		try {
-			// Dynamic import to avoid circular dependencies
-			const { ensureCoordinator } = await import(
-				"../commands/coordinator/daemon.ts"
-			);
+  _coordinatorStarting = true;
+  _coordinatorStartPromise = (async () => {
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { ensureCoordinator } = await import(
+        '../commands/coordinator/daemon.ts'
+      );
 
-			// Create a timeout promise
-			const timeoutPromise = new Promise<never>((_, reject) => {
-				setTimeout(
-					() => reject(new Error("Coordinator start timeout")),
-					timeout,
-				);
-			});
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('Coordinator start timeout')),
+          timeout
+        );
+      });
 
-			// Race between coordinator start and timeout
-			await Promise.race([ensureCoordinator(), timeoutPromise]);
-		} catch (error) {
-			// Log but don't throw - operations can continue without coordinator
-			console.warn(
-				`[db] Coordinator start failed: ${error instanceof Error ? error.message : error}`,
-			);
-		} finally {
-			_coordinatorStarting = false;
-			_coordinatorStartPromise = null;
-		}
-	})();
+      // Race between coordinator start and timeout
+      await Promise.race([ensureCoordinator(), timeoutPromise]);
+    } catch (error) {
+      // Log but don't throw - operations can continue without coordinator
+      console.warn(
+        `[db] Coordinator start failed: ${error instanceof Error ? error.message : error}`
+      );
+    } finally {
+      _coordinatorStarting = false;
+      _coordinatorStartPromise = null;
+    }
+  })();
 
-	await _coordinatorStartPromise;
-	return isCoordinatorRunning();
+  await _coordinatorStartPromise;
+  return isCoordinatorRunning();
 }
 
 /**
@@ -266,12 +266,12 @@ export async function startCoordinatorIfNeeded(
  * @returns The result of the operation
  */
 export async function withFreshData<T>(fn: () => Promise<T>): Promise<T> {
-	// Try to ensure coordinator is running (5s timeout to prevent slow startups)
-	// Increased from 2s to handle slower systems
-	await startCoordinatorIfNeeded(5000);
+  // Try to ensure coordinator is running (5s timeout to prevent slow startups)
+  // Increased from 2s to handle slower systems
+  await startCoordinatorIfNeeded(5000);
 
-	// Execute the operation regardless of coordinator status
-	return fn();
+  // Execute the operation regardless of coordinator status
+  return fn();
 }
 
 /**
@@ -284,20 +284,20 @@ export async function withFreshData<T>(fn: () => Promise<T>): Promise<T> {
  * @returns The result of the operation
  */
 export async function withCoordinator<T>(fn: () => Promise<T>): Promise<T> {
-	try {
-		return await fn();
-	} catch (error) {
-		// Check if this is a coordinator-related error
-		if (isCoordinatorError(error)) {
-			// Try to start coordinator
-			const started = await startCoordinatorIfNeeded();
-			if (started) {
-				// Retry the operation once
-				return fn();
-			}
-		}
-		throw error;
-	}
+  try {
+    return await fn();
+  } catch (error) {
+    // Check if this is a coordinator-related error
+    if (isCoordinatorError(error)) {
+      // Try to start coordinator
+      const started = await startCoordinatorIfNeeded();
+      if (started) {
+        // Retry the operation once
+        return fn();
+      }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -305,16 +305,16 @@ export async function withCoordinator<T>(fn: () => Promise<T>): Promise<T> {
  * Used by withCoordinator to determine if retry is appropriate
  */
 function isCoordinatorError(error: unknown): boolean {
-	if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) return false;
 
-	const message = error.message.toLowerCase();
-	return (
-		message.includes("coordinator") ||
-		message.includes("econnrefused") ||
-		message.includes("connection refused") ||
-		message.includes("fetch failed") ||
-		message.includes("socket hang up")
-	);
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('coordinator') ||
+    message.includes('econnrefused') ||
+    message.includes('connection refused') ||
+    message.includes('fetch failed') ||
+    message.includes('socket hang up')
+  );
 }
 
 // ============================================================================
@@ -322,36 +322,36 @@ function isCoordinatorError(error: unknown): boolean {
 // ============================================================================
 
 export const repos = {
-	/**
-	 * Create or update a repository record
-	 */
-	async upsert(
-		input: import("../../../han-native").RepoInput,
-	): Promise<import("../../../han-native").Repo> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.upsertRepo(dbPath, input);
-	},
+  /**
+   * Create or update a repository record
+   */
+  async upsert(
+    input: import('../../../han-native').RepoInput
+  ): Promise<import('../../../han-native').Repo> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.upsertRepo(dbPath, input);
+  },
 
-	/**
-	 * Get a repository by its remote URL
-	 */
-	async getByRemote(
-		remote: string,
-	): Promise<import("../../../han-native").Repo | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getRepoByRemote(dbPath, remote);
-	},
+  /**
+   * Get a repository by its remote URL
+   */
+  async getByRemote(
+    remote: string
+  ): Promise<import('../../../han-native').Repo | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getRepoByRemote(dbPath, remote);
+  },
 
-	/**
-	 * List all repositories
-	 */
-	async list(): Promise<import("../../../han-native").Repo[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listRepos(dbPath);
-	},
+  /**
+   * List all repositories
+   */
+  async list(): Promise<import('../../../han-native').Repo[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.listRepos(dbPath);
+  },
 };
 
 // ============================================================================
@@ -359,49 +359,49 @@ export const repos = {
 // ============================================================================
 
 export const projects = {
-	/**
-	 * Create or update a project record
-	 */
-	async upsert(
-		input: import("../../../han-native").ProjectInput,
-	): Promise<import("../../../han-native").Project> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.upsertProject(dbPath, input);
-	},
+  /**
+   * Create or update a project record
+   */
+  async upsert(
+    input: import('../../../han-native').ProjectInput
+  ): Promise<import('../../../han-native').Project> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.upsertProject(dbPath, input);
+  },
 
-	/**
-	 * Get a project by its slug (Claude Code normalized path)
-	 */
-	async getBySlug(
-		slug: string,
-	): Promise<import("../../../han-native").Project | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getProjectBySlug(dbPath, slug);
-	},
+  /**
+   * Get a project by its slug (Claude Code normalized path)
+   */
+  async getBySlug(
+    slug: string
+  ): Promise<import('../../../han-native').Project | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getProjectBySlug(dbPath, slug);
+  },
 
-	/**
-	 * Get a project by its absolute path
-	 */
-	async getByPath(
-		path: string,
-	): Promise<import("../../../han-native").Project | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getProjectByPath(dbPath, path);
-	},
+  /**
+   * Get a project by its absolute path
+   */
+  async getByPath(
+    path: string
+  ): Promise<import('../../../han-native').Project | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getProjectByPath(dbPath, path);
+  },
 
-	/**
-	 * List projects, optionally filtered by repo
-	 */
-	async list(
-		repoId?: string,
-	): Promise<import("../../../han-native").Project[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listProjects(dbPath, repoId ?? null);
-	},
+  /**
+   * List projects, optionally filtered by repo
+   */
+  async list(
+    repoId?: string
+  ): Promise<import('../../../han-native').Project[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.listProjects(dbPath, repoId ?? null);
+  },
 };
 
 // ============================================================================
@@ -409,64 +409,64 @@ export const projects = {
 // ============================================================================
 
 export const sessions = {
-	/**
-	 * Create or update a session record
-	 */
-	async upsert(
-		input: import("../../../han-native").SessionInput,
-	): Promise<import("../../../han-native").Session> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.upsertSession(dbPath, input);
-	},
+  /**
+   * Create or update a session record
+   */
+  async upsert(
+    input: import('../../../han-native').SessionInput
+  ): Promise<import('../../../han-native').Session> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.upsertSession(dbPath, input);
+  },
 
-	/**
-	 * Mark a session as completed
-	 */
-	async end(sessionId: string): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.endSession(dbPath, sessionId);
-	},
+  /**
+   * Mark a session as completed
+   */
+  async end(sessionId: string): Promise<boolean> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.endSession(dbPath, sessionId);
+  },
 
-	/**
-	 * Get a session by ID
-	 */
-	async get(
-		sessionId: string,
-	): Promise<import("../../../han-native").Session | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSession(dbPath, sessionId);
-	},
+  /**
+   * Get a session by ID
+   */
+  async get(
+    sessionId: string
+  ): Promise<import('../../../han-native').Session | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSession(dbPath, sessionId);
+  },
 
-	/**
-	 * List sessions with optional filters
-	 */
-	async list(options?: {
-		projectId?: string;
-		status?: string;
-		limit?: number;
-	}): Promise<import("../../../han-native").Session[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listSessions(
-			dbPath,
-			options?.projectId ?? null,
-			options?.status ?? null,
-			options?.limit ?? null,
-		);
-	},
+  /**
+   * List sessions with optional filters
+   */
+  async list(options?: {
+    projectId?: string;
+    status?: string;
+    limit?: number;
+  }): Promise<import('../../../han-native').Session[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.listSessions(
+      dbPath,
+      options?.projectId ?? null,
+      options?.status ?? null,
+      options?.limit ?? null
+    );
+  },
 
-	/**
-	 * Reset all sessions for re-indexing
-	 * Use this to backfill raw_json or other fields for existing messages
-	 */
-	async resetForReindex(): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.resetAllSessionsForReindex(dbPath);
-	},
+  /**
+   * Reset all sessions for re-indexing
+   * Use this to backfill raw_json or other fields for existing messages
+   */
+  async resetForReindex(): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.resetAllSessionsForReindex(dbPath);
+  },
 };
 
 // ============================================================================
@@ -474,114 +474,114 @@ export const sessions = {
 // ============================================================================
 
 export const messages = {
-	/**
-	 * Insert a batch of messages for a session
-	 */
-	async insertBatch(
-		sessionId: string,
-		msgs: import("../../../han-native").MessageInput[],
-	): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.insertMessagesBatch(dbPath, sessionId, msgs);
-	},
+  /**
+   * Insert a batch of messages for a session
+   */
+  async insertBatch(
+    sessionId: string,
+    msgs: import('../../../han-native').MessageInput[]
+  ): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.insertMessagesBatch(dbPath, sessionId, msgs);
+  },
 
-	/**
-	 * Get a message by ID
-	 */
-	async get(
-		messageId: string,
-	): Promise<import("../../../han-native").Message | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getMessage(dbPath, messageId);
-	},
+  /**
+   * Get a message by ID
+   */
+  async get(
+    messageId: string
+  ): Promise<import('../../../han-native').Message | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getMessage(dbPath, messageId);
+  },
 
-	/**
-	 * List messages for a session with optional filters and pagination
-	 *
-	 * @param options.agentIdFilter - Filter by agent:
-	 *   - undefined/null: All messages (no agent filtering)
-	 *   - "": Main conversation only (messages with no agent_id)
-	 *   - "abc12345": Specific agent's messages only
-	 */
-	async list(options: {
-		sessionId: string;
-		messageType?: string;
-		agentIdFilter?: string | null;
-		limit?: number;
-		offset?: number;
-	}): Promise<import("../../../han-native").Message[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.listSessionMessages(
-			dbPath,
-			options.sessionId,
-			options.messageType ?? null,
-			options.agentIdFilter ?? null,
-			options.limit ?? null,
-			options.offset ?? null,
-		);
-	},
+  /**
+   * List messages for a session with optional filters and pagination
+   *
+   * @param options.agentIdFilter - Filter by agent:
+   *   - undefined/null: All messages (no agent filtering)
+   *   - "": Main conversation only (messages with no agent_id)
+   *   - "abc12345": Specific agent's messages only
+   */
+  async list(options: {
+    sessionId: string;
+    messageType?: string;
+    agentIdFilter?: string | null;
+    limit?: number;
+    offset?: number;
+  }): Promise<import('../../../han-native').Message[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.listSessionMessages(
+      dbPath,
+      options.sessionId,
+      options.messageType ?? null,
+      options.agentIdFilter ?? null,
+      options.limit ?? null,
+      options.offset ?? null
+    );
+  },
 
-	/**
-	 * Get the count of messages for a session
-	 */
-	async count(sessionId: string): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getMessageCount(dbPath, sessionId);
-	},
+  /**
+   * Get the count of messages for a session
+   */
+  async count(sessionId: string): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getMessageCount(dbPath, sessionId);
+  },
 
-	/**
-	 * Get message counts for multiple sessions in a single query
-	 * Returns a map of session_id -> count
-	 */
-	async countBatch(sessionIds: string[]): Promise<Record<string, number>> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getMessageCountsBatch(dbPath, sessionIds);
-	},
+  /**
+   * Get message counts for multiple sessions in a single query
+   * Returns a map of session_id -> count
+   */
+  async countBatch(sessionIds: string[]): Promise<Record<string, number>> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getMessageCountsBatch(dbPath, sessionIds);
+  },
 
-	/**
-	 * Get the last indexed line number for a session
-	 * Used for incremental indexing
-	 */
-	async getLastIndexedLine(sessionId: string): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getLastIndexedLine(dbPath, sessionId);
-	},
+  /**
+   * Get the last indexed line number for a session
+   * Used for incremental indexing
+   */
+  async getLastIndexedLine(sessionId: string): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getLastIndexedLine(dbPath, sessionId);
+  },
 
-	/**
-	 * Get first/last message timestamps for multiple sessions in a single query
-	 * Returns a map of session_id -> { startedAt, endedAt }
-	 */
-	async timestampsBatch(
-		sessionIds: string[],
-	): Promise<Record<string, import("../../../han-native").SessionTimestamps>> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSessionTimestampsBatch(dbPath, sessionIds);
-	},
+  /**
+   * Get first/last message timestamps for multiple sessions in a single query
+   * Returns a map of session_id -> { startedAt, endedAt }
+   */
+  async timestampsBatch(
+    sessionIds: string[]
+  ): Promise<Record<string, import('../../../han-native').SessionTimestamps>> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSessionTimestampsBatch(dbPath, sessionIds);
+  },
 
-	/**
-	 * Search messages using full-text search
-	 */
-	async search(options: {
-		query: string;
-		sessionId?: string;
-		limit?: number;
-	}): Promise<import("../../../han-native").Message[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.searchMessages(
-			dbPath,
-			options.query,
-			options.sessionId ?? null,
-			options.limit ?? null,
-		);
-	},
+  /**
+   * Search messages using full-text search
+   */
+  async search(options: {
+    query: string;
+    sessionId?: string;
+    limit?: number;
+  }): Promise<import('../../../han-native').Message[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.searchMessages(
+      dbPath,
+      options.query,
+      options.sessionId ?? null,
+      options.limit ?? null
+    );
+  },
 };
 
 // ============================================================================
@@ -589,67 +589,67 @@ export const messages = {
 // ============================================================================
 
 export const tasks = {
-	/**
-	 * Create a new task record
-	 */
-	async create(
-		input: import("../../../han-native").TaskInput,
-	): Promise<import("../../../han-native").Task> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.createTask(dbPath, input);
-	},
+  /**
+   * Create a new task record
+   */
+  async create(
+    input: import('../../../han-native').TaskInput
+  ): Promise<import('../../../han-native').Task> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.createTask(dbPath, input);
+  },
 
-	/**
-	 * Mark a task as completed with outcome
-	 */
-	async complete(
-		completion: import("../../../han-native").TaskCompletion,
-	): Promise<import("../../../han-native").Task> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.completeTask(dbPath, completion);
-	},
+  /**
+   * Mark a task as completed with outcome
+   */
+  async complete(
+    completion: import('../../../han-native').TaskCompletion
+  ): Promise<import('../../../han-native').Task> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.completeTask(dbPath, completion);
+  },
 
-	/**
-	 * Mark a task as failed
-	 */
-	async fail(
-		failure: import("../../../han-native").TaskFailure,
-	): Promise<import("../../../han-native").Task> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.failTask(dbPath, failure);
-	},
+  /**
+   * Mark a task as failed
+   */
+  async fail(
+    failure: import('../../../han-native').TaskFailure
+  ): Promise<import('../../../han-native').Task> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.failTask(dbPath, failure);
+  },
 
-	/**
-	 * Get a task by ID
-	 */
-	async get(
-		taskId: string,
-	): Promise<import("../../../han-native").Task | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getTask(dbPath, taskId);
-	},
+  /**
+   * Get a task by ID
+   */
+  async get(
+    taskId: string
+  ): Promise<import('../../../han-native').Task | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getTask(dbPath, taskId);
+  },
 
-	/**
-	 * Query task metrics with optional filters
-	 */
-	async queryMetrics(options?: {
-		taskType?: string;
-		outcome?: string;
-		period?: "day" | "week" | "month";
-	}): Promise<import("../../../han-native").TaskMetrics> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.queryTaskMetrics(
-			dbPath,
-			options?.taskType ?? null,
-			options?.outcome ?? null,
-			options?.period ?? null,
-		);
-	},
+  /**
+   * Query task metrics with optional filters
+   */
+  async queryMetrics(options?: {
+    taskType?: string;
+    outcome?: string;
+    period?: 'day' | 'week' | 'month';
+  }): Promise<import('../../../han-native').TaskMetrics> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.queryTaskMetrics(
+      dbPath,
+      options?.taskType ?? null,
+      options?.outcome ?? null,
+      options?.period ?? null
+    );
+  },
 };
 
 // ============================================================================
@@ -658,16 +658,16 @@ export const tasks = {
 // ============================================================================
 
 export interface HookCacheEntry {
-	cacheKey: string;
-	fileHash: string;
-	result: string;
+  cacheKey: string;
+  fileHash: string;
+  result: string;
 }
 
 export interface HookCacheInput {
-	cacheKey: string;
-	fileHash: string;
-	result: string;
-	ttlSeconds: number;
+  cacheKey: string;
+  fileHash: string;
+  result: string;
+  ttlSeconds: number;
 }
 
 /**
@@ -675,10 +675,10 @@ export interface HookCacheInput {
  * @deprecated Use sessionFileValidations for caching - this always returns null
  */
 export async function getHookCache(
-	_cacheKey: string,
+  _cacheKey: string
 ): Promise<HookCacheEntry | null> {
-	// Stub - always returns cache miss, caching handled by sessionFileValidations
-	return null;
+  // Stub - always returns cache miss, caching handled by sessionFileValidations
+  return null;
 }
 
 /**
@@ -686,8 +686,8 @@ export async function getHookCache(
  * @deprecated Use sessionFileValidations for caching - this is a no-op
  */
 export async function setHookCache(_input: HookCacheInput): Promise<boolean> {
-	// Stub - no-op, caching handled by sessionFileValidations
-	return false;
+  // Stub - no-op, caching handled by sessionFileValidations
+  return false;
 }
 
 // ============================================================================
@@ -699,27 +699,27 @@ export async function setHookCache(_input: HookCacheInput): Promise<boolean> {
 // ============================================================================
 
 export const hookExecutions = {
-	/**
-	 * Record a hook execution
-	 */
-	async record(
-		input: import("../../../han-native").HookExecutionInput,
-	): Promise<import("../../../han-native").HookExecution> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.recordHookExecution(dbPath, input);
-	},
+  /**
+   * Record a hook execution
+   */
+  async record(
+    input: import('../../../han-native').HookExecutionInput
+  ): Promise<import('../../../han-native').HookExecution> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.recordHookExecution(dbPath, input);
+  },
 
-	/**
-	 * Query hook statistics
-	 */
-	async queryStats(
-		period?: "day" | "week" | "month",
-	): Promise<import("../../../han-native").HookStats> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.queryHookStats(dbPath, period ?? null);
-	},
+  /**
+   * Query hook statistics
+   */
+  async queryStats(
+    period?: 'day' | 'week' | 'month'
+  ): Promise<import('../../../han-native').HookStats> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.queryHookStats(dbPath, period ?? null);
+  },
 };
 
 // ============================================================================
@@ -727,70 +727,70 @@ export const hookExecutions = {
 // ============================================================================
 
 export const hookAttempts = {
-	/**
-	 * Get or create hook attempt info for tracking consecutive failures
-	 * Uses (session_id, plugin, hook_name, directory) as the unique key
-	 */
-	getOrCreate(
-		sessionId: string,
-		plugin: string,
-		hookName: string,
-		directory: string,
-	): import("../../../han-native").HookAttemptInfo {
-		const native = getNativeModule();
-		return native.getOrCreateHookAttempt(
-			sessionId,
-			plugin,
-			hookName,
-			directory,
-		);
-	},
+  /**
+   * Get or create hook attempt info for tracking consecutive failures
+   * Uses (session_id, plugin, hook_name, directory) as the unique key
+   */
+  getOrCreate(
+    sessionId: string,
+    plugin: string,
+    hookName: string,
+    directory: string
+  ): import('../../../han-native').HookAttemptInfo {
+    const native = getNativeModule();
+    return native.getOrCreateHookAttempt(
+      sessionId,
+      plugin,
+      hookName,
+      directory
+    );
+  },
 
-	/**
-	 * Increment consecutive_failures for a hook, returns updated info with is_stuck flag
-	 */
-	increment(
-		sessionId: string,
-		plugin: string,
-		hookName: string,
-		directory: string,
-	): import("../../../han-native").HookAttemptInfo {
-		const native = getNativeModule();
-		return native.incrementHookFailures(sessionId, plugin, hookName, directory);
-	},
+  /**
+   * Increment consecutive_failures for a hook, returns updated info with is_stuck flag
+   */
+  increment(
+    sessionId: string,
+    plugin: string,
+    hookName: string,
+    directory: string
+  ): import('../../../han-native').HookAttemptInfo {
+    const native = getNativeModule();
+    return native.incrementHookFailures(sessionId, plugin, hookName, directory);
+  },
 
-	/**
-	 * Reset consecutive_failures to 0 (on success)
-	 */
-	reset(
-		sessionId: string,
-		plugin: string,
-		hookName: string,
-		directory: string,
-	): void {
-		const native = getNativeModule();
-		native.resetHookFailures(sessionId, plugin, hookName, directory);
-	},
+  /**
+   * Reset consecutive_failures to 0 (on success)
+   */
+  reset(
+    sessionId: string,
+    plugin: string,
+    hookName: string,
+    directory: string
+  ): void {
+    const native = getNativeModule();
+    native.resetHookFailures(sessionId, plugin, hookName, directory);
+  },
 
-	/**
-	 * Increase max_attempts for a hook (user override via MCP tool)
-	 */
-	increaseMaxAttempts(
-		sessionId: string,
-		plugin: string,
-		hookName: string,
-		directory: string,
-		increase: number,
-	): void {
-		const native = getNativeModule();
-		native.increaseHookMaxAttempts(
-			sessionId,
-			plugin,
-			hookName,
-			directory,
-			increase,
-		);
-	},
+  /**
+   * Increase max_attempts for a hook (user override via MCP tool)
+   */
+  increaseMaxAttempts(
+    sessionId: string,
+    plugin: string,
+    hookName: string,
+    directory: string,
+    increase: number
+  ): void {
+    const native = getNativeModule();
+    native.increaseHookMaxAttempts(
+      sessionId,
+      plugin,
+      hookName,
+      directory,
+      increase
+    );
+  },
 };
 
 // ============================================================================
@@ -798,49 +798,49 @@ export const hookAttempts = {
 // ============================================================================
 
 export const orchestrations = {
-	/**
-	 * Create a new orchestration, cancelling any existing running orchestration for the same session
-	 */
-	create(
-		input: import("../../../han-native").OrchestrationInput,
-	): import("../../../han-native").Orchestration {
-		const native = getNativeModule();
-		return native.createOrchestration(input);
-	},
+  /**
+   * Create a new orchestration, cancelling any existing running orchestration for the same session
+   */
+  create(
+    input: import('../../../han-native').OrchestrationInput
+  ): import('../../../han-native').Orchestration {
+    const native = getNativeModule();
+    return native.createOrchestration(input);
+  },
 
-	/**
-	 * Get an orchestration by ID
-	 */
-	get(id: string): import("../../../han-native").Orchestration | null {
-		const native = getNativeModule();
-		return native.getOrchestration(id) ?? null;
-	},
+  /**
+   * Get an orchestration by ID
+   */
+  get(id: string): import('../../../han-native').Orchestration | null {
+    const native = getNativeModule();
+    return native.getOrchestration(id) ?? null;
+  },
 
-	/**
-	 * Update an orchestration's counters and status
-	 */
-	update(update: import("../../../han-native").OrchestrationUpdate): void {
-		const native = getNativeModule();
-		native.updateOrchestration(update);
-	},
+  /**
+   * Update an orchestration's counters and status
+   */
+  update(update: import('../../../han-native').OrchestrationUpdate): void {
+    const native = getNativeModule();
+    native.updateOrchestration(update);
+  },
 
-	/**
-	 * Cancel an orchestration and all its pending/running hooks
-	 */
-	cancel(id: string): void {
-		const native = getNativeModule();
-		native.cancelOrchestration(id);
-	},
+  /**
+   * Cancel an orchestration and all its pending/running hooks
+   */
+  cancel(id: string): void {
+    const native = getNativeModule();
+    native.cancelOrchestration(id);
+  },
 
-	/**
-	 * Get all hooks for an orchestration
-	 */
-	getHooks(
-		orchestrationId: string,
-	): import("../../../han-native").HookExecution[] {
-		const native = getNativeModule();
-		return native.getOrchestrationHooks(orchestrationId);
-	},
+  /**
+   * Get all hooks for an orchestration
+   */
+  getHooks(
+    orchestrationId: string
+  ): import('../../../han-native').HookExecution[] {
+    const native = getNativeModule();
+    return native.getOrchestrationHooks(orchestrationId);
+  },
 };
 
 // ============================================================================
@@ -848,29 +848,29 @@ export const orchestrations = {
 // ============================================================================
 
 export const pendingHooks = {
-	/**
-	 * Queue a hook for later execution during --wait
-	 */
-	queue(input: import("../../../han-native").QueuedHookInput): string {
-		const native = getNativeModule();
-		return native.queueHook(input);
-	},
+  /**
+   * Queue a hook for later execution during --wait
+   */
+  queue(input: import('../../../han-native').QueuedHookInput): string {
+    const native = getNativeModule();
+    return native.queueHook(input);
+  },
 
-	/**
-	 * Get all queued hooks for an orchestration
-	 */
-	list(orchestrationId: string): import("../../../han-native").QueuedHook[] {
-		const native = getNativeModule();
-		return native.getQueuedHooks(orchestrationId);
-	},
+  /**
+   * Get all queued hooks for an orchestration
+   */
+  list(orchestrationId: string): import('../../../han-native').QueuedHook[] {
+    const native = getNativeModule();
+    return native.getQueuedHooks(orchestrationId);
+  },
 
-	/**
-	 * Delete queued hooks after they've been executed
-	 */
-	delete(orchestrationId: string): number {
-		const native = getNativeModule();
-		return native.deleteQueuedHooks(orchestrationId);
-	},
+  /**
+   * Delete queued hooks after they've been executed
+   */
+  delete(orchestrationId: string): number {
+    const native = getNativeModule();
+    return native.deleteQueuedHooks(orchestrationId);
+  },
 };
 
 // ============================================================================
@@ -878,73 +878,73 @@ export const pendingHooks = {
 // ============================================================================
 
 export const deferredHooks = {
-	/**
-	 * Queue a pending hook for background execution
-	 * Returns the new hook execution ID
-	 */
-	queue(input: import("../../../han-native").PendingHookInput): string {
-		const native = getNativeModule();
-		return native.queuePendingHook(input);
-	},
+  /**
+   * Queue a pending hook for background execution
+   * Returns the new hook execution ID
+   */
+  queue(input: import('../../../han-native').PendingHookInput): string {
+    const native = getNativeModule();
+    return native.queuePendingHook(input);
+  },
 
-	/**
-	 * Get all pending hooks ready to run (coordinator picks these up)
-	 */
-	getAll(): import("../../../han-native").HookExecution[] {
-		const native = getNativeModule();
-		return native.getPendingHooks();
-	},
+  /**
+   * Get all pending hooks ready to run (coordinator picks these up)
+   */
+  getAll(): import('../../../han-native').HookExecution[] {
+    const native = getNativeModule();
+    return native.getPendingHooks();
+  },
 
-	/**
-	 * Get pending/running/failed hooks for a specific session (legacy)
-	 */
-	getForSession(
-		sessionId: string,
-	): import("../../../han-native").HookExecution[] {
-		const native = getNativeModule();
-		return native.getSessionPendingHooks(sessionId);
-	},
+  /**
+   * Get pending/running/failed hooks for a specific session (legacy)
+   */
+  getForSession(
+    sessionId: string
+  ): import('../../../han-native').HookExecution[] {
+    const native = getNativeModule();
+    return native.getSessionPendingHooks(sessionId);
+  },
 
-	/**
-	 * Update hook execution status
-	 */
-	updateStatus(
-		id: string,
-		status: "pending" | "running" | "completed" | "failed" | "cancelled",
-	): void {
-		const native = getNativeModule();
-		native.updateHookStatus(id, status);
-	},
+  /**
+   * Update hook execution status
+   */
+  updateStatus(
+    id: string,
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  ): void {
+    const native = getNativeModule();
+    native.updateHookStatus(id, status);
+  },
 
-	/**
-	 * Complete a hook execution (update status, output, error, duration)
-	 */
-	complete(
-		id: string,
-		success: boolean,
-		output: string | null,
-		error: string | null,
-		durationMs: number,
-	): void {
-		const native = getNativeModule();
-		// Convert null to undefined for Rust Option<String>
-		native.completeHookExecution(
-			id,
-			success,
-			output ?? undefined,
-			error ?? undefined,
-			durationMs,
-		);
-	},
+  /**
+   * Complete a hook execution (update status, output, error, duration)
+   */
+  complete(
+    id: string,
+    success: boolean,
+    output: string | null,
+    error: string | null,
+    durationMs: number
+  ): void {
+    const native = getNativeModule();
+    // Convert null to undefined for Rust Option<String>
+    native.completeHookExecution(
+      id,
+      success,
+      output ?? undefined,
+      error ?? undefined,
+      durationMs
+    );
+  },
 
-	/**
-	 * Mark a hook as failed with an error message
-	 * Used for stale hook detection when the owning process is no longer running
-	 */
-	fail(id: string, errorMessage: string): void {
-		const native = getNativeModule();
-		native.failHookExecution(id, errorMessage);
-	},
+  /**
+   * Mark a hook as failed with an error message
+   * Used for stale hook detection when the owning process is no longer running
+   */
+  fail(id: string, errorMessage: string): void {
+    const native = getNativeModule();
+    native.failHookExecution(id, errorMessage);
+  },
 };
 
 // ============================================================================
@@ -952,29 +952,29 @@ export const deferredHooks = {
 // ============================================================================
 
 export const frustrations = {
-	/**
-	 * Record a frustration event
-	 */
-	async record(
-		input: import("../../../han-native").FrustrationEventInput,
-	): Promise<import("../../../han-native").FrustrationEvent> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.recordFrustration(dbPath, input);
-	},
+  /**
+   * Record a frustration event
+   */
+  async record(
+    input: import('../../../han-native').FrustrationEventInput
+  ): Promise<import('../../../han-native').FrustrationEvent> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.recordFrustration(dbPath, input);
+  },
 
-	/**
-	 * Query frustration metrics
-	 * @param totalTasks Total number of tasks for calculating rates
-	 */
-	async queryMetrics(
-		totalTasks: number,
-		period?: "day" | "week" | "month",
-	): Promise<import("../../../han-native").FrustrationMetrics> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.queryFrustrationMetrics(dbPath, period ?? null, totalTasks);
-	},
+  /**
+   * Query frustration metrics
+   * @param totalTasks Total number of tasks for calculating rates
+   */
+  async queryMetrics(
+    totalTasks: number,
+    period?: 'day' | 'week' | 'month'
+  ): Promise<import('../../../han-native').FrustrationMetrics> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.queryFrustrationMetrics(dbPath, period ?? null, totalTasks);
+  },
 };
 
 // ============================================================================
@@ -986,37 +986,37 @@ export const frustrations = {
 // ============================================================================
 
 export const sessionFileChanges = {
-	/**
-	 * Record a file change in a session
-	 */
-	async record(
-		input: import("../../../han-native").SessionFileChangeInput,
-	): Promise<import("../../../han-native").SessionFileChange> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.recordFileChange(dbPath, input);
-	},
+  /**
+   * Record a file change in a session
+   */
+  async record(
+    input: import('../../../han-native').SessionFileChangeInput
+  ): Promise<import('../../../han-native').SessionFileChange> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.recordFileChange(dbPath, input);
+  },
 
-	/**
-	 * List all file changes for a session
-	 */
-	async list(
-		sessionId: string,
-	): Promise<import("../../../han-native").SessionFileChange[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSessionFileChanges(dbPath, sessionId);
-	},
+  /**
+   * List all file changes for a session
+   */
+  async list(
+    sessionId: string
+  ): Promise<import('../../../han-native').SessionFileChange[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSessionFileChanges(dbPath, sessionId);
+  },
 
-	/**
-	 * Check if a session has any file changes
-	 * Useful for determining if hooks need to run
-	 */
-	async hasChanges(sessionId: string): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.hasSessionChanges(dbPath, sessionId);
-	},
+  /**
+   * Check if a session has any file changes
+   * Useful for determining if hooks need to run
+   */
+  async hasChanges(sessionId: string): Promise<boolean> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.hasSessionChanges(dbPath, sessionId);
+  },
 };
 
 // ============================================================================
@@ -1024,223 +1024,223 @@ export const sessionFileChanges = {
 // ============================================================================
 
 export const sessionFileValidations = {
-	/**
-	 * Record a file validation (upserts based on session/file/plugin/hook/directory)
-	 * Call this after a successful hook run to track which files have been validated
-	 */
-	async record(
-		input: import("../../../han-native").SessionFileValidationInput,
-	): Promise<import("../../../han-native").SessionFileValidation> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.recordFileValidation(dbPath, input);
-	},
+  /**
+   * Record a file validation (upserts based on session/file/plugin/hook/directory)
+   * Call this after a successful hook run to track which files have been validated
+   */
+  async record(
+    input: import('../../../han-native').SessionFileValidationInput
+  ): Promise<import('../../../han-native').SessionFileValidation> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.recordFileValidation(dbPath, input);
+  },
 
-	/**
-	 * Get a specific file validation
-	 */
-	async get(
-		sessionId: string,
-		filePath: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-	): Promise<import("../../../han-native").SessionFileValidation | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getFileValidation(
-			dbPath,
-			sessionId,
-			filePath,
-			pluginName,
-			hookName,
-			directory,
-		);
-	},
+  /**
+   * Get a specific file validation
+   */
+  async get(
+    sessionId: string,
+    filePath: string,
+    pluginName: string,
+    hookName: string,
+    directory: string
+  ): Promise<import('../../../han-native').SessionFileValidation | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getFileValidation(
+      dbPath,
+      sessionId,
+      filePath,
+      pluginName,
+      hookName,
+      directory
+    );
+  },
 
-	/**
-	 * Get all validations for a session and plugin/hook/directory combo
-	 */
-	async list(
-		sessionId: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-	): Promise<import("../../../han-native").SessionFileValidation[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSessionValidations(
-			dbPath,
-			sessionId,
-			pluginName,
-			hookName,
-			directory,
-		);
-	},
+  /**
+   * Get all validations for a session and plugin/hook/directory combo
+   */
+  async list(
+    sessionId: string,
+    pluginName: string,
+    hookName: string,
+    directory: string
+  ): Promise<import('../../../han-native').SessionFileValidation[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSessionValidations(
+      dbPath,
+      sessionId,
+      pluginName,
+      hookName,
+      directory
+    );
+  },
 
-	/**
-	 * Check if files need validation (any changed since last validation or command changed)
-	 * Use this to skip re-running hooks when files haven't changed
-	 */
-	async needsValidation(
-		sessionId: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-		commandHash: string,
-	): Promise<boolean> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.needsValidation(
-			dbPath,
-			sessionId,
-			pluginName,
-			hookName,
-			directory,
-			commandHash,
-		);
-	},
+  /**
+   * Check if files need validation (any changed since last validation or command changed)
+   * Use this to skip re-running hooks when files haven't changed
+   */
+  async needsValidation(
+    sessionId: string,
+    pluginName: string,
+    hookName: string,
+    directory: string,
+    commandHash: string
+  ): Promise<boolean> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.needsValidation(
+      dbPath,
+      sessionId,
+      pluginName,
+      hookName,
+      directory,
+      commandHash
+    );
+  },
 
-	/**
-	 * Get ALL validations for a session (not filtered by plugin/hook)
-	 * Useful for showing validation status across all hooks for file changes
-	 */
-	async listAll(
-		sessionId: string,
-	): Promise<import("../../../han-native").SessionFileValidation[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getAllSessionValidations(dbPath, sessionId);
-	},
+  /**
+   * Get ALL validations for a session (not filtered by plugin/hook)
+   * Useful for showing validation status across all hooks for file changes
+   */
+  async listAll(
+    sessionId: string
+  ): Promise<import('../../../han-native').SessionFileValidation[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getAllSessionValidations(dbPath, sessionId);
+  },
 
-	/**
-	 * Get files this session modified along with their validation status.
-	 * Used for stale detection in checkFilesNeedValidation.
-	 */
-	async getFilesForValidation(
-		sessionId: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-	): Promise<import("../../../han-native").FileValidationStatus[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getFilesForValidation(
-			dbPath,
-			sessionId,
-			pluginName,
-			hookName,
-			directory,
-		);
-	},
+  /**
+   * Get files this session modified along with their validation status.
+   * Used for stale detection in checkFilesNeedValidation.
+   */
+  async getFilesForValidation(
+    sessionId: string,
+    pluginName: string,
+    hookName: string,
+    directory: string
+  ): Promise<import('../../../han-native').FileValidationStatus[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getFilesForValidation(
+      dbPath,
+      sessionId,
+      pluginName,
+      hookName,
+      directory
+    );
+  },
 
-	/**
-	 * Check which files need validation using stale detection.
-	 * Returns list of files that need validation, filtering out:
-	 * 1. Files that are stale (modified by another session)
-	 * 2. Files that have already been validated in current state
-	 *
-	 * @param sessionId - The current session ID
-	 * @param pluginName - Plugin name
-	 * @param hookName - Hook name
-	 * @param directory - Directory being validated
-	 * @param commandHash - Hash of the command being run
-	 * @param computeHash - Function to compute current file hash from disk
-	 * @returns Array of file paths that need validation
-	 */
-	async checkFilesNeedValidation(
-		sessionId: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-		commandHash: string,
-		computeHash: (filePath: string) => string,
-	): Promise<{
-		needsValidation: boolean;
-		files: string[];
-		staleFiles: string[];
-	}> {
-		const files = await this.getFilesForValidation(
-			sessionId,
-			pluginName,
-			hookName,
-			directory,
-		);
+  /**
+   * Check which files need validation using stale detection.
+   * Returns list of files that need validation, filtering out:
+   * 1. Files that are stale (modified by another session)
+   * 2. Files that have already been validated in current state
+   *
+   * @param sessionId - The current session ID
+   * @param pluginName - Plugin name
+   * @param hookName - Hook name
+   * @param directory - Directory being validated
+   * @param commandHash - Hash of the command being run
+   * @param computeHash - Function to compute current file hash from disk
+   * @returns Array of file paths that need validation
+   */
+  async checkFilesNeedValidation(
+    sessionId: string,
+    pluginName: string,
+    hookName: string,
+    directory: string,
+    commandHash: string,
+    computeHash: (filePath: string) => string
+  ): Promise<{
+    needsValidation: boolean;
+    files: string[];
+    staleFiles: string[];
+  }> {
+    const files = await this.getFilesForValidation(
+      sessionId,
+      pluginName,
+      hookName,
+      directory
+    );
 
-		const filesNeedingValidation: string[] = [];
-		const staleFiles: string[] = [];
+    const filesNeedingValidation: string[] = [];
+    const staleFiles: string[] = [];
 
-		for (const file of files) {
-			const currentHash = computeHash(file.filePath);
+    for (const file of files) {
+      const currentHash = computeHash(file.filePath);
 
-			// Skip files that no longer exist (empty hash)
-			if (!currentHash) {
-				continue;
-			}
+      // Skip files that no longer exist (empty hash)
+      if (!currentHash) {
+        continue;
+      }
 
-			// Check if file is stale (modified by another session)
-			// Stale = current hash doesn't match our modification AND doesn't match our validation
-			const matchesModification = currentHash === file.modificationHash;
-			const matchesValidation =
-				file.validationHash && currentHash === file.validationHash;
+      // Check if file is stale (modified by another session)
+      // Stale = current hash doesn't match our modification AND doesn't match our validation
+      const matchesModification = currentHash === file.modificationHash;
+      const matchesValidation =
+        file.validationHash && currentHash === file.validationHash;
 
-			if (!matchesModification && !matchesValidation) {
-				// File was modified by another session - not our responsibility
-				staleFiles.push(file.filePath);
-				continue;
-			}
+      if (!matchesModification && !matchesValidation) {
+        // File was modified by another session - not our responsibility
+        staleFiles.push(file.filePath);
+        continue;
+      }
 
-			// Check if validation is needed
-			// Needs validation if:
-			// 1. No validation exists (validationHash is null)
-			// 2. Current hash doesn't match validation hash
-			// 3. Command changed (different command hash)
-			const needsValidation =
-				!file.validationHash ||
-				currentHash !== file.validationHash ||
-				file.validationCommandHash !== commandHash;
+      // Check if validation is needed
+      // Needs validation if:
+      // 1. No validation exists (validationHash is null)
+      // 2. Current hash doesn't match validation hash
+      // 3. Command changed (different command hash)
+      const needsValidation =
+        !file.validationHash ||
+        currentHash !== file.validationHash ||
+        file.validationCommandHash !== commandHash;
 
-			if (needsValidation) {
-				filesNeedingValidation.push(file.filePath);
-			}
-		}
+      if (needsValidation) {
+        filesNeedingValidation.push(file.filePath);
+      }
+    }
 
-		return {
-			needsValidation: filesNeedingValidation.length > 0,
-			files: filesNeedingValidation,
-			staleFiles,
-		};
-	},
+    return {
+      needsValidation: filesNeedingValidation.length > 0,
+      files: filesNeedingValidation,
+      staleFiles,
+    };
+  },
 
-	/**
-	 * Delete stale validation records for files that no longer exist.
-	 * This prevents "ghost" validations from causing infinite re-validation loops.
-	 *
-	 * @param sessionId - Session ID
-	 * @param pluginName - Plugin name
-	 * @param hookName - Hook name
-	 * @param directory - Directory being validated
-	 * @param currentFilePaths - List of file paths that currently exist
-	 * @returns Number of stale records deleted
-	 */
-	async deleteStale(
-		sessionId: string,
-		pluginName: string,
-		hookName: string,
-		directory: string,
-		currentFilePaths: string[],
-	): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.deleteStaleValidations(
-			dbPath,
-			sessionId,
-			pluginName,
-			hookName,
-			directory,
-			currentFilePaths,
-		);
-	},
+  /**
+   * Delete stale validation records for files that no longer exist.
+   * This prevents "ghost" validations from causing infinite re-validation loops.
+   *
+   * @param sessionId - Session ID
+   * @param pluginName - Plugin name
+   * @param hookName - Hook name
+   * @param directory - Directory being validated
+   * @param currentFilePaths - List of file paths that currently exist
+   * @returns Number of stale records deleted
+   */
+  async deleteStale(
+    sessionId: string,
+    pluginName: string,
+    hookName: string,
+    directory: string,
+    currentFilePaths: string[]
+  ): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.deleteStaleValidations(
+      dbPath,
+      sessionId,
+      pluginName,
+      hookName,
+      directory,
+      currentFilePaths
+    );
+  },
 };
 
 // ============================================================================
@@ -1248,28 +1248,28 @@ export const sessionFileValidations = {
 // ============================================================================
 
 export const sessionTodos = {
-	/**
-	 * Get the current todos for a session
-	 * Returns the most recent TodoWrite state
-	 */
-	async get(
-		sessionId: string,
-	): Promise<import("../../../han-native").SessionTodos | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSessionTodos(dbPath, sessionId);
-	},
+  /**
+   * Get the current todos for a session
+   * Returns the most recent TodoWrite state
+   */
+  async get(
+    sessionId: string
+  ): Promise<import('../../../han-native').SessionTodos | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSessionTodos(dbPath, sessionId);
+  },
 
-	/**
-	 * Upsert session todos (used by indexer)
-	 */
-	async upsert(
-		input: import("../../../han-native").SessionTodosInput,
-	): Promise<import("../../../han-native").SessionTodos> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.upsertSessionTodos(dbPath, input);
-	},
+  /**
+   * Upsert session todos (used by indexer)
+   */
+  async upsert(
+    input: import('../../../han-native').SessionTodosInput
+  ): Promise<import('../../../han-native').SessionTodos> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.upsertSessionTodos(dbPath, input);
+  },
 };
 
 // ============================================================================
@@ -1277,28 +1277,28 @@ export const sessionTodos = {
 // ============================================================================
 
 export const nativeTasks = {
-	/**
-	 * Get all native tasks for a session
-	 */
-	async getForSession(
-		sessionId: string,
-	): Promise<import("../../../han-native").NativeTask[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getSessionNativeTasks(dbPath, sessionId);
-	},
+  /**
+   * Get all native tasks for a session
+   */
+  async getForSession(
+    sessionId: string
+  ): Promise<import('../../../han-native').NativeTask[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getSessionNativeTasks(dbPath, sessionId);
+  },
 
-	/**
-	 * Get a specific native task by session ID and task ID
-	 */
-	async get(
-		sessionId: string,
-		taskId: string,
-	): Promise<import("../../../han-native").NativeTask | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.getNativeTask(dbPath, sessionId, taskId);
-	},
+  /**
+   * Get a specific native task by session ID and task ID
+   */
+  async get(
+    sessionId: string,
+    taskId: string
+  ): Promise<import('../../../han-native').NativeTask | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.getNativeTask(dbPath, sessionId, taskId);
+  },
 };
 
 // ============================================================================
@@ -1310,18 +1310,18 @@ export const nativeTasks = {
  * Mirrors TranscriptModifiedFiles interface for easy migration
  */
 export interface SessionModifiedFiles {
-	/** Files that were created */
-	created: string[];
-	/** Files that were modified */
-	modified: string[];
-	/** Files that were deleted */
-	deleted: string[];
-	/** Combined set of all modified files (created + modified, excludes deleted) */
-	allModified: string[];
-	/** Session ID */
-	sessionId: string;
-	/** Whether query was successful */
-	success: boolean;
+  /** Files that were created */
+  created: string[];
+  /** Files that were modified */
+  modified: string[];
+  /** Files that were deleted */
+  deleted: string[];
+  /** Combined set of all modified files (created + modified, excludes deleted) */
+  allModified: string[];
+  /** Session ID */
+  sessionId: string;
+  /** Whether query was successful */
+  success: boolean;
 }
 
 /**
@@ -1333,55 +1333,55 @@ export interface SessionModifiedFiles {
  * @returns Modified files grouped by action type
  */
 export async function getSessionModifiedFiles(
-	sessionId: string,
+  sessionId: string
 ): Promise<SessionModifiedFiles> {
-	try {
-		const changes = await sessionFileChanges.list(sessionId);
+  try {
+    const changes = await sessionFileChanges.list(sessionId);
 
-		const created: string[] = [];
-		const modified: string[] = [];
-		const deleted: string[] = [];
+    const created: string[] = [];
+    const modified: string[] = [];
+    const deleted: string[] = [];
 
-		for (const change of changes) {
-			switch (change.action) {
-				case "created":
-					created.push(change.filePath);
-					break;
-				case "modified":
-					modified.push(change.filePath);
-					break;
-				case "deleted":
-					deleted.push(change.filePath);
-					break;
-			}
-		}
+    for (const change of changes) {
+      switch (change.action) {
+        case 'created':
+          created.push(change.filePath);
+          break;
+        case 'modified':
+          modified.push(change.filePath);
+          break;
+        case 'deleted':
+          deleted.push(change.filePath);
+          break;
+      }
+    }
 
-		// allModified includes created and modified, but not deleted
-		// Filter out files that were later deleted (e.g., created then deleted in same session)
-		const deletedSet = new Set(deleted);
-		const allModified = [...new Set([...created, ...modified])].filter(
-			(f) => !deletedSet.has(f),
-		);
+    // allModified includes created and modified, but not deleted
+    // Filter out files that were later deleted (e.g., created then deleted in same session)
+    const deletedSet = new Set(deleted);
+    const allModified = [...new Set([...created, ...modified])].filter(
+      (f) => !deletedSet.has(f)
+    );
 
-		return {
-			created,
-			modified,
-			deleted,
-			allModified,
-			sessionId,
-			success: true,
-		};
-	} catch (_err) {
-		// Graceful fallback: query error, treat as no data
-		return {
-			created: [],
-			modified: [],
-			deleted: [],
-			allModified: [],
-			sessionId,
-			success: false,
-		};
-	}
+    return {
+      created,
+      modified,
+      deleted,
+      allModified,
+      sessionId,
+      success: true,
+    };
+  } catch (_err) {
+    // Graceful fallback: query error, treat as no data
+    return {
+      created: [],
+      modified: [],
+      deleted: [],
+      allModified: [],
+      sessionId,
+      success: false,
+    };
+  }
 }
 
 /**
@@ -1393,53 +1393,53 @@ export async function getSessionModifiedFiles(
  * @param projectPath - Project path to find the transcript
  */
 export async function ensureSessionIndexed(
-	sessionId: string,
-	projectPath: string,
+  sessionId: string,
+  projectPath: string
 ): Promise<void> {
-	const { join } = await import("node:path");
-	const { existsSync, readdirSync } = await import("node:fs");
+  const { join } = await import('node:path');
+  const { existsSync, readdirSync } = await import('node:fs');
 
-	// Find the transcript file for this session
-	const configDir = getClaudeConfigDir();
-	if (!configDir) return;
+  // Find the transcript file for this session
+  const configDir = getClaudeConfigDir();
+  if (!configDir) return;
 
-	// Convert project path to slug (matches Claude Code's format)
-	const projectSlug = projectPath
-		.replace(/^\//, "")
-		.replace(/\//g, "-")
-		.replace(/\s+/g, "-");
+  // Convert project path to slug (matches Claude Code's format)
+  const projectSlug = projectPath
+    .replace(/^\//, '')
+    .replace(/\//g, '-')
+    .replace(/\s+/g, '-');
 
-	const projectDir = join(configDir, "projects", projectSlug);
+  const projectDir = join(configDir, 'projects', projectSlug);
 
-	if (!existsSync(projectDir)) return;
+  if (!existsSync(projectDir)) return;
 
-	// Find session file (main transcript)
-	const exactPath = join(projectDir, `${sessionId}.jsonl`);
-	let transcriptPath: string | null = null;
+  // Find session file (main transcript)
+  const exactPath = join(projectDir, `${sessionId}.jsonl`);
+  let transcriptPath: string | null = null;
 
-	if (existsSync(exactPath)) {
-		transcriptPath = exactPath;
-	} else {
-		// Fall back to searching for partial match
-		try {
-			const files = readdirSync(projectDir).filter((f) => f.endsWith(".jsonl"));
-			const match = files.find((f) => f.includes(sessionId));
-			if (match) {
-				transcriptPath = join(projectDir, match);
-			}
-		} catch {
-			// Ignore read errors
-		}
-	}
+  if (existsSync(exactPath)) {
+    transcriptPath = exactPath;
+  } else {
+    // Fall back to searching for partial match
+    try {
+      const files = readdirSync(projectDir).filter((f) => f.endsWith('.jsonl'));
+      const match = files.find((f) => f.includes(sessionId));
+      if (match) {
+        transcriptPath = join(projectDir, match);
+      }
+    } catch {
+      // Ignore read errors
+    }
+  }
 
-	if (!transcriptPath) return;
+  if (!transcriptPath) return;
 
-	// Index the session file to ensure session_file_changes is current
-	try {
-		await indexer.indexSessionFile(transcriptPath);
-	} catch {
-		// Ignore indexing errors - best effort
-	}
+  // Index the session file to ensure session_file_changes is current
+  try {
+    await indexer.indexSessionFile(transcriptPath);
+  } catch {
+    // Ignore indexing errors - best effort
+  }
 }
 
 // ============================================================================
@@ -1447,39 +1447,39 @@ export async function ensureSessionIndexed(
 // ============================================================================
 
 export const fts = {
-	/**
-	 * Index documents for full-text search
-	 */
-	async index(
-		tableName: string,
-		documents: import("../../../han-native").FtsDocument[],
-	): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.ftsIndex(dbPath, tableName, documents);
-	},
+  /**
+   * Index documents for full-text search
+   */
+  async index(
+    tableName: string,
+    documents: import('../../../han-native').FtsDocument[]
+  ): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.ftsIndex(dbPath, tableName, documents);
+  },
 
-	/**
-	 * Search documents using BM25
-	 */
-	async search(
-		tableName: string,
-		query: string,
-		limit?: number,
-	): Promise<import("../../../han-native").FtsSearchResult[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.ftsSearch(dbPath, tableName, query, limit ?? null);
-	},
+  /**
+   * Search documents using BM25
+   */
+  async search(
+    tableName: string,
+    query: string,
+    limit?: number
+  ): Promise<import('../../../han-native').FtsSearchResult[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.ftsSearch(dbPath, tableName, query, limit ?? null);
+  },
 
-	/**
-	 * Delete documents by ID
-	 */
-	async delete(tableName: string, ids: string[]): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.ftsDelete(dbPath, tableName, ids);
-	},
+  /**
+   * Delete documents by ID
+   */
+  async delete(tableName: string, ids: string[]): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.ftsDelete(dbPath, tableName, ids);
+  },
 };
 
 // ============================================================================
@@ -1487,30 +1487,30 @@ export const fts = {
 // ============================================================================
 
 export const vectors = {
-	/**
-	 * Index documents with vectors
-	 */
-	async index(
-		tableName: string,
-		documents: import("../../../han-native").VectorDocumentInput[],
-	): Promise<number> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.vectorIndex(dbPath, tableName, documents);
-	},
+  /**
+   * Index documents with vectors
+   */
+  async index(
+    tableName: string,
+    documents: import('../../../han-native').VectorDocumentInput[]
+  ): Promise<number> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.vectorIndex(dbPath, tableName, documents);
+  },
 
-	/**
-	 * Search documents using vector similarity
-	 */
-	async search(
-		tableName: string,
-		queryVector: number[],
-		limit?: number,
-	): Promise<import("../../../han-native").VectorSearchResult[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.vectorSearch(dbPath, tableName, queryVector, limit ?? null);
-	},
+  /**
+   * Search documents using vector similarity
+   */
+  async search(
+    tableName: string,
+    queryVector: number[],
+    limit?: number
+  ): Promise<import('../../../han-native').VectorSearchResult[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.vectorSearch(dbPath, tableName, queryVector, limit ?? null);
+  },
 };
 
 // ============================================================================
@@ -1518,62 +1518,62 @@ export const vectors = {
 // ============================================================================
 
 export const coordinator = {
-	/**
-	 * Try to acquire the coordinator lock
-	 * Returns true if this process became the coordinator
-	 */
-	tryAcquire(): boolean {
-		const native = getNativeModule();
-		return native.tryAcquireCoordinatorLock();
-	},
+  /**
+   * Try to acquire the coordinator lock
+   * Returns true if this process became the coordinator
+   */
+  tryAcquire(): boolean {
+    const native = getNativeModule();
+    return native.tryAcquireCoordinatorLock();
+  },
 
-	/**
-	 * Release the coordinator lock
-	 */
-	release(): boolean {
-		const native = getNativeModule();
-		return native.releaseCoordinatorLock();
-	},
+  /**
+   * Release the coordinator lock
+   */
+  release(): boolean {
+    const native = getNativeModule();
+    return native.releaseCoordinatorLock();
+  },
 
-	/**
-	 * Update coordinator heartbeat (call periodically while coordinating)
-	 */
-	updateHeartbeat(): boolean {
-		const native = getNativeModule();
-		return native.updateCoordinatorHeartbeat();
-	},
+  /**
+   * Update coordinator heartbeat (call periodically while coordinating)
+   */
+  updateHeartbeat(): boolean {
+    const native = getNativeModule();
+    return native.updateCoordinatorHeartbeat();
+  },
 
-	/**
-	 * Get current coordinator status
-	 */
-	getStatus(): import("../../../han-native").CoordinatorStatus {
-		const native = getNativeModule();
-		return native.getCoordinatorStatus();
-	},
+  /**
+   * Get current coordinator status
+   */
+  getStatus(): import('../../../han-native').CoordinatorStatus {
+    const native = getNativeModule();
+    return native.getCoordinatorStatus();
+  },
 
-	/**
-	 * Check if this process is the coordinator
-	 */
-	isCoordinator(): boolean {
-		const native = getNativeModule();
-		return native.isCoordinator();
-	},
+  /**
+   * Check if this process is the coordinator
+   */
+  isCoordinator(): boolean {
+    const native = getNativeModule();
+    return native.isCoordinator();
+  },
 
-	/**
-	 * Get the heartbeat interval in seconds
-	 */
-	getHeartbeatInterval(): number {
-		const native = getNativeModule();
-		return native.getHeartbeatInterval();
-	},
+  /**
+   * Get the heartbeat interval in seconds
+   */
+  getHeartbeatInterval(): number {
+    const native = getNativeModule();
+    return native.getHeartbeatInterval();
+  },
 
-	/**
-	 * Get the stale lock timeout in seconds
-	 */
-	getStaleLockTimeout(): number {
-		const native = getNativeModule();
-		return native.getStaleLockTimeout();
-	},
+  /**
+   * Get the stale lock timeout in seconds
+   */
+  getStaleLockTimeout(): number {
+    const native = getNativeModule();
+    return native.getStaleLockTimeout();
+  },
 };
 
 // ============================================================================
@@ -1581,93 +1581,93 @@ export const coordinator = {
 // ============================================================================
 
 export const watcher = {
-	/**
-	 * Start watching the Claude projects directory for JSONL changes
-	 */
-	async start(watchPath?: string): Promise<boolean> {
-		const native = getNativeModule();
-		return native.startFileWatcher(watchPath ?? null);
-	},
+  /**
+   * Start watching the Claude projects directory for JSONL changes
+   */
+  async start(watchPath?: string): Promise<boolean> {
+    const native = getNativeModule();
+    return native.startFileWatcher(watchPath ?? null);
+  },
 
-	/**
-	 * Stop the file watcher
-	 */
-	stop(): boolean {
-		const native = getNativeModule();
-		return native.stopFileWatcher();
-	},
+  /**
+   * Stop the file watcher
+   */
+  stop(): boolean {
+    const native = getNativeModule();
+    return native.stopFileWatcher();
+  },
 
-	/**
-	 * Check if the file watcher is running
-	 */
-	isRunning(): boolean {
-		const native = getNativeModule();
-		return native.isWatcherRunning();
-	},
+  /**
+   * Check if the file watcher is running
+   */
+  isRunning(): boolean {
+    const native = getNativeModule();
+    return native.isWatcherRunning();
+  },
 
-	/**
-	 * Get the default watch path (~/.claude/projects)
-	 */
-	getDefaultPath(): string {
-		const native = getNativeModule();
-		return native.getDefaultWatchPath();
-	},
+  /**
+   * Get the default watch path (~/.claude/projects)
+   */
+  getDefaultPath(): string {
+    const native = getNativeModule();
+    return native.getDefaultWatchPath();
+  },
 
-	/**
-	 * Poll for index results from background watcher
-	 * Returns results and clears the queue
-	 * @deprecated Use setCallback for event-driven updates instead
-	 */
-	pollResults(): IndexResult[] {
-		const native = getNativeModule();
-		return native.pollIndexResults();
-	},
+  /**
+   * Poll for index results from background watcher
+   * Returns results and clears the queue
+   * @deprecated Use setCallback for event-driven updates instead
+   */
+  pollResults(): IndexResult[] {
+    const native = getNativeModule();
+    return native.pollIndexResults();
+  },
 
-	/**
-	 * Set a callback to be notified of new index results instantly
-	 * This replaces polling with event-driven updates
-	 */
-	setCallback(callback: (result: IndexResult) => void): void {
-		const native = getNativeModule();
-		native.setIndexCallback(callback);
-	},
+  /**
+   * Set a callback to be notified of new index results instantly
+   * This replaces polling with event-driven updates
+   */
+  setCallback(callback: (result: IndexResult) => void): void {
+    const native = getNativeModule();
+    native.setIndexCallback(callback);
+  },
 
-	/**
-	 * Clear the callback (revert to polling mode)
-	 */
-	clearCallback(): void {
-		const native = getNativeModule();
-		native.clearIndexCallback();
-	},
+  /**
+   * Clear the callback (revert to polling mode)
+   */
+  clearCallback(): void {
+    const native = getNativeModule();
+    native.clearIndexCallback();
+  },
 
-	/**
-	 * Add an additional watch path for multi-environment support
-	 * @param configDir The config directory path (e.g., /work/.claude)
-	 * @param projectsPath Optional explicit projects path (default: {configDir}/projects)
-	 * @returns true if the path was added, false if already watching or watcher not running
-	 */
-	addWatchPath(configDir: string, projectsPath?: string): boolean {
-		const native = getNativeModule();
-		return native.addWatchPath(configDir, projectsPath ?? null);
-	},
+  /**
+   * Add an additional watch path for multi-environment support
+   * @param configDir The config directory path (e.g., /work/.claude)
+   * @param projectsPath Optional explicit projects path (default: {configDir}/projects)
+   * @returns true if the path was added, false if already watching or watcher not running
+   */
+  addWatchPath(configDir: string, projectsPath?: string): boolean {
+    const native = getNativeModule();
+    return native.addWatchPath(configDir, projectsPath ?? null);
+  },
 
-	/**
-	 * Remove a watch path
-	 * @param configDir The config directory to stop watching
-	 * @returns true if the path was removed, false if not watching
-	 */
-	removeWatchPath(configDir: string): boolean {
-		const native = getNativeModule();
-		return native.removeWatchPath(configDir);
-	},
+  /**
+   * Remove a watch path
+   * @param configDir The config directory to stop watching
+   * @returns true if the path was removed, false if not watching
+   */
+  removeWatchPath(configDir: string): boolean {
+    const native = getNativeModule();
+    return native.removeWatchPath(configDir);
+  },
 
-	/**
-	 * Get all currently watched paths
-	 */
-	getWatchedPaths(): string[] {
-		const native = getNativeModule();
-		return native.getWatchedPaths();
-	},
+  /**
+   * Get all currently watched paths
+   */
+  getWatchedPaths(): string[] {
+    const native = getNativeModule();
+    return native.getWatchedPaths();
+  },
 };
 
 // ============================================================================
@@ -1677,114 +1677,118 @@ export const watcher = {
 
 // Repo operations
 export async function upsertRepo(
-	input: import("../../../han-native").RepoInput,
-): Promise<import("../../../han-native").Repo> {
-	return repos.upsert(input);
+  input: import('../../../han-native').RepoInput
+): Promise<import('../../../han-native').Repo> {
+  return repos.upsert(input);
 }
 
 export async function getRepoByRemote(
-	remote: string,
-): Promise<import("../../../han-native").Repo | null> {
-	return repos.getByRemote(remote);
+  remote: string
+): Promise<import('../../../han-native').Repo | null> {
+  return repos.getByRemote(remote);
 }
 
 export async function listRepos(): Promise<
-	import("../../../han-native").Repo[]
+  import('../../../han-native').Repo[]
 > {
-	return repos.list();
+  return repos.list();
 }
 
 // Project operations
 export async function upsertProject(
-	input: import("../../../han-native").ProjectInput,
-): Promise<import("../../../han-native").Project> {
-	return projects.upsert(input);
+  input: import('../../../han-native').ProjectInput
+): Promise<import('../../../han-native').Project> {
+  return projects.upsert(input);
 }
 
 export async function getProjectBySlug(
-	slug: string,
-): Promise<import("../../../han-native").Project | null> {
-	return projects.getBySlug(slug);
+  slug: string
+): Promise<import('../../../han-native').Project | null> {
+  return projects.getBySlug(slug);
 }
 
 export async function getProjectByPath(
-	path: string,
-): Promise<import("../../../han-native").Project | null> {
-	return projects.getByPath(path);
+  path: string
+): Promise<import('../../../han-native').Project | null> {
+  return projects.getByPath(path);
 }
 
 export async function listProjects(
-	repoId?: string,
-): Promise<import("../../../han-native").Project[]> {
-	return projects.list(repoId);
+  repoId?: string
+): Promise<import('../../../han-native').Project[]> {
+  return projects.list(repoId);
 }
 
 // Session operations
 export async function upsertSession(
-	input: import("../../../han-native").SessionInput,
-): Promise<import("../../../han-native").Session> {
-	return sessions.upsert(input);
+  input: import('../../../han-native').SessionInput
+): Promise<import('../../../han-native').Session> {
+  return sessions.upsert(input);
 }
 
 export async function endSession(sessionId: string): Promise<boolean> {
-	return sessions.end(sessionId);
+  return sessions.end(sessionId);
 }
 
 export async function getSession(
-	sessionId: string,
-): Promise<import("../../../han-native").Session | null> {
-	return sessions.get(sessionId);
+  sessionId: string
+): Promise<import('../../../han-native').Session | null> {
+  return sessions.get(sessionId);
 }
 
 export async function listSessions(options?: {
-	projectId?: string;
-	status?: string;
-	limit?: number;
-}): Promise<import("../../../han-native").Session[]> {
-	return sessions.list(options);
+  projectId?: string;
+  status?: string;
+  limit?: number;
+}): Promise<import('../../../han-native').Session[]> {
+  return sessions.list(options);
 }
 
 // Config Dir Registry operations (Multi-Environment Support)
 export async function registerConfigDir(
-	input: import("../../../han-native").ConfigDirInput,
-): Promise<import("../../../han-native").ConfigDir> {
-	await initDb();
-	const native = getNativeModule();
-	return native.registerConfigDir(getDbPath(), input);
+  input: import('../../../han-native').ConfigDirInput
+): Promise<import('../../../han-native').ConfigDir> {
+  await initDb();
+  const native = getNativeModule();
+  return native.registerConfigDir(getDbPath(), input);
 }
 
 export async function getConfigDirByPath(
-	path: string,
-): Promise<import("../../../han-native").ConfigDir | null> {
-	await initDb();
-	const native = getNativeModule();
-	return native.getConfigDirByPath(getDbPath(), path);
+  path: string
+): Promise<import('../../../han-native').ConfigDir | null> {
+  await initDb();
+  const native = getNativeModule();
+  return native.getConfigDirByPath(getDbPath(), path);
 }
 
 export async function listConfigDirs(): Promise<
-	import("../../../han-native").ConfigDir[]
+  import('../../../han-native').ConfigDir[]
 > {
-	await initDb();
-	const native = getNativeModule();
-	return native.listConfigDirs(getDbPath());
+  await initDb();
+  const native = getNativeModule();
+  return native.listConfigDirs(getDbPath());
 }
 
-export async function updateConfigDirLastIndexed(path: string): Promise<boolean> {
-	await initDb();
-	const native = getNativeModule();
-	return native.updateConfigDirLastIndexed(getDbPath(), path);
+export async function updateConfigDirLastIndexed(
+  path: string
+): Promise<boolean> {
+  await initDb();
+  const native = getNativeModule();
+  return native.updateConfigDirLastIndexed(getDbPath(), path);
 }
 
 export async function unregisterConfigDir(path: string): Promise<boolean> {
-	await initDb();
-	const native = getNativeModule();
-	return native.unregisterConfigDir(getDbPath(), path);
+  await initDb();
+  const native = getNativeModule();
+  return native.unregisterConfigDir(getDbPath(), path);
 }
 
-export async function getDefaultConfigDir(): Promise<import("../../../han-native").ConfigDir | null> {
-	await initDb();
-	const native = getNativeModule();
-	return native.getDefaultConfigDir(getDbPath());
+export async function getDefaultConfigDir(): Promise<
+  import('../../../han-native').ConfigDir | null
+> {
+  await initDb();
+  const native = getNativeModule();
+  return native.getDefaultConfigDir(getDbPath());
 }
 
 /**
@@ -1792,107 +1796,107 @@ export async function getDefaultConfigDir(): Promise<import("../../../han-native
  * Returns null if no active session exists.
  */
 export function getActiveSessionForProject(
-	projectPath: string,
-): import("../../../han-native").Session | null {
-	try {
-		// Ensure database is initialized
-		if (!_initialized) {
-			getDbPath();
-		}
+  projectPath: string
+): import('../../../han-native').Session | null {
+  try {
+    // Ensure database is initialized
+    if (!_initialized) {
+      getDbPath();
+    }
 
-		const native = getNativeModule();
-		const dbPath = getDbPath();
+    const native = getNativeModule();
+    const dbPath = getDbPath();
 
-		// Query for project by path
-		// Slug replaces both / and . with - (e.g., "/path/to/dir.name" -> "-path-to-dir-name")
-		const projectSlug = projectPath.replace(/[/.]/g, "-");
-		const projects = native.listProjects(dbPath);
-		const project = projects.find((p) => p.slug === projectSlug);
+    // Query for project by path
+    // Slug replaces both / and . with - (e.g., "/path/to/dir.name" -> "-path-to-dir-name")
+    const projectSlug = projectPath.replace(/[/.]/g, '-');
+    const projects = native.listProjects(dbPath);
+    const project = projects.find((p) => p.slug === projectSlug);
 
-		if (!project) {
-			return null;
-		}
+    if (!project) {
+      return null;
+    }
 
-		// Query for active session in this project
-		const sessions = native.listSessions(dbPath, project.id, "active", 1);
-		return sessions[0] || null;
-	} catch (error) {
-		console.error(`Failed to get active session for project: ${error}`);
-		return null;
-	}
+    // Query for active session in this project
+    const sessions = native.listSessions(dbPath, project.id, 'active', 1);
+    return sessions[0] || null;
+  } catch (error) {
+    console.error(`Failed to get active session for project: ${error}`);
+    return null;
+  }
 }
 
 // Message operations
 export async function insertMessagesBatch(
-	sessionId: string,
-	msgs: import("../../../han-native").MessageInput[],
+  sessionId: string,
+  msgs: import('../../../han-native').MessageInput[]
 ): Promise<number> {
-	return messages.insertBatch(sessionId, msgs);
+  return messages.insertBatch(sessionId, msgs);
 }
 
 export async function getMessage(
-	messageId: string,
-): Promise<import("../../../han-native").Message | null> {
-	return messages.get(messageId);
+  messageId: string
+): Promise<import('../../../han-native').Message | null> {
+  return messages.get(messageId);
 }
 
 export async function listSessionMessages(options: {
-	sessionId: string;
-	messageType?: string;
-	agentIdFilter?: string | null;
-	limit?: number;
-	offset?: number;
-}): Promise<import("../../../han-native").Message[]> {
-	return messages.list(options);
+  sessionId: string;
+  messageType?: string;
+  agentIdFilter?: string | null;
+  limit?: number;
+  offset?: number;
+}): Promise<import('../../../han-native').Message[]> {
+  return messages.list(options);
 }
 
 export async function getMessageCount(sessionId: string): Promise<number> {
-	return messages.count(sessionId);
+  return messages.count(sessionId);
 }
 
 export async function getLastIndexedLine(sessionId: string): Promise<number> {
-	return messages.getLastIndexedLine(sessionId);
+  return messages.getLastIndexedLine(sessionId);
 }
 
 export async function searchMessages(options: {
-	query: string;
-	sessionId?: string;
-	limit?: number;
-}): Promise<import("../../../han-native").Message[]> {
-	return messages.search(options);
+  query: string;
+  sessionId?: string;
+  limit?: number;
+}): Promise<import('../../../han-native').Message[]> {
+  return messages.search(options);
 }
 
 // Task operations
 export async function createTask(
-	input: import("../../../han-native").TaskInput,
-): Promise<import("../../../han-native").Task> {
-	return tasks.create(input);
+  input: import('../../../han-native').TaskInput
+): Promise<import('../../../han-native').Task> {
+  return tasks.create(input);
 }
 
 export async function completeTask(
-	completion: import("../../../han-native").TaskCompletion,
-): Promise<import("../../../han-native").Task> {
-	return tasks.complete(completion);
+  completion: import('../../../han-native').TaskCompletion
+): Promise<import('../../../han-native').Task> {
+  return tasks.complete(completion);
 }
 
 export async function failTask(
-	failure: import("../../../han-native").TaskFailure,
-): Promise<import("../../../han-native").Task> {
-	return tasks.fail(failure);
+  failure: import('../../../han-native').TaskFailure
+): Promise<import('../../../han-native').Task> {
+  return tasks.fail(failure);
 }
 
 export async function getTask(
-	taskId: string,
-): Promise<import("../../../han-native").Task | null> {
-	return tasks.get(taskId);
+  taskId: string
+): Promise<import('../../../han-native').Task | null> {
+  return tasks.get(taskId);
 }
 
 export async function queryTaskMetrics(options?: {
-	taskType?: string;
-	outcome?: string;
-	period?: "day" | "week" | "month";
-}): Promise<import("../../../han-native").TaskMetrics> {
-	return tasks.queryMetrics(options);
+  taskType?: string;
+  outcome?: string;
+  period?: 'day' | 'week' | 'month';
+}): Promise<import('../../../han-native').TaskMetrics> {
+  return tasks.queryMetrics(options);
 }
 
 // NOTE: Hook cache operations removed - replaced by session_file_validations
@@ -1904,66 +1908,66 @@ export async function queryTaskMetrics(options?: {
  * Returns: Number of rows deleted across all tables
  */
 export function truncateDerivedTables(): number {
-	const native = getNativeModule();
-	return native.truncateDerivedTables(getDbPath());
+  const native = getNativeModule();
+  return native.truncateDerivedTables(getDbPath());
 }
 
 // NOTE: Marketplace operations removed - not used
 
 // Coordinator operations
 export function tryAcquireCoordinatorLock(): boolean {
-	return coordinator.tryAcquire();
+  return coordinator.tryAcquire();
 }
 
 export function releaseCoordinatorLock(): boolean {
-	return coordinator.release();
+  return coordinator.release();
 }
 
 export function updateCoordinatorHeartbeat(): boolean {
-	return coordinator.updateHeartbeat();
+  return coordinator.updateHeartbeat();
 }
 
-export function getCoordinatorStatus(): import("../../../han-native").CoordinatorStatus {
-	return coordinator.getStatus();
+export function getCoordinatorStatus(): import('../../../han-native').CoordinatorStatus {
+  return coordinator.getStatus();
 }
 
 export function isCoordinator(): boolean {
-	return coordinator.isCoordinator();
+  return coordinator.isCoordinator();
 }
 
 export function getHeartbeatInterval(): number {
-	return coordinator.getHeartbeatInterval();
+  return coordinator.getHeartbeatInterval();
 }
 
 export function getStaleLockTimeout(): number {
-	return coordinator.getStaleLockTimeout();
+  return coordinator.getStaleLockTimeout();
 }
 
 // Watcher operations
 export async function startFileWatcher(watchPath?: string): Promise<boolean> {
-	return watcher.start(watchPath);
+  return watcher.start(watchPath);
 }
 
 export function stopFileWatcher(): boolean {
-	return watcher.stop();
+  return watcher.stop();
 }
 
 export function isWatcherRunning(): boolean {
-	return watcher.isRunning();
+  return watcher.isRunning();
 }
 
 export function getDefaultWatchPath(): string {
-	return watcher.getDefaultPath();
+  return watcher.getDefaultPath();
 }
 
 // FTS/Vector pass-through (for existing code)
 export {
-	ftsDelete,
-	ftsIndex,
-	ftsSearch,
-	vectorIndex,
-	vectorSearch,
-} from "../native.ts";
+  ftsDelete,
+  ftsIndex,
+  ftsSearch,
+  vectorIndex,
+  vectorSearch,
+} from '../native.ts';
 
 // ============================================================================
 // Indexer Operations (Coordinator Only)
@@ -1974,72 +1978,72 @@ export {
 //
 
 export interface IndexResult {
-	sessionId: string;
-	messagesIndexed: number;
-	totalMessages: number;
-	isNewSession: boolean;
-	error?: string;
+  sessionId: string;
+  messagesIndexed: number;
+  totalMessages: number;
+  isNewSession: boolean;
+  error?: string;
 }
 
 export const indexer = {
-	/**
-	 * Index a single JSONL session file incrementally
-	 * Only processes lines after the last indexed line
-	 * Task association for sentiment events is loaded from SQLite automatically
-	 * COORDINATOR USE ONLY
-	 */
-	async indexSessionFile(filePath: string): Promise<IndexResult> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.indexSessionFile(dbPath, filePath);
-	},
+  /**
+   * Index a single JSONL session file incrementally
+   * Only processes lines after the last indexed line
+   * Task association for sentiment events is loaded from SQLite automatically
+   * COORDINATOR USE ONLY
+   */
+  async indexSessionFile(filePath: string): Promise<IndexResult> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.indexSessionFile(dbPath, filePath);
+  },
 
-	/**
-	 * Index all JSONL files in a project directory
-	 * COORDINATOR USE ONLY
-	 */
-	async indexProjectDirectory(projectDir: string): Promise<IndexResult[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.indexProjectDirectory(dbPath, projectDir);
-	},
+  /**
+   * Index all JSONL files in a project directory
+   * COORDINATOR USE ONLY
+   */
+  async indexProjectDirectory(projectDir: string): Promise<IndexResult[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.indexProjectDirectory(dbPath, projectDir);
+  },
 
-	/**
-	 * Handle a file event from the watcher
-	 * COORDINATOR USE ONLY
-	 */
-	async handleFileEvent(
-		eventType: import("../native.ts").FileEventType,
-		filePath: string,
-		sessionId?: string,
-		projectPath?: string,
-	): Promise<IndexResult | null> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		// Cast to native FileEventType - values are identical ("Created", "Modified", "Removed")
-		return native.handleFileEvent(
-			dbPath,
-			eventType as unknown as import("../../../han-native").FileEventType,
-			filePath,
-			sessionId ?? null,
-			projectPath ?? null,
-		);
-	},
+  /**
+   * Handle a file event from the watcher
+   * COORDINATOR USE ONLY
+   */
+  async handleFileEvent(
+    eventType: import('../native.ts').FileEventType,
+    filePath: string,
+    sessionId?: string,
+    projectPath?: string
+  ): Promise<IndexResult | null> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    // Cast to native FileEventType - values are identical ("Created", "Modified", "Removed")
+    return native.handleFileEvent(
+      dbPath,
+      eventType as unknown as import('../../../han-native').FileEventType,
+      filePath,
+      sessionId ?? null,
+      projectPath ?? null
+    );
+  },
 
-	/**
-	 * Perform a full scan and index of all Claude Code sessions
-	 * Should be called on coordinator startup
-	 * COORDINATOR USE ONLY
-	 */
-	async fullScanAndIndex(): Promise<IndexResult[]> {
-		const dbPath = await ensureInitialized();
-		const native = getNativeModule();
-		return native.fullScanAndIndex(dbPath);
-	},
+  /**
+   * Perform a full scan and index of all Claude Code sessions
+   * Should be called on coordinator startup
+   * COORDINATOR USE ONLY
+   */
+  async fullScanAndIndex(): Promise<IndexResult[]> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    return native.fullScanAndIndex(dbPath);
+  },
 };
 
 // Export FileEventType for use with handleFileEvent
-export { FileEventType } from "../native.ts";
+export { FileEventType } from '../native.ts';
 
 // ============================================================================
 // Note on JSONL Access

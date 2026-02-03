@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getAllPlugins,
 	getCategoryIcon,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "../../lib/plugins";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";

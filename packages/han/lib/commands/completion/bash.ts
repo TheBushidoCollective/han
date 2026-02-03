@@ -3,7 +3,7 @@
  */
 
 export function generateBashCompletion(): string {
-	return `# han bash completion
+  return `# han bash completion
 # To enable, add to ~/.bashrc:
 #   eval "$(han completion bash)"
 

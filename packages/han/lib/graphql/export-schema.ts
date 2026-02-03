@@ -5,8 +5,8 @@
  * tools like Relay compiler.
  */
 
-import { lexicographicSortSchema, printSchema } from "graphql";
-import { schema } from "./schema.ts";
+import { lexicographicSortSchema, printSchema } from 'graphql';
+import { schema } from './schema.ts';
 
 // Sort the schema alphabetically for consistent output
 const sortedSchema = lexicographicSortSchema(schema);

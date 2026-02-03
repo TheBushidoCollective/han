@@ -9,7 +9,15 @@
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
   "license": "Apache-2.0",
-  "keywords": ["canva", "design", "graphics", "templates", "images", "pdf", "export"],
+  "keywords": [
+    "canva",
+    "design",
+    "graphics",
+    "templates",
+    "images",
+    "pdf",
+    "export"
+  ],
   "mcpServers": {
     "canva": {
       "type": "http",
