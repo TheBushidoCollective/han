@@ -1139,6 +1139,25 @@
       ]
     },
     {
+      "name": "svelteflow",
+      "description": "Build node-based editors, interactive diagrams, and workflow builders with Svelte Flow.",
+      "source": "./frameworks/svelteflow",
+      "category": "Framework",
+      "keywords": [
+        "svelteflow",
+        "svelte-flow",
+        "node-based",
+        "diagram",
+        "flowchart",
+        "workflow",
+        "graph",
+        "editor",
+        "svelte",
+        "typescript",
+        "interactive"
+      ]
+    },
+    {
       "name": "reddit",
       "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
       "source": "./plugins/services/reddit",
