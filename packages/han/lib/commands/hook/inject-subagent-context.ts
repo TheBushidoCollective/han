@@ -30,25 +30,6 @@ interface PreToolUseOutput {
 }
 
 /**
- * Check if stdin has data available.
- */
-function hasStdinData(): boolean {
-	try {
-		if (process.stdin.isTTY) {
-			return false;
-		}
-		// Try to stat stdin fd
-		const { fstatSync } = require("node:fs");
-		const stat = fstatSync(0);
-		return stat.isFile() || stat.isFIFO() || stat.isSocket();
-	} catch {
-		// stdin may be a pipe that doesn't support fstat
-		// Try reading anyway
-		return !process.stdin.isTTY;
-	}
-}
-
-/**
  * Read and parse stdin payload
  */
 function readStdinPayload(): PreToolUsePayload | null {

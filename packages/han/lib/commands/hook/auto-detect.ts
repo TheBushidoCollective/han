@@ -16,7 +16,6 @@ import type { Command } from "commander";
 import {
 	getClaudeConfigDir,
 	getLearnMode,
-	type LearnMode,
 } from "../../config/han-settings.ts";
 import {
 	loadPluginDetection,
@@ -539,7 +538,7 @@ function compileLearnPatterns(
 				// Compile the regex pattern (case insensitive)
 				const regex = new RegExp(patternStr, "i");
 				compiled.push({ regex, plugin });
-			} catch (error) {
+			} catch (_error) {
 				if (isDebugMode()) {
 					console.error(
 						`${colors.dim}[auto-detect-prompt]${colors.reset} Invalid regex in ${plugin.name}: ${patternStr}`,

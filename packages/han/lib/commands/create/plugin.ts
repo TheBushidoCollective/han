@@ -209,10 +209,10 @@ Plugin Types:
 					const hasAllRequired =
 						options.type && options.name && options.description && options.author;
 
-					if (hasAllRequired) {
+					if (hasAllRequired && options.type && options.name && options.description && options.author) {
 						// Validate type
 						const validTypes = ["jutsu", "do", "hashi"];
-						if (!validTypes.includes(options.type!)) {
+						if (!validTypes.includes(options.type)) {
 							console.error(
 								`Error: Invalid plugin type "${options.type}". Must be one of: ${validTypes.join(", ")}`,
 							);
@@ -222,9 +222,9 @@ Plugin Types:
 						runNonInteractive(
 							{
 								type: options.type as PluginType,
-								name: options.name!,
-								description: options.description!,
-								author: options.author!,
+								name: options.name,
+								description: options.description,
+								author: options.author,
 								authorUrl: options.authorUrl,
 							},
 							outputDir,
