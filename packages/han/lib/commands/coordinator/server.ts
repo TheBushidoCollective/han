@@ -49,9 +49,11 @@ interface ServerState {
 	watchdogInterval: NodeJS.Timeout | null;
 	pendingHooksInterval: NodeJS.Timeout | null;
 	certRefreshInterval: NodeJS.Timeout | null;
+	selfHealthCheckInterval: NodeJS.Timeout | null;
 	lastActivity: number;
 	processingHooks: boolean;
 	activeWebSocketClients: number;
+	consecutiveHealthFailures: number;
 }
 
 const state: ServerState = {
@@ -62,14 +64,20 @@ const state: ServerState = {
 	watchdogInterval: null,
 	pendingHooksInterval: null,
 	certRefreshInterval: null,
+	selfHealthCheckInterval: null,
 	lastActivity: Date.now(),
 	processingHooks: false,
 	activeWebSocketClients: 0,
+	consecutiveHealthFailures: 0,
 };
 
 // Watchdog constants
 const WATCHDOG_INTERVAL_MS = 30000; // Check every 30 seconds
 const WATCHDOG_TIMEOUT_MS = 120000; // Consider stuck after 2 minutes of no activity
+
+// Self-health check constants
+const SELF_HEALTH_CHECK_INTERVAL_MS = 15000; // Check own health every 15 seconds
+const MAX_CONSECUTIVE_HEALTH_FAILURES = 3; // Restart after 3 consecutive failures
 
 // Pending hooks processing
 const PENDING_HOOKS_INTERVAL_MS = 5000; // Poll every 5 seconds
@@ -83,6 +91,54 @@ const CERT_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
  */
 function recordActivity(): void {
 	state.lastActivity = Date.now();
+}
+
+/**
+ * Perform self-health check by calling own /health endpoint
+ * Returns true if healthy, false otherwise
+ */
+async function performSelfHealthCheck(): Promise<boolean> {
+	try {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+		const response = await fetch(`http://127.0.0.1:${COORDINATOR_PORT}/health`, {
+			signal: controller.signal,
+		});
+
+		clearTimeout(timeoutId);
+
+		if (response.ok) {
+			const health = (await response.json()) as { status: string };
+			return health.status === "ok";
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Handle a failed self-health check
+ * Tracks consecutive failures and triggers restart if threshold breached
+ */
+async function handleHealthCheckFailure(): Promise<void> {
+	state.consecutiveHealthFailures++;
+	log.warn(
+		`Self-health check failed (${state.consecutiveHealthFailures}/${MAX_CONSECUTIVE_HEALTH_FAILURES})`,
+	);
+
+	if (state.consecutiveHealthFailures >= MAX_CONSECUTIVE_HEALTH_FAILURES) {
+		log.error(
+			`Coordinator self-health check failed ${MAX_CONSECUTIVE_HEALTH_FAILURES} times, triggering restart...`,
+		);
+
+		// Stop server gracefully
+		stopServer();
+
+		// Exit with code 1 to trigger daemon restart loop
+		process.exit(1);
+	}
 }
 
 /**
@@ -583,6 +639,24 @@ export async function startServer(
 	}, PENDING_HOOKS_INTERVAL_MS);
 	log.info("Pending hooks processor started");
 
+	// Start self-health monitoring watchdog
+	// This detects when the coordinator becomes unresponsive and triggers a restart
+	state.selfHealthCheckInterval = setInterval(async () => {
+		const healthy = await performSelfHealthCheck();
+		if (healthy) {
+			// Reset consecutive failures on successful check
+			if (state.consecutiveHealthFailures > 0) {
+				log.info("Self-health check recovered after failures");
+				state.consecutiveHealthFailures = 0;
+			}
+		} else {
+			await handleHealthCheckFailure();
+		}
+	}, SELF_HEALTH_CHECK_INTERVAL_MS);
+	log.info(
+		`Self-health monitoring started (checks every ${SELF_HEALTH_CHECK_INTERVAL_MS / 1000}s, restarts after ${MAX_CONSECUTIVE_HEALTH_FAILURES} failures)`,
+	);
+
 	// Start certificate refresh for HTTPS servers (6-day cert hot-reload)
 	// Only needed if TLS is enabled
 	if (tls && state.httpServer) {
@@ -627,6 +701,11 @@ export function stopServer(): void {
 	if (state.certRefreshInterval) {
 		clearInterval(state.certRefreshInterval);
 		state.certRefreshInterval = null;
+	}
+
+	if (state.selfHealthCheckInterval) {
+		clearInterval(state.selfHealthCheckInterval);
+		state.selfHealthCheckInterval = null;
 	}
 
 	// Callback is cleared automatically by watcher.stop()

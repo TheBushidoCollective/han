@@ -17,6 +17,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { getHanBinary } from "../../config/han-settings.ts";
 import { getOrAllocatePorts } from "../../config/port-allocation.ts";
 import { checkHealth, waitForHealth } from "./health.ts";
 import { startServer, stopServer } from "./server.ts";
@@ -94,6 +95,7 @@ function isProcessRunning(pid: number): boolean {
 
 /**
  * Get coordinator status
+ * Automatically cleans up stale locks (dead process or old heartbeat)
  */
 export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 	const effectivePort = port ?? getCoordinatorPort();
@@ -108,6 +110,29 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 		};
 	}
 
+	// Health check failed - try to clean up stale locks using native module
+	try {
+		const { tryGetNativeModule } = await import("../../native.ts");
+		const native = tryGetNativeModule();
+		if (native) {
+			const cleaned = native.cleanupStaleCoordinatorLock();
+			if (cleaned) {
+				console.log("[coordinator] Cleaned up stale lock file");
+				// After cleanup, no coordinator is running
+				removePidFile();
+				return {
+					running: false,
+					port: effectivePort,
+				};
+			}
+		}
+	} catch (error) {
+		// Native module not available or error - fall back to PID check
+		if (process.env.HAN_DEBUG) {
+			console.error("[coordinator] Failed to cleanup stale lock:", error);
+		}
+	}
+
 	// Check if PID file exists with a running process
 	const pid = readPid();
 	if (pid && isProcessRunning(pid)) {
@@ -116,6 +141,11 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 			pid,
 			port: effectivePort,
 		};
+	}
+
+	// Clean up stale PID file
+	if (pid && !isProcessRunning(pid)) {
+		removePidFile();
 	}
 
 	return {
@@ -174,21 +204,40 @@ export async function startDaemon(
 	// Open log file for appending (Bun requires fd, not stream)
 	const logFd = openSync(logPath, "a");
 
-	// For compiled Bun binaries, process.execPath is the binary itself
-	// and we shouldn't pass process.argv[1] (which is internal /$bunfs/... path)
-	// Just spawn the binary directly with the command arguments
-	const child = spawn(
-		process.execPath,
-		["coordinator", "start", "--foreground", "--port", String(port)],
-		{
-			detached: true,
-			stdio: ["ignore", logFd, logFd],
-			env: {
-				...process.env,
-				HAN_COORDINATOR_DAEMON: "1",
-			},
+	// Use configured hanBinary (respects han.yml for development overrides)
+	// Falls back to process.execPath for compiled binaries
+	const configuredBinary = getHanBinary();
+	let spawnCommand: string;
+	let spawnArgs: string[];
+
+	if (configuredBinary && configuredBinary !== "han") {
+		// hanBinary is set (e.g., `bun "/path/to/main.ts"`)
+		// Use shell to handle the full command string
+		spawnCommand = "/bin/bash";
+		spawnArgs = [
+			"-c",
+			`${configuredBinary} coordinator start --foreground --port ${port}`,
+		];
+	} else {
+		// Use the current binary (compiled or han from PATH)
+		spawnCommand = process.execPath;
+		spawnArgs = [
+			"coordinator",
+			"start",
+			"--foreground",
+			"--port",
+			String(port),
+		];
+	}
+
+	const child = spawn(spawnCommand, spawnArgs, {
+		detached: true,
+		stdio: ["ignore", logFd, logFd],
+		env: {
+			...process.env,
+			HAN_COORDINATOR_DAEMON: "1",
 		},
-	);
+	});
 
 	// Close the fd in parent process after spawn
 	closeSync(logFd);

@@ -4,7 +4,7 @@ import YAML from "yaml";
 import { getClaudeConfigDir, getProjectDir } from "./claude-settings.ts";
 
 /**
- * Hook override settings for a specific plugin hook
+ * Hook override settings for a specific plugin hook.
  */
 export interface HookOverride {
 	enabled?: boolean;
@@ -19,7 +19,7 @@ export interface HookOverride {
 }
 
 /**
- * Plugin settings with nested hooks structure
+ * Plugin settings with nested hooks structure.
  */
 export interface PluginSettings {
 	hooks?: {

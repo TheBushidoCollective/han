@@ -1,5 +1,7 @@
 /**
  * Types for Coordinator Daemon
+ *
+ * Includes status, options, and port configuration types.
  */
 
 import {
