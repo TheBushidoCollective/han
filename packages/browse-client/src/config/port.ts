@@ -22,7 +22,7 @@ export function getCoordinatorPort(): number {
   const portParam = params.get('coordinatorPort');
   if (portParam) {
     const port = parseInt(portParam, 10);
-    if (!isNaN(port) && port > 0 && port < 65536) {
+    if (!Number.isNaN(port) && port > 0 && port < 65536) {
       return port;
     }
   }
