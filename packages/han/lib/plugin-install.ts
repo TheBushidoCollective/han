@@ -11,9 +11,7 @@ import {
 	HAN_MARKETPLACE_REPO,
 	type InstallScope,
 	type MarketplacePlugin,
-	readOrCreateSettings,
 	removeInvalidPlugins,
-	writeSettings,
 } from "./shared.ts";
 import { recordPluginInstall } from "./telemetry/index.ts";
 

@@ -1,9 +1,6 @@
 import type { Command } from "commander";
-import { render } from "ink";
-import React from "react";
 import { install, installInteractive } from "../../install.ts";
 import { installPlugins } from "../../plugin-install.ts";
-import { ScopeSelector } from "../../scope-selector.tsx";
 import {
 	getEffectiveProjectScope,
 	getSettingsFilename,
@@ -57,26 +54,6 @@ async function resolveScope(
 	// Default to project scope (no prompting needed)
 	console.log("Installing to project scope (.claude/settings.json)\n");
 	return "project";
-}
-
-/**
- * Prompt the user to select an installation scope using Ink
- */
-async function promptForScope(): Promise<InstallScope | null> {
-	return new Promise<InstallScope | null>((resolve) => {
-		const { unmount } = render(
-			React.createElement(ScopeSelector, {
-				onSelect: (scope: InstallScope) => {
-					unmount();
-					resolve(scope);
-				},
-				onCancel: () => {
-					unmount();
-					resolve(null);
-				},
-			}),
-		);
-	});
 }
 
 export function registerPluginInstall(pluginCommand: Command): void {
