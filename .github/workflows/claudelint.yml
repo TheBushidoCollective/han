@@ -38,12 +38,23 @@ jobs:
 
       - name: Validate all plugins and marketplaces
         run: |
-          # Find all plugin.json and marketplace.json files and validate their parent directories
+          # Find all plugin.json files and validate their parent directories
+          # Note: We skip the root marketplace.json because it contains external sources
+          # (github:owner/repo format) which claude plugin validate doesn't support yet
           failed=0
           failed_dirs=""
 
           while IFS= read -r manifest; do
             dir=$(dirname "$(dirname "$manifest")")
+
+            # Skip root directory - marketplace.json with external sources
+            if [ "$dir" = "." ]; then
+              echo "::group::Skipping root marketplace (contains external sources)"
+              echo "Skipping: $manifest (external sources not supported by claude plugin validate)"
+              echo "::endgroup::"
+              continue
+            fi
+
             echo "::group::Validating: $dir"
 
             # Run validation with timeout to prevent hangs
