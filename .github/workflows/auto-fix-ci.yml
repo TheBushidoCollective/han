@@ -3,11 +3,24 @@ name: Auto Fix CI Failures
 on:
   workflow_run:
     workflows:
+      # Include all CI workflows that could benefit from auto-fix
+      # Excludes: Auto Fix CI Failures (self), Issue Triage/Deduplication (not fixable)
       - "Auto Tag Release"
-      - "Publish to NPM"
-      - "Test Website"
-      - "Validate Han Website"
+      - "Bump Plugin Versions"
+      - "Bump Website Version"
+      - "Claude Code"
+      - "Claude Code Review"
       - "Claude Plugin Validate"
+      - "Coverage"
+      - "Deploy Han Website"
+      - "Manual Release"
+      - "Release Binaries"
+      - "Test Failure Analysis"
+      - "Test Website"
+      - "Validate Browse Client"
+      - "Validate Han CLI"
+      - "Validate Han Native"
+      - "Validate Han Website"
     types:
       - completed
 
