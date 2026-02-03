@@ -245,8 +245,9 @@ export function registerHookList(hookCommand: Command): void {
 				}
 
 				if (opts.plugin) {
+					const pluginFilter = opts.plugin.toLowerCase();
 					filteredHooks = filteredHooks.filter((h) =>
-						h.plugin.toLowerCase().includes(opts.plugin!.toLowerCase()),
+						h.plugin.toLowerCase().includes(pluginFilter),
 					);
 				}
 
@@ -294,7 +295,8 @@ export function registerHookList(hookCommand: Command): void {
 				const sortedPlugins = Array.from(byPlugin.keys()).sort();
 
 				for (const pluginName of sortedPlugins) {
-					const pluginHooks = byPlugin.get(pluginName)!;
+					const pluginHooks = byPlugin.get(pluginName);
+					if (!pluginHooks) continue;
 					const firstHook = pluginHooks[0];
 
 					console.log(
