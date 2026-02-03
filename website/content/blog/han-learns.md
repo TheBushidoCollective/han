@@ -221,13 +221,16 @@ Auto-detected plugins install to **project scope** (`.claude/settings.json`), no
 Here's the magic: because Han's core plugin orchestrates all hooks dynamically, newly installed plugin hooks work **immediately in the same session**.
 
 When Han installs a plugin like `typescript`:
+
 - **Hooks** (like typecheck on Stop) are active immediately - Han's orchestrator dynamically discovers and runs them
 
 What requires a restart:
+
 - **MCP servers** - connections are established at Claude Code startup
 - **Skills/Commands** - may require restart depending on how Claude Code caches plugin content
 
 So when you see:
+
 ```
 ✓ Auto-installed Han plugin(s): biome
 Hooks from these plugins are now active. MCP servers require a restart.
@@ -325,6 +328,7 @@ sequenceDiagram
 | `*.sentry.io/*` | `sentry` | Sentry error tracking |
 
 **Example:**
+
 ```
 User: Can you look at PROJ-123 and fix the bug?
 
@@ -369,21 +373,25 @@ This means your Claude session automatically gets access to your repo's issues, 
 Let's say you're starting a new Next.js project:
 
 **Day 1**: You create `package.json` and `tsconfig.json`
+
 ```
 ✓ Auto-installed Han plugin(s): typescript
 ```
 
 **Day 2**: You add `biome.json` for linting
+
 ```
 ✓ Auto-installed Han plugin(s): biome
 ```
 
 **Day 3**: You create `playwright.config.ts` for E2E tests
+
 ```
 ✓ Auto-installed Han plugin(s): playwright
 ```
 
 **Day 4**: You add `relay.config.json` for GraphQL
+
 ```
 ✓ Auto-installed Han plugin(s): relay
 ```
