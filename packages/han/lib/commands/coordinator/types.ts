@@ -4,11 +4,15 @@
  * Includes status, options, and port configuration types.
  */
 
-import {
-	DEFAULT_BROWSE_PORT,
-	DEFAULT_COORDINATOR_PORT,
-	getConfiguredPorts,
-} from "../../config/port-allocation.ts";
+/**
+ * Fixed port assignments for Han services
+ */
+export const DEFAULT_COORDINATOR_PORT = 41957;
+export const DEFAULT_BROWSE_PORT = 41956;
+
+// Legacy exports for backwards compatibility
+export const COORDINATOR_PORT = DEFAULT_COORDINATOR_PORT;
+export const BROWSE_PORT = DEFAULT_BROWSE_PORT;
 
 /**
  * Coordinator daemon status
@@ -39,16 +43,12 @@ export const PID_FILE = ".han-coordinator.pid";
  */
 export const LOG_FILE = "han/coordinator.log";
 
-// Re-export defaults for backwards compatibility
-export { DEFAULT_BROWSE_PORT, DEFAULT_COORDINATOR_PORT };
-
 /**
  * Get the coordinator port
  *
  * Priority (highest to lowest):
  * 1. HAN_COORDINATOR_PORT environment variable
- * 2. ports.coordinator in han.yml config
- * 3. Default port (41957)
+ * 2. Default port (41957)
  */
 export function getCoordinatorPort(): number {
 	// Environment variable takes highest priority
@@ -60,12 +60,6 @@ export function getCoordinatorPort(): number {
 		}
 	}
 
-	// Check config file
-	const configuredPorts = getConfiguredPorts();
-	if (configuredPorts.coordinator) {
-		return configuredPorts.coordinator;
-	}
-
 	return DEFAULT_COORDINATOR_PORT;
 }
 
@@ -74,8 +68,7 @@ export function getCoordinatorPort(): number {
  *
  * Priority (highest to lowest):
  * 1. HAN_BROWSE_PORT environment variable
- * 2. ports.browse in han.yml config
- * 3. Default port (41956)
+ * 2. Default port (41956)
  */
 export function getBrowsePort(): number {
 	// Environment variable takes highest priority
@@ -87,15 +80,5 @@ export function getBrowsePort(): number {
 		}
 	}
 
-	// Check config file
-	const configuredPorts = getConfiguredPorts();
-	if (configuredPorts.browse) {
-		return configuredPorts.browse;
-	}
-
 	return DEFAULT_BROWSE_PORT;
 }
-
-// Legacy exports for backwards compatibility
-export const COORDINATOR_PORT = DEFAULT_COORDINATOR_PORT;
-export const BROWSE_PORT = DEFAULT_BROWSE_PORT;

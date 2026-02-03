@@ -18,7 +18,6 @@ import {
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { getHanBinary } from "../../config/han-settings.ts";
-import { getOrAllocatePorts } from "../../config/port-allocation.ts";
 import { checkHealth, waitForHealth } from "./health.ts";
 import { startServer, stopServer } from "./server.ts";
 import {
@@ -160,16 +159,8 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 export async function startDaemon(
 	options: CoordinatorOptions = {},
 ): Promise<CoordinatorStatus> {
-	// Ensure ports are allocated before starting
-	// This persists port configuration to han.yml if not already set
-	if (!options.port) {
-		const allocatedPorts = await getOrAllocatePorts();
-		console.log(
-			`[coordinator] Using ports: coordinator=${allocatedPorts.coordinator}, browse=${allocatedPorts.browse}`,
-		);
-	}
-
 	const port = options.port ?? getCoordinatorPort();
+	console.log(`[coordinator] Using port: ${port}`);
 
 	// Check if already running
 	const status = await getStatus(port);
@@ -391,19 +382,11 @@ async function runForeground(port: number): Promise<void> {
  * Ensure coordinator is running
  * Starts it lazily if not already running
  *
- * This function also ensures ports are allocated before checking status,
- * so the first call will persist port configuration to han.yml.
- *
  * @returns Status of the coordinator
  */
 export async function ensureCoordinator(
 	port?: number,
 ): Promise<CoordinatorStatus> {
-	// Ensure ports are allocated on first call
-	if (!port) {
-		await getOrAllocatePorts();
-	}
-
 	const effectivePort = port ?? getCoordinatorPort();
 	const status = await getStatus(effectivePort);
 

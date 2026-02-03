@@ -11,7 +11,7 @@ After ANY changes to:
 ```bash
 # 1. Kill any existing processes
 lsof -ti:41956 | xargs kill -9 2>/dev/null
-lsof -ti:41900 | xargs kill -9 2>/dev/null
+lsof -ti:41957 | xargs kill -9 2>/dev/null
 
 # 2. Start browse in background
 cd packages/han && bun run lib/main.ts browse &

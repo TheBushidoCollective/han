@@ -2,7 +2,6 @@
  * Coordinator Port Configuration
  *
  * Extracts the coordinator port from URL query parameter or uses default.
- * This is in a separate file to avoid circular imports between urls.ts and discovery.ts.
  */
 
 /**
