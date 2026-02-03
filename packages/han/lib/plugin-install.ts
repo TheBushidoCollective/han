@@ -1,9 +1,11 @@
+import { execSync } from "node:child_process";
 import { resolvePluginNames } from "./plugin-aliases.ts";
 import { showPluginSelector } from "./plugin-selector-wrapper.tsx";
 import {
 	ensureClaudeDirectory,
 	ensureDispatchHooks,
 	fetchMarketplace,
+	findClaudeExecutable,
 	getInstalledPlugins,
 	getSettingsFilename,
 	HAN_MARKETPLACE_REPO,
@@ -56,12 +58,53 @@ function showAvailablePlugins(marketplacePlugins: MarketplacePlugin[]): void {
 }
 
 /**
+ * Install plugins using Claude CLI
+ * Uses `claude plugin install <plugin>@han` for proper Claude Code integration
+ */
+function installPluginViaClaude(
+	pluginName: string,
+	scope: InstallScope,
+): boolean {
+	try {
+		const claudePath = findClaudeExecutable();
+		const scopeArg = scope === "local" ? "--scope local" : "--scope project";
+
+		// First ensure the Han marketplace is added
+		try {
+			execSync(
+				`${claudePath} marketplace add han --source github --repo ${HAN_MARKETPLACE_REPO} ${scopeArg}`,
+				{ stdio: "pipe", encoding: "utf-8" },
+			);
+		} catch {
+			// Marketplace might already exist, ignore error
+		}
+
+		// Install the plugin
+		execSync(`${claudePath} plugin install ${pluginName}@han ${scopeArg}`, {
+			stdio: "inherit",
+		});
+		return true;
+	} catch (error) {
+		console.error(`Failed to install ${pluginName}:`, error);
+		return false;
+	}
+}
+
+/**
  * Install one or more plugins to Claude settings
  */
 export async function installPlugins(
 	pluginNames: string[],
-	scope: InstallScope = "user",
+	scope: InstallScope = "project",
 ): Promise<void> {
+	// Reject user scope - Han plugins must be installed at project or local scope
+	if (scope === "user") {
+		console.error(
+			'Error: --scope "user" is not supported. Han plugins must be installed at project or local scope.',
+		);
+		process.exit(1);
+	}
+
 	if (pluginNames.length === 0) {
 		console.error("Error: No plugin names provided.");
 		process.exit(1);
@@ -70,9 +113,8 @@ export async function installPlugins(
 	// Resolve aliases (short names, new paths, old names all resolve to canonical names)
 	const resolvedNames = resolvePluginNames(pluginNames);
 
-	// Always include bushido plugin as a dependency
-	const pluginsToInstall = new Set(resolvedNames);
-	pluginsToInstall.add("bushido");
+	// Always include bushido and core plugins as dependencies
+	const pluginsToInstall = new Set(["core", "bushido", ...resolvedNames]);
 
 	ensureClaudeDirectory(scope);
 
@@ -153,60 +195,45 @@ export async function installPlugins(
 		);
 	}
 
-	const settings = readOrCreateSettings(scope);
 	const currentPlugins = getInstalledPlugins(scope);
-
 	const filename = getSettingsFilename(scope);
 	console.log(`Installing to ${filename}...\n`);
 
-	// Add Han marketplace if not already added
-	if (!settings?.extraKnownMarketplaces?.han) {
-		settings.extraKnownMarketplaces = {
-			...settings.extraKnownMarketplaces,
-			han: { source: { source: "github", repo: HAN_MARKETPLACE_REPO } },
-		};
-		console.log("✓ Added Han marketplace");
-	}
-
 	const installed: string[] = [];
 	const alreadyInstalled: string[] = [];
+	const failed: string[] = [];
 
+	// Install each plugin via Claude CLI
 	for (const pluginName of pluginsToInstall) {
 		if (currentPlugins.includes(pluginName)) {
 			alreadyInstalled.push(pluginName);
 		} else {
-			settings.enabledPlugins = {
-				...settings.enabledPlugins,
-				[`${pluginName}@han`]: true,
-			};
-			installed.push(pluginName);
+			console.log(`Installing ${pluginName}@han...`);
+			if (installPluginViaClaude(pluginName, scope)) {
+				installed.push(pluginName);
+				// Record telemetry
+				recordPluginInstall(pluginName, scope, true);
+			} else {
+				failed.push(pluginName);
+			}
 		}
-	}
-
-	writeSettings(settings, scope);
-
-	// Record telemetry for each installed plugin
-	for (const pluginName of installed) {
-		recordPluginInstall(pluginName, scope, true);
 	}
 
 	if (installed.length > 0) {
 		console.log(
-			`✓ Installed ${installed.length} plugin(s): ${installed.join(", ")}`,
+			`\n✓ Installed ${installed.length} plugin(s): ${installed.join(", ")}`,
 		);
 	}
 	if (alreadyInstalled.length > 0) {
 		console.log(`⚠️  Already installed: ${alreadyInstalled.join(", ")}`);
 	}
+	if (failed.length > 0) {
+		console.log(`✗ Failed to install: ${failed.join(", ")}`);
+	}
 
-	// Ensure dispatch hooks are configured in global settings
+	// Ensure dispatch hooks are configured in project settings
 	// This is a workaround for Claude Code bug #12151
-	ensureDispatchHooks();
-
-	// Note: Migration is NOT run here intentionally. Settings use canonical names
-	// (jutsu-typescript, do-frontend-development, hashi-github) for consistency
-	// with the marketplace. Migration to short names is a separate operation
-	// that should only run on session start for legacy settings.
+	ensureDispatchHooks(scope);
 
 	if (installed.length > 0) {
 		console.log("\n⚠️  Please restart Claude Code to load the new plugin(s)");

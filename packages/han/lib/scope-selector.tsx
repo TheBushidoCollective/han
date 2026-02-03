@@ -14,13 +14,8 @@ const SCOPE_OPTIONS: Array<{
 	description: string;
 }> = [
 	{
-		scope: "user",
-		name: "User (global)",
-		description: "~/.claude/settings.json - Shared across all projects",
-	},
-	{
 		scope: "project",
-		name: "Project",
+		name: "Project (Recommended)",
 		description: ".claude/settings.json - Shared with team via git",
 	},
 	{

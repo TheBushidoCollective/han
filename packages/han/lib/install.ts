@@ -34,7 +34,7 @@ interface PluginChanges {
 function syncPluginsToSettings(
 	selectedPlugins: string[],
 	validPluginNames: Set<string>,
-	scope: InstallScope = "user",
+	scope: InstallScope = "project",
 ): PluginChanges {
 	ensureClaudeDirectory(scope);
 
@@ -113,7 +113,7 @@ interface InstallOptions {
  * When useAiAnalysis is false: runs only marker detection (instant results)
  */
 export async function install(
-	scope: InstallScope = "user",
+	scope: InstallScope = "project",
 	options: InstallOptions = {},
 ): Promise<void> {
 	const { useAiAnalysis = true } = options;
@@ -313,7 +313,7 @@ function showInstallResults(
  * Interactive plugin selector (no auto-detect)
  */
 export async function installInteractive(
-	scope: InstallScope = "user",
+	scope: InstallScope = "project",
 ): Promise<void> {
 	let resolveCompletion:
 		| ((result: { plugins?: string[]; cancelled?: boolean }) => void)

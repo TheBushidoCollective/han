@@ -13,11 +13,14 @@ import {
 /**
  * Determine the installation scope, using smart detection if no explicit scope provided.
  *
+ * Han plugins are ALWAYS installed at project or local scope, never user scope.
+ * This ensures plugins are tracked per-project and don't pollute global settings.
+ *
  * Logic:
- * 1. If --scope was explicitly provided, use it
+ * 1. If --scope was explicitly provided, validate it's project or local
  * 2. Otherwise, check if Han is already in a project-level scope (local or project)
  * 3. If yes, use that existing scope (with a message)
- * 4. If no, prompt the user to choose
+ * 4. If no, default to "project" scope
  */
 async function resolveScope(
 	explicitScope: string | undefined,
@@ -25,12 +28,17 @@ async function resolveScope(
 ): Promise<InstallScope | null> {
 	// If scope was explicitly provided via --scope, validate and use it
 	if (wasExplicitlyProvided && explicitScope) {
-		if (
-			explicitScope !== "user" &&
-			explicitScope !== "project" &&
-			explicitScope !== "local"
-		) {
-			console.error('Error: --scope must be "user", "project", or "local"');
+		if (explicitScope === "user") {
+			console.error(
+				'Error: --scope "user" is not supported. Han plugins must be installed at project or local scope.',
+			);
+			console.error(
+				'Use --scope "project" (default) or --scope "local" instead.',
+			);
+			process.exit(1);
+		}
+		if (explicitScope !== "project" && explicitScope !== "local") {
+			console.error('Error: --scope must be "project" or "local"');
 			process.exit(1);
 		}
 		return explicitScope as InstallScope;
@@ -46,8 +54,9 @@ async function resolveScope(
 		return effectiveScope;
 	}
 
-	// Need to prompt user to choose scope
-	return promptForScope();
+	// Default to project scope (no prompting needed)
+	console.log("Installing to project scope (.claude/settings.json)\n");
+	return "project";
 }
 
 /**
@@ -81,7 +90,7 @@ export function registerPluginInstall(pluginCommand: Command): void {
 		)
 		.option(
 			"--scope <scope>",
-			'Installation scope: "user" (~/.claude/settings.json), "project" (.claude/settings.json), or "local" (.claude/settings.local.json)',
+			'Installation scope: "project" (.claude/settings.json, default) or "local" (.claude/settings.local.json)',
 		)
 		.action(
 			async (

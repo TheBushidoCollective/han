@@ -143,14 +143,17 @@ function getDispatchHookCommand(): string {
 }
 
 /**
- * Ensure dispatch hooks are configured in global settings
+ * Ensure dispatch hooks are configured in project settings
  * This is a workaround for Claude Code bug #12151 where plugin hook output
  * is not passed to the agent.
  *
  * Also migrates old-style hooks that use `npx` to use `han` directly for faster execution.
+ *
+ * @param scope - Installation scope (project or local). Defaults to project.
  */
-export function ensureDispatchHooks(): void {
-	const settings = readGlobalSettings();
+export function ensureDispatchHooks(scope: InstallScope = "project"): void {
+	// Always use project-level settings for dispatch hooks
+	const settings = readOrCreateSettings(scope);
 
 	// Initialize hooks if not present
 	if (!settings.hooks) {
@@ -212,8 +215,9 @@ export function ensureDispatchHooks(): void {
 
 	if (modified) {
 		settings.hooks = hooks;
-		writeGlobalSettings(settings);
-		console.log("✓ Configured dispatch hooks in global settings");
+		writeSettings(settings, scope);
+		const filename = getSettingsFilename(scope);
+		console.log(`✓ Configured dispatch hooks in ${filename}`);
 	}
 }
 

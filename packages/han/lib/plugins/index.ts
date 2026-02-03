@@ -17,7 +17,7 @@ export {
 } from "../marketplace-cache.ts";
 
 // Plugin operations
-export { installPlugin, installPlugins } from "./plugin-install.ts";
+export { installPlugin, installPlugins } from "../plugin-install.ts";
 export { listPlugins } from "./plugin-list.ts";
 export { searchPlugins } from "./plugin-search.ts";
 export { PluginSelector } from "./plugin-selector.tsx";
