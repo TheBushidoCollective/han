@@ -644,18 +644,19 @@ describe('Plugin install/uninstall', () => {
       writeFileSync(settingsPath, JSON.stringify({}, null, 2));
 
       execSync(
-        `${binCommand} plugin install jutsu-typescript jutsu-react --scope project`,
+        `${binCommand} plugin install typescript biome --scope project`,
         {
           cwd: testDir,
           encoding: 'utf8',
           stdio: 'pipe',
+          env: { ...process.env, HAN_SKIP_CLAUDE_CLI: '1' },
         }
       );
 
       const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
 
       expect(settings.enabledPlugins?.['jutsu-typescript@han']).toBe(true);
-      expect(settings.enabledPlugins?.['jutsu-react@han']).toBe(true);
+      expect(settings.enabledPlugins?.['jutsu-biome@han']).toBe(true);
     },
     { timeout: BINARY_TIMEOUT }
   );
