@@ -5,12 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import YAML from "yaml";
 import {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
 	getPluginContent,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "../../../../lib/plugins";
 import Header from "../../../components/Header";
 import HookCommandWithDetails from "../../../components/HookCommandWithDetails";

@@ -1,0 +1,27 @@
+# figma plugin configuration
+# This plugin provides Figma integration via MCP server
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://(?:www\\.)?figma\\.com/[^\\s]+"
+
+# Memory provider for team memory extraction from Figma
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-figma_figma__list_files
+    - mcp__plugin_hashi-figma_figma__get_file
+    - mcp__plugin_hashi-figma_figma__get_comments
+  system_prompt: |
+    Extract observations from Figma files and comments. For each item, capture:
+    - author: Figma user who created/commented
+    - timestamp: when created/updated
+    - summary: design decisions, component names, or feedback highlights
+    - status: file/component state
+    - type: 'design', 'comment', or 'component'
+    Focus on design decisions, feedback, and component documentation.
+    Return as JSON array of observations.

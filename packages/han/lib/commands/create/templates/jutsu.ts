@@ -5,19 +5,15 @@
  * They typically include skills, commands, and hook configurations.
  */
 
-import {
-	type PluginConfig,
-	processTemplate,
-	toTitleCase,
-} from "./index.ts";
+import { type PluginConfig, processTemplate, toTitleCase } from './index.ts';
 
 export interface JutsuTemplateFiles {
-	[key: string]: string;
-	".claude-plugin/plugin.json": string;
-	"han-plugin.yml": string;
-	"skills/getting-started/SKILL.md": string;
-	"README.md": string;
-	"CHANGELOG.md": string;
+  [key: string]: string;
+  '.claude-plugin/plugin.json': string;
+  'han-plugin.yml': string;
+  'skills/getting-started/SKILL.md': string;
+  'README.md': string;
+  'CHANGELOG.md': string;
 }
 
 const PLUGIN_JSON_TEMPLATE = `{
@@ -133,27 +129,27 @@ All notable changes to this project will be documented in this file.
  * Generate all files for a jutsu plugin.
  */
 export function getJutsuTemplate(config: PluginConfig): JutsuTemplateFiles {
-	const variables = {
-		NAME: config.name,
-		TITLE: toTitleCase(config.name.replace(/^jutsu-/, "")),
-		DESCRIPTION: config.description,
-		AUTHOR_NAME: config.authorName,
-		AUTHOR_URL: config.authorUrl,
-		KEYWORD: config.name.replace(/^jutsu-/, ""),
-		DATE: new Date().toISOString().split("T")[0],
-	};
+  const variables = {
+    NAME: config.name,
+    TITLE: toTitleCase(config.name.replace(/^jutsu-/, '')),
+    DESCRIPTION: config.description,
+    AUTHOR_NAME: config.authorName,
+    AUTHOR_URL: config.authorUrl,
+    KEYWORD: config.name.replace(/^jutsu-/, ''),
+    DATE: new Date().toISOString().split('T')[0],
+  };
 
-	return {
-		".claude-plugin/plugin.json": processTemplate(
-			PLUGIN_JSON_TEMPLATE,
-			variables,
-		),
-		"han-plugin.yml": processTemplate(HAN_PLUGIN_YML_TEMPLATE, variables),
-		"skills/getting-started/SKILL.md": processTemplate(
-			SKILL_TEMPLATE,
-			variables,
-		),
-		"README.md": processTemplate(README_TEMPLATE, variables),
-		"CHANGELOG.md": processTemplate(CHANGELOG_TEMPLATE, variables),
-	};
+  return {
+    '.claude-plugin/plugin.json': processTemplate(
+      PLUGIN_JSON_TEMPLATE,
+      variables
+    ),
+    'han-plugin.yml': processTemplate(HAN_PLUGIN_YML_TEMPLATE, variables),
+    'skills/getting-started/SKILL.md': processTemplate(
+      SKILL_TEMPLATE,
+      variables
+    ),
+    'README.md': processTemplate(README_TEMPLATE, variables),
+    'CHANGELOG.md': processTemplate(CHANGELOG_TEMPLATE, variables),
+  };
 }

@@ -5,45 +5,45 @@
  */
 
 export interface Citation {
-  source: string;
-  excerpt: string;
-  author: string | null;
-  timestamp: string | null;
-  layer: string | null;
+	source: string;
+	excerpt: string;
+	author: string | null;
+	timestamp: string | null;
+	layer: string | null;
 }
 
 export interface SearchResult {
-  answer: string;
-  source: string;
-  confidence: string;
-  caveats: string[];
-  layersSearched: string[];
-  citations: Citation[];
+	answer: string;
+	source: string;
+	confidence: string;
+	caveats: string[];
+	layersSearched: string[];
+	citations: Citation[];
 }
 
 export interface Rule {
-  id: string;
-  domain: string;
-  scope: string;
-  path: string;
-  content: string;
-  size: number;
+	id: string;
+	domain: string;
+	scope: string;
+	path: string;
+	content: string;
+	size: number;
 }
 
 export interface SearchData {
-  viewer: {
-    memory: {
-      search: SearchResult;
-    };
-  };
+	viewer: {
+		memory: {
+			search: SearchResult;
+		};
+	};
 }
 
 export interface RulesData {
-  viewer: {
-    memory: {
-      rules: Rule[];
-    };
-  };
+	viewer: {
+		memory: {
+			rules: Rule[];
+		};
+	};
 }
 
-export type Tab = 'search' | 'rules';
+export type Tab = "search" | "rules";

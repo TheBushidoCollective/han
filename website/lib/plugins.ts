@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import yaml from "yaml";
-import { type PluginCategory, getCategoryIcon } from "./constants";
+import { getCategoryIcon, type PluginCategory } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
 
@@ -149,10 +149,10 @@ function getCategoryFromMarketplace(
 
 // Re-export from constants for convenience
 export {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getCategoryIcon,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "./constants";
 
 /**

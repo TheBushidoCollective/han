@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { execFileSync } = require('child_process');
-const { existsSync } = require('fs');
-const { join } = require('path');
+const { execFileSync } = require('node:child_process');
+const { existsSync } = require('node:fs');
+const { join } = require('node:path');
 
 const platform = process.platform;
 const arch = process.arch;
@@ -29,10 +29,16 @@ const paths = [
   // Installed as dependency
   join(__dirname, '..', '@thebushidocollective', `han-${pkgName}`, binName),
   // npx cache location
-  join(__dirname, 'node_modules', '@thebushidocollective', `han-${pkgName}`, binName),
+  join(
+    __dirname,
+    'node_modules',
+    '@thebushidocollective',
+    `han-${pkgName}`,
+    binName
+  ),
 ];
 
-let binPath = paths.find(p => existsSync(p));
+let binPath = paths.find((p) => existsSync(p));
 
 if (!binPath) {
   // Try to install the platform package on-demand
@@ -41,9 +47,15 @@ if (!binPath) {
     console.error(`Installing ${pkg}...`);
     execFileSync('npm', ['install', '--no-save', pkg], {
       stdio: 'inherit',
-      cwd: __dirname
+      cwd: __dirname,
     });
-    binPath = join(__dirname, 'node_modules', '@thebushidocollective', `han-${pkgName}`, binName);
+    binPath = join(
+      __dirname,
+      'node_modules',
+      '@thebushidocollective',
+      `han-${pkgName}`,
+      binName
+    );
   } catch (e) {
     console.error(`Failed to install platform package: ${e.message}`);
     process.exit(1);

@@ -5,4 +5,4 @@
  * @deprecated Import directly from "./messages/index.ts" instead.
  */
 
-export * from "./messages/index.ts";
+export * from './messages/index.ts';
