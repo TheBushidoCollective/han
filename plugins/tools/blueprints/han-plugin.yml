@@ -1,16 +1,8 @@
-# hashi-blueprints plugin configuration
+# blueprints plugin configuration
 # Blueprint tools are provided by Han's built-in blueprints MCP server
 #
 # Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
-
-# Blueprints MCP server exposed through Han's main MCP server
-mcp_servers:
-  blueprints:
-    expose: true
-    name: blueprints
-    description: Project blueprint documentation search and retrieval
-    command: npx
-    args: ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
+# MCP servers are defined in .mcp.json for direct Claude Code integration
 
 hooks: {}
 

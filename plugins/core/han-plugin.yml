@@ -1,25 +1,6 @@
 # core plugin configuration
 # Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
-
-# MCP servers - exposed through main Han MCP server (han mcp)
-mcp_servers:
-  context7:
-    name: context7
-    description: Fetch up-to-date documentation and code examples for any library
-    command: npx
-    args: ["-y", "@upstash/context7-mcp"]
-    expose: true
-  deepwiki:
-    name: deepwiki
-    description: Access DeepWiki for GitHub repository documentation
-    type: http
-    url: https://mcp.deepwiki.com/mcp
-    expose: true
-  memory-dal:
-    name: memory-dal
-    description: Han internal memory database with FTS and vector search
-    command: npx
-    args: ["-y", "@thebushidocollective/han", "mcp", "memory"]
+# MCP servers are defined in .mcp.json for direct Claude Code integration
 
 hooks: {}
 

@@ -1,7 +1,7 @@
 hooks:
   # Full test suite at Stop (checkpoint)
   test:
-    command: "npx -y playwright test"
+    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test"
     dirs_with:
       - "playwright.config.ts"
       - "playwright.config.js"
@@ -15,7 +15,7 @@ hooks:
   # Single test file async on PostToolUse
   test-async:
     event: PostToolUse
-    command: "npx -y playwright test ${HAN_FILES}"
+    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test ${HAN_FILES}"
     dirs_with:
       - "playwright.config.ts"
       - "playwright.config.js"
