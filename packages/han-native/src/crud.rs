@@ -545,7 +545,7 @@ pub fn reset_all_sessions_for_reindex() -> napi::Result<u32> {
 // ============================================================================
 
 /// Register a new config directory for multi-environment indexing
-#[napi]
+/// Note: Exported via wrapper in lib.rs (not directly via #[napi] here to avoid duplicate exports)
 pub fn register_config_dir(input: ConfigDirInput) -> napi::Result<ConfigDir> {
     let db = db::get_db()?;
     let conn = db
@@ -585,7 +585,7 @@ pub fn register_config_dir(input: ConfigDirInput) -> napi::Result<ConfigDir> {
 }
 
 /// Get a config directory by path
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn get_config_dir_by_path(path: String) -> napi::Result<Option<ConfigDir>> {
     let db = db::get_db()?;
     let conn = db
@@ -622,7 +622,7 @@ pub fn get_config_dir_by_path(path: String) -> napi::Result<Option<ConfigDir>> {
 }
 
 /// List all registered config directories
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
     let db = db::get_db()?;
     let conn = db
@@ -654,7 +654,7 @@ pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
 }
 
 /// Update the last indexed timestamp for a config directory
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -679,7 +679,7 @@ pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
 }
 
 /// Remove a config directory from the registry
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -694,7 +694,7 @@ pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
 }
 
 /// Get the default config directory
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn get_default_config_dir() -> napi::Result<Option<ConfigDir>> {
     let db = db::get_db()?;
     let conn = db
@@ -4028,7 +4028,7 @@ pub struct AsyncHookQueueEntry {
 /// Enqueue a hook for async execution
 /// First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
 /// and merges their file paths into the new entry
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn enqueue_async_hook(
     _db_path: String,
     input: AsyncHookQueueInputNative,
@@ -4141,7 +4141,7 @@ pub fn list_pending_async_hooks(
 }
 
 /// Check if the async hook queue is empty for a session (no pending or running hooks)
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -4159,7 +4159,7 @@ pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::
 
 /// Drain the queue - get all pending hooks and mark as running
 /// Used at checkpoint (Stop, PreToolUse for git commit/push)
-#[napi]
+/// Note: Exported via wrapper in lib.rs
 pub fn drain_async_hook_queue(
     _db_path: String,
     session_id: String,

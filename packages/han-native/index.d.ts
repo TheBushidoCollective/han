@@ -23,18 +23,6 @@ export interface CoordinatorStatus {
   /** Lock info if available */
   lockInfo?: LockInfo
 }
-/** Register a new config directory for multi-environment indexing */
-export declare function registerConfigDir(input: ConfigDirInput): ConfigDir
-/** Get a config directory by path */
-export declare function getConfigDirByPath(path: string): ConfigDir | null
-/** List all registered config directories */
-export declare function listConfigDirs(): Array<ConfigDir>
-/** Update the last indexed timestamp for a config directory */
-export declare function updateConfigDirLastIndexed(path: string): boolean
-/** Remove a config directory from the registry */
-export declare function unregisterConfigDir(path: string): boolean
-/** Get the default config directory */
-export declare function getDefaultConfigDir(): ConfigDir | null
 /**
  * Get or create a hook execution entry for attempt tracking
  * Uses (session_id, hook_name, directory) as the hook key
@@ -95,21 +83,8 @@ export interface AsyncHookQueueEntry {
   status: string
   createdAt: string
 }
-/**
- * Enqueue a hook for async execution
- * First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
- * and merges their file paths into the new entry
- */
-export declare function enqueueAsyncHook(dbPath: string, input: AsyncHookQueueInputNative): string
 /** List pending async hooks for a session */
 export declare function listPendingAsyncHooks(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
-/** Check if the async hook queue is empty for a session (no pending or running hooks) */
-export declare function isAsyncHookQueueEmpty(dbPath: string, sessionId: string): boolean
-/**
- * Drain the queue - get all pending hooks and mark as running
- * Used at checkpoint (Stop, PreToolUse for git commit/push)
- */
-export declare function drainAsyncHookQueue(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
 /** Cancel pending hooks matching dedup key and return merged file paths */
 export declare function cancelPendingAsyncHooks(dbPath: string, sessionId: string, cwd: string, plugin: string, hookName: string): Array<string>
 /** Complete an async hook execution */
