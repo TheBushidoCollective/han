@@ -73,11 +73,9 @@ export function shouldReexec(): { reexec: boolean; binary?: string } {
     return { reexec: false };
   }
 
-  // Skip for --version and --help (show current binary info)
+  // Skip for --help and doctor (but allow --version to pass through to hanBinary)
   const args = process.argv.slice(2);
   if (
-    args.includes('--version') ||
-    args.includes('-V') ||
     args.includes('--help') ||
     args.includes('-h') ||
     args.includes('doctor')

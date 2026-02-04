@@ -3995,6 +3995,339 @@ pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
 }
 
 // ============================================================================
+// Async Hook Queue (for PostToolUse async hook execution)
+// ============================================================================
+
+/// Input for enqueuing an async hook
+#[napi(object)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct AsyncHookQueueInputNative {
+    pub session_id: String,
+    pub cwd: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub file_paths: Vec<String>,
+    pub command: String,
+}
+
+/// Output for async hook queue entry
+#[napi(object)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct AsyncHookQueueEntry {
+    pub id: String,
+    pub session_id: String,
+    pub cwd: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub file_paths: Vec<String>,
+    pub command: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+/// Enqueue a hook for async execution
+/// First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
+/// and merges their file paths into the new entry
+#[napi]
+pub fn enqueue_async_hook(
+    _db_path: String,
+    input: AsyncHookQueueInputNative,
+) -> napi::Result<String> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+
+    // First, collect file paths from any pending hooks with the same dedup key
+    // and cancel them
+    let mut merged_files: std::collections::HashSet<String> =
+        input.file_paths.iter().cloned().collect();
+
+    let mut stmt = conn.prepare(
+        "SELECT id, file_paths FROM async_hook_queue
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows: Vec<(String, String)> = stmt
+        .query_map(
+            params![input.session_id, input.cwd, input.plugin, input.hook_name],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for (_, file_paths_json) in &rows {
+        if let Ok(paths) = serde_json::from_str::<Vec<String>>(file_paths_json) {
+            for path in paths {
+                merged_files.insert(path);
+            }
+        }
+    }
+
+    // Cancel the pending hooks
+    if !rows.is_empty() {
+        conn.execute(
+            "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+             WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'",
+            params![input.session_id, input.cwd, input.plugin, input.hook_name],
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+    }
+
+    // Insert the new entry with merged file paths
+    let file_paths_json = serde_json::to_string(&merged_files.into_iter().collect::<Vec<_>>())
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize file paths: {}", e)))?;
+
+    conn.execute(
+        "INSERT INTO async_hook_queue (id, session_id, cwd, plugin, hook_name, file_paths, command, status)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending')",
+        params![
+            id,
+            input.session_id,
+            input.cwd,
+            input.plugin,
+            input.hook_name,
+            file_paths_json,
+            input.command
+        ],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to enqueue async hook: {}", e)))?;
+
+    Ok(id)
+}
+
+/// List pending async hooks for a session
+#[napi]
+pub fn list_pending_async_hooks(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, cwd, plugin, hook_name, file_paths, command, status, created_at
+         FROM async_hook_queue WHERE session_id = ?1 AND status = 'pending' ORDER BY created_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([session_id], |row| {
+            let file_paths_json: String = row.get(5)?;
+            let file_paths: Vec<String> =
+                serde_json::from_str(&file_paths_json).unwrap_or_default();
+            Ok(AsyncHookQueueEntry {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                cwd: row.get(2)?,
+                plugin: row.get(3)?,
+                hook_name: row.get(4)?,
+                file_paths,
+                command: row.get(6)?,
+                status: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?;
+
+    let mut hooks = Vec::new();
+    for row in rows {
+        hooks.push(row.map_err(|e| napi::Error::from_reason(format!("Failed to map row: {}", e)))?);
+    }
+
+    Ok(hooks)
+}
+
+/// Check if the async hook queue is empty for a session (no pending or running hooks)
+#[napi]
+pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM async_hook_queue WHERE session_id = ?1 AND status IN ('pending', 'running')",
+        params![session_id],
+        |row| row.get(0),
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to count queue: {}", e)))?;
+
+    Ok(count == 0)
+}
+
+/// Drain the queue - get all pending hooks and mark as running
+/// Used at checkpoint (Stop, PreToolUse for git commit/push)
+#[napi]
+pub fn drain_async_hook_queue(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // First, get all pending hooks
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, cwd, plugin, hook_name, file_paths, command, status, created_at
+         FROM async_hook_queue WHERE session_id = ?1 AND status = 'pending' ORDER BY created_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([&session_id], |row| {
+            let file_paths_json: String = row.get(5)?;
+            let file_paths: Vec<String> =
+                serde_json::from_str(&file_paths_json).unwrap_or_default();
+            Ok(AsyncHookQueueEntry {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                cwd: row.get(2)?,
+                plugin: row.get(3)?,
+                hook_name: row.get(4)?,
+                file_paths,
+                command: row.get(6)?,
+                status: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?;
+
+    let mut hooks = Vec::new();
+    for row in rows {
+        hooks.push(row.map_err(|e| napi::Error::from_reason(format!("Failed to map row: {}", e)))?);
+    }
+
+    // Mark them all as running
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'running', started_at = datetime('now')
+         WHERE session_id = ?1 AND status = 'pending'",
+        params![session_id],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to update hook status: {}", e)))?;
+
+    Ok(hooks)
+}
+
+/// Cancel pending hooks matching dedup key and return merged file paths
+#[napi]
+pub fn cancel_pending_async_hooks(
+    _db_path: String,
+    session_id: String,
+    cwd: String,
+    plugin: String,
+    hook_name: String,
+) -> napi::Result<Vec<String>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut merged_files: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let mut stmt = conn.prepare(
+        "SELECT file_paths FROM async_hook_queue
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows: Vec<String> = stmt
+        .query_map(params![session_id, cwd, plugin, hook_name], |row| {
+            row.get::<_, String>(0)
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for file_paths_json in rows {
+        if let Ok(paths) = serde_json::from_str::<Vec<String>>(&file_paths_json) {
+            for path in paths {
+                merged_files.insert(path);
+            }
+        }
+    }
+
+    // Cancel the pending hooks
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'",
+        params![session_id, cwd, plugin, hook_name],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+
+    Ok(merged_files.into_iter().collect())
+}
+
+/// Complete an async hook execution
+#[napi]
+pub fn complete_async_hook(
+    _db_path: String,
+    id: String,
+    success: bool,
+    result: Option<String>,
+    error: Option<String>,
+) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let status = if success { "completed" } else { "failed" };
+
+    conn.execute(
+        "UPDATE async_hook_queue SET status = ?2, completed_at = datetime('now'), result = ?3, error = ?4
+         WHERE id = ?1",
+        params![id, status, result, error],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to complete async hook: {}", e)))?;
+
+    Ok(())
+}
+
+/// Cancel a specific async hook by ID
+#[napi]
+pub fn cancel_async_hook(_db_path: String, id: String) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+         WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to cancel async hook: {}", e)))?;
+
+    Ok(())
+}
+
+/// Clear all async hooks for a session (used on SessionEnd to clean up)
+/// Returns the number of hooks that were cleared
+#[napi]
+pub fn clear_async_hook_queue_for_session(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Cancel all pending/running hooks for this session
+    let count = conn
+        .execute(
+            "UPDATE async_hook_queue
+         SET status = 'cancelled', completed_at = datetime('now')
+         WHERE session_id = ?1 AND status IN ('pending', 'running')",
+            params![session_id],
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to clear async hook queue: {}", e))
+        })?;
+
+    Ok(count as u32)
+}
+
+// ============================================================================
 // Test Module
 // ============================================================================
 

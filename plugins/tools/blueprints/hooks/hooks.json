@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han blueprints sync-index",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

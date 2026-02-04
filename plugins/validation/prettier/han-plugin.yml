@@ -1,8 +1,23 @@
 hooks:
+  # Full project format check at Stop (checkpoint)
   format:
     command: "npx -y prettier --check ."
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"prettier\":' package.json"
     if_changed:
+      - "**/*.{js,jsx,ts,tsx,mjs,cjs,json,md,css,scss,html,yaml,yml}"
+
+  # Single-file async format check on PostToolUse
+  format-async:
+    event: PostToolUse
+    command: "npx -y prettier --check ${HAN_FILES}"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"prettier\":' package.json"
+    tool_filter:
+      - Edit
+      - Write
+      - NotebookEdit
+    file_filter:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs,json,md,css,scss,html,yaml,yml}"

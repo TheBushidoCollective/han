@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "reddit": {
-      "command": "uvx",
-      "args": ["mcp-server-reddit"]
-    }
-  }
-}

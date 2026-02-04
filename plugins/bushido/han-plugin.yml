@@ -1,8 +1,6 @@
 # bushido plugin configuration
 # Provides Bushido philosophy - the seven virtues of the Samurai applied to software development
+#
+# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
 
-hooks:
-  bushido-context:
-    event: SessionStart
-    command: cat "${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md"
-    description: Inject Bushido philosophy context at session start
+hooks: {}

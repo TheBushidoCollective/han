@@ -1,8 +1,0 @@
-# jutsu-monorepo plugin configuration
-# Provides monorepo development context and reminders
-
-hooks:
-  monorepo-context:
-    event: SessionStart
-    command: cat "${CLAUDE_PLUGIN_ROOT}/hooks/monorepo-reminder.md"
-    description: Inject monorepo development context at session start

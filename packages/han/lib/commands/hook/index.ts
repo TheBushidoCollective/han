@@ -10,6 +10,7 @@ import { createReferenceCommand } from './reference/index.ts';
 import { registerHookRun } from './run.ts';
 import { registerHookTest } from './test.tsx';
 import { registerHookWait } from './wait.ts';
+import { registerWrapSubagentContext } from './wrap-subagent-context.ts';
 
 /**
  * Register all hook-related commands under `han hook`
@@ -27,5 +28,6 @@ export function registerHookCommands(program: Command): void {
   registerHookRun(hookCommand);
   registerHookTest(hookCommand);
   registerHookWait(hookCommand);
+  registerWrapSubagentContext(hookCommand);
   hookCommand.addCommand(createReferenceCommand());
 }

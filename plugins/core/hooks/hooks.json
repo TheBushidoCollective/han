@@ -1,35 +1,39 @@
 {
-  "description": "Core infrastructure hooks for Han marketplace - all hooks go through orchestrator",
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook orchestrate Stop --check --skip-if-questioning",
-            "timeout": 30000
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook orchestrate SubagentStop --check --skip-if-questioning",
-            "timeout": 30000
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook orchestrate SessionStart",
-            "timeout": 60000
+            "command": "han coordinator ensure --background",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/register-config-dir.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook context",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-references.sh\"",
+            "timeout": 10
           }
         ]
       }
@@ -39,8 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook auto-detect-prompt",
-            "timeout": 10000
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/current-datetime.sh\"",
+            "timeout": 5
           }
         ]
       },
@@ -48,8 +52,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook orchestrate UserPromptSubmit",
-            "timeout": 30000
+            "command": "han hook reference hooks/no-excuses.md --must-read-first \"no excuses for pre-existing issues\"",
+            "timeout": 5
           }
         ]
       }
@@ -61,48 +65,7 @@
           {
             "type": "command",
             "command": "han hook inject-subagent-context",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook orchestrate PreToolUse",
-            "timeout": 30000
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook auto-detect",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook orchestrate PostToolUse",
-            "timeout": 30000
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook orchestrate SubagentStart",
-            "timeout": 30000
+            "timeout": 10
           }
         ]
       }

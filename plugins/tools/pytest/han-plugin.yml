@@ -1,4 +1,5 @@
 hooks:
+  # Full test suite at Stop (checkpoint)
   test:
     command: "pytest"
     dirs_with:
@@ -10,3 +11,20 @@ hooks:
       - "pyproject.toml"
       - "pytest.ini"
       - "conftest.py"
+
+  # Single test file async on PostToolUse
+  test-async:
+    event: PostToolUse
+    command: "pytest ${HAN_FILES}"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/test_*.py"
+      - "**/*_test.py"
+      - "**/tests/*.py"
+    # Only run if file contains test code
+    file_test: grep -qE "(def test_|class Test)" "${HAN_FILE}"

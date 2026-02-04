@@ -1,4 +1,5 @@
 hooks:
+  # Full project lint at Stop (checkpoint)
   lint:
     command: "npx -y markdownlint-cli --fix . --ignore node_modules"
     dirs_with:
@@ -6,3 +7,15 @@ hooks:
     if_changed:
       - "**/*.md"
       - ".markdownlint.*"
+
+  # Single-file async lint on PostToolUse
+  lint-async:
+    event: PostToolUse
+    command: "npx -y markdownlint-cli --fix ${HAN_FILES}"
+    dirs_with:
+      - "'.markdownlint.*'"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.md"

@@ -1,0 +1,6 @@
+# jutsu-monorepo plugin configuration
+# Provides monorepo development context and reminders
+#
+# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
+
+hooks: {}

@@ -39,6 +39,7 @@ The new site includes everything you need to adopt AI-DLC:
 **The Paper**: The complete AI-DLC 2026 methodology, covering human-on-the-loop workflows, backpressure-driven quality, and autonomous development loops.
 
 **Runbooks**: Step-by-step guides for specific scenarios:
+
 - Mode selection (when to use HITL vs HOTL)
 - Writing completion criteria
 - Tooling setup for different AI assistants

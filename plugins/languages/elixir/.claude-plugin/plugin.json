@@ -19,7 +19,6 @@
         ".exs": "elixir"
       },
       "startupTimeout": 60000,
-      "restartOnCrash": true,
       "maxRestarts": 3
     }
   }

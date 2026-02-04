@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook reference hooks/ensure-scratch.md --must-read-first \"scratch workspace requirements\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -496,6 +496,32 @@ CREATE INDEX IF NOT EXISTS idx_config_dirs_path ON config_dirs(path);
 CREATE INDEX IF NOT EXISTS idx_config_dirs_default ON config_dirs(is_default);
 
 -- ============================================================================
+-- Async Hook Queue (for PostToolUse async hook execution)
+-- Tracks hooks queued for non-blocking execution after tool use.
+-- The coordinator deduplicates and cancels stale entries.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS async_hook_queue (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    cwd TEXT NOT NULL,           -- Working directory for the hook
+    plugin TEXT NOT NULL,        -- Plugin name (e.g., "jutsu-biome")
+    hook_name TEXT NOT NULL,     -- Hook name (e.g., "lint")
+    file_paths TEXT NOT NULL,    -- JSON array of file paths to validate
+    command TEXT NOT NULL,       -- The command to execute
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'running', 'completed', 'failed', 'cancelled'
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT,
+    completed_at TEXT,
+    result TEXT,                 -- JSON with exit_code, output, etc.
+    error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_session ON async_hook_queue(session_id);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_status ON async_hook_queue(status);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_dedup ON async_hook_queue(session_id, cwd, plugin, hook_name, status);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_created ON async_hook_queue(created_at);
+
+-- ============================================================================
 -- Vector embeddings (for semantic search)
 -- Note: sqlite-vec tables are created dynamically with appropriate dimensions
 -- ============================================================================
