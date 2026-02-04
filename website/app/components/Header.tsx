@@ -159,7 +159,6 @@ export default function Header() {
 			<nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3 flex-shrink-0">
-						<ActivityIndicator />
 						<Link href="/" className="flex items-center space-x-3">
 							<div className="text-4xl">⛩️</div>
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
