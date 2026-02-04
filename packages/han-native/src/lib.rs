@@ -1255,6 +1255,13 @@ pub fn get_stale_lock_timeout() -> u32 {
     coordinator::get_stale_lock_timeout()
 }
 
+/// Clean up a stale coordinator lock file
+/// Returns true if a stale lock was cleaned up, false otherwise
+#[napi]
+pub fn cleanup_stale_coordinator_lock() -> napi::Result<bool> {
+    coordinator::cleanup_stale_coordinator_lock()
+}
+
 // ============================================================================
 // File Watcher Functions
 // ============================================================================

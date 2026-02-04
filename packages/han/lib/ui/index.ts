@@ -9,7 +9,7 @@
  */
 
 // Atoms
-export { MarkdownWrapper } from "./atoms/index.ts";
+export { MarkdownWrapper } from './atoms/index.ts';
 
 // Molecules
 // (none yet)

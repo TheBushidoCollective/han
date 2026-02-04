@@ -5,18 +5,14 @@
  * They include agent definitions with frontmatter.
  */
 
-import {
-	type PluginConfig,
-	processTemplate,
-	toTitleCase,
-} from "./index.ts";
+import { type PluginConfig, processTemplate, toTitleCase } from './index.ts';
 
 export interface DoTemplateFiles {
-	[key: string]: string;
-	".claude-plugin/plugin.json": string;
-	"agents/specialist.md": string;
-	"README.md": string;
-	"CHANGELOG.md": string;
+  [key: string]: string;
+  '.claude-plugin/plugin.json': string;
+  'agents/specialist.md': string;
+  'README.md': string;
+  'CHANGELOG.md': string;
 }
 
 const PLUGIN_JSON_TEMPLATE = `{
@@ -124,30 +120,30 @@ All notable changes to this project will be documented in this file.
  * Generate all files for a do plugin.
  */
 export function getDoTemplate(config: PluginConfig): DoTemplateFiles {
-	const keyword = config.name.replace(/^do-/, "");
-	const agentName = keyword;
-	const agentTitle = toTitleCase(keyword);
+  const keyword = config.name.replace(/^do-/, '');
+  const agentName = keyword;
+  const agentTitle = toTitleCase(keyword);
 
-	const variables = {
-		NAME: config.name,
-		TITLE: toTitleCase(config.name.replace(/^do-/, "")),
-		DESCRIPTION: config.description,
-		AUTHOR_NAME: config.authorName,
-		AUTHOR_URL: config.authorUrl,
-		KEYWORD: keyword,
-		AGENT_NAME: agentName,
-		AGENT_TITLE: agentTitle,
-		AGENT_DESCRIPTION: config.description.toLowerCase(),
-		DATE: new Date().toISOString().split("T")[0],
-	};
+  const variables = {
+    NAME: config.name,
+    TITLE: toTitleCase(config.name.replace(/^do-/, '')),
+    DESCRIPTION: config.description,
+    AUTHOR_NAME: config.authorName,
+    AUTHOR_URL: config.authorUrl,
+    KEYWORD: keyword,
+    AGENT_NAME: agentName,
+    AGENT_TITLE: agentTitle,
+    AGENT_DESCRIPTION: config.description.toLowerCase(),
+    DATE: new Date().toISOString().split('T')[0],
+  };
 
-	return {
-		".claude-plugin/plugin.json": processTemplate(
-			PLUGIN_JSON_TEMPLATE,
-			variables,
-		),
-		"agents/specialist.md": processTemplate(AGENT_TEMPLATE, variables),
-		"README.md": processTemplate(README_TEMPLATE, variables),
-		"CHANGELOG.md": processTemplate(CHANGELOG_TEMPLATE, variables),
-	};
+  return {
+    '.claude-plugin/plugin.json': processTemplate(
+      PLUGIN_JSON_TEMPLATE,
+      variables
+    ),
+    'agents/specialist.md': processTemplate(AGENT_TEMPLATE, variables),
+    'README.md': processTemplate(README_TEMPLATE, variables),
+    'CHANGELOG.md': processTemplate(CHANGELOG_TEMPLATE, variables),
+  };
 }

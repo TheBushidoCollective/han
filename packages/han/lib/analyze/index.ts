@@ -5,9 +5,9 @@
  */
 
 export {
-	analyzeCodebase,
-	type CodebaseStats,
-	type ConfigFileCount,
-	type ExtensionCount,
-	formatStatsForPrompt,
-} from "./codebase-analyzer.ts";
+  analyzeCodebase,
+  type CodebaseStats,
+  type ConfigFileCount,
+  type ExtensionCount,
+  formatStatsForPrompt,
+} from './codebase-analyzer.ts';

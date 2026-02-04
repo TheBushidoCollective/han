@@ -266,6 +266,7 @@ export default function Header() {
 
 					{/* Desktop Navigation */}
 					<div className="hidden md:flex items-center space-x-6 flex-shrink-0">
+						<ActivityIndicator />
 						<Link
 							href="/plugins"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
@@ -278,7 +279,7 @@ export default function Header() {
 						>
 							Blog
 						</Link>
-							<Link
+						<Link
 							href="/docs"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>

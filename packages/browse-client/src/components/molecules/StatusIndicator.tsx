@@ -5,19 +5,19 @@
  * Simple boolean-to-badge mapping for existence checks.
  */
 
-import type React from 'react';
-import { Badge } from '../atoms/index.ts';
+import type React from "react";
+import { Badge } from "../atoms/index.ts";
 
 interface StatusIndicatorProps {
-  active: boolean;
+	active: boolean;
 }
 
 export function StatusIndicator({
-  active,
+	active,
 }: StatusIndicatorProps): React.ReactElement {
-  return (
-    <Badge variant={active ? 'success' : 'default'}>
-      {active ? 'Found' : 'Not Found'}
-    </Badge>
-  );
+	return (
+		<Badge variant={active ? "success" : "default"}>
+			{active ? "Found" : "Not Found"}
+		</Badge>
+	);
 }

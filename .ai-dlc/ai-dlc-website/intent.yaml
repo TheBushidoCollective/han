@@ -1,0 +1,8 @@
+# Testing requirements configured during elaboration
+# The reviewer hat enforces these requirements
+
+testing:
+  unit_tests: false          # Not required for this content-focused project
+  integration_tests: false   # Not required
+  coverage_threshold: null   # No coverage requirement
+  e2e_tests: false           # Not required - validation via build success

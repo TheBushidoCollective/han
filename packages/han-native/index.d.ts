@@ -74,53 +74,6 @@ export declare function queueHook(input: QueuedHookInput): string
 export declare function getQueuedHooks(orchestrationId: string): Array<QueuedHook>
 /** Delete queued hooks after they've been executed */
 export declare function deleteQueuedHooks(orchestrationId: string): number
-/** Input for enqueuing an async hook */
-export interface AsyncHookQueueInputNative {
-  sessionId: string
-  cwd: string
-  plugin: string
-  hookName: string
-  filePaths: Array<string>
-  command: string
-}
-/** Output for async hook queue entry */
-export interface AsyncHookQueueEntry {
-  id: string
-  sessionId: string
-  cwd: string
-  plugin: string
-  hookName: string
-  filePaths: Array<string>
-  command: string
-  status: string
-  createdAt: string
-}
-/**
- * Enqueue a hook for async execution
- * First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
- * and merges their file paths into the new entry
- */
-export declare function enqueueAsyncHook(dbPath: string, input: AsyncHookQueueInputNative): string
-/** List pending async hooks for a session */
-export declare function listPendingAsyncHooks(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
-/** Check if the async hook queue is empty for a session (no pending or running hooks) */
-export declare function isAsyncHookQueueEmpty(dbPath: string, sessionId: string): boolean
-/**
- * Drain the queue - get all pending hooks and mark as running
- * Used at checkpoint (Stop, PreToolUse for git commit/push)
- */
-export declare function drainAsyncHookQueue(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
-/** Cancel pending hooks matching dedup key and return merged file paths */
-export declare function cancelPendingAsyncHooks(dbPath: string, sessionId: string, cwd: string, plugin: string, hookName: string): Array<string>
-/** Complete an async hook execution */
-export declare function completeAsyncHook(dbPath: string, id: string, success: boolean, result?: string | undefined | null, error?: string | undefined | null): void
-/** Cancel a specific async hook by ID */
-export declare function cancelAsyncHook(dbPath: string, id: string): void
-/**
- * Clear all async hooks for a session (used on SessionEnd to clean up)
- * Returns the number of hooks that were cleared
- */
-export declare function clearAsyncHookQueueForSession(dbPath: string, sessionId: string): number
 /** A document record for FTS indexing */
 export interface FtsDocument {
   /** Unique identifier for the document */
@@ -820,45 +773,6 @@ export interface GeneratedSessionSummaryInput {
   durationSeconds?: number
 }
 /**
- * An async hook queued for execution after a tool use.
- * Used by the coordinator to manage non-blocking validation hooks.
- */
-export interface AsyncHookQueue {
-  id: string
-  sessionId: string
-  cwd: string
-  plugin: string
-  hookName: string
-  filePaths: string
-  command: string
-  status: string
-  createdAt: string
-  startedAt?: string
-  completedAt?: string
-  result?: string
-  error?: string
-}
-/** Input for creating a new async hook queue entry */
-export interface AsyncHookQueueInput {
-  sessionId: string
-  cwd: string
-  plugin: string
-  hookName: string
-  filePaths: Array<string>
-  command: string
-}
-/** Update for async hook queue entry */
-export interface AsyncHookQueueUpdate {
-  id: string
-  status?: string
-  startedAt?: string
-  completedAt?: string
-  result?: string
-  error?: string
-  /** Merge additional file paths (for deduplication) */
-  mergeFilePaths?: Array<string>
-}
-/**
  * A registered config directory for multi-environment support
  * The central coordinator tracks all CLAUDE_CONFIG_DIR locations to index
  */
@@ -1206,6 +1120,11 @@ export declare function getHeartbeatInterval(): number
 /** Get the stale lock timeout in seconds */
 export declare function getStaleLockTimeout(): number
 /**
+ * Clean up a stale coordinator lock file
+ * Returns true if a stale lock was cleaned up, false otherwise
+ */
+export declare function cleanupStaleCoordinatorLock(): boolean
+/**
  * Index a single JSONL session file incrementally
  * Only processes lines after the last indexed line
  * Task association for sentiment events is loaded from SQLite automatically
@@ -1220,15 +1139,6 @@ export declare function handleFileEvent(dbPath: string, eventType: FileEventType
  * Should be called on coordinator startup
  */
 export declare function fullScanAndIndex(dbPath: string): Array<IndexResult>
-/**
- * Enqueue a hook for async execution
- * First cancels any pending hooks with the same dedup key and merges file paths
- */
-export declare function enqueueAsyncHook(dbPath: string, input: AsyncHookQueueInputNative): string
-/** Check if the async hook queue is empty for a session */
-export declare function isAsyncHookQueueEmpty(dbPath: string, sessionId: string): boolean
-/** Drain the queue - get all pending hooks and mark as running */
-export declare function drainAsyncHookQueue(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
 /**
  * Truncate all derived tables (those populated from JSONL logs).
  * This is used during reindex to rebuild the database from scratch.

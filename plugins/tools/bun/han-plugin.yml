@@ -1,0 +1,27 @@
+hooks:
+  build:
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/build.sh\""
+    dirs_with:
+      - "bun.lock"
+      - "bun.lockb"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "bun.lock"
+      - "bun.lockb"
+      - "bunfig.toml"
+  test:
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/test.sh\""
+    dirs_with:
+      - "bun.lock"
+      - "bun.lockb"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "bun.lock"
+      - "bun.lockb"
+      - "bunfig.toml"

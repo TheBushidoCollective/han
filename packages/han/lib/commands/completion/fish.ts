@@ -3,7 +3,7 @@
  */
 
 export function generateFishCompletion(): string {
-	return `# han fish completion
+  return `# han fish completion
 # To enable, save to ~/.config/fish/completions/han.fish:
 #   han completion fish > ~/.config/fish/completions/han.fish
 

@@ -10,9 +10,9 @@
  * - SessionConnectionType
  */
 
-import type { SessionDetail, SessionListItem } from "../../api/sessions.ts";
-import { builder } from "../builder.ts";
-import { type Connection, type Edge, PageInfoType } from "./pagination.ts";
+import type { SessionDetail, SessionListItem } from '../../api/sessions.ts';
+import { builder } from '../builder.ts';
+import { type Connection, type Edge, PageInfoType } from './pagination.ts';
 
 // =============================================================================
 // Session Data Types
@@ -27,7 +27,7 @@ export type SessionData = SessionListItem | SessionDetail;
  * Forward-declared Session type ref - implemented in session.ts
  * This MUST be imported and used by session.ts to implement the type
  */
-export const SessionRef = builder.objectRef<SessionData>("Session");
+export const SessionRef = builder.objectRef<SessionData>('Session');
 
 // =============================================================================
 // Session Connection Types for Relay-style Pagination
@@ -37,20 +37,20 @@ export const SessionRef = builder.objectRef<SessionData>("Session");
  * SessionEdge type for session connections
  */
 export type SessionEdgeData = Edge<SessionData>;
-const SessionEdgeRef = builder.objectRef<SessionEdgeData>("SessionEdge");
+const SessionEdgeRef = builder.objectRef<SessionEdgeData>('SessionEdge');
 
 export const SessionEdgeType = SessionEdgeRef.implement({
-	description: "An edge in a session connection",
-	fields: (t) => ({
-		node: t.field({
-			type: SessionRef,
-			description: "The session at this edge",
-			resolve: (edge) => edge.node,
-		}),
-		cursor: t.exposeString("cursor", {
-			description: "Cursor for this edge",
-		}),
-	}),
+  description: 'An edge in a session connection',
+  fields: (t) => ({
+    node: t.field({
+      type: SessionRef,
+      description: 'The session at this edge',
+      resolve: (edge) => edge.node,
+    }),
+    cursor: t.exposeString('cursor', {
+      description: 'Cursor for this edge',
+    }),
+  }),
 });
 
 /**
@@ -58,23 +58,23 @@ export const SessionEdgeType = SessionEdgeRef.implement({
  */
 export type SessionConnectionData = Connection<SessionData>;
 export const SessionConnectionRef =
-	builder.objectRef<SessionConnectionData>("SessionConnection");
+  builder.objectRef<SessionConnectionData>('SessionConnection');
 
 export const SessionConnectionType = SessionConnectionRef.implement({
-	description: "A paginated list of sessions",
-	fields: (t) => ({
-		edges: t.field({
-			type: [SessionEdgeType],
-			description: "List of session edges",
-			resolve: (conn) => conn.edges,
-		}),
-		pageInfo: t.field({
-			type: PageInfoType,
-			description: "Pagination information",
-			resolve: (conn) => conn.pageInfo,
-		}),
-		totalCount: t.exposeInt("totalCount", {
-			description: "Total number of sessions matching the query",
-		}),
-	}),
+  description: 'A paginated list of sessions',
+  fields: (t) => ({
+    edges: t.field({
+      type: [SessionEdgeType],
+      description: 'List of session edges',
+      resolve: (conn) => conn.edges,
+    }),
+    pageInfo: t.field({
+      type: PageInfoType,
+      description: 'Pagination information',
+      resolve: (conn) => conn.pageInfo,
+    }),
+    totalCount: t.exposeInt('totalCount', {
+      description: 'Total number of sessions matching the query',
+    }),
+  }),
 });

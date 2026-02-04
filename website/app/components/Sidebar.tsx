@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import {
-	type PluginCategory,
 	CATEGORY_META,
 	CATEGORY_ORDER,
 	getCategoryIcon,
+	type PluginCategory,
 } from "../../lib/constants";
 import SidebarScrollContainer from "./SidebarScrollContainer";
 

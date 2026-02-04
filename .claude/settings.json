@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook dispatch UserPromptSubmit",
+            "command": "npx -y @thebushidocollective/han hook dispatch UserPromptSubmit",
             "timeout": 30
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook dispatch SessionStart",
+            "command": "npx -y @thebushidocollective/han hook dispatch SessionStart",
             "timeout": 30
           }
         ]
