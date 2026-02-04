@@ -964,7 +964,10 @@ async function executeHookInDirectory(
         // Filter to files in current directory and make relative
         const relativeFiles = sessionFiles.allModified
           .filter((absPath) => {
-            return absPath.startsWith(`${directory}/`) || absPath === directory;
+            // Filter to files in current directory that still exist on disk
+            const inDirectory =
+              absPath.startsWith(`${directory}/`) || absPath === directory;
+            return inDirectory && existsSync(absPath);
           })
           .map((absPath) => {
             // Make relative to execution directory
