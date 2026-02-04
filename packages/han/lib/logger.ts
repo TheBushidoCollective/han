@@ -10,7 +10,7 @@
  * - warn: Warning conditions
  * - error: Error conditions (always shown)
  *
- * Default level: "warn" (only warnings and errors)
+ * Default level: "warn" (only show warnings and errors)
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
@@ -31,7 +31,7 @@ function getLogLevel(): LogLevel {
   if (level && level in LOG_LEVELS) {
     return level as LogLevel;
   }
-  // Default to warn - only warnings and errors
+  // Default to warn - only warnings and errors (when not set)
   return 'warn';
 }
 

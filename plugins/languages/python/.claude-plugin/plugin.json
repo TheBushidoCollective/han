@@ -19,7 +19,6 @@
         ".pyi": "python"
       },
       "startupTimeout": 60000,
-      "restartOnCrash": true,
       "maxRestarts": 3
     }
   }

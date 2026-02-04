@@ -19,7 +19,6 @@
         ".h": "c"
       },
       "startupTimeout": 120000,
-      "restartOnCrash": true,
       "maxRestarts": 3
     }
   }

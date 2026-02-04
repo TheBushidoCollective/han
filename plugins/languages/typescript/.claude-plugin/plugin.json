@@ -25,7 +25,6 @@
         ".cjs": "javascript"
       },
       "startupTimeout": 60000,
-      "restartOnCrash": true,
       "maxRestarts": 3,
       "initializationOptions": {
         "preferences": {

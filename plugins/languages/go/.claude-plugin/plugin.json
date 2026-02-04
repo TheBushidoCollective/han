@@ -18,7 +18,6 @@
         ".go": "go"
       },
       "startupTimeout": 60000,
-      "restartOnCrash": true,
       "maxRestarts": 3,
       "initializationOptions": {
         "directoryFilters": ["-node_modules", "-vendor", "-.git"]
