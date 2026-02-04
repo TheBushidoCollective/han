@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename);
 
 /**
  * Check if debug mode is enabled via HAN_DEBUG environment variable
+ * @returns true if HAN_DEBUG is set to '1' or 'true'
  */
 export function isDebugMode(): boolean {
   const debug = process.env.HAN_DEBUG;
