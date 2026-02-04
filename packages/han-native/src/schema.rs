@@ -722,16 +722,16 @@ pub struct GeneratedSessionSummaryInput {
 pub struct AsyncHookQueue {
     pub id: String,
     pub session_id: String,
-    pub cwd: String,              // Working directory for the hook
-    pub plugin: String,           // Plugin name (e.g., "jutsu-biome")
-    pub hook_name: String,        // Hook name (e.g., "lint")
-    pub file_paths: String,       // JSON array of file paths to validate
-    pub command: String,          // The command to execute
-    pub status: String,           // 'pending', 'running', 'completed', 'failed', 'cancelled'
+    pub cwd: String,        // Working directory for the hook
+    pub plugin: String,     // Plugin name (e.g., "jutsu-biome")
+    pub hook_name: String,  // Hook name (e.g., "lint")
+    pub file_paths: String, // JSON array of file paths to validate
+    pub command: String,    // The command to execute
+    pub status: String,     // 'pending', 'running', 'completed', 'failed', 'cancelled'
     pub created_at: String,
     pub started_at: Option<String>,
     pub completed_at: Option<String>,
-    pub result: Option<String>,   // JSON with exit_code, output, etc.
+    pub result: Option<String>, // JSON with exit_code, output, etc.
     pub error: Option<String>,
 }
 
