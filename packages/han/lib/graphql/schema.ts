@@ -94,6 +94,8 @@ import {
   UnknownEventMessageType,
   UserMessageInterface,
 } from './types/message.ts';
+// Import auth types (registers mutations and queries via side effects)
+import './types/auth/index.ts';
 import {
   MetricsDataType,
   MetricsPeriodEnum,
@@ -145,6 +147,8 @@ import {
 } from './types/slot-manager.ts';
 import { SlotReleaseResultType } from './types/slot-release-result.ts';
 import { SlotStatusType } from './types/slot-status.ts';
+import { GranularityEnum, TeamMetricsType } from './types/team-metrics/index.ts';
+import { OrgType, TeamMemberType, type UserData, UserType } from './types/team/index.ts';
 
 // =============================================================================
 // Direct Root Queries (no viewer pattern)
@@ -508,6 +512,9 @@ builder.queryField('sessions', (t) =>
       worktreeName: t.arg.string({
         description: 'Filter by worktree name/path',
       }),
+      userId: t.arg.string({
+        description: 'Filter by user ID (only in hosted team mode)',
+      }),
     },
     description: 'Get sessions with cursor-based pagination',
     resolve: (_parent, args) => {
@@ -518,6 +525,7 @@ builder.queryField('sessions', (t) =>
         before: args.before,
         projectId: args.projectId,
         worktreeName: args.worktreeName,
+        // userId is ignored in local mode - no team filtering available
       });
     },
   })

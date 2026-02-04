@@ -18,6 +18,7 @@ import type {
 } from '../../../db/index.ts';
 import { sessionFileChanges } from '../../../db/index.ts';
 import { builder } from '../../builder.ts';
+import { type UserData, UserRef } from '../team/index.ts';
 import { registerNodeLoader } from '../../node-registry.ts';
 import {
   ImageBlockType,
@@ -475,6 +476,23 @@ export const SessionType = SessionRef.implement({
       nullable: true,
       description: 'Claude Code version',
       resolve: (s) => s.version ?? null,
+    }),
+    // Team platform fields (null in local mode)
+    orgId: t.string({
+      nullable: true,
+      description: 'Organization ID (only populated in hosted team mode)',
+      resolve: (s) => ('orgId' in s ? (s as { orgId?: string }).orgId : null) ?? null,
+    }),
+    owner: t.field({
+      type: UserRef,
+      nullable: true,
+      description: 'Session owner (only populated in hosted team mode)',
+      resolve: (s) => {
+        if ('owner' in s && s.owner) {
+          return s.owner as UserData;
+        }
+        return null;
+      },
     }),
     sourceConfigDir: t.string({
       nullable: true,
