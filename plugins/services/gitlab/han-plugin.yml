@@ -1,0 +1,27 @@
+# gitlab plugin configuration
+# This plugin provides GitLab integration via MCP server
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+learn_patterns:
+  - "https?://gitlab\\.com/[^\\s]+"
+  - "https?://[^\\s]*gitlab[^\\s]*/[^\\s]+"
+
+# Memory provider for team memory extraction from GitLab
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-gitlab_gitlab__list_merge_requests
+    - mcp__plugin_hashi-gitlab_gitlab__get_merge_request
+    - mcp__plugin_hashi-gitlab_gitlab__list_issues
+  system_prompt: |
+    Extract observations from GitLab merge requests and issues. For each item, capture:
+    - author: GitLab username
+    - timestamp: when created/merged
+    - summary: title and key points from description
+    - files: list of files changed (for MRs)
+    - type: 'mr', 'review', or 'issue'
+    Return as JSON array of observations.

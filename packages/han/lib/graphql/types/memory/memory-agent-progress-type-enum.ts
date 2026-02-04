@@ -4,18 +4,18 @@
  * Type of progress update from Memory Agent.
  */
 
-import { builder } from "../../builder.ts";
+import { builder } from '../../builder.ts';
 
 export const MemoryAgentProgressTypeEnum = builder.enumType(
-	"MemoryAgentProgressType",
-	{
-		values: [
-			"SEARCHING",
-			"FOUND",
-			"SYNTHESIZING",
-			"COMPLETE",
-			"ERROR",
-		] as const,
-		description: "Type of progress update from Memory Agent",
-	},
+  'MemoryAgentProgressType',
+  {
+    values: [
+      'SEARCHING',
+      'FOUND',
+      'SYNTHESIZING',
+      'COMPLETE',
+      'ERROR',
+    ] as const,
+    description: 'Type of progress update from Memory Agent',
+  }
 );

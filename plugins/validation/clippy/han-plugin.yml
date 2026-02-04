@@ -1,0 +1,24 @@
+hooks:
+  # Full project lint at Stop (checkpoint)
+  lint:
+    command: "cargo clippy -- -D warnings"
+    dirs_with:
+      - "Cargo.toml"
+    if_changed:
+      - "**/*.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+  # Single-file async lint on PostToolUse
+  # Note: clippy requires full project context, so this runs on the whole crate
+  # but is triggered by individual file changes
+  lint-async:
+    event: PostToolUse
+    command: "cargo clippy -- -D warnings"
+    dirs_with:
+      - "Cargo.toml"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.rs"

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import yaml from "yaml";
-import { type PluginCategory, getCategoryIcon } from "./constants";
+import { getCategoryIcon, type PluginCategory } from "./constants";
 
 const PLUGINS_DIR = path.join(process.cwd(), "..");
 
@@ -28,6 +28,13 @@ export interface SkillMetadata {
 	description: string;
 	allowedTools?: string[];
 	content: string;
+	// New Claude Code skill frontmatter fields
+	disableModelInvocation?: boolean; // User-only command (Claude can't auto-invoke)
+	userInvocable?: boolean; // If false, hidden from user menu (agent-only)
+	argumentHint?: string; // Hint shown during autocomplete
+	context?: "fork"; // Run in forked subagent context
+	agent?: string; // Subagent type when context: fork
+	model?: string; // Model override for this skill
 }
 
 export interface HookCommand {
@@ -60,6 +67,10 @@ export interface CommandMetadata {
 	description: string;
 	content: string;
 	internal?: boolean;
+	// New Claude Code skill frontmatter fields (commands support same fields)
+	disableModelInvocation?: boolean; // User-only command
+	userInvocable?: boolean; // If false, agent-only
+	argumentHint?: string; // Hint shown during autocomplete
 }
 
 export interface MCPCapability {
@@ -138,10 +149,10 @@ function getCategoryFromMarketplace(
 
 // Re-export from constants for convenience
 export {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getCategoryIcon,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "./constants";
 
 /**
@@ -163,6 +174,13 @@ function stripPrefix(name: string, category: string): string {
 		return name.slice(prefix.length);
 	}
 	return name;
+}
+
+/**
+ * Check if a plugin source is external (hosted on GitHub, not local)
+ */
+function isExternalSource(source: string): boolean {
+	return source.startsWith("github:");
 }
 
 function getPluginMetadata(
@@ -205,6 +223,26 @@ function getPluginMetadata(
 	}
 }
 
+/**
+ * Get plugin metadata from marketplace.json entry directly (for external plugins)
+ */
+function getPluginMetadataFromMarketplace(
+	plugin: { name: string; description?: string; source: string },
+	category: PluginCategory,
+): PluginMetadata {
+	const pluginName = plugin.source.split("/").pop() || plugin.name;
+	const strippedName = stripPrefix(pluginName, category);
+	const displayTitle = titleize(strippedName);
+
+	return {
+		name: pluginName,
+		title: displayTitle,
+		description: plugin.description || "",
+		icon: getCategoryIcon(category),
+		category,
+	};
+}
+
 // Get all plugins across all categories from marketplace.json
 export function getAllPluginsAcrossCategories(): Array<
 	PluginMetadata & { source: string }
@@ -220,19 +258,33 @@ export function getAllPluginsAcrossCategories(): Array<
 		);
 
 		const plugins: Array<PluginMetadata & { source: string }> = [];
+		// Track seen sources to deduplicate old prefixed entries (e.g., jutsu-typescript)
+		// from new non-prefixed entries (e.g., typescript) that point to the same source
+		const seenSources = new Set<string>();
 
 		for (const plugin of marketplaceData.plugins) {
+			// Skip if we've already seen this source (keeps first occurrence)
+			if (seenSources.has(plugin.source)) {
+				continue;
+			}
+			seenSources.add(plugin.source);
+
 			const pluginCategory = getCategoryFromMarketplace(plugin.category);
 			const pluginName = plugin.source.split("/").pop() || plugin.name;
-			const pluginPath = path.join(
-				PLUGINS_DIR,
-				plugin.source.replace("./", ""),
-			);
-			const metadata = getPluginMetadata(
-				pluginPath,
-				pluginName,
-				pluginCategory,
-			);
+
+			// For external plugins (github:owner/repo), use marketplace metadata directly
+			// since we can't read from local filesystem
+			let metadata: PluginMetadata;
+			if (isExternalSource(plugin.source)) {
+				metadata = getPluginMetadataFromMarketplace(plugin, pluginCategory);
+			} else {
+				const pluginPath = path.join(
+					PLUGINS_DIR,
+					plugin.source.replace("./", ""),
+				);
+				metadata = getPluginMetadata(pluginPath, pluginName, pluginCategory);
+			}
+
 			plugins.push({
 				...metadata,
 				source: plugin.source,
@@ -259,17 +311,31 @@ export function getAllPlugins(category: PluginCategory): PluginMetadata[] {
 		);
 
 		const plugins: PluginMetadata[] = [];
+		// Track seen sources to deduplicate old prefixed entries from new entries
+		const seenSources = new Set<string>();
 
 		for (const plugin of marketplaceData.plugins) {
 			const pluginCategory = getCategoryFromMarketplace(plugin.category);
 
 			if (pluginCategory === category) {
+				// Skip if we've already seen this source (keeps first occurrence)
+				if (seenSources.has(plugin.source)) {
+					continue;
+				}
+				seenSources.add(plugin.source);
+
 				const pluginName = plugin.source.split("/").pop() || plugin.name;
-				const pluginPath = path.join(
-					PLUGINS_DIR,
-					plugin.source.replace("./", ""),
-				);
-				plugins.push(getPluginMetadata(pluginPath, pluginName, category));
+
+				// For external plugins (github:owner/repo), use marketplace metadata directly
+				if (isExternalSource(plugin.source)) {
+					plugins.push(getPluginMetadataFromMarketplace(plugin, category));
+				} else {
+					const pluginPath = path.join(
+						PLUGINS_DIR,
+						plugin.source.replace("./", ""),
+					);
+					plugins.push(getPluginMetadata(pluginPath, pluginName, category));
+				}
 			}
 		}
 
@@ -343,6 +409,13 @@ function getPluginSkills(pluginPath: string): SkillMetadata[] {
 				description: data.description || "",
 				allowedTools: data["allowed-tools"],
 				content,
+				// New Claude Code skill frontmatter fields
+				disableModelInvocation: data["disable-model-invocation"],
+				userInvocable: data["user-invocable"],
+				argumentHint: data["argument-hint"],
+				context: data.context,
+				agent: data.agent,
+				model: data.model,
 			});
 		}
 	} catch (error) {
@@ -698,6 +771,10 @@ function getPluginCommands(pluginPath: string): CommandMetadata[] {
 				description,
 				content: fileContent,
 				internal: isInternal || undefined,
+				// New Claude Code skill frontmatter fields
+				disableModelInvocation: data["disable-model-invocation"],
+				userInvocable: data["user-invocable"],
+				argumentHint: data["argument-hint"],
 			});
 		}
 	} catch (error) {
@@ -878,8 +955,30 @@ export function getPluginContent(
 			return null;
 		}
 
-		const pluginPath = path.join(PLUGINS_DIR, plugin.source.replace("./", ""));
 		const pluginName = plugin.source.split("/").pop() || slug;
+
+		// External plugins (github:owner/repo) can't be read from local filesystem
+		// Return minimal metadata with a link to the external source
+		if (isExternalSource(plugin.source)) {
+			const metadata = getPluginMetadataFromMarketplace(plugin, category);
+			// Extract GitHub URL from source (e.g., "github:owner/repo" -> "https://github.com/owner/repo")
+			const githubPath = plugin.source.replace("github:", "");
+			const externalReadme = `This plugin is hosted externally.\n\nView the full documentation at: https://github.com/${githubPath}`;
+
+			return {
+				metadata,
+				source: plugin.source,
+				readme: externalReadme,
+				agents: [],
+				skills: [],
+				hooks: [],
+				commands: [],
+				mcpServers: [],
+				lspServers: [],
+			};
+		}
+
+		const pluginPath = path.join(PLUGINS_DIR, plugin.source.replace("./", ""));
 
 		const metadata = getPluginMetadata(pluginPath, pluginName, category);
 		const readme = getPluginReadme(pluginPath);

@@ -1,0 +1,24 @@
+{
+  "name": "swift",
+  "version": "1.10.0",
+  "description": "Advanced Swift programming skills for iOS and protocol-oriented programming",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["swift", "ios", "protocol-oriented", "concurrency"],
+  "lspServers": {
+    "sourcekit-lsp": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".swift": "swift"
+      },
+      "startupTimeout": 60000,
+      "maxRestarts": 3
+    }
+  }
+}

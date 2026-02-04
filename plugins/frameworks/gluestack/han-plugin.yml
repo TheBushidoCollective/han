@@ -1,0 +1,11 @@
+# gluestack plugin configuration
+# MCP servers are defined in .mcp.json for direct Claude Code integration
+
+hooks:
+  typecheck:
+    command: "npx -y --package typescript tsc --noEmit"
+    dirs_with:
+      - "gluestack-ui.config.json"
+    if_changed:
+      - "**/*.{ts,tsx}"
+    tip: "Use the `jutsu_gluestack_typecheck` MCP tool before marking complete."

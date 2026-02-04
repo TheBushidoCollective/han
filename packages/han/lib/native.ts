@@ -13,11 +13,11 @@
  * module needs rebuilding based on source file timestamps.
  */
 
-import { execSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { execSync } from 'node:child_process';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
-export type NativeModule = typeof import("../../han-native");
+export type NativeModule = typeof import('../../han-native');
 
 let _nativeModule: NativeModule | null = null;
 let _loadError: Error | null = null;
@@ -28,52 +28,52 @@ let _rebuildChecked = false;
  * Returns the han-native directory path if running from source, null otherwise.
  */
 function getDevNativeDir(): string | null {
-	// Check if we're running via bun run on the source file
-	const mainScript = process.argv[1] || "";
-	if (!mainScript.includes("lib/main.ts")) {
-		return null;
-	}
+  // Check if we're running via bun run on the source file
+  const mainScript = process.argv[1] || '';
+  if (!mainScript.includes('lib/main.ts')) {
+    return null;
+  }
 
-	// Navigate from lib/native.ts to packages/han-native
-	const hanDir = resolve(import.meta.dir, "../..");
-	const nativeDir = resolve(hanDir, "han-native");
+  // Navigate from lib/native.ts to packages/han-native
+  const hanDir = resolve(import.meta.dir, '../..');
+  const nativeDir = resolve(hanDir, 'han-native');
 
-	if (existsSync(nativeDir)) {
-		return nativeDir;
-	}
+  if (existsSync(nativeDir)) {
+    return nativeDir;
+  }
 
-	return null;
+  return null;
 }
 
 /**
  * Get the mtime of a file, or 0 if it doesn't exist.
  */
 function getMtime(path: string): number {
-	try {
-		return statSync(path).mtimeMs;
-	} catch {
-		return 0;
-	}
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return 0;
+  }
 }
 
 /**
  * Recursively get all files in a directory.
  */
 function getAllFiles(dir: string): string[] {
-	const files: string[] = [];
-	try {
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const fullPath = join(dir, entry.name);
-			if (entry.isDirectory()) {
-				files.push(...getAllFiles(fullPath));
-			} else {
-				files.push(fullPath);
-			}
-		}
-	} catch {
-		// Directory doesn't exist or can't be read
-	}
-	return files;
+  const files: string[] = [];
+  try {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...getAllFiles(fullPath));
+      } else {
+        files.push(fullPath);
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+  return files;
 }
 
 /**
@@ -81,39 +81,39 @@ function getAllFiles(dir: string): string[] {
  * Compares source file timestamps against the .node file.
  */
 function needsRebuild(nativeDir: string): boolean {
-	// Find the .node file
-	const nodeFile = readdirSync(nativeDir).find((f) => f.endsWith(".node"));
-	if (!nodeFile) {
-		return true; // No .node file, need to build
-	}
+  // Find the .node file
+  const nodeFile = readdirSync(nativeDir).find((f) => f.endsWith('.node'));
+  if (!nodeFile) {
+    return true; // No .node file, need to build
+  }
 
-	const nodeFilePath = join(nativeDir, nodeFile);
-	const nodeFileMtime = getMtime(nodeFilePath);
+  const nodeFilePath = join(nativeDir, nodeFile);
+  const nodeFileMtime = getMtime(nodeFilePath);
 
-	// Source files that affect the build
-	const sourcePatterns = [
-		join(nativeDir, "src"),
-		join(nativeDir, "Cargo.toml"),
-		join(nativeDir, "Cargo.lock"),
-		join(nativeDir, "build.rs"),
-	];
+  // Source files that affect the build
+  const sourcePatterns = [
+    join(nativeDir, 'src'),
+    join(nativeDir, 'Cargo.toml'),
+    join(nativeDir, 'Cargo.lock'),
+    join(nativeDir, 'build.rs'),
+  ];
 
-	// Check Cargo files
-	for (const pattern of sourcePatterns.slice(1)) {
-		if (getMtime(pattern) > nodeFileMtime) {
-			return true;
-		}
-	}
+  // Check Cargo files
+  for (const pattern of sourcePatterns.slice(1)) {
+    if (getMtime(pattern) > nodeFileMtime) {
+      return true;
+    }
+  }
 
-	// Check all files in src/
-	const srcDir = join(nativeDir, "src");
-	for (const file of getAllFiles(srcDir)) {
-		if (getMtime(file) > nodeFileMtime) {
-			return true;
-		}
-	}
+  // Check all files in src/
+  const srcDir = join(nativeDir, 'src');
+  for (const file of getAllFiles(srcDir)) {
+    if (getMtime(file) > nodeFileMtime) {
+      return true;
+    }
+  }
 
-	return false;
+  return false;
 }
 
 /**
@@ -121,26 +121,26 @@ function needsRebuild(nativeDir: string): boolean {
  * Only runs when in development mode and source files have changed.
  */
 function ensureNativeBuilt(): void {
-	if (_rebuildChecked) return;
-	_rebuildChecked = true;
+  if (_rebuildChecked) return;
+  _rebuildChecked = true;
 
-	const nativeDir = getDevNativeDir();
-	if (!nativeDir) return; // Not running from source
+  const nativeDir = getDevNativeDir();
+  if (!nativeDir) return; // Not running from source
 
-	if (!needsRebuild(nativeDir)) return; // Already up to date
+  if (!needsRebuild(nativeDir)) return; // Already up to date
 
-	console.error("[han] Native extension out of date, rebuilding...");
+  console.error('[han] Native extension out of date, rebuilding...');
 
-	try {
-		execSync("npm run build", {
-			cwd: nativeDir,
-			stdio: "inherit",
-		});
-		console.error("[han] Native extension rebuilt successfully");
-	} catch (error) {
-		console.error("[han] Failed to rebuild native extension:", error);
-		// Don't fail - let the normal loading try and give a better error
-	}
+  try {
+    execSync('npm run build', {
+      cwd: nativeDir,
+      stdio: 'inherit',
+    });
+    console.error('[han] Native extension rebuilt successfully');
+  } catch (error) {
+    console.error('[han] Failed to rebuild native extension:', error);
+    // Don't fail - let the normal loading try and give a better error
+  }
 }
 
 /**
@@ -158,65 +158,65 @@ function ensureNativeBuilt(): void {
  * - Reset error state on certain errors to allow retry after transient failures
  */
 function loadNativeModule(): NativeModule | null {
-	// Return cached module if already loaded
-	if (_nativeModule) return _nativeModule;
+  // Return cached module if already loaded
+  if (_nativeModule) return _nativeModule;
 
-	// If we've already tried and failed permanently, return null
-	if (_loadError) return null;
+  // If we've already tried and failed permanently, return null
+  if (_loadError) return null;
 
-	// Skip native module loading in CI when not built
-	if (process.env.SKIP_NATIVE === "true") {
-		_loadError = new Error("Native module skipped (SKIP_NATIVE=true)");
-		return null;
-	}
+  // Skip native module loading in CI when not built
+  if (process.env.SKIP_NATIVE === 'true') {
+    _loadError = new Error('Native module skipped (SKIP_NATIVE=true)');
+    return null;
+  }
 
-	// In dev mode, check if rebuild is needed
-	ensureNativeBuilt();
+  // In dev mode, check if rebuild is needed
+  ensureNativeBuilt();
 
-	// More retries with longer delays to handle race conditions
-	// when multiple hook processes start simultaneously during session start
-	// Total max wait: ~40 seconds (200ms * 2^0 + 2^1 + ... + 2^11)
-	const maxRetries = 12;
-	let lastError: Error | null = null;
+  // More retries with longer delays to handle race conditions
+  // when multiple hook processes start simultaneously during session start
+  // Total max wait: ~40 seconds (200ms * 2^0 + 2^1 + ... + 2^11)
+  const maxRetries = 12;
+  let lastError: Error | null = null;
 
-	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		try {
-			// Always use the .node file directly (copied by han-native's copy-to-han script)
-			// This works in both dev and production:
-			// - Dev: han-native's build script copies the .node file to ../han/native/
-			// - Production: build-bundle.js copies the platform-specific .node file
-			// Static require path tells Bun to embed the file in compiled binaries
-			_nativeModule = require("../native/han-native.node") as NativeModule;
-			return _nativeModule;
-		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Always use the .node file directly (copied by han-native's copy-to-han script)
+      // This works in both dev and production:
+      // - Dev: han-native's build script copies the .node file to ../han/native/
+      // - Production: build-bundle.js copies the platform-specific .node file
+      // Static require path tells Bun to embed the file in compiled binaries
+      _nativeModule = require('../native/han-native.node') as NativeModule;
+      return _nativeModule;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
 
-			// Check if this is a dlopen error (file might still be extracting)
-			const isDlopenError =
-				lastError.message.includes("dlopen") ||
-				lastError.message.includes("ERR_DLOPEN_FAILED") ||
-				lastError.message.includes("no such file") ||
-				lastError.message.includes("ENOENT") ||
-				lastError.message.includes("EBUSY") ||
-				lastError.message.includes("ETXTBSY");
+      // Check if this is a dlopen error (file might still be extracting)
+      const isDlopenError =
+        lastError.message.includes('dlopen') ||
+        lastError.message.includes('ERR_DLOPEN_FAILED') ||
+        lastError.message.includes('no such file') ||
+        lastError.message.includes('ENOENT') ||
+        lastError.message.includes('EBUSY') ||
+        lastError.message.includes('ETXTBSY');
 
-			// Don't retry on the last attempt
-			if (attempt < maxRetries - 1) {
-				// Exponential backoff with longer base delay for extraction issues
-				// dlopen errors: 200ms, 400ms, 800ms, 1600ms, 3200ms... (max 5s)
-				// other errors: 100ms, 200ms, 400ms... (max 2s)
-				const baseDelay = isDlopenError ? 200 : 100;
-				const maxDelay = isDlopenError ? 5000 : 2000;
-				const delay = Math.min(baseDelay * 2 ** attempt, maxDelay);
-				Bun.sleepSync(delay);
-			}
-		}
-	}
+      // Don't retry on the last attempt
+      if (attempt < maxRetries - 1) {
+        // Exponential backoff with longer base delay for extraction issues
+        // dlopen errors: 200ms, 400ms, 800ms, 1600ms, 3200ms... (max 5s)
+        // other errors: 100ms, 200ms, 400ms... (max 2s)
+        const baseDelay = isDlopenError ? 200 : 100;
+        const maxDelay = isDlopenError ? 5000 : 2000;
+        const delay = Math.min(baseDelay * 2 ** attempt, maxDelay);
+        Bun.sleepSync(delay);
+      }
+    }
+  }
 
-	// Cache the error so subsequent calls fail fast
-	_loadError =
-		lastError ?? new Error("Failed to load native module after retries");
-	return null;
+  // Cache the error so subsequent calls fail fast
+  _loadError =
+    lastError ?? new Error('Failed to load native module after retries');
+  return null;
 }
 
 /**
@@ -228,11 +228,11 @@ function loadNativeModule(): NativeModule | null {
  * temporary load failures.
  */
 export function getNativeModule(): NativeModule {
-	const module = loadNativeModule();
-	if (!module) {
-		throw _loadError ?? new Error("Failed to load native module");
-	}
-	return module;
+  const module = loadNativeModule();
+  if (!module) {
+    throw _loadError ?? new Error('Failed to load native module');
+  }
+  return module;
 }
 
 /**
@@ -240,7 +240,7 @@ export function getNativeModule(): NativeModule {
  * Returns null if the module cannot be loaded (useful for optional features).
  */
 export function tryGetNativeModule(): NativeModule | null {
-	return loadNativeModule();
+  return loadNativeModule();
 }
 
 // ============================================================================
@@ -254,8 +254,7 @@ export function tryGetNativeModule(): NativeModule | null {
  * Returns null if native module is not available
  */
 export function getGitRemoteUrl(dir: string): string | null {
-	const module = tryGetNativeModule();
-	return module?.getGitRemoteUrl(dir) ?? null;
+  return getNativeModule().getGitRemoteUrl(dir);
 }
 
 /**
@@ -263,8 +262,7 @@ export function getGitRemoteUrl(dir: string): string | null {
  * Returns null if native module is not available
  */
 export function getGitBranch(dir: string): string | null {
-	const module = tryGetNativeModule();
-	return module?.getGitBranch(dir) ?? null;
+  return getNativeModule().getGitBranch(dir);
 }
 
 /**
@@ -272,8 +270,7 @@ export function getGitBranch(dir: string): string | null {
  * Returns null if native module is not available
  */
 export function getGitRoot(dir: string): string | null {
-	const module = tryGetNativeModule();
-	return module?.getGitRoot(dir) ?? null;
+  return getNativeModule().getGitRoot(dir);
 }
 
 /**
@@ -281,8 +278,7 @@ export function getGitRoot(dir: string): string | null {
  * Returns null if native module is not available
  */
 export function getGitCommonDir(dir: string): string | null {
-	const module = tryGetNativeModule();
-	return module?.getGitCommonDir(dir) ?? null;
+  return getNativeModule().getGitCommonDir(dir);
 }
 
 /**
@@ -290,17 +286,45 @@ export function getGitCommonDir(dir: string): string | null {
  * Returns empty array if native module is not available
  */
 export function gitLsFiles(dir: string): string[] {
-	const module = tryGetNativeModule();
-	return module?.gitLsFiles(dir) ?? [];
+  return getNativeModule().gitLsFiles(dir);
 }
 
 /**
  * List git worktrees for a repository
  */
 export function gitWorktreeList(
-	dir: string,
-): ReturnType<NativeModule["gitWorktreeList"]> {
-	return getNativeModule().gitWorktreeList(dir);
+  dir: string
+): ReturnType<NativeModule['gitWorktreeList']> {
+  return getNativeModule().gitWorktreeList(dir);
+}
+
+/**
+ * Add a git worktree at the specified path for a branch
+ */
+export function gitWorktreeAdd(
+  dir: string,
+  path: string,
+  branch: string
+): void {
+  getNativeModule().gitWorktreeAdd(dir, path, branch);
+}
+
+/**
+ * Remove a git worktree at the specified path
+ */
+export function gitWorktreeRemove(
+  dir: string,
+  path: string,
+  force?: boolean | null
+): void {
+  getNativeModule().gitWorktreeRemove(dir, path, force);
+}
+
+/**
+ * Create a new git branch
+ */
+export function gitCreateBranch(dir: string, branch: string): void {
+  getNativeModule().gitCreateBranch(dir, branch);
 }
 
 /**
@@ -336,10 +360,28 @@ export function gitWorktreeRemove(
  * Get session file changes
  */
 export function getSessionFileChanges(
-	dbPath: string,
-	sessionId: string,
-): ReturnType<NativeModule["getSessionFileChanges"]> {
-	return getNativeModule().getSessionFileChanges(dbPath, sessionId);
+  dbPath: string,
+  sessionId: string
+): ReturnType<NativeModule['getSessionFileChanges']> {
+  return getNativeModule().getSessionFileChanges(dbPath, sessionId);
+}
+
+// ============================================================================
+// Type re-exports from native module
+// ============================================================================
+
+/** Git worktree information */
+export interface GitWorktree {
+  /** Absolute path to the worktree */
+  path: string;
+  /** Name of the worktree (basename of path for main, or worktree name) */
+  name: string;
+  /** Current branch or commit */
+  head?: string;
+  /** Whether this is the main worktree */
+  isMain: boolean;
+  /** Whether the worktree is locked */
+  isLocked: boolean;
 }
 
 // ============================================================================
@@ -347,33 +389,33 @@ export function getSessionFileChanges(
 // ============================================================================
 
 export function ftsIndex(
-	...args: Parameters<NativeModule["ftsIndex"]>
-): ReturnType<NativeModule["ftsIndex"]> {
-	return getNativeModule().ftsIndex(...args);
+  ...args: Parameters<NativeModule['ftsIndex']>
+): ReturnType<NativeModule['ftsIndex']> {
+  return getNativeModule().ftsIndex(...args);
 }
 
 export function ftsSearch(
-	...args: Parameters<NativeModule["ftsSearch"]>
-): ReturnType<NativeModule["ftsSearch"]> {
-	return getNativeModule().ftsSearch(...args);
+  ...args: Parameters<NativeModule['ftsSearch']>
+): ReturnType<NativeModule['ftsSearch']> {
+  return getNativeModule().ftsSearch(...args);
 }
 
 export function ftsDelete(
-	...args: Parameters<NativeModule["ftsDelete"]>
-): ReturnType<NativeModule["ftsDelete"]> {
-	return getNativeModule().ftsDelete(...args);
+  ...args: Parameters<NativeModule['ftsDelete']>
+): ReturnType<NativeModule['ftsDelete']> {
+  return getNativeModule().ftsDelete(...args);
 }
 
 export function vectorIndex(
-	...args: Parameters<NativeModule["vectorIndex"]>
-): ReturnType<NativeModule["vectorIndex"]> {
-	return getNativeModule().vectorIndex(...args);
+  ...args: Parameters<NativeModule['vectorIndex']>
+): ReturnType<NativeModule['vectorIndex']> {
+  return getNativeModule().vectorIndex(...args);
 }
 
 export function vectorSearch(
-	...args: Parameters<NativeModule["vectorSearch"]>
-): ReturnType<NativeModule["vectorSearch"]> {
-	return getNativeModule().vectorSearch(...args);
+  ...args: Parameters<NativeModule['vectorSearch']>
+): ReturnType<NativeModule['vectorSearch']> {
+  return getNativeModule().vectorSearch(...args);
 }
 
 // ============================================================================
@@ -385,7 +427,7 @@ export function vectorSearch(
  * This mirrors the native const enum with the same values.
  */
 export enum FileEventType {
-	Created = "Created",
-	Modified = "Modified",
-	Removed = "Removed",
+  Created = 'Created',
+  Modified = 'Modified',
+  Removed = 'Removed',
 }

@@ -318,8 +318,7 @@ export default async function PaperPage({
 										</ul>
 
 										<p className="text-gray-600 dark:text-gray-400 mb-6">
-											That&apos;s what AI-DLC gives you. Start with the
-											practical runbooks or dive into the theory.
+											Start with the practical runbooks or dive into the theory.
 										</p>
 
 										<div className="flex flex-col sm:flex-row gap-4">

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import YAML from "yaml";
 import {
+	CATEGORY_META,
+	CATEGORY_ORDER,
 	getAllPlugins,
 	getAllPluginsAcrossCategories,
 	getPluginContent,
 	type PluginCategory,
-	CATEGORY_ORDER,
-	CATEGORY_META,
 } from "../../../../lib/plugins";
 import Header from "../../../components/Header";
 import HookCommandWithDetails from "../../../components/HookCommandWithDetails";
@@ -203,19 +203,14 @@ export default async function PluginPage({
 	// Get plugins for sidebar
 	const pluginsByCategory = getPluginsByCategory();
 
-	// Load plugin metadata for tags
-	// Always use plugin.source which contains the actual filesystem path
-	const pluginDir = path.join(
-		process.cwd(),
-		"..",
-		plugin.source.replace("./", ""),
-	);
-	const pluginJsonPath = path.join(pluginDir, ".claude-plugin/plugin.json");
-	const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
-	const tags = pluginJson.keywords || [];
+	// Check if this is an external plugin
+	const isExternal = plugin.source.startsWith("github:");
 
-	// Load han-plugin.yml if it exists (for hook configuration)
-	const hanPluginPath = path.join(pluginDir, "han-plugin.yml");
+	// For external plugins, get tags from marketplace.json
+	// For local plugins, read from plugin.json
+	let tags: string[] = [];
+	let pluginJson: { keywords?: string[]; version?: string; license?: string } =
+		{};
 	let hanConfig: {
 		hooks?: Record<
 			string,
@@ -227,44 +222,121 @@ export default async function PluginPage({
 			}
 		>;
 	} | null = null;
-	if (fs.existsSync(hanPluginPath)) {
-		try {
-			hanConfig = YAML.parse(fs.readFileSync(hanPluginPath, "utf-8"));
-		} catch {
-			hanConfig = null;
-		}
-	}
-
-	// Load script files from scripts/ folder (for han-config hooks)
-	const scriptsDir = path.join(pluginDir, "scripts");
 	const scriptFiles: { name: string; path: string; content: string }[] = [];
-	if (fs.existsSync(scriptsDir)) {
-		const scripts = fs
-			.readdirSync(scriptsDir)
-			.filter((f) => f.endsWith(".sh") || f.endsWith(".js"));
-		for (const script of scripts) {
-			const scriptPath = path.join(scriptsDir, script);
-			scriptFiles.push({
-				name: path.basename(script, path.extname(script)),
-				path: `scripts/${script}`,
-				content: fs.readFileSync(scriptPath, "utf-8"),
-			});
+
+	if (isExternal) {
+		// External plugin: get tags from marketplace.json
+		try {
+			const marketplacePath = path.join(
+				process.cwd(),
+				"..",
+				".claude-plugin",
+				"marketplace.json",
+			);
+			const marketplaceData = JSON.parse(
+				fs.readFileSync(marketplacePath, "utf-8"),
+			);
+			const marketPlugin = marketplaceData.plugins.find(
+				(p: { source: string }) => p.source === plugin.source,
+			);
+			tags = marketPlugin?.keywords || [];
+			pluginJson = { keywords: tags };
+		} catch {
+			tags = [];
+			pluginJson = {};
+		}
+		// External plugins don't have local han-plugin.yml or scripts
+	} else {
+		// Local plugin: load plugin metadata for tags
+		const pluginDir = path.join(
+			process.cwd(),
+			"..",
+			plugin.source.replace("./", ""),
+		);
+		const pluginJsonPath = path.join(pluginDir, ".claude-plugin/plugin.json");
+		try {
+			pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf-8"));
+			tags = pluginJson.keywords || [];
+		} catch {
+			tags = [];
+			pluginJson = {};
+		}
+
+		// Load han-plugin.yml if it exists (for hook configuration)
+		const hanPluginPath = path.join(pluginDir, "han-plugin.yml");
+		if (fs.existsSync(hanPluginPath)) {
+			try {
+				hanConfig = YAML.parse(fs.readFileSync(hanPluginPath, "utf-8"));
+			} catch {
+				hanConfig = null;
+			}
+		}
+
+		// Load script files from scripts/ folder (for han-config hooks)
+		const scriptsDir = path.join(pluginDir, "scripts");
+		if (fs.existsSync(scriptsDir)) {
+			const scripts = fs
+				.readdirSync(scriptsDir)
+				.filter((f) => f.endsWith(".sh") || f.endsWith(".js"));
+			for (const script of scripts) {
+				const scriptPath = path.join(scriptsDir, script);
+				scriptFiles.push({
+					name: path.basename(script, path.extname(script)),
+					path: `scripts/${script}`,
+					content: fs.readFileSync(scriptPath, "utf-8"),
+				});
+			}
 		}
 	}
 
 	// Find related plugins
 	const allPlugins = getAllPluginsAcrossCategories();
-	const relatedPlugins = allPlugins
-		.filter((p) => p.name !== plugin.metadata.name)
-		.map((p) => {
+
+	// Helper to check if source is external (github:owner/repo)
+	const isExternalSource = (source: string) => source.startsWith("github:");
+
+	// Helper to get keywords for a plugin
+	const getPluginKeywords = (source: string): string[] => {
+		// For external plugins, read keywords from marketplace.json
+		if (isExternalSource(source)) {
+			try {
+				const marketplacePath = path.join(
+					process.cwd(),
+					"..",
+					".claude-plugin",
+					"marketplace.json",
+				);
+				const marketplaceData = JSON.parse(
+					fs.readFileSync(marketplacePath, "utf-8"),
+				);
+				const marketPlugin = marketplaceData.plugins.find(
+					(mp: { source: string }) => mp.source === source,
+				);
+				return marketPlugin?.keywords || [];
+			} catch {
+				return [];
+			}
+		}
+
+		// For local plugins, read from plugin.json
+		try {
 			const pJsonPath = path.join(
 				process.cwd(),
 				"..",
-				p.source,
+				source,
 				".claude-plugin/plugin.json",
 			);
 			const pJson = JSON.parse(fs.readFileSync(pJsonPath, "utf-8"));
-			const pTags = pJson.keywords || [];
+			return pJson.keywords || [];
+		} catch {
+			return [];
+		}
+	};
+
+	const relatedPlugins = allPlugins
+		.filter((p) => p.name !== plugin.metadata.name)
+		.map((p) => {
+			const pTags = getPluginKeywords(p.source);
 			const sharedTags = pTags.filter((t: string) => tags.includes(t));
 			const sameCategory = p.category === plugin.metadata.category ? 1 : 0;
 			return {

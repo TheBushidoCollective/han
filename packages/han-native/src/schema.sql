@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS projects (
     relative_path TEXT,
     name TEXT NOT NULL,
     is_worktree INTEGER DEFAULT 0,
+    source_config_dir TEXT,  -- Which CLAUDE_CONFIG_DIR this project was discovered from
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug);
 CREATE INDEX IF NOT EXISTS idx_projects_path ON projects(path);
 CREATE INDEX IF NOT EXISTS idx_projects_repo ON projects(repo_id);
+CREATE INDEX IF NOT EXISTS idx_projects_source ON projects(source_config_dir);
 
 -- ============================================================================
 -- Sessions (Claude Code sessions)
@@ -45,11 +47,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     status TEXT DEFAULT 'active',
     slug TEXT,  -- Human-readable session name (e.g., "snug-dreaming-knuth")
     transcript_path TEXT,
+    source_config_dir TEXT,  -- Which CLAUDE_CONFIG_DIR this session originated from
     last_indexed_line INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_source ON sessions(source_config_dir);
 
 -- ============================================================================
 -- Session Files (JSONL files belonging to sessions)
@@ -472,6 +476,50 @@ CREATE TRIGGER IF NOT EXISTS gen_summaries_au AFTER UPDATE ON generated_session_
     INSERT INTO generated_session_summaries_fts(rowid, id, summary_text, topics)
     VALUES (NEW.rowid, NEW.id, NEW.summary_text, NEW.topics);
 END;
+
+-- ============================================================================
+-- Config Dirs Registry (for multi-environment support)
+-- Tracks registered CLAUDE_CONFIG_DIR locations that the central coordinator
+-- should index sessions from.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS config_dirs (
+    id TEXT PRIMARY KEY,
+    path TEXT UNIQUE NOT NULL,  -- Absolute path to the config dir (e.g., ~/.claude, /work/.claude)
+    name TEXT,  -- Human-friendly name (e.g., "Work", "Personal", "Default")
+    registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_indexed_at TEXT,  -- Last time we scanned this config dir for sessions
+    session_count INTEGER DEFAULT 0,  -- Cached count of sessions from this config dir
+    is_default INTEGER DEFAULT 0  -- Whether this is the default ~/.claude location
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_dirs_path ON config_dirs(path);
+CREATE INDEX IF NOT EXISTS idx_config_dirs_default ON config_dirs(is_default);
+
+-- ============================================================================
+-- Async Hook Queue (for PostToolUse async hook execution)
+-- Tracks hooks queued for non-blocking execution after tool use.
+-- The coordinator deduplicates and cancels stale entries.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS async_hook_queue (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    cwd TEXT NOT NULL,           -- Working directory for the hook
+    plugin TEXT NOT NULL,        -- Plugin name (e.g., "jutsu-biome")
+    hook_name TEXT NOT NULL,     -- Hook name (e.g., "lint")
+    file_paths TEXT NOT NULL,    -- JSON array of file paths to validate
+    command TEXT NOT NULL,       -- The command to execute
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'running', 'completed', 'failed', 'cancelled'
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT,
+    completed_at TEXT,
+    result TEXT,                 -- JSON with exit_code, output, etc.
+    error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_session ON async_hook_queue(session_id);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_status ON async_hook_queue(status);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_dedup ON async_hook_queue(session_id, cwd, plugin, hook_name, status);
+CREATE INDEX IF NOT EXISTS idx_async_hook_queue_created ON async_hook_queue(created_at);
 
 -- ============================================================================
 -- Vector embeddings (for semantic search)

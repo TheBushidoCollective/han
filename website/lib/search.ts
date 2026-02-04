@@ -31,6 +31,52 @@ export interface TagInfo {
 		| "paradigm";
 }
 
+/**
+ * Check if a plugin source is external (hosted on GitHub, not local)
+ */
+function isExternalSource(source: string): boolean {
+	return source.startsWith("github:");
+}
+
+/**
+ * Get keywords for a plugin - from local filesystem or marketplace.json
+ */
+function getPluginKeywords(source: string): string[] {
+	// For external plugins, read keywords from marketplace.json
+	if (isExternalSource(source)) {
+		try {
+			const marketplacePath = path.join(
+				process.cwd(),
+				"..",
+				".claude-plugin",
+				"marketplace.json",
+			);
+			const marketplaceData = JSON.parse(
+				fs.readFileSync(marketplacePath, "utf-8"),
+			);
+			const plugin = marketplaceData.plugins.find(
+				(p: { source: string }) => p.source === source,
+			);
+			return plugin?.keywords || [];
+		} catch {
+			return [];
+		}
+	}
+
+	// For local plugins, read from plugin.json
+	try {
+		const pluginJson = JSON.parse(
+			fs.readFileSync(
+				path.join(process.cwd(), "..", source, ".claude-plugin/plugin.json"),
+				"utf-8",
+			),
+		);
+		return pluginJson.keywords || [];
+	} catch {
+		return [];
+	}
+}
+
 // Build the search index from all plugins
 export function buildSearchIndex(): SearchIndex {
 	const plugins = getAllPluginsAcrossCategories();
@@ -38,19 +84,7 @@ export function buildSearchIndex(): SearchIndex {
 	const tagCounts = new Map<string, number>();
 
 	for (const plugin of plugins) {
-		const pluginJson = JSON.parse(
-			fs.readFileSync(
-				path.join(
-					process.cwd(),
-					"..",
-					plugin.source,
-					".claude-plugin/plugin.json",
-				),
-				"utf-8",
-			),
-		);
-
-		const tags = pluginJson.keywords || [];
+		const tags = getPluginKeywords(plugin.source);
 
 		// Track tag usage
 		for (const tag of tags) {

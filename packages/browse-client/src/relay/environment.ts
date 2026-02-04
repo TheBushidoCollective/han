@@ -7,19 +7,19 @@
  * Supports @defer directive via multipart/mixed response streaming.
  */
 
-import { type Client, createClient } from 'graphql-ws';
+import { type Client, createClient } from "graphql-ws";
 import {
-  Environment,
-  type FetchFunction,
-  type GraphQLResponse,
-  Network,
-  Observable,
-  type ObservableFromValue,
-  RecordSource,
-  Store,
-  type SubscribeFunction,
-} from 'relay-runtime';
-import { getGraphQLEndpoints } from '../config/urls.ts';
+	Environment,
+	type FetchFunction,
+	type GraphQLResponse,
+	Network,
+	Observable,
+	type ObservableFromValue,
+	RecordSource,
+	Store,
+	type SubscribeFunction,
+} from "relay-runtime";
+import { getGraphQLEndpoints } from "../config/urls.ts";
 
 /**
  * Parse a multipart/mixed response for @defer support
@@ -36,142 +36,142 @@ import { getGraphQLEndpoints } from '../config/urls.ts';
  * --boundary--
  */
 async function* parseMultipartResponse(
-  response: Response,
-  boundary: string
+	response: Response,
+	boundary: string,
 ): AsyncGenerator<GraphQLResponse> {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('Response body is not readable');
-  }
+	const reader = response.body?.getReader();
+	if (!reader) {
+		throw new Error("Response body is not readable");
+	}
 
-  const decoder = new TextDecoder();
-  let buffer = '';
-  // Multipart boundaries must be preceded by CRLF (except the first one)
-  // The actual delimiter in the body is CRLF + "--" + boundary
-  const boundaryMarker = `--${boundary}`;
-  const crlfDelimiter = `\r\n${boundaryMarker}`;
-  const lfDelimiter = `\n${boundaryMarker}`;
+	const decoder = new TextDecoder();
+	let buffer = "";
+	// Multipart boundaries must be preceded by CRLF (except the first one)
+	// The actual delimiter in the body is CRLF + "--" + boundary
+	const boundaryMarker = `--${boundary}`;
+	const crlfDelimiter = `\r\n${boundaryMarker}`;
+	const lfDelimiter = `\n${boundaryMarker}`;
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
 
-      if (done) {
-        break;
-      }
+			if (done) {
+				break;
+			}
 
-      buffer += decoder.decode(value, { stream: true });
+			buffer += decoder.decode(value, { stream: true });
 
-      // Find and skip the initial boundary marker at the start of the response
-      // The first boundary is NOT preceded by CRLF
-      if (buffer.startsWith(boundaryMarker)) {
-        buffer = buffer.slice(boundaryMarker.length);
-        // Skip trailing CRLF or LF after the initial boundary
-        if (buffer.startsWith('\r\n')) {
-          buffer = buffer.slice(2);
-        } else if (buffer.startsWith('\n')) {
-          buffer = buffer.slice(1);
-        }
-      } else if (buffer.startsWith(`\r\n${boundaryMarker}`)) {
-        buffer = buffer.slice(2 + boundaryMarker.length);
-        if (buffer.startsWith('\r\n')) {
-          buffer = buffer.slice(2);
-        } else if (buffer.startsWith('\n')) {
-          buffer = buffer.slice(1);
-        }
-      }
+			// Find and skip the initial boundary marker at the start of the response
+			// The first boundary is NOT preceded by CRLF
+			if (buffer.startsWith(boundaryMarker)) {
+				buffer = buffer.slice(boundaryMarker.length);
+				// Skip trailing CRLF or LF after the initial boundary
+				if (buffer.startsWith("\r\n")) {
+					buffer = buffer.slice(2);
+				} else if (buffer.startsWith("\n")) {
+					buffer = buffer.slice(1);
+				}
+			} else if (buffer.startsWith(`\r\n${boundaryMarker}`)) {
+				buffer = buffer.slice(2 + boundaryMarker.length);
+				if (buffer.startsWith("\r\n")) {
+					buffer = buffer.slice(2);
+				} else if (buffer.startsWith("\n")) {
+					buffer = buffer.slice(1);
+				}
+			}
 
-      // Now process parts - look for CRLF+boundary or LF+boundary as delimiters
-      // This prevents matching "---" that appears inside JSON content
-      let delimiterIndex = buffer.indexOf(crlfDelimiter);
-      let delimiterLen = crlfDelimiter.length;
-      if (delimiterIndex === -1) {
-        delimiterIndex = buffer.indexOf(lfDelimiter);
-        delimiterLen = lfDelimiter.length;
-      }
+			// Now process parts - look for CRLF+boundary or LF+boundary as delimiters
+			// This prevents matching "---" that appears inside JSON content
+			let delimiterIndex = buffer.indexOf(crlfDelimiter);
+			let delimiterLen = crlfDelimiter.length;
+			if (delimiterIndex === -1) {
+				delimiterIndex = buffer.indexOf(lfDelimiter);
+				delimiterLen = lfDelimiter.length;
+			}
 
-      while (delimiterIndex !== -1) {
-        // Extract the part (headers + body) before the delimiter
-        const part = buffer.slice(0, delimiterIndex);
-        buffer = buffer.slice(delimiterIndex + delimiterLen);
+			while (delimiterIndex !== -1) {
+				// Extract the part (headers + body) before the delimiter
+				const part = buffer.slice(0, delimiterIndex);
+				buffer = buffer.slice(delimiterIndex + delimiterLen);
 
-        // Parse the part - find headers and body
-        if (part.trim()) {
-          // Find the JSON body after headers (separated by double newline)
-          let bodyStart = part.indexOf('\r\n\r\n');
-          let headerSepLen = 4;
-          if (bodyStart === -1) {
-            bodyStart = part.indexOf('\n\n');
-            headerSepLen = 2;
-          }
-          if (bodyStart !== -1) {
-            const jsonStr = part.slice(bodyStart + headerSepLen).trim();
-            if (jsonStr) {
-              try {
-                const json = JSON.parse(jsonStr);
-                yield json as GraphQLResponse;
-              } catch {
-                // Skip malformed JSON
-              }
-            }
-          }
-        }
+				// Parse the part - find headers and body
+				if (part.trim()) {
+					// Find the JSON body after headers (separated by double newline)
+					let bodyStart = part.indexOf("\r\n\r\n");
+					let headerSepLen = 4;
+					if (bodyStart === -1) {
+						bodyStart = part.indexOf("\n\n");
+						headerSepLen = 2;
+					}
+					if (bodyStart !== -1) {
+						const jsonStr = part.slice(bodyStart + headerSepLen).trim();
+						if (jsonStr) {
+							try {
+								const json = JSON.parse(jsonStr);
+								yield json as GraphQLResponse;
+							} catch {
+								// Skip malformed JSON
+							}
+						}
+					}
+				}
 
-        // Check for end marker (--boundary--)
-        if (buffer.startsWith('--')) {
-          // End of multipart
-          break;
-        }
+				// Check for end marker (--boundary--)
+				if (buffer.startsWith("--")) {
+					// End of multipart
+					break;
+				}
 
-        // Skip leading newline after delimiter if present
-        if (buffer.startsWith('\r\n')) {
-          buffer = buffer.slice(2);
-        } else if (buffer.startsWith('\n')) {
-          buffer = buffer.slice(1);
-        }
+				// Skip leading newline after delimiter if present
+				if (buffer.startsWith("\r\n")) {
+					buffer = buffer.slice(2);
+				} else if (buffer.startsWith("\n")) {
+					buffer = buffer.slice(1);
+				}
 
-        // Look for next delimiter
-        delimiterIndex = buffer.indexOf(crlfDelimiter);
-        delimiterLen = crlfDelimiter.length;
-        if (delimiterIndex === -1) {
-          delimiterIndex = buffer.indexOf(lfDelimiter);
-          delimiterLen = lfDelimiter.length;
-        }
-      }
-    }
+				// Look for next delimiter
+				delimiterIndex = buffer.indexOf(crlfDelimiter);
+				delimiterLen = crlfDelimiter.length;
+				if (delimiterIndex === -1) {
+					delimiterIndex = buffer.indexOf(lfDelimiter);
+					delimiterLen = lfDelimiter.length;
+				}
+			}
+		}
 
-    // Process any remaining buffer (last part before final boundary)
-    if (buffer.trim() && !buffer.trim().startsWith('--')) {
-      // Handle both \r\n\r\n and \n\n
-      let bodyStart = buffer.indexOf('\r\n\r\n');
-      let headerSepLen = 4;
-      if (bodyStart === -1) {
-        bodyStart = buffer.indexOf('\n\n');
-        headerSepLen = 2;
-      }
-      if (bodyStart !== -1) {
-        const jsonStr = buffer.slice(bodyStart + headerSepLen).trim();
-        if (jsonStr) {
-          try {
-            const json = JSON.parse(jsonStr);
-            yield json as GraphQLResponse;
-          } catch {
-            // Skip malformed JSON
-          }
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
+		// Process any remaining buffer (last part before final boundary)
+		if (buffer.trim() && !buffer.trim().startsWith("--")) {
+			// Handle both \r\n\r\n and \n\n
+			let bodyStart = buffer.indexOf("\r\n\r\n");
+			let headerSepLen = 4;
+			if (bodyStart === -1) {
+				bodyStart = buffer.indexOf("\n\n");
+				headerSepLen = 2;
+			}
+			if (bodyStart !== -1) {
+				const jsonStr = buffer.slice(bodyStart + headerSepLen).trim();
+				if (jsonStr) {
+					try {
+						const json = JSON.parse(jsonStr);
+						yield json as GraphQLResponse;
+					} catch {
+						// Skip malformed JSON
+					}
+				}
+			}
+		}
+	} finally {
+		reader.releaseLock();
+	}
 }
 
 /**
  * Extract boundary from Content-Type header
  */
 function extractBoundary(contentType: string): string | null {
-  const match = contentType.match(/boundary=(?:"([^"]+)"|([^\s;]+))/i);
-  return match ? match[1] || match[2] : null;
+	const match = contentType.match(/boundary=(?:"([^"]+)"|([^\s;]+))/i);
+	return match ? match[1] || match[2] : null;
 }
 
 /**
@@ -181,70 +181,70 @@ function extractBoundary(contentType: string): string | null {
  * Returns an Observable to allow incremental delivery.
  */
 const fetchFn: FetchFunction = (
-  request,
-  variables
+	request,
+	variables,
 ): ObservableFromValue<GraphQLResponse> => {
-  return Observable.create((sink) => {
-    let aborted = false;
-    const abortController = new AbortController();
+	return Observable.create((sink) => {
+		let aborted = false;
+		const abortController = new AbortController();
 
-    (async () => {
-      try {
-        const endpoints = getGraphQLEndpoints();
-        const response = await fetch(endpoints.http, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Request multipart format for @defer support
-            Accept: 'multipart/mixed;deferSpec=20220824,application/json',
-          },
-          body: JSON.stringify({
-            query: request.text,
-            variables,
-          }),
-          signal: abortController.signal,
-        });
+		(async () => {
+			try {
+				const endpoints = getGraphQLEndpoints();
+				const response = await fetch(endpoints.http, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						// Request multipart format for @defer support
+						Accept: "multipart/mixed;deferSpec=20220824,application/json",
+					},
+					body: JSON.stringify({
+						query: request.text,
+						variables,
+					}),
+					signal: abortController.signal,
+				});
 
-        if (aborted) return;
+				if (aborted) return;
 
-        const contentType = response.headers.get('Content-Type') || '';
+				const contentType = response.headers.get("Content-Type") || "";
 
-        // Check if response is multipart (for @defer)
-        if (contentType.includes('multipart/mixed')) {
-          const boundary = extractBoundary(contentType);
-          if (!boundary) {
-            throw new Error('Missing boundary in multipart response');
-          }
+				// Check if response is multipart (for @defer)
+				if (contentType.includes("multipart/mixed")) {
+					const boundary = extractBoundary(contentType);
+					if (!boundary) {
+						throw new Error("Missing boundary in multipart response");
+					}
 
-          // Stream multipart responses
-          for await (const part of parseMultipartResponse(response, boundary)) {
-            if (aborted) break;
-            sink.next(part);
-          }
-        } else {
-          // Regular JSON response
-          const json = await response.json();
-          if (!aborted) {
-            sink.next(json as GraphQLResponse);
-          }
-        }
+					// Stream multipart responses
+					for await (const part of parseMultipartResponse(response, boundary)) {
+						if (aborted) break;
+						sink.next(part);
+					}
+				} else {
+					// Regular JSON response
+					const json = await response.json();
+					if (!aborted) {
+						sink.next(json as GraphQLResponse);
+					}
+				}
 
-        if (!aborted) {
-          sink.complete();
-        }
-      } catch (error) {
-        if (!aborted) {
-          sink.error(error instanceof Error ? error : new Error(String(error)));
-        }
-      }
-    })();
+				if (!aborted) {
+					sink.complete();
+				}
+			} catch (error) {
+				if (!aborted) {
+					sink.error(error instanceof Error ? error : new Error(String(error)));
+				}
+			}
+		})();
 
-    // Cleanup function
-    return () => {
-      aborted = true;
-      abortController.abort();
-    };
-  });
+		// Cleanup function
+		return () => {
+			aborted = true;
+			abortController.abort();
+		};
+	});
 };
 
 /**
@@ -253,63 +253,63 @@ const fetchFn: FetchFunction = (
 let wsClient: Client | null = null;
 
 function getWsClient(): Client {
-  if (typeof window === 'undefined') {
-    throw new Error('WebSocket client can only be created on the client side');
-  }
+	if (typeof window === "undefined") {
+		throw new Error("WebSocket client can only be created on the client side");
+	}
 
-  if (!wsClient) {
-    const endpoints = getGraphQLEndpoints();
-    wsClient = createClient({
-      url: endpoints.ws,
-      retryAttempts: 5,
-      shouldRetry: () => true,
-    });
-  }
-  return wsClient;
+	if (!wsClient) {
+		const endpoints = getGraphQLEndpoints();
+		wsClient = createClient({
+			url: endpoints.ws,
+			retryAttempts: 5,
+			shouldRetry: () => true,
+		});
+	}
+	return wsClient;
 }
 
 /**
  * Subscribe function for GraphQL subscriptions
  */
 const subscribeFn: SubscribeFunction = (request, variables) => {
-  return Observable.create((sink) => {
-    const client = getWsClient();
+	return Observable.create((sink) => {
+		const client = getWsClient();
 
-    const unsubscribe = client.subscribe(
-      {
-        query: request.text ?? '',
-        variables,
-      },
-      {
-        next: (result) => {
-          sink.next(result as GraphQLResponse);
-        },
-        error: (err) => {
-          sink.error(err instanceof Error ? err : new Error(String(err)));
-        },
-        complete: () => {
-          sink.complete();
-        },
-      }
-    );
+		const unsubscribe = client.subscribe(
+			{
+				query: request.text ?? "",
+				variables,
+			},
+			{
+				next: (result) => {
+					sink.next(result as GraphQLResponse);
+				},
+				error: (err) => {
+					sink.error(err instanceof Error ? err : new Error(String(err)));
+				},
+				complete: () => {
+					sink.complete();
+				},
+			},
+		);
 
-    return () => {
-      unsubscribe();
-    };
-  });
+		return () => {
+			unsubscribe();
+		};
+	});
 };
 
 /**
  * Create a new Relay environment
  */
 function createEnvironment(): Environment {
-  const network = Network.create(fetchFn, subscribeFn);
-  const store = new Store(new RecordSource());
+	const network = Network.create(fetchFn, subscribeFn);
+	const store = new Store(new RecordSource());
 
-  return new Environment({
-    network,
-    store,
-  });
+	return new Environment({
+		network,
+		store,
+	});
 }
 
 /**
@@ -321,17 +321,17 @@ let relayEnvironment: Environment | null = null;
  * Get the Relay environment (singleton on client, fresh on server)
  */
 export function getRelayEnvironment(): Environment {
-  // Server-side: always create a new environment
-  if (typeof window === 'undefined') {
-    return createEnvironment();
-  }
+	// Server-side: always create a new environment
+	if (typeof window === "undefined") {
+		return createEnvironment();
+	}
 
-  // Client-side: reuse singleton
-  if (!relayEnvironment) {
-    relayEnvironment = createEnvironment();
-  }
+	// Client-side: reuse singleton
+	if (!relayEnvironment) {
+		relayEnvironment = createEnvironment();
+	}
 
-  return relayEnvironment;
+	return relayEnvironment;
 }
 
 export default getRelayEnvironment;

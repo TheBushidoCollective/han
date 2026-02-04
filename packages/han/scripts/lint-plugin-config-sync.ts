@@ -8,5 +8,5 @@
  * - Verify hook commands exist
  */
 
-console.log("✓ Plugin config sync check passed (placeholder)");
+console.log('✓ Plugin config sync check passed (placeholder)');
 process.exit(0);

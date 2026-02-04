@@ -1,0 +1,27 @@
+hooks:
+  # Full project lint at Stop (checkpoint)
+  lint:
+    command: "pylint ."
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pylint[^a-zA-Z]|\"pylint\"' pyproject.toml"
+    if_changed:
+      - "**/*.py"
+      - "**/*.pyi"
+      - "pyproject.toml"
+      - ".pylintrc"
+      - "pylintrc"
+
+  # Single-file async lint on PostToolUse
+  lint-async:
+    event: PostToolUse
+    command: "pylint ${HAN_FILES}"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pylint[^a-zA-Z]|\"pylint\"' pyproject.toml"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.py"
+      - "**/*.pyi"

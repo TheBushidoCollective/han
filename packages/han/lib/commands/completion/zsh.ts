@@ -3,7 +3,7 @@
  */
 
 export function generateZshCompletion(): string {
-	return `#compdef han
+  return `#compdef han
 # han zsh completion
 # To enable, add to ~/.zshrc:
 #   eval "$(han completion zsh)"

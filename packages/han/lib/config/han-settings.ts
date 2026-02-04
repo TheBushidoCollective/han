@@ -1,103 +1,95 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import YAML from "yaml";
-import { getClaudeConfigDir, getProjectDir } from "./claude-settings.ts";
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import YAML from 'yaml';
+import { getClaudeConfigDir, getProjectDir } from './claude-settings.ts';
 
 /**
- * Hook override settings for a specific plugin hook
+ * Hook override settings for a specific plugin hook.
  */
 export interface HookOverride {
-	enabled?: boolean;
-	command?: string;
-	if_changed?: string[];
-	idle_timeout?: number | false;
-	/**
-	 * Script to run once before all directory iterations.
-	 * Useful for generating files that the hook depends on.
-	 */
-	before_all?: string;
+  enabled?: boolean;
+  command?: string;
+  if_changed?: string[];
+  idle_timeout?: number | false;
+  /**
+   * Script to run once before all directory iterations.
+   * Useful for generating files that the hook depends on.
+   */
+  before_all?: string;
 }
 
 /**
- * Plugin settings with nested hooks structure
+ * Plugin settings with nested hooks structure.
  */
 export interface PluginSettings {
-	hooks?: {
-		[hookName: string]: HookOverride;
-	};
+  hooks?: {
+    [hookName: string]: HookOverride;
+  };
 }
 
 /**
  * Port configuration for Han services
  */
 export interface PortConfig {
-	coordinator?: number; // GraphQL coordinator daemon port
-	browse?: number; // Browse UI server port
+  coordinator?: number; // GraphQL coordinator daemon port
+  browse?: number; // Browse UI server port
 }
 
 /**
- * Sync configuration for team platform data synchronization
+ * Learn mode for auto-detecting and installing plugins
+ * - "auto": Automatically install detected plugins (default)
+ * - "ask": Output what would be installed but don't install (user must confirm)
+ * - "none": Disable auto-detection entirely
  */
-export interface SyncConfig {
-	/** Enable sync to team platform (default: false) */
-	enabled?: boolean;
-	/** Sync server endpoint URL */
-	endpoint?: string;
-	/** API key for authentication (prefer env var HAN_SYNC_API_KEY) */
-	apiKey?: string;
-	/** Sync interval in seconds (default: 300) */
-	interval?: number;
-	/** Maximum messages per batch (default: 1000) */
-	batchSize?: number;
-	/** Include personal repos in sync (default: false) */
-	includePersonal?: boolean;
-	/** Force include specific repos by remote URL pattern */
-	forceInclude?: string[];
-	/** Force exclude specific repos by remote URL pattern */
-	forceExclude?: string[];
-	/** Include full message content (default: false for privacy) */
-	includeContent?: boolean;
-	/** Enable compression (default: true) */
-	compression?: boolean;
-}
+export type LearnMode = 'auto' | 'ask' | 'none';
 
 /**
  * Han configuration structure
  */
 export interface HanConfig {
-	/**
-	 * Custom han binary command or path.
-	 * Useful for development to run local version instead of installed binary.
-	 * @example "bun run /path/to/han/packages/han/lib/main.ts"
-	 * @example "/path/to/han"
-	 * @default "han" (from PATH)
-	 */
-	hanBinary?: string;
-	/**
-	 * Port configuration for Han services.
-	 * Ports are auto-allocated on first run to avoid conflicts
-	 * with other Han instances using different CLAUDE_CONFIG_DIR.
-	 */
-	ports?: PortConfig;
-	hooks?: {
-		enabled?: boolean; // Master switch (default: true)
-		checkpoints?: boolean; // Enable checkpoints for session-scoped filtering (default: true)
-		cache?: boolean; // Enable caching (default: true)
-		fail_fast?: boolean; // Stop on first failure (default: true)
-	};
-	memory?: {
-		enabled?: boolean; // Enable memory system (default: true)
-	};
-	metrics?: {
-		enabled?: boolean; // Enable metrics tracking (default: true)
-	};
-	/**
-	 * Sync configuration for team platform data synchronization
-	 */
-	sync?: SyncConfig;
-	plugins?: {
-		[pluginName: string]: PluginSettings;
-	};
+  /**
+   * Custom han binary command or path.
+   * Useful for development to run local version instead of installed binary.
+   * @example "bun run /path/to/han/packages/han/lib/main.ts"
+   * @example "/path/to/han"
+   * @default "han" (from PATH)
+   */
+  hanBinary?: string;
+  /**
+   * Port configuration for Han services.
+   * Ports are auto-allocated on first run to avoid conflicts
+   * with other Han instances using different CLAUDE_CONFIG_DIR.
+   */
+  ports?: PortConfig;
+  hooks?: {
+    enabled?: boolean; // Master switch (default: true)
+    checkpoints?: boolean; // Enable checkpoints for session-scoped filtering (default: true)
+    cache?: boolean; // Enable caching (default: true)
+    fail_fast?: boolean; // Stop on first failure (default: true)
+  };
+  /**
+   * Learn mode configuration for auto-detecting plugins.
+   * Controls whether Han automatically installs plugins when it
+   * detects marker files (like tsconfig.json, biome.json, etc.)
+   */
+  learn?: {
+    /**
+     * Learn mode:
+     * - "auto": Automatically install detected plugins (default)
+     * - "ask": Suggest plugins but require manual installation
+     * - "none": Disable auto-detection entirely
+     */
+    mode?: LearnMode;
+  };
+  memory?: {
+    enabled?: boolean; // Enable memory system (default: true)
+  };
+  metrics?: {
+    enabled?: boolean; // Enable metrics tracking (default: true)
+  };
+  plugins?: {
+    [pluginName: string]: PluginSettings;
+  };
 }
 
 /**
@@ -109,11 +101,11 @@ export interface HanConfig {
  * - directory: <dir>/han.yml (directory-specific)
  */
 export type HanConfigScope =
-	| "user"
-	| "project"
-	| "local"
-	| "root"
-	| "directory";
+  | 'user'
+  | 'project'
+  | 'local'
+  | 'root'
+  | 'directory';
 
 /**
  * Get Han config file paths in order of precedence (lowest to highest priority):
@@ -126,40 +118,40 @@ export type HanConfigScope =
  * getHanConfigPathsForDirectory() when resolving hooks for a specific directory.
  */
 export function getHanConfigPaths(): Array<{
-	scope: HanConfigScope;
-	path: string;
+  scope: HanConfigScope;
+  path: string;
 }> {
-	const paths: Array<{ scope: HanConfigScope; path: string }> = [];
-	const configDir = getClaudeConfigDir();
-	const projectDir = getProjectDir();
+  const paths: Array<{ scope: HanConfigScope; path: string }> = [];
+  const configDir = getClaudeConfigDir();
+  const projectDir = getProjectDir();
 
-	// 1. User config (lowest priority)
-	if (configDir) {
-		paths.push({
-			scope: "user",
-			path: join(configDir, "han.yml"),
-		});
-	}
+  // 1. User config (lowest priority)
+  if (configDir) {
+    paths.push({
+      scope: 'user',
+      path: join(configDir, 'han.yml'),
+    });
+  }
 
-	// 2. Project config (team-shared)
-	paths.push({
-		scope: "project",
-		path: join(projectDir, ".claude", "han.yml"),
-	});
+  // 2. Project config (team-shared)
+  paths.push({
+    scope: 'project',
+    path: join(projectDir, '.claude', 'han.yml'),
+  });
 
-	// 3. Local config (personal project-specific, gitignored)
-	paths.push({
-		scope: "local",
-		path: join(projectDir, ".claude", "han.local.yml"),
-	});
+  // 3. Local config (personal project-specific, gitignored)
+  paths.push({
+    scope: 'local',
+    path: join(projectDir, '.claude', 'han.local.yml'),
+  });
 
-	// 4. Root config (project root)
-	paths.push({
-		scope: "root",
-		path: join(projectDir, "han.yml"),
-	});
+  // 4. Root config (project root)
+  paths.push({
+    scope: 'root',
+    path: join(projectDir, 'han.yml'),
+  });
 
-	return paths;
+  return paths;
 }
 
 /**
@@ -169,76 +161,76 @@ export function getHanConfigPaths(): Array<{
  *   ~/.claude/han.yml < .claude/han.yml < .claude/han.local.yml < ./han.yml < dir/han.yml
  */
 export function getHanConfigPathsForDirectory(directory: string): Array<{
-	scope: HanConfigScope;
-	path: string;
+  scope: HanConfigScope;
+  path: string;
 }> {
-	const basePaths = getHanConfigPaths();
-	const projectDir = getProjectDir();
+  const basePaths = getHanConfigPaths();
+  const projectDir = getProjectDir();
 
-	// If directory is different from project root, add directory-specific config
-	if (directory !== projectDir) {
-		basePaths.push({
-			scope: "directory",
-			path: join(directory, "han.yml"),
-		});
-	}
+  // If directory is different from project root, add directory-specific config
+  if (directory !== projectDir) {
+    basePaths.push({
+      scope: 'directory',
+      path: join(directory, 'han.yml'),
+    });
+  }
 
-	return basePaths;
+  return basePaths;
 }
 
 /**
  * Parse YAML file and return config or null if missing/invalid
  */
 export function loadHanConfigFile(path: string): HanConfig | null {
-	if (!existsSync(path)) {
-		return null;
-	}
+  if (!existsSync(path)) {
+    return null;
+  }
 
-	try {
-		const content = readFileSync(path, "utf-8");
-		const config = YAML.parse(content);
+  try {
+    const content = readFileSync(path, 'utf-8');
+    const config = YAML.parse(content);
 
-		// Empty file returns null from YAML.parse, treat as empty object
-		if (config === null || config === undefined) {
-			return {};
-		}
+    // Empty file returns null from YAML.parse, treat as empty object
+    if (config === null || config === undefined) {
+      return {};
+    }
 
-		return config as HanConfig;
-	} catch {
-		// Invalid YAML or read error - return null
-		return null;
-	}
+    return config as HanConfig;
+  } catch {
+    // Invalid YAML or read error - return null
+    return null;
+  }
 }
 
 /**
  * Deep merge plugin settings (hooks are merged individually)
  */
 function mergePluginSettings(
-	base: { [pluginName: string]: PluginSettings } | undefined,
-	override: { [pluginName: string]: PluginSettings } | undefined,
+  base: { [pluginName: string]: PluginSettings } | undefined,
+  override: { [pluginName: string]: PluginSettings } | undefined
 ): { [pluginName: string]: PluginSettings } {
-	const result = { ...base };
+  const result = { ...base };
 
-	if (!override) {
-		return result;
-	}
+  if (!override) {
+    return result;
+  }
 
-	for (const [pluginName, pluginSettings] of Object.entries(override)) {
-		if (!result[pluginName]) {
-			result[pluginName] = pluginSettings;
-		} else {
-			// Merge hooks within the plugin
-			result[pluginName] = {
-				...result[pluginName],
-				hooks: {
-					...result[pluginName].hooks,
-					...pluginSettings.hooks,
-				},
-			};
-		}
-	}
+  for (const [pluginName, pluginSettings] of Object.entries(override)) {
+    if (!result[pluginName]) {
+      result[pluginName] = pluginSettings;
+    } else {
+      // Merge hooks within the plugin
+      result[pluginName] = {
+        ...result[pluginName],
+        hooks: {
+          ...result[pluginName].hooks,
+          ...pluginSettings.hooks,
+        },
+      };
+    }
+  }
 
-	return result;
+  return result;
 }
 
 /**
@@ -246,69 +238,64 @@ function mergePluginSettings(
  * Precedence: user < project < local < root
  */
 export function getMergedHanConfig(): HanConfig {
-	const merged: HanConfig = {};
+  const merged: HanConfig = {};
 
-	for (const { path } of getHanConfigPaths()) {
-		const config = loadHanConfigFile(path);
-		if (config) {
-			// hanBinary - later config wins
-			if (config.hanBinary !== undefined) {
-				merged.hanBinary = config.hanBinary;
-			}
+  for (const { path } of getHanConfigPaths()) {
+    const config = loadHanConfigFile(path);
+    if (config) {
+      // hanBinary - later config wins
+      if (config.hanBinary !== undefined) {
+        merged.hanBinary = config.hanBinary;
+      }
 
-			// Merge ports section
-			if (config.ports) {
-				merged.ports = {
-					...merged.ports,
-					...config.ports,
-				};
-			}
+      // Merge ports section
+      if (config.ports) {
+        merged.ports = {
+          ...merged.ports,
+          ...config.ports,
+        };
+      }
 
-			// Merge hooks section
-			if (config.hooks) {
-				merged.hooks = {
-					...merged.hooks,
-					...config.hooks,
-				};
-			}
+      // Merge hooks section
+      if (config.hooks) {
+        merged.hooks = {
+          ...merged.hooks,
+          ...config.hooks,
+        };
+      }
 
-			// Merge memory section
-			if (config.memory) {
-				merged.memory = {
-					...merged.memory,
-					...config.memory,
-				};
-			}
+      // Merge learn section
+      if (config.learn) {
+        merged.learn = {
+          ...merged.learn,
+          ...config.learn,
+        };
+      }
 
-			// Merge metrics section
-			if (config.metrics) {
-				merged.metrics = {
-					...merged.metrics,
-					...config.metrics,
-				};
-			}
+      // Merge memory section
+      if (config.memory) {
+        merged.memory = {
+          ...merged.memory,
+          ...config.memory,
+        };
+      }
 
-			// Merge sync section
-			if (config.sync) {
-				merged.sync = {
-					...merged.sync,
-					...config.sync,
-					// Arrays need special handling - later config replaces
-					forceInclude:
-						config.sync.forceInclude ?? merged.sync?.forceInclude ?? [],
-					forceExclude:
-						config.sync.forceExclude ?? merged.sync?.forceExclude ?? [],
-				};
-			}
+      // Merge metrics section
+      if (config.metrics) {
+        merged.metrics = {
+          ...merged.metrics,
+          ...config.metrics,
+        };
+      }
 
-			// Merge plugins section
-			if (config.plugins) {
-				merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
-			}
-		}
-	}
+      // Merge plugins section
+      if (config.plugins) {
+        merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
+      }
+    }
+  }
 
-	return merged;
+  return merged;
 }
 
 /**
@@ -316,69 +303,64 @@ export function getMergedHanConfig(): HanConfig {
  * @param directory - The directory to get config for
  */
 export function getMergedHanConfigForDirectory(directory: string): HanConfig {
-	const merged: HanConfig = {};
+  const merged: HanConfig = {};
 
-	for (const { path } of getHanConfigPathsForDirectory(directory)) {
-		const config = loadHanConfigFile(path);
-		if (config) {
-			// hanBinary - later config wins
-			if (config.hanBinary !== undefined) {
-				merged.hanBinary = config.hanBinary;
-			}
+  for (const { path } of getHanConfigPathsForDirectory(directory)) {
+    const config = loadHanConfigFile(path);
+    if (config) {
+      // hanBinary - later config wins
+      if (config.hanBinary !== undefined) {
+        merged.hanBinary = config.hanBinary;
+      }
 
-			// Merge ports section
-			if (config.ports) {
-				merged.ports = {
-					...merged.ports,
-					...config.ports,
-				};
-			}
+      // Merge ports section
+      if (config.ports) {
+        merged.ports = {
+          ...merged.ports,
+          ...config.ports,
+        };
+      }
 
-			// Merge hooks section
-			if (config.hooks) {
-				merged.hooks = {
-					...merged.hooks,
-					...config.hooks,
-				};
-			}
+      // Merge hooks section
+      if (config.hooks) {
+        merged.hooks = {
+          ...merged.hooks,
+          ...config.hooks,
+        };
+      }
 
-			// Merge memory section
-			if (config.memory) {
-				merged.memory = {
-					...merged.memory,
-					...config.memory,
-				};
-			}
+      // Merge learn section
+      if (config.learn) {
+        merged.learn = {
+          ...merged.learn,
+          ...config.learn,
+        };
+      }
 
-			// Merge metrics section
-			if (config.metrics) {
-				merged.metrics = {
-					...merged.metrics,
-					...config.metrics,
-				};
-			}
+      // Merge memory section
+      if (config.memory) {
+        merged.memory = {
+          ...merged.memory,
+          ...config.memory,
+        };
+      }
 
-			// Merge sync section
-			if (config.sync) {
-				merged.sync = {
-					...merged.sync,
-					...config.sync,
-					// Arrays need special handling - later config replaces
-					forceInclude:
-						config.sync.forceInclude ?? merged.sync?.forceInclude ?? [],
-					forceExclude:
-						config.sync.forceExclude ?? merged.sync?.forceExclude ?? [],
-				};
-			}
+      // Merge metrics section
+      if (config.metrics) {
+        merged.metrics = {
+          ...merged.metrics,
+          ...config.metrics,
+        };
+      }
 
-			// Merge plugins section
-			if (config.plugins) {
-				merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
-			}
-		}
-	}
+      // Merge plugins section
+      if (config.plugins) {
+        merged.plugins = mergePluginSettings(merged.plugins, config.plugins);
+      }
+    }
+  }
 
-	return merged;
+  return merged;
 }
 
 /**
@@ -386,23 +368,23 @@ export function getMergedHanConfigForDirectory(directory: string): HanConfig {
  * Returns the merged hook override settings from all config scopes
  */
 export function getPluginHookSettings(
-	pluginName: string,
-	hookName: string,
-	directory?: string,
+  pluginName: string,
+  hookName: string,
+  directory?: string
 ): HookOverride | undefined {
-	const config = directory
-		? getMergedHanConfigForDirectory(directory)
-		: getMergedHanConfig();
+  const config = directory
+    ? getMergedHanConfigForDirectory(directory)
+    : getMergedHanConfig();
 
-	return config.plugins?.[pluginName]?.hooks?.[hookName];
+  return config.plugins?.[pluginName]?.hooks?.[hookName];
 }
 
 /**
  * Check if hooks master switch is enabled (default: true)
  */
 export function isHooksEnabled(): boolean {
-	const config = getMergedHanConfig();
-	return config.hooks?.enabled !== false;
+  const config = getMergedHanConfig();
+  return config.hooks?.enabled !== false;
 }
 
 /**
@@ -413,30 +395,30 @@ export function isHooksEnabled(): boolean {
  * This setting is controlled by `hooks.checkpoints` in han.yml for backwards compatibility.
  */
 export function isSessionFilteringEnabled(): boolean {
-	const config = getMergedHanConfig();
+  const config = getMergedHanConfig();
 
-	// If hooks are globally disabled, session filtering is also disabled
-	if (config.hooks?.enabled === false) {
-		return false;
-	}
+  // If hooks are globally disabled, session filtering is also disabled
+  if (config.hooks?.enabled === false) {
+    return false;
+  }
 
-	return config.hooks?.checkpoints !== false;
+  return config.hooks?.checkpoints !== false;
 }
 
 /**
  * Check if memory system is enabled (default: true)
  */
 export function isMemoryEnabled(): boolean {
-	const config = getMergedHanConfig();
-	return config.memory?.enabled !== false;
+  const config = getMergedHanConfig();
+  return config.memory?.enabled !== false;
 }
 
 /**
  * Check if metrics tracking is enabled (default: true)
  */
 export function isMetricsEnabled(): boolean {
-	const config = getMergedHanConfig();
-	return config.metrics?.enabled !== false;
+  const config = getMergedHanConfig();
+  return config.metrics?.enabled !== false;
 }
 
 /**
@@ -444,14 +426,14 @@ export function isMetricsEnabled(): boolean {
  * Note: If hooks are globally disabled, caching setting is irrelevant
  */
 export function isCacheEnabled(): boolean {
-	const config = getMergedHanConfig();
+  const config = getMergedHanConfig();
 
-	// If hooks are globally disabled, cache setting doesn't matter
-	if (config.hooks?.enabled === false) {
-		return false;
-	}
+  // If hooks are globally disabled, cache setting doesn't matter
+  if (config.hooks?.enabled === false) {
+    return false;
+  }
 
-	return config.hooks?.cache !== false;
+  return config.hooks?.cache !== false;
 }
 
 /**
@@ -460,14 +442,30 @@ export function isCacheEnabled(): boolean {
  * Note: If hooks are globally disabled, fail_fast setting is irrelevant
  */
 export function isFailFastEnabled(): boolean {
-	const config = getMergedHanConfig();
+  const config = getMergedHanConfig();
 
-	// If hooks are globally disabled, fail_fast setting doesn't matter
-	if (config.hooks?.enabled === false) {
-		return false;
-	}
+  // If hooks are globally disabled, fail_fast setting doesn't matter
+  if (config.hooks?.enabled === false) {
+    return false;
+  }
 
-	return config.hooks?.fail_fast !== false;
+  return config.hooks?.fail_fast !== false;
+}
+
+/**
+ * Get the learn mode for auto-detecting plugins.
+ * @returns "auto" (default), "ask", or "none"
+ *
+ * @example
+ * // In han.yml:
+ * // learn:
+ * //   mode: ask
+ *
+ * const mode = getLearnMode(); // "ask"
+ */
+export function getLearnMode(): LearnMode {
+  const config = getMergedHanConfig();
+  return config.learn?.mode || 'auto';
 }
 
 /**
@@ -490,13 +488,13 @@ export function isFailFastEnabled(): boolean {
  * execSync(`${han} hook dispatch SessionStart`);
  */
 export function getHanBinary(): string {
-	// Environment variable takes highest priority
-	if (process.env.HAN_BINARY) {
-		return process.env.HAN_BINARY;
-	}
+  // Environment variable takes highest priority
+  if (process.env.HAN_BINARY) {
+    return process.env.HAN_BINARY;
+  }
 
-	const config = getMergedHanConfig();
-	return config.hanBinary || "han";
+  const config = getMergedHanConfig();
+  return config.hanBinary || 'han';
 }
 
 /**

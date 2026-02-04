@@ -1,0 +1,27 @@
+hooks:
+  # Full project lint at Stop (checkpoint)
+  lint:
+    command: "bundle exec rubocop"
+    dirs_with:
+      - "Gemfile"
+    dir_test: "grep -qE '^\\s*gem.*rubocop' Gemfile"
+    if_changed:
+      - "**/*.rb"
+      - "**/*.erb"
+      - "Gemfile"
+      - ".rubocop.yml"
+      - ".rubocop_todo.yml"
+
+  # Single-file async lint on PostToolUse
+  lint-async:
+    event: PostToolUse
+    command: "bundle exec rubocop ${HAN_FILES}"
+    dirs_with:
+      - "Gemfile"
+    dir_test: "grep -qE '^\\s*gem.*rubocop' Gemfile"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.rb"
+      - "**/*.erb"

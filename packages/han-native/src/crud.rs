@@ -132,16 +132,17 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
 
     // Use RETURNING to get the inserted/updated row in one query (avoids re-entrancy deadlock)
     let mut stmt = conn.prepare(
-        "INSERT INTO projects (id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+        "INSERT INTO projects (id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
          ON CONFLICT(slug) DO UPDATE SET
              repo_id = excluded.repo_id,
              path = excluded.path,
              relative_path = excluded.relative_path,
              name = excluded.name,
              is_worktree = excluded.is_worktree,
+             source_config_dir = COALESCE(excluded.source_config_dir, projects.source_config_dir),
              updated_at = excluded.updated_at
-         RETURNING id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at"
+         RETURNING id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
     stmt.query_row(
@@ -153,6 +154,7 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
             input.relative_path,
             input.name,
             is_worktree,
+            input.source_config_dir,
             now
         ],
         |row| {
@@ -164,8 +166,9 @@ pub fn upsert_project(input: ProjectInput) -> napi::Result<Project> {
                 relative_path: row.get(4)?,
                 name: row.get(5)?,
                 is_worktree: row.get::<_, i32>(6)? != 0,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                source_config_dir: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         },
     )
@@ -179,7 +182,7 @@ pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
          FROM projects WHERE slug = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -192,8 +195,9 @@ pub fn get_project_by_slug(slug: &str) -> napi::Result<Option<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     });
 
@@ -214,7 +218,7 @@ pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+        "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
          FROM projects WHERE path = ?1 LIMIT 1"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -227,8 +231,9 @@ pub fn get_project_by_path(path: &str) -> napi::Result<Option<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     });
 
@@ -258,14 +263,15 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
             relative_path: row.get(4)?,
             name: row.get(5)?,
             is_worktree: row.get::<_, i32>(6)? != 0,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            source_config_dir: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     }
 
     if let Some(ref rid) = repo_id {
         let mut stmt = conn.prepare(
-            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
              FROM projects WHERE repo_id = ?1 ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -277,7 +283,7 @@ pub fn list_projects(repo_id: Option<String>) -> napi::Result<Vec<Project>> {
         Ok(rows)
     } else {
         let mut stmt = conn.prepare(
-            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, created_at, updated_at
+            "SELECT id, repo_id, slug, path, relative_path, name, is_worktree, source_config_dir, created_at, updated_at
              FROM projects ORDER BY name ASC"
         ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
 
@@ -306,14 +312,15 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
     // No timestamps stored - derived from messages
     let mut stmt = conn
         .prepare(
-            "INSERT INTO sessions (id, project_id, status, transcript_path, slug)
-         VALUES (?1, ?2, ?3, ?4, ?5)
+            "INSERT INTO sessions (id, project_id, status, transcript_path, slug, source_config_dir)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(id) DO UPDATE SET
              project_id = COALESCE(excluded.project_id, sessions.project_id),
              status = excluded.status,
              transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path),
-             slug = COALESCE(excluded.slug, sessions.slug)
-         RETURNING id, project_id, status, transcript_path, slug, last_indexed_line",
+             slug = COALESCE(excluded.slug, sessions.slug),
+             source_config_dir = COALESCE(excluded.source_config_dir, sessions.source_config_dir)
+         RETURNING id, project_id, status, transcript_path, slug, source_config_dir, last_indexed_line",
         )
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare upsert: {}", e)))?;
 
@@ -323,7 +330,8 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
             input.project_id,
             status,
             input.transcript_path,
-            input.slug
+            input.slug,
+            input.source_config_dir
         ],
         |row| {
             Ok(Session {
@@ -332,7 +340,8 @@ pub fn upsert_session(input: SessionInput) -> napi::Result<Session> {
                 status: row.get(2)?,
                 transcript_path: row.get(3)?,
                 slug: row.get(4)?,
-                last_indexed_line: row.get(5)?,
+                source_config_dir: row.get(5)?,
+                last_indexed_line: row.get(6)?,
             })
         },
     )
@@ -365,7 +374,7 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
     // id IS the session UUID - query by id directly
     let mut stmt = conn
         .prepare(
-            "SELECT id, project_id, status, transcript_path, slug, last_indexed_line
+            "SELECT id, project_id, status, transcript_path, slug, source_config_dir, last_indexed_line
          FROM sessions WHERE id = ?1 LIMIT 1",
         )
         .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
@@ -377,7 +386,8 @@ pub fn get_session(session_id: &str) -> napi::Result<Option<Session>> {
             status: row.get(2)?,
             transcript_path: row.get(3)?,
             slug: row.get(4)?,
-            last_indexed_line: row.get(5)?,
+            source_config_dir: row.get(5)?,
+            last_indexed_line: row.get(6)?,
         })
     });
 
@@ -420,7 +430,7 @@ pub fn list_sessions(
     // Sessions are ordered by most recent message timestamp (descending)
     let sql = match (&project_id, &status) {
         (Some(_), Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -429,7 +439,7 @@ pub fn list_sessions(
              LIMIT ?3"
         }
         (Some(_), None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -438,7 +448,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, Some(_)) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -447,7 +457,7 @@ pub fn list_sessions(
              LIMIT ?2"
         }
         (None, None) => {
-            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.last_indexed_line
+            "SELECT s.id, s.project_id, s.status, s.transcript_path, s.slug, s.source_config_dir, s.last_indexed_line
              FROM sessions s
              LEFT JOIN (SELECT session_id, MAX(timestamp) as max_ts FROM messages GROUP BY session_id) m
              ON s.id = m.session_id
@@ -467,7 +477,8 @@ pub fn list_sessions(
             status: row.get(2)?,
             transcript_path: row.get(3)?,
             slug: row.get(4)?,
-            last_indexed_line: row.get(5)?,
+            source_config_dir: row.get(5)?,
+            last_indexed_line: row.get(6)?,
         })
     };
 
@@ -527,6 +538,196 @@ pub fn reset_all_sessions_for_reindex() -> napi::Result<u32> {
         .map_err(|e| napi::Error::from_reason(format!("Failed to reset sessions: {}", e)))?;
 
     Ok(count as u32)
+}
+
+// ============================================================================
+// Config Dir Registry Operations (Multi-Environment Support)
+// ============================================================================
+
+/// Register a new config directory for multi-environment indexing
+#[napi]
+pub fn register_config_dir(input: ConfigDirInput) -> napi::Result<ConfigDir> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let is_default = input.is_default.unwrap_or(false);
+
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO config_dirs (id, path, name, registered_at, is_default)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(path) DO UPDATE SET
+                 name = COALESCE(excluded.name, config_dirs.name),
+                 is_default = excluded.is_default
+             RETURNING id, path, name, registered_at, last_indexed_at, session_count, is_default",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
+
+    stmt.query_row(
+        params![id, input.path, input.name, now, is_default],
+        |row| {
+            Ok(ConfigDir {
+                id: row.get(0)?,
+                path: row.get(1)?,
+                name: row.get(2)?,
+                registered_at: row.get(3)?,
+                last_indexed_at: row.get(4)?,
+                session_count: row.get(5)?,
+                is_default: row.get(6)?,
+            })
+        },
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to register config dir: {}", e)))
+}
+
+/// Get a config directory by path
+#[napi]
+pub fn get_config_dir_by_path(path: String) -> napi::Result<Option<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs WHERE path = ?1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row(params![path], |row| {
+        Ok(ConfigDir {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            name: row.get(2)?,
+            registered_at: row.get(3)?,
+            last_indexed_at: row.get(4)?,
+            session_count: row.get(5)?,
+            is_default: row.get(6)?,
+        })
+    });
+
+    match result {
+        Ok(config_dir) => Ok(Some(config_dir)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get config dir: {}",
+            e
+        ))),
+    }
+}
+
+/// List all registered config directories
+#[napi]
+pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs ORDER BY is_default DESC, registered_at ASC",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(ConfigDir {
+                id: row.get(0)?,
+                path: row.get(1)?,
+                name: row.get(2)?,
+                registered_at: row.get(3)?,
+                last_indexed_at: row.get(4)?,
+                session_count: row.get(5)?,
+                is_default: row.get(6)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to list config dirs: {}", e)))?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+/// Update the last indexed timestamp for a config directory
+#[napi]
+pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Also update session count
+    conn.execute(
+        "UPDATE config_dirs SET
+            last_indexed_at = ?1,
+            session_count = (SELECT COUNT(*) FROM sessions WHERE source_config_dir = config_dirs.path)
+         WHERE path = ?2",
+        params![now, path],
+    )
+    .map_err(|e| {
+        napi::Error::from_reason(format!("Failed to update config dir last indexed: {}", e))
+    })?;
+
+    Ok(true)
+}
+
+/// Remove a config directory from the registry
+#[napi]
+pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let count = conn
+        .execute("DELETE FROM config_dirs WHERE path = ?1", params![path])
+        .map_err(|e| napi::Error::from_reason(format!("Failed to unregister config dir: {}", e)))?;
+
+    Ok(count > 0)
+}
+
+/// Get the default config directory
+#[napi]
+pub fn get_default_config_dir() -> napi::Result<Option<ConfigDir>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, name, registered_at, last_indexed_at, session_count, is_default
+             FROM config_dirs WHERE is_default = 1 LIMIT 1",
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let result = stmt.query_row([], |row| {
+        Ok(ConfigDir {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            name: row.get(2)?,
+            registered_at: row.get(3)?,
+            last_indexed_at: row.get(4)?,
+            session_count: row.get(5)?,
+            is_default: row.get(6)?,
+        })
+    });
+
+    match result {
+        Ok(config_dir) => Ok(Some(config_dir)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Failed to get default config dir: {}",
+            e
+        ))),
+    }
 }
 
 // ============================================================================
@@ -3794,6 +3995,339 @@ pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
 }
 
 // ============================================================================
+// Async Hook Queue (for PostToolUse async hook execution)
+// ============================================================================
+
+/// Input for enqueuing an async hook
+#[napi(object)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct AsyncHookQueueInputNative {
+    pub session_id: String,
+    pub cwd: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub file_paths: Vec<String>,
+    pub command: String,
+}
+
+/// Output for async hook queue entry
+#[napi(object)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct AsyncHookQueueEntry {
+    pub id: String,
+    pub session_id: String,
+    pub cwd: String,
+    pub plugin: String,
+    pub hook_name: String,
+    pub file_paths: Vec<String>,
+    pub command: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+/// Enqueue a hook for async execution
+/// First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
+/// and merges their file paths into the new entry
+#[napi]
+pub fn enqueue_async_hook(
+    _db_path: String,
+    input: AsyncHookQueueInputNative,
+) -> napi::Result<String> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let id = Uuid::new_v4().to_string();
+
+    // First, collect file paths from any pending hooks with the same dedup key
+    // and cancel them
+    let mut merged_files: std::collections::HashSet<String> =
+        input.file_paths.iter().cloned().collect();
+
+    let mut stmt = conn.prepare(
+        "SELECT id, file_paths FROM async_hook_queue
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows: Vec<(String, String)> = stmt
+        .query_map(
+            params![input.session_id, input.cwd, input.plugin, input.hook_name],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for (_, file_paths_json) in &rows {
+        if let Ok(paths) = serde_json::from_str::<Vec<String>>(file_paths_json) {
+            for path in paths {
+                merged_files.insert(path);
+            }
+        }
+    }
+
+    // Cancel the pending hooks
+    if !rows.is_empty() {
+        conn.execute(
+            "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+             WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'",
+            params![input.session_id, input.cwd, input.plugin, input.hook_name],
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+    }
+
+    // Insert the new entry with merged file paths
+    let file_paths_json = serde_json::to_string(&merged_files.into_iter().collect::<Vec<_>>())
+        .map_err(|e| napi::Error::from_reason(format!("Failed to serialize file paths: {}", e)))?;
+
+    conn.execute(
+        "INSERT INTO async_hook_queue (id, session_id, cwd, plugin, hook_name, file_paths, command, status)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending')",
+        params![
+            id,
+            input.session_id,
+            input.cwd,
+            input.plugin,
+            input.hook_name,
+            file_paths_json,
+            input.command
+        ],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to enqueue async hook: {}", e)))?;
+
+    Ok(id)
+}
+
+/// List pending async hooks for a session
+#[napi]
+pub fn list_pending_async_hooks(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, cwd, plugin, hook_name, file_paths, command, status, created_at
+         FROM async_hook_queue WHERE session_id = ?1 AND status = 'pending' ORDER BY created_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([session_id], |row| {
+            let file_paths_json: String = row.get(5)?;
+            let file_paths: Vec<String> =
+                serde_json::from_str(&file_paths_json).unwrap_or_default();
+            Ok(AsyncHookQueueEntry {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                cwd: row.get(2)?,
+                plugin: row.get(3)?,
+                hook_name: row.get(4)?,
+                file_paths,
+                command: row.get(6)?,
+                status: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?;
+
+    let mut hooks = Vec::new();
+    for row in rows {
+        hooks.push(row.map_err(|e| napi::Error::from_reason(format!("Failed to map row: {}", e)))?);
+    }
+
+    Ok(hooks)
+}
+
+/// Check if the async hook queue is empty for a session (no pending or running hooks)
+#[napi]
+pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::Result<bool> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM async_hook_queue WHERE session_id = ?1 AND status IN ('pending', 'running')",
+        params![session_id],
+        |row| row.get(0),
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to count queue: {}", e)))?;
+
+    Ok(count == 0)
+}
+
+/// Drain the queue - get all pending hooks and mark as running
+/// Used at checkpoint (Stop, PreToolUse for git commit/push)
+#[napi]
+pub fn drain_async_hook_queue(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // First, get all pending hooks
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, cwd, plugin, hook_name, file_paths, command, status, created_at
+         FROM async_hook_queue WHERE session_id = ?1 AND status = 'pending' ORDER BY created_at ASC"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows = stmt
+        .query_map([&session_id], |row| {
+            let file_paths_json: String = row.get(5)?;
+            let file_paths: Vec<String> =
+                serde_json::from_str(&file_paths_json).unwrap_or_default();
+            Ok(AsyncHookQueueEntry {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                cwd: row.get(2)?,
+                plugin: row.get(3)?,
+                hook_name: row.get(4)?,
+                file_paths,
+                command: row.get(6)?,
+                status: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?;
+
+    let mut hooks = Vec::new();
+    for row in rows {
+        hooks.push(row.map_err(|e| napi::Error::from_reason(format!("Failed to map row: {}", e)))?);
+    }
+
+    // Mark them all as running
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'running', started_at = datetime('now')
+         WHERE session_id = ?1 AND status = 'pending'",
+        params![session_id],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to update hook status: {}", e)))?;
+
+    Ok(hooks)
+}
+
+/// Cancel pending hooks matching dedup key and return merged file paths
+#[napi]
+pub fn cancel_pending_async_hooks(
+    _db_path: String,
+    session_id: String,
+    cwd: String,
+    plugin: String,
+    hook_name: String,
+) -> napi::Result<Vec<String>> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let mut merged_files: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let mut stmt = conn.prepare(
+        "SELECT file_paths FROM async_hook_queue
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'"
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+    let rows: Vec<String> = stmt
+        .query_map(params![session_id, cwd, plugin, hook_name], |row| {
+            row.get::<_, String>(0)
+        })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to query pending hooks: {}", e)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for file_paths_json in rows {
+        if let Ok(paths) = serde_json::from_str::<Vec<String>>(&file_paths_json) {
+            for path in paths {
+                merged_files.insert(path);
+            }
+        }
+    }
+
+    // Cancel the pending hooks
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+         WHERE session_id = ?1 AND cwd = ?2 AND plugin = ?3 AND hook_name = ?4 AND status = 'pending'",
+        params![session_id, cwd, plugin, hook_name],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to cancel pending hooks: {}", e)))?;
+
+    Ok(merged_files.into_iter().collect())
+}
+
+/// Complete an async hook execution
+#[napi]
+pub fn complete_async_hook(
+    _db_path: String,
+    id: String,
+    success: bool,
+    result: Option<String>,
+    error: Option<String>,
+) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let status = if success { "completed" } else { "failed" };
+
+    conn.execute(
+        "UPDATE async_hook_queue SET status = ?2, completed_at = datetime('now'), result = ?3, error = ?4
+         WHERE id = ?1",
+        params![id, status, result, error],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to complete async hook: {}", e)))?;
+
+    Ok(())
+}
+
+/// Cancel a specific async hook by ID
+#[napi]
+pub fn cancel_async_hook(_db_path: String, id: String) -> napi::Result<()> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE async_hook_queue SET status = 'cancelled', completed_at = datetime('now')
+         WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to cancel async hook: {}", e)))?;
+
+    Ok(())
+}
+
+/// Clear all async hooks for a session (used on SessionEnd to clean up)
+/// Returns the number of hooks that were cleared
+#[napi]
+pub fn clear_async_hook_queue_for_session(
+    _db_path: String,
+    session_id: String,
+) -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Cancel all pending/running hooks for this session
+    let count = conn
+        .execute(
+            "UPDATE async_hook_queue
+         SET status = 'cancelled', completed_at = datetime('now')
+         WHERE session_id = ?1 AND status IN ('pending', 'running')",
+            params![session_id],
+        )
+        .map_err(|e| {
+            napi::Error::from_reason(format!("Failed to clear async hook queue: {}", e))
+        })?;
+
+    Ok(count as u32)
+}
+
+// ============================================================================
 // Test Module
 // ============================================================================
 
@@ -3826,6 +4360,7 @@ mod tests {
         conn.execute_batch("PRAGMA journal_mode=WAL;").unwrap();
         conn.execute_batch("PRAGMA synchronous=NORMAL;").unwrap();
         conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
+        conn.execute_batch("PRAGMA busy_timeout=5000;").unwrap();
         conn.execute_batch(include_str!("schema.sql")).unwrap();
 
         (temp_dir, conn)
@@ -3961,6 +4496,7 @@ mod tests {
             relative_path: Some("project".to_string()),
             name: "Test Project".to_string(),
             is_worktree: Some(false),
+            source_config_dir: None,
         };
 
         let result = upsert_project(input).expect("Failed to upsert project");
@@ -3984,6 +4520,7 @@ mod tests {
             relative_path: None,
             name: "Original".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         let proj1 = upsert_project(input1).expect("Failed to insert project");
 
@@ -3995,6 +4532,7 @@ mod tests {
             relative_path: None,
             name: "Updated".to_string(),
             is_worktree: Some(true),
+            source_config_dir: None,
         };
         let proj2 = upsert_project(input2).expect("Failed to update project");
 
@@ -4015,6 +4553,7 @@ mod tests {
             relative_path: None,
             name: "Findable".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         upsert_project(input).expect("Failed to insert project");
 
@@ -4034,6 +4573,7 @@ mod tests {
             relative_path: None,
             name: "PathLookup".to_string(),
             is_worktree: None,
+            source_config_dir: None,
         };
         upsert_project(input).expect("Failed to insert project");
 
@@ -4054,6 +4594,7 @@ mod tests {
                 relative_path: None,
                 name: format!("ListProject{}", i),
                 is_worktree: None,
+                source_config_dir: None,
             };
             upsert_project(input).expect("Failed to insert project");
         }
@@ -4076,6 +4617,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: Some("/path/to/transcript.jsonl".to_string()),
             slug: Some("test-session".to_string()),
+            source_config_dir: None,
         };
 
         let result = upsert_session(input).expect("Failed to upsert session");
@@ -4099,6 +4641,7 @@ mod tests {
             status: None, // Should default to "active"
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
 
         let result = upsert_session(input).expect("Failed to upsert session");
@@ -4115,6 +4658,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4141,6 +4685,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4165,6 +4710,7 @@ mod tests {
                 status: Some("active".to_string()),
                 transcript_path: None,
                 slug: None,
+                source_config_dir: None,
             };
             upsert_session(input).expect("Failed to insert session");
         }
@@ -4184,6 +4730,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input1).expect("Failed to insert session");
 
@@ -4194,6 +4741,7 @@ mod tests {
             status: Some("completed".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input2).expect("Failed to insert session");
 
@@ -4212,6 +4760,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
 
@@ -4234,6 +4783,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(input).expect("Failed to insert session");
         update_last_indexed_line("reindex-session", 100).expect("Failed to update line");
@@ -4262,6 +4812,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4290,6 +4841,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4323,6 +4875,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4352,6 +4905,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4385,6 +4939,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4414,6 +4969,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4446,6 +5002,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4477,6 +5034,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4525,6 +5083,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4571,6 +5130,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4635,6 +5195,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4685,6 +5246,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4750,6 +5312,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4822,6 +5385,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -4909,6 +5473,7 @@ mod tests {
                 status: Some("active".to_string()),
                 transcript_path: None,
                 slug: None,
+                source_config_dir: None,
             };
             upsert_session(session_input).expect("Failed to insert session");
 
@@ -4961,6 +5526,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
         update_last_indexed_line("last-indexed-session", 99).expect("Failed to update");
@@ -4980,6 +5546,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5082,6 +5649,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5110,6 +5678,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5148,6 +5717,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5185,6 +5755,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5213,6 +5784,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5254,6 +5826,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5290,6 +5863,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5348,6 +5922,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5380,6 +5955,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5413,6 +5989,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5441,6 +6018,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5472,6 +6050,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5512,6 +6091,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5541,6 +6121,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5579,6 +6160,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5882,6 +6464,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 
@@ -5932,6 +6515,7 @@ mod tests {
             status: Some("active".to_string()),
             transcript_path: None,
             slug: None,
+            source_config_dir: None,
         };
         upsert_session(session_input).expect("Failed to insert session");
 

@@ -170,11 +170,13 @@ fn convert_event(event: &Event) -> Option<FileEvent> {
     })
 }
 
-/// Active watcher handle
+/// Active watcher handle with support for multiple watch paths
 struct WatcherHandle {
-    _watcher: RecommendedWatcher,
+    watcher: RecommendedWatcher,
     running: Arc<AtomicBool>,
     _thread: std::thread::JoinHandle<()>,
+    /// Tracks watched paths: config_dir -> projects_path
+    watched_paths: std::collections::HashMap<String, String>,
 }
 
 /// Global watcher state (only one watcher can be active)
@@ -300,13 +302,112 @@ pub fn start_file_watcher(watch_path: Option<String>) -> Result<bool> {
         }
     });
 
+    // Track the watched path
+    let mut watched_paths = std::collections::HashMap::new();
+    let config_dir = path
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+    watched_paths.insert(config_dir, path.to_string_lossy().to_string());
+
     *guard = Some(WatcherHandle {
-        _watcher: watcher,
+        watcher,
         running,
         _thread: thread,
+        watched_paths,
     });
 
     Ok(true)
+}
+
+/// Add an additional watch path for multi-environment support
+/// Returns true if the path was added, false if already watching or watcher not running
+#[napi]
+pub fn add_watch_path(config_dir: String, projects_path: Option<String>) -> Result<bool> {
+    let state = get_watcher_state();
+    let mut guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
+
+    let handle = match guard.as_mut() {
+        Some(h) => h,
+        None => return Ok(false), // Watcher not running
+    };
+
+    // Determine the projects path
+    let path = if let Some(p) = projects_path {
+        PathBuf::from(p)
+    } else {
+        // Default: {config_dir}/projects
+        PathBuf::from(&config_dir).join("projects")
+    };
+
+    let path_str = path.to_string_lossy().to_string();
+
+    // Check if already watching this config dir
+    if handle.watched_paths.contains_key(&config_dir) {
+        return Ok(false);
+    }
+
+    // Ensure the directory exists
+    if !path.exists() {
+        std::fs::create_dir_all(&path).map_err(|e| {
+            napi::Error::from_reason(format!("Failed to create watch directory: {}", e))
+        })?;
+    }
+
+    // Add the watch
+    handle
+        .watcher
+        .watch(&path, RecursiveMode::Recursive)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to watch path: {}", e)))?;
+
+    handle.watched_paths.insert(config_dir, path_str);
+    Ok(true)
+}
+
+/// Remove a watch path
+/// Returns true if the path was removed, false if not watching or watcher not running
+#[napi]
+pub fn remove_watch_path(config_dir: String) -> Result<bool> {
+    let state = get_watcher_state();
+    let mut guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
+
+    let handle = match guard.as_mut() {
+        Some(h) => h,
+        None => return Ok(false), // Watcher not running
+    };
+
+    // Get the projects path for this config dir
+    let path_str = match handle.watched_paths.remove(&config_dir) {
+        Some(p) => p,
+        None => return Ok(false), // Not watching this config dir
+    };
+
+    // Remove the watch
+    let path = PathBuf::from(&path_str);
+    handle
+        .watcher
+        .unwatch(&path)
+        .map_err(|e| napi::Error::from_reason(format!("Failed to unwatch path: {}", e)))?;
+
+    Ok(true)
+}
+
+/// Get all currently watched paths
+#[napi]
+pub fn get_watched_paths() -> Result<Vec<String>> {
+    let state = get_watcher_state();
+    let guard = state
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire watcher lock: {}", e)))?;
+
+    match guard.as_ref() {
+        Some(handle) => Ok(handle.watched_paths.values().cloned().collect()),
+        None => Ok(vec![]),
+    }
 }
 
 /// Stop the file watcher

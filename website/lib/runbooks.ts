@@ -274,12 +274,9 @@ export function getAllRunbookSlugs(
 /**
  * Format category/phase name for display
  */
-export function formatPhaseName(
-	category: string,
-	paperSlug = "ai-dlc-2026",
-): string {
+export function formatPhaseName(category: string, paperSlug?: string): string {
 	// Try to get from config first
-	const config = loadRunbooksConfig(paperSlug);
+	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
 		const group = config.groups.find((g) => g.id === category);
 		if (group) {
@@ -299,12 +296,9 @@ export function formatPhaseName(
 /**
  * Get category/phase icon
  */
-export function getPhaseIcon(
-	category: string,
-	paperSlug = "ai-dlc-2026",
-): string {
+export function getPhaseIcon(category: string, paperSlug?: string): string {
 	// Try to get from config first
-	const config = loadRunbooksConfig(paperSlug);
+	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
 		const group = config.groups.find((g) => g.id === category);
 		if (group) {

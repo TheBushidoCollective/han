@@ -1,8 +1,0 @@
-hooks:
-  lint:
-    command: "npx -y markdownlint-cli --fix . --ignore node_modules"
-    dirs_with:
-      - "'.markdownlint.*'"
-    if_changed:
-      - "**/*.md"
-      - ".markdownlint.*"

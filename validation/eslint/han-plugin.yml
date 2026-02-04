@@ -1,8 +1,0 @@
-hooks:
-  lint:
-    command: "npx -y eslint . --max-warnings 0"
-    dirs_with:
-      - "package.json"
-    dir_test: "grep -qE '\"eslint\":' package.json"
-    if_changed:
-      - "**/*.{js,jsx,ts,tsx,mjs,cjs}"

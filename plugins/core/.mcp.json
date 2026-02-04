@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "han": {
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    },
+    "memory-dal": {
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp", "memory"]
+    }
+  }
+}

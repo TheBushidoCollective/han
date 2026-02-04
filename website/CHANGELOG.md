@@ -5,6 +5,162 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.3] - 2026-02-04
+
+### Added
+
+- improve activity indicator timing and initial state ([2a0ba081](../../commit/2a0ba081))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add coordinator activity indicator to header ([7d18fe26](../../commit/7d18fe26))
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- remove deprecated naming prefixes and fix paths ([a23a6ec4](../../commit/a23a6ec4))
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- format ActivityIndicator.tsx ([3234397a](../../commit/3234397a))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [1.36.3] - 2026-02-03
+
+### Added
+
+- improve activity indicator timing and initial state ([2a0ba081](../../commit/2a0ba081))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add coordinator activity indicator to header ([7d18fe26](../../commit/7d18fe26))
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- remove deprecated naming prefixes and fix paths ([a23a6ec4](../../commit/a23a6ec4))
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- format ActivityIndicator.tsx ([3234397a](../../commit/3234397a))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [1.36.2] - 2026-02-03
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [1.36.2] - 2026-02-02
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.2] - 2026-02-02
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Changed
+
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
+## [1.36.1] - 2026-02-02
+
+### Added
+
+- show internal commands and LSP servers on plugin pages ([f22dff91](../../commit/f22dff91))
+
+### Fixed
+
+- deduplicate plugins with same source in marketplace display ([7dd40088](../../commit/7dd40088))
+
+### Other
+
+- replace jutsu/do/hashi terminology with 9-category plugin structure (#50) ([69d9e47b](../../commit/69d9e47b))
+
 ## [1.36.0] - 2026-02-01
 
 ### Added

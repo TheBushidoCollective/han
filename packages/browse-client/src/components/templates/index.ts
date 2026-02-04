@@ -6,10 +6,10 @@
  */
 
 export type {
-  DashboardHeaderProps,
-  DashboardTemplateProps,
-  DashboardVariant,
-} from './DashboardTemplate.tsx';
-export { DashboardTemplate } from './DashboardTemplate.tsx';
-export { PageLayout } from './PageLayout.tsx';
-export { Sidebar } from './Sidebar.tsx';
+	DashboardHeaderProps,
+	DashboardTemplateProps,
+	DashboardVariant,
+} from "./DashboardTemplate.tsx";
+export { DashboardTemplate } from "./DashboardTemplate.tsx";
+export { PageLayout } from "./PageLayout.tsx";
+export { Sidebar } from "./Sidebar.tsx";

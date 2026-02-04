@@ -1,8 +1,0 @@
-hooks:
-  typecheck:
-    command: "npx -y --package typescript tsc --noEmit"
-    dirs_with:
-      - "tsconfig.json"
-    if_changed:
-      - "**/*.{ts,tsx,mts,cts}"
-      - "tsconfig*.json"

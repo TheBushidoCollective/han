@@ -1435,6 +1435,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
             relative_path: None,
             name: project_name,
             is_worktree: Some(false),
+            source_config_dir: None, // Will be set during multi-environment indexing
         })?;
 
         project.id
@@ -1459,6 +1460,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
         status: Some("active".to_string()),
         transcript_path: Some(file_path.clone()),
         slug: None,
+        source_config_dir: None, // Will be set during multi-environment indexing
     })?;
 
     // Read new lines from JSONL file
@@ -1818,6 +1820,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
             status: Some("active".to_string()),
             transcript_path: Some(file_path.clone()),
             slug: session_slug,
+            source_config_dir: None, // Preserved from existing session
         })?;
     }
 
@@ -1855,6 +1858,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                 status: Some("active".to_string()),
                 transcript_path: Some(file_path_str.clone()),
                 slug: None,
+                source_config_dir: None, // Will be set during multi-environment indexing
             })?;
 
             // Register the file
@@ -1881,6 +1885,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                         status: Some("active".to_string()),
                         transcript_path: None,
                         slug: None,
+                        source_config_dir: None, // Will be set during multi-environment indexing
                     })?;
                 }
 

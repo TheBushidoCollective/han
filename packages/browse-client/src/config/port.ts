@@ -2,7 +2,6 @@
  * Coordinator Port Configuration
  *
  * Extracts the coordinator port from URL query parameter or uses default.
- * This is in a separate file to avoid circular imports between urls.ts and discovery.ts.
  */
 
 /**
@@ -16,16 +15,16 @@ export const DEFAULT_COORDINATOR_PORT = 41957;
  * The han browse command passes ?coordinatorPort=XXXX in hosted mode
  */
 export function getCoordinatorPort(): number {
-  if (typeof window === 'undefined') {
-    return DEFAULT_COORDINATOR_PORT;
-  }
-  const params = new URLSearchParams(window.location.search);
-  const portParam = params.get('coordinatorPort');
-  if (portParam) {
-    const port = parseInt(portParam, 10);
-    if (!isNaN(port) && port > 0 && port < 65536) {
-      return port;
-    }
-  }
-  return DEFAULT_COORDINATOR_PORT;
+	if (typeof window === "undefined") {
+		return DEFAULT_COORDINATOR_PORT;
+	}
+	const params = new URLSearchParams(window.location.search);
+	const portParam = params.get("coordinatorPort");
+	if (portParam) {
+		const port = parseInt(portParam, 10);
+		if (!Number.isNaN(port) && port > 0 && port < 65536) {
+			return port;
+		}
+	}
+	return DEFAULT_COORDINATOR_PORT;
 }

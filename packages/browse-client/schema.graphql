@@ -2,169 +2,232 @@
 Defers resolution of a fragment, allowing the rest of the response to be returned first
 """
 directive @defer(
-  """Condition to check if the fragment should be deferred"""
-  if: Boolean
+	"""
+	Condition to check if the fragment should be deferred
+	"""
+	if: Boolean
 
-  """Unique label to identify the deferred fragment"""
-  label: String
+	"""
+	Unique label to identify the deferred fragment
+	"""
+	label: String
 ) on FRAGMENT_SPREAD | INLINE_FRAGMENT
 
-"""Information about an active slot"""
+"""
+Information about an active slot
+"""
 type ActiveSlot {
-  """How long the slot has been held in milliseconds"""
-  heldForMs: Int
+	"""
+	How long the slot has been held in milliseconds
+	"""
+	heldForMs: Int
 
-  """Hook currently running"""
-  hookName: String
+	"""
+	Hook currently running
+	"""
+	hookName: String
 
-  """Process ID holding the slot"""
-  pid: Int
+	"""
+	Process ID holding the slot
+	"""
+	pid: Int
 
-  """Plugin that owns the hook"""
-  pluginName: String
+	"""
+	Plugin that owns the hook
+	"""
+	pluginName: String
 
-  """Session that owns this slot"""
-  sessionId: String
+	"""
+	Session that owns this slot
+	"""
+	sessionId: String
 
-  """Slot identifier"""
-  slotId: Int
+	"""
+	Slot identifier
+	"""
+	slotId: Int
 }
 
-"""Complete activity data for dashboard visualizations"""
+"""
+Complete activity data for dashboard visualizations
+"""
 type ActivityData {
-  """Activity by day for heatmap (last 365 days)"""
-  dailyActivity: [DailyActivity!]
+	"""
+	Activity by day for heatmap (last 365 days)
+	"""
+	dailyActivity: [DailyActivity!]
 
-  """
-  Daily token usage by model (from Claude Code stats, survives session cleanup)
-  """
-  dailyModelTokens: [DailyModelTokens!]
+	"""
+	Daily token usage by model (from Claude Code stats, survives session cleanup)
+	"""
+	dailyModelTokens: [DailyModelTokens!]
 
-  """Date of first session"""
-  firstSessionDate: String
+	"""
+	Date of first session
+	"""
+	firstSessionDate: String
 
-  """Activity by hour of day (0-23)"""
-  hourlyActivity: [HourlyActivity!]
+	"""
+	Activity by hour of day (0-23)
+	"""
+	hourlyActivity: [HourlyActivity!]
 
-  """
-  Cumulative model usage (from Claude Code stats, survives session cleanup)
-  """
-  modelUsage: [ModelUsageStats!]
+	"""
+	Cumulative model usage (from Claude Code stats, survives session cleanup)
+	"""
+	modelUsage: [ModelUsageStats!]
 
-  """Current consecutive days with activity"""
-  streakDays: Int
+	"""
+	Current consecutive days with activity
+	"""
+	streakDays: Int
 
-  """Aggregate token usage statistics"""
-  tokenUsage: TokenUsageStats
+	"""
+	Aggregate token usage statistics
+	"""
+	tokenUsage: TokenUsageStats
 
-  """Total number of days with activity"""
-  totalActiveDays: Int
+	"""
+	Total number of days with activity
+	"""
+	totalActiveDays: Int
 
-  """Total messages from Claude Code stats (survives session cleanup)"""
-  totalMessages: Int
+	"""
+	Total messages from Claude Code stats (survives session cleanup)
+	"""
+	totalMessages: Int
 
-  """Total sessions from Claude Code stats (survives session cleanup)"""
-  totalSessions: Int
+	"""
+	Total sessions from Claude Code stats (survives session cleanup)
+	"""
+	totalSessions: Int
 }
 
-"""Single data point in the activity timeline"""
-type ActivityTimelineEntry {
-  """Messages exchanged in this period"""
-  messageCount: Int
-
-  """Time period label"""
-  period: String
-
-  """Sessions started in this period"""
-  sessionCount: Int
-
-  """Tasks created in this period"""
-  taskCount: Int
-}
-
-"""A subagent task spawned by a Task tool call"""
+"""
+A subagent task spawned by a Task tool call
+"""
 type AgentTask {
-  """Unique ID of the agent task"""
-  agentId: String
+	"""
+	Unique ID of the agent task
+	"""
+	agentId: String
 
-  """When the agent task ended"""
-  endedAt: String
+	"""
+	When the agent task ended
+	"""
+	endedAt: String
 
-  """Number of messages in the agent task"""
-  messageCount: Int
+	"""
+	Number of messages in the agent task
+	"""
+	messageCount: Int
 
-  """Project name"""
-  project: String
+	"""
+	Project name
+	"""
+	project: String
 
-  """Full path to the project"""
-  projectPath: String
+	"""
+	Full path to the project
+	"""
+	projectPath: String
 
-  """Parent session ID that spawned this agent"""
-  sessionId: String
+	"""
+	Parent session ID that spawned this agent
+	"""
+	sessionId: String
 
-  """When the agent task started"""
-  startedAt: String
+	"""
+	When the agent task started
+	"""
+	startedAt: String
 }
 
-"""An assistant (Claude) message in a session"""
+"""
+An assistant (Claude) message in a session
+"""
 type AssistantMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Cached tokens used"""
-  cachedTokens: BigInt
+	"""
+	Cached tokens used
+	"""
+	cachedTokens: BigInt
 
-  """Assistant message text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Assistant message text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Whether this message contains thinking blocks"""
-  hasThinking: Boolean
+	"""
+	Whether this message contains thinking blocks
+	"""
+	hasThinking: Boolean
 
-  """Whether this message contains tool use blocks"""
-  hasToolUse: Boolean
+	"""
+	Whether this message contains tool use blocks
+	"""
+	hasToolUse: Boolean
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Input tokens used"""
-  inputTokens: BigInt
+	"""
+	Input tokens used
+	"""
+	inputTokens: BigInt
 
-  """Whether this message only contains tool calls"""
-  isToolOnly: Boolean
+	"""
+	Whether this message only contains tool calls
+	"""
+	isToolOnly: Boolean
 
-  """Model used for this response"""
-  model: String
+	"""
+	Model used for this response
+	"""
+	model: String
 
-  """Output tokens generated"""
-  outputTokens: BigInt
+	"""
+	Output tokens generated
+	"""
+	outputTokens: BigInt
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Number of thinking blocks in this message"""
-  thinkingCount: Int
+	"""
+	Number of thinking blocks in this message
+	"""
+	thinkingCount: Int
 
-  """When the message was sent"""
-  timestamp: DateTime
+	"""
+	When the message was sent
+	"""
+	timestamp: DateTime
 
-  """Number of tool use blocks in this message"""
-  toolUseCount: Int
+	"""
+	Number of tool use blocks in this message
+	"""
+	toolUseCount: Int
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
 """Result of an authentication operation"""
@@ -229,1820 +292,2504 @@ type AuthUser {
 
 scalar BigInt
 
-"""A cached hook run entry"""
+"""
+A cached hook run entry
+"""
 type CacheEntry {
-  """Number of files tracked"""
-  fileCount: Int
+	"""
+	Number of files tracked
+	"""
+	fileCount: Int
 
-  """Hook name"""
-  hookName: String
+	"""
+	Hook name
+	"""
+	hookName: String
 
-  """Cache entry ID"""
-  id: ID
+	"""
+	Cache entry ID
+	"""
+	id: ID
 
-  """When the cache was last updated"""
-  lastModified: DateTime
+	"""
+	When the cache was last updated
+	"""
+	lastModified: DateTime
 
-  """Path to cache file"""
-  path: String
+	"""
+	Path to cache file
+	"""
+	path: String
 
-  """Plugin name"""
-  pluginName: String
+	"""
+	Plugin name
+	"""
+	pluginName: String
 }
 
-"""Aggregate cache statistics"""
+"""
+Aggregate cache statistics
+"""
 type CacheStats {
-  """Newest cache entry timestamp"""
-  newestEntry: DateTime
+	"""
+	Newest cache entry timestamp
+	"""
+	newestEntry: DateTime
 
-  """Oldest cache entry timestamp"""
-  oldestEntry: DateTime
+	"""
+	Oldest cache entry timestamp
+	"""
+	oldestEntry: DateTime
 
-  """Total number of cache entries"""
-  totalEntries: Int
+	"""
+	Total number of cache entries
+	"""
+	totalEntries: Int
 
-  """Total number of tracked files"""
-  totalFiles: Int
+	"""
+	Total number of tracked files
+	"""
+	totalFiles: Int
 }
 
-"""Citation from memory search"""
+"""
+Citation from memory search
+"""
 type Citation {
-  """Author if known"""
-  author: String
+	"""
+	Author if known
+	"""
+	author: String
 
-  """Relevant excerpt"""
-  excerpt: String
+	"""
+	Relevant excerpt
+	"""
+	excerpt: String
 
-  """Memory layer this came from"""
-  layer: MemoryLayer
+	"""
+	Memory layer this came from
+	"""
+	layer: MemoryLayer
 
-  """Human-readable project name (e.g., han, website)"""
-  projectName: String
+	"""
+	Human-readable project name (e.g., han, website)
+	"""
+	projectName: String
 
-  """Full filesystem path to the project"""
-  projectPath: String
+	"""
+	Full filesystem path to the project
+	"""
+	projectPath: String
 
-  """Source identifier"""
-  source: String
+	"""
+	Source identifier
+	"""
+	source: String
 
-  """Timestamp if known"""
-  timestamp: DateTime
+	"""
+	Timestamp if known
+	"""
+	timestamp: DateTime
 }
 
-"""Visibility level for a citation"""
-enum CitationVisibility {
-  """Only visible to the session owner"""
-  PRIVATE
-
-  """Safe to share broadly within the org"""
-  PUBLIC
-
-  """Visible to team members with repo access"""
-  TEAM
-}
-
-"""Summary of Claude user settings"""
+"""
+Summary of Claude user settings
+"""
 type ClaudeSettingsSummary {
-  """Whether the settings file exists"""
-  exists: Boolean
+	"""
+	Whether the settings file exists
+	"""
+	exists: Boolean
 
-  """Whether permissions are configured"""
-  hasPermissions: Boolean
+	"""
+	Whether permissions are configured
+	"""
+	hasPermissions: Boolean
 
-  """Last modification time"""
-  lastModified: String
+	"""
+	Last modification time
+	"""
+	lastModified: String
 
-  """Number of configured MCP servers"""
-  mcpServerCount: Int
+	"""
+	Number of configured MCP servers
+	"""
+	mcpServerCount: Int
 
-  """Path to settings file"""
-  path: String
+	"""
+	Path to settings file
+	"""
+	path: String
 
-  """Number of enabled plugins"""
-  pluginCount: Int
+	"""
+	Number of enabled plugins
+	"""
+	pluginCount: Int
 }
 
-"""A slash command message in a session"""
+"""
+A slash command message in a session
+"""
 type CommandUserMessage implements Message & UserMessage {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Name of the slash command (e.g., 'commit', 'review')"""
-  commandName: String
+	"""
+	Name of the slash command (e.g., 'commit', 'review')
+	"""
+	commandName: String
 
-  """Command message text content (including command name)"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Command message text content (including command name)
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Sentiment analysis for this message (if available)"""
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis for this message (if available)
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the command was sent"""
-  timestamp: DateTime
+	"""
+	When the command was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Confidence level in search results"""
+"""
+Confidence level in search results
+"""
 enum Confidence {
-  HIGH
-  LOW
-  MEDIUM
+	HIGH
+	LOW
+	MEDIUM
 }
 
-"""A content block within a message"""
+"""
+A content block within a message
+"""
 interface ContentBlock {
-  """The type of this content block"""
-  type: ContentBlockType
+	"""
+	The type of this content block
+	"""
+	type: ContentBlockType
 }
 
-"""Type of content block in a message"""
+"""
+Type of content block in a message
+"""
 enum ContentBlockType {
-  IMAGE
-  TEXT
-  THINKING
-  TOOL_RESULT
-  TOOL_USE
+	IMAGE
+	TEXT
+	THINKING
+	TOOL_RESULT
+	TOOL_USE
 }
 
-"""Anonymized metrics for a contributor"""
-type ContributorMetrics {
-  """Anonymized contributor identifier"""
-  contributorId: String
-
-  """Display name (e.g., 'Project A', 'Workstation 1')"""
-  displayName: String
-
-  """Total sessions by this contributor"""
-  sessionCount: Int
-
-  """Task success rate (0-1)"""
-  successRate: Float
-
-  """Total tasks by this contributor"""
-  taskCount: Int
-}
-
-"""Activity metrics for a single day"""
+"""
+Activity metrics for a single day
+"""
 type DailyActivity {
-  """Total cached tokens used"""
-  cachedTokens: BigInt
+	"""
+	Total cached tokens used
+	"""
+	cachedTokens: BigInt
 
-  """Date in YYYY-MM-DD format"""
-  date: String
+	"""
+	Date in YYYY-MM-DD format
+	"""
+	date: String
 
-  """Number of files changed"""
-  filesChanged: Int
+	"""
+	Number of files changed
+	"""
+	filesChanged: Int
 
-  """Total input tokens used"""
-  inputTokens: BigInt
+	"""
+	Total input tokens used
+	"""
+	inputTokens: BigInt
 
-  """Lines of code added"""
-  linesAdded: Int
+	"""
+	Lines of code added
+	"""
+	linesAdded: Int
 
-  """Lines of code removed"""
-  linesRemoved: Int
+	"""
+	Lines of code removed
+	"""
+	linesRemoved: Int
 
-  """Number of messages sent on this day"""
-  messageCount: Int
+	"""
+	Number of messages sent on this day
+	"""
+	messageCount: Int
 
-  """Total output tokens generated"""
-  outputTokens: BigInt
+	"""
+	Total output tokens generated
+	"""
+	outputTokens: BigInt
 
-  """Number of sessions started on this day"""
-  sessionCount: Int
+	"""
+	Number of sessions started on this day
+	"""
+	sessionCount: Int
 }
 
-"""Daily token usage broken down by model"""
+"""
+Daily token usage broken down by model
+"""
 type DailyModelTokens {
-  """Date in YYYY-MM-DD format"""
-  date: String
+	"""
+	Date in YYYY-MM-DD format
+	"""
+	date: String
 
-  """Token usage per model for this day"""
-  models: [ModelTokenEntry!]
+	"""
+	Token usage per model for this day
+	"""
+	models: [ModelTokenEntry!]
 
-  """Total tokens across all models for this day"""
-  totalTokens: BigInt
+	"""
+	Total tokens across all models for this day
+	"""
+	totalTokens: BigInt
 }
 
 scalar DateTime
 
-"""Type of action that occurred"""
+"""
+Type of action that occurred
+"""
 enum EventAction {
-  CREATED
-  DELETED
-  UPDATED
+	CREATED
+	DELETED
+	UPDATED
 }
 
-input ExportOptionsInput {
-  """Only export approved learnings"""
-  approvedOnly: Boolean
-
-  """Description for the export"""
-  description: String
-
-  """Filter by domains"""
-  domains: [String!]
-
-  """Include aggregated patterns"""
-  includePatterns: Boolean
-}
-
-"""An exposed tool call event"""
+"""
+An exposed tool call event
+"""
 type ExposedToolCallMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Correlation ID to match with result"""
-  callId: String
+	"""
+	Correlation ID to match with result
+	"""
+	callId: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Tool input as JSON string"""
-  input: String
+	"""
+	Tool input as JSON string
+	"""
+	input: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Full prefixed tool name"""
-  prefixedName: String
-  rawJson: String
+	"""
+	Full prefixed tool name
+	"""
+	prefixedName: String
+	rawJson: String
 
-  """
-  The result of this tool call (if available). Loaded via DataLoader from paired events.
-  """
-  result: ExposedToolResult
+	"""
+	The result of this tool call (if available). Loaded via DataLoader from paired events.
+	"""
+	result: ExposedToolResult
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the tool was called"""
-  timestamp: DateTime
+	"""
+	When the tool was called
+	"""
+	timestamp: DateTime
 
-  """Name of the exposed tool"""
-  tool: String
+	"""
+	Name of the exposed tool
+	"""
+	tool: String
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Exposed tool result (inline, not a separate event)"""
+"""
+Exposed tool result (inline, not a separate event)
+"""
 type ExposedToolResult {
-  """Call ID for correlation"""
-  callId: String
+	"""
+	Call ID for correlation
+	"""
+	callId: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message (if failed)"""
-  error: String
+	"""
+	Error message (if failed)
+	"""
+	error: String
 
-  """Event ID"""
-  id: String
+	"""
+	Event ID
+	"""
+	id: String
 
-  """Result as JSON string (if success)"""
-  result: String
+	"""
+	Result as JSON string (if success)
+	"""
+	result: String
 
-  """Whether call succeeded"""
-  success: Boolean
+	"""
+	Whether call succeeded
+	"""
+	success: Boolean
 
-  """When the result was recorded"""
-  timestamp: DateTime
+	"""
+	When the result was recorded
+	"""
+	timestamp: DateTime
 }
 
-"""An exposed tool result event"""
+"""
+An exposed tool result event
+"""
 type ExposedToolResultMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message if tool failed"""
-  error: String
+	"""
+	Error message if tool failed
+	"""
+	error: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Tool output"""
-  output: String
+	"""
+	Tool output
+	"""
+	output: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Full prefixed tool name"""
-  prefixedName: String
-  rawJson: String
+	"""
+	Full prefixed tool name
+	"""
+	prefixedName: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Whether the tool call succeeded"""
-  success: Boolean
+	"""
+	Whether the tool call succeeded
+	"""
+	success: Boolean
 
-  """When the tool result was received"""
-  timestamp: DateTime
+	"""
+	When the tool result was received
+	"""
+	timestamp: DateTime
 
-  """Name of the exposed tool"""
-  tool: String
+	"""
+	Name of the exposed tool
+	"""
+	tool: String
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A file change that occurred during a session"""
+"""
+A file change that occurred during a session
+"""
 type FileChange {
-  """The type of change (created, modified, deleted)"""
-  action: FileChangeAction
+	"""
+	The type of change (created, modified, deleted)
+	"""
+	action: FileChangeAction
 
-  """SHA256 hash of file after change (if available)"""
-  fileHashAfter: String
+	"""
+	SHA256 hash of file after change (if available)
+	"""
+	fileHashAfter: String
 
-  """SHA256 hash of file before change (if available)"""
-  fileHashBefore: String
+	"""
+	SHA256 hash of file before change (if available)
+	"""
+	fileHashBefore: String
 
-  """Path to the changed file"""
-  filePath: String
+	"""
+	Path to the changed file
+	"""
+	filePath: String
 
-  """Unique identifier for this file change"""
-  id: String
+	"""
+	Unique identifier for this file change
+	"""
+	id: String
 
-  """Whether this file has been validated by any hook"""
-  isValidated: Boolean
+	"""
+	Whether this file has been validated by any hook
+	"""
+	isValidated: Boolean
 
-  """Hooks whose patterns match this file but haven't validated it (yellow)"""
-  missingValidations: [FileValidation!]
+	"""
+	Hooks whose patterns match this file but haven't validated it (yellow)
+	"""
+	missingValidations: [FileValidation!]
 
-  """When the change was recorded"""
-  recordedAt: DateTime
+	"""
+	When the change was recorded
+	"""
+	recordedAt: DateTime
 
-  """The session ID this change belongs to"""
-  sessionId: String
+	"""
+	The session ID this change belongs to
+	"""
+	sessionId: String
 
-  """The tool that made the change (Edit, Write, Bash)"""
-  toolName: String
+	"""
+	The tool that made the change (Edit, Write, Bash)
+	"""
+	toolName: String
 
-  """Hook validations for this file (validated = green)"""
-  validations: [FileValidation!]
+	"""
+	Hook validations for this file (validated = green)
+	"""
+	validations: [FileValidation!]
 }
 
-"""The type of file change action"""
+"""
+The type of file change action
+"""
 enum FileChangeAction {
-  """File was created"""
-  CREATED
+	"""
+	File was created
+	"""
+	CREATED
 
-  """File was deleted"""
-  DELETED
+	"""
+	File was deleted
+	"""
+	DELETED
 
-  """File was modified"""
-  MODIFIED
+	"""
+	File was modified
+	"""
+	MODIFIED
 }
 
-"""A paginated list of file changes"""
+"""
+A paginated list of file changes
+"""
 type FileChangeConnection {
-  """List of file change edges"""
-  edges: [FileChangeEdge!]
+	"""
+	List of file change edges
+	"""
+	edges: [FileChangeEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of file changes"""
-  totalCount: Int
+	"""
+	Total number of file changes
+	"""
+	totalCount: Int
 }
 
-"""An edge in a file change connection"""
+"""
+An edge in a file change connection
+"""
 type FileChangeEdge {
-  """Cursor for this edge"""
-  cursor: String
+	"""
+	Cursor for this edge
+	"""
+	cursor: String
 
-  """The file change at this edge"""
-  node: FileChange
+	"""
+	The file change at this edge
+	"""
+	node: FileChange
 }
 
-"""A file history snapshot message tracking file state changes"""
+"""
+A file history snapshot message tracking file state changes
+"""
 type FileHistorySnapshotMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Number of files tracked in this snapshot"""
-  fileCount: Int
+	"""
+	Number of files tracked in this snapshot
+	"""
+	fileCount: Int
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Whether this is an update to an existing snapshot"""
-  isSnapshotUpdate: Boolean
+	"""
+	Whether this is an update to an existing snapshot
+	"""
+	isSnapshotUpdate: Boolean
 
-  """ID of the message this snapshot is associated with"""
-  messageId: String
+	"""
+	ID of the message this snapshot is associated with
+	"""
+	messageId: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Timestamp of the actual snapshot data"""
-  snapshotTimestamp: DateTime
+	"""
+	Timestamp of the actual snapshot data
+	"""
+	snapshotTimestamp: DateTime
 
-  """When the snapshot was taken"""
-  timestamp: DateTime
+	"""
+	When the snapshot was taken
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A hook validation for a file"""
+"""
+A hook validation for a file
+"""
 type FileValidation {
-  """Directory context for the validation"""
-  directory: String
+	"""
+	Directory context for the validation
+	"""
+	directory: String
 
-  """Name of the hook that validated the file"""
-  hookName: String
+	"""
+	Name of the hook that validated the file
+	"""
+	hookName: String
 
-  """Unique identifier for this validation"""
-  id: String
+	"""
+	Unique identifier for this validation
+	"""
+	id: String
 
-  """Name of the plugin that validated the file"""
-  pluginName: String
+	"""
+	Name of the plugin that validated the file
+	"""
+	pluginName: String
 
-  """When the file was validated"""
-  validatedAt: DateTime
+	"""
+	When the file was validated
+	"""
+	validatedAt: DateTime
 }
 
-"""Aggregated frustration metrics for a session"""
+"""
+Aggregated frustration metrics for a session
+"""
 type FrustrationSummary {
-  """Average frustration score (0-10)"""
-  averageScore: Float
+	"""
+	Average frustration score (0-10)
+	"""
+	averageScore: Float
 
-  """Count of high frustration events"""
-  highCount: Int
+	"""
+	Count of high frustration events
+	"""
+	highCount: Int
 
-  """Count of moderate frustration events"""
-  moderateCount: Int
+	"""
+	Count of moderate frustration events
+	"""
+	moderateCount: Int
 
-  """Overall frustration level: none, low, moderate, or high"""
-  overallLevel: String
+	"""
+	Overall frustration level: none, low, moderate, or high
+	"""
+	overallLevel: String
 
-  """Peak frustration score in the session"""
-  peakScore: Float
+	"""
+	Peak frustration score in the session
+	"""
+	peakScore: Float
 
-  """Most common frustration signals"""
-  topSignals: [String!]
+	"""
+	Most common frustration signals
+	"""
+	topSignals: [String!]
 
-  """Total messages analyzed for sentiment"""
-  totalAnalyzed: Int
+	"""
+	Total messages analyzed for sentiment
+	"""
+	totalAnalyzed: Int
 }
 
-"""Time period granularity for aggregation"""
-enum Granularity {
-  DAY
-  MONTH
-  WEEK
-}
-
-"""Summary of Han user configuration"""
+"""
+Summary of Han user configuration
+"""
 type HanConfigSummary {
-  """Whether the config file exists"""
-  exists: Boolean
+	"""
+	Whether the config file exists
+	"""
+	exists: Boolean
 
-  """Whether hooks are enabled"""
-  hooksEnabled: Boolean
+	"""
+	Whether hooks are enabled
+	"""
+	hooksEnabled: Boolean
 
-  """Last modification time"""
-  lastModified: String
+	"""
+	Last modification time
+	"""
+	lastModified: String
 
-  """Whether memory is enabled"""
-  memoryEnabled: Boolean
+	"""
+	Whether memory is enabled
+	"""
+	memoryEnabled: Boolean
 
-  """Whether metrics tracking is enabled"""
-  metricsEnabled: Boolean
+	"""
+	Whether metrics tracking is enabled
+	"""
+	metricsEnabled: Boolean
 
-  """Path to config file"""
-  path: String
+	"""
+	Path to config file
+	"""
+	path: String
 
-  """Number of plugins with custom configuration"""
-  pluginConfigCount: Int
+	"""
+	Number of plugins with custom configuration
+	"""
+	pluginConfigCount: Int
 }
 
-"""Hook check state event recording when hooks are checked for validation"""
+"""
+Hook check state event recording when hooks are checked for validation
+"""
 type HookCheckStateMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Hash of hooks needing validation (for deduplication)"""
-  fingerprint: String
+	"""
+	Hash of hooks needing validation (for deduplication)
+	"""
+	fingerprint: String
 
-  """The type of hook being checked (e.g., Stop, PreToolUse)"""
-  hookType: String
+	"""
+	The type of hook being checked (e.g., Stop, PreToolUse)
+	"""
+	hookType: String
 
-  """Number of hooks that need to run"""
-  hooksCount: Int
+	"""
+	Number of hooks that need to run
+	"""
+	hooksCount: Int
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the check occurred"""
-  timestamp: DateTime
+	"""
+	When the check occurred
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A datetime injection event"""
+"""
+A datetime injection event
+"""
 type HookDatetimeMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """The datetime string that was output"""
-  datetime: String
+	"""
+	The datetime string that was output
+	"""
+	datetime: String
 
-  """Duration in milliseconds"""
-  durationMs: Int
+	"""
+	Duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin injecting the datetime"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin injecting the datetime
+	"""
+	plugin: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the datetime was injected"""
-  timestamp: DateTime
+	"""
+	When the datetime was injected
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A single hook execution record"""
+"""
+A single hook execution record
+"""
 type HookExecution {
-  """The command that was executed"""
-  command: String
+	"""
+	The command that was executed
+	"""
+	command: String
 
-  """Directory where the hook executed"""
-  directory: String
+	"""
+	Directory where the hook executed
+	"""
+	directory: String
 
-  """Duration in milliseconds"""
-  durationMs: Int
+	"""
+	Duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message if hook failed"""
-  error: String
+	"""
+	Error message if hook failed
+	"""
+	error: String
 
-  """Exit code (0 = success)"""
-  exitCode: Int
+	"""
+	Exit code (0 = success)
+	"""
+	exitCode: Int
 
-  """Name of the hook"""
-  hookName: String
+	"""
+	Name of the hook
+	"""
+	hookName: String
 
-  """Plugin source of the hook"""
-  hookSource: String
+	"""
+	Plugin source of the hook
+	"""
+	hookSource: String
 
-  """Type of hook (SessionStart, Stop, etc.)"""
-  hookType: String
+	"""
+	Type of hook (SessionStart, Stop, etc.)
+	"""
+	hookType: String
 
-  """Hook execution ID"""
-  id: String
+	"""
+	Hook execution ID
+	"""
+	id: String
 
-  """Glob patterns that trigger this hook (for file validation tracking)"""
-  ifChanged: [String!]
+	"""
+	Glob patterns that trigger this hook (for file validation tracking)
+	"""
+	ifChanged: [String!]
 
-  """Hook output (truncated if long)"""
-  output: String
+	"""
+	Hook output (truncated if long)
+	"""
+	output: String
 
-  """Whether the hook passed"""
-  passed: Boolean
+	"""
+	Whether the hook passed
+	"""
+	passed: Boolean
 
-  """Session ID this hook ran in"""
-  sessionId: String
+	"""
+	Session ID this hook ran in
+	"""
+	sessionId: String
 
-  """Execution status (RUNNING, PASSED, FAILED, KILLED)"""
-  status: HookExecutionStatus
+	"""
+	Execution status (RUNNING, PASSED, FAILED, KILLED)
+	"""
+	status: HookExecutionStatus
 
-  """Task ID this hook ran for"""
-  taskId: String
+	"""
+	Task ID this hook ran for
+	"""
+	taskId: String
 
-  """When the hook executed"""
-  timestamp: String
+	"""
+	When the hook executed
+	"""
+	timestamp: String
 }
 
-"""A paginated list of hook executions"""
+"""
+A paginated list of hook executions
+"""
 type HookExecutionConnection {
-  """List of hook execution edges"""
-  edges: [HookExecutionEdge!]
+	"""
+	List of hook execution edges
+	"""
+	edges: [HookExecutionEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of hook executions"""
-  totalCount: Int
+	"""
+	Total number of hook executions
+	"""
+	totalCount: Int
 }
 
-"""An edge in a hook execution connection"""
+"""
+An edge in a hook execution connection
+"""
 type HookExecutionEdge {
-  """Cursor for this edge"""
-  cursor: String
+	"""
+	Cursor for this edge
+	"""
+	cursor: String
 
-  """The hook execution at this edge"""
-  node: HookExecution
+	"""
+	The hook execution at this edge
+	"""
+	node: HookExecution
 }
 
-"""Status of a hook execution"""
+"""
+Status of a hook execution
+"""
 enum HookExecutionStatus {
-  FAILED
-  KILLED
-  PASSED
-  RUNNING
+	FAILED
+	KILLED
+	PASSED
+	RUNNING
 }
 
-"""A file change recording event"""
+"""
+A file change recording event
+"""
 type HookFileChangeMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Tool that made the change (Edit, Write)"""
-  changeToolName: String
+	"""
+	Tool that made the change (Edit, Write)
+	"""
+	changeToolName: String
 
-  """Path to the changed file"""
-  filePath: String
+	"""
+	Path to the changed file
+	"""
+	filePath: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """Session ID where the change occurred"""
-  recordedSessionId: String
+	"""
+	Session ID where the change occurred
+	"""
+	recordedSessionId: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the file change was recorded"""
-  timestamp: DateTime
+	"""
+	When the file change was recorded
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A hook reference injection event (must-read-first files)"""
+"""
+A hook reference injection event (must-read-first files)
+"""
 type HookReferenceMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Duration in milliseconds"""
-  durationMs: Int
+	"""
+	Duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Path to the referenced file"""
-  filePath: String
+	"""
+	Path to the referenced file
+	"""
+	filePath: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin that injected the reference"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin that injected the reference
+	"""
+	plugin: String
+	rawJson: String
 
-  """Reason for must-read-first requirement"""
-  reason: String
+	"""
+	Reason for must-read-first requirement
+	"""
+	reason: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Whether the file was found and injected"""
-  success: Boolean
+	"""
+	Whether the file was found and injected
+	"""
+	success: Boolean
 
-  """When the reference was injected"""
-  timestamp: DateTime
+	"""
+	When the reference was injected
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Hook execution result (inline, not a separate event)"""
+"""
+Hook execution result (inline, not a separate event)
+"""
 type HookResult {
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message (if failed)"""
-  error: String
+	"""
+	Error message (if failed)
+	"""
+	error: String
 
-  """Process exit code"""
-  exitCode: Int
+	"""
+	Process exit code
+	"""
+	exitCode: Int
 
-  """Event ID"""
-  id: String
+	"""
+	Event ID
+	"""
+	id: String
 
-  """Hook output (if success)"""
-  output: String
+	"""
+	Hook output (if success)
+	"""
+	output: String
 
-  """Whether hook succeeded"""
-  success: Boolean
+	"""
+	Whether hook succeeded
+	"""
+	success: Boolean
 
-  """When the result was recorded"""
-  timestamp: DateTime
+	"""
+	When the result was recorded
+	"""
+	timestamp: DateTime
 }
 
-"""Payload for hook result added events"""
+"""
+Payload for hook result added events
+"""
 type HookResultAddedPayload {
-  """Duration of the hook execution in milliseconds"""
-  durationMs: Int
+	"""
+	Duration of the hook execution in milliseconds
+	"""
+	durationMs: Int
 
-  """Name of the hook that was executed"""
-  hookName: String
+	"""
+	Name of the hook that was executed
+	"""
+	hookName: String
 
-  """UUID of the parent hook_run event for correlation"""
-  hookRunId: String
+	"""
+	UUID of the parent hook_run event for correlation
+	"""
+	hookRunId: String
 
-  """Plugin that executed the hook"""
-  pluginName: String
+	"""
+	Plugin that executed the hook
+	"""
+	pluginName: String
 
-  """ID of the session containing the hook run"""
-  sessionId: String
+	"""
+	ID of the session containing the hook run
+	"""
+	sessionId: String
 
-  """Whether the hook succeeded"""
-  success: Boolean
+	"""
+	Whether the hook succeeded
+	"""
+	success: Boolean
 }
 
-"""A hook execution result event with success/failure status"""
+"""
+A hook execution result event with success/failure status
+"""
 type HookResultMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Whether this result was from cache"""
-  cached: Boolean
+	"""
+	Whether this result was from cache
+	"""
+	cached: Boolean
 
-  """Directory context for the hook"""
-  directory: String
+	"""
+	Directory context for the hook
+	"""
+	directory: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message if hook failed"""
-  error: String
+	"""
+	Error message if hook failed
+	"""
+	error: String
 
-  """Exit code from the hook process"""
-  exitCode: Int
+	"""
+	Exit code from the hook process
+	"""
+	exitCode: Int
 
-  """Name of the hook that was executed"""
-  hook: String
+	"""
+	Name of the hook that was executed
+	"""
+	hook: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Hook output content"""
-  output: String
+	"""
+	Hook output content
+	"""
+	output: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin that owns the hook"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin that owns the hook
+	"""
+	plugin: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Whether the hook succeeded"""
-  success: Boolean
+	"""
+	Whether the hook succeeded
+	"""
+	success: Boolean
 
-  """When the hook completed"""
-  timestamp: DateTime
+	"""
+	When the hook completed
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A hook execution start event"""
+"""
+A hook execution start event
+"""
 type HookRunMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Whether this hook result was cached"""
-  cached: Boolean
+	"""
+	Whether this hook result was cached
+	"""
+	cached: Boolean
 
-  """Directory context for the hook"""
-  directory: String
+	"""
+	Directory context for the hook
+	"""
+	directory: String
 
-  """Name of the hook being executed"""
-  hook: String
+	"""
+	Name of the hook being executed
+	"""
+	hook: String
 
-  """UUID of this hook run (used to correlate with result)"""
-  hookRunId: String
+	"""
+	UUID of this hook run (used to correlate with result)
+	"""
+	hookRunId: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin that owns the hook"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin that owns the hook
+	"""
+	plugin: String
+	rawJson: String
 
-  """Hook result (null if still pending)"""
-  result: HookResult
+	"""
+	Hook result (null if still pending)
+	"""
+	result: HookResult
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the hook started execution"""
-  timestamp: DateTime
+	"""
+	When the hook started execution
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A generic script execution event (bash/cat commands)"""
+"""
+A generic script execution event (bash/cat commands)
+"""
 type HookScriptMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """The command that was executed"""
-  command: String
+	"""
+	The command that was executed
+	"""
+	command: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Exit code from the script"""
-  exitCode: Int
+	"""
+	Exit code from the script
+	"""
+	exitCode: Int
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Script output"""
-  output: String
+	"""
+	Script output
+	"""
+	output: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin running the script"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin running the script
+	"""
+	plugin: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Whether the script succeeded"""
-  success: Boolean
+	"""
+	Whether the script succeeded
+	"""
+	success: Boolean
 
-  """When the script executed"""
-  timestamp: DateTime
+	"""
+	When the script executed
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Hook execution statistics"""
+"""
+Hook execution statistics
+"""
 type HookStats {
-  """Statistics broken down by hook type"""
-  byHookType: [HookTypeStat!]
+	"""
+	Statistics broken down by hook type
+	"""
+	byHookType: [HookTypeStat!]
 
-  """Number of failed hooks"""
-  failedHooks: Int
+	"""
+	Number of failed hooks
+	"""
+	failedHooks: Int
 
-  """Pass rate as a percentage"""
-  passRate: Float
+	"""
+	Pass rate as a percentage
+	"""
+	passRate: Float
 
-  """Number of passed hooks"""
-  passedHooks: Int
+	"""
+	Number of passed hooks
+	"""
+	passedHooks: Int
 
-  """Total duration of all hooks in ms"""
-  totalDurationMs: Int
+	"""
+	Total duration of all hooks in ms
+	"""
+	totalDurationMs: Int
 
-  """Total hook executions"""
-  totalHooks: Int
+	"""
+	Total hook executions
+	"""
+	totalHooks: Int
 }
 
-"""Hook statistics by type"""
+"""
+Hook statistics by type
+"""
 type HookTypeStat {
-  """Hook type name"""
-  hookType: String
+	"""
+	Hook type name
+	"""
+	hookType: String
 
-  """Passed executions"""
-  passed: Int
+	"""
+	Passed executions
+	"""
+	passed: Int
 
-  """Total executions of this type"""
-  total: Int
+	"""
+	Total executions of this type
+	"""
+	total: Int
 }
 
-"""A hook validation cache event with tracked file hashes"""
+"""
+A hook validation cache event with tracked file hashes
+"""
 type HookValidationCacheMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Directory that was validated"""
-  directory: String
+	"""
+	Directory that was validated
+	"""
+	directory: String
 
-  """Number of files tracked in cache"""
-  fileCount: Int
+	"""
+	Number of files tracked in cache
+	"""
+	fileCount: Int
 
-  """Validation hook name (e.g., typecheck, lint)"""
-  hook: String
+	"""
+	Validation hook name (e.g., typecheck, lint)
+	"""
+	hook: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin that ran the validation"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin that ran the validation
+	"""
+	plugin: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the cache was written"""
-  timestamp: DateTime
+	"""
+	When the cache was written
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A per-directory validation hook result event"""
+"""
+A per-directory validation hook result event
+"""
 type HookValidationMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Whether result was from cache"""
-  cached: Boolean
+	"""
+	Whether result was from cache
+	"""
+	cached: Boolean
 
-  """Directory being validated"""
-  directory: String
+	"""
+	Directory being validated
+	"""
+	directory: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message if validation failed"""
-  error: String
+	"""
+	Error message if validation failed
+	"""
+	error: String
 
-  """Exit code from the validation"""
-  exitCode: Int
+	"""
+	Exit code from the validation
+	"""
+	exitCode: Int
 
-  """Validation hook name (e.g., lint, typecheck)"""
-  hook: String
+	"""
+	Validation hook name (e.g., lint, typecheck)
+	"""
+	hook: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Validation output"""
-  output: String
+	"""
+	Validation output
+	"""
+	output: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Plugin running the validation"""
-  plugin: String
-  rawJson: String
+	"""
+	Plugin running the validation
+	"""
+	plugin: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Whether validation passed"""
-  success: Boolean
+	"""
+	Whether validation passed
+	"""
+	success: Boolean
 
-  """When the validation completed"""
-  timestamp: DateTime
+	"""
+	When the validation completed
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Activity metrics for an hour of the day"""
+"""
+Activity metrics for an hour of the day
+"""
 type HourlyActivity {
-  """Hour of day (0-23)"""
-  hour: Int
+	"""
+	Hour of day (0-23)
+	"""
+	hour: Int
 
-  """Number of messages sent in this hour"""
-  messageCount: Int
+	"""
+	Number of messages sent in this hour
+	"""
+	messageCount: Int
 
-  """Number of sessions started in this hour"""
-  sessionCount: Int
+	"""
+	Number of sessions started in this hour
+	"""
+	sessionCount: Int
 }
 
-"""An image (base64 encoded or file path)"""
+"""
+An image (base64 encoded or file path)
+"""
 type ImageBlock implements ContentBlock {
-  """Data URL for displaying the image"""
-  dataUrl: String
+	"""
+	Data URL for displaying the image
+	"""
+	dataUrl: String
 
-  """MIME type of the image"""
-  mediaType: String
-  type: ContentBlockType
+	"""
+	MIME type of the image
+	"""
+	mediaType: String
+	type: ContentBlockType
 }
 
-input ImportOptionsInput {
-  """Auto-approve imported learnings"""
-  autoApprove: Boolean
-
-  """Filter to specific domains"""
-  domains: [String!]
-
-  """Dry run without importing"""
-  dryRun: Boolean
-
-  """How to handle duplicates: skip, replace, create_new"""
-  duplicateStrategy: String
-}
-
-"""Result of indexing sessions"""
+"""
+Result of indexing sessions
+"""
 type IndexingResult {
-  """Any errors encountered during indexing"""
-  errors: [String!]
+	"""
+	Any errors encountered during indexing
+	"""
+	errors: [String!]
 
-  """Number of sessions indexed"""
-  sessionsIndexed: Int
+	"""
+	Number of sessions indexed
+	"""
+	sessionsIndexed: Int
 
-  """Whether indexing completed successfully"""
-  success: Boolean
+	"""
+	Whether indexing completed successfully
+	"""
+	success: Boolean
 
-  """Total messages indexed"""
-  totalMessages: Int
+	"""
+	Total messages indexed
+	"""
+	totalMessages: Int
 }
 
-"""An interrupt message in a session (user interrupted the assistant)"""
+"""
+An interrupt message in a session (user interrupted the assistant)
+"""
 type InterruptUserMessage implements Message & UserMessage {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Interrupt message text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Interrupt message text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Sentiment analysis for this message (if available)"""
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis for this message (if available)
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the interrupt occurred"""
-  timestamp: DateTime
+	"""
+	When the interrupt occurred
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Result of linking an OAuth provider to an account"""
-type LinkResult {
-  """The new OAuth connection (if successful)"""
-  connection: OAuthConnection
-
-  """Error message (if failed)"""
-  error: String
-
-  """Whether the linking succeeded"""
-  success: Boolean
-}
-
-"""Result of requesting a magic link"""
-type MagicLinkResult {
-  """Status message or error"""
-  message: String
-
-  """Whether the magic link was sent"""
-  success: Boolean
-}
-
-"""An MCP server configuration"""
+"""
+An MCP server configuration
+"""
 type McpServer {
-  """Number of command arguments"""
-  argCount: Int
+	"""
+	Number of command arguments
+	"""
+	argCount: Int
 
-  """Command to run the server"""
-  command: String
+	"""
+	Command to run the server
+	"""
+	command: String
 
-  """Whether environment variables are configured"""
-  hasEnv: Boolean
+	"""
+	Whether environment variables are configured
+	"""
+	hasEnv: Boolean
 
-  """Server ID"""
-  id: ID
+	"""
+	Server ID
+	"""
+	id: ID
 
-  """Server name"""
-  name: String
+	"""
+	Server name
+	"""
+	name: String
 
-  """Server type (stdio or http)"""
-  type: String
+	"""
+	Server type (stdio or http)
+	"""
+	type: String
 
-  """URL for HTTP servers"""
-  url: String
+	"""
+	URL for HTTP servers
+	"""
+	url: String
 }
 
-"""An MCP tool call event"""
+"""
+An MCP tool call event
+"""
 type McpToolCallMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Correlation ID to match with result"""
-  callId: String
+	"""
+	Correlation ID to match with result
+	"""
+	callId: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Tool input as JSON string"""
-  input: String
+	"""
+	Tool input as JSON string
+	"""
+	input: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Full prefixed tool name"""
-  prefixedName: String
-  rawJson: String
+	"""
+	Full prefixed tool name
+	"""
+	prefixedName: String
+	rawJson: String
 
-  """
-  The result of this tool call (if available). Loaded via DataLoader from paired events.
-  """
-  result: McpToolResult
+	"""
+	The result of this tool call (if available). Loaded via DataLoader from paired events.
+	"""
+	result: McpToolResult
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """MCP server handling the tool"""
-  server: String
+	"""
+	MCP server handling the tool
+	"""
+	server: String
 
-  """When the tool was called"""
-  timestamp: DateTime
+	"""
+	When the tool was called
+	"""
+	timestamp: DateTime
 
-  """Name of the MCP tool being called"""
-  tool: String
+	"""
+	Name of the MCP tool being called
+	"""
+	tool: String
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""MCP tool result (inline, not a separate event)"""
+"""
+MCP tool result (inline, not a separate event)
+"""
 type McpToolResult {
-  """Call ID for correlation"""
-  callId: String
+	"""
+	Call ID for correlation
+	"""
+	callId: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message (if failed)"""
-  error: String
+	"""
+	Error message (if failed)
+	"""
+	error: String
 
-  """Event ID"""
-  id: String
+	"""
+	Event ID
+	"""
+	id: String
 
-  """Result as JSON string (if success)"""
-  result: String
+	"""
+	Result as JSON string (if success)
+	"""
+	result: String
 
-  """Whether call succeeded"""
-  success: Boolean
+	"""
+	Whether call succeeded
+	"""
+	success: Boolean
 
-  """When the result was recorded"""
-  timestamp: DateTime
+	"""
+	When the result was recorded
+	"""
+	timestamp: DateTime
 }
 
-"""An MCP tool result event"""
+"""
+An MCP tool result event
+"""
 type McpToolResultMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Execution duration in milliseconds"""
-  durationMs: Int
+	"""
+	Execution duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Error message if tool failed"""
-  error: String
+	"""
+	Error message if tool failed
+	"""
+	error: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Tool output"""
-  output: String
+	"""
+	Tool output
+	"""
+	output: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Full prefixed tool name"""
-  prefixedName: String
-  rawJson: String
+	"""
+	Full prefixed tool name
+	"""
+	prefixedName: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """MCP server that handled the tool"""
-  server: String
+	"""
+	MCP server that handled the tool
+	"""
+	server: String
 
-  """Whether the tool call succeeded"""
-  success: Boolean
+	"""
+	Whether the tool call succeeded
+	"""
+	success: Boolean
 
-  """When the tool result was received"""
-  timestamp: DateTime
+	"""
+	When the tool result was received
+	"""
+	timestamp: DateTime
 
-  """Name of the MCP tool"""
-  tool: String
+	"""
+	Name of the MCP tool
+	"""
+	tool: String
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Progress update from Memory Agent during search"""
+"""
+Progress update from Memory Agent during search
+"""
 type MemoryAgentProgress {
-  """Progress message or content"""
-  content: String
+	"""
+	Progress message or content
+	"""
+	content: String
 
-  """Memory layer being searched"""
-  layer: String
+	"""
+	Memory layer being searched
+	"""
+	layer: String
 
-  """Number of results found (if applicable)"""
-  resultCount: Int
+	"""
+	Number of results found (if applicable)
+	"""
+	resultCount: Int
 
-  """Unique ID for this memory query session"""
-  sessionId: String
+	"""
+	Unique ID for this memory query session
+	"""
+	sessionId: String
 
-  """When this progress update occurred"""
-  timestamp: DateTime
+	"""
+	When this progress update occurred
+	"""
+	timestamp: DateTime
 
-  """Type of progress update"""
-  type: MemoryAgentProgressType
+	"""
+	Type of progress update
+	"""
+	type: MemoryAgentProgressType
 }
 
-"""Type of progress update from Memory Agent"""
+"""
+Type of progress update from Memory Agent
+"""
 enum MemoryAgentProgressType {
-  COMPLETE
-  ERROR
-  FOUND
-  SEARCHING
-  SYNTHESIZING
+	COMPLETE
+	ERROR
+	FOUND
+	SEARCHING
+	SYNTHESIZING
 }
 
-"""Final result from Memory Agent query"""
+"""
+Final result from Memory Agent query
+"""
 type MemoryAgentResult {
-  """Synthesized answer from memory"""
-  answer: String
+	"""
+	Synthesized answer from memory
+	"""
+	answer: String
 
-  """Citations supporting the answer"""
-  citations: [Citation!]
+	"""
+	Citations supporting the answer
+	"""
+	citations: [Citation!]
 
-  """Confidence in the answer"""
-  confidence: Confidence
+	"""
+	Confidence in the answer
+	"""
+	confidence: Confidence
 
-  """Error message if query failed"""
-  error: String
+	"""
+	Error message if query failed
+	"""
+	error: String
 
-  """Memory layers that were searched"""
-  searchedLayers: [MemoryLayer!]
+	"""
+	Memory layers that were searched
+	"""
+	searchedLayers: [MemoryLayer!]
 
-  """Unique ID for this memory query session"""
-  sessionId: String
+	"""
+	Unique ID for this memory query session
+	"""
+	sessionId: String
 
-  """Whether the query succeeded"""
-  success: Boolean
+	"""
+	Whether the query succeeded
+	"""
+	success: Boolean
 }
 
-"""Event emitted when memory changes"""
+"""
+Event emitted when memory changes
+"""
 type MemoryEvent {
-  """What action occurred"""
-  action: EventAction
+	"""
+	What action occurred
+	"""
+	action: EventAction
 
-  """Path to the affected file"""
-  path: String
+	"""
+	Path to the affected file
+	"""
+	path: String
 
-  """ISO timestamp when the event occurred"""
-  timestamp: String
+	"""
+	ISO timestamp when the event occurred
+	"""
+	timestamp: String
 
-  """Type of memory that changed"""
-  type: MemoryEventType
+	"""
+	Type of memory that changed
+	"""
+	type: MemoryEventType
 }
 
-"""Type of memory that changed"""
+"""
+Type of memory that changed
+"""
 enum MemoryEventType {
-  OBSERVATION
-  RELOAD
-  RULE
-  SESSION
-  SUMMARY
+	OBSERVATION
+	RELOAD
+	RULE
+	SESSION
+	SUMMARY
 }
 
-"""Layer in the memory system"""
+"""
+Layer in the memory system
+"""
 enum MemoryLayer {
-  OBSERVATIONS
-  RULES
-  SUMMARIES
-  TEAM
-  TRANSCRIPTS
+	OBSERVATIONS
+	RULES
+	SUMMARIES
+	TEAM
+	TRANSCRIPTS
 }
 
-"""Information about a memory layer available to the user"""
-type MemoryLayerInfo {
-  """Whether this layer is available to the user"""
-  available: Boolean
-
-  """Human-readable description"""
-  description: String
-
-  """Layer name (personal, project, team, org)"""
-  name: String
-
-  """Number of sessions accessible in this layer"""
-  sessionCount: Int
-}
-
-"""A memory learn event"""
+"""
+A memory learn event
+"""
 type MemoryLearnMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Whether content was appended vs replaced"""
-  append: Boolean
+	"""
+	Whether content was appended vs replaced
+	"""
+	append: Boolean
 
-  """Domain for the learned content"""
-  domain: String
+	"""
+	Domain for the learned content
+	"""
+	domain: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Path patterns if path-specific"""
-  paths: [String!]
-  rawJson: String
+	"""
+	Path patterns if path-specific
+	"""
+	paths: [String!]
+	rawJson: String
 
-  """Scope of the learning (e.g., 'project', 'user')"""
-  scope: String
+	"""
+	Scope of the learning (e.g., 'project', 'user')
+	"""
+	scope: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the learning was captured"""
-  timestamp: DateTime
+	"""
+	When the learning was captured
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Memory query interface"""
+"""
+Memory query interface
+"""
 type MemoryQuery {
-  """All project and user rules across registered projects"""
-  rules: [Rule!]
+	"""
+	All project and user rules across registered projects
+	"""
+	rules: [Rule!]
 
-  """Search memory with a question (requires project context)"""
-  search(
-    layers: [MemoryLayer!]
+	"""
+	Search memory with a question (requires project context)
+	"""
+	search(
+		layers: [MemoryLayer!]
 
-    """
-    Project filesystem path for plugin discovery. Required for context-aware search.
-    """
-    projectPath: String!
-    query: String!
-  ): MemorySearchResult
+		"""
+		Project filesystem path for plugin discovery. Required for context-aware search.
+		"""
+		projectPath: String!
+		query: String!
+	): MemorySearchResult
 }
 
-"""A memory query event"""
+"""
+A memory query event
+"""
 type MemoryQueryMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Query duration in milliseconds"""
-  durationMs: Int
+	"""
+	Query duration in milliseconds
+	"""
+	durationMs: Int
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """The question being asked"""
-  question: String
-  rawJson: String
+	"""
+	The question being asked
+	"""
+	question: String
+	rawJson: String
 
-  """Number of results returned"""
-  resultCount: Int
+	"""
+	Number of results returned
+	"""
+	resultCount: Int
 
-  """Memory route used (e.g., 'personal', 'team', 'project')"""
-  route: String
+	"""
+	Memory route used (e.g., 'personal', 'team', 'project')
+	"""
+	route: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the memory was queried"""
-  timestamp: DateTime
+	"""
+	When the memory was queried
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Result of starting a memory query with streaming"""
+"""
+Result of starting a memory query with streaming
+"""
 type MemoryQueryStartResult {
-  """Status message or error details"""
-  message: String
+	"""
+	Status message or error details
+	"""
+	message: String
 
-  """
-  Session ID to use for subscribing to progress updates via memoryAgentProgress subscription
-  """
-  sessionId: String
+	"""
+	Session ID to use for subscribing to progress updates via memoryAgentProgress subscription
+	"""
+	sessionId: String
 
-  """Whether the query was started successfully"""
-  success: Boolean
+	"""
+	Whether the query was started successfully
+	"""
+	success: Boolean
 }
 
-"""Memory access scope levels"""
-enum MemoryScope {
-  """Aggregated learnings only (no raw data)"""
-  ORG
-
-  """User's own sessions (always accessible)"""
-  PERSONAL
-
-  """Sessions in projects user belongs to"""
-  PROJECT
-
-  """Sessions visible via repo permissions"""
-  TEAM
-}
-
-"""Result from memory search"""
+"""
+Result from memory search
+"""
 type MemorySearchResult {
-  """Answer synthesized from memory"""
-  answer: String
+	"""
+	Answer synthesized from memory
+	"""
+	answer: String
 
-  """Caveats or notes about the results"""
-  caveats: [String!]
+	"""
+	Caveats or notes about the results
+	"""
+	caveats: [String!]
 
-  """Citations supporting the answer"""
-  citations: [Citation!]
+	"""
+	Citations supporting the answer
+	"""
+	citations: [Citation!]
 
-  """Confidence in the answer"""
-  confidence: Confidence
+	"""
+	Confidence in the answer
+	"""
+	confidence: Confidence
 
-  """Which memory layers were searched"""
-  layersSearched: [MemoryLayer!]
+	"""
+	Which memory layers were searched
+	"""
+	layersSearched: [MemoryLayer!]
 
-  """Primary source of the answer"""
-  source: MemorySource
+	"""
+	Primary source of the answer
+	"""
+	source: MemorySource
 }
 
-"""Source of memory search result"""
+"""
+Source of memory search result
+"""
 enum MemorySource {
-  COMBINED
-  PERSONAL
-  RULES
-  TEAM
-  TRANSCRIPTS
+	COMBINED
+	PERSONAL
+	RULES
+	TEAM
+	TRANSCRIPTS
 }
 
 """
 Base interface for all message types in a session. Contains only shared fields - concrete types add their own specific fields.
 """
 interface Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Message global ID (Message:{uuid})"""
-  id: ID
+	"""
+	Message global ID (Message:{uuid})
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Original JSONL line content for debugging"""
-  rawJson: String
+	"""
+	Original JSONL line content for debugging
+	"""
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the message was sent"""
-  timestamp: DateTime
+	"""
+	When the message was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A paginated list of messages"""
+"""
+A paginated list of messages
+"""
 type MessageConnection {
-  """List of message edges"""
-  edges: [MessageEdge!]
+	"""
+	List of message edges
+	"""
+	edges: [MessageEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of messages in the session"""
-  totalCount: Int
+	"""
+	Total number of messages in the session
+	"""
+	totalCount: Int
 }
 
-"""An edge in a message connection"""
+"""
+An edge in a message connection
+"""
 type MessageEdge {
-  """Cursor for this edge"""
-  cursor: String
+	"""
+	Cursor for this edge
+	"""
+	cursor: String
 
-  """The message at this edge"""
-  node: Message
+	"""
+	The message at this edge
+	"""
+	node: Message
 }
 
-"""A search result from searching session messages"""
+"""
+A search result from searching session messages
+"""
 type MessageSearchResult {
-  """The matched text with surrounding context"""
-  matchContext: String
+	"""
+	The matched text with surrounding context
+	"""
+	matchContext: String
 
-  """The message ID"""
-  messageId: String
+	"""
+	The message ID
+	"""
+	messageId: String
 
-  """The 0-based index of the message in the session (for jumping)"""
-  messageIndex: Int
+	"""
+	The 0-based index of the message in the session (for jumping)
+	"""
+	messageIndex: Int
 
-  """Preview text showing match context"""
-  preview: String
+	"""
+	Preview text showing match context
+	"""
+	preview: String
 }
 
-"""A system-injected meta message in a session"""
+"""
+A system-injected meta message in a session
+"""
 type MetaUserMessage implements Message & UserMessage {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Meta message text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Meta message text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Sentiment analysis (typically null for meta messages)"""
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis (typically null for meta messages)
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the message was sent"""
-  timestamp: DateTime
+	"""
+	When the message was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""Aggregate metrics for a time period"""
+"""
+Aggregate metrics for a time period
+"""
 type MetricsData {
-  """Average confidence score (0-1)"""
-  averageConfidence: Float
+	"""
+	Average confidence score (0-1)
+	"""
+	averageConfidence: Float
 
-  """Average duration in seconds"""
-  averageDuration: Float
+	"""
+	Average duration in seconds
+	"""
+	averageDuration: Float
 
-  """Calibration score (how well confidence matches outcomes)"""
-  calibrationScore: Float
+	"""
+	Calibration score (how well confidence matches outcomes)
+	"""
+	calibrationScore: Float
 
-  """Number of completed tasks"""
-  completedTasks: Int
+	"""
+	Number of completed tasks
+	"""
+	completedTasks: Int
 
-  """Significant frustrations per task"""
-  significantFrustrationRate: Float
+	"""
+	Significant frustrations per task
+	"""
+	significantFrustrationRate: Float
 
-  """Count of moderate/high frustration events"""
-  significantFrustrations: Int
+	"""
+	Count of moderate/high frustration events
+	"""
+	significantFrustrations: Int
 
-  """Success rate (0-1)"""
-  successRate: Float
+	"""
+	Success rate (0-1)
+	"""
+	successRate: Float
 
-  """Task breakdown by outcome"""
-  tasksByOutcome: [TaskOutcomeCount!]
+	"""
+	Task breakdown by outcome
+	"""
+	tasksByOutcome: [TaskOutcomeCount!]
 
-  """Task breakdown by type"""
-  tasksByType: [TaskTypeCount!]
+	"""
+	Task breakdown by type
+	"""
+	tasksByType: [TaskTypeCount!]
 
-  """Total number of tasks"""
-  totalTasks: Int
+	"""
+	Total number of tasks
+	"""
+	totalTasks: Int
 }
 
-"""Time period for metrics queries"""
+"""
+Time period for metrics queries
+"""
 enum MetricsPeriod {
-  DAY
-  MONTH
-  WEEK
+	DAY
+	MONTH
+	WEEK
 }
 
-"""Token usage for a specific model"""
+"""
+Token usage for a specific model
+"""
 type ModelTokenEntry {
-  """Human-readable model name (e.g., Opus 4.5)"""
-  displayName: String
+	"""
+	Human-readable model name (e.g., Opus 4.5)
+	"""
+	displayName: String
 
-  """Model ID (e.g., claude-opus-4-5-20251101)"""
-  model: String
+	"""
+	Model ID (e.g., claude-opus-4-5-20251101)
+	"""
+	model: String
 
-  """Token count for this model"""
-  tokens: BigInt
+	"""
+	Token count for this model
+	"""
+	tokens: BigInt
 }
 
-"""Cumulative usage statistics for a model"""
+"""
+Cumulative usage statistics for a model
+"""
 type ModelUsageStats {
-  """Total cache creation tokens"""
-  cacheCreationTokens: BigInt
+	"""
+	Total cache creation tokens
+	"""
+	cacheCreationTokens: BigInt
 
-  """Total cache read tokens"""
-  cacheReadTokens: BigInt
+	"""
+	Total cache read tokens
+	"""
+	cacheReadTokens: BigInt
 
-  """Human-readable model name"""
-  displayName: String
+	"""
+	Human-readable model name
+	"""
+	displayName: String
 
-  """Total input tokens"""
-  inputTokens: BigInt
+	"""
+	Total input tokens
+	"""
+	inputTokens: BigInt
 
-  """Model ID"""
-  model: String
+	"""
+	Model ID
+	"""
+	model: String
 
-  """Total output tokens"""
-  outputTokens: BigInt
+	"""
+	Total output tokens
+	"""
+	outputTokens: BigInt
 
-  """Total tokens (input + output)"""
-  totalTokens: BigInt
+	"""
+	Total tokens (input + output)
+	"""
+	totalTokens: BigInt
 }
 
 """Result of a moderation action"""
@@ -2053,458 +2800,415 @@ type ModerationResult {
 }
 
 type Mutation {
-  """
-  Acquire a global execution slot. Returns slot ID if granted, -1 if no slots available.
-  """
-  acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
+	"""
+	Acquire a global execution slot. Returns slot ID if granted, -1 if no slots available.
+	"""
+	acquireSlot(
+		hookName: String!
+		pid: Int!
+		pluginName: String
+		sessionId: String!
+	): SlotAcquireResult
 
-  """Approve a pending learning (admin only)"""
-  approveLearning(context: TeamUserContextInput!, learningId: String!, notes: String): ModerationResult
+	"""
+	Trigger full indexing of all Claude Code sessions from JSONL files
+	"""
+	indexSessions: IndexingResult
 
-  """Complete OAuth flow after user authorization"""
-  completeOAuth(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): AuthResult
+	"""
+	Release a previously acquired slot
+	"""
+	releaseSlot(pid: Int!, slotId: Int!): SlotReleaseResult
 
-  """Export team knowledge to JSON format"""
-  exportTeamKnowledge(context: TeamUserContextInput!, options: ExportOptionsInput): TeamKnowledgeExportResult
+	"""
+	Remove a plugin from settings
+	"""
+	removePlugin(
+		marketplace: String!
+		name: String!
+		scope: PluginScope!
+	): PluginMutationResult
 
-  """Import team knowledge from JSON format"""
-  importTeamKnowledge(
-    context: TeamUserContextInput!
+	"""
+	Start a memory query with streaming. Returns a session ID to subscribe to progress updates.
+	"""
+	startMemoryQuery(
+		model: String
 
-    """JSON string of export data"""
-    importJson: String!
-    options: ImportOptionsInput
-  ): TeamKnowledgeImportResult
+		"""
+		Project filesystem path for plugin discovery. Required for context-aware search.
+		"""
+		projectPath: String!
+		question: String!
+	): MemoryQueryStartResult
 
-  """Trigger full indexing of all Claude Code sessions from JSONL files"""
-  indexSessions: IndexingResult
-
-  """Initiate OAuth flow with a provider. Returns URL to redirect user to."""
-  initiateOAuth(provider: OAuthProvider!): OAuthInitiateResult
-
-  """Link an OAuth provider to the current user's account"""
-  linkOAuthProvider(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): LinkResult
-
-  """Refresh an existing session using a refresh token"""
-  refreshSession(refreshToken: String!): AuthResult
-
-  """Reject a pending learning (admin only)"""
-  rejectLearning(context: TeamUserContextInput!, learningId: String!, reason: String!): ModerationResult
-
-  """Release a previously acquired slot"""
-  releaseSlot(pid: Int!, slotId: Int!): SlotReleaseResult
-
-  """Remove a plugin from settings"""
-  removePlugin(marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
-
-  """Remove a shared learning (admin only)"""
-  removeSharedLearning(context: TeamUserContextInput!, learningId: String!, reason: String!): ModerationResult
-
-  """Request a magic link to be sent to the specified email"""
-  requestMagicLink(email: String!): MagicLinkResult
-
-  """Revoke all sessions for the current user"""
-  revokeAllSessions: Boolean
-
-  """Revoke a specific session"""
-  revokeSession(sessionId: ID!): Boolean
-
-  """Share a personal learning with the team"""
-  shareWithTeam(context: TeamUserContextInput!, input: ShareLearningInput!): ShareLearningResult
-
-  """
-  Start a memory query with streaming. Returns a session ID to subscribe to progress updates.
-  """
-  startMemoryQuery(
-    model: String
-
-    """
-    Project filesystem path for plugin discovery. Required for context-aware search.
-    """
-    projectPath: String!
-    question: String!
-  ): MemoryQueryStartResult
-
-  """Enable or disable a plugin"""
-  togglePlugin(enabled: Boolean!, marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
-
-  """Remove an OAuth provider connection from the current user's account"""
-  unlinkOAuthProvider(connectionId: ID!): Boolean
-
-  """Update organization sharing policy (admin only)"""
-  updateSharingPolicy(context: TeamUserContextInput!, policy: SharingPolicyInput!): PolicyUpdateResult
-
-  """Verify a magic link token and create a session"""
-  verifyMagicLink(token: String!): AuthResult
+	"""
+	Enable or disable a plugin
+	"""
+	togglePlugin(
+		enabled: Boolean!
+		marketplace: String!
+		name: String!
+		scope: PluginScope!
+	): PluginMutationResult
 }
 
-"""A task from Claude Code's built-in task management system"""
+"""
+A task from Claude Code's built-in task management system
+"""
 type NativeTask {
-  """Present continuous form shown in spinner"""
-  activeForm: String
+	"""
+	Present continuous form shown in spinner
+	"""
+	activeForm: String
 
-  """Task IDs that block this task"""
-  blockedBy: [String!]
+	"""
+	Task IDs that block this task
+	"""
+	blockedBy: [String!]
 
-  """Task IDs that this task blocks"""
-  blocks: [String!]
+	"""
+	Task IDs that this task blocks
+	"""
+	blocks: [String!]
 
-  """When the task was completed"""
-  completedAt: String
+	"""
+	When the task was completed
+	"""
+	completedAt: String
 
-  """When the task was created"""
-  createdAt: String
+	"""
+	When the task was created
+	"""
+	createdAt: String
 
-  """Detailed task description"""
-  description: String
+	"""
+	Detailed task description
+	"""
+	description: String
 
-  """Task ID (sequential within session)"""
-  id: ID
+	"""
+	Task ID (sequential within session)
+	"""
+	id: ID
 
-  """Message ID that last updated this task"""
-  messageId: String
+	"""
+	Message ID that last updated this task
+	"""
+	messageId: String
 
-  """Task owner (agent name)"""
-  owner: String
+	"""
+	Task owner (agent name)
+	"""
+	owner: String
 
-  """Session this task belongs to"""
-  sessionId: String
+	"""
+	Session this task belongs to
+	"""
+	sessionId: String
 
-  """Current task status"""
-  status: NativeTaskStatus
+	"""
+	Current task status
+	"""
+	status: NativeTaskStatus
 
-  """Brief task title"""
-  subject: String
+	"""
+	Brief task title
+	"""
+	subject: String
 
-  """When the task was last updated"""
-  updatedAt: String
+	"""
+	When the task was last updated
+	"""
+	updatedAt: String
 }
 
-"""Status of a native Claude Code task"""
+"""
+Status of a native Claude Code task
+"""
 enum NativeTaskStatus {
-  """Task finished"""
-  completed
+	"""
+	Task finished
+	"""
+	completed
 
-  """Task currently being worked on"""
-  in_progress
+	"""
+	Task currently being worked on
+	"""
+	in_progress
 
-  """Task not yet started"""
-  pending
+	"""
+	Task not yet started
+	"""
+	pending
 }
 
 interface Node {
-  id: ID!
+	id: ID!
 }
 
-"""Payload for node updated events"""
+"""
+Payload for node updated events
+"""
 type NodeUpdatedPayload {
-  """Global ID of the updated node"""
-  id: String
+	"""
+	Global ID of the updated node
+	"""
+	id: String
 
-  """The updated node"""
-  node: Node
+	"""
+	The updated node
+	"""
+	node: Node
 
-  """GraphQL typename of the updated node"""
-  typename: String
+	"""
+	GraphQL typename of the updated node
+	"""
+	typename: String
 }
 
-"""A connection between a user and an OAuth provider"""
-type OAuthConnection {
-  """When this provider was connected"""
-  connectedAt: DateTime
-
-  """Whether the stored token is still valid"""
-  hasValidToken: Boolean
-
-  """Unique connection identifier"""
-  id: ID
-
-  """The OAuth provider (GITHUB, GITLAB)"""
-  provider: OAuthProvider
-
-  """Email from the OAuth provider"""
-  providerEmail: String
-
-  """Username on the OAuth provider"""
-  providerUsername: String
-
-  """OAuth scopes granted to this connection"""
-  scopes: [String!]
-}
-
-"""Result of initiating an OAuth flow"""
-type OAuthInitiateResult {
-  """URL to redirect the user to for authorization"""
-  authorizationUrl: String
-
-  """PKCE code verifier (store securely and send with token exchange)"""
-  codeVerifier: String
-
-  """State parameter for CSRF protection (store and verify on callback)"""
-  state: String
-}
-
-"""Supported OAuth providers"""
-enum OAuthProvider {
-  GITHUB
-  GITLAB
-}
-
-"""An organization that users belong to"""
-type Org {
-  """Organization ID"""
-  id: ID
-
-  """URL to organization logo image"""
-  logoUrl: String
-
-  """Organization name"""
-  name: String
-
-  """URL-safe organization slug"""
-  slug: String
-}
-
-"""Aggregated learning/pattern detected across organization sessions"""
-type OrgLearning {
-  """Confidence level based on consistency"""
-  confidence: Confidence
-
-  """Domain/category (e.g., api, testing, database)"""
-  domain: String
-
-  """How many sessions exhibited this pattern"""
-  frequency: Int
-
-  """When this pattern was last observed"""
-  lastSeen: DateTime
-
-  """Pattern or convention observed"""
-  pattern: String
-}
-
-"""Input for org learnings query"""
-input OrgLearningsQueryInput {
-  """Filter by domain (e.g., api, testing)"""
-  domain: String
-
-  """Maximum learnings to return (default: 50)"""
-  limit: Int
-
-  """Minimum confidence level to include"""
-  minConfidence: Confidence
-
-  """Whether to use cached results (default: true)"""
-  useCache: Boolean
-}
-
-"""Result of org learnings query"""
-type OrgLearningsResult {
-  """Whether result was served from cache"""
-  cached: Boolean
-
-  """Aggregated learnings"""
-  learnings: [OrgLearning!]
-
-  """Total sessions analyzed"""
-  sessionsAnalyzed: Int
-
-  """Time range of analysis"""
-  timeRange: OrgLearningsTimeRange
-}
-
-"""Time range of analysis"""
-type OrgLearningsTimeRange {
-  """End of analysis period"""
-  end: DateTime
-
-  """Start of analysis period"""
-  start: DateTime
-}
-
-"""Organization sharing policy"""
-type OrgSharingPolicy {
-  allowAnonymous: Boolean
-  allowedDomains: [String!]
-  blockedDomains: [String!]
-  maxContentLength: Int
-  maxLearningsPerDay: Int
-  minContentLength: Int
-  requireApproval: Boolean
-  updatedAt: Float
-  updatedBy: String
-}
-
-"""Pagination information for a connection"""
+"""
+Pagination information for a connection
+"""
 type PageInfo {
-  """Cursor of the last item in the current page"""
-  endCursor: String
+	"""
+	Cursor of the last item in the current page
+	"""
+	endCursor: String
 
-  """Whether there are more items after the current page"""
-  hasNextPage: Boolean
+	"""
+	Whether there are more items after the current page
+	"""
+	hasNextPage: Boolean
 
-  """Whether there are more items before the current page"""
-  hasPreviousPage: Boolean
+	"""
+	Whether there are more items before the current page
+	"""
+	hasPreviousPage: Boolean
 
-  """Cursor of the first item in the current page"""
-  startCursor: String
+	"""
+	Cursor of the first item in the current page
+	"""
+	startCursor: String
 }
 
-"""Session count aggregated by time period"""
-type PeriodSessionCount {
-  """Time period label (e.g., '2026-01-30' or '2026-W05')"""
-  period: String
-
-  """Number of sessions in this period"""
-  sessionCount: Int
-
-  """Number of tasks in this period"""
-  taskCount: Int
-
-  """Total tokens used in this period"""
-  tokenUsage: Int
-}
-
-"""Claude permissions configuration"""
+"""
+Claude permissions configuration
+"""
 type Permissions {
-  """Additional allowed directories"""
-  additionalDirectories: [String!]
+	"""
+	Additional allowed directories
+	"""
+	additionalDirectories: [String!]
 
-  """List of allowed tools"""
-  allowedTools: [String!]
+	"""
+	List of allowed tools
+	"""
+	allowedTools: [String!]
 
-  """List of denied tools"""
-  deniedTools: [String!]
+	"""
+	List of denied tools
+	"""
+	deniedTools: [String!]
 }
 
-"""An installed plugin"""
+"""
+An installed plugin
+"""
 type Plugin {
-  """Plugin category based on naming convention"""
-  category: String
+	"""
+	Plugin category based on naming convention
+	"""
+	category: String
 
-  """Whether the plugin is enabled"""
-  enabled: Boolean
+	"""
+	Whether the plugin is enabled
+	"""
+	enabled: Boolean
 
-  """Plugin ID"""
-  id: ID
+	"""
+	Plugin ID
+	"""
+	id: ID
 
-  """Marketplace the plugin is from"""
-  marketplace: String
+	"""
+	Marketplace the plugin is from
+	"""
+	marketplace: String
 
-  """Plugin name"""
-  name: String
+	"""
+	Plugin name
+	"""
+	name: String
 
-  """Installation scope"""
-  scope: PluginScope
+	"""
+	Installation scope
+	"""
+	scope: PluginScope
 }
 
-"""Plugin count by category"""
+"""
+Plugin count by category
+"""
 type PluginCategory {
-  """Category name"""
-  category: String
+	"""
+	Category name
+	"""
+	category: String
 
-  """Number of plugins in this category"""
-  count: Int
+	"""
+	Number of plugins in this category
+	"""
+	count: Int
 }
 
-"""Result of a plugin mutation"""
+"""
+Result of a plugin mutation
+"""
 type PluginMutationResult {
-  """Status message"""
-  message: String
+	"""
+	Status message
+	"""
+	message: String
 
-  """Whether the operation succeeded"""
-  success: Boolean
+	"""
+	Whether the operation succeeded
+	"""
+	success: Boolean
 }
 
-"""Scope where plugin is installed"""
+"""
+Scope where plugin is installed
+"""
 enum PluginScope {
-  LOCAL
-  PROJECT
-  USER
+	LOCAL
+	PROJECT
+	USER
 }
 
-"""Aggregate plugin statistics"""
+"""
+Aggregate plugin statistics
+"""
 type PluginStats {
-  """Number of enabled plugins"""
-  enabledPlugins: Int
+	"""
+	Number of enabled plugins
+	"""
+	enabledPlugins: Int
 
-  """Plugins installed at local scope"""
-  localPlugins: Int
+	"""
+	Plugins installed at local scope
+	"""
+	localPlugins: Int
 
-  """Plugins installed at project scope"""
-  projectPlugins: Int
+	"""
+	Plugins installed at project scope
+	"""
+	projectPlugins: Int
 
-  """Total number of installed plugins"""
-  totalPlugins: Int
+	"""
+	Total number of installed plugins
+	"""
+	totalPlugins: Int
 
-  """Plugins installed at user scope"""
-  userPlugins: Int
+	"""
+	Plugins installed at user scope
+	"""
+	userPlugins: Int
 }
 
-"""Result of updating sharing policy"""
-type PolicyUpdateResult {
-  message: String
-  policy: OrgSharingPolicy
-  success: Boolean
-}
-
-"""A project with sessions"""
+"""
+A project with sessions
+"""
 type Project {
-  """Global ID (Project_{projectId})"""
-  id: ID
+	"""
+	Global ID (Project_{projectId})
+	"""
+	id: ID
 
-  """Most recent session timestamp"""
-  lastActivity: DateTime
+	"""
+	Most recent session timestamp
+	"""
+	lastActivity: DateTime
 
-  """Display name for the project"""
-  name: String
+	"""
+	Display name for the project
+	"""
+	name: String
 
-  """Plugins installed at project or local scope for this project"""
-  plugins: [Plugin!]
+	"""
+	Plugins installed at project or local scope for this project
+	"""
+	plugins: [Plugin!]
 
-  """
-  Encoded directory path from ~/.claude/projects (e.g., -Volumes-dev-src-...)
-  """
-  projectId: String
+	"""
+	Encoded directory path from ~/.claude/projects (e.g., -Volumes-dev-src-...)
+	"""
+	projectId: String
 
-  """The repository containing this project"""
-  repo: Project
+	"""
+	The repository containing this project
+	"""
+	repo: Project
 
-  """Git remote-based identifier (e.g., github-com-org-repo)"""
-  repoId: String
+	"""
+	Git remote-based identifier (e.g., github-com-org-repo)
+	"""
+	repoId: String
 
-  """Sessions in this project"""
-  sessions(
-    """Cursor to fetch sessions after"""
-    after: String
+	"""
+	Sessions in this project
+	"""
+	sessions(
+		"""
+		Cursor to fetch sessions after
+		"""
+		after: String
 
-    """Cursor to fetch sessions before"""
-    before: String
+		"""
+		Cursor to fetch sessions before
+		"""
+		before: String
 
-    """Number of sessions to fetch from the start"""
-    first: Int
+		"""
+		Number of sessions to fetch from the start
+		"""
+		first: Int
 
-    """Number of sessions to fetch from the end"""
-    last: Int
-  ): SessionConnection
+		"""
+		Number of sessions to fetch from the end
+		"""
+		last: Int
+	): SessionConnection
 
-  """URL-safe slug for routing (same as projectId)"""
-  slug: String
+	"""
+	URL-safe slug for routing (same as projectId)
+	"""
+	slug: String
 
-  """Total sessions across all worktrees"""
-  totalSessions: Int
+	"""
+	Total sessions across all worktrees
+	"""
+	totalSessions: Int
 
-  """All worktrees for this project"""
-  worktrees: [Worktree!]
+	"""
+	All worktrees for this project
+	"""
+	worktrees: [Worktree!]
 }
 
-"""Payload for project added events"""
+"""
+Payload for project added events
+"""
 type ProjectAddedPayload {
-  """Parent repo ID (for git projects)"""
-  parentId: String
+	"""
+	Parent repo ID (for git projects)
+	"""
+	parentId: String
 
-  """ID of the new project"""
-  projectId: String
+	"""
+	ID of the new project
+	"""
+	projectId: String
 }
 
 """Session and task metrics aggregated by project"""
@@ -2526,1560 +3230,1877 @@ type ProjectSessionCount {
 }
 
 type Query {
-  """Activity data for dashboard visualizations"""
-  activity(days: Int = 365): ActivityData
+	"""
+	Activity data for dashboard visualizations
+	"""
+	activity(days: Int = 365): ActivityData
 
-  """Get an agent task by session ID and agent ID"""
-  agentTask(agentId: String!, sessionId: String!): Session
+	"""
+	Get an agent task by session ID and agent ID
+	"""
+	agentTask(agentId: String!, sessionId: String!): Session
 
-  """All cache entries for the current project"""
-  cacheEntries: [CacheEntry!]
+	"""
+	All cache entries for the current project
+	"""
+	cacheEntries: [CacheEntry!]
 
-  """Aggregate cache statistics"""
-  cacheStats: CacheStats
+	"""
+	Aggregate cache statistics
+	"""
+	cacheStats: CacheStats
 
-  """Current organization context (only available in hosted team mode)"""
-  currentOrg: Org
+	"""
+	Memory query interface
+	"""
+	memory: MemoryQuery
 
-  """The current authentication session, or null if not authenticated"""
-  currentSession: AuthSession
+	"""
+	Get a message by its UUID (optionally prefixed with 'Message:')
+	"""
+	message(id: String!): Message
 
-  """Current authenticated user (only available in hosted team mode)"""
-  currentUser: User
+	"""
+	Task metrics for a time period
+	"""
+	metrics(period: MetricsPeriod): MetricsData
 
-  """Memory query interface"""
-  memory: MemoryQuery
+	"""
+	Fetch any node by its global ID
+	"""
+	node(id: ID!): Node
+	nodes(ids: [ID!]!): [Node]!
 
-  """Get a message by its UUID (optionally prefixed with 'Message:')"""
-  message(id: String!): Message
+	"""
+	Plugin counts by category
+	"""
+	pluginCategories: [PluginCategory!]
 
-  """Task metrics for a time period"""
-  metrics(period: MetricsPeriod): MetricsData
+	"""
+	Aggregate plugin statistics
+	"""
+	pluginStats: PluginStats
 
-  """All active sessions for the current user"""
-  mySessions: [AuthSession!]
+	"""
+	Installed plugins, optionally filtered by scope
+	"""
+	plugins(scope: PluginScope): [Plugin!]
 
-  """Fetch any node by its global ID"""
-  node(id: ID!): Node
-  nodes(ids: [ID!]!): [Node]!
+	"""
+	Get a project by ID
+	"""
+	project(id: String!): Project
 
-  """Get aggregated learnings across the organization"""
-  orgLearnings(input: OrgLearningsQueryInput, userContext: UserContextInput!): OrgLearningsResult
+	"""
+	All projects with sessions
+	"""
+	projects(first: Int = 20): [Project!]
 
-  """Members of an organization (only available in hosted team mode)"""
-  orgMembers(orgId: String!): [TeamMember!]
+	"""
+	Get a repo by its repoId (git remote-based ID)
+	"""
+	repo(id: String!): Repo
 
-  """
-  Organizations the current user belongs to (only available in hosted team mode)
-  """
-  orgs: [Org!]
+	"""
+	All git repositories with sessions
+	"""
+	repos(first: Int = 20): [Repo!]
 
-  """Get pending learnings for review (admin only)"""
-  pendingLearnings(context: TeamUserContextInput!, domain: String, limit: Int): [SharedLearning!]
+	"""
+	Get a session by ID
+	"""
+	session(id: String!): Session
 
-  """Plugin counts by category"""
-  pluginCategories: [PluginCategory!]
+	"""
+	Get sessions with cursor-based pagination
+	"""
+	sessions(
+		"""
+		Cursor to fetch sessions after
+		"""
+		after: String
 
-  """Aggregate plugin statistics"""
-  pluginStats: PluginStats
+		"""
+		Cursor to fetch sessions before
+		"""
+		before: String
 
-  """Installed plugins, optionally filtered by scope"""
-  plugins(scope: PluginScope): [Plugin!]
+		"""
+		Number of sessions to fetch from the start
+		"""
+		first: Int
 
-  """Get a project by ID"""
-  project(id: String!): Project
+		"""
+		Number of sessions to fetch from the end
+		"""
+		last: Int
 
-  """All projects with sessions"""
-  projects(first: Int = 20): [Project!]
+		"""
+		Filter by project ID (groups all worktrees)
+		"""
+		projectId: String
 
-  """Get a repo by its repoId (git remote-based ID)"""
-  repo(id: String!): Repo
+		"""
+		Filter by worktree name/path
+		"""
+		worktreeName: String
+	): SessionConnection
 
-  """All git repositories with sessions"""
-  repos(first: Int = 20): [Repo!]
+	"""
+	Settings summary with all configuration locations
+	"""
+	settings(projectId: String): SettingsSummary
 
-  """Get a session by ID"""
-  session(id: String!): Session
-
-  """Get sessions with cursor-based pagination"""
-  sessions(
-    """Cursor to fetch sessions after"""
-    after: String
-
-    """Cursor to fetch sessions before"""
-    before: String
-
-    """Number of sessions to fetch from the start"""
-    first: Int
-
-    """Number of sessions to fetch from the end"""
-    last: Int
-
-    """Filter by project ID (groups all worktrees)"""
-    projectId: String
-
-    """Filter by user ID (team mode only - filters sessions by owner)"""
-    userId: String
-
-    """Filter by worktree name/path"""
-    worktreeName: String
-  ): SessionConnection
-
-  """Settings summary with all configuration locations"""
-  settings(projectId: String): SettingsSummary
-
-  """Global slot pool status for cross-session resource management"""
-  slots: SlotStatus
-
-  """Query team memory with permission filtering"""
-  teamMemory(input: TeamMemoryQueryInput!, userContext: UserContextInput!): TeamMemoryResult
-
-  """Get available memory layers for the user"""
-  teamMemoryLayers(userContext: UserContextInput!): [MemoryLayerInfo!]
-
-  """Team-level aggregate metrics for dashboard"""
-  teamMetrics(
-    """End date (ISO format)"""
-    endDate: String
-
-    """Time grouping"""
-    granularity: Granularity
-
-    """Filter by project IDs"""
-    projectIds: [String!]
-
-    """Start date (ISO format)"""
-    startDate: String
-  ): TeamMetrics
-
-  """The currently authenticated user, or null if not authenticated"""
-  viewer: AuthUser
+	"""
+	Global slot pool status for cross-session resource management
+	"""
+	slots: SlotStatus
 }
 
-"""A queue state change operation"""
+"""
+A queue state change operation
+"""
 type QueueOperationMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Type of queue operation (e.g., 'enqueue', 'dequeue', 'clear')"""
-  operation: String
+	"""
+	Type of queue operation (e.g., 'enqueue', 'dequeue', 'clear')
+	"""
+	operation: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Session ID involved in the queue operation"""
-  queueSessionId: String
-  rawJson: String
+	"""
+	Session ID involved in the queue operation
+	"""
+	queueSessionId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the queue operation occurred"""
-  timestamp: DateTime
+	"""
+	When the queue operation occurred
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A regular user input message in a session"""
+"""
+A regular user input message in a session
+"""
 type RegularUserMessage implements Message & UserMessage {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """User message text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	User message text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """
-  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
-  """
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the message was sent"""
-  timestamp: DateTime
+	"""
+	When the message was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A git repository containing projects and sessions"""
+"""
+A git repository containing projects and sessions
+"""
 type Repo implements Node {
-  id: ID!
+	id: ID!
 
-  """Most recent session timestamp"""
-  lastActivity: DateTime
+	"""
+	Most recent session timestamp
+	"""
+	lastActivity: DateTime
 
-  """Display name for the repository"""
-  name: String
+	"""
+	Display name for the repository
+	"""
+	name: String
 
-  """Path to the repository root"""
-  path: String
+	"""
+	Path to the repository root
+	"""
+	path: String
 
-  """All projects (worktrees) belonging to this repository"""
-  projects: [Project!]
+	"""
+	All projects (worktrees) belonging to this repository
+	"""
+	projects: [Project!]
 
-  """Git remote-based repository identifier (e.g., github-com-org-repo)"""
-  repoId: String
+	"""
+	Git remote-based repository identifier (e.g., github-com-org-repo)
+	"""
+	repoId: String
 
-  """All sessions in this repository"""
-  sessions(
-    """Cursor to fetch sessions after"""
-    after: String
+	"""
+	All sessions in this repository
+	"""
+	sessions(
+		"""
+		Cursor to fetch sessions after
+		"""
+		after: String
 
-    """Cursor to fetch sessions before"""
-    before: String
+		"""
+		Cursor to fetch sessions before
+		"""
+		before: String
 
-    """Number of sessions to fetch from the start"""
-    first: Int
+		"""
+		Number of sessions to fetch from the start
+		"""
+		first: Int
 
-    """Number of sessions to fetch from the end"""
-    last: Int
-  ): SessionConnection
+		"""
+		Number of sessions to fetch from the end
+		"""
+		last: Int
+	): SessionConnection
 
-  """Total sessions across all projects in this repo"""
-  totalSessions: Int
+	"""
+	Total sessions across all projects in this repo
+	"""
+	totalSessions: Int
 }
 
-"""Payload for repo added events"""
+"""
+Payload for repo added events
+"""
 type RepoAddedPayload {
-  """ID of the new repo"""
-  repoId: String
+	"""
+	ID of the new repo
+	"""
+	repoId: String
 }
 
-"""Payload for repo memory added events"""
+"""
+Payload for repo memory added events
+"""
 type RepoMemoryAddedPayload {
-  """Memory domain (e.g., 'rules', 'observations')"""
-  domain: String
+	"""
+	Memory domain (e.g., 'rules', 'observations')
+	"""
+	domain: String
 
-  """Path to the memory file"""
-  path: String
+	"""
+	Path to the memory file
+	"""
+	path: String
 
-  """ID of the repo"""
-  repoId: String
+	"""
+	ID of the repo
+	"""
+	repoId: String
 }
 
-"""A rule file from .claude/rules/"""
+"""
+A rule file from .claude/rules/
+"""
 type Rule {
-  """Rule content"""
-  content: String
+	"""
+	Rule content
+	"""
+	content: String
 
-  """Domain/name of the rule"""
-  domain: String
+	"""
+	Domain/name of the rule
+	"""
+	domain: String
 
-  """Rule ID"""
-  id: ID
+	"""
+	Rule ID
+	"""
+	id: ID
 
-  """Full path to the rule file"""
-  path: String
+	"""
+	Full path to the rule file
+	"""
+	path: String
 
-  """Project display name (null for user rules)"""
-  projectName: String
+	"""
+	Project display name (null for user rules)
+	"""
+	projectName: String
 
-  """Project root path (null for user rules)"""
-  projectPath: String
+	"""
+	Project root path (null for user rules)
+	"""
+	projectPath: String
 
-  """Whether this is a project or user rule"""
-  scope: RuleScope
+	"""
+	Whether this is a project or user rule
+	"""
+	scope: RuleScope
 
-  """File size in bytes"""
-  size: Int
+	"""
+	File size in bytes
+	"""
+	size: Int
 }
 
-"""Scope of a rule file"""
+"""
+Scope of a rule file
+"""
 enum RuleScope {
-  PROJECT
-  USER
+	PROJECT
+	USER
 }
 
 """
 Sentiment analysis result for a user message (inline, not a separate event)
 """
 type SentimentAnalysis {
-  """Frustration level if detected (low, moderate, high)"""
-  frustrationLevel: String
+	"""
+	Frustration level if detected (low, moderate, high)
+	"""
+	frustrationLevel: String
 
-  """Frustration score (0-10) if frustration detected"""
-  frustrationScore: Float
+	"""
+	Frustration score (0-10) if frustration detected
+	"""
+	frustrationScore: Float
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Categorized sentiment level (positive, neutral, negative)"""
-  sentimentLevel: String
+	"""
+	Categorized sentiment level (positive, neutral, negative)
+	"""
+	sentimentLevel: String
 
-  """Raw sentiment score (typically -5 to +5)"""
-  sentimentScore: Float
+	"""
+	Raw sentiment score (typically -5 to +5)
+	"""
+	sentimentScore: Float
 
-  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
-  signals: [String!]
+	"""
+	Detected signals (e.g., CAPS, punctuation, negative_words)
+	"""
+	signals: [String!]
 
-  """Optional link to current task ID"""
-  taskId: String
+	"""
+	Optional link to current task ID
+	"""
+	taskId: String
 
-  """When the analysis occurred"""
-  timestamp: DateTime
+	"""
+	When the analysis occurred
+	"""
+	timestamp: DateTime
 }
 
-"""A sentiment analysis event"""
+"""
+A sentiment analysis event
+"""
 type SentimentAnalysisMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """ID of the message that was analyzed"""
-  analyzedMessageId: String
+	"""
+	ID of the message that was analyzed
+	"""
+	analyzedMessageId: String
 
-  """Frustration level if detected (low, moderate, high)"""
-  frustrationLevel: String
+	"""
+	Frustration level if detected (low, moderate, high)
+	"""
+	frustrationLevel: String
 
-  """Frustration score (0-10) if detected"""
-  frustrationScore: Float
+	"""
+	Frustration score (0-10) if detected
+	"""
+	frustrationScore: Float
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """Categorized sentiment level (positive, neutral, negative)"""
-  sentimentLevel: String
+	"""
+	Categorized sentiment level (positive, neutral, negative)
+	"""
+	sentimentLevel: String
 
-  """Raw sentiment score (typically -5 to +5)"""
-  sentimentScore: Float
+	"""
+	Raw sentiment score (typically -5 to +5)
+	"""
+	sentimentScore: Float
 
-  """Detected signals (e.g., CAPS, punctuation, negative_words)"""
-  signals: [String!]
+	"""
+	Detected signals (e.g., CAPS, punctuation, negative_words)
+	"""
+	signals: [String!]
 
-  """When the analysis was performed"""
-  timestamp: DateTime
+	"""
+	When the analysis was performed
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A Claude Code session"""
+"""
+A Claude Code session
+"""
 type Session implements Node {
-  """Active (in-progress) tasks in this session"""
-  activeTasks(
-    """Cursor to fetch active tasks after"""
-    after: String
+	"""
+	Active (in-progress) tasks in this session
+	"""
+	activeTasks(
+		"""
+		Cursor to fetch active tasks after
+		"""
+		after: String
 
-    """Cursor to fetch active tasks before"""
-    before: String
+		"""
+		Cursor to fetch active tasks before
+		"""
+		before: String
 
-    """Number of active tasks from the start"""
-    first: Int
+		"""
+		Number of active tasks from the start
+		"""
+		first: Int
 
-    """Number of active tasks from the end"""
-    last: Int
-  ): TaskConnection
+		"""
+		Number of active tasks from the end
+		"""
+		last: Int
+	): TaskConnection
 
-  """Non-completed todos (pending or in-progress)"""
-  activeTodos(
-    """Cursor to fetch todos after"""
-    after: String
+	"""
+	Non-completed todos (pending or in-progress)
+	"""
+	activeTodos(
+		"""
+		Cursor to fetch todos after
+		"""
+		after: String
 
-    """Cursor to fetch todos before"""
-    before: String
+		"""
+		Cursor to fetch todos before
+		"""
+		before: String
 
-    """Number of todos from the start"""
-    first: Int
+		"""
+		Number of todos from the start
+		"""
+		first: Int
 
-    """Number of todos from the end"""
-    last: Int
-  ): TodoConnection
+		"""
+		Number of todos from the end
+		"""
+		last: Int
+	): TodoConnection
 
-  """IDs of agent tasks spawned during this session"""
-  agentTaskIds: [String!]
+	"""
+	IDs of agent tasks spawned during this session
+	"""
+	agentTaskIds: [String!]
 
-  """The most recently started active task, if any"""
-  currentTask: Task
+	"""
+	The most recently started active task, if any
+	"""
+	currentTask: Task
 
-  """The currently in-progress todo, if any"""
-  currentTodo: Todo
+	"""
+	The currently in-progress todo, if any
+	"""
+	currentTodo: Todo
 
-  """Session date"""
-  date: String
+	"""
+	Session date
+	"""
+	date: String
 
-  """Number of unique files changed in this session"""
-  fileChangeCount: Int
+	"""
+	Number of unique files changed in this session
+	"""
+	fileChangeCount: Int
 
-  """
-  Files that were changed during this session (deduplicated by path, paginated)
-  """
-  fileChanges(
-    """Cursor to fetch file changes after"""
-    after: String
+	"""
+	Files that were changed during this session (deduplicated by path, paginated)
+	"""
+	fileChanges(
+		"""
+		Cursor to fetch file changes after
+		"""
+		after: String
 
-    """Cursor to fetch file changes before"""
-    before: String
+		"""
+		Cursor to fetch file changes before
+		"""
+		before: String
 
-    """Number of file changes from the start"""
-    first: Int
+		"""
+		Number of file changes from the start
+		"""
+		first: Int
 
-    """Number of file changes from the end"""
-    last: Int
-  ): FileChangeConnection
+		"""
+		Number of file changes from the end
+		"""
+		last: Int
+	): FileChangeConnection
 
-  """Aggregated frustration metrics for this session"""
-  frustrationSummary: FrustrationSummary
+	"""
+	Aggregated frustration metrics for this session
+	"""
+	frustrationSummary: FrustrationSummary
 
-  """Git branch active during session"""
-  gitBranch: String
+	"""
+	Git branch active during session
+	"""
+	gitBranch: String
 
-  """Hook executions that occurred during this session (paginated)"""
-  hookExecutions(
-    """Cursor to fetch hook executions after"""
-    after: String
+	"""
+	Hook executions that occurred during this session (paginated)
+	"""
+	hookExecutions(
+		"""
+		Cursor to fetch hook executions after
+		"""
+		after: String
 
-    """Cursor to fetch hook executions before"""
-    before: String
+		"""
+		Cursor to fetch hook executions before
+		"""
+		before: String
 
-    """Number of hook executions from the start"""
-    first: Int
+		"""
+		Number of hook executions from the start
+		"""
+		first: Int
 
-    """Number of hook executions from the end"""
-    last: Int
-  ): HookExecutionConnection
+		"""
+		Number of hook executions from the end
+		"""
+		last: Int
+	): HookExecutionConnection
 
-  """Hook execution statistics for this session"""
-  hookStats: HookStats
+	"""
+	Hook execution statistics for this session
+	"""
+	hookStats: HookStats
 
-  """Session global ID in format Session:{projectDir}:{sessionId}"""
-  id: ID!
+	"""
+	Session global ID in format Session:{projectDir}:{sessionId}
+	"""
+	id: ID!
 
-  """Number of messages in session"""
-  messageCount: Int
+	"""
+	Number of messages in session
+	"""
+	messageCount: Int
 
-  """Paginated messages in this session"""
-  messages(
-    """Cursor to fetch messages after"""
-    after: String
+	"""
+	Paginated messages in this session
+	"""
+	messages(
+		"""
+		Cursor to fetch messages after
+		"""
+		after: String
 
-    """Cursor to fetch messages before"""
-    before: String
+		"""
+		Cursor to fetch messages before
+		"""
+		before: String
 
-    """Number of messages from the start"""
-    first: Int
+		"""
+		Number of messages from the start
+		"""
+		first: Int
 
-    """Number of messages from the end"""
-    last: Int
-  ): MessageConnection
+		"""
+		Number of messages from the end
+		"""
+		last: Int
+	): MessageConnection
 
-  """Display name for session (slug if available, otherwise sessionId)"""
-  name: String
+	"""
+	Display name for session (slug if available, otherwise sessionId)
+	"""
+	name: String
 
-  """
-  Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
-  """
-  nativeTasks: [NativeTask!]
+	"""
+	Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
+	"""
+	nativeTasks: [NativeTask!]
 
-  """Organization ID this session belongs to (only in hosted team mode)"""
-  orgId: String
+	"""
+	The project this session belongs to
+	"""
+	project: Project
 
-  """User who ran this session (only populated in hosted team mode)"""
-  owner: User
+	"""
+	Canonical project ID for grouping
+	"""
+	projectId: String
 
-  """The project this session belongs to"""
-  project: Project
+	"""
+	Project name
+	"""
+	projectName: String
 
-  """Canonical project ID for grouping"""
-  projectId: String
+	"""
+	Full project path
+	"""
+	projectPath: String
 
-  """Project name"""
-  projectName: String
+	"""
+	Encoded project directory for URL routing (e.g., -Volumes-dev-src-...)
+	"""
+	projectSlug: String
 
-  """Full project path"""
-  projectPath: String
+	"""
+	Search all messages in this session using FTS and return matching results with indices
+	"""
+	searchMessages(
+		"""
+		Maximum number of results to return (default: 20)
+		"""
+		limit: Int
 
-  """Encoded project directory for URL routing (e.g., -Volumes-dev-src-...)"""
-  projectSlug: String
+		"""
+		Search query to find in messages
+		"""
+		query: String!
+	): [MessageSearchResult!]
 
-  """
-  Search all messages in this session using FTS and return matching results with indices
-  """
-  searchMessages(
-    """Maximum number of results to return (default: 20)"""
-    limit: Int
+	"""
+	Session ID
+	"""
+	sessionId: String
 
-    """Search query to find in messages"""
-    query: String!
-  ): [MessageSearchResult!]
+	"""
+	Human-readable session name (e.g., 'snug-dreaming-knuth')
+	"""
+	slug: String
 
-  """Session ID"""
-  sessionId: String
+	"""
+	Session start time
+	"""
+	startedAt: DateTime
 
-  """Human-readable session name (e.g., 'snug-dreaming-knuth')"""
-  slug: String
+	"""
+	First user message as summary
+	"""
+	summary: String
 
-  """Session start time"""
-  startedAt: DateTime
+	"""
+	All tasks tracked in this session via start_task MCP tool
+	"""
+	tasks(
+		"""
+		Cursor to fetch tasks after
+		"""
+		after: String
 
-  """First user message as summary"""
-  summary: String
+		"""
+		Cursor to fetch tasks before
+		"""
+		before: String
 
-  """All tasks tracked in this session via start_task MCP tool"""
-  tasks(
-    """Cursor to fetch tasks after"""
-    after: String
+		"""
+		Number of tasks from the start
+		"""
+		first: Int
 
-    """Cursor to fetch tasks before"""
-    before: String
+		"""
+		Number of tasks from the end
+		"""
+		last: Int
+	): TaskConnection
 
-    """Number of tasks from the start"""
-    first: Int
+	"""
+	Counts of todos by status
+	"""
+	todoCounts: TodoCounts
 
-    """Number of tasks from the end"""
-    last: Int
-  ): TaskConnection
+	"""
+	All todos from the most recent TodoWrite in this session
+	"""
+	todos(
+		"""
+		Cursor to fetch todos after
+		"""
+		after: String
 
-  """Counts of todos by status"""
-  todoCounts: TodoCounts
+		"""
+		Cursor to fetch todos before
+		"""
+		before: String
 
-  """All todos from the most recent TodoWrite in this session"""
-  todos(
-    """Cursor to fetch todos after"""
-    after: String
+		"""
+		Number of todos from the start
+		"""
+		first: Int
 
-    """Cursor to fetch todos before"""
-    before: String
+		"""
+		Number of todos from the end
+		"""
+		last: Int
+	): TodoConnection
 
-    """Number of todos from the start"""
-    first: Int
+	"""
+	All tool results from this session, for inline display under tool use blocks
+	"""
+	toolResults: [ToolResultBlock!]
 
-    """Number of todos from the end"""
-    last: Int
-  ): TodoConnection
+	"""
+	When the session was last updated (most recent message)
+	"""
+	updatedAt: DateTime
 
-  """
-  All tool results from this session, for inline display under tool use blocks
-  """
-  toolResults: [ToolResultBlock!]
+	"""
+	Claude Code version
+	"""
+	version: String
 
-  """When the session was last updated (most recent message)"""
-  updatedAt: DateTime
-
-  """Claude Code version"""
-  version: String
-
-  """Worktree name if part of multi-worktree project"""
-  worktreeName: String
+	"""
+	Worktree name if part of multi-worktree project
+	"""
+	worktreeName: String
 }
 
-"""Payload for session added events"""
+"""
+Payload for session added events
+"""
 type SessionAddedPayload {
-  """Parent project ID (if filtered)"""
-  parentId: String
+	"""
+	Parent project ID (if filtered)
+	"""
+	parentId: String
 
-  """ID of the new session"""
-  sessionId: String
+	"""
+	ID of the new session
+	"""
+	sessionId: String
 }
 
-"""A paginated list of sessions"""
+"""
+A paginated list of sessions
+"""
 type SessionConnection {
-  """List of session edges"""
-  edges: [SessionEdge!]
+	"""
+	List of session edges
+	"""
+	edges: [SessionEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of sessions matching the query"""
-  totalCount: Int
+	"""
+	Total number of sessions matching the query
+	"""
+	totalCount: Int
 }
 
-"""An edge in a session connection"""
+"""
+An edge in a session connection
+"""
 type SessionEdge {
-  """Cursor for this edge"""
-  cursor: String
+	"""
+	Cursor for this edge
+	"""
+	cursor: String
 
-  """The session at this edge"""
-  node: Session
+	"""
+	The session at this edge
+	"""
+	node: Session
 }
 
-"""Payload for session files changed events"""
+"""
+Payload for session files changed events
+"""
 type SessionFilesChangedPayload {
-  """Count of file changes"""
-  fileCount: Int
+	"""
+	Count of file changes
+	"""
+	fileCount: Int
 
-  """ID of the session whose files changed"""
-  sessionId: String
+	"""
+	ID of the session whose files changed
+	"""
+	sessionId: String
 
-  """Name of the tool that triggered the change"""
-  toolName: String
+	"""
+	Name of the tool that triggered the change
+	"""
+	toolName: String
 }
 
-"""Payload for session hooks changed events"""
+"""
+Payload for session hooks changed events
+"""
 type SessionHooksChangedPayload {
-  """Whether this is a new run or a result update"""
-  eventType: String
+	"""
+	Whether this is a new run or a result update
+	"""
+	eventType: String
 
-  """Name of the hook"""
-  hookName: String
+	"""
+	Name of the hook
+	"""
+	hookName: String
 
-  """Plugin name of the hook"""
-  pluginName: String
+	"""
+	Plugin name of the hook
+	"""
+	pluginName: String
 
-  """ID of the session whose hooks changed"""
-  sessionId: String
+	"""
+	ID of the session whose hooks changed
+	"""
+	sessionId: String
 }
 
-"""Payload for session message added events"""
+"""
+Payload for session message added events
+"""
 type SessionMessageAddedPayload {
-  """Index of the new message in the session"""
-  messageIndex: Int
+	"""
+	Index of the new message in the session
+	"""
+	messageIndex: Int
 
-  """
-  The new message edge for Relay @appendEdge directive. Returns null if message data is not available.
-  """
-  newMessageEdge: MessageEdge
+	"""
+	The new message edge for Relay @appendEdge directive. Returns null if message data is not available.
+	"""
+	newMessageEdge: MessageEdge
 
-  """ID of the session the message was added to"""
-  sessionId: String
+	"""
+	ID of the session the message was added to
+	"""
+	sessionId: String
 }
 
-"""Payload for session todos changed events"""
+"""
+Payload for session todos changed events
+"""
 type SessionTodosChangedPayload {
-  """Count of completed todos"""
-  completedCount: Int
+	"""
+	Count of completed todos
+	"""
+	completedCount: Int
 
-  """Count of in-progress todos"""
-  inProgressCount: Int
+	"""
+	Count of in-progress todos
+	"""
+	inProgressCount: Int
 
-  """ID of the session whose todos changed"""
-  sessionId: String
+	"""
+	ID of the session whose todos changed
+	"""
+	sessionId: String
 
-  """Total count of todos after the change"""
-  todoCount: Int
+	"""
+	Total count of todos after the change
+	"""
+	todoCount: Int
 }
 
-"""A settings file with source information"""
+"""
+A settings file with source information
+"""
 type SettingsFile {
-  """Whether the file exists"""
-  exists: Boolean
+	"""
+	Whether the file exists
+	"""
+	exists: Boolean
 
-  """Last modification time"""
-  lastModified: String
+	"""
+	Last modification time
+	"""
+	lastModified: String
 
-  """Path to settings file"""
-  path: String
+	"""
+	Path to settings file
+	"""
+	path: String
 
-  """Source location (user, project, local, root, directory)"""
-  source: String
+	"""
+	Source location (user, project, local, root, directory)
+	"""
+	source: String
 
-  """Human-readable source label"""
-  sourceLabel: String
+	"""
+	Human-readable source label
+	"""
+	sourceLabel: String
 
-  """File type (claude or han)"""
-  type: String
+	"""
+	File type (claude or han)
+	"""
+	type: String
 }
 
-"""Settings summary with all configuration locations"""
+"""
+Settings summary with all configuration locations
+"""
 type SettingsSummary {
-  """Claude settings summary (legacy)"""
-  claudeSettings: ClaudeSettingsSummary
+	"""
+	Claude settings summary (legacy)
+	"""
+	claudeSettings: ClaudeSettingsSummary
 
-  """All Claude settings files with source information"""
-  claudeSettingsFiles: [SettingsFile!]
+	"""
+	All Claude settings files with source information
+	"""
+	claudeSettingsFiles: [SettingsFile!]
 
-  """Han configuration summary (legacy)"""
-  hanConfig: HanConfigSummary
+	"""
+	Han configuration summary (legacy)
+	"""
+	hanConfig: HanConfigSummary
 
-  """All Han config files with source information"""
-  hanConfigFiles: [SettingsFile!]
+	"""
+	All Han config files with source information
+	"""
+	hanConfigFiles: [SettingsFile!]
 
-  """Configured MCP servers"""
-  mcpServers: [McpServer!]
+	"""
+	Configured MCP servers
+	"""
+	mcpServers: [McpServer!]
 
-  """Permissions configuration"""
-  permissions: Permissions
+	"""
+	Permissions configuration
+	"""
+	permissions: Permissions
 }
 
-input ShareLearningInput {
-  """Learning content to share"""
-  content: String!
-
-  """Domain/category for the learning"""
-  domain: String!
-
-  """Require admin approval"""
-  requireApproval: Boolean
-
-  """Original source reference"""
-  source: String
-
-  """Tags for categorization"""
-  tags: [String!]
-}
-
-"""Result of sharing a learning with the team"""
-type ShareLearningResult {
-  learningId: String
-  message: String
-  success: Boolean
-}
-
-"""A learning shared with the team"""
-type SharedLearning {
-  content: String
-  domain: String
-  id: String
-  moderationNotes: String
-  sharedAt: Float
-  sharedBy: String
-  sharedByEmail: String
-  source: String
-  status: String
-  tags: [String!]
-}
-
-input SharingPolicyInput {
-  allowAnonymous: Boolean
-  allowedDomains: [String!]
-  blockedDomains: [String!]
-  maxContentLength: Int
-  maxLearningsPerDay: Int
-  minContentLength: Int
-  requireApproval: Boolean
-}
-
-"""Result of slot acquisition attempt"""
+"""
+Result of slot acquisition attempt
+"""
 type SlotAcquireResult {
-  """Whether the slot was granted"""
-  granted: Boolean
+	"""
+	Whether the slot was granted
+	"""
+	granted: Boolean
 
-  """Slot ID if granted, -1 otherwise"""
-  slotId: Int
+	"""
+	Slot ID if granted, -1 otherwise
+	"""
+	slotId: Int
 
-  """Number of slots currently in use (if not granted)"""
-  waitingCount: Int
+	"""
+	Number of slots currently in use (if not granted)
+	"""
+	waitingCount: Int
 }
 
-"""Result of slot release"""
+"""
+Result of slot release
+"""
 type SlotReleaseResult {
-  """Result message"""
-  message: String
+	"""
+	Result message
+	"""
+	message: String
 
-  """Whether the slot was released"""
-  success: Boolean
+	"""
+	Whether the slot was released
+	"""
+	success: Boolean
 }
 
-"""Global slot pool status"""
+"""
+Global slot pool status
+"""
 type SlotStatus {
-  """Currently active slots"""
-  active: [ActiveSlot!]
+	"""
+	Currently active slots
+	"""
+	active: [ActiveSlot!]
 
-  """Number of available slots"""
-  available: Int
+	"""
+	Number of available slots
+	"""
+	available: Int
 
-  """Total number of slots"""
-  total: Int
+	"""
+	Total number of slots
+	"""
+	total: Int
 }
 
-"""A subdirectory within a worktree"""
+"""
+A subdirectory within a worktree
+"""
 type Subdir {
-  """Full path to subdirectory"""
-  path: String
+	"""
+	Full path to subdirectory
+	"""
+	path: String
 
-  """Relative path from worktree root"""
-  relativePath: String
+	"""
+	Relative path from worktree root
+	"""
+	relativePath: String
 
-  """Number of sessions in this subdirectory"""
-  sessionCount: Int
+	"""
+	Number of sessions in this subdirectory
+	"""
+	sessionCount: Int
 }
 
 type Subscription {
-  """Subscribe to hook result for a specific hook run ID"""
-  hookResultAdded(
-    """Hook run UUID to watch for result"""
-    hookRunId: String!
-  ): HookResultAddedPayload
+	"""
+	Subscribe to hook result for a specific hook run ID
+	"""
+	hookResultAdded(
+		"""
+		Hook run UUID to watch for result
+		"""
+		hookRunId: String!
+	): HookResultAddedPayload
 
-  """Subscribe to Memory Agent progress updates during a query"""
-  memoryAgentProgress(
-    """Memory Agent session ID to watch for progress updates"""
-    sessionId: String!
-  ): MemoryAgentProgress
+	"""
+	Subscribe to Memory Agent progress updates during a query
+	"""
+	memoryAgentProgress(
+		"""
+		Memory Agent session ID to watch for progress updates
+		"""
+		sessionId: String!
+	): MemoryAgentProgress
 
-  """Subscribe to Memory Agent final result"""
-  memoryAgentResult(
-    """Memory Agent session ID to watch for final result"""
-    sessionId: String!
-  ): MemoryAgentResult
+	"""
+	Subscribe to Memory Agent final result
+	"""
+	memoryAgentResult(
+		"""
+		Memory Agent session ID to watch for final result
+		"""
+		sessionId: String!
+	): MemoryAgentResult
 
-  """Subscribe to memory change events"""
-  memoryUpdated: MemoryEvent
+	"""
+	Subscribe to memory change events
+	"""
+	memoryUpdated: MemoryEvent
 
-  """Subscribe to updates for a specific node"""
-  nodeUpdated(
-    """Global ID of the node to watch"""
-    id: ID!
-  ): NodeUpdatedPayload
+	"""
+	Subscribe to updates for a specific node
+	"""
+	nodeUpdated(
+		"""
+		Global ID of the node to watch
+		"""
+		id: ID!
+	): NodeUpdatedPayload
 
-  """Subscribe to new projects"""
-  projectAdded(
-    """Optional repo ID to filter by"""
-    parentId: ID
-  ): ProjectAddedPayload
+	"""
+	Subscribe to new projects
+	"""
+	projectAdded(
+		"""
+		Optional repo ID to filter by
+		"""
+		parentId: ID
+	): ProjectAddedPayload
 
-  """Subscribe to new repos being added"""
-  repoAdded: RepoAddedPayload
+	"""
+	Subscribe to new repos being added
+	"""
+	repoAdded: RepoAddedPayload
 
-  """Subscribe to memory being added to a repo"""
-  repoMemoryAdded(
-    """Repo ID to watch for memory updates"""
-    repoId: ID!
-  ): RepoMemoryAddedPayload
+	"""
+	Subscribe to memory being added to a repo
+	"""
+	repoMemoryAdded(
+		"""
+		Repo ID to watch for memory updates
+		"""
+		repoId: ID!
+	): RepoMemoryAddedPayload
 
-  """Subscribe to new sessions"""
-  sessionAdded(
-    """Optional project ID to filter by"""
-    parentId: ID
-  ): SessionAddedPayload
+	"""
+	Subscribe to new sessions
+	"""
+	sessionAdded(
+		"""
+		Optional project ID to filter by
+		"""
+		parentId: ID
+	): SessionAddedPayload
 
-  """Subscribe to file changes for a session"""
-  sessionFilesChanged(
-    """Session ID to watch for file changes"""
-    sessionId: ID!
-  ): SessionFilesChangedPayload
+	"""
+	Subscribe to file changes for a session
+	"""
+	sessionFilesChanged(
+		"""
+		Session ID to watch for file changes
+		"""
+		sessionId: ID!
+	): SessionFilesChangedPayload
 
-  """Subscribe to hook run and result events for a session"""
-  sessionHooksChanged(
-    """Session ID to watch for hook changes"""
-    sessionId: ID!
-  ): SessionHooksChangedPayload
+	"""
+	Subscribe to hook run and result events for a session
+	"""
+	sessionHooksChanged(
+		"""
+		Session ID to watch for hook changes
+		"""
+		sessionId: ID!
+	): SessionHooksChangedPayload
 
-  """Subscribe to new messages in a session"""
-  sessionMessageAdded(
-    """Session ID to watch for new messages"""
-    sessionId: ID!
-  ): SessionMessageAddedPayload
+	"""
+	Subscribe to new messages in a session
+	"""
+	sessionMessageAdded(
+		"""
+		Session ID to watch for new messages
+		"""
+		sessionId: ID!
+	): SessionMessageAddedPayload
 
-  """Subscribe to todo changes for a session"""
-  sessionTodosChanged(
-    """Session ID to watch for todo changes"""
-    sessionId: ID!
-  ): SessionTodosChangedPayload
+	"""
+	Subscribe to todo changes for a session
+	"""
+	sessionTodosChanged(
+		"""
+		Session ID to watch for todo changes
+		"""
+		sessionId: ID!
+	): SessionTodosChangedPayload
 
-  """Subscribe to tool result for a specific call ID"""
-  toolResultAdded(
-    """Call ID to watch for result"""
-    callId: String!
-  ): ToolResultAddedPayload
+	"""
+	Subscribe to tool result for a specific call ID
+	"""
+	toolResultAdded(
+		"""
+		Call ID to watch for result
+		"""
+		callId: String!
+	): ToolResultAddedPayload
 }
 
-"""A context summary message in a session"""
+"""
+A context summary message in a session
+"""
 type SummaryMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Summary text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Summary text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  Whether this is an auto-compaction summary (context was automatically condensed)
-  """
-  isCompactSummary: Boolean
+	"""
+	Whether this is an auto-compaction summary (context was automatically condensed)
+	"""
+	isCompactSummary: Boolean
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the summary was created"""
-  timestamp: DateTime
+	"""
+	When the summary was created
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A system notification message with subtype and level"""
+"""
+A system notification message with subtype and level
+"""
 type SystemMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """System message content"""
-  content: String
+	"""
+	System message content
+	"""
+	content: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """Whether this is a meta/internal system message"""
-  isMeta: Boolean
+	"""
+	Whether this is a meta/internal system message
+	"""
+	isMeta: Boolean
 
-  """Message severity level (e.g., 'info', 'warning', 'error')"""
-  level: String
+	"""
+	Message severity level (e.g., 'info', 'warning', 'error')
+	"""
+	level: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """System message subtype (e.g., 'init', 'error', 'warning')"""
-  subtype: String
+	"""
+	System message subtype (e.g., 'init', 'error', 'warning')
+	"""
+	subtype: String
 
-  """When the system message was sent"""
-  timestamp: DateTime
+	"""
+	When the system message was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A tracked task"""
+"""
+A tracked task
+"""
 type Task {
-  """When the task completed"""
-  completedAt: DateTime
+	"""
+	When the task completed
+	"""
+	completedAt: DateTime
 
-  """Confidence score (0-1)"""
-  confidence: Float
+	"""
+	Confidence score (0-1)
+	"""
+	confidence: Float
 
-  """Task description"""
-  description: String
+	"""
+	Task description
+	"""
+	description: String
 
-  """Duration in seconds"""
-  durationSeconds: Int
+	"""
+	Duration in seconds
+	"""
+	durationSeconds: Int
 
-  """List of modified files"""
-  filesModified: [String!]
+	"""
+	List of modified files
+	"""
+	filesModified: [String!]
 
-  """Task ID"""
-  id: ID
+	"""
+	Task ID
+	"""
+	id: ID
 
-  """Additional notes"""
-  notes: String
+	"""
+	Additional notes
+	"""
+	notes: String
 
-  """Outcome if completed"""
-  outcome: TaskOutcome
+	"""
+	Outcome if completed
+	"""
+	outcome: TaskOutcome
 
-  """When the task started"""
-  startedAt: DateTime
+	"""
+	When the task started
+	"""
+	startedAt: DateTime
 
-  """Current status"""
-  status: TaskStatus
+	"""
+	Current status
+	"""
+	status: TaskStatus
 
-  """Task ID"""
-  taskId: String
+	"""
+	Task ID
+	"""
+	taskId: String
 
-  """Number of tests added"""
-  testsAdded: Int
+	"""
+	Number of tests added
+	"""
+	testsAdded: Int
 
-  """Type of task"""
-  type: TaskType
+	"""
+	Type of task
+	"""
+	type: TaskType
 }
 
-"""Aggregate task completion statistics"""
-type TaskCompletionMetrics {
-  """Average confidence score (0-1)"""
-  averageConfidence: Float
-
-  """Tasks completed with failure outcome"""
-  failureCount: Int
-
-  """Tasks completed with partial outcome"""
-  partialCount: Int
-
-  """Tasks completed with success outcome"""
-  successCount: Int
-
-  """Success rate (0-1)"""
-  successRate: Float
-
-  """Total tasks completed (any outcome)"""
-  totalCompleted: Int
-
-  """Total tasks created"""
-  totalCreated: Int
-}
-
-"""A paginated list of tasks"""
+"""
+A paginated list of tasks
+"""
 type TaskConnection {
-  """List of task edges"""
-  edges: [TaskEdge!]
+	"""
+	List of task edges
+	"""
+	edges: [TaskEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of tasks"""
-  totalCount: Int
+	"""
+	Total number of tasks
+	"""
+	totalCount: Int
 }
 
-"""An edge in a task connection"""
+"""
+An edge in a task connection
+"""
 type TaskEdge {
-  """Cursor for this edge"""
-  cursor: String
+	"""
+	Cursor for this edge
+	"""
+	cursor: String
 
-  """The task at this edge"""
-  node: Task
+	"""
+	The task at this edge
+	"""
+	node: Task
 }
 
-"""Outcome of a completed task"""
+"""
+Outcome of a completed task
+"""
 enum TaskOutcome {
-  FAILURE
-  PARTIAL
-  SUCCESS
+	FAILURE
+	PARTIAL
+	SUCCESS
 }
 
-"""Task count by outcome"""
+"""
+Task count by outcome
+"""
 type TaskOutcomeCount {
-  count: Int
-  outcome: TaskOutcome
+	count: Int
+	outcome: TaskOutcome
 }
 
-"""Status of a task"""
+"""
+Status of a task
+"""
 enum TaskStatus {
-  ACTIVE
-  COMPLETED
-  FAILED
+	ACTIVE
+	COMPLETED
+	FAILED
 }
 
-"""Type of task"""
+"""
+Type of task
+"""
 enum TaskType {
-  FIX
-  IMPLEMENTATION
-  REFACTOR
-  RESEARCH
+	FIX
+	IMPLEMENTATION
+	REFACTOR
+	RESEARCH
 }
 
-"""Task count by type"""
+"""
+Task count by type
+"""
 type TaskTypeCount {
-  count: Int
-  type: TaskType
+	count: Int
+	type: TaskType
 }
 
-"""Citation from team memory with visibility metadata"""
-type TeamCitation {
-  """Author if known"""
-  author: String
-
-  """Relevant excerpt (sanitized for privacy)"""
-  excerpt: String
-
-  """Session ID if from a session"""
-  sessionId: String
-
-  """Source identifier (e.g., transcript:sessionId:msgId)"""
-  source: String
-
-  """Timestamp if known"""
-  timestamp: DateTime
-
-  """Visibility level of the source"""
-  visibility: CitationVisibility
-}
-
-"""Result of exporting team knowledge"""
-type TeamKnowledgeExportResult {
-  """JSON string of the export data"""
-  exportJson: String
-  message: String
-  success: Boolean
-}
-
-"""Result of importing team knowledge"""
-type TeamKnowledgeImportResult {
-  errors: Int
-  imported: Int
-  message: String
-  skipped: Int
-  success: Boolean
-}
-
-"""A member of an organization"""
-type TeamMember {
-  """Team member ID"""
-  id: ID
-
-  """Organization ID"""
-  orgId: String
-
-  """Role within the organization"""
-  role: TeamMemberRole
-
-  """The user"""
-  user: User
-
-  """User ID"""
-  userId: String
-}
-
-"""Role of a team member within an organization"""
-enum TeamMemberRole {
-  """Organization administrator"""
-  ADMIN
-
-  """Full team member"""
-  MEMBER
-
-  """Read-only viewer"""
-  VIEWER
-}
-
-"""Input for team memory query"""
-input TeamMemoryQueryInput {
-  """Maximum results to return (default: 20)"""
-  limit: Int
-
-  """Project path for context-aware search"""
-  projectPath: String
-
-  """The question to research in team memory"""
-  question: String!
-
-  """Memory scope to search (default: TEAM)"""
-  scope: MemoryScope
-
-  """Whether to use cached results (default: true)"""
-  useCache: Boolean
-}
-
-"""Result of a team memory query"""
-type TeamMemoryResult {
-  """Synthesized answer based on team memory"""
-  answer: String
-
-  """Whether result was served from cache"""
-  cached: Boolean
-
-  """Citations with visibility metadata"""
-  citations: [TeamCitation!]
-
-  """Confidence level based on source quality"""
-  confidence: Confidence
-
-  """Number of sessions searched"""
-  sessionsSearched: Int
-
-  """Search statistics"""
-  stats: TeamMemoryStats
-}
-
-"""Statistics from team memory search"""
-type TeamMemoryStats {
-  """Sessions user has permission to access"""
-  permittedSessions: Int
-
-  """Number of results filtered out by permissions"""
-  resultsFiltered: Int
-
-  """Number of results found"""
-  resultsFound: Int
-
-  """Total sessions available"""
-  totalSessions: Int
-}
-
-"""Aggregate team-level metrics for dashboard"""
-type TeamMetrics {
-  """Activity over time"""
-  activityTimeline: [ActivityTimelineEntry!]
-
-  """Estimated total cost in USD"""
-  estimatedCostUsd: Float
-
-  """Sessions grouped by time period"""
-  sessionsByPeriod: [PeriodSessionCount!]
-
-  """Sessions grouped by project"""
-  sessionsByProject: [ProjectSessionCount!]
-
-  """Task completion statistics"""
-  taskCompletionMetrics: TaskCompletionMetrics
-
-  """Token usage aggregation"""
-  tokenUsageAggregation: TokenUsageAggregation
-
-  """Top contributors (anonymized)"""
-  topContributors: [ContributorMetrics!]
-
-  """Total number of sessions"""
-  totalSessions: Int
-
-  """Total number of tasks"""
-  totalTasks: Int
-
-  """Total tokens used"""
-  totalTokens: Int
-}
-
-input TeamUserContextInput {
-  """User email"""
-  email: String
-
-  """Whether user is an admin"""
-  isAdmin: Boolean
-
-  """Organization ID"""
-  orgId: String
-
-  """User ID"""
-  userId: String!
-}
-
-"""Regular text content"""
+"""
+Regular text content
+"""
 type TextBlock implements ContentBlock {
-  """The text content"""
-  text: String
-  type: ContentBlockType
+	"""
+	The text content
+	"""
+	text: String
+	type: ContentBlockType
 }
 
-"""Claude's thinking/reasoning block (extended thinking)"""
+"""
+Claude's thinking/reasoning block (extended thinking)
+"""
 type ThinkingBlock implements ContentBlock {
-  """First ~200 chars for collapsed view"""
-  preview: String
+	"""
+	First ~200 chars for collapsed view
+	"""
+	preview: String
 
-  """Cryptographic signature if present"""
-  signature: String
+	"""
+	Cryptographic signature if present
+	"""
+	signature: String
 
-  """Full thinking content"""
-  thinking: String
-  type: ContentBlockType
+	"""
+	Full thinking content
+	"""
+	thinking: String
+	type: ContentBlockType
 }
 
-"""A todo item from a Claude Code session"""
+"""
+A todo item from a Claude Code session
+"""
 type Todo {
-  """Present continuous form shown during execution"""
-  activeForm: String
+	"""
+	Present continuous form shown during execution
+	"""
+	activeForm: String
 
-  """The todo item content (imperative form)"""
-  content: String
+	"""
+	The todo item content (imperative form)
+	"""
+	content: String
 
-  """Todo ID (content hash)"""
-  id: ID
+	"""
+	Todo ID (content hash)
+	"""
+	id: ID
 
-  """Current status of the todo"""
-  status: TodoStatus
+	"""
+	Current status of the todo
+	"""
+	status: TodoStatus
 }
 
-"""A paginated list of todo items"""
+"""
+A paginated list of todo items
+"""
 type TodoConnection {
-  """List of todo edges"""
-  edges: [TodoEdge!]
+	"""
+	List of todo edges
+	"""
+	edges: [TodoEdge!]
 
-  """Pagination information"""
-  pageInfo: PageInfo
+	"""
+	Pagination information
+	"""
+	pageInfo: PageInfo
 
-  """Total number of todos"""
-  totalCount: Int
+	"""
+	Total number of todos
+	"""
+	totalCount: Int
 }
 
-"""Counts of todos by status"""
+"""
+Counts of todos by status
+"""
 type TodoCounts {
-  """Number of completed todos"""
-  completed: Int
+	"""
+	Number of completed todos
+	"""
+	completed: Int
 
-  """Number of in-progress todos"""
-  inProgress: Int
+	"""
+	Number of in-progress todos
+	"""
+	inProgress: Int
 
-  """Number of pending todos"""
-  pending: Int
+	"""
+	Number of pending todos
+	"""
+	pending: Int
 
-  """Total number of todos"""
-  total: Int
+	"""
+	Total number of todos
+	"""
+	total: Int
 }
 
-"""An edge in a todo connection"""
+"""
+An edge in a todo connection
+"""
 type TodoEdge {
-  """Cursor for pagination"""
-  cursor: String
+	"""
+	Cursor for pagination
+	"""
+	cursor: String
 
-  """The todo item"""
-  node: Todo
+	"""
+	The todo item
+	"""
+	node: Todo
 }
 
-"""Status of a todo item"""
+"""
+Status of a todo item
+"""
 enum TodoStatus {
-  COMPLETED
-  IN_PROGRESS
-  PENDING
+	COMPLETED
+	IN_PROGRESS
+	PENDING
 }
 
-"""JWT token pair for authentication"""
-type TokenPair {
-  """Short-lived access token (1 hour)"""
-  accessToken: String
-
-  """When the access token expires"""
-  accessTokenExpiresAt: DateTime
-
-  """Long-lived refresh token (7 days)"""
-  refreshToken: String
-
-  """When the refresh token expires"""
-  refreshTokenExpiresAt: DateTime
-}
-
-"""Aggregated token usage statistics"""
-type TokenUsageAggregation {
-  """Estimated cost in USD"""
-  estimatedCostUsd: Float
-
-  """Total cached tokens used"""
-  totalCachedTokens: Int
-
-  """Total input tokens consumed"""
-  totalInputTokens: Int
-
-  """Total output tokens generated"""
-  totalOutputTokens: Int
-
-  """Total tokens (input + output)"""
-  totalTokens: Int
-}
-
-"""Aggregate token usage statistics"""
+"""
+Aggregate token usage statistics
+"""
 type TokenUsageStats {
-  """Estimated cost in USD based on Claude pricing"""
-  estimatedCostUsd: Float
+	"""
+	Estimated cost in USD based on Claude pricing
+	"""
+	estimatedCostUsd: Float
 
-  """Number of messages with token data"""
-  messageCount: Int
+	"""
+	Number of messages with token data
+	"""
+	messageCount: Int
 
-  """Number of unique sessions"""
-  sessionCount: Int
+	"""
+	Number of unique sessions
+	"""
+	sessionCount: Int
 
-  """Total cached tokens used"""
-  totalCachedTokens: BigInt
+	"""
+	Total cached tokens used
+	"""
+	totalCachedTokens: BigInt
 
-  """Total input tokens across all messages"""
-  totalInputTokens: BigInt
+	"""
+	Total input tokens across all messages
+	"""
+	totalInputTokens: BigInt
 
-  """Total output tokens generated"""
-  totalOutputTokens: BigInt
+	"""
+	Total output tokens generated
+	"""
+	totalOutputTokens: BigInt
 
-  """Total tokens (input + output)"""
-  totalTokens: BigInt
+	"""
+	Total tokens (input + output)
+	"""
+	totalTokens: BigInt
 }
 
-"""Category of tool"""
+"""
+Category of tool
+"""
 enum ToolCategory {
-  FILE
-  MCP
-  OTHER
-  SEARCH
-  SHELL
-  TASK
-  WEB
+	FILE
+	MCP
+	OTHER
+	SEARCH
+	SHELL
+	TASK
+	WEB
 }
 
-"""Payload for tool result added events"""
+"""
+Payload for tool result added events
+"""
 type ToolResultAddedPayload {
-  """Call ID to correlate with the tool call message"""
-  callId: String
+	"""
+	Call ID to correlate with the tool call message
+	"""
+	callId: String
 
-  """Duration of the tool call in milliseconds"""
-  durationMs: Int
+	"""
+	Duration of the tool call in milliseconds
+	"""
+	durationMs: Int
 
-  """ID of the session containing the tool call"""
-  sessionId: String
+	"""
+	ID of the session containing the tool call
+	"""
+	sessionId: String
 
-  """Whether the tool call succeeded"""
-  success: Boolean
+	"""
+	Whether the tool call succeeded
+	"""
+	success: Boolean
 
-  """Type of tool call (mcp or exposed)"""
-  type: String
+	"""
+	Type of tool call (mcp or exposed)
+	"""
+	type: String
 }
 
-"""Result returned from a tool execution"""
+"""
+Result returned from a tool execution
+"""
 type ToolResultBlock implements ContentBlock {
-  """Full result content"""
-  content: String
+	"""
+	Full result content
+	"""
+	content: String
 
-  """Whether this result contains an image"""
-  hasImage: Boolean
+	"""
+	Whether this result contains an image
+	"""
+	hasImage: Boolean
 
-  """Whether this result is an error"""
-  isError: Boolean
+	"""
+	Whether this result is an error
+	"""
+	isError: Boolean
 
-  """Whether content exceeds preview length"""
-  isLong: Boolean
+	"""
+	Whether content exceeds preview length
+	"""
+	isLong: Boolean
 
-  """Preview of content (first 500 chars)"""
-  preview: String
+	"""
+	Preview of content (first 500 chars)
+	"""
+	preview: String
 
-  """ID of the tool call this is a result for"""
-  toolCallId: String
-  type: ContentBlockType
+	"""
+	ID of the tool call this is a result for
+	"""
+	toolCallId: String
+	type: ContentBlockType
 }
 
 """
 A user message containing only tool_result blocks (internal API structure)
 """
 type ToolResultUserMessage implements Message & UserMessage {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """Tool result content (usually empty for display)"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	Tool result content (usually empty for display)
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
-  rawJson: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """
-  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
-  """
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the tool result was recorded"""
-  timestamp: DateTime
+	"""
+	When the tool result was recorded
+	"""
+	timestamp: DateTime
 
-  """Number of tool_result blocks in this message"""
-  toolResultCount: Int
+	"""
+	Number of tool_result blocks in this message
+	"""
+	toolResultCount: Int
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A tool use request from Claude"""
+"""
+A tool use request from Claude
+"""
 type ToolUseBlock implements ContentBlock {
-  """For Task tool calls, the spawned agent task with details"""
-  agentTask: AgentTask
+	"""
+	For Task tool calls, the spawned agent task with details
+	"""
+	agentTask: AgentTask
 
-  """For Task tool calls, the ID of the spawned agent task"""
-  agentTaskId: String
+	"""
+	For Task tool calls, the ID of the spawned agent task
+	"""
+	agentTaskId: String
 
-  """Category of tool (FILE, SEARCH, SHELL, etc.)"""
-  category: ToolCategory
+	"""
+	Category of tool (FILE, SEARCH, SHELL, etc.)
+	"""
+	category: ToolCategory
 
-  """Color code for the tool"""
-  color: String
+	"""
+	Color code for the tool
+	"""
+	color: String
 
-  """Human-readable tool name"""
-  displayName: String
+	"""
+	Human-readable tool name
+	"""
+	displayName: String
 
-  """Emoji icon for this tool"""
-  icon: String
+	"""
+	Emoji icon for this tool
+	"""
+	icon: String
 
-  """Tool input as JSON string"""
-  input: String
+	"""
+	Tool input as JSON string
+	"""
+	input: String
 
-  """Name of the tool being called"""
-  name: String
+	"""
+	Name of the tool being called
+	"""
+	name: String
 
-  """Result of this tool call (resolved via DataLoader)"""
-  result: ToolResultBlock
+	"""
+	Result of this tool call (resolved via DataLoader)
+	"""
+	result: ToolResultBlock
 
-  """Unique ID for this tool call"""
-  toolCallId: String
-  type: ContentBlockType
+	"""
+	Unique ID for this tool call
+	"""
+	toolCallId: String
+	type: ContentBlockType
 }
 
 """
 A fallback message type for unknown or future event types. Contains raw JSON for debugging.
 """
 type UnknownEventMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """The event subtype if han_event"""
-  eventType: String
+	"""
+	The event subtype if han_event
+	"""
+	eventType: String
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """The original message type"""
-  messageType: String
+	"""
+	The original message type
+	"""
+	messageType: String
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Raw JSON for debugging unknown types"""
-  rawJson: String
+	"""
+	Raw JSON for debugging unknown types
+	"""
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """When the event occurred"""
-  timestamp: DateTime
+	"""
+	When the event occurred
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
 """A user in the team platform"""
@@ -4113,59 +5134,79 @@ input UserContextInput {
 Base interface for all user message types. Subtypes include regular messages, meta/system messages, commands, and interrupts.
 """
 interface UserMessage implements Message {
-  """
-  Agent ID if this message is from a subagent. NULL for main conversation.
-  """
-  agentId: String
+	"""
+	Agent ID if this message is from a subagent. NULL for main conversation.
+	"""
+	agentId: String
 
-  """User message text content"""
-  content: String
-  contentBlocks: [ContentBlock!]
+	"""
+	User message text content
+	"""
+	content: String
+	contentBlocks: [ContentBlock!]
 
-  """Message global ID"""
-  id: ID
+	"""
+	Message global ID
+	"""
+	id: ID
 
-  """
-  For result messages, references the call message ID (e.g., tool_result -> tool_use)
-  """
-  parentId: String
+	"""
+	For result messages, references the call message ID (e.g., tool_result -> tool_use)
+	"""
+	parentId: String
 
-  """Original JSONL line content for debugging"""
-  rawJson: String
+	"""
+	Original JSONL line content for debugging
+	"""
+	rawJson: String
 
-  """
-  Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
-  """
-  searchText: String
+	"""
+	Searchable text content for message filtering. Returns combined text from message content, tool names, and other relevant fields.
+	"""
+	searchText: String
 
-  """
-  Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
-  """
-  sentimentAnalysis: SentimentAnalysis
+	"""
+	Sentiment analysis for this message (if available). Loaded via DataLoader from the session's paired events.
+	"""
+	sentimentAnalysis: SentimentAnalysis
 
-  """When the message was sent"""
-  timestamp: DateTime
+	"""
+	When the message was sent
+	"""
+	timestamp: DateTime
 
-  """
-  Raw message UUID. Use this for URLs and links instead of the global ID.
-  """
-  uuid: String
+	"""
+	Raw message UUID. Use this for URLs and links instead of the global ID.
+	"""
+	uuid: String
 }
 
-"""A git worktree within a project"""
+"""
+A git worktree within a project
+"""
 type Worktree {
-  """Whether this is a linked worktree (vs main repo)"""
-  isWorktree: Boolean
+	"""
+	Whether this is a linked worktree (vs main repo)
+	"""
+	isWorktree: Boolean
 
-  """Worktree name"""
-  name: String
+	"""
+	Worktree name
+	"""
+	name: String
 
-  """Full path to worktree"""
-  path: String
+	"""
+	Full path to worktree
+	"""
+	path: String
 
-  """Number of sessions at this worktree root"""
-  sessionCount: Int
+	"""
+	Number of sessions at this worktree root
+	"""
+	sessionCount: Int
 
-  """Subdirectories with sessions within this worktree"""
-  subdirs: [Subdir!]
+	"""
+	Subdirectories with sessions within this worktree
+	"""
+	subdirs: [Subdir!]
 }

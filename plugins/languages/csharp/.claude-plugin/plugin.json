@@ -1,0 +1,24 @@
+{
+  "name": "csharp",
+  "version": "1.2.0",
+  "description": "Advanced C# programming skills for async patterns and LINQ",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["csharp", "c#", "dotnet", "async", "linq"],
+  "lspServers": {
+    "csharp-ls": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".cs": "csharp"
+      },
+      "startupTimeout": 60000,
+      "maxRestarts": 3
+    }
+  }
+}

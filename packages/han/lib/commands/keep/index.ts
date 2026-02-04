@@ -13,247 +13,266 @@
  *   --repo      Repository-scoped (shared across branches)
  *   --branch    Branch-scoped (default)
  */
-import { readFileSync } from "node:fs";
-import type { Command } from "commander";
+import { readFileSync } from 'node:fs';
+import type { Command } from 'commander';
 import {
-	type Scope,
-	type StorageOptions,
-	clear,
-	list,
-	load,
-	remove,
-	save,
-} from "./storage.ts";
+  clear,
+  getStoragePath,
+  list,
+  load,
+  remove,
+  type Scope,
+  type StorageOptions,
+  save,
+} from './storage.ts';
 
 /**
  * Parse scope and options from command options
  */
 function parseScopeAndOptions(options: {
-	global?: boolean;
-	repo?: boolean;
-	branch?: string | boolean;
+  global?: boolean;
+  repo?: boolean;
+  branch?: string | boolean;
 }): { scope: Scope; storageOptions: StorageOptions } {
-	if (options.global) return { scope: "global", storageOptions: {} };
-	if (options.repo) return { scope: "repo", storageOptions: {} };
+  if (options.global) return { scope: 'global', storageOptions: {} };
+  if (options.repo) return { scope: 'repo', storageOptions: {} };
 
-	// Branch scope - may have explicit branch name
-	const storageOptions: StorageOptions = {};
-	if (typeof options.branch === "string") {
-		storageOptions.branchName = options.branch;
-	}
+  // Branch scope - may have explicit branch name
+  const storageOptions: StorageOptions = {};
+  if (typeof options.branch === 'string') {
+    storageOptions.branchName = options.branch;
+  }
 
-	return { scope: "branch", storageOptions };
+  return { scope: 'branch', storageOptions };
 }
 
 /**
  * Register han keep commands
  */
 export function registerKeepCommands(program: Command): void {
-	const keepCommand = program
-		.command("keep")
-		.description("Scoped key-value storage for persisting state across sessions");
+  const keepCommand = program
+    .command('keep')
+    .description(
+      'Scoped key-value storage for persisting state across sessions'
+    );
 
-	// han keep save <key> [content...]
-	keepCommand
-		.command("save <key> [content...]")
-		.description("Save content to storage (reads from stdin if no content provided)")
-		.option("--global", "Use global scope (shared across all repos)")
-		.option("--repo", "Use repo scope (shared across branches)")
-		.option(
-			"--branch [name]",
-			"Use branch scope (default). Optionally specify explicit branch name.",
-		)
-		.option("--file <path>", "Read content from file")
-		.action(async (key: string, contentParts: string[], options) => {
-			// Join content parts back together (handles space-separated arguments)
-			let content: string | undefined =
-				contentParts.length > 0 ? contentParts.join(" ") : undefined;
-			const { scope, storageOptions } = parseScopeAndOptions(options);
+  // han keep save <key> [content...]
+  keepCommand
+    .command('save <key> [content...]')
+    .description(
+      'Save content to storage (reads from stdin if no content provided)'
+    )
+    .option('--global', 'Use global scope (shared across all repos)')
+    .option('--repo', 'Use repo scope (shared across branches)')
+    .option(
+      '--branch [name]',
+      'Use branch scope (default). Optionally specify explicit branch name.'
+    )
+    .option('--file <path>', 'Read content from file')
+    .action(async (key: string, contentParts: string[], options) => {
+      // Join content parts back together (handles space-separated arguments)
+      let content: string | undefined =
+        contentParts.length > 0 ? contentParts.join(' ') : undefined;
+      const { scope, storageOptions } = parseScopeAndOptions(options);
 
-			// Priority: --file > argument > stdin
-			if (options.file) {
-				try {
-					content = readFileSync(options.file, "utf-8");
-				} catch (_err) {
-					console.error(`Error reading file: ${options.file}`);
-					process.exit(1);
-				}
-			} else if (content === undefined) {
-				// No content argument, read from stdin
-				const chunks: Buffer[] = [];
-				for await (const chunk of process.stdin) {
-					chunks.push(chunk);
-				}
-				content = Buffer.concat(chunks).toString("utf-8").trimEnd();
-			}
+      // Priority: --file > argument > stdin
+      if (options.file) {
+        try {
+          content = readFileSync(options.file, 'utf-8');
+        } catch (_err) {
+          console.error(`Error reading file: ${options.file}`);
+          process.exit(1);
+        }
+      } else if (content === undefined) {
+        // No content argument, read from stdin
+        const chunks: Buffer[] = [];
+        for await (const chunk of process.stdin) {
+          chunks.push(chunk);
+        }
+        content = Buffer.concat(chunks).toString('utf-8').trimEnd();
+      }
 
-			try {
-				save(scope, key, content, storageOptions);
-				const branchSuffix =
-					storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
-				console.log(`Saved to ${scope}:${key}${branchSuffix}`);
-			} catch (error) {
-				console.error(
-					`Error saving ${key}:`,
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(1);
-			}
-		});
+      try {
+        save(scope, key, content, storageOptions);
+        const branchSuffix = storageOptions.branchName
+          ? ` (${storageOptions.branchName})`
+          : '';
+        console.log(`Saved to ${scope}:${key}${branchSuffix}`);
+      } catch (error) {
+        console.error(
+          `Error saving ${key}:`,
+          error instanceof Error ? error.message : error
+        );
+        process.exit(1);
+      }
+    });
 
-	// han keep load <key>
-	keepCommand
-		.command("load <key>")
-		.description("Load content from storage")
-		.option("--global", "Use global scope")
-		.option("--repo", "Use repo scope")
-		.option(
-			"--branch [name]",
-			"Use branch scope (default). Optionally specify explicit branch name.",
-		)
-		.option("-q, --quiet", "Suppress errors if key not found")
-		.action((key: string, options) => {
-			const { scope, storageOptions } = parseScopeAndOptions(options);
+  // han keep load <key>
+  keepCommand
+    .command('load <key>')
+    .description('Load content from storage')
+    .option('--global', 'Use global scope')
+    .option('--repo', 'Use repo scope')
+    .option(
+      '--branch [name]',
+      'Use branch scope (default). Optionally specify explicit branch name.'
+    )
+    .option('-q, --quiet', 'Suppress errors if key not found')
+    .option('-p, --path', 'Output file path instead of content')
+    .action((key: string, options) => {
+      const { scope, storageOptions } = parseScopeAndOptions(options);
 
-			try {
-				const content = load(scope, key, storageOptions);
+      try {
+        // If --path, just output the path (even if file doesn't exist)
+        if (options.path) {
+          const path = getStoragePath(scope, key, storageOptions);
+          console.log(path);
+          return;
+        }
 
-				if (content === null) {
-					if (!options.quiet) {
-						console.error(`Key not found: ${scope}:${key}`);
-					}
-					process.exit(1);
-				}
+        const content = load(scope, key, storageOptions);
 
-				console.log(content);
-			} catch (error) {
-				if (!options.quiet) {
-					console.error(
-						`Error loading ${key}:`,
-						error instanceof Error ? error.message : error,
-					);
-				}
-				process.exit(1);
-			}
-		});
+        if (content === null) {
+          if (!options.quiet) {
+            console.error(`Key not found: ${scope}:${key}`);
+          }
+          process.exit(1);
+        }
 
-	// han keep list
-	keepCommand
-		.command("list")
-		.description("List all keys in scope")
-		.option("--global", "Use global scope")
-		.option("--repo", "Use repo scope")
-		.option(
-			"--branch [name]",
-			"Use branch scope (default). Optionally specify explicit branch name.",
-		)
-		.option("--json", "Output as JSON array")
-		.action((options) => {
-			const { scope, storageOptions } = parseScopeAndOptions(options);
+        console.log(content);
+      } catch (error) {
+        if (!options.quiet) {
+          console.error(
+            `Error loading ${key}:`,
+            error instanceof Error ? error.message : error
+          );
+        }
+        process.exit(1);
+      }
+    });
 
-			try {
-				const keys = list(scope, storageOptions);
+  // han keep list
+  keepCommand
+    .command('list')
+    .description('List all keys in scope')
+    .option('--global', 'Use global scope')
+    .option('--repo', 'Use repo scope')
+    .option(
+      '--branch [name]',
+      'Use branch scope (default). Optionally specify explicit branch name.'
+    )
+    .option('--json', 'Output as JSON array')
+    .action((options) => {
+      const { scope, storageOptions } = parseScopeAndOptions(options);
 
-				if (options.json) {
-					console.log(JSON.stringify(keys));
-				} else if (keys.length === 0) {
-					console.log(`No keys in ${scope} scope`);
-				} else {
-					for (const key of keys) {
-						console.log(key);
-					}
-				}
-			} catch (error) {
-				console.error(
-					"Error listing keys:",
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(1);
-			}
-		});
+      try {
+        const keys = list(scope, storageOptions);
 
-	// han keep delete <key>
-	keepCommand
-		.command("delete <key>")
-		.description("Delete a key from storage")
-		.option("--global", "Use global scope")
-		.option("--repo", "Use repo scope")
-		.option(
-			"--branch [name]",
-			"Use branch scope (default). Optionally specify explicit branch name.",
-		)
-		.option("-q, --quiet", "Suppress errors if key not found")
-		.action((key: string, options) => {
-			const { scope, storageOptions } = parseScopeAndOptions(options);
+        if (options.json) {
+          console.log(JSON.stringify(keys));
+        } else if (keys.length === 0) {
+          console.log(`No keys in ${scope} scope`);
+        } else {
+          for (const key of keys) {
+            console.log(key);
+          }
+        }
+      } catch (error) {
+        console.error(
+          'Error listing keys:',
+          error instanceof Error ? error.message : error
+        );
+        process.exit(1);
+      }
+    });
 
-			try {
-				const deleted = remove(scope, key, storageOptions);
+  // han keep delete <key>
+  keepCommand
+    .command('delete <key>')
+    .description('Delete a key from storage')
+    .option('--global', 'Use global scope')
+    .option('--repo', 'Use repo scope')
+    .option(
+      '--branch [name]',
+      'Use branch scope (default). Optionally specify explicit branch name.'
+    )
+    .option('-q, --quiet', 'Suppress errors if key not found')
+    .action((key: string, options) => {
+      const { scope, storageOptions } = parseScopeAndOptions(options);
 
-				if (!deleted && !options.quiet) {
-					console.error(`Key not found: ${scope}:${key}`);
-					process.exit(1);
-				}
+      try {
+        const deleted = remove(scope, key, storageOptions);
 
-				if (deleted) {
-					const branchSuffix =
-						storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
-					console.log(`Deleted ${scope}:${key}${branchSuffix}`);
-				}
-			} catch (error) {
-				if (!options.quiet) {
-					console.error(
-						`Error deleting ${key}:`,
-						error instanceof Error ? error.message : error,
-					);
-				}
-				process.exit(1);
-			}
-		});
+        if (!deleted && !options.quiet) {
+          console.error(`Key not found: ${scope}:${key}`);
+          process.exit(1);
+        }
 
-	// han keep clear
-	keepCommand
-		.command("clear")
-		.description("Clear all keys in scope")
-		.option("--global", "Use global scope")
-		.option("--repo", "Use repo scope")
-		.option(
-			"--branch [name]",
-			"Use branch scope (default). Optionally specify explicit branch name.",
-		)
-		.option("-f, --force", "Skip confirmation prompt")
-		.action((options) => {
-			const { scope, storageOptions } = parseScopeAndOptions(options);
+        if (deleted) {
+          const branchSuffix = storageOptions.branchName
+            ? ` (${storageOptions.branchName})`
+            : '';
+          console.log(`Deleted ${scope}:${key}${branchSuffix}`);
+        }
+      } catch (error) {
+        if (!options.quiet) {
+          console.error(
+            `Error deleting ${key}:`,
+            error instanceof Error ? error.message : error
+          );
+        }
+        process.exit(1);
+      }
+    });
 
-			try {
-				const keys = list(scope, storageOptions);
+  // han keep clear
+  keepCommand
+    .command('clear')
+    .description('Clear all keys in scope')
+    .option('--global', 'Use global scope')
+    .option('--repo', 'Use repo scope')
+    .option(
+      '--branch [name]',
+      'Use branch scope (default). Optionally specify explicit branch name.'
+    )
+    .option('-f, --force', 'Skip confirmation prompt')
+    .action((options) => {
+      const { scope, storageOptions } = parseScopeAndOptions(options);
 
-				if (keys.length === 0) {
-					console.log(`No keys to clear in ${scope} scope`);
-					return;
-				}
+      try {
+        const keys = list(scope, storageOptions);
 
-				// For now, just proceed (could add interactive prompt later)
-				if (!options.force) {
-					const branchSuffix =
-						storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
-					console.log(
-						`Clearing ${keys.length} key(s) from ${scope} scope${branchSuffix}:`,
-					);
-					for (const key of keys) {
-						console.log(`  - ${key}`);
-					}
-				}
+        if (keys.length === 0) {
+          console.log(`No keys to clear in ${scope} scope`);
+          return;
+        }
 
-				const deleted = clear(scope, storageOptions);
-				const branchSuffix =
-					storageOptions.branchName ? ` (${storageOptions.branchName})` : "";
-				console.log(`Cleared ${deleted} key(s) from ${scope} scope${branchSuffix}`);
-			} catch (error) {
-				console.error(
-					"Error clearing keys:",
-					error instanceof Error ? error.message : error,
-				);
-				process.exit(1);
-			}
-		});
+        // For now, just proceed (could add interactive prompt later)
+        if (!options.force) {
+          const branchSuffix = storageOptions.branchName
+            ? ` (${storageOptions.branchName})`
+            : '';
+          console.log(
+            `Clearing ${keys.length} key(s) from ${scope} scope${branchSuffix}:`
+          );
+          for (const key of keys) {
+            console.log(`  - ${key}`);
+          }
+        }
+
+        const deleted = clear(scope, storageOptions);
+        const branchSuffix = storageOptions.branchName
+          ? ` (${storageOptions.branchName})`
+          : '';
+        console.log(
+          `Cleared ${deleted} key(s) from ${scope} scope${branchSuffix}`
+        );
+      } catch (error) {
+        console.error(
+          'Error clearing keys:',
+          error instanceof Error ? error.message : error
+        );
+        process.exit(1);
+      }
+    });
 }

@@ -1,8 +1,0 @@
-# jutsu-scratch plugin configuration
-# Enforces scratch workspace usage for exploratory development
-
-hooks:
-  ensure-scratch:
-    event: UserPromptSubmit
-    command: han hook reference hooks/ensure-scratch.md --must-read-first "scratch workspace requirements"
-    description: Remind agent to use scratch workspace for exploratory work

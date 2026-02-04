@@ -5,120 +5,103 @@
  */
 
 import {
-	getSessionAsync,
-	listSessions,
-	listSessionsAsync,
-} from "../../../api/sessions.ts";
+  getSessionAsync,
+  listSessions,
+  listSessionsAsync,
+} from '../../../api/sessions.ts';
 import {
-	applyConnectionArgs,
-	type ConnectionArgs,
-	encodeCursor,
-} from "../pagination.ts";
-import type { SessionConnectionData } from "../session-connection.ts";
-import { getAgentTask, getAgentTasksForSession } from "./session-type.ts";
+  applyConnectionArgs,
+  type ConnectionArgs,
+  encodeCursor,
+} from '../pagination.ts';
+import type { SessionConnectionData } from '../session-connection.ts';
+import { getAgentTask, getAgentTasksForSession } from './session-type.ts';
 
 /**
  * Get all sessions
  */
 export function getAllSessions(params: URLSearchParams) {
-	return listSessions(params);
+  return listSessions(params);
 }
 
 /**
  * Get a session by ID (async - reads from database)
  */
 export async function getSessionById(id: string) {
-	return getSessionAsync(id);
+  return getSessionAsync(id);
 }
 
 /**
  * Get agent task IDs for a session
  */
 export function getAgentTaskIds(sessionId: string): string[] {
-	return getAgentTasksForSession(sessionId);
+  return getAgentTasksForSession(sessionId);
 }
 
 /**
  * Get agent task by ID
  */
 export function getAgentTaskById(sessionId: string, agentId: string) {
-	return getAgentTask(sessionId, agentId);
+  return getAgentTask(sessionId, agentId);
 }
 
 /**
  * Get sessions with cursor-based pagination from database
  */
 export async function getSessionsConnection(
-	args: ConnectionArgs & {
-		projectId?: string | null;
-		worktreeName?: string | null;
-		userId?: string | null;
-	},
+  args: ConnectionArgs & {
+    projectId?: string | null;
+    worktreeName?: string | null;
+  }
 ): Promise<SessionConnectionData> {
-	const startTime = Date.now();
+  const startTime = Date.now();
 
-	// Build params for the underlying listSessions function
-	const params = new URLSearchParams();
+  // Build params for the underlying listSessions function
+  const params = new URLSearchParams();
 
-	// Set a large page size to get all sessions for cursor-based filtering
-	// In production, you'd want to optimize this with proper database cursors
-	params.set("pageSize", "1000");
+  // Set a large page size to get all sessions for cursor-based filtering
+  // In production, you'd want to optimize this with proper database cursors
+  params.set('pageSize', '1000');
 
-	if (args.projectId) {
-		params.set("projectId", args.projectId);
-	}
-	if (args.worktreeName) {
-		params.set("worktree", args.worktreeName);
-	}
+  if (args.projectId) {
+    params.set('projectId', args.projectId);
+  }
+  if (args.worktreeName) {
+    params.set('worktree', args.worktreeName);
+  }
 
-	// Use async version that reads from database
-	const listStart = Date.now();
-	const result = await listSessionsAsync(params);
-	const listEnd = Date.now();
-	console.log(
-		`[getSessionsConnection] listSessionsAsync took ${listEnd - listStart}ms, returned ${result.data.length} sessions`,
-	);
+  // Use async version that reads from database
+  const listStart = Date.now();
+  const result = await listSessionsAsync(params);
+  const listEnd = Date.now();
+  console.log(
+    `[getSessionsConnection] listSessionsAsync took ${listEnd - listStart}ms, returned ${result.data.length} sessions`
+  );
 
-	// Filter out sessions with no messages
-	const filterStart = Date.now();
-	let sessions = result.data.filter((s) => s.messageCount > 0);
+  // Filter out sessions with no messages
+  const filterStart = Date.now();
+  const sessions = result.data.filter((s) => s.messageCount > 0);
+  const filterEnd = Date.now();
+  console.log(
+    `[getSessionsConnection] Filtering took ${filterEnd - filterStart}ms, ${sessions.length} sessions with messages`
+  );
 
-	// Filter by userId if provided (team mode - filter by session owner)
-	// This is a client-side filter for now; will be optimized when team backend is ready
-	if (args.userId) {
-		sessions = sessions.filter((s) => {
-			// In hosted mode, sessions will have an owner field
-			// For now, this is a stub - actual filtering will happen when
-			// the team backend populates owner data on sessions
-			if ("owner" in s && s.owner) {
-				const owner = s.owner as { id?: string };
-				return owner.id === args.userId;
-			}
-			return false;
-		});
-	}
+  // Apply cursor-based pagination
+  const paginationStart = Date.now();
+  const connection = applyConnectionArgs(sessions, args, (session) =>
+    encodeCursor(
+      'session',
+      session.sessionId,
+      session.startedAt ? new Date(session.startedAt).getTime() : undefined
+    )
+  );
+  const paginationEnd = Date.now();
+  console.log(
+    `[getSessionsConnection] Pagination took ${paginationEnd - paginationStart}ms`
+  );
 
-	const filterEnd = Date.now();
-	console.log(
-		`[getSessionsConnection] Filtering took ${filterEnd - filterStart}ms, ${sessions.length} sessions with messages`,
-	);
+  const totalTime = Date.now() - startTime;
+  console.log(`[getSessionsConnection] Total time: ${totalTime}ms`);
 
-	// Apply cursor-based pagination
-	const paginationStart = Date.now();
-	const connection = applyConnectionArgs(sessions, args, (session) =>
-		encodeCursor(
-			"session",
-			session.sessionId,
-			session.startedAt ? new Date(session.startedAt).getTime() : undefined,
-		),
-	);
-	const paginationEnd = Date.now();
-	console.log(
-		`[getSessionsConnection] Pagination took ${paginationEnd - paginationStart}ms`,
-	);
-
-	const totalTime = Date.now() - startTime;
-	console.log(`[getSessionsConnection] Total time: ${totalTime}ms`);
-
-	return connection;
+  return connection;
 }

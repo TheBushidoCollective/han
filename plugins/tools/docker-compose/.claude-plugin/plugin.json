@@ -1,0 +1,25 @@
+{
+  "name": "docker-compose",
+  "version": "1.10.0",
+  "description": "Docker Compose validation and best practices",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["docker", "docker-compose", "containers", "devops"],
+  "lspServers": {
+    "docker-compose-langserver": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".yaml": "dockercompose",
+        ".yml": "dockercompose"
+      },
+      "startupTimeout": 60000,
+      "maxRestarts": 3
+    }
+  }
+}

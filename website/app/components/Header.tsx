@@ -4,6 +4,7 @@ import Fuse from "fuse.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator } from "./ActivityIndicator";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface SearchResult {
@@ -157,12 +158,15 @@ export default function Header() {
 		<header className="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
 			<nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 				<div className="flex items-center justify-between gap-4">
-					<Link href="/" className="flex items-center space-x-3 flex-shrink-0">
-						<div className="text-4xl">⛩️</div>
-						<div className="text-2xl font-bold text-gray-900 dark:text-white">
-							Han
-						</div>
-					</Link>
+					<div className="flex items-center gap-3 flex-shrink-0">
+						<ActivityIndicator />
+						<Link href="/" className="flex items-center space-x-3">
+							<div className="text-4xl">⛩️</div>
+							<div className="text-2xl font-bold text-gray-900 dark:text-white">
+								Han
+							</div>
+						</Link>
+					</div>
 
 					<form
 						onSubmit={handleSubmit}
@@ -262,6 +266,7 @@ export default function Header() {
 
 					{/* Desktop Navigation */}
 					<div className="hidden md:flex items-center space-x-6 flex-shrink-0">
+						<ActivityIndicator />
 						<Link
 							href="/plugins"
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
@@ -273,12 +278,6 @@ export default function Header() {
 							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
 						>
 							Blog
-						</Link>
-						<Link
-							href="/papers/ai-dlc-2026"
-							className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
-						>
-							AI-DLC 2026
 						</Link>
 						<Link
 							href="/docs"
@@ -424,13 +423,6 @@ export default function Header() {
 								onClick={() => setMobileMenuOpen(false)}
 							>
 								Blog
-							</Link>
-							<Link
-								href="/papers/ai-dlc-2026"
-								className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition py-2"
-								onClick={() => setMobileMenuOpen(false)}
-							>
-								AI-DLC 2026
 							</Link>
 							<Link
 								href="/docs"

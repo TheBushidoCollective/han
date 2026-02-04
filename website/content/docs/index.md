@@ -35,7 +35,7 @@ Browse over 139 plugins across nine categories at [han.guru/plugins](https://han
 - **Tool** - Build tools, testing frameworks, dev tools (playwright, jest, webpack, docker-compose)
 - **Integration** - MCP servers for external services (github, jira, figma, sentry, linear)
 - **Discipline** - Specialized AI agents (frontend, backend, accessibility, security)
-- **Pattern** - Methodologies and workflows (ai-dlc, tdd, bdd, atomic-design, monorepo)
+- **Pattern** - Methodologies and workflows ([ai-dlc](https://ai-dlc.dev), tdd, bdd, atomic-design, monorepo)
 - **Specialized** - Niche or platform-specific tools (android, ios, tensorflow, fnox)
 
 ## Get Help

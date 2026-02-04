@@ -297,7 +297,7 @@ Pattern plugins encode development methodologies, design patterns, and workflow 
 
 **Examples:**
 
-- **ai-dlc** - AI-driven development lifecycle methodology
+- **[ai-dlc](https://ai-dlc.dev)** - AI-driven development lifecycle methodology
 - **tdd** - Test-Driven Development with red-green-refactor
 - **bdd** - Behavior-Driven Development collaboration patterns
 - **atomic-design** - Component-based design system (atoms, molecules, organisms)

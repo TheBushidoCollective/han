@@ -3,12 +3,8 @@ name: Manual Release
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-  id-token: write
-
 jobs:
-  trigger-release:
+  trigger:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,23 +12,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get latest tag
-        id: get_tag
+      - name: Get latest tag and trigger release
         run: |
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$TAG" ]; then
             echo "No tags found!"
             exit 1
           fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Found tag: $TAG"
-
-      - name: Trigger release-binaries via workflow_dispatch
-        env:
-          # Use PAT instead of github.token - the default token lacks
-          # permission to trigger workflow_dispatch events
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          TAG="${{ steps.get_tag.outputs.tag }}"
-          echo "Triggering release for $TAG"
-          gh workflow run release-binaries.yml --ref "$TAG"
+          echo ""
+          echo "To trigger the full release workflow, delete and recreate the tag:"
+          echo ""
+          echo "  git tag -d $TAG"
+          echo "  git push origin :refs/tags/$TAG"
+          echo "  git tag -a $TAG -m 'Release $TAG'"
+          echo "  git push origin $TAG"
+          echo ""
+          echo "This will trigger the release-binaries workflow via push:tags trigger."

@@ -1,0 +1,29 @@
+# jira plugin configuration
+# This plugin provides Jira integration via Atlassian MCP server
+# MCP server is defined in .mcp.json for direct exposure to Claude Code
+
+# No hooks - MCP server plugins don't have validation hooks
+hooks: {}
+
+# Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
+# These patterns detect Jira URLs and issue keys (e.g., PROJ-123, ABC-1)
+learn_patterns:
+  - "https?://[^\\s]*\\.atlassian\\.net"
+  - "https?://jira\\.[^\\s]+"
+  - "[A-Z]{2,10}-\\d+"
+
+# Memory provider for team memory extraction from Jira
+# Convention: provider name = plugin name, script = memory-provider.ts
+memory:
+  allowed_tools:
+    - mcp__plugin_hashi-jira_atlassian__search_issues
+    - mcp__plugin_hashi-jira_atlassian__get_issue
+    - mcp__plugin_hashi-jira_atlassian__list_projects
+  system_prompt: |
+    Extract observations from Jira tickets and projects. For each item, capture:
+    - author: Jira user (reporter or assignee)
+    - timestamp: when created/updated/resolved
+    - summary: ticket summary and key acceptance criteria
+    - status: ticket state (To Do, In Progress, Done, etc.)
+    - type: 'ticket', 'epic', or 'comment'
+    Return as JSON array of observations.

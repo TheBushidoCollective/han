@@ -5,10 +5,10 @@
  * All derived memory lives in ~/.claude/han/memory/, NOT in project repos.
  */
 
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { getClaudeConfigDir } from "../config/claude-settings.ts";
-import { getGitRemoteUrl } from "../native.ts";
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { getClaudeConfigDir } from '../config/claude-settings.ts';
+import { getGitRemoteUrl } from '../native.ts';
 
 /**
  * Override for memory root (used in tests)
@@ -20,7 +20,7 @@ let memoryRootOverride: string | null = null;
  * Pass null to reset to default
  */
 export function setMemoryRoot(path: string | null): void {
-	memoryRootOverride = path;
+  memoryRootOverride = path;
 }
 
 /**
@@ -28,38 +28,38 @@ export function setMemoryRoot(path: string | null): void {
  * Computed lazily to support test environment overrides
  */
 export function getMemoryRoot(): string {
-	if (memoryRootOverride) {
-		return memoryRootOverride;
-	}
-	return join(getClaudeConfigDir(), "han", "memory");
+  if (memoryRootOverride) {
+    return memoryRootOverride;
+  }
+  return join(getClaudeConfigDir(), 'han', 'memory');
 }
 
 /**
  * Get path to personal memory storage
  */
 export function getPersonalPath(): string {
-	return join(getMemoryRoot(), "personal");
+  return join(getMemoryRoot(), 'personal');
 }
 
 /**
  * Get path to personal session observations
  */
 export function getSessionsPath(): string {
-	return join(getPersonalPath(), "sessions");
+  return join(getPersonalPath(), 'sessions');
 }
 
 /**
  * Get path to personal session summaries
  */
 export function getSummariesPath(): string {
-	return join(getPersonalPath(), "summaries");
+  return join(getPersonalPath(), 'summaries');
 }
 
 /**
  * Get path to personal memory index
  */
 export function getPersonalIndexPath(): string {
-	return join(getPersonalPath(), ".index");
+  return join(getPersonalPath(), '.index');
 }
 
 /**
@@ -71,32 +71,32 @@ export function getPersonalIndexPath(): string {
  * normalizeGitRemote("https://gitlab.com/team/project.git") // "gitlab.com_team_project"
  */
 export function normalizeGitRemote(gitRemote: string): string {
-	return gitRemote
-		.replace(/^(git@|https?:\/\/)/, "")
-		.replace(/\.git$/, "")
-		.replace(/[/:]/g, "_");
+  return gitRemote
+    .replace(/^(git@|https?:\/\/)/, '')
+    .replace(/\.git$/, '')
+    .replace(/[/:]/g, '_');
 }
 
 /**
  * Get path to project memory storage from git remote
  */
 export function getProjectMemoryPath(gitRemote: string): string {
-	const normalized = normalizeGitRemote(gitRemote);
-	return join(getMemoryRoot(), "projects", normalized);
+  const normalized = normalizeGitRemote(gitRemote);
+  return join(getMemoryRoot(), 'projects', normalized);
 }
 
 /**
  * Get path to project memory index
  */
 export function getProjectIndexPath(gitRemote: string): string {
-	return join(getProjectMemoryPath(gitRemote), ".index");
+  return join(getProjectMemoryPath(gitRemote), '.index');
 }
 
 /**
  * Get path to project metadata file
  */
 export function getProjectMetaPath(gitRemote: string): string {
-	return join(getProjectMemoryPath(gitRemote), "meta.yaml");
+  return join(getProjectMemoryPath(gitRemote), 'meta.yaml');
 }
 
 /**
@@ -104,7 +104,7 @@ export function getProjectMetaPath(gitRemote: string): string {
  * Returns null if not in a git repo or no remote configured
  */
 export function getGitRemote(cwd?: string): string | null {
-	return getGitRemoteUrl(cwd ?? process.cwd()) ?? null;
+  return getGitRemoteUrl(cwd ?? process.cwd()) ?? null;
 }
 
 /**
@@ -112,61 +112,61 @@ export function getGitRemote(cwd?: string): string | null {
  * Returns null if not in a git repo
  */
 export function getCurrentProjectPath(): string | null {
-	const remote = getGitRemote();
-	if (!remote) return null;
-	return getProjectMemoryPath(remote);
+  const remote = getGitRemote();
+  if (!remote) return null;
+  return getProjectMemoryPath(remote);
 }
 
 /**
  * Ensure a directory exists, creating it recursively if needed
  */
 export function ensureDir(dirPath: string): void {
-	if (!existsSync(dirPath)) {
-		mkdirSync(dirPath, { recursive: true });
-	}
+  if (!existsSync(dirPath)) {
+    mkdirSync(dirPath, { recursive: true });
+  }
 }
 
 /**
  * Ensure all memory directories exist
  */
 export function ensureMemoryDirs(): void {
-	ensureDir(getSessionsPath());
-	ensureDir(getSummariesPath());
-	ensureDir(getPersonalIndexPath());
+  ensureDir(getSessionsPath());
+  ensureDir(getSummariesPath());
+  ensureDir(getPersonalIndexPath());
 }
 
 /**
  * Ensure project memory directories exist
  */
 export function ensureProjectDirs(gitRemote: string): void {
-	const projectPath = getProjectMemoryPath(gitRemote);
-	ensureDir(projectPath);
-	ensureDir(getProjectIndexPath(gitRemote));
+  const projectPath = getProjectMemoryPath(gitRemote);
+  ensureDir(projectPath);
+  ensureDir(getProjectIndexPath(gitRemote));
 }
 
 /**
  * Generate a unique ID for observations
  */
 export function generateId(): string {
-	const timestamp = Date.now().toString(36);
-	const random = Math.random().toString(36).substring(2, 8);
-	return `${timestamp}-${random}`;
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${timestamp}-${random}`;
 }
 
 /**
  * Generate session file path
  */
 export function getSessionFilePath(sessionId: string): string {
-	const date = new Date().toISOString().split("T")[0];
-	return join(getSessionsPath(), `${date}-${sessionId}.jsonl`);
+  const date = new Date().toISOString().split('T')[0];
+  return join(getSessionsPath(), `${date}-${sessionId}.jsonl`);
 }
 
 /**
  * Generate summary file path
  */
 export function getSummaryFilePath(sessionId: string): string {
-	const date = new Date().toISOString().split("T")[0];
-	return join(getSummariesPath(), `${date}-${sessionId}.yaml`);
+  const date = new Date().toISOString().split('T')[0];
+  return join(getSummariesPath(), `${date}-${sessionId}.yaml`);
 }
 
 /**
@@ -174,7 +174,7 @@ export function getSummaryFilePath(sessionId: string): string {
  * This is where Claude Code stores session transcripts
  */
 export function getClaudeProjectsDir(): string {
-	return join(getClaudeConfigDir(), "projects");
+  return join(getClaudeConfigDir(), 'projects');
 }
 
 /**
@@ -185,16 +185,16 @@ export function getClaudeProjectsDir(): string {
  * pathToSlug("/Volumes/dev/src/github.com/foo/bar") // "-Volumes-dev-src-github-com-foo-bar"
  */
 export function pathToSlug(fsPath: string): string {
-	// Replace path separators and dots with dashes, removing leading slashes
-	return fsPath.replace(/^\//, "-").replace(/[/.]/g, "-");
+  // Replace path separators and dots with dashes, removing leading slashes
+  return fsPath.replace(/^\//, '-').replace(/[/.]/g, '-');
 }
 
 /**
  * Get the path to a project's Claude Code directory
  */
 export function getClaudeProjectPath(projectPath: string): string {
-	const slug = pathToSlug(projectPath);
-	return join(getClaudeProjectsDir(), slug);
+  const slug = pathToSlug(projectPath);
+  return join(getClaudeProjectsDir(), slug);
 }
 
 /**
@@ -213,22 +213,22 @@ export function getClaudeProjectPath(projectPath: string): string {
  */
 export function getHanEventsFilePath(sessionId: string): string;
 export function getHanEventsFilePath(
-	projectPath: string,
-	sessionId: string,
+  projectPath: string,
+  sessionId: string
 ): string;
 export function getHanEventsFilePath(
-	projectPathOrSessionId: string,
-	sessionId?: string,
+  projectPathOrSessionId: string,
+  sessionId?: string
 ): string {
-	if (sessionId === undefined) {
-		// Single argument: sessionId only, use sessions directory
-		const date = new Date().toISOString().split("T")[0];
-		return join(
-			getSessionsPath(),
-			`${date}-${projectPathOrSessionId}-han.jsonl`,
-		);
-	}
-	// Two arguments: projectPath and sessionId, use project directory
-	const projectDir = getClaudeProjectPath(projectPathOrSessionId);
-	return join(projectDir, `${sessionId}-han.jsonl`);
+  if (sessionId === undefined) {
+    // Single argument: sessionId only, use sessions directory
+    const date = new Date().toISOString().split('T')[0];
+    return join(
+      getSessionsPath(),
+      `${date}-${projectPathOrSessionId}-han.jsonl`
+    );
+  }
+  // Two arguments: projectPath and sessionId, use project directory
+  const projectDir = getClaudeProjectPath(projectPathOrSessionId);
+  return join(projectDir, `${sessionId}-han.jsonl`);
 }

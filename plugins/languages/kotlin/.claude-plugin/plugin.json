@@ -1,0 +1,25 @@
+{
+  "name": "kotlin",
+  "version": "1.10.0",
+  "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["kotlin", "coroutines", "android", "jvm"],
+  "lspServers": {
+    "kotlin-language-server": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lsp-entrypoint.sh",
+      "args": [],
+      "extensionToLanguage": {
+        ".kt": "kotlin",
+        ".kts": "kotlin"
+      },
+      "startupTimeout": 120000,
+      "maxRestarts": 3
+    }
+  }
+}

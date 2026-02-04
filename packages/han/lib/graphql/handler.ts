@@ -8,12 +8,12 @@
  * and efficient batching of database access.
  */
 
-import { useDeferStream } from "@graphql-yoga/plugin-defer-stream";
-import { makeServer } from "graphql-ws";
-import { createYoga } from "graphql-yoga";
-import type { GraphQLContext, UserContext, UserRole } from "./builder.ts";
-import { createLoaders } from "./loaders.ts";
-import { schema } from "./schema.ts";
+import { useDeferStream } from '@graphql-yoga/plugin-defer-stream';
+import { makeServer } from 'graphql-ws';
+import { createYoga } from 'graphql-yoga';
+import type { GraphQLContext } from './builder.ts';
+import { createLoaders } from './loaders.ts';
+import { schema } from './schema.ts';
 
 /**
  * Extract user context from request headers
@@ -60,33 +60,32 @@ export { schema };
  * Enables @defer and @stream directives for incremental delivery.
  */
 export function createGraphQLHandler() {
-	return createYoga<GraphQLContext>({
-		schema,
-		graphqlEndpoint: "/api/graphql",
-		graphiql: true,
-		plugins: [
-			useDeferStream(), // Enable @defer and @stream directives
-		],
-		cors: {
-			origin: "*",
-			methods: ["GET", "POST", "OPTIONS"],
-		},
-		context: ({ request }) => ({
-			request,
-			loaders: createLoaders(),
-			user: extractUserContext(request),
-		}),
-	});
+  return createYoga<GraphQLContext>({
+    schema,
+    graphqlEndpoint: '/api/graphql',
+    graphiql: true,
+    plugins: [
+      useDeferStream(), // Enable @defer and @stream directives
+    ],
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+    },
+    context: ({ request }) => ({
+      request,
+      loaders: createLoaders(),
+    }),
+  });
 }
 
 /**
  * Create a WebSocket server for GraphQL subscriptions
  */
 export function createGraphQLWebSocketServer() {
-	return makeServer({ schema });
+  return makeServer({ schema });
 }
 
 /**
  * Re-export pubsub for broadcasting events
  */
-export { publishMemoryEvent } from "./pubsub.ts";
+export { publishMemoryEvent } from './pubsub.ts';

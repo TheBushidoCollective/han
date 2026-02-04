@@ -1,125 +1,125 @@
 {
-	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "https://han.guru/schemas/han-config-override.schema.json",
-	"title": "Han User Override Configuration",
-	"description": "Configuration schema for han.yml files that configure Han behavior and override plugin defaults",
-	"type": "object",
-	"properties": {
-		"hanBinary": {
-			"type": "string",
-			"description": "Custom han command or path. Useful for development to run local version instead of installed binary.",
-			"examples": [
-				"bun run /path/to/han/packages/han/lib/main.ts",
-				"/path/to/han"
-			]
-		},
-		"hooks": {
-			"type": "object",
-			"description": "Global hook settings",
-			"properties": {
-				"enabled": {
-					"type": "boolean",
-					"description": "Master switch to enable/disable all hooks",
-					"default": true
-				},
-				"checkpoints": {
-					"type": "boolean",
-					"description": "Enable session checkpoints",
-					"default": true
-				},
-				"cache": {
-					"type": "boolean",
-					"description": "Enable hook caching",
-					"default": true
-				},
-				"fail_fast": {
-					"type": "boolean",
-					"description": "Stop on first hook failure",
-					"default": true
-				}
-			}
-		},
-		"memory": {
-			"type": "object",
-			"description": "Memory system settings",
-			"properties": {
-				"enabled": {
-					"type": "boolean",
-					"description": "Enable memory system",
-					"default": true
-				}
-			}
-		},
-		"metrics": {
-			"type": "object",
-			"description": "Metrics tracking settings",
-			"properties": {
-				"enabled": {
-					"type": "boolean",
-					"description": "Enable metrics tracking",
-					"default": true
-				}
-			}
-		},
-		"plugins": {
-			"type": "object",
-			"description": "Per-plugin override settings",
-			"additionalProperties": {
-				"$ref": "#/definitions/pluginOverrides"
-			}
-		}
-	},
-	"additionalProperties": false,
-	"definitions": {
-		"pluginOverrides": {
-			"type": "object",
-			"description": "Overrides for a specific plugin (keyed by plugin name, e.g., 'jutsu-biome')",
-			"additionalProperties": {
-				"$ref": "#/definitions/hookOverride"
-			}
-		},
-		"hookOverride": {
-			"type": "object",
-			"description": "Override settings for a specific hook",
-			"properties": {
-				"enabled": {
-					"type": "boolean",
-					"description": "Whether this hook is enabled for this directory. Set to false to disable.",
-					"default": true
-				},
-				"command": {
-					"type": "string",
-					"description": "Override the command to execute for this hook"
-				},
-				"if_changed": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					},
-					"description": "Additional glob patterns for change detection. These patterns are merged with (added to) the plugin's ifChanged patterns."
-				},
-				"idle_timeout": {
-					"oneOf": [
-						{
-							"type": "integer",
-							"minimum": 1,
-							"description": "Override the idle timeout in seconds"
-						},
-						{
-							"type": "boolean",
-							"const": false,
-							"description": "Set to false to disable idle timeout checking"
-						},
-						{
-							"type": "integer",
-							"const": 0,
-							"description": "Set to 0 to disable idle timeout checking"
-						}
-					],
-					"description": "Override the idle timeout. Set to a number (seconds), false, or 0 to disable."
-				}
-			},
-			"additionalProperties": false
-		}
-	}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://han.guru/schemas/han-config-override.schema.json",
+  "title": "Han User Override Configuration",
+  "description": "Configuration schema for han.yml files that configure Han behavior and override plugin defaults",
+  "type": "object",
+  "properties": {
+    "hanBinary": {
+      "type": "string",
+      "description": "Custom han command or path. Useful for development to run local version instead of installed binary.",
+      "examples": [
+        "bun run /path/to/han/packages/han/lib/main.ts",
+        "/path/to/han"
+      ]
+    },
+    "hooks": {
+      "type": "object",
+      "description": "Global hook settings",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch to enable/disable all hooks",
+          "default": true
+        },
+        "checkpoints": {
+          "type": "boolean",
+          "description": "Enable session checkpoints",
+          "default": true
+        },
+        "cache": {
+          "type": "boolean",
+          "description": "Enable hook caching",
+          "default": true
+        },
+        "fail_fast": {
+          "type": "boolean",
+          "description": "Stop on first hook failure",
+          "default": true
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "description": "Memory system settings",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable memory system",
+          "default": true
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Metrics tracking settings",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable metrics tracking",
+          "default": true
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "description": "Per-plugin override settings",
+      "additionalProperties": {
+        "$ref": "#/definitions/pluginOverrides"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "pluginOverrides": {
+      "type": "object",
+      "description": "Overrides for a specific plugin (keyed by plugin name, e.g., 'jutsu-biome')",
+      "additionalProperties": {
+        "$ref": "#/definitions/hookOverride"
+      }
+    },
+    "hookOverride": {
+      "type": "object",
+      "description": "Override settings for a specific hook",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this hook is enabled for this directory. Set to false to disable.",
+          "default": true
+        },
+        "command": {
+          "type": "string",
+          "description": "Override the command to execute for this hook"
+        },
+        "if_changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional glob patterns for change detection. These patterns are merged with (added to) the plugin's ifChanged patterns."
+        },
+        "idle_timeout": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Override the idle timeout in seconds"
+            },
+            {
+              "type": "boolean",
+              "const": false,
+              "description": "Set to false to disable idle timeout checking"
+            },
+            {
+              "type": "integer",
+              "const": 0,
+              "description": "Set to 0 to disable idle timeout checking"
+            }
+          ],
+          "description": "Override the idle timeout. Set to a number (seconds), false, or 0 to disable."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

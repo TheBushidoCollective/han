@@ -26,7 +26,7 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 └─────────────────────────────────────────────────────────────────┘
         ▲                    ▲                    ▲
         │                    │                    │
-   HTTP/WS :41957       HTTP/WS :41957       HTTP/WS :41957
+  HTTPS/WSS :41957     HTTPS/WSS :41957    HTTPS/WSS :41957
         │                    │                    │
 ┌───────┴───────┐   ┌────────┴───────┐   ┌───────┴───────┐
 │    Browse     │   │   MCP Server   │   │     Hooks     │
@@ -102,9 +102,9 @@ han coordinator status  # Check if running, show PID
 **Configuration:**
 
 ```typescript
-// Direct connection to coordinator
-const GRAPHQL_HTTP = 'http://localhost:41957/graphql';
-const GRAPHQL_WS = 'ws://localhost:41957/graphql';
+// Direct connection to coordinator (HTTPS required)
+const GRAPHQL_HTTP = 'https://coordinator.local.han.guru:41957/graphql';
+const GRAPHQL_WS = 'wss://coordinator.local.han.guru:41957/graphql';
 ```
 
 ### MCP Server / Hooks
@@ -113,7 +113,7 @@ const GRAPHQL_WS = 'ws://localhost:41957/graphql';
 
 - Use `graphql-request` + GraphQL Code Generator
 - Type-safe operations generated from schema
-- Connect to `http://localhost:41957/graphql`
+- Connect to `https://coordinator.local.han.guru:41957/graphql`
 
 ## Lazy Startup Flow
 
@@ -218,11 +218,11 @@ packages/han/lib/graphql/
 
 ## CORS Configuration
 
-Coordinator allows requests from browse origin:
+Coordinator allows requests from browse and dashboard origins:
 
 ```typescript
 cors: {
-  origin: ['http://localhost:41956'],
+  origin: ['http://localhost:41956', 'https://dashboard.local.han.guru'],
   credentials: true
 }
 ```
@@ -321,11 +321,8 @@ Potential future state: Eliminate the need for local UI serving by hosting the d
 4. **Frontend Configuration:**
 
    ```typescript
-   // In production (hosted dashboard)
-   const GRAPHQL_ENDPOINT = 'https://coordinator.han.guru:41957/graphql';
-   
-   // Falls back to local for development
-   const GRAPHQL_ENDPOINT = 'http://localhost:41957/graphql';
+   // Both production and development use HTTPS via local DNS
+   const GRAPHQL_ENDPOINT = 'https://coordinator.local.han.guru:41957/graphql';
    ```
 
 ### Rollout Plan

@@ -28,6 +28,9 @@ pub use db::{FtsDocument, FtsSearchResult, VectorSearchResult};
 
 // Re-export schema types for unified data store
 pub use schema::{
+    // Config dirs registry (multi-environment support)
+    ConfigDir,
+    ConfigDirInput,
     // File validation status (for stale detection)
     FileValidationStatus,
     // Frustration tracking
@@ -706,6 +709,46 @@ pub fn reset_all_sessions_for_reindex(_db_path: String) -> napi::Result<u32> {
 }
 
 // ============================================================================
+// Config Dir Registry Operations (Multi-Environment Support)
+// ============================================================================
+
+/// Register a config directory for multi-environment indexing
+#[napi]
+pub fn register_config_dir(_db_path: String, input: ConfigDirInput) -> napi::Result<ConfigDir> {
+    crud::register_config_dir(input)
+}
+
+/// Get a config directory by path
+#[napi]
+pub fn get_config_dir_by_path(_db_path: String, path: String) -> napi::Result<Option<ConfigDir>> {
+    crud::get_config_dir_by_path(path)
+}
+
+/// List all registered config directories
+#[napi]
+pub fn list_config_dirs(_db_path: String) -> napi::Result<Vec<ConfigDir>> {
+    crud::list_config_dirs()
+}
+
+/// Update the last indexed timestamp for a config directory
+#[napi]
+pub fn update_config_dir_last_indexed(_db_path: String, path: String) -> napi::Result<bool> {
+    crud::update_config_dir_last_indexed(path)
+}
+
+/// Remove a config directory from the registry
+#[napi]
+pub fn unregister_config_dir(_db_path: String, path: String) -> napi::Result<bool> {
+    crud::unregister_config_dir(path)
+}
+
+/// Get the default config directory
+#[napi]
+pub fn get_default_config_dir(_db_path: String) -> napi::Result<Option<ConfigDir>> {
+    crud::get_default_config_dir()
+}
+
+// ============================================================================
 // Message Operations
 // ============================================================================
 
@@ -1212,14 +1255,22 @@ pub fn get_stale_lock_timeout() -> u32 {
     coordinator::get_stale_lock_timeout()
 }
 
+/// Clean up a stale coordinator lock file
+/// Returns true if a stale lock was cleaned up, false otherwise
+#[napi]
+pub fn cleanup_stale_coordinator_lock() -> napi::Result<bool> {
+    coordinator::cleanup_stale_coordinator_lock()
+}
+
 // ============================================================================
 // File Watcher Functions
 // ============================================================================
 
 // Re-export watcher types and functions (they have #[napi] in watcher.rs)
 pub use watcher::{
-    clear_index_callback, get_default_watch_path, is_watcher_running, poll_index_results,
-    set_index_callback, start_file_watcher, stop_file_watcher, FileEvent, FileEventType,
+    add_watch_path, clear_index_callback, get_default_watch_path, get_watched_paths,
+    is_watcher_running, poll_index_results, remove_watch_path, set_index_callback,
+    start_file_watcher, stop_file_watcher, FileEvent, FileEventType,
 };
 
 // ============================================================================
@@ -1278,6 +1329,77 @@ pub use git::{
     git_create_branch, git_diff_stat, git_log, git_ls_files, git_show_file, git_worktree_add,
     git_worktree_list, git_worktree_remove, GitDiffStat, GitInfo, GitLogEntry, GitWorktree,
 };
+
+// ============================================================================
+// Async Hook Queue Functions (for PostToolUse async hook execution)
+// ============================================================================
+
+// Re-export async hook queue types
+pub use crud::{AsyncHookQueueEntry, AsyncHookQueueInputNative};
+
+/// Enqueue a hook for async execution
+/// First cancels any pending hooks with the same dedup key and merges file paths
+#[napi]
+pub fn enqueue_async_hook(
+    db_path: String,
+    input: AsyncHookQueueInputNative,
+) -> napi::Result<String> {
+    crud::enqueue_async_hook(db_path, input)
+}
+
+/// List pending async hooks for a session
+#[napi]
+pub fn list_pending_async_hooks(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    crud::list_pending_async_hooks(db_path, session_id)
+}
+
+/// Check if the async hook queue is empty for a session
+#[napi]
+pub fn is_async_hook_queue_empty(db_path: String, session_id: String) -> napi::Result<bool> {
+    crud::is_async_hook_queue_empty(db_path, session_id)
+}
+
+/// Drain the queue - get all pending hooks and mark as running
+#[napi]
+pub fn drain_async_hook_queue(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<Vec<AsyncHookQueueEntry>> {
+    crud::drain_async_hook_queue(db_path, session_id)
+}
+
+/// Cancel pending hooks matching dedup key and return merged file paths
+#[napi]
+pub fn cancel_pending_async_hooks(
+    db_path: String,
+    session_id: String,
+    cwd: String,
+    plugin: String,
+    hook_name: String,
+) -> napi::Result<Vec<String>> {
+    crud::cancel_pending_async_hooks(db_path, session_id, cwd, plugin, hook_name)
+}
+
+/// Complete an async hook execution
+#[napi]
+pub fn complete_async_hook(
+    db_path: String,
+    id: String,
+    success: bool,
+    result: Option<String>,
+    error: Option<String>,
+) -> napi::Result<()> {
+    crud::complete_async_hook(db_path, id, success, result, error)
+}
+
+/// Cancel a specific async hook by ID
+#[napi]
+pub fn cancel_async_hook(db_path: String, id: String) -> napi::Result<()> {
+    crud::cancel_async_hook(db_path, id)
+}
 
 // ============================================================================
 // Database Reset Functions

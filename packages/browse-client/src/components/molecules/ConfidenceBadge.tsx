@@ -5,25 +5,25 @@
  * Maps HIGH/MEDIUM/LOW to success/warning/danger badge variants.
  */
 
-import type React from 'react';
-import { Badge } from '../atoms/index.ts';
+import type React from "react";
+import { Badge } from "../atoms/index.ts";
 
 interface ConfidenceBadgeProps {
-  confidence: string;
+	confidence: string;
 }
 
 export function ConfidenceBadge({
-  confidence,
+	confidence,
 }: ConfidenceBadgeProps): React.ReactElement {
-  const variants: Record<string, 'success' | 'warning' | 'danger' | 'default'> =
-    {
-      HIGH: 'success',
-      MEDIUM: 'warning',
-      LOW: 'danger',
-    };
-  return (
-    <Badge variant={variants[confidence] || 'default'}>
-      {confidence.toLowerCase()}
-    </Badge>
-  );
+	const variants: Record<string, "success" | "warning" | "danger" | "default"> =
+		{
+			HIGH: "success",
+			MEDIUM: "warning",
+			LOW: "danger",
+		};
+	return (
+		<Badge variant={variants[confidence] || "default"}>
+			{confidence.toLowerCase()}
+		</Badge>
+	);
 }
