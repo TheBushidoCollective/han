@@ -319,6 +319,28 @@ export class EventLogger {
 					`[${time}] ${data.success ? "✓" : "✗"} mcp_tool_result: ${data.tool} (${data.duration_ms}ms)`,
 				);
 				break;
+			case "async_hook_queued":
+				console.error(
+					`[${time}] ⏳ async_hook_queued: ${data.plugin}/${data.hook} (${data.file_paths?.length || 0} files)`,
+				);
+				break;
+			case "async_hook_started":
+				console.error(
+					`[${time}] 🚀 async_hook_started: ${data.plugin}/${data.hook}`,
+				);
+				break;
+			case "async_hook_completed": {
+				const icon = data.success ? "✓" : "✗";
+				console.error(
+					`[${time}] ${icon} async_hook_completed: ${data.plugin}/${data.hook} ${data.success ? "passed" : "failed"} (${data.duration_ms}ms)`,
+				);
+				break;
+			}
+			case "async_hook_cancelled":
+				console.error(
+					`[${time}] 🚫 async_hook_cancelled: ${data.plugin}/${data.hook} (${data.reason})`,
+				);
+				break;
 			default:
 				console.error(`[${time}] 📝 ${event.type}`);
 		}
@@ -731,6 +753,109 @@ export class EventLogger {
 				queue_name: queueName,
 				task_id: taskId,
 				task_description: taskDescription,
+			},
+		});
+	}
+
+	// =========================================================================
+	// Async Hook Events (for PostToolUse validation)
+	// =========================================================================
+
+	/**
+	 * Log async hook queued event
+	 * Called when han hook run --async queues a hook for execution
+	 * Returns the hook_id for tracking through its lifecycle
+	 */
+	logAsyncHookQueued(
+		hookId: string,
+		plugin: string,
+		hook: string,
+		cwd: string,
+		filePaths: string[],
+		command: string,
+		triggerTool?: string,
+	): string {
+		this.writeEvent({
+			...this.createBaseEvent("async_hook_queued"),
+			data: {
+				hook_id: hookId,
+				plugin,
+				hook,
+				cwd,
+				file_paths: filePaths,
+				command,
+				trigger_tool: triggerTool,
+			},
+		});
+		return hookId;
+	}
+
+	/**
+	 * Log async hook started event
+	 * Called by coordinator when it begins executing the hook
+	 */
+	logAsyncHookStarted(hookId: string, plugin: string, hook: string): void {
+		this.writeEvent({
+			...this.createBaseEvent("async_hook_started"),
+			data: {
+				hook_id: hookId,
+				plugin,
+				hook,
+			},
+		});
+	}
+
+	/**
+	 * Log async hook completed event
+	 * Called by coordinator when hook execution finishes
+	 */
+	logAsyncHookCompleted(
+		hookId: string,
+		plugin: string,
+		hook: string,
+		success: boolean,
+		durationMs: number,
+		exitCode: number,
+		output?: string,
+		error?: string,
+	): void {
+		this.writeEvent({
+			...this.createBaseEvent("async_hook_completed"),
+			data: {
+				hook_id: hookId,
+				plugin,
+				hook,
+				success,
+				duration_ms: durationMs,
+				exit_code: exitCode,
+				output:
+					this.config.logOutput && output
+						? this.truncateOutput(output)
+						: undefined,
+				error,
+			},
+		});
+	}
+
+	/**
+	 * Log async hook cancelled event
+	 * Called when deduplication or session end cancels a pending hook
+	 */
+	logAsyncHookCancelled(
+		hookId: string,
+		plugin: string,
+		hook: string,
+		reason: "deduplication" | "session_end" | "manual",
+		replacedBy?: string,
+	): void {
+		this.writeEvent({
+			...this.createBaseEvent("async_hook_cancelled"),
+			data: {
+				hook_id: hookId,
+				plugin,
+				hook,
+				reason,
+				replaced_by: replacedBy,
 			},
 		});
 	}

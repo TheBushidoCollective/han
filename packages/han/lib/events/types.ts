@@ -202,6 +202,92 @@ export interface QueueOperationEvent extends BaseEvent {
 	};
 }
 
+/**
+ * Async Hook events - for PostToolUse validation hooks that run asynchronously
+ * These events are logged to JSONL and processed by the coordinator.
+ * The coordinator handles deduplication, execution, and publishes results via WebSocket.
+ */
+
+/** Async hook queued - logged when han hook run --async is called */
+export interface AsyncHookQueuedEvent extends BaseEvent {
+	type: "async_hook_queued";
+	data: {
+		/** Unique hook execution ID for tracking through lifecycle */
+		hook_id: string;
+		/** Plugin name */
+		plugin: string;
+		/** Hook name (e.g., "lint-async", "test-async") */
+		hook: string;
+		/** Working directory for hook execution */
+		cwd: string;
+		/** File paths being validated */
+		file_paths: string[];
+		/** Command to execute */
+		command: string;
+		/** Tool that triggered this hook (Edit, Write, etc.) */
+		trigger_tool?: string;
+	};
+}
+
+/** Async hook started - logged when coordinator begins execution */
+export interface AsyncHookStartedEvent extends BaseEvent {
+	type: "async_hook_started";
+	data: {
+		/** Hook execution ID (from async_hook_queued) */
+		hook_id: string;
+		/** Plugin name */
+		plugin: string;
+		/** Hook name */
+		hook: string;
+	};
+}
+
+/** Async hook completed - logged when execution finishes (success or failure) */
+export interface AsyncHookCompletedEvent extends BaseEvent {
+	type: "async_hook_completed";
+	data: {
+		/** Hook execution ID (from async_hook_queued) */
+		hook_id: string;
+		/** Plugin name */
+		plugin: string;
+		/** Hook name */
+		hook: string;
+		/** Whether the hook succeeded */
+		success: boolean;
+		/** Duration in milliseconds */
+		duration_ms: number;
+		/** Output from the hook (stdout) */
+		output?: string;
+		/** Error output (stderr) */
+		error?: string;
+		/** Exit code */
+		exit_code: number;
+	};
+}
+
+/** Async hook cancelled - logged when deduplication cancels an older hook */
+export interface AsyncHookCancelledEvent extends BaseEvent {
+	type: "async_hook_cancelled";
+	data: {
+		/** Hook execution ID being cancelled */
+		hook_id: string;
+		/** Plugin name */
+		plugin: string;
+		/** Hook name */
+		hook: string;
+		/** Reason for cancellation */
+		reason: "deduplication" | "session_end" | "manual";
+		/** ID of the newer hook that replaced this one (for deduplication) */
+		replaced_by?: string;
+	};
+}
+
+export type AsyncHookEvent =
+	| AsyncHookQueuedEvent
+	| AsyncHookStartedEvent
+	| AsyncHookCompletedEvent
+	| AsyncHookCancelledEvent;
+
 export type SpecificHookEvent =
 	| HookReferenceEvent
 	| HookValidationEvent
@@ -209,7 +295,8 @@ export type SpecificHookEvent =
 	| HookDatetimeEvent
 	| HookFileChangeEvent
 	| HookScriptEvent
-	| QueueOperationEvent;
+	| QueueOperationEvent
+	| AsyncHookEvent;
 
 /**
  * MCP tool events

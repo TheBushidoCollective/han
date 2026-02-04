@@ -19,6 +19,7 @@ import {
 	type Scope,
 	type StorageOptions,
 	clear,
+	getStoragePath,
 	list,
 	load,
 	remove,
@@ -112,10 +113,18 @@ export function registerKeepCommands(program: Command): void {
 			"Use branch scope (default). Optionally specify explicit branch name.",
 		)
 		.option("-q, --quiet", "Suppress errors if key not found")
+		.option("-p, --path", "Output file path instead of content")
 		.action((key: string, options) => {
 			const { scope, storageOptions } = parseScopeAndOptions(options);
 
 			try {
+				// If --path, just output the path (even if file doesn't exist)
+				if (options.path) {
+					const path = getStoragePath(scope, key, storageOptions);
+					console.log(path);
+					return;
+				}
+
 				const content = load(scope, key, storageOptions);
 
 				if (content === null) {

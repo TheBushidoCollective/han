@@ -20,6 +20,7 @@ import { startMemoryQuerySession } from "../memory/streaming.ts";
 import { builder } from "./builder.ts";
 import { decodeGlobalId } from "./node-registry.ts";
 import {
+	type AsyncHookResultPayload,
 	type HookResultAddedPayload,
 	type MemoryAgentProgressPayload,
 	type MemoryAgentResultPayload,
@@ -604,6 +605,52 @@ const HookResultAddedPayloadType = HookResultAddedPayloadRef.implement({
 });
 
 /**
+ * Async hook result subscription payload type
+ * Used by `han hook run --async` to receive execution results
+ */
+const AsyncHookResultPayloadRef =
+	builder.objectRef<AsyncHookResultPayload>("AsyncHookResultPayload");
+const AsyncHookResultPayloadType = AsyncHookResultPayloadRef.implement({
+	description: "Payload for async hook result events",
+	fields: (t) => ({
+		hookId: t.exposeString("hookId", {
+			description: "Unique hook execution ID for correlation",
+		}),
+		sessionId: t.exposeString("sessionId", {
+			description: "ID of the session containing the hook",
+		}),
+		pluginName: t.exposeString("pluginName", {
+			description: "Plugin that executed the hook",
+		}),
+		hookName: t.exposeString("hookName", {
+			description: "Name of the hook that was executed",
+		}),
+		success: t.exposeBoolean("success", {
+			description: "Whether the hook succeeded",
+		}),
+		durationMs: t.exposeInt("durationMs", {
+			description: "Duration of the hook execution in milliseconds",
+		}),
+		output: t.exposeString("output", {
+			nullable: true,
+			description: "Output from the hook (stdout)",
+		}),
+		error: t.exposeString("error", {
+			nullable: true,
+			description: "Error output from the hook (stderr)",
+		}),
+		exitCode: t.exposeInt("exitCode", {
+			description: "Exit code of the hook execution",
+		}),
+		cancelled: t.exposeBoolean("cancelled", {
+			nullable: true,
+			description:
+				"Whether the hook was cancelled (e.g., due to deduplication). When true, the client should exit 0 silently.",
+		}),
+	}),
+});
+
+/**
  * Session todos changed subscription payload type
  */
 const SessionTodosChangedPayloadRef =
@@ -894,6 +941,41 @@ builder.subscriptionType({
 				};
 			},
 			resolve: (payload: HookResultAddedPayload) => payload,
+		}),
+
+		asyncHookResult: t.field({
+			type: AsyncHookResultPayloadType,
+			args: {
+				hookId: t.arg.string({
+					required: true,
+					description: "Unique hook execution ID to watch for result",
+				}),
+			},
+			description:
+				"Subscribe to async hook result for a specific hook ID. Used by `han hook run --async` to receive execution results via WebSocket.",
+			subscribe: (_parent, args) => {
+				const iterator = pubsub.asyncIterator<AsyncHookResultPayload>(
+					TOPICS.ASYNC_HOOK_RESULT,
+				);
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							while (true) {
+								const result = await iterator.next();
+								if (result.done) return result;
+								if (result.value.hookId === args.hookId) {
+									return result;
+								}
+							}
+						},
+						return: () =>
+							iterator.return?.() ??
+							Promise.resolve({ value: undefined, done: true }),
+						throw: (e: Error) => iterator.throw?.(e) ?? Promise.reject(e),
+					}),
+				};
+			},
+			resolve: (payload: AsyncHookResultPayload) => payload,
 		}),
 
 		sessionTodosChanged: t.field({

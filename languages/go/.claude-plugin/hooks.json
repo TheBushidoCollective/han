@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run go format-async --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run go build-async --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @thebushidocollective/han hook run go test-async --async"
+          }
+        ],
+        "async": true
+      }
+    ]
+  }
+}

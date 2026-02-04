@@ -39,6 +39,8 @@ export const TOPICS = {
 	SESSION_FILES_CHANGED: "session:files:changed",
 	// Session hooks subscription
 	SESSION_HOOKS_CHANGED: "session:hooks:changed",
+	// Async hook result subscriptions (for PostToolUse validation hooks)
+	ASYNC_HOOK_RESULT: "async:hook:result",
 } as const;
 
 export type Topic = (typeof TOPICS)[keyof typeof TOPICS];
@@ -296,6 +298,34 @@ export interface SessionHooksChangedPayload {
 	hookName: string;
 	/** Whether this is a new run or a result update */
 	eventType: "run" | "result";
+}
+
+/**
+ * Async hook result payload
+ * Emitted when an async PostToolUse hook completes execution
+ * Used by `han hook run --async` to receive results via WebSocket
+ */
+export interface AsyncHookResultPayload {
+	/** Unique hook execution ID (from async_hook_queued event) */
+	hookId: string;
+	/** Session ID */
+	sessionId: string;
+	/** Plugin name */
+	pluginName: string;
+	/** Hook name */
+	hookName: string;
+	/** Whether the hook succeeded */
+	success: boolean;
+	/** Duration in milliseconds */
+	durationMs: number;
+	/** Output from the hook (stdout) */
+	output?: string;
+	/** Error output (stderr) */
+	error?: string;
+	/** Exit code */
+	exitCode: number;
+	/** Whether the hook was cancelled (e.g., due to deduplication) */
+	cancelled?: boolean;
 }
 
 /**
@@ -571,4 +601,60 @@ export function publishSessionHooksChanged(
 		eventType,
 	};
 	pubsub.publish(TOPICS.SESSION_HOOKS_CHANGED, payload);
+}
+
+/**
+ * Publish async hook result event
+ *
+ * Called by the coordinator when an async PostToolUse hook completes.
+ * The `han hook run --async` command subscribes to this topic to receive
+ * results and return the appropriate JSON to Claude Code.
+ */
+export function publishAsyncHookResult(result: AsyncHookResultPayload): void {
+	log.debug(
+		`Publishing ${TOPICS.ASYNC_HOOK_RESULT} for hook ${result.hookId}:`,
+		result.success ? "success" : "failure",
+	);
+	pubsub.publish(TOPICS.ASYNC_HOOK_RESULT, result);
+}
+
+/**
+ * Create an async iterator for async hook results
+ * Used by `han hook run --async` to subscribe to results
+ */
+export function subscribeAsyncHookResult(
+	hookId: string,
+): AsyncIterableIterator<AsyncHookResultPayload> {
+	// Create a filtered iterator that only returns results for the specific hookId
+	const baseIterator = pubsub.asyncIterator<AsyncHookResultPayload>(
+		TOPICS.ASYNC_HOOK_RESULT,
+	);
+
+	return {
+		async next(): Promise<IteratorResult<AsyncHookResultPayload>> {
+			// Keep pulling from base iterator until we get our hook's result
+			while (true) {
+				const result = await baseIterator.next();
+				if (result.done) {
+					return result;
+				}
+				if (result.value.hookId === hookId) {
+					return result;
+				}
+				// Skip results for other hooks
+			}
+		},
+
+		return(): Promise<IteratorResult<AsyncHookResultPayload>> {
+			return baseIterator.return?.() ?? Promise.resolve({ value: undefined as unknown as AsyncHookResultPayload, done: true });
+		},
+
+		throw(error: Error): Promise<IteratorResult<AsyncHookResultPayload>> {
+			return baseIterator.throw?.(error) ?? Promise.reject(error);
+		},
+
+		[Symbol.asyncIterator]() {
+			return this;
+		},
+	};
 }

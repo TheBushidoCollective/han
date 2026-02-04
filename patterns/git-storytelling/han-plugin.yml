@@ -1,7 +1,6 @@
-hooks:
-  commit:
-    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\" ${HAN_FILES}"
-    description: "Commit work early and often for git storytelling"
-    depends_on:
-      - plugin: "*"
-        hook: "*"
+# Git Storytelling plugin
+# Encourages committing work early and often to tell the story of development
+#
+# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
+
+hooks: {}

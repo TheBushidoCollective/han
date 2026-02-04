@@ -1,4 +1,5 @@
 hooks:
+  # Full test suite at Stop (checkpoint)
   test:
     command: "bundle exec rspec"
     dirs_with:
@@ -11,3 +12,19 @@ hooks:
       - "Gemfile.lock"
       - "spec/**/*"
       - ".rspec"
+
+  # Single test file async on PostToolUse
+  test-async:
+    event: PostToolUse
+    command: "bundle exec rspec ${HAN_FILES}"
+    dirs_with:
+      - "Gemfile"
+    dir_test: "grep -qE '^\\s*gem.*rspec' Gemfile"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*_spec.rb"
+      - "**/spec/**/*.rb"
+    # Only run if file contains test code
+    file_test: grep -qE "(describe|it|context)\s" "${HAN_FILE}"

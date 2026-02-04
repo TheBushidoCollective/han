@@ -116,6 +116,11 @@ export declare function cancelPendingAsyncHooks(dbPath: string, sessionId: strin
 export declare function completeAsyncHook(dbPath: string, id: string, success: boolean, result?: string | undefined | null, error?: string | undefined | null): void
 /** Cancel a specific async hook by ID */
 export declare function cancelAsyncHook(dbPath: string, id: string): void
+/**
+ * Clear all async hooks for a session (used on SessionEnd to clean up)
+ * Returns the number of hooks that were cleared
+ */
+export declare function clearAsyncHookQueueForSession(dbPath: string, sessionId: string): number
 /** A document record for FTS indexing */
 export interface FtsDocument {
   /** Unique identifier for the document */

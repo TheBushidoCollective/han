@@ -31,6 +31,7 @@ import {
 	publishSessionUpdated,
 	publishToolResultAdded,
 } from "../graphql/pubsub.ts";
+import { asyncHookExecutor } from "./async-hook-executor.ts";
 
 /**
  * Event types that are paired with other messages (loaded as nested fields)
@@ -41,6 +42,13 @@ const PAIRED_EVENT_TYPES = new Set([
 	"hook_result",
 	"mcp_tool_result",
 	"exposed_tool_result",
+]);
+
+/**
+ * Async hook event types that the coordinator needs to process
+ */
+const ASYNC_HOOK_EVENT_TYPES = new Set([
+	"async_hook_queued",
 ]);
 
 /**
@@ -122,6 +130,32 @@ async function onDataIndexed(result: IndexResult): Promise<void> {
 				// Skip paired event types - they're loaded as nested fields on other messages
 				// But publish to specific topics so subscribers can update the parent message
 				if (msg.messageType === "han_event" && msg.toolName) {
+					// Handle async hook events
+					if (ASYNC_HOOK_EVENT_TYPES.has(msg.toolName) && msg.rawJson) {
+						try {
+							const event = JSON.parse(msg.rawJson);
+							const data = event.data || {};
+
+							if (msg.toolName === "async_hook_queued") {
+								// Queue the hook for execution
+								void asyncHookExecutor.queueHook({
+									hookId: data.hook_id,
+									sessionId: result.sessionId,
+									plugin: data.plugin,
+									hook: data.hook,
+									cwd: data.cwd,
+									filePaths: data.file_paths || [],
+									command: data.command,
+									triggerTool: data.trigger_tool,
+								});
+							}
+						} catch {
+							// Ignore parse errors
+						}
+						// Continue to skip adding to message stream
+						continue;
+					}
+
 					if (PAIRED_EVENT_TYPES.has(msg.toolName)) {
 						// Publish to specific topic for paired events
 						if (msg.toolName === "hook_result" && msg.rawJson) {

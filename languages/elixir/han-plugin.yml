@@ -1,4 +1,5 @@
 hooks:
+  # Full project hooks at Stop (checkpoint)
   test:
     dirs_with:
       - "mix.exs"
@@ -57,3 +58,42 @@ hooks:
       - "mix.exs"
       - "mix.lock"
       - "coveralls.json"
+
+  # Async hooks on PostToolUse - immediate feedback on file changes
+  format-async:
+    event: PostToolUse
+    command: "mix format --check-formatted ${HAN_FILES}"
+    dirs_with:
+      - ".formatter.exs"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.ex"
+      - "**/*.exs"
+
+  compile-async:
+    event: PostToolUse
+    command: "mix compile --warnings-as-errors"
+    dirs_with:
+      - "mix.exs"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.ex"
+      - "**/*.exs"
+
+  test-async:
+    event: PostToolUse
+    command: "mix test ${HAN_FILES}"
+    dirs_with:
+      - "mix.exs"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*_test.exs"
+      - "**/test/**/*.exs"
+    # Only run if file contains test code
+    file_test: grep -qE "(describe|test|doctest)" "${HAN_FILE}"

@@ -4282,6 +4282,26 @@ pub fn cancel_async_hook(_db_path: String, id: String) -> napi::Result<()> {
     Ok(())
 }
 
+/// Clear all async hooks for a session (used on SessionEnd to clean up)
+/// Returns the number of hooks that were cleared
+#[napi]
+pub fn clear_async_hook_queue_for_session(_db_path: String, session_id: String) -> napi::Result<u32> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // Cancel all pending/running hooks for this session
+    let count = conn.execute(
+        "UPDATE async_hook_queue
+         SET status = 'cancelled', completed_at = datetime('now')
+         WHERE session_id = ?1 AND status IN ('pending', 'running')",
+        params![session_id],
+    ).map_err(|e| napi::Error::from_reason(format!("Failed to clear async hook queue: {}", e)))?;
+
+    Ok(count as u32)
+}
+
 // ============================================================================
 // Test Module
 // ============================================================================

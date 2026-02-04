@@ -1,4 +1,5 @@
 hooks:
+  # Full test suite at Stop (checkpoint)
   test:
     command: "npx -y playwright test"
     dirs_with:
@@ -10,3 +11,20 @@ hooks:
       - plugin: jutsu-playwright-bdd
         hook: generate
         optional: true
+
+  # Single test file async on PostToolUse
+  test-async:
+    event: PostToolUse
+    command: "npx -y playwright test ${HAN_FILES}"
+    dirs_with:
+      - "playwright.config.ts"
+      - "playwright.config.js"
+    tool_filter:
+      - Edit
+      - Write
+    file_filter:
+      - "**/*.spec.{js,ts}"
+      - "**/*.test.{js,ts}"
+      - "**/e2e/**/*.{js,ts}"
+    # Only run if file contains test code
+    file_test: grep -qE "(test\(|test\.describe)" "${HAN_FILE}"

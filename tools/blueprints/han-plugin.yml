@@ -1,5 +1,7 @@
 # hashi-blueprints plugin configuration
 # Blueprint tools are provided by Han's built-in blueprints MCP server
+#
+# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
 
 # Blueprints MCP server exposed through Han's main MCP server
 mcp_servers:
@@ -10,13 +12,7 @@ mcp_servers:
     command: npx
     args: ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
 
-hooks:
-  # Sync blueprints index to .claude/rules at session start
-  sync-index:
-    event: SessionStart
-    command: han blueprints sync-index
-    description: Generate blueprints index in .claude/rules
-    silent: true
+hooks: {}
 
 # Memory provider config - defines which tools the Memory Agent can use
 memory:

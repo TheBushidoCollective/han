@@ -1,7 +1,6 @@
-import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { Command } from "commander";
-import { getHanBinary } from "../../config/han-settings.ts";
 import { isDebugMode } from "../../shared.ts";
 
 /**
@@ -30,25 +29,6 @@ interface PreToolUseOutput {
 }
 
 /**
- * Check if stdin has data available.
- */
-function hasStdinData(): boolean {
-	try {
-		if (process.stdin.isTTY) {
-			return false;
-		}
-		// Try to stat stdin fd
-		const { fstatSync } = require("node:fs");
-		const stat = fstatSync(0);
-		return stat.isFile() || stat.isFIFO() || stat.isSocket();
-	} catch {
-		// stdin may be a pipe that doesn't support fstat
-		// Try reading anyway
-		return !process.stdin.isTTY;
-	}
-}
-
-/**
  * Read and parse stdin payload
  */
 function readStdinPayload(): PreToolUsePayload | null {
@@ -67,62 +47,74 @@ function readStdinPayload(): PreToolUsePayload | null {
 }
 
 /**
- * Gather context from SubagentPrompt hooks via han hook orchestrate.
- * Returns the combined output from all SubagentPrompt hooks.
- *
- * @param projectDir - The project directory to run orchestration in
- * @param toolName - The tool being invoked (Task or Skill) for hook filtering
+ * Get the core plugin hooks directory
  */
-function gatherSubagentContext(projectDir: string, toolName: string): string {
-	try {
-		// Use configured han binary (respects han.yml hanBinary setting for dev)
-		const hanBinary = getHanBinary() || "han";
-		const command = `${hanBinary} hook orchestrate SubagentPrompt --tool-name ${toolName}`;
+function getCoreHooksDir(): string | null {
+	// Try to find core plugin via common paths
+	const possiblePaths = [
+		// Development: relative to this file
+		join(dirname(dirname(dirname(dirname(__dirname)))), "core", "hooks"),
+		// Installed: ~/.claude/plugins/han/core/hooks
+		join(process.env.HOME || "", ".claude", "plugins", "han", "core", "hooks"),
+		// CLAUDE_PLUGIN_ROOT if set (when running as a hook)
+		process.env.CLAUDE_PLUGIN_ROOT
+			? join(dirname(process.env.CLAUDE_PLUGIN_ROOT), "core", "hooks")
+			: null,
+	].filter(Boolean) as string[];
 
-		if (isDebugMode()) {
-			console.error(
-				`[inject-subagent-context] Running: ${command}`,
-			);
+	for (const p of possiblePaths) {
+		if (existsSync(p)) {
+			return p;
 		}
+	}
+	return null;
+}
 
-		const result = execSync(command, {
-			encoding: "utf-8",
-			timeout: 10000,
-			cwd: projectDir,
-			stdio: ["pipe", "pipe", "pipe"],
-			shell: "/bin/bash",
-			env: {
-				...process.env,
-				CLAUDE_PROJECT_DIR: projectDir,
-			},
-		});
-
-		// Extract just the stdout content (skip stderr which contains progress info)
-		const stdout = result.trim();
-
+/**
+ * Gather subagent context directly from reference files.
+ * Returns the combined content to inject.
+ */
+function gatherSubagentContext(): string {
+	const hooksDir = getCoreHooksDir();
+	if (!hooksDir) {
 		if (isDebugMode()) {
-			console.error(
-				`[inject-subagent-context] SubagentPrompt output: ${stdout.slice(0, 200)}...`,
-			);
-		}
-
-		return stdout;
-	} catch (error: unknown) {
-		if (isDebugMode()) {
-			const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || "";
-			console.error(
-				`[inject-subagent-context] SubagentPrompt orchestrate error: ${stderr}`,
-			);
+			console.error("[inject-subagent-context] Could not find core hooks directory");
 		}
 		return "";
 	}
+
+	const contextParts: string[] = [];
+
+	// Reference files to include for subagents
+	const referenceFiles = [
+		"no-time-estimates.md",
+		"professional-honesty.md",
+	];
+
+	for (const file of referenceFiles) {
+		const filePath = join(hooksDir, file);
+		if (existsSync(filePath)) {
+			try {
+				const content = readFileSync(filePath, "utf-8").trim();
+				if (content) {
+					contextParts.push(content);
+				}
+			} catch (error) {
+				if (isDebugMode()) {
+					console.error(`[inject-subagent-context] Error reading ${file}: ${error}`);
+				}
+			}
+		}
+	}
+
+	return contextParts.join("\n\n");
 }
 
 /**
  * Inject subagent context into Task and Skill tool prompts.
  *
  * This is a PreToolUse hook that intercepts Task and Skill tool calls and prepends
- * context gathered from SubagentPrompt hooks to the prompt/arguments parameter.
+ * context to the prompt/arguments parameter.
  *
  * The output uses `updatedInput` to modify the tool parameters without
  * blocking the tool execution (no permissionDecision is set).
@@ -163,7 +155,6 @@ async function injectSubagentContext(): Promise<void> {
 	}
 
 	// Skip if already has our injected context
-	// Check for the opening tag with newline to avoid false positives
 	if (originalValue.includes("<subagent-context>\n")) {
 		if (isDebugMode()) {
 			console.error(
@@ -173,10 +164,8 @@ async function injectSubagentContext(): Promise<void> {
 		process.exit(0);
 	}
 
-	// Gather context from SubagentPrompt hooks
-	const projectDir =
-		process.env.CLAUDE_PROJECT_DIR || process.env.PWD || process.cwd();
-	const contextOutput = gatherSubagentContext(projectDir, toolName);
+	// Gather context directly from reference files
+	const contextOutput = gatherSubagentContext();
 
 	if (!contextOutput) {
 		if (isDebugMode()) {
@@ -223,9 +212,9 @@ export function registerInjectSubagentContext(hookCommand: Command): void {
 		.command("inject-subagent-context")
 		.description(
 			"PreToolUse hook that injects context into Task and Skill tool prompts.\n\n" +
-				"Gathers context from SubagentPrompt hooks (defined by plugins like AI-DLC)\n" +
-				"and prepends it to the tool's prompt/arguments parameter. This ensures\n" +
-				"subagents and skills receive essential context from all enabled plugins.\n\n" +
+				"Reads reference files from core/hooks/ (no-time-estimates.md, professional-honesty.md)\n" +
+				"and prepends them to the tool's prompt/arguments parameter. This ensures\n" +
+				"subagents and skills receive essential context.\n\n" +
 				"Output format uses updatedInput to modify the tool parameters\n" +
 				"without blocking execution.",
 		)
