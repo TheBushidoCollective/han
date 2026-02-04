@@ -7,11 +7,11 @@
  * Can be used for both global dashboard (/) and project-specific dashboard (/repos/:repoId).
  */
 
-import type React from 'react';
-import { graphql } from 'react-relay';
-import { PageLoader } from '@/components/helpers';
-import type { DashboardPageQuery as DashboardPageQueryType } from './__generated__/DashboardPageQuery.graphql.ts';
-import { DashboardContent } from './DashboardContent.tsx';
+import type React from "react";
+import { graphql } from "react-relay";
+import { PageLoader } from "@/components/helpers";
+import type { DashboardPageQuery as DashboardPageQueryType } from "./__generated__/DashboardPageQuery.graphql.ts";
+import { DashboardContent } from "./DashboardContent.tsx";
 
 /**
  * Fragment for deferred activity data
@@ -117,28 +117,28 @@ export const DashboardPageQuery = graphql`
 `;
 
 export interface DashboardPageProps {
-  /**
-   * Optional repo ID to filter the dashboard to a specific repo.
-   * When provided, shows repo-specific sessions and context.
-   */
-  repoId?: string;
+	/**
+	 * Optional repo ID to filter the dashboard to a specific repo.
+	 * When provided, shows repo-specific sessions and context.
+	 */
+	repoId?: string;
 }
 
 /**
  * Dashboard page with PageLoader for query preloading
  */
 export default function DashboardPage({
-  repoId,
+	repoId,
 }: DashboardPageProps): React.ReactElement {
-  return (
-    <PageLoader<DashboardPageQueryType>
-      query={DashboardPageQuery}
-      variables={{
-        projectId: repoId || null,
-      }}
-      loadingMessage="Loading dashboard..."
-    >
-      {(queryRef) => <DashboardContent queryRef={queryRef} repoId={repoId} />}
-    </PageLoader>
-  );
+	return (
+		<PageLoader<DashboardPageQueryType>
+			query={DashboardPageQuery}
+			variables={{
+				projectId: repoId || null,
+			}}
+			loadingMessage="Loading dashboard..."
+		>
+			{(queryRef) => <DashboardContent queryRef={queryRef} repoId={repoId} />}
+		</PageLoader>
+	);
 }

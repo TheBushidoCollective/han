@@ -26,80 +26,85 @@
  * ```
  */
 
-import type { ExpansionLevel } from "./query-expansion.ts";
-import type { FtsResult } from "./indexer.ts";
+import type { FtsResult } from './indexer.ts';
+import type { ExpansionLevel } from './query-expansion.ts';
 
 /**
  * Available search strategies
  */
 export type SearchStrategy =
-	| "direct_fts" // Direct FTS without expansion
-	| "expanded_fts" // FTS with query expansion
-	| "semantic" // Vector/embedding search
-	| "summaries"; // Session summaries search
+  | 'direct_fts' // Direct FTS without expansion
+  | 'expanded_fts' // FTS with query expansion
+  | 'semantic' // Vector/embedding search
+  | 'summaries'; // Session summaries search
 
 /**
  * Memory layers to search
  */
-export type MemoryLayer = "rules" | "transcripts" | "team" | "summaries" | "all";
+export type MemoryLayer =
+  | 'rules'
+  | 'transcripts'
+  | 'team'
+  | 'summaries'
+  | 'all';
 
 /**
  * Search result with citation metadata
  */
 export interface SearchResultWithCitation extends FtsResult {
-	layer: string;
-	browseUrl?: string;
+  layer: string;
+  browseUrl?: string;
 }
 
 /**
  * Result from a single strategy execution
  */
 export interface StrategyResult {
-	strategy: SearchStrategy;
-	results: SearchResultWithCitation[];
-	duration: number;
-	success: boolean;
-	error?: string;
+  strategy: SearchStrategy;
+  results: SearchResultWithCitation[];
+  duration: number;
+  success: boolean;
+  error?: string;
 }
 
 /**
  * Options for multi-strategy search
  */
 export interface MultiStrategySearchOptions {
-	/** The search query */
-	query: string;
-	/** Memory layer to search */
-	layer: MemoryLayer;
-	/** Maximum results to return (default: 10) */
-	limit?: number;
-	/** Query expansion level for FTS strategies (default: "minimal") */
-	expansion?: ExpansionLevel;
-	/** Per-strategy timeout in ms (default: 5000) */
-	timeout?: number;
-	/** Specific strategies to run (default: all) */
-	strategies?: SearchStrategy[];
+  /** The search query */
+  query: string;
+  /** Memory layer to search */
+  layer: MemoryLayer;
+  /** Maximum results to return (default: 10) */
+  limit?: number;
+  /** Query expansion level for FTS strategies (default: "minimal") */
+  expansion?: ExpansionLevel;
+  /** Per-strategy timeout in ms (default: 5000) */
+  timeout?: number;
+  /** Specific strategies to run (default: all) */
+  strategies?: SearchStrategy[];
 }
 
 /**
  * Result from multi-strategy search
  */
 export interface MultiStrategySearchResult {
-	/** Fused and deduplicated results */
-	results: SearchResultWithCitation[];
-	/** Number of strategies attempted */
-	strategiesAttempted: number;
-	/** Number of strategies that returned results */
-	strategiesSucceeded: number;
-	/** Per-strategy results for debugging */
-	strategyResults: StrategyResult[];
-	/** Overall confidence based on strategy coverage */
-	confidence: "high" | "medium" | "low";
-	/** Search statistics */
-	searchStats: {
-		totalDuration: number;
-		strategiesTimedOut: string[];
-		deduplicatedCount: number;
-	};
+  /** Fused and deduplicated results */
+  results: SearchResultWithCitation[];
+  /** Number of strategies attempted */
+  strategiesAttempted: number;
+  /** Number of strategies that returned results */
+  strategiesSucceeded: number;
+  /** Per-strategy results for debugging */
+  strategyResults: StrategyResult[];
+  /** Overall confidence based on strategy coverage */
+  confidence: 'high' | 'medium' | 'low';
+  /** Search statistics */
+  searchStats: {
+    totalDuration: number;
+    strategiesTimedOut: string[];
+    deduplicatedCount: number;
+  };
 }
 
 /**
@@ -115,10 +120,10 @@ const DEFAULT_TIMEOUT = 5000;
 
 /** All available strategies */
 const ALL_STRATEGIES: SearchStrategy[] = [
-	"direct_fts",
-	"expanded_fts",
-	"semantic",
-	"summaries",
+  'direct_fts',
+  'expanded_fts',
+  'semantic',
+  'summaries',
 ];
 
 /**
@@ -127,67 +132,67 @@ const ALL_STRATEGIES: SearchStrategy[] = [
  * @internal
  */
 export async function executeStrategy(
-	strategy: SearchStrategy,
-	query: string,
-	layer: MemoryLayer,
-	limit: number,
-	expansion: ExpansionLevel,
-	timeout: number,
-	searchFns: {
-		searchMemoryFts: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchMemoryVector: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchSummariesNative: (
-			query: string,
-			limit: number,
-		) => Promise<SearchResultWithCitation[]>;
-	},
+  strategy: SearchStrategy,
+  query: string,
+  layer: MemoryLayer,
+  limit: number,
+  expansion: ExpansionLevel,
+  timeout: number,
+  searchFns: {
+    searchMemoryFts: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchMemoryVector: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchSummariesNative: (
+      query: string,
+      limit: number
+    ) => Promise<SearchResultWithCitation[]>;
+  }
 ): Promise<StrategyResult> {
-	const startTime = Date.now();
+  const startTime = Date.now();
 
-	const timeoutPromise = new Promise<never>((_, reject) => {
-		setTimeout(() => reject(new Error("Strategy timeout")), timeout);
-	});
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Strategy timeout')), timeout);
+  });
 
-	const searchPromise = (async (): Promise<SearchResultWithCitation[]> => {
-		switch (strategy) {
-			case "direct_fts":
-				return searchFns.searchMemoryFts(query, layer, limit, "none");
-			case "expanded_fts":
-				return searchFns.searchMemoryFts(query, layer, limit, expansion);
-			case "semantic":
-				return searchFns.searchMemoryVector(query, layer, limit, expansion);
-			case "summaries":
-				return searchFns.searchSummariesNative(query, limit);
-		}
-	})();
+  const searchPromise = (async (): Promise<SearchResultWithCitation[]> => {
+    switch (strategy) {
+      case 'direct_fts':
+        return searchFns.searchMemoryFts(query, layer, limit, 'none');
+      case 'expanded_fts':
+        return searchFns.searchMemoryFts(query, layer, limit, expansion);
+      case 'semantic':
+        return searchFns.searchMemoryVector(query, layer, limit, expansion);
+      case 'summaries':
+        return searchFns.searchSummariesNative(query, limit);
+    }
+  })();
 
-	try {
-		const results = await Promise.race([searchPromise, timeoutPromise]);
-		return {
-			strategy,
-			results,
-			duration: Date.now() - startTime,
-			success: true,
-		};
-	} catch (error) {
-		return {
-			strategy,
-			results: [],
-			duration: Date.now() - startTime,
-			success: false,
-			error: error instanceof Error ? error.message : String(error),
-		};
-	}
+  try {
+    const results = await Promise.race([searchPromise, timeoutPromise]);
+    return {
+      strategy,
+      results,
+      duration: Date.now() - startTime,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      strategy,
+      results: [],
+      duration: Date.now() - startTime,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 /**
@@ -199,48 +204,48 @@ export async function executeStrategy(
  * @internal
  */
 export function fuseResults(
-	strategyResults: StrategyResult[],
-	limit: number,
+  strategyResults: StrategyResult[],
+  limit: number
 ): SearchResultWithCitation[] {
-	const scores = new Map<
-		string,
-		{
-			score: number;
-			result: SearchResultWithCitation;
-			strategies: Set<SearchStrategy>;
-		}
-	>();
+  const scores = new Map<
+    string,
+    {
+      score: number;
+      result: SearchResultWithCitation;
+      strategies: Set<SearchStrategy>;
+    }
+  >();
 
-	for (const sr of strategyResults) {
-		if (!sr.success) continue;
+  for (const sr of strategyResults) {
+    if (!sr.success) continue;
 
-		sr.results.forEach((result, rank) => {
-			const rrfScore = 1 / (RRF_K + rank + 1);
-			const existing = scores.get(result.id);
+    sr.results.forEach((result, rank) => {
+      const rrfScore = 1 / (RRF_K + rank + 1);
+      const existing = scores.get(result.id);
 
-			if (existing) {
-				existing.score += rrfScore;
-				existing.strategies.add(sr.strategy);
-			} else {
-				scores.set(result.id, {
-					score: rrfScore,
-					result,
-					strategies: new Set([sr.strategy]),
-				});
-			}
-		});
-	}
+      if (existing) {
+        existing.score += rrfScore;
+        existing.strategies.add(sr.strategy);
+      } else {
+        scores.set(result.id, {
+          score: rrfScore,
+          result,
+          strategies: new Set([sr.strategy]),
+        });
+      }
+    });
+  }
 
-	// Boost for results found by multiple strategies
-	for (const entry of scores.values()) {
-		const multiStrategyBoost = 1 + (entry.strategies.size - 1) * 0.1;
-		entry.score *= multiStrategyBoost;
-	}
+  // Boost for results found by multiple strategies
+  for (const entry of scores.values()) {
+    const multiStrategyBoost = 1 + (entry.strategies.size - 1) * 0.1;
+    entry.score *= multiStrategyBoost;
+  }
 
-	return Array.from(scores.values())
-		.sort((a, b) => b.score - a.score)
-		.slice(0, limit)
-		.map(({ result, score }) => ({ ...result, score }));
+  return Array.from(scores.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ result, score }) => ({ ...result, score }));
 }
 
 /**
@@ -253,37 +258,37 @@ export function fuseResults(
  * @internal
  */
 export function calculateConfidence(
-	strategyResults: StrategyResult[],
-	fusedResults: SearchResultWithCitation[],
-): "high" | "medium" | "low" {
-	const successfulStrategies = strategyResults.filter(
-		(sr) => sr.success && sr.results.length > 0,
-	);
+  strategyResults: StrategyResult[],
+  fusedResults: SearchResultWithCitation[]
+): 'high' | 'medium' | 'low' {
+  const successfulStrategies = strategyResults.filter(
+    (sr) => sr.success && sr.results.length > 0
+  );
 
-	const successCount = successfulStrategies.length;
+  const successCount = successfulStrategies.length;
 
-	// Count cross-validated results (appearing in multiple strategies)
-	const resultIds = new Map<string, number>();
-	for (const sr of successfulStrategies) {
-		for (const r of sr.results) {
-			resultIds.set(r.id, (resultIds.get(r.id) || 0) + 1);
-		}
-	}
-	const crossValidatedCount = Array.from(resultIds.values()).filter(
-		(count) => count > 1,
-	).length;
+  // Count cross-validated results (appearing in multiple strategies)
+  const resultIds = new Map<string, number>();
+  for (const sr of successfulStrategies) {
+    for (const r of sr.results) {
+      resultIds.set(r.id, (resultIds.get(r.id) || 0) + 1);
+    }
+  }
+  const crossValidatedCount = Array.from(resultIds.values()).filter(
+    (count) => count > 1
+  ).length;
 
-	// High: 3+ strategies succeeded, or 2+ with cross-validation
-	if (successCount >= 3 || (successCount >= 2 && crossValidatedCount > 0)) {
-		return "high";
-	}
+  // High: 3+ strategies succeeded, or 2+ with cross-validation
+  if (successCount >= 3 || (successCount >= 2 && crossValidatedCount > 0)) {
+    return 'high';
+  }
 
-	// Medium: 2+ strategies succeeded, or 1 with many results
-	if (successCount >= 2 || (successCount === 1 && fusedResults.length >= 5)) {
-		return "medium";
-	}
+  // Medium: 2+ strategies succeeded, or 1 with many results
+  if (successCount >= 2 || (successCount === 1 && fusedResults.length >= 5)) {
+    return 'medium';
+  }
 
-	return "low";
+  return 'low';
 }
 
 /**
@@ -308,109 +313,109 @@ export function calculateConfidence(
  * ```
  */
 export async function multiStrategySearch(
-	options: MultiStrategySearchOptions,
-	searchFns: {
-		searchMemoryFts: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchMemoryVector: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchSummariesNative: (
-			query: string,
-			limit: number,
-		) => Promise<SearchResultWithCitation[]>;
-	},
+  options: MultiStrategySearchOptions,
+  searchFns: {
+    searchMemoryFts: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchMemoryVector: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchSummariesNative: (
+      query: string,
+      limit: number
+    ) => Promise<SearchResultWithCitation[]>;
+  }
 ): Promise<MultiStrategySearchResult> {
-	const {
-		query,
-		layer,
-		limit = 10,
-		expansion = "minimal",
-		timeout = DEFAULT_TIMEOUT,
-		strategies = ALL_STRATEGIES,
-	} = options;
+  const {
+    query,
+    layer,
+    limit = 10,
+    expansion = 'minimal',
+    timeout = DEFAULT_TIMEOUT,
+    strategies = ALL_STRATEGIES,
+  } = options;
 
-	const startTime = Date.now();
+  const startTime = Date.now();
 
-	// Execute all strategies in parallel
-	const strategyPromises = strategies.map((strategy) =>
-		executeStrategy(
-			strategy,
-			query,
-			layer,
-			limit * 2, // Get more results for fusion
-			expansion,
-			timeout,
-			searchFns,
-		),
-	);
+  // Execute all strategies in parallel
+  const strategyPromises = strategies.map((strategy) =>
+    executeStrategy(
+      strategy,
+      query,
+      layer,
+      limit * 2, // Get more results for fusion
+      expansion,
+      timeout,
+      searchFns
+    )
+  );
 
-	const strategyResults = await Promise.all(strategyPromises);
+  const strategyResults = await Promise.all(strategyPromises);
 
-	// Fuse results using RRF
-	const fusedResults = fuseResults(strategyResults, limit);
+  // Fuse results using RRF
+  const fusedResults = fuseResults(strategyResults, limit);
 
-	// Calculate confidence
-	const confidence = calculateConfidence(strategyResults, fusedResults);
+  // Calculate confidence
+  const confidence = calculateConfidence(strategyResults, fusedResults);
 
-	const strategiesTimedOut = strategyResults
-		.filter((sr) => sr.error?.includes("timeout"))
-		.map((sr) => sr.strategy);
+  const strategiesTimedOut = strategyResults
+    .filter((sr) => sr.error?.includes('timeout'))
+    .map((sr) => sr.strategy);
 
-	const totalResultsBeforeFusion = strategyResults.reduce(
-		(sum, sr) => sum + sr.results.length,
-		0,
-	);
+  const totalResultsBeforeFusion = strategyResults.reduce(
+    (sum, sr) => sum + sr.results.length,
+    0
+  );
 
-	return {
-		results: fusedResults,
-		strategiesAttempted: strategyResults.length,
-		strategiesSucceeded: strategyResults.filter(
-			(sr) => sr.success && sr.results.length > 0,
-		).length,
-		strategyResults,
-		confidence,
-		searchStats: {
-			totalDuration: Date.now() - startTime,
-			strategiesTimedOut,
-			deduplicatedCount: totalResultsBeforeFusion - fusedResults.length,
-		},
-	};
+  return {
+    results: fusedResults,
+    strategiesAttempted: strategyResults.length,
+    strategiesSucceeded: strategyResults.filter(
+      (sr) => sr.success && sr.results.length > 0
+    ).length,
+    strategyResults,
+    confidence,
+    searchStats: {
+      totalDuration: Date.now() - startTime,
+      strategiesTimedOut,
+      deduplicatedCount: totalResultsBeforeFusion - fusedResults.length,
+    },
+  };
 }
 
 /**
  * Options for multi-strategy search with fallbacks
  */
 export interface MultiStrategySearchWithFallbacksOptions
-	extends MultiStrategySearchOptions {
-	/** Whether to enable fallback strategies (default: true) */
-	enableFallbacks?: boolean;
-	/** Whether to run grep fallback (slow, default: true) */
-	enableGrep?: boolean;
-	/** Timeout for grep in ms (default: 5000) */
-	grepTimeout?: number;
-	/** Number of recent sessions to scan (default: 10) */
-	recentSessionsLimit?: number;
+  extends MultiStrategySearchOptions {
+  /** Whether to enable fallback strategies (default: true) */
+  enableFallbacks?: boolean;
+  /** Whether to run grep fallback (slow, default: true) */
+  enableGrep?: boolean;
+  /** Timeout for grep in ms (default: 5000) */
+  grepTimeout?: number;
+  /** Number of recent sessions to scan (default: 10) */
+  recentSessionsLimit?: number;
 }
 
 /**
  * Result from multi-strategy search with fallbacks
  */
 export interface MultiStrategySearchWithFallbacksResult
-	extends MultiStrategySearchResult {
-	/** Fallback strategies that were used */
-	fallbacksUsed: string[];
-	/** Clarification prompt if query needs more details */
-	clarificationPrompt?: string;
-	/** Whether any fallbacks were attempted */
-	fallbacksAttempted: boolean;
+  extends MultiStrategySearchResult {
+  /** Fallback strategies that were used */
+  fallbacksUsed: string[];
+  /** Clarification prompt if query needs more details */
+  clarificationPrompt?: string;
+  /** Whether any fallbacks were attempted */
+  fallbacksAttempted: boolean;
 }
 
 /**
@@ -436,92 +441,92 @@ export interface MultiStrategySearchWithFallbacksResult
  * ```
  */
 export async function multiStrategySearchWithFallbacks(
-	options: MultiStrategySearchWithFallbacksOptions,
-	searchFns: {
-		searchMemoryFts: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchMemoryVector: (
-			query: string,
-			layer: MemoryLayer,
-			limit: number,
-			expansion: ExpansionLevel,
-		) => Promise<SearchResultWithCitation[]>;
-		searchSummariesNative: (
-			query: string,
-			limit: number,
-		) => Promise<SearchResultWithCitation[]>;
-	},
+  options: MultiStrategySearchWithFallbacksOptions,
+  searchFns: {
+    searchMemoryFts: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchMemoryVector: (
+      query: string,
+      layer: MemoryLayer,
+      limit: number,
+      expansion: ExpansionLevel
+    ) => Promise<SearchResultWithCitation[]>;
+    searchSummariesNative: (
+      query: string,
+      limit: number
+    ) => Promise<SearchResultWithCitation[]>;
+  }
 ): Promise<MultiStrategySearchWithFallbacksResult> {
-	// Import fallback functions dynamically to avoid circular dependencies
-	const { executeFallbacks } = await import("./fallback-search.ts");
+  // Import fallback functions dynamically to avoid circular dependencies
+  const { executeFallbacks } = await import('./fallback-search.ts');
 
-	const {
-		enableFallbacks = true,
-		enableGrep = true,
-		grepTimeout = 5000,
-		recentSessionsLimit = 10,
-		...searchOptions
-	} = options;
+  const {
+    enableFallbacks = true,
+    enableGrep = true,
+    grepTimeout = 5000,
+    recentSessionsLimit = 10,
+    ...searchOptions
+  } = options;
 
-	// Run primary multi-strategy search first
-	const primaryResult = await multiStrategySearch(searchOptions, searchFns);
+  // Run primary multi-strategy search first
+  const primaryResult = await multiStrategySearch(searchOptions, searchFns);
 
-	// If fallbacks disabled or we have results, return primary result
-	if (!enableFallbacks || primaryResult.results.length > 0) {
-		return {
-			...primaryResult,
-			fallbacksUsed: [],
-			fallbacksAttempted: false,
-		};
-	}
+  // If fallbacks disabled or we have results, return primary result
+  if (!enableFallbacks || primaryResult.results.length > 0) {
+    return {
+      ...primaryResult,
+      fallbacksUsed: [],
+      fallbacksAttempted: false,
+    };
+  }
 
-	// Execute fallbacks
-	const fallbackResult = await executeFallbacks(
-		options.query,
-		primaryResult.results.length,
-		primaryResult.strategiesSucceeded,
-		{
-			enableFallbacks,
-			enableGrep,
-			grepTimeout,
-			recentSessionsLimit,
-		},
-	);
+  // Execute fallbacks
+  const fallbackResult = await executeFallbacks(
+    options.query,
+    primaryResult.results.length,
+    primaryResult.strategiesSucceeded,
+    {
+      enableFallbacks,
+      enableGrep,
+      grepTimeout,
+      recentSessionsLimit,
+    }
+  );
 
-	// Combine results: primary results (if any) + fallback results
-	const combinedResults = [
-		...primaryResult.results,
-		...fallbackResult.results,
-	].slice(0, options.limit || 10);
+  // Combine results: primary results (if any) + fallback results
+  const combinedResults = [
+    ...primaryResult.results,
+    ...fallbackResult.results,
+  ].slice(0, options.limit || 10);
 
-	// Recalculate confidence based on combined results
-	const hasResults = combinedResults.length > 0;
-	const usedFallbacks = fallbackResult.fallbacksUsed.length > 0;
+  // Recalculate confidence based on combined results
+  const hasResults = combinedResults.length > 0;
+  const usedFallbacks = fallbackResult.fallbacksUsed.length > 0;
 
-	// Confidence is lower if we had to use fallbacks
-	let confidence = primaryResult.confidence;
-	if (!hasResults) {
-		confidence = "low";
-	} else if (usedFallbacks && confidence === "high") {
-		confidence = "medium"; // Downgrade if we only got results from fallbacks
-	}
+  // Confidence is lower if we had to use fallbacks
+  let confidence = primaryResult.confidence;
+  if (!hasResults) {
+    confidence = 'low';
+  } else if (usedFallbacks && confidence === 'high') {
+    confidence = 'medium'; // Downgrade if we only got results from fallbacks
+  }
 
-	return {
-		...primaryResult,
-		results: combinedResults,
-		confidence,
-		fallbacksUsed: fallbackResult.fallbacksUsed,
-		clarificationPrompt: fallbackResult.clarificationPrompt,
-		fallbacksAttempted: fallbackResult.fallbacksAttempted,
-		searchStats: {
-			...primaryResult.searchStats,
-			totalDuration:
-				primaryResult.searchStats.totalDuration +
-				fallbackResult.fallbackDuration,
-		},
-	};
+  return {
+    ...primaryResult,
+    results: combinedResults,
+    confidence,
+    fallbacksUsed: fallbackResult.fallbacksUsed,
+    clarificationPrompt: fallbackResult.clarificationPrompt,
+    fallbacksAttempted: fallbackResult.fallbacksAttempted,
+    searchStats: {
+      ...primaryResult.searchStats,
+      totalDuration:
+        primaryResult.searchStats.totalDuration +
+        fallbackResult.fallbackDuration,
+    },
+  };
 }

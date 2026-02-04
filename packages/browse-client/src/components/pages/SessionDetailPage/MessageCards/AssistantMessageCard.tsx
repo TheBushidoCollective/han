@@ -8,27 +8,27 @@
  * - Tool-only message handling
  */
 
-import type React from 'react';
-import { graphql, useFragment } from 'react-relay';
-import { Badge } from '@/components/atoms/Badge.tsx';
-import { Text } from '@/components/atoms/Text.tsx';
-import { VStack } from '@/components/atoms/VStack.tsx';
-import { MarkdownContent } from '@/components/organisms/MarkdownContent.tsx';
+import type React from "react";
+import { graphql, useFragment } from "react-relay";
+import { Badge } from "@/components/atoms/Badge.tsx";
+import { Text } from "@/components/atoms/Text.tsx";
+import { VStack } from "@/components/atoms/VStack.tsx";
+import { MarkdownContent } from "@/components/organisms/MarkdownContent.tsx";
 import {
-  ImageBlock,
-  TextBlock,
-  ThinkingBlock,
-  ToolUseBlock,
-} from '../ContentBlocks/index.tsx';
-import type { ContentBlock as ContentBlockType } from '../types.ts';
-import type { AssistantMessageCard_message$key } from './__generated__/AssistantMessageCard_message.graphql.ts';
+	ImageBlock,
+	TextBlock,
+	ThinkingBlock,
+	ToolUseBlock,
+} from "../ContentBlocks/index.tsx";
+import type { ContentBlock as ContentBlockType } from "../types.ts";
+import type { AssistantMessageCard_message$key } from "./__generated__/AssistantMessageCard_message.graphql.ts";
 import {
-  MessageHeader,
-  type MessageRoleInfo,
-  MessageWrapper,
-  RawJsonView,
-  useRawJsonToggle,
-} from './shared.tsx';
+	MessageHeader,
+	type MessageRoleInfo,
+	MessageWrapper,
+	RawJsonView,
+	useRawJsonToggle,
+} from "./shared.tsx";
 
 const AssistantMessageCardFragment = graphql`
   fragment AssistantMessageCard_message on AssistantMessage {
@@ -81,13 +81,13 @@ const AssistantMessageCardFragment = graphql`
 `;
 
 interface AssistantMessageCardProps {
-  fragmentRef: AssistantMessageCard_message$key;
+	fragmentRef: AssistantMessageCard_message$key;
 }
 
 const ASSISTANT_ROLE_INFO: MessageRoleInfo = {
-  label: 'Claude',
-  color: '#3fb950', // success green
-  icon: '🤖',
+	label: "Claude",
+	color: "#3fb950", // success green
+	icon: "🤖",
 };
 
 /**
@@ -95,165 +95,165 @@ const ASSISTANT_ROLE_INFO: MessageRoleInfo = {
  * Note: Tool results are now fetched inline via GraphQL result field on ToolUseBlock
  */
 function renderContentBlock(
-  block: ContentBlockType,
-  index: number
+	block: ContentBlockType,
+	index: number,
 ): React.ReactElement | null {
-  switch (block.type) {
-    case 'THINKING':
-      return (
-        <ThinkingBlock
-          key={`thinking-${index}`}
-          thinking={block.thinking ?? ''}
-          preview={block.preview ?? ''}
-          signature={block.signature}
-        />
-      );
-    case 'TEXT':
-      return <TextBlock key={`text-${index}`} text={block.text ?? ''} />;
-    case 'TOOL_USE': {
-      const category = block.category as
-        | 'FILE'
-        | 'SEARCH'
-        | 'SHELL'
-        | 'WEB'
-        | 'TASK'
-        | 'MCP'
-        | 'OTHER'
-        | null;
-      const validCategory =
-        category &&
-        ['FILE', 'SEARCH', 'SHELL', 'WEB', 'TASK', 'MCP', 'OTHER'].includes(
-          category
-        )
-          ? category
-          : 'OTHER';
-      // Result is now fetched via GraphQL result field on ToolUseBlock
-      const result = block.result
-        ? {
-            type: 'TOOL_RESULT' as const,
-            toolCallId: block.result.toolCallId ?? '',
-            content: block.result.content ?? '',
-            isError: block.result.isError ?? false,
-            isLong: block.result.isLong ?? false,
-            preview: block.result.preview ?? '',
-            hasImage: block.result.hasImage ?? false,
-          }
-        : undefined;
-      return (
-        <ToolUseBlock
-          key={`tool-use-${index}`}
-          toolCallId={block.toolCallId ?? ''}
-          name={block.name ?? ''}
-          input={block.input ?? '{}'}
-          category={validCategory}
-          icon={block.icon ?? '🔧'}
-          displayName={block.displayName ?? block.name ?? 'Tool'}
-          color={block.color ?? '#8b949e'}
-          result={result}
-        />
-      );
-    }
-    case 'TOOL_RESULT':
-      // Tool results are now rendered inline with their parent ToolUseBlock
-      return null;
-    case 'IMAGE':
-      return (
-        <ImageBlock
-          key={`image-${index}`}
-          mediaType={block.mediaType ?? 'image/png'}
-          dataUrl={block.dataUrl ?? ''}
-        />
-      );
-    default:
-      return null;
-  }
+	switch (block.type) {
+		case "THINKING":
+			return (
+				<ThinkingBlock
+					key={`thinking-${index}`}
+					thinking={block.thinking ?? ""}
+					preview={block.preview ?? ""}
+					signature={block.signature}
+				/>
+			);
+		case "TEXT":
+			return <TextBlock key={`text-${index}`} text={block.text ?? ""} />;
+		case "TOOL_USE": {
+			const category = block.category as
+				| "FILE"
+				| "SEARCH"
+				| "SHELL"
+				| "WEB"
+				| "TASK"
+				| "MCP"
+				| "OTHER"
+				| null;
+			const validCategory =
+				category &&
+				["FILE", "SEARCH", "SHELL", "WEB", "TASK", "MCP", "OTHER"].includes(
+					category,
+				)
+					? category
+					: "OTHER";
+			// Result is now fetched via GraphQL result field on ToolUseBlock
+			const result = block.result
+				? {
+						type: "TOOL_RESULT" as const,
+						toolCallId: block.result.toolCallId ?? "",
+						content: block.result.content ?? "",
+						isError: block.result.isError ?? false,
+						isLong: block.result.isLong ?? false,
+						preview: block.result.preview ?? "",
+						hasImage: block.result.hasImage ?? false,
+					}
+				: undefined;
+			return (
+				<ToolUseBlock
+					key={`tool-use-${index}`}
+					toolCallId={block.toolCallId ?? ""}
+					name={block.name ?? ""}
+					input={block.input ?? "{}"}
+					category={validCategory}
+					icon={block.icon ?? "🔧"}
+					displayName={block.displayName ?? block.name ?? "Tool"}
+					color={block.color ?? "#8b949e"}
+					result={result}
+				/>
+			);
+		}
+		case "TOOL_RESULT":
+			// Tool results are now rendered inline with their parent ToolUseBlock
+			return null;
+		case "IMAGE":
+			return (
+				<ImageBlock
+					key={`image-${index}`}
+					mediaType={block.mediaType ?? "image/png"}
+					dataUrl={block.dataUrl ?? ""}
+				/>
+			);
+		default:
+			return null;
+	}
 }
 
 /**
  * Badge components for assistant message metadata
  */
 function AssistantBadges({
-  hasThinking,
-  thinkingCount,
-  hasToolUse,
-  toolUseCount,
-  model,
-  inputTokens,
-  outputTokens,
-  cachedTokens,
+	hasThinking,
+	thinkingCount,
+	hasToolUse,
+	toolUseCount,
+	model,
+	inputTokens,
+	outputTokens,
+	cachedTokens,
 }: {
-  hasThinking: boolean;
-  thinkingCount: number;
-  hasToolUse: boolean;
-  toolUseCount: number;
-  model: string | null;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  cachedTokens: number | null;
+	hasThinking: boolean;
+	thinkingCount: number;
+	hasToolUse: boolean;
+	toolUseCount: number;
+	model: string | null;
+	inputTokens: number | null;
+	outputTokens: number | null;
+	cachedTokens: number | null;
 }): React.ReactElement {
-  return (
-    <>
-      {hasThinking && <Badge variant="info">🧠 {thinkingCount}</Badge>}
-      {hasToolUse && <Badge variant="warning">🔧 {toolUseCount}</Badge>}
-      {model && <Badge variant="purple">{model}</Badge>}
-      {(inputTokens || outputTokens) && (
-        <Text size="xs" color="muted">
-          {inputTokens?.toLocaleString() ?? 0}↓{' '}
-          {outputTokens?.toLocaleString() ?? 0}↑
-          {cachedTokens ? ` (${cachedTokens.toLocaleString()} cached)` : ''}
-        </Text>
-      )}
-    </>
-  );
+	return (
+		<>
+			{hasThinking && <Badge variant="info">🧠 {thinkingCount}</Badge>}
+			{hasToolUse && <Badge variant="warning">🔧 {toolUseCount}</Badge>}
+			{model && <Badge variant="purple">{model}</Badge>}
+			{(inputTokens || outputTokens) && (
+				<Text size="xs" color="muted">
+					{inputTokens?.toLocaleString() ?? 0}↓{" "}
+					{outputTokens?.toLocaleString() ?? 0}↑
+					{cachedTokens ? ` (${cachedTokens.toLocaleString()} cached)` : ""}
+				</Text>
+			)}
+		</>
+	);
 }
 
 export function AssistantMessageCard({
-  fragmentRef,
+	fragmentRef,
 }: AssistantMessageCardProps): React.ReactElement {
-  const data = useFragment(AssistantMessageCardFragment, fragmentRef);
-  const { showRawJson, toggleRawJson } = useRawJsonToggle();
+	const data = useFragment(AssistantMessageCardFragment, fragmentRef);
+	const { showRawJson, toggleRawJson } = useRawJsonToggle();
 
-  const hasContentBlocks = data.contentBlocks && data.contentBlocks.length > 0;
-  const contentBlocks = data.contentBlocks ?? [];
+	const hasContentBlocks = data.contentBlocks && data.contentBlocks.length > 0;
+	const contentBlocks = data.contentBlocks ?? [];
 
-  return (
-    <MessageWrapper
-      type="assistant"
-      isToolOnly={data.isToolOnly ?? false}
-      showRawJson={showRawJson}
-    >
-      <MessageHeader
-        roleInfo={ASSISTANT_ROLE_INFO}
-        timestamp={data.timestamp}
-        showRawJson={showRawJson}
-        onToggleRawJson={toggleRawJson}
-        badges={
-          <AssistantBadges
-            hasThinking={data.hasThinking ?? false}
-            thinkingCount={data.thinkingCount ?? 0}
-            hasToolUse={data.hasToolUse ?? false}
-            toolUseCount={data.toolUseCount ?? 0}
-            model={data.model ?? null}
-            inputTokens={data.inputTokens ?? null}
-            outputTokens={data.outputTokens ?? null}
-            cachedTokens={data.cachedTokens ?? null}
-          />
-        }
-      />
+	return (
+		<MessageWrapper
+			type="assistant"
+			isToolOnly={data.isToolOnly ?? false}
+			showRawJson={showRawJson}
+		>
+			<MessageHeader
+				roleInfo={ASSISTANT_ROLE_INFO}
+				timestamp={data.timestamp}
+				showRawJson={showRawJson}
+				onToggleRawJson={toggleRawJson}
+				badges={
+					<AssistantBadges
+						hasThinking={data.hasThinking ?? false}
+						thinkingCount={data.thinkingCount ?? 0}
+						hasToolUse={data.hasToolUse ?? false}
+						toolUseCount={data.toolUseCount ?? 0}
+						model={data.model ?? null}
+						inputTokens={data.inputTokens ?? null}
+						outputTokens={data.outputTokens ?? null}
+						cachedTokens={data.cachedTokens ?? null}
+					/>
+				}
+			/>
 
-      {showRawJson ? (
-        <RawJsonView rawJson={data.rawJson ?? null} />
-      ) : (
-        <VStack gap="md" align="stretch">
-          {hasContentBlocks ? (
-            contentBlocks.map((block, index) =>
-              renderContentBlock(block as ContentBlockType, index)
-            )
-          ) : (
-            <MarkdownContent>{data.content ?? ''}</MarkdownContent>
-          )}
-        </VStack>
-      )}
-    </MessageWrapper>
-  );
+			{showRawJson ? (
+				<RawJsonView rawJson={data.rawJson ?? null} />
+			) : (
+				<VStack gap="md" align="stretch">
+					{hasContentBlocks ? (
+						contentBlocks.map((block, index) =>
+							renderContentBlock(block as ContentBlockType, index),
+						)
+					) : (
+						<MarkdownContent>{data.content ?? ""}</MarkdownContent>
+					)}
+				</VStack>
+			)}
+		</MessageWrapper>
+	);
 }

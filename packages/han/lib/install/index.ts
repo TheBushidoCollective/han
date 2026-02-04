@@ -8,13 +8,13 @@
  */
 
 // Installation functions
-export { install, installInteractive } from "./install.ts";
+export { install, installInteractive } from './install.ts';
 // UI Components
 export {
-	formatToolUsage,
-	InstallInteractive,
-	parseMarkdown,
-} from "./install-interactive.tsx";
-export { InstallProgress } from "./install-progress.tsx";
+  formatToolUsage,
+  InstallInteractive,
+  parseMarkdown,
+} from './install-interactive.tsx';
+export { InstallProgress } from './install-progress.tsx';
 // Uninstallation
-export { uninstall } from "./uninstall.ts";
+export { uninstall } from './uninstall.ts';

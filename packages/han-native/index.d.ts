@@ -23,6 +23,18 @@ export interface CoordinatorStatus {
   /** Lock info if available */
   lockInfo?: LockInfo
 }
+/** Register a new config directory for multi-environment indexing */
+export declare function registerConfigDir(input: ConfigDirInput): ConfigDir
+/** Get a config directory by path */
+export declare function getConfigDirByPath(path: string): ConfigDir | null
+/** List all registered config directories */
+export declare function listConfigDirs(): Array<ConfigDir>
+/** Update the last indexed timestamp for a config directory */
+export declare function updateConfigDirLastIndexed(path: string): boolean
+/** Remove a config directory from the registry */
+export declare function unregisterConfigDir(path: string): boolean
+/** Get the default config directory */
+export declare function getDefaultConfigDir(): ConfigDir | null
 /**
  * Get or create a hook execution entry for attempt tracking
  * Uses (session_id, hook_name, directory) as the hook key
@@ -301,6 +313,7 @@ export interface Project {
   relativePath?: string
   name: string
   isWorktree: boolean
+  sourceConfigDir?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -311,6 +324,7 @@ export interface ProjectInput {
   relativePath?: string
   name: string
   isWorktree?: boolean
+  sourceConfigDir?: string
 }
 export interface Session {
   id: string
@@ -318,6 +332,7 @@ export interface Session {
   status: string
   transcriptPath?: string
   slug?: string
+  sourceConfigDir?: string
   lastIndexedLine?: number
 }
 export interface SessionInput {
@@ -326,6 +341,7 @@ export interface SessionInput {
   status?: string
   transcriptPath?: string
   slug?: string
+  sourceConfigDir?: string
 }
 export interface SessionFile {
   id: string
@@ -756,6 +772,25 @@ export interface GeneratedSessionSummaryInput {
   messageCount?: number
   durationSeconds?: number
 }
+/**
+ * A registered config directory for multi-environment support
+ * The central coordinator tracks all CLAUDE_CONFIG_DIR locations to index
+ */
+export interface ConfigDir {
+  id: string
+  path: string
+  name?: string
+  registeredAt: string
+  lastIndexedAt?: string
+  sessionCount?: number
+  isDefault: boolean
+}
+/** Input for registering a new config directory */
+export interface ConfigDirInput {
+  path: string
+  name?: string
+  isDefault?: boolean
+}
 /** A file operation extracted from transcript content */
 export interface FileOperation {
   /** File path */
@@ -829,6 +864,18 @@ export interface FileEvent {
  * Returns true if watcher was started, false if already running
  */
 export declare function startFileWatcher(watchPath?: string | undefined | null): boolean
+/**
+ * Add an additional watch path for multi-environment support
+ * Returns true if the path was added, false if already watching or watcher not running
+ */
+export declare function addWatchPath(configDir: string, projectsPath?: string | undefined | null): boolean
+/**
+ * Remove a watch path
+ * Returns true if the path was removed, false if not watching or watcher not running
+ */
+export declare function removeWatchPath(configDir: string): boolean
+/** Get all currently watched paths */
+export declare function getWatchedPaths(): Array<string>
 /** Stop the file watcher */
 export declare function stopFileWatcher(): boolean
 /**
@@ -937,6 +984,18 @@ export declare function listSessions(dbPath: string, projectId?: string | undefi
  * Use this when you need to backfill raw_json or other fields
  */
 export declare function resetAllSessionsForReindex(dbPath: string): number
+/** Register a config directory for multi-environment indexing */
+export declare function registerConfigDir(dbPath: string, input: ConfigDirInput): ConfigDir
+/** Get a config directory by path */
+export declare function getConfigDirByPath(dbPath: string, path: string): ConfigDir | null
+/** List all registered config directories */
+export declare function listConfigDirs(dbPath: string): Array<ConfigDir>
+/** Update the last indexed timestamp for a config directory */
+export declare function updateConfigDirLastIndexed(dbPath: string, path: string): boolean
+/** Remove a config directory from the registry */
+export declare function unregisterConfigDir(dbPath: string, path: string): boolean
+/** Get the default config directory */
+export declare function getDefaultConfigDir(dbPath: string): ConfigDir | null
 /** Insert a batch of messages for a session */
 export declare function insertMessagesBatch(dbPath: string, sessionId: string, messages: Array<MessageInput>): number
 /** Get a message by ID */
@@ -1060,6 +1119,11 @@ export declare function isCoordinator(): boolean
 export declare function getHeartbeatInterval(): number
 /** Get the stale lock timeout in seconds */
 export declare function getStaleLockTimeout(): number
+/**
+ * Clean up a stale coordinator lock file
+ * Returns true if a stale lock was cleaned up, false otherwise
+ */
+export declare function cleanupStaleCoordinatorLock(): boolean
 /**
  * Index a single JSONL session file incrementally
  * Only processes lines after the last indexed line

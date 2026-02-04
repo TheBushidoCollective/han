@@ -386,10 +386,7 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
             .unwrap_or(false);
 
         if !has_source_config_dir {
-            conn.execute(
-                "ALTER TABLE sessions ADD COLUMN source_config_dir TEXT",
-                [],
-            )?;
+            conn.execute("ALTER TABLE sessions ADD COLUMN source_config_dir TEXT", [])?;
             // Create index for the new column
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_sessions_source ON sessions(source_config_dir)",
@@ -417,10 +414,7 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
             .unwrap_or(false);
 
         if !has_source_config_dir {
-            conn.execute(
-                "ALTER TABLE projects ADD COLUMN source_config_dir TEXT",
-                [],
-            )?;
+            conn.execute("ALTER TABLE projects ADD COLUMN source_config_dir TEXT", [])?;
             // Create index for the new column
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_projects_source ON projects(source_config_dir)",

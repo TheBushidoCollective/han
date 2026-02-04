@@ -5,19 +5,15 @@
  * They include MCP server configuration and optional memory providers.
  */
 
-import {
-	type PluginConfig,
-	processTemplate,
-	toTitleCase,
-} from "./index.ts";
+import { type PluginConfig, processTemplate, toTitleCase } from './index.ts';
 
 export interface HashiTemplateFiles {
-	[key: string]: string;
-	".claude-plugin/plugin.json": string;
-	".mcp.json": string;
-	"han-plugin.yml": string;
-	"README.md": string;
-	"CHANGELOG.md": string;
+  [key: string]: string;
+  '.claude-plugin/plugin.json': string;
+  '.mcp.json': string;
+  'han-plugin.yml': string;
+  'README.md': string;
+  'CHANGELOG.md': string;
 }
 
 const PLUGIN_JSON_TEMPLATE = `{
@@ -131,28 +127,28 @@ All notable changes to this project will be documented in this file.
  * Generate all files for a hashi plugin.
  */
 export function getHashiTemplate(config: PluginConfig): HashiTemplateFiles {
-	const keyword = config.name.replace(/^hashi-/, "");
-	const serverName = keyword;
+  const keyword = config.name.replace(/^hashi-/, '');
+  const serverName = keyword;
 
-	const variables = {
-		NAME: config.name,
-		TITLE: toTitleCase(config.name.replace(/^hashi-/, "")),
-		DESCRIPTION: config.description,
-		AUTHOR_NAME: config.authorName,
-		AUTHOR_URL: config.authorUrl,
-		KEYWORD: keyword,
-		SERVER_NAME: serverName,
-		DATE: new Date().toISOString().split("T")[0],
-	};
+  const variables = {
+    NAME: config.name,
+    TITLE: toTitleCase(config.name.replace(/^hashi-/, '')),
+    DESCRIPTION: config.description,
+    AUTHOR_NAME: config.authorName,
+    AUTHOR_URL: config.authorUrl,
+    KEYWORD: keyword,
+    SERVER_NAME: serverName,
+    DATE: new Date().toISOString().split('T')[0],
+  };
 
-	return {
-		".claude-plugin/plugin.json": processTemplate(
-			PLUGIN_JSON_TEMPLATE,
-			variables,
-		),
-		".mcp.json": processTemplate(MCP_JSON_TEMPLATE, variables),
-		"han-plugin.yml": processTemplate(HAN_PLUGIN_YML_TEMPLATE, variables),
-		"README.md": processTemplate(README_TEMPLATE, variables),
-		"CHANGELOG.md": processTemplate(CHANGELOG_TEMPLATE, variables),
-	};
+  return {
+    '.claude-plugin/plugin.json': processTemplate(
+      PLUGIN_JSON_TEMPLATE,
+      variables
+    ),
+    '.mcp.json': processTemplate(MCP_JSON_TEMPLATE, variables),
+    'han-plugin.yml': processTemplate(HAN_PLUGIN_YML_TEMPLATE, variables),
+    'README.md': processTemplate(README_TEMPLATE, variables),
+    'CHANGELOG.md': processTemplate(CHANGELOG_TEMPLATE, variables),
+  };
 }

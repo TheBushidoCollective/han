@@ -274,10 +274,7 @@ export function getAllRunbookSlugs(
 /**
  * Format category/phase name for display
  */
-export function formatPhaseName(
-	category: string,
-	paperSlug?: string,
-): string {
+export function formatPhaseName(category: string, paperSlug?: string): string {
 	// Try to get from config first
 	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
@@ -299,10 +296,7 @@ export function formatPhaseName(
 /**
  * Get category/phase icon
  */
-export function getPhaseIcon(
-	category: string,
-	paperSlug?: string,
-): string {
+export function getPhaseIcon(category: string, paperSlug?: string): string {
 	// Try to get from config first
 	const config = paperSlug ? loadRunbooksConfig(paperSlug) : null;
 	if (config?.groups) {
