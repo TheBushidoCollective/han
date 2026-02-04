@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.4] - 2026-02-04
+
+### Added
+
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- multi-environment dashboard with central coordinator ([6246aec3](../../commit/6246aec3))
+- add configurable VCS strategy with jj support (#49) ([4cba29e8](../../commit/4cba29e8))
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+
+### Other
+
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
 ## [3.7.3] - 2026-02-04
 
 ### Added
