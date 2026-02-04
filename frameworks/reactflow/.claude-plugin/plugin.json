@@ -1,0 +1,25 @@
+{
+  "name": "reactflow",
+  "version": "1.0.0",
+  "description": "Build node-based editors, interactive diagrams, and workflow builders with React Flow.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://reactflow.dev",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "reactflow",
+    "react-flow",
+    "node-based",
+    "diagram",
+    "flowchart",
+    "workflow",
+    "graph",
+    "editor",
+    "react",
+    "typescript",
+    "interactive"
+  ]
+}
