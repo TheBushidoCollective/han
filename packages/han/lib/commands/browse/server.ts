@@ -64,8 +64,14 @@ const yoga = createYoga({
   graphqlEndpoint: '/graphql',
   graphiql: true,
   cors: {
-    origin: '*',
+    origin: (request) => {
+      // Reflect the requesting origin to support cross-protocol requests
+      const origin = request.headers.get('origin');
+      return origin || '*';
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
   },
 });
 
