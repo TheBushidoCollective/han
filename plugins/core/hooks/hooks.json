@@ -14,6 +14,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "han plugin migrate --silent",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/register-config-dir.sh\"",
             "timeout": 5
           }

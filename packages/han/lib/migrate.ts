@@ -4,49 +4,134 @@
  * Migrates old plugin names (e.g., `jutsu-typescript@han`) to new short names
  * (e.g., `typescript@han`) in Claude Code settings files.
  *
- * This ensures backwards compatibility during the transition from the old
- * naming scheme to the new organizational structure.
+ * Uses marketplace.json as the source of truth - finds plugins with the same
+ * source path and picks the canonical (shortest, non-prefixed) name.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { PLUGIN_ALIASES } from './plugin-aliases.ts';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
- * Get the old plugin name prefix that should be replaced with short form.
- * Maps from old names like "jutsu-typescript" to short names like "typescript".
- *
- * @param oldName - The old plugin name (e.g., "jutsu-typescript")
- * @returns The short name (e.g., "typescript") or null if not a known alias
+ * Marketplace plugin entry
  */
-function getShortName(oldName: string): string | null {
-  const normalized = oldName.toLowerCase();
-
-  // Check if this is a known old name that should be migrated
-  if (!(normalized in PLUGIN_ALIASES)) {
-    return null;
-  }
-
-  // Extract short name from the new path format (e.g., "languages/typescript" -> "typescript")
-  const newPath = PLUGIN_ALIASES[normalized];
-  const parts = newPath.split('/');
-  return parts[parts.length - 1];
+interface MarketplacePlugin {
+  name: string;
+  source: string;
+  description?: string;
+  category?: string;
+  keywords?: string[];
 }
 
 /**
- * Check if a plugin name is an old-style name that should be migrated.
- *
- * Old names follow patterns like:
- * - jutsu-typescript
- * - do-frontend-development
- * - hashi-github
- *
- * @param name - The plugin name to check (without @han suffix)
- * @returns True if this is an old name that should be migrated
+ * Marketplace JSON structure
+ */
+interface Marketplace {
+  plugins: MarketplacePlugin[];
+}
+
+/**
+ * Check if a name uses old-style prefixes
+ */
+function hasOldPrefix(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    lower.startsWith('jutsu-') ||
+    lower.startsWith('hashi-') ||
+    lower.startsWith('do-')
+  );
+}
+
+/**
+ * Build migration map from marketplace.json
+ * Maps old names to their canonical (shortest, non-prefixed) equivalents
+ */
+function buildMigrationMap(): Map<string, string> {
+  const migrationMap = new Map<string, string>();
+
+  // Find marketplace.json relative to this module
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const marketplacePath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '.claude-plugin',
+    'marketplace.json'
+  );
+
+  if (!existsSync(marketplacePath)) {
+    // Fallback: try from project root
+    const altPath = join(process.cwd(), '.claude-plugin', 'marketplace.json');
+    if (!existsSync(altPath)) {
+      return migrationMap;
+    }
+  }
+
+  try {
+    const content = readFileSync(marketplacePath, 'utf-8');
+    const marketplace = JSON.parse(content) as Marketplace;
+
+    // Group plugins by source path
+    const sourceToNames = new Map<string, string[]>();
+    for (const plugin of marketplace.plugins) {
+      const source = plugin.source.toLowerCase();
+      const names = sourceToNames.get(source) || [];
+      names.push(plugin.name);
+      sourceToNames.set(source, names);
+    }
+
+    // For each source with multiple names, map old names to canonical name
+    for (const [, names] of sourceToNames) {
+      if (names.length <= 1) continue;
+
+      // Find canonical name: shortest name without old prefix
+      const canonical = names
+        .filter((n) => !hasOldPrefix(n))
+        .sort((a, b) => a.length - b.length)[0];
+
+      if (!canonical) continue;
+
+      // Map all old-style names to the canonical name
+      for (const name of names) {
+        if (hasOldPrefix(name) && name !== canonical) {
+          migrationMap.set(name.toLowerCase(), canonical);
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors, return empty map
+  }
+
+  return migrationMap;
+}
+
+// Cache the migration map
+let cachedMigrationMap: Map<string, string> | null = null;
+
+/**
+ * Get the migration map (cached)
+ */
+function getMigrationMap(): Map<string, string> {
+  if (!cachedMigrationMap) {
+    cachedMigrationMap = buildMigrationMap();
+  }
+  return cachedMigrationMap;
+}
+
+/**
+ * Get the canonical name for an old plugin name
+ */
+function getCanonicalName(oldName: string): string | null {
+  const map = getMigrationMap();
+  return map.get(oldName.toLowerCase()) || null;
+}
+
+/**
+ * Check if a plugin name is an old-style name that should be migrated
  */
 export function isOldPluginName(name: string): boolean {
-  const normalized = name.toLowerCase();
-  return normalized in PLUGIN_ALIASES;
+  return getMigrationMap().has(name.toLowerCase());
 }
 
 /**
@@ -102,9 +187,6 @@ function writeSettingsFile(path: string, settings: ClaudeSettings): void {
 /**
  * Migrate plugin names in enabledPlugins section.
  * Converts old names like "jutsu-typescript@han" to "typescript@han".
- *
- * @param enabledPlugins - The enabledPlugins object to migrate
- * @returns Object with migrated plugins and list of changes
  */
 function migrateEnabledPlugins(enabledPlugins: Record<string, boolean>): {
   migrated: Record<string, boolean>;
@@ -121,11 +203,11 @@ function migrateEnabledPlugins(enabledPlugins: Record<string, boolean>): {
     }
 
     const pluginName = key.slice(0, -4); // Remove "@han" suffix
-    const shortName = getShortName(pluginName);
+    const canonicalName = getCanonicalName(pluginName);
 
-    if (shortName && shortName !== pluginName) {
+    if (canonicalName && canonicalName !== pluginName) {
       // This is an old name - migrate it
-      const newKey = `${shortName}@han`;
+      const newKey = `${canonicalName}@han`;
       migrated[newKey] = enabled;
       changes.push({ oldName: key, newName: newKey });
     } else {
@@ -140,9 +222,6 @@ function migrateEnabledPlugins(enabledPlugins: Record<string, boolean>): {
 /**
  * Migrate plugin names in permissions.allow/deny arrays.
  * Converts old names like "jutsu-typescript@han" to "typescript@han".
- *
- * @param items - The array of permission items to migrate
- * @returns Object with migrated array and list of changes
  */
 function migratePermissionItems(items: string[]): {
   migrated: string[];
@@ -159,11 +238,11 @@ function migratePermissionItems(items: string[]): {
     }
 
     const pluginName = item.slice(0, -4); // Remove "@han" suffix
-    const shortName = getShortName(pluginName);
+    const canonicalName = getCanonicalName(pluginName);
 
-    if (shortName && shortName !== pluginName) {
+    if (canonicalName && canonicalName !== pluginName) {
       // This is an old name - migrate it
-      const newItem = `${shortName}@han`;
+      const newItem = `${canonicalName}@han`;
       migrated.push(newItem);
       changes.push({ oldName: item, newName: newItem });
     } else {
@@ -177,9 +256,6 @@ function migratePermissionItems(items: string[]): {
 
 /**
  * Migrate a single settings file.
- *
- * @param path - Path to the settings.json file
- * @returns Migration result
  */
 export function migrateSettingsFile(path: string): MigrationResult {
   const result: MigrationResult = {
@@ -248,9 +324,6 @@ export function migrateSettingsFile(path: string): MigrationResult {
 
 /**
  * Get paths to all Claude settings files that may contain plugin references.
- *
- * @param projectPath - Optional project path for project/local settings
- * @returns Array of settings file paths
  */
 export function getSettingsFilePaths(projectPath?: string): string[] {
   const paths: string[] = [];
@@ -274,9 +347,6 @@ export function getSettingsFilePaths(projectPath?: string): string[] {
  *
  * This function is idempotent - running it multiple times will have no effect
  * after the first successful migration.
- *
- * @param projectPath - Optional project path for project/local settings
- * @returns Array of migration results for each settings file
  */
 export function migratePluginNames(projectPath?: string): MigrationResult[] {
   const paths = getSettingsFilePaths(projectPath);
@@ -291,9 +361,6 @@ export function migratePluginNames(projectPath?: string): MigrationResult[] {
 
 /**
  * Log migration results to console.
- *
- * @param results - Array of migration results
- * @param verbose - Whether to show detailed output
  */
 export function logMigrationResults(
   results: MigrationResult[],
@@ -320,9 +387,6 @@ export function logMigrationResults(
 /**
  * Run migration as a standalone operation.
  * This can be called from a startup hook to migrate settings automatically.
- *
- * @param options - Migration options
- * @returns True if any migrations were performed
  */
 export function runMigration(
   options: { projectPath?: string; verbose?: boolean; silent?: boolean } = {}
