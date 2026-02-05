@@ -446,11 +446,7 @@ export async function startServer(
       useDeferStream(), // Enable @defer and @stream directives
     ],
     cors: {
-      origin: (request) => {
-        // Reflect the requesting origin to support all development scenarios
-        const origin = request.headers.get('origin');
-        return origin || '*';
-      },
+      origin: '*',
       credentials: false,
       methods: ['GET', 'POST', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
@@ -516,7 +512,13 @@ export async function startServer(
             const webResponse = await yoga.fetch(webRequest);
             await sendWebResponse(res, webResponse);
           } catch (error) {
-            log.error('GraphQL error:', error);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            log.error('GraphQL error:', errorMessage);
+            if (errorStack) {
+              log.error('Stack:', errorStack);
+            }
             res.statusCode = 500;
             res.end('Internal Server Error');
           }
@@ -577,7 +579,13 @@ export async function startServer(
             const webResponse = await yoga.fetch(webRequest);
             await sendWebResponse(res, webResponse);
           } catch (error) {
-            log.error('GraphQL error:', error);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            log.error('GraphQL error:', errorMessage);
+            if (errorStack) {
+              log.error('Stack:', errorStack);
+            }
             res.statusCode = 500;
             res.end('Internal Server Error');
           }
