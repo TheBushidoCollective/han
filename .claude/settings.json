@@ -66,7 +66,9 @@
     "vite@han": true,
     "vitest@han": true,
     "webpack@han": true,
-    "clippy@han": true
+    "clippy@han": true,
+    "claude-agent-sdk@han": true,
+    "han-plugins@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

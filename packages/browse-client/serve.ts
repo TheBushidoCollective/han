@@ -5,7 +5,7 @@
  * Supports SPA routing by falling back to index.html.
  */
 
-import { join, extname } from "node:path";
+import { extname, join } from "node:path";
 import { file } from "bun";
 
 const DIST_DIR = join(import.meta.dir, "out");

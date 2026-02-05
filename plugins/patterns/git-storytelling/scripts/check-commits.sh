@@ -17,7 +17,7 @@ if [ -z "$SESSION_FILES" ] || [ "$SESSION_FILES" = "." ]; then
     echo 'Please commit your changes with a meaningful message:'
     echo '  git add -A'
     echo '  git commit -m "Your descriptive commit message"'
-    exit 1
+    exit 2
   fi
 fi
 
@@ -52,4 +52,4 @@ echo ""
 echo "Please commit your changes with a meaningful message:"
 echo "  git add ${UNCOMMITTED_SESSION_FILES[*]}"
 echo "  git commit -m \"Your descriptive commit message\""
-exit 1
+exit 2

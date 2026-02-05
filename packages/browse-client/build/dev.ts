@@ -187,5 +187,7 @@ Bun.serve({
 });
 
 console.log(`\nDev server running at http://localhost:${PORT}`);
-console.log("GraphQL connects directly to coordinator at https://coordinator.local.han.guru:41957/graphql");
+console.log(
+	"GraphQL connects directly to coordinator at https://coordinator.local.han.guru:41957/graphql",
+);
 console.log("Watching for changes...\n");
