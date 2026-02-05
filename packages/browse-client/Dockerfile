@@ -5,15 +5,22 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lockb* ./
-RUN bun install
+# Copy package files and lockfile
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
-# Copy source files
+# Copy source files (respects .dockerignore)
 COPY . .
+
+# Verify schema exists for relay-compiler
+RUN test -f schema.graphql || (echo "ERROR: schema.graphql missing" && exit 1)
 
 # Build the application
 RUN bun run build
+
+# Verify build output
+RUN test -f out/index.html || (echo "ERROR: Build failed - no index.html" && exit 1)
+RUN ls -la out/
 
 # Production stage
 FROM oven/bun:1
@@ -22,8 +29,10 @@ WORKDIR /app
 
 # Copy built files from builder
 COPY --from=builder /app/out ./out
-COPY serve.ts ./
+COPY --from=builder /app/serve.ts ./
 
+# Use PORT env var (Railway sets this)
+ENV PORT=3000
 EXPOSE 3000
 
 CMD ["bun", "serve.ts"]

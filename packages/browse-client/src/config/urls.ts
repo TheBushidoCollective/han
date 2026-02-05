@@ -2,7 +2,7 @@
  * GraphQL Endpoint URL Configuration
  *
  * Provides runtime URL resolution for GraphQL endpoints.
- * Uses fixed port 41957 for the coordinator.
+ * Supports multiple configuration methods for flexibility.
  */
 
 import { getCoordinatorPort } from "./port.ts";
@@ -20,26 +20,41 @@ export interface GraphQLEndpoints {
 }
 
 /**
- * Detect if we're running in hosted dashboard mode
- * by checking the current hostname
+ * Get coordinator URL from URL query parameters
+ * Allows override via ?coordinatorUrl=https://example.com
  */
-function isHostedMode(): boolean {
+function getCoordinatorUrlOverride(): string | null {
 	if (typeof window === "undefined") {
-		return false;
+		return null;
 	}
-	return window.location.hostname === "dashboard.local.han.guru";
+	const params = new URLSearchParams(window.location.search);
+	return params.get("coordinatorUrl");
 }
 
 /**
  * Get GraphQL endpoints based on environment
  *
  * Priority order:
- * 1. Build-time injected URLs (for custom deployments)
- * 2. Hosted mode: coordinator.local.han.guru:41957
- * 3. Local mode: localhost via HTTP
+ * 1. URL query parameter: ?coordinatorUrl=https://coordinator.example.com
+ * 2. Build-time injected URLs (for custom deployments)
+ * 3. Default: coordinator.local.han.guru (HTTPS)
  */
 export function getGraphQLEndpoints(): GraphQLEndpoints {
-	// Use build-time injected URLs if available
+	// 1. Check for URL override (highest priority)
+	const urlOverride = getCoordinatorUrlOverride();
+	if (urlOverride) {
+		const isSecure = urlOverride.startsWith("https://");
+		const wsProtocol = isSecure ? "wss" : "ws";
+		const wsUrl = urlOverride.replace(/^https?:\/\//, `${wsProtocol}://`);
+		return {
+			http: urlOverride.endsWith("/graphql")
+				? urlOverride
+				: `${urlOverride}/graphql`,
+			ws: wsUrl.endsWith("/graphql") ? wsUrl : `${wsUrl}/graphql`,
+		};
+	}
+
+	// 2. Use build-time injected URLs if available
 	if (
 		typeof __GRAPHQL_URL__ !== "undefined" &&
 		typeof __GRAPHQL_WS_URL__ !== "undefined"
@@ -52,17 +67,11 @@ export function getGraphQLEndpoints(): GraphQLEndpoints {
 
 	const port = getCoordinatorPort();
 
-	// Hosted dashboard mode - connect to coordinator via HTTPS
-	if (isHostedMode()) {
-		return {
-			http: `https://coordinator.local.han.guru:${port}/graphql`,
-			ws: `wss://coordinator.local.han.guru:${port}/graphql`,
-		};
-	}
-
-	// Local development mode - connect via HTTP
+	// 3. Always use HTTPS coordinator URL
+	// This works for both local and hosted because coordinator.local.han.guru
+	// resolves to localhost with valid HTTPS via the cert-server
 	return {
-		http: `http://127.0.0.1:${port}/graphql`,
-		ws: `ws://127.0.0.1:${port}/graphql`,
+		http: `https://coordinator.local.han.guru:${port}/graphql`,
+		ws: `wss://coordinator.local.han.guru:${port}/graphql`,
 	};
 }
