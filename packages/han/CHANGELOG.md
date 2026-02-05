@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.5] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+- multi-environment dashboard with central coordinator ([6246aec3](../../commit/6246aec3))
+
+### Fixed
+
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
 ## [3.7.4] - 2026-02-04
 
 ### Added
