@@ -12,6 +12,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve activity indicator timing and initial state ([2a0ba081](../../commit/2a0ba081))
 - add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
 - add coordinator activity indicator to header ([7d18fe26](../../commit/7d18fe26))
+
+### Fixed
+
+- remove duplicate activity indicator from header ([0f48dbdd](../../commit/0f48dbdd))
+- remove deprecated naming prefixes and fix paths ([a23a6ec4](../../commit/a23a6ec4))
+- handle external plugin sources in build ([831a633f](../../commit/831a633f))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- move AI-DLC plugin to external repository (#53) ([93405345](../../commit/93405345))
+
+### Other
+
+- format ActivityIndicator.tsx ([3234397a](../../commit/3234397a))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [1.36.3] - 2026-02-05
+
+### Added
+
+- improve activity indicator timing and initial state ([2a0ba081](../../commit/2a0ba081))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add coordinator activity indicator to header ([7d18fe26](../../commit/7d18fe26))
 - add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
 
 ### Fixed
