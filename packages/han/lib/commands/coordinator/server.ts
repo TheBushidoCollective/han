@@ -492,6 +492,25 @@ export async function startServer(
 
         // GraphQL endpoint
         if (pathname === '/graphql') {
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            const origin = req.headers.origin || '*';
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization'
+            );
+            res.setHeader('Access-Control-Max-Age', '86400');
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          // Add CORS headers to all responses
+          const origin = req.headers.origin || '*';
+          res.setHeader('Access-Control-Allow-Origin', origin);
+
           try {
             const webRequest = await nodeToWebRequest(req);
             const webResponse = await yoga.fetch(webRequest);
@@ -534,6 +553,25 @@ export async function startServer(
 
         // GraphQL endpoint
         if (pathname === '/graphql') {
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            const origin = req.headers.origin || '*';
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization'
+            );
+            res.setHeader('Access-Control-Max-Age', '86400');
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          // Add CORS headers to all responses
+          const origin = req.headers.origin || '*';
+          res.setHeader('Access-Control-Allow-Origin', origin);
+
           try {
             const webRequest = await nodeToWebRequest(req);
             const webResponse = await yoga.fetch(webRequest);
