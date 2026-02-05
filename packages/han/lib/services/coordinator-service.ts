@@ -55,18 +55,41 @@ const FILE_MODIFYING_TOOLS = new Set([
 ]);
 
 /**
+ * Get the han version from package.json
+ */
+const getHanVersion = (): string => {
+  try {
+    // At build time this resolves to the built package
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pkg = require('../../package.json');
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+};
+
+/**
+ * Coordinator version for upgrade detection
+ */
+export const COORDINATOR_VERSION = getHanVersion();
+
+/**
  * Coordinator service state
  */
 interface CoordinatorState {
   isCoordinator: boolean;
   heartbeatInterval: NodeJS.Timeout | null;
   isRunning: boolean;
+  version: string;
+  restartPending: boolean;
 }
 
 const state: CoordinatorState = {
   isCoordinator: false,
   heartbeatInterval: null,
   isRunning: false,
+  version: COORDINATOR_VERSION,
+  restartPending: false,
 };
 
 /**
@@ -385,21 +408,39 @@ async function startCoordinating(): Promise<void> {
     }
   }, heartbeatMs);
 
-  // Perform initial full scan and index in background (non-blocking)
-  console.log('[coordinator] Starting full scan and index in background...');
+  // Check if data version changed and reindex is needed
+  console.log('[coordinator] Checking for schema/data version changes...');
   void (async () => {
     try {
+      // Check if reindex is needed (schema upgrade, new features requiring backfill)
+      const needsReindex = await indexer.needsReindex();
+
+      if (needsReindex) {
+        console.log(
+          '[coordinator] Data version changed - truncating derived tables for full reindex...',
+        );
+        await indexer.truncateDerivedTables();
+      }
+
+      // Perform full scan and index
+      console.log('[coordinator] Starting full scan and index...');
       const results = await indexer.fullScanAndIndex();
       const totalSessions = results.length;
       const newSessions = results.filter((r) => r.isNewSession).length;
       const totalMessages = results.reduce(
         (sum, r) => sum + r.messagesIndexed,
-        0
+        0,
       );
 
       console.log(
-        `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`
+        `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`,
       );
+
+      // Clear reindex flag after successful completion
+      if (needsReindex) {
+        await indexer.clearReindexFlag();
+        console.log('[coordinator] Reindex complete, flag cleared');
+      }
 
       // Publish events for indexed data
       for (const result of results) {
@@ -566,6 +607,61 @@ export function stopCoordinatorService(): void {
  */
 export function isCoordinatorInstance(): boolean {
   return state.isCoordinator;
+}
+
+/**
+ * Get the current coordinator version
+ */
+export function getCoordinatorVersion(): string {
+  return state.version;
+}
+
+/**
+ * Compare semantic versions
+ * Returns: -1 if a < b, 0 if a == b, 1 if a > b
+ */
+function compareVersions(a: string, b: string): number {
+  const partsA = a.split('.').map((p) => parseInt(p, 10) || 0);
+  const partsB = b.split('.').map((p) => parseInt(p, 10) || 0);
+
+  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+    const partA = partsA[i] || 0;
+    const partB = partsB[i] || 0;
+    if (partA < partB) return -1;
+    if (partA > partB) return 1;
+  }
+  return 0;
+}
+
+/**
+ * Check if a client version is newer than the coordinator
+ * If so, schedule a coordinator restart to upgrade
+ * Returns true if a restart is scheduled
+ */
+export function checkClientVersion(clientVersion: string): boolean {
+  if (!state.isCoordinator || state.restartPending) {
+    return false;
+  }
+
+  const cmp = compareVersions(clientVersion, state.version);
+  if (cmp > 0) {
+    console.log(
+      `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`,
+    );
+    state.restartPending = true;
+
+    // Schedule restart after a short delay to allow current operations to complete
+    setTimeout(() => {
+      console.log('[coordinator] Restarting for version upgrade...');
+      stopCoordinatorService();
+      // The new client should detect the coordinator is stopped and become the new coordinator
+      // This is a graceful handoff - the newer client will take over
+    }, 1000);
+
+    return true;
+  }
+
+  return false;
 }
 
 /**

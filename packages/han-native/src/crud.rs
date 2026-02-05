@@ -622,7 +622,7 @@ pub fn get_config_dir_by_path(path: String) -> napi::Result<Option<ConfigDir>> {
 }
 
 /// List all registered config directories
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
     let db = db::get_db()?;
     let conn = db
@@ -654,7 +654,7 @@ pub fn list_config_dirs() -> napi::Result<Vec<ConfigDir>> {
 }
 
 /// Update the last indexed timestamp for a config directory
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -679,7 +679,7 @@ pub fn update_config_dir_last_indexed(path: String) -> napi::Result<bool> {
 }
 
 /// Remove a config directory from the registry
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -694,7 +694,7 @@ pub fn unregister_config_dir(path: String) -> napi::Result<bool> {
 }
 
 /// Get the default config directory
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn get_default_config_dir() -> napi::Result<Option<ConfigDir>> {
     let db = db::get_db()?;
     let conn = db
@@ -3359,7 +3359,7 @@ pub fn truncate_derived_tables() -> napi::Result<u32> {
 
 /// Get or create a hook execution entry for attempt tracking
 /// Uses (session_id, hook_name, directory) as the hook key
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_or_create_hook_attempt(
     session_id: String,
     plugin: String,
@@ -3408,7 +3408,7 @@ pub fn get_or_create_hook_attempt(
 }
 
 /// Increment consecutive_failures for a hook, returns updated info with is_stuck flag
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn increment_hook_failures(
     session_id: String,
     plugin: String,
@@ -3454,7 +3454,7 @@ pub fn increment_hook_failures(
 }
 
 /// Reset consecutive_failures to 0 (on success)
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn reset_hook_failures(
     session_id: String,
     plugin: String,
@@ -3481,7 +3481,7 @@ pub fn reset_hook_failures(
 }
 
 /// Increase max_attempts for a hook (user override)
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn increase_hook_max_attempts(
     session_id: String,
     plugin: String,
@@ -3513,7 +3513,7 @@ pub fn increase_hook_max_attempts(
 // ============================================================================
 
 /// Create a new orchestration, cancelling any existing running orchestration for the same session
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestration> {
     let db = db::get_db()?;
     let conn = db
@@ -3567,7 +3567,7 @@ pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestra
 }
 
 /// Get an orchestration by ID
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
     let db = db::get_db()?;
     let conn = db
@@ -3606,7 +3606,7 @@ pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
 }
 
 /// Update an orchestration's counters and status
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
     let db = db::get_db()?;
     let conn = db
@@ -3661,7 +3661,7 @@ pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
 }
 
 /// Cancel an orchestration and all its pending/running hooks
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn cancel_orchestration(id: String) -> napi::Result<()> {
     let db = db::get_db()?;
     let conn = db
@@ -3688,7 +3688,7 @@ pub fn cancel_orchestration(id: String) -> napi::Result<()> {
 // ============================================================================
 
 /// Queue a pending hook for background execution
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
     let db = db::get_db()?;
     let conn = db
@@ -3715,7 +3715,7 @@ pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
 }
 
 /// Get all pending hooks ready to run
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
     let conn = db
@@ -3759,7 +3759,7 @@ pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
 }
 
 /// Update hook execution status
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
     let db = db::get_db()?;
     let conn = db
@@ -3776,7 +3776,7 @@ pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
 }
 
 /// Get pending/running/failed hooks for an orchestration
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
     let conn = db
@@ -3822,7 +3822,7 @@ pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<Hoo
 }
 
 /// Get pending/running hooks for a session (legacy support)
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExecution>> {
     let db = db::get_db()?;
     let conn = db
@@ -3868,7 +3868,7 @@ pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExe
 }
 
 /// Mark a hook as failed with a given error message
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn fail_hook_execution(id: String, error_message: String) -> napi::Result<()> {
     let db = db::get_db()?;
     let conn = db
@@ -3885,7 +3885,7 @@ pub fn fail_hook_execution(id: String, error_message: String) -> napi::Result<()
 }
 
 /// Complete a hook execution (update status, output, error, duration)
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn complete_hook_execution(
     id: String,
     success: bool,
@@ -3914,7 +3914,7 @@ pub fn complete_hook_execution(
 // ============================================================================
 
 /// Queue a hook for later execution during --wait
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
     let db = db::get_db()?;
     let conn = db
@@ -3941,7 +3941,7 @@ pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
 }
 
 /// Get all queued hooks for an orchestration
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook>> {
     let db = db::get_db()?;
     let conn = db
@@ -3977,7 +3977,7 @@ pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook
 }
 
 /// Delete queued hooks after they've been executed
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
     let db = db::get_db()?;
     let conn = db
@@ -4028,7 +4028,7 @@ pub struct AsyncHookQueueEntry {
 /// Enqueue a hook for async execution
 /// First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
 /// and merges their file paths into the new entry
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn enqueue_async_hook(
     _db_path: String,
     input: AsyncHookQueueInputNative,
@@ -4098,7 +4098,7 @@ pub fn enqueue_async_hook(
 }
 
 /// List pending async hooks for a session
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn list_pending_async_hooks(
     _db_path: String,
     session_id: String,
@@ -4141,7 +4141,7 @@ pub fn list_pending_async_hooks(
 }
 
 /// Check if the async hook queue is empty for a session (no pending or running hooks)
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
@@ -4159,7 +4159,7 @@ pub fn is_async_hook_queue_empty(_db_path: String, session_id: String) -> napi::
 
 /// Drain the queue - get all pending hooks and mark as running
 /// Used at checkpoint (Stop, PreToolUse for git commit/push)
-/// Note: Exported via wrapper in lib.rs
+// Note: Exported via lib.rs wrapper
 pub fn drain_async_hook_queue(
     _db_path: String,
     session_id: String,
@@ -4211,7 +4211,7 @@ pub fn drain_async_hook_queue(
 }
 
 /// Cancel pending hooks matching dedup key and return merged file paths
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn cancel_pending_async_hooks(
     _db_path: String,
     session_id: String,
@@ -4258,7 +4258,7 @@ pub fn cancel_pending_async_hooks(
 }
 
 /// Complete an async hook execution
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn complete_async_hook(
     _db_path: String,
     id: String,
@@ -4283,7 +4283,7 @@ pub fn complete_async_hook(
 }
 
 /// Cancel a specific async hook by ID
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn cancel_async_hook(_db_path: String, id: String) -> napi::Result<()> {
     let db = db::get_db()?;
     let conn = db
@@ -4302,7 +4302,7 @@ pub fn cancel_async_hook(_db_path: String, id: String) -> napi::Result<()> {
 
 /// Clear all async hooks for a session (used on SessionEnd to clean up)
 /// Returns the number of hooks that were cleared
-#[napi]
+// Note: Exported via lib.rs wrapper
 pub fn clear_async_hook_queue_for_session(
     _db_path: String,
     session_id: String,

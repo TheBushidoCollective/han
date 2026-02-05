@@ -2,6 +2,15 @@
 -- All database access MUST go through the coordinator
 
 -- ============================================================================
+-- Metadata (version tracking for automatic reindexing)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS han_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ============================================================================
 -- Repos (git repositories, identified by remote URL)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS repos (

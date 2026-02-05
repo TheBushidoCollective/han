@@ -1374,7 +1374,10 @@ fn generate_sentiment_event(
 /// Index a single JSONL file incrementally
 /// Also reads the corresponding -han.jsonl file and merges events by timestamp
 /// Task association for sentiment events is automatically loaded from SQLite
-pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
+pub fn index_session_file(
+    file_path: String,
+    source_config_dir: Option<String>,
+) -> napi::Result<IndexResult> {
     let path = Path::new(&file_path);
 
     // Extract source file metadata for session reconstruction
@@ -1435,7 +1438,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
             relative_path: None,
             name: project_name,
             is_worktree: Some(false),
-            source_config_dir: None, // Will be set during multi-environment indexing
+            source_config_dir: source_config_dir.clone(),
         })?;
 
         project.id
@@ -1460,7 +1463,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
         status: Some("active".to_string()),
         transcript_path: Some(file_path.clone()),
         slug: None,
-        source_config_dir: None, // Will be set during multi-environment indexing
+        source_config_dir: source_config_dir.clone(),
     })?;
 
     // Read new lines from JSONL file
@@ -1820,7 +1823,7 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
             status: Some("active".to_string()),
             transcript_path: Some(file_path.clone()),
             slug: session_slug,
-            source_config_dir: None, // Preserved from existing session
+            source_config_dir: source_config_dir.clone(),
         })?;
     }
 
@@ -1838,7 +1841,10 @@ pub fn index_session_file(file_path: String) -> napi::Result<IndexResult> {
 
 /// Register a file in the session_files table
 /// Returns (session_id, file_type) if successful
-fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, String)>> {
+fn register_session_file(
+    file_path: &Path,
+    source_config_dir: Option<&str>,
+) -> napi::Result<Option<(String, String)>> {
     let file_path_str = file_path.to_string_lossy().to_string();
 
     match classify_file(file_path) {
@@ -1858,7 +1864,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                 status: Some("active".to_string()),
                 transcript_path: Some(file_path_str.clone()),
                 slug: None,
-                source_config_dir: None, // Will be set during multi-environment indexing
+                source_config_dir: source_config_dir.map(|s| s.to_string()),
             })?;
 
             // Register the file
@@ -1885,7 +1891,7 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
                         status: Some("active".to_string()),
                         transcript_path: None,
                         slug: None,
-                        source_config_dir: None, // Will be set during multi-environment indexing
+                        source_config_dir: source_config_dir.map(|s| s.to_string()),
                     })?;
                 }
 
@@ -1918,7 +1924,10 @@ fn register_session_file(file_path: &Path) -> napi::Result<Option<(String, Strin
 /// Index all JSONL files in a project directory
 /// Phase 1: Register all files in session_files table
 /// Phase 2: Index messages from each file
-pub fn index_project_directory(project_dir: String) -> napi::Result<Vec<IndexResult>> {
+pub fn index_project_directory(
+    project_dir: String,
+    source_config_dir: Option<String>,
+) -> napi::Result<Vec<IndexResult>> {
     let dir = Path::new(&project_dir);
 
     if !dir.exists() || !dir.is_dir() {
@@ -1948,13 +1957,13 @@ pub fn index_project_directory(project_dir: String) -> napi::Result<Vec<IndexRes
     // Phase 1: Register files in order (main first, then agents, then han events)
     // This ensures sessions exist before agents/han files try to link to them
     for path in &main_files {
-        let _ = register_session_file(path);
+        let _ = register_session_file(path, source_config_dir.as_deref());
     }
     for path in &agent_files {
-        let _ = register_session_file(path);
+        let _ = register_session_file(path, source_config_dir.as_deref());
     }
     for path in &han_files {
-        let _ = register_session_file(path);
+        let _ = register_session_file(path, source_config_dir.as_deref());
     }
 
     // Phase 2: Index all files
@@ -1962,13 +1971,19 @@ pub fn index_project_directory(project_dir: String) -> napi::Result<Vec<IndexRes
 
     // Index main session files (including their han events)
     for path in &main_files {
-        let result = index_session_file(path.to_string_lossy().to_string())?;
+        let result = index_session_file(
+            path.to_string_lossy().to_string(),
+            source_config_dir.clone(),
+        )?;
         results.push(result);
     }
 
     // Index agent files
     for path in &agent_files {
-        let result = index_session_file(path.to_string_lossy().to_string())?;
+        let result = index_session_file(
+            path.to_string_lossy().to_string(),
+            source_config_dir.clone(),
+        )?;
         results.push(result);
     }
 
@@ -1997,8 +2012,9 @@ pub fn handle_file_event(
                     if let Some(dir) = parent {
                         let main_file = dir.join(format!("{}.jsonl", sid));
                         if main_file.exists() {
+                            // Pass None for source_config_dir - COALESCE preserves existing value
                             let result =
-                                index_session_file(main_file.to_string_lossy().to_string())?;
+                                index_session_file(main_file.to_string_lossy().to_string(), None)?;
                             return Ok(Some(result));
                         }
                     }
@@ -2008,7 +2024,8 @@ pub fn handle_file_event(
             }
 
             // Index the main session file (which also processes Han events)
-            let result = index_session_file(file_path)?;
+            // Pass None for source_config_dir - COALESCE preserves existing value
+            let result = index_session_file(file_path, None)?;
             Ok(Some(result))
         }
         FileEventType::Removed => {
@@ -2023,30 +2040,69 @@ pub fn handle_file_event(
 
 /// Perform a full scan and index of all Claude Code sessions
 /// This should be called on startup to ensure the database is in sync
+/// Scans all registered config directories (from config_dirs table)
 pub fn full_scan_and_index() -> napi::Result<Vec<IndexResult>> {
-    // Get the default watch path (~/.claude/projects)
-    let home = dirs::home_dir().ok_or_else(|| {
-        napi::Error::from_reason("Could not determine home directory".to_string())
-    })?;
-    let projects_dir = home.join(".claude").join("projects");
-
-    if !projects_dir.exists() {
-        return Ok(Vec::new());
-    }
+    use crate::crud;
 
     let mut results = Vec::new();
 
-    // Iterate through all project directories
-    let entries = std::fs::read_dir(&projects_dir).map_err(|e| {
-        napi::Error::from_reason(format!("Failed to read projects directory: {}", e))
-    })?;
+    // Get all registered config directories
+    let config_dirs = crud::list_config_dirs()?;
 
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            // Index all JSONL files in this project directory
-            let project_results = index_project_directory(path.to_string_lossy().to_string())?;
-            results.extend(project_results);
+    // Also include the default ~/.claude if not already registered
+    let home = dirs::home_dir().ok_or_else(|| {
+        napi::Error::from_reason("Could not determine home directory".to_string())
+    })?;
+    let default_claude_dir = home.join(".claude");
+
+    // Collect all unique config dir paths to scan
+    let mut dirs_to_scan: Vec<std::path::PathBuf> = config_dirs
+        .iter()
+        .map(|cd| std::path::PathBuf::from(&cd.path))
+        .collect();
+
+    // Add default if not in the list
+    if !dirs_to_scan.iter().any(|p| p == &default_claude_dir) {
+        dirs_to_scan.push(default_claude_dir);
+    }
+
+    tracing::info!("Full scan: scanning {} config directories", dirs_to_scan.len());
+
+    for config_dir in dirs_to_scan {
+        let projects_dir = config_dir.join("projects");
+
+        if !projects_dir.exists() {
+            tracing::debug!("Skipping non-existent projects dir: {:?}", projects_dir);
+            continue;
+        }
+
+        tracing::info!("Scanning projects in: {:?}", projects_dir);
+
+        // Iterate through all project directories
+        let entries = match std::fs::read_dir(&projects_dir) {
+            Ok(e) => e,
+            Err(e) => {
+                tracing::warn!("Failed to read projects directory {:?}: {}", projects_dir, e);
+                continue;
+            }
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                // Index all JSONL files in this project directory
+                // Pass the config_dir so sessions can be tagged with their source
+                let config_dir_str = config_dir.to_string_lossy().to_string();
+                match index_project_directory(
+                    path.to_string_lossy().to_string(),
+                    Some(config_dir_str),
+                ) {
+                    Ok(project_results) => results.extend(project_results),
+                    Err(e) => {
+                        tracing::warn!("Failed to index project {:?}: {}", path, e);
+                    }
+                }
+            }
         }
     }
 
