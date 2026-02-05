@@ -1021,6 +1021,42 @@ export declare function queryTaskMetrics(dbPath: string, taskType?: string | und
 export declare function recordHookExecution(dbPath: string, input: HookExecutionInput): HookExecution
 /** Query hook statistics */
 export declare function queryHookStats(dbPath: string, period?: string | undefined | null): HookStats
+/** Create a new orchestration, cancelling any existing running orchestration for the same session */
+export declare function createOrchestration(input: OrchestrationInput): Orchestration
+/** Get an orchestration by ID */
+export declare function getOrchestration(id: string): Orchestration | null
+/** Update an orchestration's counters and status */
+export declare function updateOrchestration(update: OrchestrationUpdate): void
+/** Cancel an orchestration and all its pending/running hooks */
+export declare function cancelOrchestration(id: string): void
+/** Get all hooks for an orchestration */
+export declare function getOrchestrationHooks(orchestrationId: string): Array<HookExecution>
+/** Queue a hook for later execution during --wait */
+export declare function queueHook(input: QueuedHookInput): string
+/** Get all queued hooks for an orchestration */
+export declare function getQueuedHooks(orchestrationId: string): Array<QueuedHook>
+/** Delete queued hooks after they've been executed */
+export declare function deleteQueuedHooks(orchestrationId: string): number
+/** Queue a pending hook for background execution */
+export declare function queuePendingHook(input: PendingHookInput): string
+/** Get all pending hooks ready to run */
+export declare function getPendingHooks(): Array<HookExecution>
+/** Get pending/running/failed hooks for a specific session */
+export declare function getSessionPendingHooks(sessionId: string): Array<HookExecution>
+/** Update hook execution status */
+export declare function updateHookStatus(id: string, status: string): void
+/** Complete a hook execution */
+export declare function completeHookExecution(id: string, success: boolean, output: string | undefined | null, error: string | undefined | null, durationMs: number): void
+/** Mark a hook as failed with an error message */
+export declare function failHookExecution(id: string, errorMessage: string): void
+/** Get or create hook attempt info for tracking consecutive failures */
+export declare function getOrCreateHookAttempt(sessionId: string, plugin: string, hookName: string, directory: string): HookAttemptInfo
+/** Increment consecutive_failures for a hook */
+export declare function incrementHookFailures(sessionId: string, plugin: string, hookName: string, directory: string): HookAttemptInfo
+/** Reset consecutive_failures to 0 (on success) */
+export declare function resetHookFailures(sessionId: string, plugin: string, hookName: string, directory: string): void
+/** Increase max_attempts for a hook (user override via MCP tool) */
+export declare function increaseHookMaxAttempts(sessionId: string, plugin: string, hookName: string, directory: string, increase: number): void
 /** Record a frustration event */
 export declare function recordFrustration(dbPath: string, input: FrustrationEventInput): FrustrationEvent
 /** Query frustration metrics */
