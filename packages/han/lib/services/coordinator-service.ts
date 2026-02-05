@@ -417,7 +417,7 @@ async function startCoordinating(): Promise<void> {
 
       if (needsReindex) {
         console.log(
-          '[coordinator] Data version changed - truncating derived tables for full reindex...',
+          '[coordinator] Data version changed - truncating derived tables for full reindex...'
         );
         await indexer.truncateDerivedTables();
       }
@@ -429,11 +429,11 @@ async function startCoordinating(): Promise<void> {
       const newSessions = results.filter((r) => r.isNewSession).length;
       const totalMessages = results.reduce(
         (sum, r) => sum + r.messagesIndexed,
-        0,
+        0
       );
 
       console.log(
-        `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`,
+        `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`
       );
 
       // Clear reindex flag after successful completion
@@ -646,7 +646,7 @@ export function checkClientVersion(clientVersion: string): boolean {
   const cmp = compareVersions(clientVersion, state.version);
   if (cmp > 0) {
     console.log(
-      `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`,
+      `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`
     );
     state.restartPending = true;
 

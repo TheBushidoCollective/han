@@ -1994,7 +1994,7 @@ export const indexer = {
    */
   async indexSessionFile(
     filePath: string,
-    sourceConfigDir?: string,
+    sourceConfigDir?: string
   ): Promise<IndexResult> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
@@ -2007,14 +2007,14 @@ export const indexer = {
    */
   async indexProjectDirectory(
     projectDir: string,
-    sourceConfigDir?: string,
+    sourceConfigDir?: string
   ): Promise<IndexResult[]> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
     return native.indexProjectDirectory(
       dbPath,
       projectDir,
-      sourceConfigDir ?? null,
+      sourceConfigDir ?? null
     );
   },
 

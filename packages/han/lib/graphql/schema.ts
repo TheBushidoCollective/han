@@ -247,7 +247,8 @@ builder.queryField('coordinatorStatus', (t) =>
     args: {
       clientVersion: t.arg.string({
         required: false,
-        description: 'Client version to report - if newer, coordinator will restart',
+        description:
+          'Client version to report - if newer, coordinator will restart',
       }),
     },
     description:
