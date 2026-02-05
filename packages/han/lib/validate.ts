@@ -485,7 +485,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
 // ============================================
 
 /**
- * Find plugin in a marketplace root directory.
+ * Find plugin in a marketplace root directory using multiple discovery methods.
  *
  * Discovery order:
  * 1. Check marketplace.json for the plugin's source path

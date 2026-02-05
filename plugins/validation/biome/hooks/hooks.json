@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run biome lint-async --async"
+            "command": "han hook run biome lint-async --async"
           }
         ],
         "async": true

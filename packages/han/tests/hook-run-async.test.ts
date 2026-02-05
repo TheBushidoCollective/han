@@ -501,14 +501,17 @@ describe('HAN_FILES Environment Variable', () => {
 
 describe('Command Building', () => {
   // Test buildCommandWithFiles behavior
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+  const HAN_FILES_PLACEHOLDER = '${HAN_FILES}';
   function buildCommandWithFiles(command: string, files: string[]): string {
-    if (command.includes('${HAN_FILES}')) {
-      return command.replace('${HAN_FILES}', files.join(' '));
+    if (command.includes(HAN_FILES_PLACEHOLDER)) {
+      return command.replace(HAN_FILES_PLACEHOLDER, files.join(' '));
     }
     return command;
   }
 
-  it('replaces ${HAN_FILES} placeholder', () => {
+  it('replaces HAN_FILES placeholder', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
     const command = 'biome check ${HAN_FILES}';
     const files = ['/path/to/file.ts'];
     expect(buildCommandWithFiles(command, files)).toBe(
@@ -517,6 +520,7 @@ describe('Command Building', () => {
   });
 
   it('handles multiple files', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
     const command = 'eslint ${HAN_FILES}';
     const files = ['/path/to/a.ts', '/path/to/b.ts'];
     expect(buildCommandWithFiles(command, files)).toBe(
@@ -563,6 +567,7 @@ describe('Plugin Configuration Patterns', () => {
   it('validates async lint hook structure', () => {
     const hook: PluginHookDefinition = {
       event: 'PostToolUse',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       command: 'biome check ${HAN_FILES}',
       dirsWith: ['biome.json'],
       toolFilter: ['Edit', 'Write'],
@@ -578,6 +583,7 @@ describe('Plugin Configuration Patterns', () => {
   it('validates async format hook structure', () => {
     const hook: PluginHookDefinition = {
       event: 'PostToolUse',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       command: 'biome format ${HAN_FILES}',
       dirsWith: ['biome.json'],
       toolFilter: ['Edit', 'Write'],
@@ -590,10 +596,12 @@ describe('Plugin Configuration Patterns', () => {
   it('validates async test hook with file_test', () => {
     const hook: PluginHookDefinition = {
       event: 'PostToolUse',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       command: 'bun test ${HAN_FILES}',
       dirsWith: ['package.json'],
       toolFilter: ['Edit', 'Write'],
       fileFilter: ['**/*.test.ts', '**/*.spec.ts'],
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       fileTest: 'grep -qE "(describe|it|test)\\s*\\(" "${HAN_FILE}"',
     };
 
@@ -605,10 +613,12 @@ describe('Plugin Configuration Patterns', () => {
   it('validates Elixir async test hook', () => {
     const hook: PluginHookDefinition = {
       event: 'PostToolUse',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       command: 'mix test ${HAN_FILES}',
       dirsWith: ['mix.exs'],
       toolFilter: ['Edit', 'Write'],
       fileFilter: ['**/*_test.exs', '**/test/**/*.exs'],
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
       fileTest: 'grep -qE "(describe|test|doctest)" "${HAN_FILE}"',
     };
 

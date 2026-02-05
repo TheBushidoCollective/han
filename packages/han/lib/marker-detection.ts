@@ -18,6 +18,7 @@ import type { MarketplacePlugin } from './shared.ts';
 interface YamlPluginHook {
   dirs_with?: string[];
   dir_test?: string;
+  if_changed?: string[];
 }
 
 interface YamlPluginConfig {
@@ -86,6 +87,7 @@ function findAllHanConfigs(rootDir: string, maxDepth = 4): Map<string, string> {
 interface DetectionPatterns {
   dirsWith: string[];
   dirTest: string[];
+  ifChanged: string[];
   learnPatterns: string[];
 }
 
@@ -98,9 +100,10 @@ function extractDetectionPatterns(
   try {
     const content = readFileSync(configPath, 'utf-8');
 
-    // Collect unique dirsWith patterns from all hooks
+    // Collect unique patterns from all hooks
     const dirsWithSet = new Set<string>();
     const dirTestSet = new Set<string>();
+    const ifChangedSet = new Set<string>();
     const learnPatternsSet = new Set<string>();
 
     const config = YAML.parse(content) as YamlPluginConfig;
@@ -116,6 +119,11 @@ function extractDetectionPatterns(
         if (hook.dir_test) {
           dirTestSet.add(hook.dir_test);
         }
+        if (hook.if_changed) {
+          for (const pattern of hook.if_changed) {
+            ifChangedSet.add(pattern);
+          }
+        }
       }
     }
 
@@ -130,6 +138,7 @@ function extractDetectionPatterns(
     if (
       dirsWithSet.size === 0 &&
       dirTestSet.size === 0 &&
+      ifChangedSet.size === 0 &&
       learnPatternsSet.size === 0
     ) {
       return null;
@@ -138,6 +147,7 @@ function extractDetectionPatterns(
     return {
       dirsWith: Array.from(dirsWithSet),
       dirTest: Array.from(dirTestSet),
+      ifChanged: Array.from(ifChangedSet),
       learnPatterns: Array.from(learnPatternsSet),
     };
   } catch {
@@ -181,6 +191,7 @@ export interface PluginWithDetection extends MarketplacePlugin {
   detection?: {
     dirsWith?: string[];
     dirTest?: string[];
+    ifChanged?: string[];
     learnPatterns?: string[];
   };
 }
@@ -233,7 +244,7 @@ function patternExists(dir: string, pattern: string): boolean {
 /**
  * Run a dirTest command and check if it succeeds
  */
-function runDirTest(dir: string, command: string): boolean {
+export function runDirTest(dir: string, command: string): boolean {
   try {
     execSync(command, {
       cwd: dir,

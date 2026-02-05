@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run elixir format-async --async"
+            "command": "han hook run elixir format-async --async"
           }
         ],
         "async": true
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run elixir compile-async --async"
+            "command": "han hook run elixir compile-async --async"
           }
         ],
         "async": true
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run elixir test-async --async"
+            "command": "han hook run elixir test-async --async"
           }
         ],
         "async": true

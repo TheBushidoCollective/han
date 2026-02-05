@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run prettier format-async --async"
+            "command": "han hook run prettier format-async --async"
           }
         ],
         "async": true

@@ -18,6 +18,13 @@ else
   chmod +x package/han
 fi
 
+# Determine bin entry based on platform
+if [[ "$PLATFORM" == win32-* ]]; then
+  BIN_ENTRY="han.exe"
+else
+  BIN_ENTRY="han"
+fi
+
 # Create package.json
 cat > package/package.json << EOF
 {
@@ -29,6 +36,9 @@ cat > package/package.json << EOF
   "repository": {
     "type": "git",
     "url": "https://github.com/TheBushidoCollective/han"
+  },
+  "bin": {
+    "han": "./${BIN_ENTRY}"
   },
   "os": ["${PLATFORM%-*}"],
   "cpu": ["${PLATFORM#*-}"]

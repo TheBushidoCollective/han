@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run typescript typecheck-async --async"
+            "command": "han hook run typescript typecheck-async --async"
           }
         ],
         "async": true

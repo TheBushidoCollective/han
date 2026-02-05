@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run pylint lint-async --async"
+            "command": "han hook run pylint lint-async --async"
           }
         ],
         "async": true

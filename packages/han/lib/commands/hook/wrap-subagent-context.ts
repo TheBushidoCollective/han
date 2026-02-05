@@ -214,6 +214,7 @@ export function registerWrapSubagentContext(hookCommand: Command): void {
         'Reads hook payload from stdin, generates context from a command or file,\n' +
         'wraps it in XML tags, and outputs proper JSON with updatedInput.\n\n' +
         'Example usage in hooks.json:\n' +
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: This is a shell variable placeholder, not a JS template literal
         '  han hook wrap-subagent-context --context-command \'bash "${CLAUDE_PLUGIN_ROOT}/hooks/context.sh"\''
     )
     .option(

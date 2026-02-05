@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run rspec test-async --async"
+            "command": "han hook run rspec test-async --async"
           }
         ],
         "async": true

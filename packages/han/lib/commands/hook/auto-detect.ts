@@ -11,13 +11,15 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import type { Command } from 'commander';
+import micromatch from 'micromatch';
 import { getClaudeConfigDir } from '../../config/claude-settings.ts';
 import { getLearnMode } from '../../config/han-settings.ts';
 import {
   loadPluginDetection,
   type PluginWithDetection,
+  runDirTest,
 } from '../../marker-detection.ts';
 import { getMarketplacePlugins } from '../../marketplace-cache.ts';
 import { getGitRemoteUrl } from '../../native.ts';
@@ -148,6 +150,23 @@ function patternExistsInDir(dir: string, pattern: string): boolean {
 }
 
 /**
+ * Check if a file path matches any of the if_changed glob patterns,
+ * resolved relative to the matched directory.
+ */
+function fileMatchesIfChanged(
+  filePath: string,
+  matchedDir: string,
+  ifChangedPatterns: string[]
+): boolean {
+  const relPath = relative(matchedDir, filePath);
+  // Don't match files outside the matched directory
+  if (relPath.startsWith('..')) {
+    return false;
+  }
+  return micromatch.isMatch(relPath, ifChangedPatterns);
+}
+
+/**
  * Track which plugins we've already suggested this session to avoid spam
  */
 const suggestedPluginsThisSession = new Set<string>();
@@ -194,29 +213,54 @@ function saveSuggestedPlugins(sessionId: string, plugins: Set<string>): void {
 }
 
 /**
- * Check if a plugin matches a directory based on its dirs_with patterns
+ * Check if a plugin matches for a given file, checking all 3 criteria:
+ * 1. dirs_with: Does the directory contain the marker files?
+ * 2. dir_test: Does the command succeed in the directory?
+ * 3. if_changed: Does the changed file match the glob patterns relative to the directory?
+ *
+ * Returns the matched directory if all criteria pass, or null if not.
  */
-function pluginMatchesDirectory(
+function pluginMatchesForFile(
   plugin: PluginWithDetection,
-  directory: string
+  directory: string,
+  filePath: string
 ): boolean {
   const detection = plugin.detection;
   if (!detection?.dirsWith || detection.dirsWith.length === 0) {
     return false;
   }
 
-  // Check if any dirs_with pattern exists in this directory
-  for (const pattern of detection.dirsWith) {
-    if (patternExistsInDir(directory, pattern)) {
-      return true;
+  // 1. Check dirs_with: does any marker pattern exist in this directory?
+  const hasDirsWith = detection.dirsWith.some((pattern) =>
+    patternExistsInDir(directory, pattern)
+  );
+  if (!hasDirsWith) {
+    return false;
+  }
+
+  // 2. Check dir_test: if specified, run the command in the directory
+  if (detection.dirTest && detection.dirTest.length > 0) {
+    const allTestsPass = detection.dirTest.every((test) =>
+      runDirTest(directory, test)
+    );
+    if (!allTestsPass) {
+      return false;
     }
   }
 
-  return false;
+  // 3. Check if_changed: if specified, does the file match the glob patterns?
+  if (detection.ifChanged && detection.ifChanged.length > 0) {
+    if (!fileMatchesIfChanged(filePath, directory, detection.ifChanged)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
- * Walk up the directory tree from a file path and find matching plugins
+ * Walk up the directory tree from a file path and find matching plugins.
+ * Checks all 3 criteria at each level: dirs_with, dir_test, if_changed.
  */
 function findMatchingPlugins(
   filePath: string,
@@ -243,8 +287,8 @@ function findMatchingPlugins(
         continue;
       }
 
-      // Check if this plugin matches the current directory
-      if (pluginMatchesDirectory(plugin, currentDir)) {
+      // Check all 3 criteria: dirs_with, dir_test, if_changed
+      if (pluginMatchesForFile(plugin, currentDir, filePath)) {
         // Check if we haven't already matched this plugin
         if (!matches.some((m) => m.plugin.name === plugin.name)) {
           matches.push({ plugin, matchedDir: currentDir });

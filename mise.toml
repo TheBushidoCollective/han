@@ -7,9 +7,6 @@ not_found_auto_install = true
 task_run_auto_install = true
 use_file_shell_for_executable_tasks = true
 
-[env]
-CLAUDE_ENV_FILE = "{{config_root}}/.claude/env.sh"
-
 [tools]
 markdownlint-cli2 = "latest"
 "uv" = "latest"

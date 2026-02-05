@@ -1,1 +1,1 @@
-{}
+hanBinary: bun "$(git rev-parse --show-toplevel)/packages/han/lib/main.ts"

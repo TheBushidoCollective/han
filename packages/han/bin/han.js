@@ -111,6 +111,60 @@ async function selfRepairIfNeeded() {
 await selfRepairIfNeeded();
 const require = createRequire(import.meta.url);
 
+// Check for hanBinary override in .claude/han.yml
+function checkHanBinaryOverride() {
+  // Walk up from cwd looking for .claude/han.yml
+  let dir = process.cwd();
+  const { root } = require('node:path').parse(dir);
+
+  while (dir !== root) {
+    const hanYmlPath = join(dir, '.claude', 'han.yml');
+    if (existsSync(hanYmlPath)) {
+      try {
+        const content = readFileSync(hanYmlPath, 'utf-8');
+        // Simple YAML parsing for hanBinary key
+        const match = content.match(/^hanBinary:\s*(.+)$/m);
+        if (match) {
+          return { path: hanYmlPath, command: match[1].trim() };
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function tryRunHanBinaryOverride() {
+  const override = checkHanBinaryOverride();
+  if (!override) return false;
+
+  // Execute the override command with all args
+  const args = process.argv.slice(2);
+  const fullCommand = `${override.command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(' ')}`;
+
+  const result = spawnSync(fullCommand, {
+    stdio: 'inherit',
+    shell: true,
+    cwd: process.cwd(),
+  });
+
+  if (result.error) {
+    console.error(
+      `\x1b[31mError running hanBinary override: ${result.error.message}\x1b[0m`
+    );
+    return false;
+  }
+
+  process.exit(result.status ?? 0);
+}
+
+// Check for hanBinary override first
+tryRunHanBinaryOverride();
+
 // Platform package mapping
 const platformPackages = {
   'darwin-arm64': '@thebushidocollective/han-darwin-arm64',

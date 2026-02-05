@@ -11,7 +11,39 @@ import {
   getMergedPluginsAndMarketplaces,
   type MarketplaceConfig,
 } from '../../config/claude-settings.ts';
-import { findPluginInMarketplace, resolvePathToAbsolute } from './tools.ts';
+
+/**
+ * Find plugin in a marketplace root directory
+ */
+export function findPluginInMarketplace(
+  marketplaceRoot: string,
+  pluginName: string
+): string | null {
+  const potentialPaths = [
+    join(marketplaceRoot, 'jutsu', pluginName),
+    join(marketplaceRoot, 'do', pluginName),
+    join(marketplaceRoot, 'hashi', pluginName),
+    join(marketplaceRoot, pluginName),
+  ];
+
+  for (const path of potentialPaths) {
+    if (existsSync(path)) {
+      return path;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve a path to absolute, relative to cwd
+ */
+export function resolvePathToAbsolute(path: string): string {
+  if (path.startsWith('/')) {
+    return path;
+  }
+  return join(process.cwd(), path);
+}
 
 /**
  * MCP server definition from han-plugin.yml

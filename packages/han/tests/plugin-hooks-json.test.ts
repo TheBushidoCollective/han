@@ -84,14 +84,16 @@ describe('Plugin hooks.json Files', () => {
 
       it(`${relativePath} has async: true on all PostToolUse hooks`, () => {
         const hooks = parseHooksJson(filePath);
-        for (const entry of hooks.hooks.PostToolUse!) {
+        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
+        for (const entry of postToolUseHooks) {
           expect(entry.async).toBe(true);
         }
       });
 
       it(`${relativePath} has matcher for file modification tools`, () => {
         const hooks = parseHooksJson(filePath);
-        for (const entry of hooks.hooks.PostToolUse!) {
+        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
+        for (const entry of postToolUseHooks) {
           expect(entry.matcher).toBeDefined();
           expect(entry.matcher).toMatch(/Edit|Write|NotebookEdit/);
         }
@@ -99,7 +101,8 @@ describe('Plugin hooks.json Files', () => {
 
       it(`${relativePath} uses npx command format`, () => {
         const hooks = parseHooksJson(filePath);
-        for (const entry of hooks.hooks.PostToolUse!) {
+        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
+        for (const entry of postToolUseHooks) {
           for (const hook of entry.hooks) {
             expect(hook.type).toBe('command');
             expect(hook.command).toMatch(/^npx -y @thebushidocollective\/han/);
@@ -109,7 +112,8 @@ describe('Plugin hooks.json Files', () => {
 
       it(`${relativePath} uses han hook run with --async flag`, () => {
         const hooks = parseHooksJson(filePath);
-        for (const entry of hooks.hooks.PostToolUse!) {
+        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
+        for (const entry of postToolUseHooks) {
           for (const hook of entry.hooks) {
             expect(hook.command).toMatch(/hook run .+ --async$/);
           }
@@ -223,7 +227,8 @@ describe('Plugin Coverage', () => {
           expect(hooks.hooks.PostToolUse?.length).toBeGreaterThan(0);
 
           // All entries should have async: true
-          for (const entry of hooks.hooks.PostToolUse!) {
+          const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
+          for (const entry of postToolUseHooks) {
             expect(entry.async).toBe(true);
           }
         });
