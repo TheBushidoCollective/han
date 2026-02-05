@@ -1,0 +1,30 @@
+hooks: {}
+
+learn_patterns:
+  - "redis://[^\\s]+"
+  - "rediss://[^\\s]+"
+  - "redis\\.createClient"
+  - "ioredis"
+  - "redis-cli"
+  - "REDIS_URL"
+  - "REDIS_HOST"
+
+memory:
+  allowed_tools:
+    - mcp__redis__get
+    - mcp__redis__keys
+    - mcp__redis__info
+  system_prompt: |
+    Query Redis to explore keys, get values, and understand
+    cache patterns. Use keys to discover key patterns,
+    get for retrieving values, and info for server statistics.
+
+orchestrator_guidance: |
+  Use the Redis MCP server for:
+  - Getting and setting key-value pairs
+  - Exploring key patterns and data structures
+  - Monitoring cache performance and memory usage
+
+  Requires REDIS_URL environment variable to be set.
+  Format: redis://[[username:]password@]host[:port][/database]
+  For TLS: rediss://...

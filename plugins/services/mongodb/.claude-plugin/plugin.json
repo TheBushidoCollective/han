@@ -1,0 +1,19 @@
+{
+  "name": "mongodb",
+  "version": "1.0.0",
+  "description": "MongoDB database integration providing document queries, collection exploration, and database management capabilities",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/mongodb",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["mongodb", "nosql", "document", "database", "query"],
+  "mcpServers": {
+    "mongodb": {
+      "command": "npx",
+      "args": ["-y", "mcp-mongo-server"]
+    }
+  }
+}

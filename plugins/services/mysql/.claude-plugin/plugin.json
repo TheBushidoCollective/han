@@ -1,0 +1,19 @@
+{
+  "name": "mysql",
+  "version": "1.0.0",
+  "description": "MySQL database integration providing query execution, schema exploration, and database management capabilities",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/mysql",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["mysql", "mariadb", "database", "sql", "query"],
+  "mcpServers": {
+    "mysql": {
+      "command": "npx",
+      "args": ["-y", "@benborla/mcp-server-mysql"]
+    }
+  }
+}

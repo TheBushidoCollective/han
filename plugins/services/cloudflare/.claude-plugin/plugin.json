@@ -1,0 +1,19 @@
+{
+  "name": "cloudflare",
+  "version": "1.0.0",
+  "description": "Cloudflare integration for DNS management, Workers deployment, and edge computing operations",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/cloudflare",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["cloudflare", "dns", "cdn", "workers", "edge", "security"],
+  "mcpServers": {
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-cloudflare"]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "aws",
+  "version": "1.0.0",
+  "description": "AWS integration providing access to Amazon Web Services resources, infrastructure management, and cloud operations",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/aws",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["aws", "amazon", "cloud", "infrastructure", "s3", "ec2", "lambda"],
+  "mcpServers": {
+    "aws": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-aws"]
+    }
+  }
+}

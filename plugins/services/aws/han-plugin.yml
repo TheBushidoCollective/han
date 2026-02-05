@@ -1,0 +1,37 @@
+hooks: {}
+
+learn_patterns:
+  - "aws\\s+"
+  - "arn:aws:"
+  - "s3://[^\\s]+"
+  - "AWS_ACCESS_KEY"
+  - "AWS_SECRET"
+  - "boto3"
+  - "@aws-sdk/"
+  - "amazonaws\\.com"
+  - "cloudformation"
+  - "\\.aws/credentials"
+
+memory:
+  allowed_tools:
+    - mcp__aws__s3_list_buckets
+    - mcp__aws__ec2_describe_instances
+    - mcp__aws__lambda_list_functions
+    - mcp__aws__cloudwatch_get_metrics
+  system_prompt: |
+    Query AWS to explore cloud resources, infrastructure state,
+    and service configurations. List S3 buckets, EC2 instances,
+    Lambda functions, and other AWS resources.
+
+orchestrator_guidance: |
+  Use the AWS MCP server for:
+  - Managing S3 buckets and objects
+  - Exploring EC2 instances and VPC configurations
+  - Working with Lambda functions and API Gateway
+  - Querying CloudWatch metrics and logs
+  - Managing IAM roles and policies
+
+  Requires AWS credentials configured via:
+  - Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+  - AWS credentials file (~/.aws/credentials)
+  - IAM role (when running on EC2/Lambda)

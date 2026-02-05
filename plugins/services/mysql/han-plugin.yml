@@ -1,0 +1,31 @@
+hooks: {}
+
+learn_patterns:
+  - "mysql://[^\\s]+"
+  - "mariadb://[^\\s]+"
+  - "mysql\\s+-u"
+  - "mysqldump"
+  - "mysql_config"
+
+memory:
+  allowed_tools:
+    - mcp__mysql__query
+    - mcp__mysql__list_tables
+    - mcp__mysql__describe_table
+  system_prompt: |
+    Query MySQL databases to find relevant schema information,
+    table structures, and data patterns. Use list_tables to discover
+    available tables, describe_table for schema details, and query
+    for specific data exploration.
+
+orchestrator_guidance: |
+  Use the MySQL MCP server for:
+  - Running SQL queries against MySQL/MariaDB databases
+  - Exploring database schemas and table structures
+  - Analyzing data patterns and relationships
+
+  Requires environment variables:
+  - MYSQL_HOST: Database host
+  - MYSQL_USER: Database user
+  - MYSQL_PASSWORD: Database password
+  - MYSQL_DATABASE: Database name

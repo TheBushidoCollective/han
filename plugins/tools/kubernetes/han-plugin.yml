@@ -1,0 +1,46 @@
+hooks:
+  validate-manifests:
+    event: Stop
+    command: kubectl apply --dry-run=client -f .
+    dirs_with:
+      - "*.yaml,*.yml"
+    if_changed:
+      - "**/*.yaml"
+      - "**/*.yml"
+
+learn_patterns:
+  - "kubectl\\s+"
+  - "kind:\\s*(Deployment|Service|Pod|ConfigMap)"
+  - "apiVersion:\\s*"
+  - "\\.kube/config"
+  - "kubernetes\\.io"
+  - "k8s\\.io"
+  - "helm\\s+"
+  - "kustomize"
+
+memory:
+  allowed_tools:
+    - mcp__kubernetes__get_pods
+    - mcp__kubernetes__get_deployments
+    - mcp__kubernetes__get_services
+    - mcp__kubernetes__describe_resource
+  system_prompt: |
+    Query Kubernetes clusters to explore running workloads,
+    services, and configurations. List pods, deployments,
+    and services across namespaces.
+
+orchestrator_guidance: |
+  Use the Kubernetes MCP server for:
+  - Listing and describing pods, deployments, services
+  - Checking pod logs and events
+  - Exploring cluster resources and configurations
+  - Monitoring workload health
+
+  Requires kubectl configured with cluster access:
+  - KUBECONFIG environment variable, or
+  - ~/.kube/config file with valid context
+
+  Common patterns:
+  - Use namespaces to organize workloads
+  - Apply manifests with `kubectl apply -f`
+  - Check status with `kubectl get` and `kubectl describe`

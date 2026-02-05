@@ -1,0 +1,19 @@
+{
+  "name": "redis",
+  "version": "1.0.0",
+  "description": "Redis integration providing key-value operations, data exploration, and cache management capabilities",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/redis",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["redis", "cache", "key-value", "database", "memory"],
+  "mcpServers": {
+    "redis": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-redis", "${REDIS_URL}"]
+    }
+  }
+}

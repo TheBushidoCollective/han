@@ -97,6 +97,13 @@
       "keywords": ["api", "rest", "graphql", "agent"]
     },
     {
+      "name": "aws",
+      "description": "AWS integration providing access to Amazon Web Services resources, infrastructure management, and cloud operations via MCP server.",
+      "source": "./plugins/services/aws",
+      "category": "Integration",
+      "keywords": ["mcp", "aws", "amazon", "cloud", "infrastructure", "s3", "ec2", "lambda", "server"]
+    },
+    {
       "name": "apollo-graphql",
       "description": "Advanced Apollo GraphQL skills for client and server development",
       "source": "./plugins/tools/apollo-graphql",
@@ -271,6 +278,13 @@
       "source": "./plugins/validation/clippy",
       "category": "Validation",
       "keywords": ["clippy", "linting", "rust", "skill"]
+    },
+    {
+      "name": "cloudflare",
+      "description": "Cloudflare integration for DNS management, Workers deployment, and edge computing operations via MCP server.",
+      "source": "./plugins/services/cloudflare",
+      "category": "Integration",
+      "keywords": ["mcp", "cloudflare", "dns", "cdn", "workers", "edge", "security", "server"]
     },
     {
       "name": "cocoapods",
@@ -855,11 +869,25 @@
       "keywords": ["mocha", "testing", "javascript", "nodejs", "skill"]
     },
     {
+      "name": "mongodb",
+      "description": "MongoDB database integration providing document queries, collection exploration, and database management via MCP server.",
+      "source": "./plugins/services/mongodb",
+      "category": "Integration",
+      "keywords": ["mcp", "mongodb", "nosql", "document", "database", "query", "server"]
+    },
+    {
       "name": "monorepo",
       "description": "Advanced monorepo development skills for architecture, tooling, and workflow management across multiple packages and projects.",
       "source": "./plugins/patterns/monorepo",
       "category": "Pattern",
       "keywords": ["monorepo", "workspace", "turborepo", "nx", "lerna", "skill"]
+    },
+    {
+      "name": "mysql",
+      "description": "MySQL/MariaDB database integration providing query execution, schema exploration, and database management via MCP server.",
+      "source": "./plugins/services/mysql",
+      "category": "Integration",
+      "keywords": ["mcp", "mysql", "mariadb", "database", "sql", "query", "server"]
     },
     {
       "name": "nestjs",
@@ -1016,6 +1044,13 @@
       "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
     {
+      "name": "postgresql",
+      "description": "PostgreSQL database integration providing query execution, schema exploration, and database management via MCP server.",
+      "source": "./plugins/services/postgresql",
+      "category": "Integration",
+      "keywords": ["mcp", "postgresql", "postgres", "database", "sql", "query", "server"]
+    },
+    {
       "name": "prettier",
       "description": "Comprehensive Prettier skills for code formatting with configuration, editor integration, and custom plugin development.",
       "source": "./plugins/validation/prettier",
@@ -1137,6 +1172,13 @@
         "typescript",
         "interactive"
       ]
+    },
+    {
+      "name": "redis",
+      "description": "Redis integration providing key-value operations, data exploration, and cache management via MCP server.",
+      "source": "./plugins/services/redis",
+      "category": "Integration",
+      "keywords": ["mcp", "redis", "cache", "key-value", "database", "memory", "server"]
     },
     {
       "name": "svelteflow",

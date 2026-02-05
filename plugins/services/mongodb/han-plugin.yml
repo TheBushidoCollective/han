@@ -1,0 +1,31 @@
+hooks: {}
+
+learn_patterns:
+  - "mongodb://[^\\s]+"
+  - "mongodb\\+srv://[^\\s]+"
+  - "mongoose\\.connect"
+  - "MongoClient"
+  - "\\.mongo\\."
+  - "mongosh"
+  - "mongodump"
+  - "mongorestore"
+
+memory:
+  allowed_tools:
+    - mcp__mongodb__find
+    - mcp__mongodb__list_collections
+    - mcp__mongodb__aggregate
+  system_prompt: |
+    Query MongoDB databases to find relevant collection information,
+    document structures, and data patterns. Use list_collections to discover
+    available collections, and find/aggregate for data exploration.
+
+orchestrator_guidance: |
+  Use the MongoDB MCP server for:
+  - Running queries against MongoDB databases
+  - Exploring collections and document structures
+  - Aggregating and analyzing data patterns
+
+  Requires MONGODB_URI environment variable to be set.
+  Format: mongodb://user:password@host:port/database
+  Or: mongodb+srv://user:password@cluster.mongodb.net/database

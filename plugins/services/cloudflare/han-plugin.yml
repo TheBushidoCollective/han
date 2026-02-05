@@ -1,0 +1,31 @@
+hooks: {}
+
+learn_patterns:
+  - "cloudflare"
+  - "wrangler\\s+"
+  - "wrangler\\.toml"
+  - "CF_API_TOKEN"
+  - "CLOUDFLARE_"
+  - "workers\\.dev"
+  - "pages\\.dev"
+  - "\\.pages/functions"
+
+memory:
+  allowed_tools:
+    - mcp__cloudflare__list_zones
+    - mcp__cloudflare__list_dns_records
+    - mcp__cloudflare__list_workers
+  system_prompt: |
+    Query Cloudflare to explore DNS configurations, Workers,
+    and other edge resources. List zones, DNS records,
+    and deployed Workers scripts.
+
+orchestrator_guidance: |
+  Use the Cloudflare MCP server for:
+  - Managing DNS records and zones
+  - Deploying and managing Workers
+  - Configuring CDN and caching rules
+  - Setting up security features (WAF, rate limiting)
+
+  Requires CLOUDFLARE_API_TOKEN environment variable.
+  Token needs appropriate permissions for zones and Workers.

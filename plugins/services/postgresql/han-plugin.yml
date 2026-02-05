@@ -1,0 +1,29 @@
+hooks: {}
+
+learn_patterns:
+  - "postgres://[^\\s]+"
+  - "postgresql://[^\\s]+"
+  - "\\.pg\\."
+  - "psql\\s+"
+  - "pg_dump"
+  - "pg_restore"
+
+memory:
+  allowed_tools:
+    - mcp__postgresql__query
+    - mcp__postgresql__list_tables
+    - mcp__postgresql__describe_table
+  system_prompt: |
+    Query PostgreSQL databases to find relevant schema information,
+    table structures, and data patterns. Use list_tables to discover
+    available tables, describe_table for schema details, and query
+    for specific data exploration.
+
+orchestrator_guidance: |
+  Use the PostgreSQL MCP server for:
+  - Running SQL queries against PostgreSQL databases
+  - Exploring database schemas and table structures
+  - Analyzing data patterns and relationships
+
+  Requires POSTGRES_CONNECTION_STRING environment variable to be set.
+  Format: postgres://user:password@host:port/database

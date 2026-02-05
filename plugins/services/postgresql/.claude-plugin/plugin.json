@@ -1,0 +1,19 @@
+{
+  "name": "postgresql",
+  "version": "1.0.0",
+  "description": "PostgreSQL database integration providing query execution, schema exploration, and database management capabilities",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://han.guru/plugins/postgresql",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": ["postgresql", "postgres", "database", "sql", "query"],
+  "mcpServers": {
+    "postgresql": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${POSTGRES_CONNECTION_STRING}"]
+    }
+  }
+}
