@@ -20,7 +20,6 @@ const pagesDir = join(srcDir, "pages");
 const outDir = join(projectRoot, ".dev-out");
 
 const PORT = Number(process.env.PORT) || 3000;
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:41956";
 
 // Connected clients for live reload
 const liveReloadClients = new Set<{ send: (msg: string) => void }>();
@@ -130,24 +129,8 @@ Bun.serve({
 			return new Response("WebSocket upgrade failed", { status: 400 });
 		}
 
-		// Proxy GraphQL requests to backend
-		if (pathname === "/graphql") {
-			const backendUrl = `${BACKEND_URL}${pathname}${url.search}`;
-
-			// Handle WebSocket upgrade for subscriptions
-			if (req.headers.get("upgrade") === "websocket") {
-				return new Response(null, {
-					status: 307,
-					headers: { Location: backendUrl.replace(/^http/, "ws") },
-				});
-			}
-
-			return fetch(backendUrl, {
-				method: req.method,
-				headers: req.headers,
-				body: req.body,
-			});
-		}
+		// Note: /graphql is NOT proxied - the React app connects directly to the coordinator
+		// at https://coordinator.local.han.guru:41957/graphql via urls.ts config
 
 		// Serve built files
 		let filePath: string;
@@ -204,5 +187,5 @@ Bun.serve({
 });
 
 console.log(`\nDev server running at http://localhost:${PORT}`);
-console.log(`Proxying /graphql to ${BACKEND_URL}`);
+console.log("GraphQL connects directly to coordinator at https://coordinator.local.han.guru:41957/graphql");
 console.log("Watching for changes...\n");

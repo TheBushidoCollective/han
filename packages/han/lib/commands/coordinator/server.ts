@@ -446,9 +446,14 @@ export async function startServer(
       useDeferStream(), // Enable @defer and @stream directives
     ],
     cors: {
-      origin: ['http://localhost:41956', 'https://dashboard.local.han.guru'],
-      credentials: true,
+      origin: (request) => {
+        // Reflect the requesting origin to support all development scenarios
+        const origin = request.headers.get('origin');
+        return origin || '*';
+      },
+      credentials: false,
       methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     },
     context: ({ request }) => ({
       request,
