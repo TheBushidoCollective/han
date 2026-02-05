@@ -311,14 +311,30 @@ function findMatchingPlugins(
  * Install a plugin using Claude CLI to project scope.
  * This ensures the plugin is properly cloned from the marketplace.
  */
+/**
+ * Get the git repo root directory.
+ * Falls back to process.cwd() if not in a git repo.
+ */
+function getProjectRoot(): string {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return process.cwd();
+  }
+}
+
 function installPlugin(pluginName: string): boolean {
   try {
     // Use claude plugin install with project scope
-    // This properly clones the marketplace and enables the plugin
+    // Run from the git root so it writes to the correct .claude/settings.json
     execSync(`claude plugin install ${pluginName}@han --scope project`, {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 60000, // 60 second timeout for cloning
+      cwd: getProjectRoot(),
     });
 
     return true;
