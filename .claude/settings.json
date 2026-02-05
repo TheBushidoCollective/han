@@ -65,7 +65,8 @@
     "rollup@han": true,
     "vite@han": true,
     "vitest@han": true,
-    "webpack@han": true
+    "webpack@han": true,
+    "clippy@han": true
   },
   "extraKnownMarketplaces": {
     "han": {
