@@ -1578,6 +1578,16 @@ pub fn cancel_async_hook(db_path: String, id: String) -> napi::Result<()> {
     crud::cancel_async_hook(db_path, id)
 }
 
+/// Clear all async hooks for a session (used on SessionEnd to clean up)
+/// Returns the number of hooks that were cleared
+#[napi]
+pub fn clear_async_hook_queue_for_session(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<u32> {
+    crud::clear_async_hook_queue_for_session(db_path, session_id)
+}
+
 // ============================================================================
 // Database Reset Functions
 // ============================================================================
