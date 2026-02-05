@@ -2066,7 +2066,10 @@ pub fn full_scan_and_index() -> napi::Result<Vec<IndexResult>> {
         dirs_to_scan.push(default_claude_dir);
     }
 
-    tracing::info!("Full scan: scanning {} config directories", dirs_to_scan.len());
+    tracing::info!(
+        "Full scan: scanning {} config directories",
+        dirs_to_scan.len()
+    );
 
     for config_dir in dirs_to_scan {
         let projects_dir = config_dir.join("projects");
@@ -2082,7 +2085,11 @@ pub fn full_scan_and_index() -> napi::Result<Vec<IndexResult>> {
         let entries = match std::fs::read_dir(&projects_dir) {
             Ok(e) => e,
             Err(e) => {
-                tracing::warn!("Failed to read projects directory {:?}: {}", projects_dir, e);
+                tracing::warn!(
+                    "Failed to read projects directory {:?}: {}",
+                    projects_dir,
+                    e
+                );
                 continue;
             }
         };
