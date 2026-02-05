@@ -131,6 +131,9 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'hashi-blueprints': 'tools/blueprints',
   blueprints: 'tools/blueprints',
 
+  // bridges
+  'hashi-opencode': 'bridges/opencode',
+
   // services
   'hashi-agent-sop': 'services/agent-sop',
   'hashi-canva': 'services/canva',
