@@ -1992,20 +1992,30 @@ export const indexer = {
    * Task association for sentiment events is loaded from SQLite automatically
    * COORDINATOR USE ONLY
    */
-  async indexSessionFile(filePath: string): Promise<IndexResult> {
+  async indexSessionFile(
+    filePath: string,
+    sourceConfigDir?: string,
+  ): Promise<IndexResult> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.indexSessionFile(dbPath, filePath);
+    return native.indexSessionFile(dbPath, filePath, sourceConfigDir ?? null);
   },
 
   /**
    * Index all JSONL files in a project directory
    * COORDINATOR USE ONLY
    */
-  async indexProjectDirectory(projectDir: string): Promise<IndexResult[]> {
+  async indexProjectDirectory(
+    projectDir: string,
+    sourceConfigDir?: string,
+  ): Promise<IndexResult[]> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.indexProjectDirectory(dbPath, projectDir);
+    return native.indexProjectDirectory(
+      dbPath,
+      projectDir,
+      sourceConfigDir ?? null,
+    );
   },
 
   /**
@@ -2039,6 +2049,37 @@ export const indexer = {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
     return native.fullScanAndIndex(dbPath);
+  },
+
+  /**
+   * Check if database needs reindex (after schema upgrade or version change)
+   * Call this on coordinator startup and trigger fullScanAndIndex if true
+   * COORDINATOR USE ONLY
+   */
+  async needsReindex(): Promise<boolean> {
+    await ensureInitialized();
+    const native = getNativeModule();
+    return native.needsReindex();
+  },
+
+  /**
+   * Clear the needs_reindex flag after successful reindex
+   * COORDINATOR USE ONLY
+   */
+  async clearReindexFlag(): Promise<void> {
+    await ensureInitialized();
+    const native = getNativeModule();
+    native.clearReindexFlag();
+  },
+
+  /**
+   * Truncate derived tables to force full reindex
+   * COORDINATOR USE ONLY
+   */
+  async truncateDerivedTables(): Promise<void> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    native.truncateDerivedTables(dbPath);
   },
 };
 

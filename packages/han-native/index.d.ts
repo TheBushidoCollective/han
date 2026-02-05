@@ -23,57 +23,6 @@ export interface CoordinatorStatus {
   /** Lock info if available */
   lockInfo?: LockInfo
 }
-/** Register a new config directory for multi-environment indexing */
-export declare function registerConfigDir(input: ConfigDirInput): ConfigDir
-/** Get a config directory by path */
-export declare function getConfigDirByPath(path: string): ConfigDir | null
-/** List all registered config directories */
-export declare function listConfigDirs(): Array<ConfigDir>
-/** Update the last indexed timestamp for a config directory */
-export declare function updateConfigDirLastIndexed(path: string): boolean
-/** Remove a config directory from the registry */
-export declare function unregisterConfigDir(path: string): boolean
-/** Get the default config directory */
-export declare function getDefaultConfigDir(): ConfigDir | null
-/**
- * Get or create a hook execution entry for attempt tracking
- * Uses (session_id, hook_name, directory) as the hook key
- */
-export declare function getOrCreateHookAttempt(sessionId: string, plugin: string, hookName: string, directory: string): HookAttemptInfo
-/** Increment consecutive_failures for a hook, returns updated info with is_stuck flag */
-export declare function incrementHookFailures(sessionId: string, plugin: string, hookName: string, directory: string): HookAttemptInfo
-/** Reset consecutive_failures to 0 (on success) */
-export declare function resetHookFailures(sessionId: string, plugin: string, hookName: string, directory: string): void
-/** Increase max_attempts for a hook (user override) */
-export declare function increaseHookMaxAttempts(sessionId: string, plugin: string, hookName: string, directory: string, increase: number): void
-/** Create a new orchestration, cancelling any existing running orchestration for the same session */
-export declare function createOrchestration(input: OrchestrationInput): Orchestration
-/** Get an orchestration by ID */
-export declare function getOrchestration(id: string): Orchestration | null
-/** Update an orchestration's counters and status */
-export declare function updateOrchestration(update: OrchestrationUpdate): void
-/** Cancel an orchestration and all its pending/running hooks */
-export declare function cancelOrchestration(id: string): void
-/** Queue a pending hook for background execution */
-export declare function queuePendingHook(input: PendingHookInput): string
-/** Get all pending hooks ready to run */
-export declare function getPendingHooks(): Array<HookExecution>
-/** Update hook execution status */
-export declare function updateHookStatus(id: string, status: string): void
-/** Get pending/running/failed hooks for an orchestration */
-export declare function getOrchestrationHooks(orchestrationId: string): Array<HookExecution>
-/** Get pending/running hooks for a session (legacy support) */
-export declare function getSessionPendingHooks(sessionId: string): Array<HookExecution>
-/** Mark a hook as failed with a given error message */
-export declare function failHookExecution(id: string, errorMessage: string): void
-/** Complete a hook execution (update status, output, error, duration) */
-export declare function completeHookExecution(id: string, success: boolean, output: string | undefined | null, error: string | undefined | null, durationMs: number): void
-/** Queue a hook for later execution during --wait */
-export declare function queueHook(input: QueuedHookInput): string
-/** Get all queued hooks for an orchestration */
-export declare function getQueuedHooks(orchestrationId: string): Array<QueuedHook>
-/** Delete queued hooks after they've been executed */
-export declare function deleteQueuedHooks(orchestrationId: string): number
 /** Input for enqueuing an async hook */
 export interface AsyncHookQueueInputNative {
   sessionId: string
@@ -95,32 +44,6 @@ export interface AsyncHookQueueEntry {
   status: string
   createdAt: string
 }
-/**
- * Enqueue a hook for async execution
- * First cancels any pending hooks with the same dedup key (session, cwd, plugin, hook_name)
- * and merges their file paths into the new entry
- */
-export declare function enqueueAsyncHook(dbPath: string, input: AsyncHookQueueInputNative): string
-/** List pending async hooks for a session */
-export declare function listPendingAsyncHooks(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
-/** Check if the async hook queue is empty for a session (no pending or running hooks) */
-export declare function isAsyncHookQueueEmpty(dbPath: string, sessionId: string): boolean
-/**
- * Drain the queue - get all pending hooks and mark as running
- * Used at checkpoint (Stop, PreToolUse for git commit/push)
- */
-export declare function drainAsyncHookQueue(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
-/** Cancel pending hooks matching dedup key and return merged file paths */
-export declare function cancelPendingAsyncHooks(dbPath: string, sessionId: string, cwd: string, plugin: string, hookName: string): Array<string>
-/** Complete an async hook execution */
-export declare function completeAsyncHook(dbPath: string, id: string, success: boolean, result?: string | undefined | null, error?: string | undefined | null): void
-/** Cancel a specific async hook by ID */
-export declare function cancelAsyncHook(dbPath: string, id: string): void
-/**
- * Clear all async hooks for a session (used on SessionEnd to clean up)
- * Returns the number of hooks that were cleared
- */
-export declare function clearAsyncHookQueueForSession(dbPath: string, sessionId: string): number
 /** A document record for FTS indexing */
 export interface FtsDocument {
   /** Unique identifier for the document */
@@ -973,6 +896,13 @@ export declare function checkAndBuildManifest(rootDir: string, patterns: Array<s
  * Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
  */
 export declare function dbInit(dbPath: string): boolean
+/**
+ * Check if database needs reindex (after schema upgrade or version change)
+ * Call this on coordinator startup and trigger fullScanAndIndex if true
+ */
+export declare function needsReindex(): boolean
+/** Clear the needs_reindex flag after successful reindex */
+export declare function clearReindexFlag(): void
 /** Index documents for FTS */
 export declare function ftsIndex(dbPath: string, tableName: string, documents: Array<FtsDocument>): number
 /** Search documents using FTS (BM25) */
@@ -1176,9 +1106,9 @@ export declare function cleanupStaleCoordinatorLock(): boolean
  * Only processes lines after the last indexed line
  * Task association for sentiment events is loaded from SQLite automatically
  */
-export declare function indexSessionFile(dbPath: string, filePath: string): IndexResult
+export declare function indexSessionFile(dbPath: string, filePath: string, sourceConfigDir?: string | undefined | null): IndexResult
 /** Index all JSONL files in a project directory */
-export declare function indexProjectDirectory(dbPath: string, projectDir: string): Array<IndexResult>
+export declare function indexProjectDirectory(dbPath: string, projectDir: string, sourceConfigDir?: string | undefined | null): Array<IndexResult>
 /** Handle a file event from the watcher (coordinator use only) */
 export declare function handleFileEvent(dbPath: string, eventType: FileEventType, filePath: string, sessionId?: string | undefined | null, projectPath?: string | undefined | null): IndexResult | null
 /**
@@ -1191,10 +1121,18 @@ export declare function fullScanAndIndex(dbPath: string): Array<IndexResult>
  * First cancels any pending hooks with the same dedup key and merges file paths
  */
 export declare function enqueueAsyncHook(dbPath: string, input: AsyncHookQueueInputNative): string
+/** List pending async hooks for a session */
+export declare function listPendingAsyncHooks(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
 /** Check if the async hook queue is empty for a session */
 export declare function isAsyncHookQueueEmpty(dbPath: string, sessionId: string): boolean
 /** Drain the queue - get all pending hooks and mark as running */
 export declare function drainAsyncHookQueue(dbPath: string, sessionId: string): Array<AsyncHookQueueEntry>
+/** Cancel pending hooks matching dedup key and return merged file paths */
+export declare function cancelPendingAsyncHooks(dbPath: string, sessionId: string, cwd: string, plugin: string, hookName: string): Array<string>
+/** Complete an async hook execution */
+export declare function completeAsyncHook(dbPath: string, id: string, success: boolean, result?: string | undefined | null, error?: string | undefined | null): void
+/** Cancel a specific async hook by ID */
+export declare function cancelAsyncHook(dbPath: string, id: string): void
 /**
  * Truncate all derived tables (those populated from JSONL logs).
  * This is used during reindex to rebuild the database from scratch.

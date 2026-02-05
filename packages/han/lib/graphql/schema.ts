@@ -219,6 +219,59 @@ builder.queryField('configDirs', (t) =>
 );
 
 /**
+ * Coordinator status type for version checking
+ */
+const CoordinatorStatusType = builder.objectRef<{
+  version: string;
+  needsRestart: boolean;
+}>('CoordinatorStatus');
+
+CoordinatorStatusType.implement({
+  fields: (t) => ({
+    version: t.exposeString('version', {
+      description: 'Current coordinator version',
+    }),
+    needsRestart: t.exposeBoolean('needsRestart', {
+      description:
+        'Whether a restart is pending due to newer client version detected',
+    }),
+  }),
+});
+
+/**
+ * Query for coordinator status (version checking for upgrades)
+ */
+builder.queryField('coordinatorStatus', (t) =>
+  t.field({
+    type: CoordinatorStatusType,
+    args: {
+      clientVersion: t.arg.string({
+        required: false,
+        description: 'Client version to report - if newer, coordinator will restart',
+      }),
+    },
+    description:
+      'Get coordinator status and optionally report client version for upgrade detection',
+    resolve: async (_parent, args) => {
+      const { checkClientVersion, getCoordinatorVersion } = await import(
+        '../services/coordinator-service.ts'
+      );
+
+      // If client reports a version, check if upgrade is needed
+      let needsRestart = false;
+      if (args.clientVersion) {
+        needsRestart = checkClientVersion(args.clientVersion);
+      }
+
+      return {
+        version: getCoordinatorVersion(),
+        needsRestart,
+      };
+    },
+  })
+);
+
+/**
  * Query for metrics
  */
 builder.queryField('metrics', (t) =>

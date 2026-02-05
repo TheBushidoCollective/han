@@ -423,6 +423,97 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         }
     }
 
+    // Version tracking - check and update data version at end of migrations
+    // This allows triggering reindex when new features require backfill
+    check_and_update_data_version(conn)?;
+
+    Ok(())
+}
+
+/// Current data version - increment this when new features require reindex
+/// Version history:
+/// 1 - Initial version
+/// 2 - source_config_dir tracking for sessions and projects
+const CURRENT_DATA_VERSION: u32 = 2;
+
+/// Check if data version matches and flag for reindex if needed
+/// Returns Ok(true) if reindex is needed, Ok(false) otherwise
+fn check_and_update_data_version(conn: &Connection) -> Result<(), rusqlite::Error> {
+    // Ensure han_metadata table exists (might not exist on fresh DB before schema.sql)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS han_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    )?;
+
+    // Get current stored version
+    let stored_version: Option<u32> = conn
+        .query_row(
+            "SELECT value FROM han_metadata WHERE key = 'data_version'",
+            [],
+            |row| {
+                let v: String = row.get(0)?;
+                Ok(v.parse().unwrap_or(0))
+            },
+        )
+        .ok();
+
+    if stored_version.unwrap_or(0) < CURRENT_DATA_VERSION {
+        // Flag that reindex is needed
+        conn.execute(
+            "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('needs_reindex', 'true', datetime('now'))",
+            [],
+        )?;
+        tracing::info!(
+            "Data version {} < {}, flagging for reindex",
+            stored_version.unwrap_or(0),
+            CURRENT_DATA_VERSION
+        );
+    }
+
+    // Update to current version
+    conn.execute(
+        "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('data_version', ?1, datetime('now'))",
+        params![CURRENT_DATA_VERSION.to_string()],
+    )?;
+
+    Ok(())
+}
+
+/// Check if database needs reindex (after schema upgrade or version change)
+pub fn needs_reindex() -> napi::Result<bool> {
+    let db = get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let needs: bool = conn
+        .query_row(
+            "SELECT value = 'true' FROM han_metadata WHERE key = 'needs_reindex'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    Ok(needs)
+}
+
+/// Clear the needs_reindex flag after successful reindex
+pub fn clear_reindex_flag() -> napi::Result<()> {
+    let db = get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('needs_reindex', 'false', datetime('now'))",
+        [],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to clear reindex flag: {}", e)))?;
+
     Ok(())
 }
 

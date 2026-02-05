@@ -508,6 +508,19 @@ pub fn db_init(db_path: String) -> napi::Result<bool> {
     db::init(&db_path)
 }
 
+/// Check if database needs reindex (after schema upgrade or version change)
+/// Call this on coordinator startup and trigger fullScanAndIndex if true
+#[napi]
+pub fn needs_reindex() -> napi::Result<bool> {
+    db::needs_reindex()
+}
+
+/// Clear the needs_reindex flag after successful reindex
+#[napi]
+pub fn clear_reindex_flag() -> napi::Result<()> {
+    db::clear_reindex_flag()
+}
+
 /// Index documents for FTS
 #[napi]
 pub fn fts_index(
@@ -1287,8 +1300,9 @@ pub use indexer::IndexResult;
 pub fn index_session_file(
     _db_path: String,
     file_path: String,
+    source_config_dir: Option<String>,
 ) -> napi::Result<indexer::IndexResult> {
-    indexer::index_session_file(file_path)
+    indexer::index_session_file(file_path, source_config_dir)
 }
 
 /// Index all JSONL files in a project directory
@@ -1296,8 +1310,9 @@ pub fn index_session_file(
 pub fn index_project_directory(
     _db_path: String,
     project_dir: String,
+    source_config_dir: Option<String>,
 ) -> napi::Result<Vec<indexer::IndexResult>> {
-    indexer::index_project_directory(project_dir)
+    indexer::index_project_directory(project_dir, source_config_dir)
 }
 
 /// Handle a file event from the watcher (coordinator use only)
