@@ -44,21 +44,6 @@ describe('aliases', () => {
       expect(uninstallCmd).toBeDefined();
     });
 
-    test('registers validate command', async () => {
-      const { registerAliasCommands } = await import(
-        '../lib/commands/aliases.ts'
-      );
-
-      const program = new Command();
-      registerAliasCommands(program);
-
-      // Find the validate command
-      const validateCmd = program.commands.find(
-        (cmd) => cmd.name() === 'validate'
-      );
-      expect(validateCmd).toBeDefined();
-    });
-
     test('install command has description', async () => {
       const { registerAliasCommands } = await import(
         '../lib/commands/aliases.ts'
@@ -104,74 +89,6 @@ describe('aliases', () => {
         (cmd) => cmd.name() === 'uninstall'
       );
       expect(uninstallCmd?.description()).toContain('Remove');
-    });
-
-    test('validate command has description', async () => {
-      const { registerAliasCommands } = await import(
-        '../lib/commands/aliases.ts'
-      );
-
-      const program = new Command();
-      registerAliasCommands(program);
-
-      const validateCmd = program.commands.find(
-        (cmd) => cmd.name() === 'validate'
-      );
-      expect(validateCmd?.description()).toContain('Stop hooks');
-    });
-
-    test('validate command has --all-files option', async () => {
-      const { registerAliasCommands } = await import(
-        '../lib/commands/aliases.ts'
-      );
-
-      const program = new Command();
-      registerAliasCommands(program);
-
-      const validateCmd = program.commands.find(
-        (cmd) => cmd.name() === 'validate'
-      );
-      expect(validateCmd).toBeDefined();
-
-      const options = validateCmd?.options || [];
-      const allFilesOption = options.find((opt) => opt.long === '--all-files');
-      expect(allFilesOption).toBeDefined();
-    });
-
-    test('validate command has --verbose option', async () => {
-      const { registerAliasCommands } = await import(
-        '../lib/commands/aliases.ts'
-      );
-
-      const program = new Command();
-      registerAliasCommands(program);
-
-      const validateCmd = program.commands.find(
-        (cmd) => cmd.name() === 'validate'
-      );
-      expect(validateCmd).toBeDefined();
-
-      const options = validateCmd?.options || [];
-      const verboseOption = options.find((opt) => opt.long === '--verbose');
-      expect(verboseOption).toBeDefined();
-    });
-
-    test('validate command has --check option', async () => {
-      const { registerAliasCommands } = await import(
-        '../lib/commands/aliases.ts'
-      );
-
-      const program = new Command();
-      registerAliasCommands(program);
-
-      const validateCmd = program.commands.find(
-        (cmd) => cmd.name() === 'validate'
-      );
-      expect(validateCmd).toBeDefined();
-
-      const options = validateCmd?.options || [];
-      const checkOption = options.find((opt) => opt.long === '--check');
-      expect(checkOption).toBeDefined();
     });
 
     test('validate-legacy command has --dirs-with option', async () => {
@@ -226,9 +143,8 @@ describe('aliases', () => {
 
       expect(commandNames).toContain('install');
       expect(commandNames).toContain('uninstall');
-      expect(commandNames).toContain('validate');
       expect(commandNames).toContain('validate-legacy');
-      expect(commandNames.length).toBe(4);
+      expect(commandNames.length).toBe(3);
     });
 
     test('commands have actions attached', async () => {
