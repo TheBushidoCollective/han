@@ -1,4 +1,5 @@
 ---
+name: monitor-pipeline
 description: Monitor a GitLab pipeline or job until completion, reporting status changes and failures in real-time
 ---
 

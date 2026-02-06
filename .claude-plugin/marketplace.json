@@ -1122,7 +1122,7 @@
     {
       "name": "reactflow",
       "description": "Build node-based editors, interactive diagrams, and workflow builders with React Flow.",
-      "source": "./frameworks/reactflow",
+      "source": "./plugins/frameworks/reactflow",
       "category": "Framework",
       "keywords": [
         "reactflow",
@@ -1141,7 +1141,7 @@
     {
       "name": "svelteflow",
       "description": "Build node-based editors, interactive diagrams, and workflow builders with Svelte Flow.",
-      "source": "./frameworks/svelteflow",
+      "source": "./plugins/frameworks/svelteflow",
       "category": "Framework",
       "keywords": [
         "svelteflow",

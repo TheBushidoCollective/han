@@ -1,4 +1,5 @@
 ---
+name: create-pr
 description: Create a new pull request in a GitHub repository
 ---
 

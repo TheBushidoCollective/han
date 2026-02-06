@@ -1,4 +1,5 @@
 ---
+name: view-pipeline
 description: View CI/CD pipeline status for a merge request or project
 ---
 

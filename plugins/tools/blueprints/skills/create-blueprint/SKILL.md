@@ -1,4 +1,5 @@
 ---
+name: create-blueprint
 description: Research a specific system and create or update its blueprints/ documentation
 ---
 

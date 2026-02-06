@@ -1,4 +1,5 @@
 ---
+name: debug
 description: Investigate and diagnose issues without necessarily fixing them
 disable-model-invocation: false
 ---

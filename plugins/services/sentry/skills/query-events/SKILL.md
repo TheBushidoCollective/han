@@ -1,4 +1,5 @@
 ---
+name: query-events
 description: Run custom queries on Sentry events and issues with advanced filtering
 ---
 

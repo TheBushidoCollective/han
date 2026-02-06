@@ -1,4 +1,5 @@
 ---
+name: view-workflow
 description: View GitHub Actions workflow runs and status
 ---
 

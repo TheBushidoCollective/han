@@ -1,4 +1,5 @@
 ---
+name: review-pr
 description: Get comprehensive review of a GitHub pull request
 ---
 
