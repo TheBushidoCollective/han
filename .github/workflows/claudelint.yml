@@ -36,28 +36,32 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Validate all plugins and marketplaces
+      - name: Validate marketplace
         run: |
-          # Find all plugin.json files and validate their parent directories
-          # Note: We skip the root marketplace.json because it contains external sources
-          # (github:owner/repo format) which claude plugin validate doesn't support yet
+          echo "::group::Validating root marketplace"
+          if timeout 60 claude plugin validate .; then
+            echo "✓ Marketplace passed"
+          else
+            echo "::error::Root marketplace validation failed (exit code: $?)"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Validate all plugins
+        run: |
           failed=0
           failed_dirs=""
 
           while IFS= read -r manifest; do
             dir=$(dirname "$(dirname "$manifest")")
 
-            # Skip root directory - marketplace.json with external sources
+            # Skip root directory (validated in previous step)
             if [ "$dir" = "." ]; then
-              echo "::group::Skipping root marketplace (contains external sources)"
-              echo "Skipping: $manifest (external sources not supported by claude plugin validate)"
-              echo "::endgroup::"
               continue
             fi
 
             echo "::group::Validating: $dir"
 
-            # Run validation with timeout to prevent hangs
             if timeout 60 claude plugin validate "$dir"; then
               echo "✓ $dir passed"
             else
@@ -68,7 +72,7 @@ jobs:
             fi
 
             echo "::endgroup::"
-          done < <(find . \( -path '*/.claude-plugin/plugin.json' -o -path '*/.claude-plugin/marketplace.json' \) -not -path './node_modules/*' -not -path './website/*')
+          done < <(find . -path '*/.claude-plugin/plugin.json' -not -path './node_modules/*' -not -path './website/*')
 
           if [ $failed -gt 0 ]; then
             echo ""
