@@ -9,6 +9,7 @@
 import { spawn } from "node:child_process"
 import type { HookDefinition, HookResult } from "./types"
 import { shouldSkipHook, recordSuccess } from "./cache"
+import type { BridgeEventLogger } from "./events"
 
 const DEFAULT_TIMEOUT = 60_000 // 60s for individual hooks
 
@@ -25,6 +26,8 @@ export function executeHook(
     cwd: string
     sessionId: string
     timeout?: number
+    eventLogger?: BridgeEventLogger
+    hookType?: string
   },
 ): Promise<HookResult> {
   const startTime = Date.now()
@@ -65,6 +68,12 @@ export function executeHook(
     })
   }
 
+  // Log hook_run event
+  const hookRunId = options.eventLogger?.logHookRun(
+    hook,
+    options.hookType ?? "PostToolUse",
+  )
+
   return new Promise((resolve) => {
     const timeout = hook.timeout ?? options.timeout ?? DEFAULT_TIMEOUT
 
@@ -77,6 +86,7 @@ export function executeHook(
         CLAUDE_PLUGIN_ROOT: hook.pluginRoot,
         CLAUDE_PROJECT_DIR: options.cwd,
         HAN_SESSION_ID: options.sessionId,
+        HAN_PROVIDER: "opencode",
         HAN_FILES: filesArg,
         HAN_FILE: filePaths[0] ?? "",
       },
@@ -104,25 +114,47 @@ export function executeHook(
         }
       }
 
-      resolve({
+      const result: HookResult = {
         hook,
         exitCode,
         stdout,
         stderr,
         durationMs: Date.now() - startTime,
         skipped: false,
-      })
+      }
+
+      // Log hook_result event
+      if (options.eventLogger && hookRunId) {
+        options.eventLogger.logHookResult(
+          result,
+          options.hookType ?? "PostToolUse",
+          hookRunId,
+        )
+      }
+
+      resolve(result)
     })
 
     child.on("error", (err) => {
-      resolve({
+      const result: HookResult = {
         hook,
         exitCode: 127,
         stdout: "",
         stderr: `Failed to execute: ${err.message}`,
         durationMs: Date.now() - startTime,
         skipped: false,
-      })
+      }
+
+      // Log hook_result for errors too
+      if (options.eventLogger && hookRunId) {
+        options.eventLogger.logHookResult(
+          result,
+          options.hookType ?? "PostToolUse",
+          hookRunId,
+        )
+      }
+
+      resolve(result)
     })
   })
 }
@@ -140,6 +172,8 @@ export async function executeHooksParallel(
     cwd: string
     sessionId: string
     timeout?: number
+    eventLogger?: BridgeEventLogger
+    hookType?: string
   },
 ): Promise<HookResult[]> {
   if (hooks.length === 0) return []

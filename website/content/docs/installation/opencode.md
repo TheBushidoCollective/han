@@ -149,6 +149,20 @@ The bridge discovers hooks at startup by reading:
 2. `.claude-plugin/marketplace.json` for plugin path resolution
 3. Each plugin's `han-plugin.yml` for hook definitions
 
+## Event Logging
+
+The bridge writes Han-format JSONL events to `~/.han/opencode/projects/`. Each event includes `provider: "opencode"` to distinguish OpenCode sessions from Claude Code sessions.
+
+On startup, the bridge launches the Han coordinator in the background. The coordinator watches the OpenCode events directory and indexes events into SQLite, making them visible in the Browse UI alongside Claude Code sessions.
+
+Events logged:
+- **hook_run / hook_result** - Hook execution lifecycle
+- **hook_file_change** - File edits detected via tool events
+
+Environment variables set by the bridge:
+- `HAN_PROVIDER=opencode` - Identifies the provider for child processes
+- `HAN_SESSION_ID=<uuid>` - Session ID for event correlation
+
 ## Next Steps
 
 - [Install Han plugins](/docs/installation/plugins) for your project's languages and tools

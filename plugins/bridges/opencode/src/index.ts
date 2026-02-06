@@ -41,6 +41,7 @@ import {
   type OpenCodeEvent,
   type StopResult,
 } from "./types"
+import { BridgeEventLogger } from "./events"
 
 const PREFIX = "[han]"
 
@@ -79,6 +80,43 @@ function extractFilePaths(
 }
 
 /**
+ * Start the Han coordinator daemon in the background.
+ * The coordinator indexes JSONL event files and serves the Browse UI.
+ * We pass the OpenCode watch path so it picks up our events.
+ */
+function startCoordinator(watchDir: string): void {
+  try {
+    const { spawn } = require("node:child_process") as typeof import("node:child_process")
+
+    // Start coordinator if not already running
+    const child = spawn(
+      "han",
+      ["coordinator", "ensure", "--background", "--watch-path", watchDir],
+      {
+        stdio: "ignore",
+        detached: true,
+        env: {
+          ...process.env,
+          HAN_PROVIDER: "opencode",
+        },
+      },
+    )
+
+    // Unref so the coordinator doesn't prevent OpenCode from exiting
+    child.unref()
+
+    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
+  } catch {
+    // han CLI not installed - coordinator won't index our events
+    // but validation still works fine without it
+    console.error(
+      `${PREFIX} Could not start coordinator (han CLI not found). ` +
+        `Browse UI won't show OpenCode sessions.`,
+    )
+  }
+}
+
+/**
  * Main OpenCode plugin entry point.
  */
 async function hanBridgePlugin(ctx: OpenCodePluginContext) {
@@ -111,6 +149,20 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
   // Track pending async validations to avoid duplicate notifications
   const pendingValidations = new Map<string, Promise<void>>()
 
+  // ─── Event Logger ──────────────────────────────────────────────────────
+  // Write unified JSONL events to ~/.han/opencode/projects/{slug}/
+  // with provider="opencode" so coordinator can index them.
+  const eventLogger = new BridgeEventLogger(sessionId, directory)
+
+  // Set HAN_PROVIDER for child processes (hook commands)
+  process.env.HAN_PROVIDER = "opencode"
+  process.env.HAN_SESSION_ID = sessionId
+
+  // ─── Coordinator ───────────────────────────────────────────────────────
+  // Start coordinator in background so it can watch our JSONL events.
+  // Fire-and-forget: don't block plugin init on coordinator startup.
+  startCoordinator(eventLogger.getWatchDir())
+
   // ─── Hook Handlers ───────────────────────────────────────────────────────
 
   return {
@@ -134,8 +186,9 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
 
       if (filePaths.length === 0) return
 
-      // Invalidate cache for edited files so hooks re-run
+      // Log file changes and invalidate cache
       for (const fp of filePaths) {
+        eventLogger.logFileChange(claudeToolName, fp)
         invalidateFile(fp)
       }
 
@@ -157,6 +210,8 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
           const results = await executeHooksParallel(matching, filePaths, {
             cwd: directory,
             sessionId,
+            eventLogger,
+            hookType: "PostToolUse",
           })
 
           // Inline feedback: append failures directly to tool output
@@ -221,6 +276,8 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
             cwd: directory,
             sessionId,
             timeout: 120_000, // Stop hooks get more time
+            eventLogger,
+            hookType: "Stop",
           })
 
           const message = formatStopResults(results)
@@ -260,10 +317,14 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
           cwd: directory,
           sessionId,
           timeout: 120_000,
+          eventLogger,
+          hookType: "Stop",
         })
 
         const message = formatStopResults(results)
         if (message) {
+          // Flush events before returning so coordinator has latest data
+          eventLogger.flush()
           return {
             continue: true,
             assistantMessage: message,

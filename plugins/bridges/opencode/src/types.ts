@@ -104,6 +104,20 @@ export interface HookResult {
   skipped: boolean
 }
 
+// ─── Provider ────────────────────────────────────────────────────────────────
+
+/**
+ * Han provider identifies which AI coding tool is running the session.
+ * Defaults to "claude-code" when HAN_PROVIDER is not set.
+ */
+export type HanProvider = "opencode" | "claude-code"
+
+export function getProvider(): HanProvider {
+  const env = process.env.HAN_PROVIDER
+  if (env === "opencode") return "opencode"
+  return "claude-code"
+}
+
 // ─── OpenCode → Claude Code Tool Name Mapping ───────────────────────────────
 
 /**

@@ -107,6 +107,8 @@ Bridge Internals:
   matcher.ts     Filter by tool name, file globs, dirsWith
   executor.ts    Spawn hook commands as parallel promises
   formatter.ts   Structure results as XML-tagged agent messages
+  events.ts      JSONL event logger (provider="opencode")
+  cache.ts       Content-hash caching (SHA-256)
 ```
 
 ## Result Format
@@ -130,6 +132,16 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables ━━━━━━━━━�
 The bridge implements content-hash caching identical to Han's approach. After a hook runs successfully on a file, the file's SHA-256 hash is recorded. On subsequent edits, if the file content hasn't changed (e.g. a no-op edit or reformat), the hook is skipped.
 
 Cache invalidation happens automatically: when `tool.execute.after` fires, the edited file's cache entries are invalidated before hooks run, ensuring validation always runs on genuinely changed content.
+
+## Event Logging & Provider Architecture
+
+The bridge writes Han-format JSONL events to `~/.han/opencode/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `provider: "opencode"` so the coordinator can distinguish OpenCode sessions from Claude Code sessions.
+
+Events logged:
+- `hook_run` / `hook_result` — Hook execution lifecycle (start, success/failure, duration)
+- `hook_file_change` — File edits detected via `tool.execute.after`
+
+The bridge sets `HAN_PROVIDER=opencode` in the environment for child processes and starts the Han coordinator in the background via `han coordinator ensure --background --watch-path <dir>`. The coordinator indexes these JSONL files into SQLite and serves them through the Browse UI alongside Claude Code sessions.
 
 ## Known Limitations
 
