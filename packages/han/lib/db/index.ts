@@ -23,7 +23,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 // Import directly from claude-settings to avoid circular dependency
 // (config/index.ts -> validation/index.ts -> db/index.ts)
-import { getHanDataDir } from '../config/claude-settings.ts';
+import { getClaudeConfigDir, getHanDataDir } from '../config/claude-settings.ts';
 import { getNativeModule } from '../native.ts';
 
 // ============================================================================
