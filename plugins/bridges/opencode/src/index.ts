@@ -19,12 +19,20 @@
  *     -> formatter.ts structures results
  *     -> client.session.prompt() re-prompts agent to fix issues
  *
+ *   han_skills tool (LLM-callable)
+ *     -> skills.ts discovers SKILL.md from installed plugins
+ *     -> LLM can list and load 400+ skills on demand
+ *
+ *   han_discipline tool (LLM-callable)
+ *     -> disciplines.ts discovers agent personas
+ *     -> System prompt injection via experimental.chat.system.transform
+ *
  * Key difference from han's dispatch: hooks run as awaited promises,
  * not fire-and-forget. Results are collected, parsed, and delivered
  * as structured messages the agent can act on.
  */
 
-import { discoverHooks, getHooksByEvent } from "./discovery"
+import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
 import { invalidateFile } from "./cache"
@@ -42,6 +50,18 @@ import {
   type StopResult,
 } from "./types"
 import { BridgeEventLogger } from "./events"
+import {
+  discoverAllSkills,
+  loadSkillContent,
+  formatSkillList,
+  type SkillInfo,
+} from "./skills"
+import {
+  discoverDisciplines,
+  formatDisciplineList,
+  buildDisciplineContext,
+  type DisciplineInfo,
+} from "./disciplines"
 
 const PREFIX = "[han]"
 
@@ -122,36 +142,61 @@ function startCoordinator(watchDir: string): void {
 async function hanBridgePlugin(ctx: OpenCodePluginContext) {
   const { client, directory } = ctx
 
-  // ─── Hook Discovery ──────────────────────────────────────────────────────
-  // Discover all hooks at plugin init time. This reads settings files
-  // and plugin configs once, not on every event.
-  const allHooks = discoverHooks(directory)
+  // ─── Plugin Discovery ───────────────────────────────────────────────────
+  // Resolve all installed plugins to their filesystem paths.
+  // This is shared by hooks, skills, and disciplines.
+  const resolvedPlugins = resolvePluginPaths(directory)
 
+  // ─── Hook Discovery ──────────────────────────────────────────────────────
+  const allHooks = discoverHooks(directory)
   const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
   const stopHooks = getHooksByEvent(allHooks, "Stop")
 
-  if (allHooks.length === 0) {
+  // ─── Skill Discovery ──────────────────────────────────────────────────────
+  const allSkills = discoverAllSkills(resolvedPlugins)
+  const skillsByName = new Map<string, SkillInfo>()
+  for (const skill of allSkills) {
+    skillsByName.set(skill.name, skill)
+  }
+
+  // ─── Discipline Discovery ──────────────────────────────────────────────────
+  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills)
+  const disciplinesByName = new Map<string, DisciplineInfo>()
+  for (const d of allDisciplines) {
+    disciplinesByName.set(d.name, d)
+  }
+
+  // Active discipline for system prompt injection
+  let activeDiscipline: DisciplineInfo | null = null
+
+  // ─── Logging ──────────────────────────────────────────────────────────────
+
+  const pluginCount = resolvedPlugins.size
+  const hookCount = allHooks.length
+  const skillCount = allSkills.length
+  const disciplineCount = allDisciplines.length
+
+  if (pluginCount === 0) {
     console.error(
-      `${PREFIX} No Han plugins with hooks found. ` +
+      `${PREFIX} No Han plugins found. ` +
         `Install plugins: han plugin install --auto`,
     )
     return {}
   }
 
   console.error(
-    `${PREFIX} Discovered ${postToolUseHooks.length} PostToolUse hooks, ` +
-      `${stopHooks.length} Stop hooks from ${new Set(allHooks.map((h) => h.pluginName)).size} plugins`,
+    `${PREFIX} Discovered ${pluginCount} plugins: ` +
+      `${postToolUseHooks.length} PostToolUse hooks, ` +
+      `${stopHooks.length} Stop hooks, ` +
+      `${skillCount} skills, ` +
+      `${disciplineCount} disciplines`,
   )
 
   // ─── Session State ───────────────────────────────────────────────────────
   const sessionId = crypto.randomUUID()
-
-  // Track pending async validations to avoid duplicate notifications
   const pendingValidations = new Map<string, Promise<void>>()
 
   // ─── Event Logger ──────────────────────────────────────────────────────
-  // Write unified JSONL events to ~/.han/opencode/projects/{slug}/
-  // with provider="opencode" so coordinator can index them.
   const eventLogger = new BridgeEventLogger(sessionId, directory)
 
   // Set HAN_PROVIDER for child processes (hook commands)
@@ -159,23 +204,168 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
   process.env.HAN_SESSION_ID = sessionId
 
   // ─── Coordinator ───────────────────────────────────────────────────────
-  // Start coordinator in background so it can watch our JSONL events.
-  // Fire-and-forget: don't block plugin init on coordinator startup.
   startCoordinator(eventLogger.getWatchDir())
 
-  // ─── Hook Handlers ───────────────────────────────────────────────────────
+  // ─── Plugin Return ─────────────────────────────────────────────────────
 
   return {
+    // ─── Custom Tools ─────────────────────────────────────────────────────
+    // Registered with OpenCode so the LLM can call them directly.
+
+    tool: {
+      /**
+       * han_skills - Browse and load Han's skill library.
+       *
+       * The LLM calls this to discover available skills and load
+       * their full SKILL.md content when it needs expertise.
+       */
+      han_skills: {
+        description:
+          "Browse and load Han skills (400+ specialized coding skills). " +
+          'Use action="list" to search available skills, ' +
+          'action="load" with skill name to get full skill content.',
+        parameters: {
+          type: "object" as const,
+          properties: {
+            action: {
+              type: "string" as const,
+              enum: ["list", "load"],
+              description: 'Action to perform: "list" to search skills, "load" to get skill content',
+            },
+            skill: {
+              type: "string" as const,
+              description: "Skill name to load (required for action=load)",
+            },
+            filter: {
+              type: "string" as const,
+              description: "Search filter for skill names/descriptions (optional for action=list)",
+            },
+          },
+          required: ["action"],
+        },
+        async execute(args: { action: string; skill?: string; filter?: string }) {
+          if (args.action === "load") {
+            if (!args.skill) {
+              return { output: "Error: skill parameter required for action=load" }
+            }
+
+            const skill = skillsByName.get(args.skill)
+            if (!skill) {
+              // Try partial match
+              const matches = allSkills.filter((s) =>
+                s.name.toLowerCase().includes(args.skill!.toLowerCase()),
+              )
+              if (matches.length === 1) {
+                return { output: loadSkillContent(matches[0]) }
+              }
+              if (matches.length > 1) {
+                return {
+                  output:
+                    `Multiple skills match "${args.skill}":\n` +
+                    matches.map((s) => `- ${s.name}`).join("\n") +
+                    "\n\nBe more specific.",
+                }
+              }
+              return { output: `Skill "${args.skill}" not found. Use action="list" to see available skills.` }
+            }
+
+            return { output: loadSkillContent(skill) }
+          }
+
+          // Default: list
+          return { output: formatSkillList(allSkills, args.filter) }
+        },
+      },
+
+      /**
+       * han_discipline - Activate specialized agent disciplines.
+       *
+       * When activated, the discipline's context is injected into
+       * every subsequent LLM call via experimental.chat.system.transform.
+       */
+      han_discipline: {
+        description:
+          "Activate a Han discipline (specialized agent persona). " +
+          'Use action="list" to see available disciplines, ' +
+          'action="activate" to switch, action="deactivate" to clear.',
+        parameters: {
+          type: "object" as const,
+          properties: {
+            action: {
+              type: "string" as const,
+              enum: ["list", "activate", "deactivate"],
+              description: 'Action: "list", "activate", or "deactivate"',
+            },
+            discipline: {
+              type: "string" as const,
+              description: "Discipline name (required for activate)",
+            },
+          },
+          required: ["action"],
+        },
+        async execute(args: { action: string; discipline?: string }) {
+          if (args.action === "activate") {
+            if (!args.discipline) {
+              return { output: "Error: discipline parameter required for activate" }
+            }
+
+            const d = disciplinesByName.get(args.discipline)
+            if (!d) {
+              return {
+                output:
+                  `Discipline "${args.discipline}" not found.\n\n` +
+                  formatDisciplineList(allDisciplines),
+              }
+            }
+
+            activeDiscipline = d
+            return {
+              output:
+                `Activated discipline: **${d.name}**\n\n` +
+                `${d.description}\n\n` +
+                (d.skills.length > 0
+                  ? `${d.skills.length} specialized skills available. ` +
+                    `Use han_skills to load any of them.`
+                  : ""),
+            }
+          }
+
+          if (args.action === "deactivate") {
+            const prev = activeDiscipline?.name
+            activeDiscipline = null
+            return {
+              output: prev
+                ? `Deactivated discipline: ${prev}`
+                : "No discipline was active.",
+            }
+          }
+
+          // Default: list
+          return { output: formatDisciplineList(allDisciplines) }
+        },
+      },
+    },
+
+    // ─── System Prompt Injection ─────────────────────────────────────────
+    // Inject active discipline context into every LLM call.
+
+    "experimental.chat.system.transform": async (
+      _input: Record<string, never>,
+      output: { system: string[] },
+    ) => {
+      if (activeDiscipline) {
+        output.system.push(buildDisciplineContext(activeDiscipline))
+      }
+    },
+
+    // ─── Hook Handlers ───────────────────────────────────────────────────
+
     /**
      * tool.execute.after → PostToolUse hooks
      *
      * This is the PRIMARY validation path. When the agent edits a file,
      * we run matching validation hooks (biome, eslint, tsc, etc.) as
      * parallel promises and deliver results as notifications.
-     *
-     * Two feedback mechanisms:
-     * 1. Inline: mutate tool output to append errors (immediate)
-     * 2. Async: client.session.prompt() for detailed notifications
      */
     "tool.execute.after": async (
       input: ToolEventInput,
@@ -256,7 +446,6 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
      * Generic event handler for session lifecycle events.
      *
      * session.idle → Stop hooks (broader project validation)
-     * session.created → SessionStart (future: context injection)
      */
     event: async ({ event }: { event: OpenCodeEvent }) => {
       if (event.type === "session.idle") {
@@ -303,10 +492,6 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
      *
      * OpenCode calls this when the agent signals completion.
      * If Stop hooks find issues, forces the agent to continue.
-     *
-     * Note: session.idle handles the primary Stop flow. This is
-     * a secondary gate for cases where session.idle doesn't fire
-     * or when we need to force continuation.
      */
     stop: async (): Promise<StopResult | undefined> => {
       const matching = matchStopHooks(stopHooks, directory)

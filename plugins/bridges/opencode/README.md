@@ -1,15 +1,15 @@
 # Han Bridge for OpenCode
 
-Bridge plugin that enables Han's validation pipeline to work with [OpenCode](https://opencode.ai) by translating OpenCode events into direct hook execution with promise-based result collection.
+Bridge plugin that brings Han's full plugin ecosystem to [OpenCode](https://opencode.ai) — validation hooks, 400+ skills, and 25 agent disciplines.
 
 ## What This Does
 
-Han plugins define validation hooks (biome, eslint, tsc, etc.) that run during Claude Code sessions. This bridge makes those same hooks work in OpenCode by:
+Han plugins define validation hooks, specialized skills, and agent disciplines that run during Claude Code sessions. This bridge makes the entire ecosystem work in OpenCode:
 
-1. **Discovering** installed Han plugins and their hook definitions from `han-plugin.yml`
-2. **Matching** hooks against tool events (tool name + file glob patterns)
-3. **Executing** hook commands as parallel promises (not fire-and-forget)
-4. **Delivering** structured results the agent can act on
+1. **Hooks** — PostToolUse and Stop validation (biome, eslint, tsc, etc.) with parallel execution
+2. **Skills** — 400+ coding skills loadable on demand via `han_skills` tool
+3. **Disciplines** — 25 agent personas (frontend, backend, SRE, security, etc.) with system prompt injection
+4. **Events** — Unified JSONL logging with `provider: "opencode"` for Browse UI visibility
 
 ## Validation Flow
 
@@ -98,17 +98,28 @@ OpenCode Runtime
   |         (re-prompts agent to fix issues)
   |
   |-- stop ───────────────────────────────────────> Stop hooks (backup)
-        (agent signals completion)                    |
-                                                     └─ { continue: true }
-                                                         (force continuation)
+  |     (agent signals completion)                    |
+  |                                                   └─ { continue: true }
+  |                                                       (force continuation)
+  |
+  |-- tool: han_skills ─────────────────────────────> Skill discovery
+  |     (LLM-callable)                                (list/search/load 400+ skills)
+  |
+  |-- tool: han_discipline ─────────────────────────> Agent disciplines
+  |     (LLM-callable)                                (activate/deactivate/list)
+  |
+  |-- experimental.chat.system.transform ───────────> System prompt injection
+        (every LLM call)                               (active discipline context)
 
 Bridge Internals:
-  discovery.ts   Read settings + marketplace + han-plugin.yml
-  matcher.ts     Filter by tool name, file globs, dirsWith
-  executor.ts    Spawn hook commands as parallel promises
-  formatter.ts   Structure results as XML-tagged agent messages
-  events.ts      JSONL event logger (provider="opencode")
-  cache.ts       Content-hash caching (SHA-256)
+  discovery.ts     Read settings + marketplace + resolve plugin paths
+  skills.ts        Discover SKILL.md files from installed plugins
+  disciplines.ts   Discover discipline plugins, system prompt builder
+  matcher.ts       Filter by tool name, file globs, dirsWith
+  executor.ts      Spawn hook commands as parallel promises
+  formatter.ts     Structure results as XML-tagged agent messages
+  events.ts        JSONL event logger (provider="opencode")
+  cache.ts         Content-hash caching (SHA-256)
 ```
 
 ## Result Format
@@ -132,6 +143,41 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables ━━━━━━━━━�
 The bridge implements content-hash caching identical to Han's approach. After a hook runs successfully on a file, the file's SHA-256 hash is recorded. On subsequent edits, if the file content hasn't changed (e.g. a no-op edit or reformat), the hook is skipped.
 
 Cache invalidation happens automatically: when `tool.execute.after` fires, the edited file's cache entries are invalidated before hooks run, ensuring validation always runs on genuinely changed content.
+
+## Skills
+
+The bridge registers a `han_skills` tool with OpenCode that gives the LLM access to Han's full skill library (400+ skills across 95+ plugins). Skills are discovered at plugin init time by scanning each installed plugin's `skills/*/SKILL.md` files.
+
+Two actions:
+- **list** — Browse available skills with optional search filter
+- **load** — Load the full SKILL.md content for a specific skill (supports partial name matching)
+
+```
+LLM: han_skills({ action: "list", filter: "typescript" })
+→ Found 3 skills:
+  ## typescript
+  - typescript-type-system: Use when working with TypeScript's type system...
+  - typescript-async-patterns: Use when working with async/await...
+  - typescript-utility-types: Use when working with utility types...
+
+LLM: han_skills({ action: "load", skill: "typescript-type-system" })
+→ [Full SKILL.md content loaded into context]
+```
+
+## Disciplines
+
+The bridge registers a `han_discipline` tool for activating specialized agent personas. When a discipline is active, its context is injected into every LLM call via `experimental.chat.system.transform`.
+
+Available disciplines include: frontend, backend, api, architecture, mobile, database, security, infrastructure, sre, performance, accessibility, quality, documentation, and more (25 total).
+
+```
+LLM: han_discipline({ action: "activate", discipline: "frontend" })
+→ Activated discipline: frontend
+  3 specialized skills available. Use han_skills to load any of them.
+
+# All subsequent LLM calls now receive frontend discipline context
+# in the system prompt, steering the agent's expertise.
+```
 
 ## Event Logging & Provider Architecture
 

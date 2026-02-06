@@ -277,20 +277,35 @@ function parsePluginHooks(
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Discover all hook definitions from installed Han plugins.
- *
- * Reads settings files to find enabled plugins, resolves their paths
- * via the marketplace, and parses han-plugin.yml for hook definitions.
+ * Resolve enabled plugins to their filesystem paths.
+ * Returns a map of plugin name -> absolute plugin root path.
  */
-export function discoverHooks(projectDir: string): HookDefinition[] {
+export function resolvePluginPaths(projectDir: string): Map<string, string> {
+  const resolved = new Map<string, string>()
   const enabledPlugins = getEnabledPlugins(projectDir)
-  if (enabledPlugins.length === 0) return []
+  if (enabledPlugins.length === 0) return resolved
 
   const marketplace = findMarketplace(projectDir)
-  if (!marketplace) return []
+  if (!marketplace) return resolved
 
-  // Find marketplace.json directory for resolving relative paths
-  const marketplaceDirs = [
+  const marketplaceDir = findMarketplaceDir(projectDir)
+  if (!marketplaceDir) return resolved
+
+  for (const pluginName of enabledPlugins) {
+    const pluginPath = resolvePluginPath(pluginName, marketplace, marketplaceDir)
+    if (pluginPath) {
+      resolved.set(pluginName, pluginPath)
+    }
+  }
+
+  return resolved
+}
+
+/**
+ * Find the directory containing marketplace.json.
+ */
+function findMarketplaceDir(projectDir: string): string | null {
+  const candidates = [
     join(projectDir, ".claude-plugin"),
     join(homedir(), ".claude"),
   ]
@@ -300,26 +315,31 @@ export function discoverHooks(projectDir: string): HookDefinition[] {
     const candidate = join(dir, ".claude-plugin")
     if (
       existsSync(join(candidate, "marketplace.json")) &&
-      !marketplaceDirs.includes(candidate)
+      !candidates.includes(candidate)
     ) {
-      marketplaceDirs.unshift(candidate)
+      candidates.unshift(candidate)
     }
     const parent = dirname(dir)
     if (parent === dir) break
     dir = parent
   }
 
-  const marketplaceDir = marketplaceDirs.find((d) =>
-    existsSync(join(d, "marketplace.json")),
-  )
-  if (!marketplaceDir) return []
+  return candidates.find((d) => existsSync(join(d, "marketplace.json"))) ?? null
+}
+
+/**
+ * Discover all hook definitions from installed Han plugins.
+ *
+ * Reads settings files to find enabled plugins, resolves their paths
+ * via the marketplace, and parses han-plugin.yml for hook definitions.
+ */
+export function discoverHooks(projectDir: string): HookDefinition[] {
+  const resolved = resolvePluginPaths(projectDir)
+  if (resolved.size === 0) return []
 
   const allHooks: HookDefinition[] = []
 
-  for (const pluginName of enabledPlugins) {
-    const pluginPath = resolvePluginPath(pluginName, marketplace, marketplaceDir)
-    if (!pluginPath) continue
-
+  for (const [pluginName, pluginPath] of resolved) {
     const hooks = parsePluginHooks(pluginName, pluginPath)
     allHooks.push(...hooks)
   }

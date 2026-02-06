@@ -98,6 +98,34 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables
 | `session.idle` | Stop | Full project validation when agent finishes |
 | `stop` | Stop | Force continuation if issues found |
 
+## Skills (400+)
+
+The bridge registers a `han_skills` tool with OpenCode, giving the LLM on-demand access to Han's full skill library. Skills are discovered at startup from installed plugins' `skills/*/SKILL.md` files.
+
+The LLM can search for skills and load their full content:
+
+```text
+han_skills({ action: "list", filter: "react" })
+→ Lists all React-related skills across plugins
+
+han_skills({ action: "load", skill: "react-hooks-patterns" })
+→ Loads full skill content into context
+```
+
+## Disciplines (25 Agent Personas)
+
+The bridge registers a `han_discipline` tool for activating specialized agent personas. When activated, the discipline's expertise is injected into every LLM call via system prompt.
+
+```text
+han_discipline({ action: "list" })
+→ Available: frontend, backend, sre, security, mobile, database...
+
+han_discipline({ action: "activate", discipline: "frontend" })
+→ System prompt now includes frontend expertise context
+```
+
+Available disciplines: frontend, backend, api, architecture, mobile, database, security, infrastructure, sre, performance, accessibility, quality, documentation, project-management, product, data-engineering, machine-learning, and more.
+
 ## Known Limitations
 
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319))
@@ -130,17 +158,21 @@ Same hook definition. Same validation. Different runtime.
 ```text
 OpenCode Plugin Runtime
   |
-  |-- tool.execute.after ────> discovery.ts (find matching hooks)
-  |                              -> matcher.ts (filter by tool/file)
-  |                              -> executor.ts (run as promises)
-  |                              -> formatter.ts (structure results)
+  |-- tool.execute.after ────> PostToolUse hooks (per-file validation)
+  |                              -> discovery → matcher → executor → formatter
   |                              -> mutate tool output + notify agent
   |
-  |-- session.idle ──────────> Stop hooks (full project validation)
+  |-- session.idle / stop ───> Stop hooks (full project validation)
   |                              -> client.session.prompt() if failures
   |
-  |-- stop ──────────────────> Stop hooks (force continuation)
-                                 -> { continue: true, assistantMessage }
+  |-- tool: han_skills ──────> Skill discovery (400+ coding skills)
+  |                              -> list/search/load SKILL.md content
+  |
+  |-- tool: han_discipline ──> Agent disciplines (25 personas)
+  |                              -> activate/deactivate/list
+  |
+  |-- system.transform ──────> Active discipline context injection
+                                 -> Injected into every LLM call
 ```
 
 The bridge discovers hooks at startup by reading:
