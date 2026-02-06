@@ -4,6 +4,7 @@ description: |
   Specialized assistive technology specialist with expertise in screen readers, voice control, and alternative input methods. Use when optimizing for assistive technologies or implementing alternative interaction models.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Assistive Tech Specialist

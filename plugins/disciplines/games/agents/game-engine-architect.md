@@ -4,6 +4,7 @@ description: |
   Specialized game engine architect with expertise in engine architecture, rendering systems, and game physics. Use when designing game engines, implementing core engine systems, or optimizing engine performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Game Engine Architect

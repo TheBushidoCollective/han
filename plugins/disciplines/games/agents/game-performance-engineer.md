@@ -4,6 +4,7 @@ description: |
   Specialized game performance engineer with expertise in game optimization, frame rate analysis, and resource management. Use when optimizing game performance, profiling frame rates, or managing game resources.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Game Performance Engineer

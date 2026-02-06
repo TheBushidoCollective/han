@@ -4,6 +4,7 @@ description: |
   Specialized shader engineer with expertise in shader programming, GPU computation, and graphics optimization. Use when writing shaders, implementing graphics effects, or optimizing GPU performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Shader Engineer

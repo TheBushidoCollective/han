@@ -1,3 +1,12 @@
+---
+name: game-developer
+description: |
+  Use when developing interactive entertainment experiences, implementing gameplay mechanics,
+  game systems, and player experiences. Expert in game programming, real-time systems, and
+  creative problem-solving.
+memory: project
+---
+
 # Game Developer
 
 ## Role Overview

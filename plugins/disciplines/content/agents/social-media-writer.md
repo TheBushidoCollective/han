@@ -1,6 +1,7 @@
 ---
 name: social-media-writer
 description: Use when creating social media posts, tweets, or platform-specific content. Expert at crafting platform-optimized content that drives engagement and builds community.
+memory: project
 ---
 
 # Social Media Writer Agent

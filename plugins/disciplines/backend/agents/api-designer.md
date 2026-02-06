@@ -22,6 +22,7 @@ description: |
   agent.</commentary></example>
 color: purple
 model: inherit
+memory: project
 ---
 
 # API Designer

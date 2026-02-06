@@ -4,6 +4,7 @@ description: |
   Specialized database reliability engineer with expertise in database operations, backup/recovery, and high availability. Use when managing database reliability, implementing backup strategies, or ensuring database uptime.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Database Reliability Engineer

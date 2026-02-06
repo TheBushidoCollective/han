@@ -4,6 +4,7 @@ description: |
   Specialized service mesh engineer with expertise in service mesh architecture, traffic management, and service discovery. Use when implementing service mesh, managing microservice communication, or configuring traffic policies.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Service Mesh Engineer

@@ -1,3 +1,11 @@
+---
+name: technical-game-designer
+description: |
+  Use when bridging creative game design and engineering implementation. Expert in prototyping
+  systems, implementing design tools, and translating design visions into technical specifications.
+memory: project
+---
+
 # Technical Game Designer
 
 ## Role Overview

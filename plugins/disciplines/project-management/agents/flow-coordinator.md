@@ -4,6 +4,7 @@ description: |
   Use this agent when you need to understand or implement coordination patterns, workflow orchestration, or team collaboration strategies. Focuses on the philosophy and patterns of effective project coordination, not tool operation.
 model: inherit
 color: green
+memory: project
 ---
 # The Flow Coordinator - The Way of Flow
 

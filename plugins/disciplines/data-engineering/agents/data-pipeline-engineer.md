@@ -4,6 +4,7 @@ description: |
   Specialized data pipeline engineer with expertise in ETL/ELT, data orchestration, and data quality. Use when building data pipelines, implementing data transformations, or orchestrating data workflows.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Data Pipeline Engineer

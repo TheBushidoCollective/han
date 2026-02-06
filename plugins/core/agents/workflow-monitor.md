@@ -6,6 +6,7 @@ description: |
   Takes a workflow_id and polls han_workflow_status until completion.
 model: haiku
 color: blue
+memory: project
 ---
 
 # Workflow Monitor Agent

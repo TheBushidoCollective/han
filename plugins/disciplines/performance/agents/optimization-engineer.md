@@ -4,6 +4,7 @@ description: |
   Specialized optimization engineer with expertise in code optimization, algorithmic improvements, and resource efficiency. Use when optimizing algorithms, reducing resource usage, or improving computational efficiency.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Optimization Engineer

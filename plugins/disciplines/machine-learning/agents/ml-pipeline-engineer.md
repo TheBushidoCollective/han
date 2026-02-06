@@ -4,6 +4,7 @@ description: |
   Specialized ML pipeline engineer with expertise in data preparation, feature engineering, and training pipelines. Use when building ML training pipelines or implementing feature stores.
 model: inherit
 color: blue
+memory: project
 ---
 
 # ML Pipeline Engineer

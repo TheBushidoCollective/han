@@ -4,6 +4,7 @@ description: |
   Specialized compiler engineer with expertise in lexing, parsing, semantic analysis, and code generation. Use when building compilers, implementing language features, or optimizing compilation processes.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Compiler Engineer

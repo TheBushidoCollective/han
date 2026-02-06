@@ -8,6 +8,7 @@ description: |
   issues, or improving plugin documentation.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Claude Plugin Developer Agent

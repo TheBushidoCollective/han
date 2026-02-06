@@ -25,6 +25,7 @@ description: |
    analysis.</commentary></example>
 model: inherit
 color: purple
+memory: project
 ---
 
 # System Architect

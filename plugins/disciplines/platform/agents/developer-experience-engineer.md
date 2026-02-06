@@ -4,6 +4,7 @@ description: |
   Specialized developer experience engineer with expertise in developer tooling, onboarding, and productivity optimization. Use when improving developer experience, creating documentation, or building developer tools.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Developer Experience Engineer

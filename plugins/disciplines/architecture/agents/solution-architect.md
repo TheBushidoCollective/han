@@ -25,6 +25,7 @@ description: |
   architectural solution recommendation.</commentary></example>
 model: inherit
 color: teal
+memory: project
 ---
 
 # Solution Architect

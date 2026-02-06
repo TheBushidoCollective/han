@@ -4,6 +4,7 @@ description: |
   Specialized observability engineer with expertise in monitoring, logging, tracing, and alerting. Use when implementing observability solutions, setting up monitoring infrastructure, or debugging distributed systems.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Observability Engineer

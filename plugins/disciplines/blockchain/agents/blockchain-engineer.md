@@ -4,6 +4,7 @@ description: |
   Specialized blockchain engineer with expertise in blockchain architecture and consensus algorithms. Use when designing blockchain systems, implementing distributed ledger technology, or optimizing consensus mechanisms.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Blockchain Engineer

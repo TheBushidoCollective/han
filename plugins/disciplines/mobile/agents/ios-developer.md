@@ -4,6 +4,7 @@ description: |
   Specialized iOS developer with expertise in iOS development, Swift/SwiftUI, and Apple platform integration. Use when building iOS apps, implementing iOS-specific features, or integrating with Apple services.
 model: inherit
 color: blue
+memory: project
 ---
 
 # iOS Developer

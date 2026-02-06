@@ -4,6 +4,7 @@ description: |
   Specialized logging engineer with expertise in log aggregation, log analysis, and structured logging. Use when implementing logging solutions, analyzing logs, or managing log infrastructure.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Logging Engineer

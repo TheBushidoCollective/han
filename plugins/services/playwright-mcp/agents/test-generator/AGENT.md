@@ -14,6 +14,7 @@ allowed-tools:
   - Glob
   - Grep
   - mcp__plugin_hashi-playwright-mcp_playwright__*
+memory: project
 ---
 
 # Playwright Test Generator Agent

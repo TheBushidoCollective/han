@@ -4,6 +4,7 @@ description: |
   Specialized Web3 engineer with expertise in dApps, wallets, and Web3 integration. Use when building decentralized applications, integrating with blockchain networks, or implementing wallet connectivity.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Web3 Engineer

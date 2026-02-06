@@ -4,6 +4,7 @@ description: |
   Use PROACTIVELY when crafting prompts, managing AI workflows, coordinating agents, or optimizing Claude Code interactions. Expert in crafting clear instructions, managing context, and maximizing AI collaboration value.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Prompt Engineer

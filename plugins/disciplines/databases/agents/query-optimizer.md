@@ -4,6 +4,7 @@ description: |
   Specialized query optimizer with expertise in query performance, indexing strategies, and execution plans. Use when optimizing database queries, designing indexes, or improving query performance.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Query Optimizer

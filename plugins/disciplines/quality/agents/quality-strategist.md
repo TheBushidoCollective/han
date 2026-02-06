@@ -23,6 +23,7 @@ description: |
   evaluate their current strategy and suggest enhancements.</commentary></example>
 color: green
 model: inherit
+memory: project
 ---
 
 # Quality Strategist
