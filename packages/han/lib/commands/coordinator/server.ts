@@ -13,6 +13,7 @@ import { useDeferStream } from '@graphql-yoga/plugin-defer-stream';
 import { makeServer } from 'graphql-ws';
 import { createYoga } from 'graphql-yoga';
 import { WebSocketServer } from 'ws';
+import { HAN_VERSION } from '../../build-info.generated.ts';
 import {
   coordinator,
   deferredHooks,
@@ -480,7 +481,7 @@ export async function startServer(
               status: 'ok',
               pid: process.pid,
               uptime,
-              version: process.env.HAN_VERSION || 'dev',
+              version: HAN_VERSION || 'dev',
             })
           );
           return;
@@ -547,7 +548,7 @@ export async function startServer(
               status: 'ok',
               pid: process.pid,
               uptime,
-              version: process.env.HAN_VERSION || 'dev',
+              version: HAN_VERSION || 'dev',
             })
           );
           return;
