@@ -172,7 +172,6 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
   // ─── Logging ──────────────────────────────────────────────────────────────
 
   const pluginCount = resolvedPlugins.size
-  const hookCount = allHooks.length
   const skillCount = allSkills.length
   const disciplineCount = allDisciplines.length
 
