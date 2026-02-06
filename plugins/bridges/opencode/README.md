@@ -1,17 +1,45 @@
 # Han Bridge for OpenCode
 
-Bridge plugin that brings Han's full plugin ecosystem to [OpenCode](https://opencode.ai) — validation hooks, 400+ skills, and 25 agent disciplines.
+Bridge plugin that brings Han's full plugin ecosystem to [OpenCode](https://opencode.ai) — validation hooks, core guidelines, 400+ skills, and 25 agent disciplines.
 
 ## What This Does
 
 Han plugins define validation hooks, specialized skills, and agent disciplines that run during Claude Code sessions. This bridge makes the entire ecosystem work in OpenCode:
 
-1. **Hooks** — PostToolUse and Stop validation (biome, eslint, tsc, etc.) with parallel execution
-2. **Skills** — 400+ coding skills loadable on demand via `han_skills` tool
-3. **Disciplines** — 25 agent personas (frontend, backend, SRE, security, etc.) with system prompt injection
-4. **Events** — Unified JSONL logging with `provider: "opencode"` for Browse UI visibility
+1. **Hooks** — PreToolUse, PostToolUse, and Stop validation (biome, eslint, tsc, etc.) with parallel execution
+2. **Guidelines** — Core principles (professional honesty, no excuses, skill selection) injected into every LLM call
+3. **Datetime** — Current time injected on every user prompt
+4. **Skills** — 400+ coding skills loadable on demand via `han_skills` tool
+5. **Disciplines** — 25 agent personas (frontend, backend, SRE, security, etc.) with system prompt injection
+6. **Events** — Unified JSONL logging with `provider: "opencode"` for Browse UI visibility
+
+## Coverage Matrix
+
+| Claude Code Hook | OpenCode Equivalent | Status |
+|---|---|---|
+| PostToolUse | `tool.execute.after` | Implemented |
+| PreToolUse | `tool.execute.before` | Implemented |
+| Stop | `stop` + `session.idle` | Implemented |
+| SessionStart | `experimental.chat.system.transform` | Implemented |
+| UserPromptSubmit | `chat.message` | Implemented |
+| SubagentPrompt | `tool.execute.before` (Task/agent) | Implemented |
+| SubagentStart/Stop | — | Not available |
+| MCP tool events | — | Not available |
+| Permission denial | — | Not available |
 
 ## Validation Flow
+
+### PreToolUse (Pre-Execution)
+
+Runs before a tool executes via `tool.execute.before`:
+
+```
+Agent about to run a tool
+  -> OpenCode fires tool.execute.before
+  -> Bridge matches PreToolUse hooks by tool name
+  -> Runs matching hooks in parallel
+  -> Injects discipline context into subagent prompts
+```
 
 ### PostToolUse (Primary Path - In-the-Loop)
 
@@ -28,8 +56,6 @@ Agent edits src/app.ts via Edit tool
      2. Async: client.session.prompt() notification (agent acts on next turn)
 ```
 
-This enables single-file, on-the-loop validation identical to Claude Code's async PostToolUse hooks.
-
 ### Stop (Secondary - Full Project)
 
 When the agent finishes a turn:
@@ -41,6 +67,26 @@ Agent signals completion
   -> If failures: re-prompts agent via client.session.prompt()
   -> Agent gets a new turn to fix project-wide issues
 ```
+
+## Context Injection
+
+### SessionStart Equivalent
+
+Core guidelines are injected into every LLM call via `experimental.chat.system.transform`:
+
+- Professional honesty (verify before accepting claims)
+- No time estimates (use phase numbers)
+- No excuses policy (Boy Scout Rule)
+- Date handling best practices
+- Mandatory skill selection
+
+### UserPromptSubmit Equivalent
+
+Current local datetime is injected on every user message via `chat.message`, so the LLM always knows the current time.
+
+### SubagentPrompt Equivalent
+
+When a discipline is active and the LLM spawns a task/agent tool, the bridge injects discipline context into the subagent's prompt via `tool.execute.before`.
 
 ## Hook Discovery
 
@@ -85,33 +131,46 @@ Copy the `src/` directory to `.opencode/plugins/han-bridge/` in your project.
 ```
 OpenCode Runtime
   |
-  |-- tool.execute.after ─────────────────────────> PostToolUse hooks
-  |     (Edit, Write)                                (biome, eslint, tsc)
-  |                                                       |
-  |     ┌─ inline: mutate tool output ────────────────────┤
-  |     └─ async: client.session.prompt(noReply) ─────────┘
+  |-- experimental.chat.system.transform ──────> SessionStart context
+  |     (every LLM call)                          (core guidelines + discipline)
   |
-  |-- session.idle ───────────────────────────────> Stop hooks
-  |     (agent finished turn)                        (full project lint)
-  |                                                       |
-  |     └─ client.session.prompt() ───────────────────────┘
+  |-- chat.message ────────────────────────────> UserPromptSubmit context
+  |     (every user prompt)                        (current datetime)
+  |
+  |-- tool.execute.before ─────────────────────> PreToolUse hooks
+  |     (before tool runs)                         (validation gates)
+  |                                                     |
+  |     └─ discipline context ──────────────────────────┘
+  |         (injected into task/agent prompts)
+  |
+  |-- tool.execute.after ──────────────────────> PostToolUse hooks
+  |     (Edit, Write)                              (biome, eslint, tsc)
+  |                                                     |
+  |     ┌─ inline: mutate tool output ──────────────────┤
+  |     └─ async: client.session.prompt(noReply) ───────┘
+  |
+  |-- session.idle ────────────────────────────> Stop hooks
+  |     (agent finished turn)                      (full project lint)
+  |                                                     |
+  |     └─ client.session.prompt() ─────────────────────┘
   |         (re-prompts agent to fix issues)
   |
-  |-- stop ───────────────────────────────────────> Stop hooks (backup)
-  |     (agent signals completion)                    |
-  |                                                   └─ { continue: true }
-  |                                                       (force continuation)
+  |-- stop ────────────────────────────────────> Stop hooks (backup)
+  |     (agent signals completion)                  |
+  |                                                 └─ { continue: true }
+  |                                                     (force continuation)
   |
-  |-- tool: han_skills ─────────────────────────────> Skill discovery
-  |     (LLM-callable)                                (list/search/load 400+ skills)
+  |-- tool: han_skills ────────────────────────> Skill discovery
+  |     (LLM-callable)                             (list/search/load 400+ skills)
   |
-  |-- tool: han_discipline ─────────────────────────> Agent disciplines
-  |     (LLM-callable)                                (activate/deactivate/list)
+  |-- tool: han_discipline ────────────────────> Agent disciplines
+  |     (LLM-callable)                             (activate/deactivate/list)
   |
-  |-- experimental.chat.system.transform ───────────> System prompt injection
-        (every LLM call)                               (active discipline context)
+  |-- JSONL logger ────────────────────────────> Event logging
+        (hook_run, hook_result, hook_file_change)  (Browse UI visibility)
 
 Bridge Internals:
+  context.ts       Core guidelines + datetime injection
   discovery.ts     Read settings + marketplace + resolve plugin paths
   skills.ts        Discover SKILL.md files from installed plugins
   disciplines.ts   Discover discipline plugins, system prompt builder
@@ -189,11 +248,14 @@ Events logged:
 
 The bridge sets `HAN_PROVIDER=opencode` in the environment for child processes and starts the Han coordinator in the background via `han coordinator ensure --background --watch-path <dir>`. The coordinator indexes these JSONL files into SQLite and serves them through the Browse UI alongside Claude Code sessions.
 
-## Known Limitations
+## Remaining Gaps
+
+These are genuine platform limitations in OpenCode that cannot be bridged:
 
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319))
 - **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop
-- **Checkpoints**: Session-scoped checkpoint filtering (only validate files changed since last checkpoint) is not yet implemented
+- **Permission denial**: `tool.execute.before` cannot block tool execution (PreToolUse hooks can warn but not deny)
+- **Checkpoints**: Session-scoped checkpoint filtering is not yet implemented
 
 ## Development
 

@@ -3,16 +3,16 @@ title: "Using Han with OpenCode"
 description: "How to use Han's validation pipeline and plugin ecosystem with OpenCode using the bridge plugin."
 ---
 
-Han works with [OpenCode](https://opencode.ai) through a bridge plugin that translates OpenCode's event system into Han hook executions. Your existing Han plugins - validation, context injection, everything - work in OpenCode without modification.
+Han works with [OpenCode](https://opencode.ai) through a bridge plugin that translates OpenCode's event system into Han hook executions. Your existing Han plugins - validation, context injection, skills, disciplines - work in OpenCode without modification.
 
 ## How It Works
 
-OpenCode uses a JS/TS plugin system. The Han bridge plugin runs inside OpenCode and connects two things:
+OpenCode uses a JS/TS plugin system. The Han bridge plugin runs inside OpenCode and connects:
 
-1. **OpenCode events** (`tool.execute.after`, `session.idle`, `stop`)
-2. **Han plugin hooks** (PostToolUse, Stop) defined in `han-plugin.yml`
-
-When OpenCode's agent edits a file, the bridge discovers matching Han hooks, runs them as parallel promises, and feeds structured results back to the agent.
+1. **OpenCode events** → **Han hooks** (PreToolUse, PostToolUse, Stop)
+2. **System prompt injection** → **Core guidelines** (professional honesty, no excuses, skill selection)
+3. **Chat message hooks** → **Datetime injection** (current time on every prompt)
+4. **Custom tools** → **Skills & disciplines** (400+ skills, 25 agent personas)
 
 ```text
 Agent edits src/app.ts
@@ -42,7 +42,28 @@ Add to your `opencode.json`:
 }
 ```
 
-That's it. Your Han validation hooks now run in OpenCode.
+That's it. Your Han plugins now work in OpenCode.
+
+## Coverage Matrix
+
+The bridge maps Claude Code's hook events to OpenCode's plugin API:
+
+| Claude Code Hook | OpenCode Equivalent | Status | Notes |
+|---|---|---|---|
+| **PostToolUse** | `tool.execute.after` | Implemented | Primary validation path - per-file linting/formatting |
+| **PreToolUse** | `tool.execute.before` | Implemented | Pre-execution gates, subagent context injection |
+| **Stop** | `stop` + `session.idle` | Implemented | Full project validation when agent finishes |
+| **SessionStart** | `experimental.chat.system.transform` | Implemented | Core guidelines injected into system prompt |
+| **UserPromptSubmit** | `chat.message` | Implemented | Current datetime injected on every prompt |
+| **SubagentPrompt** | `tool.execute.before` (Task/agent) | Implemented | Discipline context injected into subagent prompts |
+| **Skills** | `tool` registration | Implemented | 400+ skills via `han_skills` tool |
+| **Disciplines** | `tool` + `system.transform` | Implemented | 25 agent personas via `han_discipline` tool |
+| **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for OpenCode sessions |
+| SubagentStart/Stop | — | Not available | No OpenCode equivalent |
+| MCP tool events | — | Not available | OpenCode doesn't fire events for MCP calls ([#2319](https://github.com/sst/opencode/issues/2319)) |
+| Permission denial | — | Not available | `tool.execute.before` can't block tool execution |
+| PreCompact | — | Not available | No OpenCode equivalent |
+| Session slug | — | Not available | OpenCode uses its own session naming |
 
 ## What Works
 
@@ -64,6 +85,14 @@ Results are delivered two ways:
 1. **Inline**: Appended directly to the tool output (agent sees immediately)
 2. **Notification**: Sent via `client.session.prompt()` (agent acts on next turn)
 
+### PreToolUse Hooks
+
+Run before a tool executes via `tool.execute.before`. Enables:
+
+- Pre-commit/pre-push validation gates (intercept git commands)
+- Subagent context injection (discipline context added to task tool prompts)
+- Input modification for tool calls
+
 ### Stop Validation (Secondary)
 
 When the agent finishes a turn, broader project-level hooks run:
@@ -73,6 +102,22 @@ When the agent finishes a turn, broader project-level hooks run:
 - Test suite execution
 
 If issues are found, the bridge re-prompts the agent to fix them.
+
+### SessionStart Context (Guidelines)
+
+Core guidelines are injected into every LLM call via `experimental.chat.system.transform`:
+
+- **Professional honesty** — Verify claims before accepting them
+- **No time estimates** — Use phase numbers and priority order instead
+- **No excuses** — Own every issue (Boy Scout Rule)
+- **Date handling** — Use injected datetime, never hardcode
+- **Skill selection** — Review available skills before starting work
+
+These are the same guidelines that Claude Code sessions receive via the core plugin's SessionStart hook.
+
+### UserPromptSubmit Context (Datetime)
+
+Current local datetime is injected on every user message via `chat.message`, mirroring Claude Code's UserPromptSubmit hook. This ensures the LLM always knows the current time for temporal assertions.
 
 ### Result Format
 
@@ -89,14 +134,6 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables
 </han-validation>
 </han-post-tool-validation>
 ```
-
-## Event Mapping
-
-| OpenCode Event | Han Hook Type | Behavior |
-|---|---|---|
-| `tool.execute.after` | PostToolUse | Per-file validation after edits |
-| `session.idle` | Stop | Full project validation when agent finishes |
-| `stop` | Stop | Force continuation if issues found |
 
 ## Skills (400+)
 
@@ -126,11 +163,15 @@ han_discipline({ action: "activate", discipline: "frontend" })
 
 Available disciplines: frontend, backend, api, architecture, mobile, database, security, infrastructure, sre, performance, accessibility, quality, documentation, project-management, product, data-engineering, machine-learning, and more.
 
-## Known Limitations
+## Remaining Gaps
 
-- **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319))
-- **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop
-- **Checkpoints**: Session-scoped checkpoint filtering is not yet implemented in the bridge
+These are genuine platform limitations that cannot be bridged:
+
+- **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319)). Validation only runs for built-in tools (edit, write, bash).
+- **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop. Discipline context is injected via `tool.execute.before` as a workaround.
+- **Permission denial**: OpenCode's `tool.execute.before` cannot block tool execution (no `permissionDecision` equivalent). PreToolUse hooks can warn but not deny.
+- **PreCompact**: No hook before context compaction.
+- **Checkpoint filtering**: Session-scoped checkpoint filtering (only validate files changed since last checkpoint) is not yet implemented in the bridge.
 
 ## How Plugins Stay Compatible
 
@@ -158,21 +199,32 @@ Same hook definition. Same validation. Different runtime.
 ```text
 OpenCode Plugin Runtime
   |
-  |-- tool.execute.after ────> PostToolUse hooks (per-file validation)
-  |                              -> discovery → matcher → executor → formatter
-  |                              -> mutate tool output + notify agent
+  |-- experimental.chat.system.transform
+  |     -> Core guidelines (professional honesty, no excuses, etc.)
+  |     -> Active discipline context injection
+  |     -> Skill/discipline capability summary
   |
-  |-- session.idle / stop ───> Stop hooks (full project validation)
-  |                              -> client.session.prompt() if failures
+  |-- chat.message ────────────> Datetime injection (every prompt)
   |
-  |-- tool: han_skills ──────> Skill discovery (400+ coding skills)
-  |                              -> list/search/load SKILL.md content
+  |-- tool.execute.before ─────> PreToolUse hooks
+  |                                -> Pre-execution validation gates
+  |                                -> Discipline context for subagents
   |
-  |-- tool: han_discipline ──> Agent disciplines (25 personas)
-  |                              -> activate/deactivate/list
+  |-- tool.execute.after ──────> PostToolUse hooks (per-file validation)
+  |                                -> discovery → matcher → executor → formatter
+  |                                -> mutate tool output + notify agent
   |
-  |-- system.transform ──────> Active discipline context injection
-                                 -> Injected into every LLM call
+  |-- session.idle / stop ─────> Stop hooks (full project validation)
+  |                                -> client.session.prompt() if failures
+  |
+  |-- tool: han_skills ────────> Skill discovery (400+ coding skills)
+  |                                -> list/search/load SKILL.md content
+  |
+  |-- tool: han_discipline ────> Agent disciplines (25 personas)
+  |                                -> activate/deactivate/list
+  |
+  |-- JSONL event logger ──────> Browse UI visibility
+                                   -> ~/.han/opencode/projects/{slug}/
 ```
 
 The bridge discovers hooks at startup by reading:
