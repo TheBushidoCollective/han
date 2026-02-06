@@ -1,204 +1,277 @@
 /**
  * Han Bridge for OpenCode
  *
- * This OpenCode plugin translates OpenCode's event system into Claude Code
- * hook invocations, enabling Han plugins to work seamlessly with OpenCode.
+ * Translates OpenCode's JS/TS plugin events into Han hook executions,
+ * enabling Han's validation pipeline to work inside OpenCode.
  *
  * Architecture:
- *   OpenCode event (e.g. session.created, tool.execute.after)
- *     -> event-map.ts translates to Claude Code event name (SessionStart, PostToolUse)
- *     -> payload.ts constructs Claude Code-compatible stdin JSON
- *     -> runner.ts executes `han hook dispatch|orchestrate <event>`
- *     -> hook output returned to OpenCode (for stop: can force continuation)
  *
- * Usage in opencode.json:
- *   { "plugin": ["opencode-plugin-han"] }
+ *   tool.execute.after (Edit/Write)
+ *     -> discovery.ts finds installed plugins' PostToolUse hooks
+ *     -> matcher.ts filters by tool name + file pattern
+ *     -> executor.ts runs matching hook commands as parallel promises
+ *     -> formatter.ts structures results into actionable feedback
+ *     -> client.session.prompt() notifies agent of issues
  *
- * Or as a local plugin:
- *   Copy src/index.ts to .opencode/plugins/han-bridge.ts
+ *   session.idle (agent finished)
+ *     -> discovery.ts finds installed plugins' Stop hooks
+ *     -> executor.ts runs matching hooks
+ *     -> formatter.ts structures results
+ *     -> client.session.prompt() re-prompts agent to fix issues
+ *
+ * Key difference from han's dispatch: hooks run as awaited promises,
+ * not fire-and-forget. Results are collected, parsed, and delivered
+ * as structured messages the agent can act on.
  */
 
+import { discoverHooks, getHooksByEvent } from "./discovery"
+import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
+import { executeHooksParallel } from "./executor"
 import {
-  EVENT_MAP,
-  STOP_MAPPING,
-  USER_PROMPT_MAPPING,
+  formatInlineResults,
+  formatNotificationResults,
+  formatStopResults,
+} from "./formatter"
+import {
+  mapToolName,
+  type OpenCodePluginContext,
+  type ToolEventInput,
+  type ToolEventOutput,
   type OpenCodeEvent,
-} from "./event-map"
-import {
-  buildEventPayload,
-  buildStopPayload,
-  buildUserPromptPayload,
-  type BridgeContext,
-} from "./payload"
-import { runHanCommand, checkHanAvailable } from "./runner"
+  type StopResult,
+  type HookDefinition,
+} from "./types"
+
+const PREFIX = "[han]"
 
 /**
- * OpenCode plugin context provided by the runtime.
- * See: https://opencode.ai/docs/plugins/
+ * Extract file path(s) from an OpenCode tool event.
+ *
+ * OpenCode provides tool output with title/output/metadata.
+ * For edit/write tools, the file path is typically in the metadata
+ * or can be inferred from the tool output.
  */
-interface OpenCodePluginContext {
-  client: unknown
-  project: unknown
-  directory: string
-  worktree: string
-  $: unknown
-}
+function extractFilePaths(
+  input: ToolEventInput,
+  output: ToolEventOutput,
+): string[] {
+  const paths: string[] = []
 
-/**
- * OpenCode plugin hook return types.
- */
-interface StopResult {
-  continue: boolean
-  assistantMessage?: string
-}
+  // Check metadata for file path
+  if (output.metadata) {
+    const meta = output.metadata as Record<string, unknown>
+    if (typeof meta.path === "string") paths.push(meta.path)
+    if (typeof meta.file_path === "string") paths.push(meta.file_path)
+    if (typeof meta.filePath === "string") paths.push(meta.filePath)
+  }
 
-type PluginHooks = {
-  event?: (args: { event: OpenCodeEvent }) => Promise<void>
-  stop?: (input: unknown) => Promise<StopResult | undefined | void>
-  "chat.message"?: (message: unknown) => Promise<unknown>
-}
+  // Check title for file path (common pattern: "Edit: src/foo.ts")
+  if (paths.length === 0 && output.title) {
+    const titleMatch = output.title.match(
+      /(?:edit|write|create|modify):\s*(.+)/i,
+    )
+    if (titleMatch) {
+      paths.push(titleMatch[1].trim())
+    }
+  }
 
-const PREFIX = "[han-bridge]"
+  return paths
+}
 
 /**
  * Main OpenCode plugin entry point.
- *
- * When OpenCode loads this plugin, it:
- * 1. Checks that the han CLI is available
- * 2. Generates a session ID for the bridge lifetime
- * 3. Returns hook handlers that translate OpenCode events to han hook calls
  */
-async function hanBridgePlugin(
-  ctx: OpenCodePluginContext,
-): Promise<PluginHooks> {
-  const { directory, worktree } = ctx
+async function hanBridgePlugin(ctx: OpenCodePluginContext) {
+  const { client, directory } = ctx
 
-  // Verify han is available before registering hooks
-  const available = await checkHanAvailable(directory)
-  if (!available) {
+  // ─── Hook Discovery ──────────────────────────────────────────────────────
+  // Discover all hooks at plugin init time. This reads settings files
+  // and plugin configs once, not on every event.
+  const allHooks = discoverHooks(directory)
+
+  const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
+  const stopHooks = getHooksByEvent(allHooks, "Stop")
+
+  if (allHooks.length === 0) {
     console.error(
-      `${PREFIX} han CLI not found.\n` +
-        `Install: curl -fsSL https://han.guru/install.sh | bash\n` +
-        `Or: npm install -g @thebushidocollective/han\n` +
-        `Han hooks will not run in this OpenCode session.`,
+      `${PREFIX} No Han plugins with hooks found. ` +
+        `Install plugins: han plugin install --auto`,
     )
     return {}
   }
 
-  // Generate a stable session ID for this OpenCode session.
-  // All hooks in this session share the same ID for correlation.
-  const sessionId = crypto.randomUUID()
-  const bridgeCtx: BridgeContext = { directory, worktree, sessionId }
+  console.error(
+    `${PREFIX} Discovered ${postToolUseHooks.length} PostToolUse hooks, ` +
+      `${stopHooks.length} Stop hooks from ${new Set(allHooks.map((h) => h.pluginName)).size} plugins`,
+  )
 
-  /**
-   * Execute a han hook command and return the result.
-   */
-  async function executeHook(
-    command: "dispatch" | "orchestrate",
-    claudeEvent: string,
-    payload: Record<string, unknown>,
-  ) {
-    const args = ["hook", command, claudeEvent]
-    return runHanCommand(args, payload, {
-      cwd: directory,
-      env: { HAN_SESSION_ID: sessionId },
-    })
-  }
+  // ─── Session State ───────────────────────────────────────────────────────
+  const sessionId = crypto.randomUUID()
+
+  // Track pending async validations to avoid duplicate notifications
+  const pendingValidations = new Map<string, Promise<void>>()
+
+  // ─── Hook Handlers ───────────────────────────────────────────────────────
 
   return {
     /**
-     * Generic event handler - routes OpenCode events to Claude Code hooks.
+     * tool.execute.after → PostToolUse hooks
      *
-     * Maps:
-     *   session.created          -> SessionStart (dispatch)
-     *   tool.execute.before      -> PreToolUse (dispatch)
-     *   tool.execute.after       -> PostToolUse (dispatch)
-     *   experimental.session.compacting -> PreCompact (dispatch)
+     * This is the PRIMARY validation path. When the agent edits a file,
+     * we run matching validation hooks (biome, eslint, tsc, etc.) as
+     * parallel promises and deliver results as notifications.
+     *
+     * Two feedback mechanisms:
+     * 1. Inline: mutate tool output to append errors (immediate)
+     * 2. Async: client.session.prompt() for detailed notifications
+     */
+    "tool.execute.after": async (
+      input: ToolEventInput,
+      output: ToolEventOutput,
+    ) => {
+      const claudeToolName = mapToolName(input.tool)
+      const filePaths = extractFilePaths(input, output)
+
+      if (filePaths.length === 0) return
+
+      // Find hooks matching this tool + file
+      const matching = matchPostToolUseHooks(
+        postToolUseHooks,
+        claudeToolName,
+        filePaths[0],
+        directory,
+      )
+
+      if (matching.length === 0) return
+
+      // Run all matching hooks as parallel promises
+      const validationKey = `${input.callID}-${filePaths.join(",")}`
+
+      const validationPromise = (async () => {
+        try {
+          const results = await executeHooksParallel(matching, filePaths, {
+            cwd: directory,
+            sessionId,
+          })
+
+          // Inline feedback: append failures directly to tool output
+          const inline = formatInlineResults(results)
+          if (inline) {
+            output.output += inline
+          }
+
+          // Async notification: send detailed results as a message
+          const notification = formatNotificationResults(results, filePaths)
+          if (notification) {
+            try {
+              await client.session.prompt({
+                path: { id: input.sessionID },
+                body: {
+                  noReply: true,
+                  parts: [{ type: "text", text: notification }],
+                },
+              })
+            } catch (err) {
+              // Session may be busy; inline feedback is the fallback
+              console.error(
+                `${PREFIX} Could not send notification:`,
+                err instanceof Error ? err.message : err,
+              )
+            }
+          }
+        } catch (err) {
+          console.error(
+            `${PREFIX} PostToolUse hook error:`,
+            err instanceof Error ? err.message : err,
+          )
+        } finally {
+          pendingValidations.delete(validationKey)
+        }
+      })()
+
+      pendingValidations.set(validationKey, validationPromise)
+    },
+
+    /**
+     * Generic event handler for session lifecycle events.
+     *
+     * session.idle → Stop hooks (broader project validation)
+     * session.created → SessionStart (future: context injection)
      */
     event: async ({ event }: { event: OpenCodeEvent }) => {
-      const mapping = EVENT_MAP[event.type]
-      if (!mapping) return
+      if (event.type === "session.idle") {
+        const eventSessionId = event.properties?.sessionID as string | undefined
 
-      const payload = buildEventPayload(mapping, event, bridgeCtx)
+        // Wait for any pending PostToolUse validations to finish
+        if (pendingValidations.size > 0) {
+          await Promise.allSettled(pendingValidations.values())
+        }
 
-      try {
-        await executeHook(mapping.command, mapping.claudeEvent, payload)
-      } catch (err) {
-        // Non-fatal: log and continue. A failing hook should not crash OpenCode.
-        console.error(
-          `${PREFIX} ${mapping.claudeEvent} hook error:`,
-          err instanceof Error ? err.message : err,
-        )
+        // Run Stop hooks for full project validation
+        const matching = matchStopHooks(stopHooks, directory)
+        if (matching.length === 0) return
+
+        try {
+          const results = await executeHooksParallel(matching, [], {
+            cwd: directory,
+            sessionId,
+            timeout: 120_000, // Stop hooks get more time
+          })
+
+          const message = formatStopResults(results)
+          if (message && eventSessionId) {
+            await client.session.prompt({
+              path: { id: eventSessionId },
+              body: {
+                parts: [{ type: "text", text: message }],
+              },
+            })
+          }
+        } catch (err) {
+          console.error(
+            `${PREFIX} Stop hook error:`,
+            err instanceof Error ? err.message : err,
+          )
+        }
       }
     },
 
     /**
-     * Stop hook - maps to Claude Code's Stop event.
+     * Stop hook - backup validation gate.
      *
-     * Han's Stop hooks run validation (linting, type checking, tests).
-     * If any hook fails (non-zero exit), the bridge forces OpenCode to
-     * continue the conversation, passing the validation output as context
-     * so the agent can fix the issues.
+     * OpenCode calls this when the agent signals completion.
+     * If Stop hooks find issues, forces the agent to continue.
      *
-     * This is the most important mapping: it enables Han's validation
-     * pipeline (biome, eslint, typescript, etc.) to work in OpenCode.
+     * Note: session.idle handles the primary Stop flow. This is
+     * a secondary gate for cases where session.idle doesn't fire
+     * or when we need to force continuation.
      */
-    stop: async (_input: unknown) => {
-      const payload = buildStopPayload(bridgeCtx)
+    stop: async (): Promise<StopResult | undefined> => {
+      const matching = matchStopHooks(stopHooks, directory)
+      if (matching.length === 0) return undefined
 
       try {
-        const result = await executeHook(
-          STOP_MAPPING.command,
-          STOP_MAPPING.claudeEvent,
-          payload,
-        )
+        const results = await executeHooksParallel(matching, [], {
+          cwd: directory,
+          sessionId,
+          timeout: 120_000,
+        })
 
-        // If hooks reported issues, force the agent to continue and fix them
-        if (result.exitCode !== 0) {
-          const output = (result.stdout || result.stderr).trim()
-          if (output) {
-            return {
-              continue: true,
-              assistantMessage: output,
-            }
+        const message = formatStopResults(results)
+        if (message) {
+          return {
+            continue: true,
+            assistantMessage: message,
           }
         }
       } catch (err) {
         console.error(
-          `${PREFIX} Stop hook error:`,
+          `${PREFIX} Stop validation error:`,
           err instanceof Error ? err.message : err,
         )
       }
 
-      // No issues found or hook didn't produce output - allow stop
       return undefined
-    },
-
-    /**
-     * Chat message hook - maps to Claude Code's UserPromptSubmit event.
-     *
-     * Fires after the user submits a message but before the agent processes it.
-     * Han's UserPromptSubmit hooks inject context (e.g. current datetime).
-     * The message is returned unmodified; hook output goes to the console.
-     */
-    "chat.message": async (message: unknown) => {
-      const payload = buildUserPromptPayload(message, bridgeCtx)
-
-      try {
-        await executeHook(
-          USER_PROMPT_MAPPING.command,
-          USER_PROMPT_MAPPING.claudeEvent,
-          payload,
-        )
-      } catch (err) {
-        console.error(
-          `${PREFIX} UserPromptSubmit hook error:`,
-          err instanceof Error ? err.message : err,
-        )
-      }
-
-      // Return message unmodified - Han doesn't transform user messages
-      return message
     },
   }
 }
