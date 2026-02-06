@@ -1,4 +1,5 @@
 ---
+name: refactor
 description: Restructure code to improve quality without changing behavior
 disable-model-invocation: false
 ---

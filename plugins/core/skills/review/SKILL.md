@@ -1,4 +1,5 @@
 ---
+name: review
 description: Multi-agent code review with confidence-based filtering
 ---
 

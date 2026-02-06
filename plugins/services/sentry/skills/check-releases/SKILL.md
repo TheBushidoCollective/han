@@ -1,4 +1,5 @@
 ---
+name: check-releases
 description: Check release health and compare error rates across deployments
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: investigate-errors
 description: Investigate recent errors and exceptions in your Sentry projects
 ---
 

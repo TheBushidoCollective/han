@@ -1,4 +1,5 @@
 ---
+name: analyze-performance
 description: Analyze performance metrics and identify slow transactions in Sentry
 ---
 

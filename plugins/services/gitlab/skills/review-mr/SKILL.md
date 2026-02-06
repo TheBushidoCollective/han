@@ -1,4 +1,5 @@
 ---
+name: review-mr
 description: Get comprehensive review of a GitLab merge request
 ---
 

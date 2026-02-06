@@ -118,7 +118,6 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'jutsu-typescript': 'languages/typescript',
 
   // patterns
-  'jutsu-ai-dlc': 'patterns/ai-dlc',
   'jutsu-atomic-design': 'patterns/atomic-design',
   'jutsu-bdd': 'patterns/bdd',
   'jutsu-functional-programming': 'patterns/functional-programming',
