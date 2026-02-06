@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-06
+
+### Fixed
+
+- route Stop hooks through han hook run for caching and session-scoped files ([343716c2](../../commit/343716c2))
+- use GITHUB_TOKEN for workflow dispatch, update plugin paths, fix hook output ([74f91f2d](../../commit/74f91f2d))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+
 ## [2.2.0] - 2026-01-30
 
 ### Changed
