@@ -2,6 +2,6 @@
 # Tests must run serially due to shared database singleton
 
 plugins:
-  jutsu-rust:
+  rust:
     test:
       command: "cargo test -- --test-threads=1"
