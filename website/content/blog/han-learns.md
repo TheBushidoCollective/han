@@ -218,11 +218,11 @@ Auto-detected plugins install to **project scope** (`.claude/settings.json`), no
 
 ## Hooks Work Immediately
 
-Here's the magic: because Han's core plugin orchestrates all hooks dynamically, newly installed plugin hooks work **immediately in the same session**.
+Here's the magic: because Claude Code discovers plugin hooks dynamically, newly installed plugin hooks work **immediately in the same session**.
 
 When Han installs a plugin like `typescript`:
 
-- **Hooks** (like typecheck on Stop) are active immediately - Han's orchestrator dynamically discovers and runs them
+- **Hooks** (like typecheck on Stop) are active immediately - Claude Code dynamically discovers and runs them
 
 What requires a restart:
 

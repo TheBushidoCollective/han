@@ -151,7 +151,7 @@ async function generatePerformanceContext(
           `- **Git Storytelling**: Commit work early and often with \`git add\` + \`git commit\``
         );
         lines.push(
-          `\n  Run \`han hook orchestrate Stop --check\` to see which hooks need attention`
+          `\n  Run \`han hook list\` to see which hooks are configured`
         );
       }
     }

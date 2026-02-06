@@ -2,7 +2,6 @@ import type { Command } from 'commander';
 import { validate } from '../hook-runner.ts';
 import { install } from '../install.ts';
 import { uninstall } from '../uninstall.ts';
-import { orchestrate } from './hook/orchestrate.ts';
 
 /**
  * Register backwards compatibility command aliases
@@ -88,49 +87,4 @@ export function registerAliasCommands(program: Command): void {
       }
     );
 
-  // New validate command: runs all Stop hooks with phase ordering
-  // Phase order: format → lint → typecheck → test → advisory
-  program
-    .command('validate')
-    .description(
-      'Run all Stop hooks with dependency ordering.\n\n' +
-        'Hooks are executed in phases: format → lint → typecheck → test → advisory.\n' +
-        'All hooks in phase N must complete before phase N+1 starts.\n' +
-        'If any hook fails in a phase, subsequent phases are skipped.\n\n' +
-        'This is useful for running full validation outside of Claude Code sessions,\n' +
-        'e.g., in CI/CD pipelines or before committing code.'
-    )
-    .option('--all-files', 'Ignore cache, run all hooks on all files')
-    .option('-v, --verbose', 'Show detailed execution output')
-    .option(
-      '-c, --check',
-      'Check mode: report what hooks would run without executing them'
-    )
-    .action(
-      async (opts: {
-        allFiles?: boolean;
-        verbose?: boolean;
-        check?: boolean;
-      }) => {
-        try {
-          await orchestrate('Stop', {
-            onlyChanged: !opts.allFiles, // default true (only changed files)
-            verbose: opts.verbose ?? false,
-            wait: true, // Always wait for completion
-            check: opts.check ?? false,
-          });
-          process.exit(0);
-        } catch (error: unknown) {
-          if (error instanceof Error && error.message.includes('exit code')) {
-            // Exit code already set by orchestrate
-            process.exit(2);
-          }
-          console.error(
-            'Error during validation:',
-            error instanceof Error ? error.message : error
-          );
-          process.exit(1);
-        }
-      }
-    );
 }

@@ -996,7 +996,7 @@ export async function runConfiguredHook(
     }
 
     // Compute relative path for consistent cache keys
-    // CRITICAL: Must use relative path to match trackFilesAsync and orchestrate.ts
+    // CRITICAL: Must use relative path to match trackFilesAsync and cache tracking
     const relativePath =
       config.directory === projectRoot
         ? '.'
@@ -1139,7 +1139,7 @@ export async function runConfiguredHook(
     for (const config of successfulConfigs) {
       if (config.ifChanged && config.ifChanged.length > 0) {
         // Compute relative path for consistent cache keys
-        // CRITICAL: Must use relative path to match orchestrate.ts checkForChangesAsync queries
+        // CRITICAL: Must use relative path to match cache tracking checkForChangesAsync queries
         const relativePath =
           config.directory === projectRoot
             ? '.'

@@ -145,7 +145,7 @@ Hooks run at specific points during Claude Code sessions:
 | `PreToolUse` | Before tool execution | Input validation |
 | `PostToolUse` | After tool execution | Result processing |
 
-By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. The core plugin orchestrates this - you just define what to run.
+By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. Claude Code executes plugin hooks directly - you just define what to run.
 
 ## Smart Behaviors
 

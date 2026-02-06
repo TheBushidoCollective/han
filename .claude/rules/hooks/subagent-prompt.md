@@ -5,10 +5,11 @@ SubagentPrompt is a "virtual" hook type used by plugins to provide context that 
 ## How It Works
 
 1. Core Han defines a PreToolUse hook that intercepts Task and Skill tools
-2. The hook runs `han hook orchestrate SubagentPrompt --tool-name <Task|Skill>`
-3. All SubagentPrompt hooks from enabled plugins are executed
-4. Their combined output is wrapped in `<subagent-context>` tags
-5. This context is prepended to the tool's prompt/arguments
+2. The hook gathers context from SubagentPrompt hooks defined by plugins
+3. Their combined output is wrapped in `<subagent-context>` tags
+4. This context is prepended to the tool's prompt/arguments
+
+**Note:** The orchestrate-based SubagentPrompt gathering has been removed. Context injection via `inject-subagent-context` is currently a no-op placeholder.
 
 ## Defining a SubagentPrompt Hook
 

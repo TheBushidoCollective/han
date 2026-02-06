@@ -65,39 +65,5 @@ STOP_PAYLOAD=$(jq -n \
   }'
 )
 
-# Run validation hooks via orchestrate
-# Pass session ID via env var for hooks that need it
-# Capture both stdout and exit code
-export HAN_SESSION_ID="$SESSION_ID"
-VALIDATION_OUTPUT=$(echo "$STOP_PAYLOAD" | han hook orchestrate Stop 2>&1) || VALIDATION_EXIT=$?
-VALIDATION_EXIT=${VALIDATION_EXIT:-0}
-
-# If validation failed, replace command with no-op that shows the error
-if [ "$VALIDATION_EXIT" -ne 0 ]; then
-  # Build the error command - use printf with %s to safely handle any characters
-  # The validation output is passed as a separate argument, avoiding shell escaping issues
-  ERROR_MESSAGE="Pre-commit validation failed. Fix the issues before committing:
-
-$VALIDATION_OUTPUT"
-
-  # Use jq to safely construct JSON with proper escaping
-  # This handles newlines, quotes, backslashes, and any special characters
-  ERROR_COMMAND=$(printf '%s' "$ERROR_MESSAGE" | jq -Rs '"printf '\''%s\\n'\'' " + (. | @json) + " >&2 && exit 1"')
-
-  jq -n \
-    --argjson cmd "$ERROR_COMMAND" \
-    '{
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "allow",
-        "updatedInput": {
-          "command": $cmd
-        },
-        "additionalContext": "Pre-commit validation failed. The commit was skipped. Fix the issues and try again."
-      }
-    }'
-  exit 0
-fi
-
-# Validation passed - allow commit to proceed
+# Allow commit to proceed - validation hooks run directly via Claude Code
 exit 0

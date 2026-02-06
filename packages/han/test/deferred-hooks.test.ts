@@ -56,15 +56,16 @@ async function createTestSession(sessionId: string) {
   });
 }
 
-// Helper to create an orchestration for testing
+// Helper to create an orchestration for testing (uses native module directly)
 async function createTestOrchestration(sessionId?: string) {
-  const { orchestrations, initDb } = await import('../lib/db/index.ts');
+  const { initDb } = await import('../lib/db/index.ts');
   await initDb();
   // Create session first if sessionId provided (FK constraint)
   if (sessionId) {
     await createTestSession(sessionId);
   }
-  return orchestrations.create({
+  const native = require('../../../han-native');
+  return native.createOrchestration({
     sessionId,
     hookType: 'Stop',
     projectRoot: '/test/project',
