@@ -132,8 +132,6 @@ OpenCode's plugin system has capabilities that Claude Code doesn't:
 
 The bridge doesn't implement everything Han does in Claude Code:
 
-- **Hook caching**: Han's content-hash caching skips hooks when files haven't changed. The bridge runs hooks on every match. This is a deliberate simplification - caching adds complexity and the per-file PostToolUse hooks are fast enough.
-
 - **Checkpoint filtering**: Han tracks which files a specific session modified and only validates those. The bridge validates all matching files. Multi-session isolation isn't implemented yet.
 
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319)). This is an OpenCode limitation, not a bridge limitation.

@@ -8,6 +8,7 @@
 
 import { spawn } from "node:child_process"
 import type { HookDefinition, HookResult } from "./types"
+import { shouldSkipHook, recordSuccess } from "./cache"
 
 const DEFAULT_TIMEOUT = 60_000 // 60s for individual hooks
 
@@ -27,6 +28,23 @@ export function executeHook(
   },
 ): Promise<HookResult> {
   const startTime = Date.now()
+
+  // Check cache: skip if every file is unchanged since last successful run
+  if (filePaths.length > 0) {
+    const allCached = filePaths.every((fp) =>
+      shouldSkipHook(hook.pluginName, hook.name, fp),
+    )
+    if (allCached) {
+      return {
+        hook,
+        exitCode: 0,
+        stdout: "",
+        stderr: "",
+        durationMs: 0,
+        skipped: true,
+      }
+    }
+  }
 
   // Substitute ${HAN_FILES} with actual file paths
   const filesArg = filePaths.join(" ")
@@ -77,9 +95,18 @@ export function executeHook(
     })
 
     child.on("close", (code) => {
+      const exitCode = code ?? 1
+
+      // Cache successful results so unchanged files skip next time
+      if (exitCode === 0) {
+        for (const fp of filePaths) {
+          recordSuccess(hook.pluginName, hook.name, fp)
+        }
+      }
+
       resolve({
         hook,
-        exitCode: code ?? 1,
+        exitCode,
         stdout,
         stderr,
         durationMs: Date.now() - startTime,

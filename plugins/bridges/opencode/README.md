@@ -125,12 +125,17 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables ━━━━━━━━━�
 </han-post-tool-validation>
 ```
 
+## Caching
+
+The bridge implements content-hash caching identical to Han's approach. After a hook runs successfully on a file, the file's SHA-256 hash is recorded. On subsequent edits, if the file content hasn't changed (e.g. a no-op edit or reformat), the hook is skipped.
+
+Cache invalidation happens automatically: when `tool.execute.after` fires, the edited file's cache entries are invalidated before hooks run, ensuring validation always runs on genuinely changed content.
+
 ## Known Limitations
 
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319))
 - **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop
-- **Transcript parsing**: Hook file discovery reads `han-plugin.yml` directly rather than using han's transcript-based file tracking
-- **Cache/checkpoints**: The bridge doesn't implement han's hook caching or checkpoint system (hooks always run when matched)
+- **Checkpoints**: Session-scoped checkpoint filtering (only validate files changed since last checkpoint) is not yet implemented
 
 ## Development
 

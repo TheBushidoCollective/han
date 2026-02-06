@@ -27,6 +27,7 @@
 import { discoverHooks, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
+import { invalidateFile } from "./cache"
 import {
   formatInlineResults,
   formatNotificationResults,
@@ -39,7 +40,6 @@ import {
   type ToolEventOutput,
   type OpenCodeEvent,
   type StopResult,
-  type HookDefinition,
 } from "./types"
 
 const PREFIX = "[han]"
@@ -133,6 +133,11 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
       const filePaths = extractFilePaths(input, output)
 
       if (filePaths.length === 0) return
+
+      // Invalidate cache for edited files so hooks re-run
+      for (const fp of filePaths) {
+        invalidateFile(fp)
+      }
 
       // Find hooks matching this tool + file
       const matching = matchPostToolUseHooks(

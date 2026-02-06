@@ -102,7 +102,6 @@ src/app.ts:10:5 lint/correctness/noUnusedVariables
 
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319))
 - **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop
-- **Hook caching**: The bridge runs hooks on every match rather than using Han's content-hash caching
 - **Checkpoints**: Session-scoped checkpoint filtering is not yet implemented in the bridge
 
 ## How Plugins Stay Compatible
