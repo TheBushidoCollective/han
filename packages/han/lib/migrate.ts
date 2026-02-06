@@ -4,103 +4,33 @@
  * Migrates old plugin names (e.g., `jutsu-typescript@han`) to new short names
  * (e.g., `typescript@han`) in Claude Code settings files.
  *
- * Uses marketplace.json as the source of truth - finds plugins with the same
- * source path and picks the canonical (shortest, non-prefixed) name.
+ * Uses plugin-aliases.ts as the source of truth for old->new name mappings.
+ * This is self-contained and does not depend on marketplace.json or its cache.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { isDeprecatedPluginName, PLUGIN_ALIASES } from './plugin-aliases.ts';
 
 /**
- * Marketplace plugin entry
- */
-interface MarketplacePlugin {
-  name: string;
-  source: string;
-  description?: string;
-  category?: string;
-  keywords?: string[];
-}
-
-/**
- * Marketplace JSON structure
- */
-interface Marketplace {
-  plugins: MarketplacePlugin[];
-}
-
-/**
- * Check if a name uses old-style prefixes
- */
-function hasOldPrefix(name: string): boolean {
-  const lower = name.toLowerCase();
-  return (
-    lower.startsWith('jutsu-') ||
-    lower.startsWith('hashi-') ||
-    lower.startsWith('do-')
-  );
-}
-
-/**
- * Build migration map from marketplace.json
- * Maps old names to their canonical (shortest, non-prefixed) equivalents
+ * Build migration map from PLUGIN_ALIASES.
+ * Maps old prefixed names (e.g., "jutsu-typescript") to their canonical
+ * short name derived from the path (e.g., "typescript" from "languages/typescript").
+ *
+ * Uses the path's last segment as the canonical name, which matches the
+ * marketplace's canonical plugin names exactly.
  */
 function buildMigrationMap(): Map<string, string> {
   const migrationMap = new Map<string, string>();
 
-  // Find marketplace.json relative to this module
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const marketplacePath = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '.claude-plugin',
-    'marketplace.json'
-  );
-
-  if (!existsSync(marketplacePath)) {
-    // Fallback: try from project root
-    const altPath = join(process.cwd(), '.claude-plugin', 'marketplace.json');
-    if (!existsSync(altPath)) {
-      return migrationMap;
-    }
-  }
-
-  try {
-    const content = readFileSync(marketplacePath, 'utf-8');
-    const marketplace = JSON.parse(content) as Marketplace;
-
-    // Group plugins by source path
-    const sourceToNames = new Map<string, string[]>();
-    for (const plugin of marketplace.plugins) {
-      const source = plugin.source.toLowerCase();
-      const names = sourceToNames.get(source) || [];
-      names.push(plugin.name);
-      sourceToNames.set(source, names);
-    }
-
-    // For each source with multiple names, map old names to canonical name
-    for (const [, names] of sourceToNames) {
-      if (names.length <= 1) continue;
-
-      // Find canonical name: shortest name without old prefix
-      const canonical = names
-        .filter((n) => !hasOldPrefix(n))
-        .sort((a, b) => a.length - b.length)[0];
-
-      if (!canonical) continue;
-
-      // Map all old-style names to the canonical name
-      for (const name of names) {
-        if (hasOldPrefix(name) && name !== canonical) {
-          migrationMap.set(name.toLowerCase(), canonical);
-        }
+  for (const [oldName, path] of Object.entries(PLUGIN_ALIASES)) {
+    if (isDeprecatedPluginName(oldName)) {
+      const segments = path.split('/');
+      const canonical = segments[segments.length - 1];
+      if (canonical && canonical !== oldName) {
+        migrationMap.set(oldName.toLowerCase(), canonical);
       }
     }
-  } catch {
-    // Ignore parse errors, return empty map
   }
 
   return migrationMap;

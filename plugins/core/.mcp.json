@@ -11,10 +11,6 @@
     "deepwiki": {
       "type": "http",
       "url": "https://mcp.deepwiki.com/mcp"
-    },
-    "memory-dal": {
-      "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp", "memory"]
     }
   }
 }
